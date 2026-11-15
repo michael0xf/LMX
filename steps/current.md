@@ -1,5 +1,98 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — полный пакет M14 получен; финальная фиксация402
+
+Предыдущий goal turn — progress: завершены genuine G1/G2 quick, fixedpoint38, actual G2 targeted2 и Graph7 triple;
+все code producers terminal. Goal ACTIVE, работа/commit/push прямо main. Пользователь передал полный пакет Astra
+из12 уточнений и поручил проверить незакоммиченное, зафиксировать/отправить и продолжать основной v3.
+Начало to_sol и полный M14 перечитаны. Это замена прежнего исполнения, не дополнительный dirty/cache слой.
+Последняя граница снимка — только код соответствующей C-функции, binding через hidden args;
+окружение/код других функций не копировать. Старый предварительный whole-lexical snapshot дизайн отменён.
+Вопросы семантики закрыты; полная реализация M14 OPEN. Срез402 закрывает только physical raw-index deletion.
+Авторский документальный пакет завершён: [свидетельство](witnesses/m14-doc-clarifications-20261115/notes.md).
+Проверены реальные terminal журналы принятым Tool401: render semantics35/14, grammar27/47,
+docs check35/14/27/44/615 и LF28292, exit0. Новых генераций без изменения источников не требуется.
+Далее fresh G2 docs/index check на итоговом дереве, явный документальный срез и код402;
+не подхватывать два старых чужих untracked artifacts. Кодовые manifests935 и все acceptance результаты сохранены.
+Fresh G2 docs-check01 terminal PASS35/14/27/44/615, LF28292. Read-only review нашёл ещё4 действующих
+dirty-publication формулировки в L1/L2 RU/EN implements; заменены на чтение/адрес/явную запись в граф.
+Book/grammar после render не менялись. Далее явный document-only index и fresh indexed check.
+Docs-index02 terminal PASS35/14/27/44/615, LF28296, actual G2 Tool402. Document-only index32,
+working/cached diff checks PASS; code402 manifests/source/tests и два чужих untracked вне него.
+Результат записан, отдельный документальный commit, затем code402 и push обоих прямо main.
+
+## 2026-11-15 — срез402: сырая индексная запись, кодовые gates PASS
+
+Ниже сохранена история разработки402. Окончательные code gates PASS — в конце раздела;
+итоговое поручение автора и текущая стадия фиксации — в самом начале этого файла.
+
+Предыдущий goal turn — progress:401 принят/отправлен16ea4e0851f2d271e1b6729732c549b9c0c447dc
+после документального a3efab92. Goal ACTIVE. Root sole code/test/build writer; helpers read-only.
+Удалены frozen slot requirement/fact/prepare/admit/type, Space receiving/receiving_index,
+переносы facts при merge/copy и emitted preparation. Graph81/Run60, ArenaRefs22.
+Удалены только write-time future-execution machine_in/words_admit/cell_admit/write_admit и5 consumers;
+физические barriers, ABI/Model receiving, настоящие invalidation links/reset и исполнение SOURCE_MACHINE сохранены.
+Index base выбирается существующим node_in/physical pointer decoder; actual cell — graph_cell_in,
+reader/writer — existing value_cell_access. Structure/Array<@> используют общий ValueOwned store с context0;
+numeric Array не переинтерпретируется как void*. Graph.kind глобально не расширялся.
+Graph.invalidate разделён на прежний collect и finish: allocation/scan до store, сброс native только
+после успешного exact store, без второго rebind prepare и нового ValueOwned API/registry.
+Добавлены private проверки в прежнем graph_fn_data_typed: FOREIGN epsilon/opaque/null, Array<@> и pointer-base,
+очистка старого context, immutable refusal сохраняет cell/native, mutable code write сбрасывает native,
+numeric Array не повреждается. Graph expected двух отменённых отказов изменён; bounds expected прежний.
+code_write_words теперь проверяет успешную запись и последующий execution refusal, вместо отказа самой записи.
+Это ещё не скомпилировано/не принято. Новый struct_index_admit success golden и включение в inputs pending.
+Tool01 normal PASSeb7bb98110865c8afbb8cec0c65a1cf39df623008fd0fc762f69693a1390320c.
+Source02 сохраняет giving UNINIT_INT как int, не язык-pointer: base physical type проверяется до payload read,
+включая immutable service variant. Добавлен poison/out-unchanged oracle и положительный явный reference на него.
+Tool recipe прежний; следующий producer Runtime01 по Source02. Canonical до приёмки не менять.
+Runtime01 terminal FAIL после успешного prefix через ValueOwned: Graph2588 assignment unknown type
+на прямом вызове function-pointer member. Source03 связывает exact callback в typed LmxPointerCellRead,
+как существующие physical access helpers; алгоритм и ABI не меняются. Повторить только Graph, затем suffix.
+Graph retry03 PASS. Runtime02 genuine suffix29: Run→aggregate PASS, prod CC отказал лишь на missing C headers.
+Runtime03 genuine98 headers+2CC PASS, prod6e6374d2/observe305458bc. Source04 test-only исправляет обращение
+к private address_of на public address_type/pointer decoder; private01 terminal SUITE2/6 FAIL:
+FD CC ещё использовал private graph_ref, а встроенный driver ожидал2 старых write refusals.
+code_write_words достиг Unsupported, который не является catch:interpreter; это не запрет записи.
+Source05 использует существующий публичный pointer constructor, обновляет driver checks на успешную запись,
+native0/slot/links и прямой walk_eval==UNSUPPORTED. Пересобрать только driver L2→aggregate→prod/observe.
+Runtime04 terminal prod/observe PASS. Private02 terminal SUITE2/6 FAIL: новый driver oracle оставил context0
+(gdb: walk_op→eval→code_links_check), а старый frontend не читает callable parts через локальный getter.
+Source06 даёт кадру обычный пустой WalkContext; code_write_words проверяет успешную запись без такого getter.
+Read-only review нашло потерю target раскрытия nested index, direct ARRAY RHS и identity primitive pointer-cell
+в code invalidation. Исправлены existing node/target и сравнение actual cell; FD unit содержит три oracles.
+Runtime05 terminal PASS. Private03 terminal SUITE2/4 FAIL: code_write_words полностью PASS, FD падает.
+Gdb локализовал address_of: typed C callback local `read := ...` старый frontend ошибочно понизил как
+вызов read(pool.pointer_read) при read0. Source07 использует обычный существующий C-door idiom
+explicit void* cast вокруг pool.pointer_read(value), как pointer_value_promised, без второго lookup.
+Добавлены struct_index_admit.expected и manifest input (935); golden пока выведен из кода, не принят.
+Следующая пересборка — только Graph+aggregate+prod/observe, затем повтор FD без уже PASS code_write_words.
+Runtime06 terminal PASS806f30f0/8ba7942c; generated C вызывает pool.pointer_read(value) напрямую.
+Private04 genuine2LD+4runs переиспользует неизменные private03 FD objects: native/forced/root0/root1 PASS.
+Fresh Graph01 normal PASSab373fcf. Graph01 focused7cases/9checks:6cases и оба negative AFTER PASS;
+struct_index_admit отказал3 лишь на ошибочном test path node\seen (node не корень файла).
+Source08 test-only использует обычный existing main\data\S\j после main(), без неверного node path;
+поправлен старый комментарий slot_typed_refused. Runtime/Graph01 не пересобирать из-за этих правок.
+Graph02 всё ещё3: прежний negative fixture имел j вне written DATA, и старый slot_prepare отказывал до RHS.
+Source09 помещает j в written DATA, как действующий struct_index, чтобы положительный случай проверял
+саму raw write/последующее чтение, а не незакрытое общее namespace/capture. Новый expected этим объяснён.
+Graph03 struct_index_admit PASS interp/native/forced, seen40; предыдущие6 focused cases и оба refusal AFTER PASS.
+Source09:935 frozen/canonical SHA5b90fde86088da265061d396f527ddb6ebcaccfeb3d2c52f552bf978abcd127c.
+Далее штатный bootstrap quick G1/G2 на том же worker; runtime06/Graph01/FD private04 и code_words private03 сохранены.
+Bootstrap01 terminal PASS: настоящие G1/G2 quick, smoke9/0 каждый. Actual G2 frontend SHAc9b3a640,
+Tool SHAe81ecdcb; fixedpoint01 CHECKS38/0, включая runtime06==G2 prod/observe и retained Graph81/Run60/Refs22.
+Actual G2 targeted01 SUITE2/0 PASS: FD и code_write_words n/f/root0/root1. Fresh G2Graph01 SHA9185c1a7;
+семь focused cases triple + оба negative AFTER CHECKS9/0 PASS. Все code producers terminal.
+Автор явно подтвердил sequential visibility variables+const; Structure/callable bidirectional.
+Полный обновлённый пакет Astra ещё готовится, пользователь передаст сообщение; до этого не начинать
+финальную нормативную консолидацию и новую кодовую вертикаль403. Три stale address RU/EN пары исправлены helper
+в уже подготовленном авторском WIP; остальные его изменения сохранены. Grammar source также менялся автором.
+Далее прочитать полный пакет/to_sol/M14, штатные render semantics+grammar, fresh docs/index gates;
+commit/push прямо main. [Свидетельство402](witnesses/m14-raw-index-20261115/notes.md).
+До Source09 исходным canonical был accepted401 Source07:934; stage402 — build2/codex_fix250generationchain01/sol-m14-index-01,
+receipts — build2/codex_fix250generationchain01/runs/sol-m14-index-20261115-01. Новый Tool из coherent401,
+затем Runtime и focused language checks в одном последовательном pipeline. Остальная новая M14 OPEN.
+
 ## 2026-11-15 — новая M14 имеет приоритет
 
 В ходе WIP401 появились подготовленные авторские уточнения: начало to_sol.md и M14 основного v3 заменяют

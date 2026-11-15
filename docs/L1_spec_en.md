@@ -86,26 +86,45 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 ## 11. Local call frame
 
 <a id="call-frame-20261115"></a>
-Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
-become one input data part. Supplied values replace the corresponding frame initializers;
-a replaced initializer is not executed. Preparation considers only data/code roots, without
-visiting branches or graph references. Code places are never appended to source data.
+Every call, including `call(D,C)`, creates its own namespace. For fn/sub/catch, args/data
+are unified into one input data; short headers remain. An actual replaces the corresponding
+source declaration in the frame, and its initializer does not execute. Preparation collects only
+data/code roots, without visiting branches or graph references or auto-filling source data.
 
-Ready declarations fold during clean-graph construction without program calls.
-Computed declarations are not executed early; uninit:T types remain.
-Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
-is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
-fields remain separate occurrences selected by `S\[n]x`.
+Entry has no initializer-execution phase. Ready declarations fold during clean-graph construction
+without program calls; uninit:T remains. An unused computed data field is not executed.
+Reading obtains its value through the common mechanism, as with `data\field`: the written RHS
+executes, not an implicit call on the obtained reference. Given `@: fptr getFuncPtr()`,
+`fptr("hello world")` first obtains the pointer, then calls the resulting function.
 
-Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Variables and const are visible from their initial declaration onward in their scope and below.
+Names of Structures and callables retain bidirectional visibility; a function-pointer variable does not.
+A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
+admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
+fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
+order of a bare name. Earlier reading through a path does not suppress the RHS when its code statement is reached.
+
+Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
+even before the first read: the selected value or computed description is retained.
+The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
+referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
+For computed input `int: x next()`, @x obtains the value and the local cell's address.
+With `@(data\field)` and source `int: field getValue()`, the addressed value is getValue()'s result;
+the examined native path already has l2_tN, so &l2_tN requires no additional allocation.
+A ready place is addressed directly; reading the result does not replace the source declaration.
+Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
+
+Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
+This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
+and other functions' code are not copied for the snapshot. Function-code selection is shared.
+Changing source code clears native for the next call;
+an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
+without data=code. Different actual argument sets produce different C signatures;
+a header without code describes a call.
+
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
-direct writes are observed through actual aliases in execution order.
-
-The executable code snapshot is selected at entry before initializers. Changing source code clears
-its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
-compilation without data=code. C signatures derive from actual calls; different argument sets yield
-different signatures. A header without code describes a call.
-[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+explicit writes are observed through actual aliases in execution order.
+[Agreed norm](LMX_semantics.en.md#call-frame-20261115),
 [single M14 task](../next_core_tasks_v3.md#native-structures).
 
 <a id="call"></a>
@@ -133,7 +152,7 @@ A child is built in its own arena. Publication adds its reference to `Thread.chi
 <a id="implements"></a>
 ## 15. implements
 
-The `LmxImplEntry` table stores a proven address mapping between candidate fields and the receiving description for any admitted pair of Structures. Different field order cannot be reduced to identity ordinals; reading, address-taking, and direct publication of a ready `dirty` value follow that same correspondence. In data every declaring form is an occurrence of the name: a repeated declaration neither replaces the former one nor writes into it, and a name with two or more occurrences is addressed only with the index of an occurrence (the author's decision of 2026-11-11, [L3](LMX_semantics.en.md#fields)); “last occurrence” selection is not part of the new contract. `s\[N]field` with zero-based `N` addresses the Nth occurrence of the name -- a form of the data that declares that name -- not an Array element. The map holds no runtime names and does not itself keep the graph alive. See [L2 §14](L2_spec_en.md#implements).
+The `LmxImplEntry` table stores a proven address mapping between candidate fields and the receiving description for any admitted pair of Structures. Different field order cannot be reduced to identity ordinals; reading, address-taking, and explicit writes to the original graph follow that same correspondence. Call-local places are not published back into the graph. In data every declaring form is an occurrence of the name: a repeated declaration neither replaces the former one nor writes into it, and a name with two or more occurrences is addressed only with the index of an occurrence (the author's decision of 2026-11-11, [L3](LMX_semantics.en.md#fields)); “last occurrence” selection is not part of the new contract. `s\[N]field` with zero-based `N` addresses the Nth occurrence of the name -- a form of the data that declares that name -- not an Array element. The map holds no runtime names and does not itself keep the graph alive. See [L2 §14](L2_spec_en.md#implements).
 
 <a id="gc"></a>
 ## 16. Collection

@@ -15,6 +15,13 @@ derived from actual calls. Load-dirty, the shared direct-access cache, flush(), 
 requirements on S[n] writes are cancelled. [M14](../next_core_tasks_v3.md#native-structures) removes
 their supporting tables, fact transfers, and generator branches, not extra conditions bypassing checks.
 Types without a value remain. Helper tools are grouped under sys; translate returns L1 and errors.
+No initializers execute at entry; unused computed inputs are not called. Variables and const have
+sequential visibility; Structures/callables remain bidirectional. Local bindings are independent of
+source fields immediately at entry, including lexical/dynamic ones. The code snapshot covers only what
+compilation puts into the corresponding C function, not the entire lexical tree; hidden arguments
+carry bindings without copying the environment. For int: field getValue(), @(data\field) addresses the existing result (native
+&l2_tN), without separate storage or replacing the source declaration. These are agreed clarifications
+of the [norm](LMX_semantics.en.md#call-frame-20261115), not a new code PASS.
 
 This documentation change does not change code. Slices through400 and current WIP401 describe the
 previous mechanism: work_load/work_flush do not prove the new model; old PASS results and expected

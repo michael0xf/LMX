@@ -1043,8 +1043,8 @@ the parser nor by the builder: in `Struct1: Struct2` one atom stands under `Stru
 continues into its fields, and the `parent` of `Struct2` itself -- its place in the tree -- does not change; the
 slot of the atom is rewritten by index (`Struct1[0] := …`), and a mutable reference is declared by a receiver
 (`Model: @: ptr knownModel`). The dump prints the tree -- the atom, not the referent (the executor's reading --
-[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р2). Visibility in data runs in both directions, and
-references by name that close into a cycle are no error. The data stands before the code in every form: the
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р2). Named Structures and callables retain bidirectional visibility;
+variables and const are sequential under M14 of2026-11-15. Cyclic references to named Structures are no error. The data stands before the code in every form: the
 two-argument launch is `call: data code`. A Structure launched over itself -- `call(code)` and the root of
 a unit -- has no rules of its own: its forms are read in both roles by the general rules, and an uncertainty is an
 error; a structural form that execution has reached is an error when its head names neither a callable nor a
@@ -1313,9 +1313,14 @@ Taking the address neither extends S's lifetime nor transfers ownership. Arbitra
 are independent; explicit paths and dereferenced writes use common typed operations, including references and function
 pointers. Restrictions on assignment through a bare Structure or function name do not prohibit them.
 
-Address `@x` of a namespace variable belongs to the current call's local cell; `@(data\x)`
-belongs to the source graph. They are different places. The selected place's typed cell retains its
-address and type on writes, including through uninit:T; taking an address does not read absent payload.
+Address `@x` of a namespace variable belongs to the current call's local cell. For a ready field,
+`@(data\x)` retains the source graph cell's own address. For computed declaration
+`int: field getValue()`, `@(data\field)` addresses the ordinary result of getValue(),
+without replacing the source declaration. Use the existing typed result place,
+without a second cell or a special allocation for `@`; lifetime remains ordinary.
+A ready place's typed cell retains its address and type on writes, including through uninit:T;
+taking its address does not read absent payload. This does not suppress evaluation of `@`'s operand:
+for computed input `int: x next()`, `@x` obtains the value and the local int cell's address.
 Do not substitute a source field for the local cell to preserve former behavior.
 [L2](L2_spec_en.md#lowlevel-address).
 
@@ -1458,39 +1463,62 @@ read as this statement (such a read has no effect).
 ### 3.4 Callables and namespace
 
 <a id="call-frame-20261115"></a>
-Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
-become one input data part. Supplied values replace the corresponding frame initializers;
-a replaced initializer is not executed. Preparation considers only data/code roots, without
-visiting branches or graph references. Code places are never appended to source data.
+Every call, including `call(D,C)`, creates its own namespace. For fn/sub/catch, args/data
+are unified into one input data; short headers remain. An actual replaces the corresponding
+source declaration in the frame, and its initializer does not execute. Preparation collects only
+data/code roots, without visiting branches or graph references or auto-filling source data.
 
-Ready declarations fold during clean-graph construction without program calls.
-Computed declarations are not executed early; uninit:T types remain.
-Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
-is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
-fields remain separate occurrences selected by `S\[n]x`.
+Entry has no initializer-execution phase. Ready declarations fold during clean-graph construction
+without program calls; uninit:T remains. An unused computed data field is not executed.
+Reading obtains its value through the common mechanism, as with `data\field`: the written RHS
+executes, not an implicit call on the obtained reference. Given `@: fptr getFuncPtr()`,
+`fptr("hello world")` first obtains the pointer, then calls the resulting function.
 
-Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Variables and const are visible from their initial declaration onward in their scope and below.
+Names of Structures and callables retain bidirectional visibility; a function-pointer variable does not.
+A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
+admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
+fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
+order of a bare name. Earlier reading through a path does not suppress the RHS when its code statement is reached.
+
+Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
+even before the first read: the selected value or computed description is retained.
+The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
+referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
+For computed input `int: x next()`, @x obtains the value and the local cell's address.
+With `@(data\field)` and source `int: field getValue()`, the addressed value is getValue()'s result;
+the examined native path already has l2_tN, so &l2_tN requires no additional allocation.
+A ready place is addressed directly; reading the result does not replace the source declaration.
+Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
+
+Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
+This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
+and other functions' code are not copied for the snapshot. Function-code selection is shared.
+Changing source code clears native for the next call;
+an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
+without data=code. Different actual argument sets produce different C signatures;
+a header without code describes a call.
+
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
-direct writes are observed through actual aliases in execution order.
-
-The executable code snapshot is selected at entry before initializers. Changing source code clears
-its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
-compilation without data=code. C signatures derive from actual calls; different argument sets yield
-different signatures. A header without code describes a call.
-[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+explicit writes are observed through actual aliases in execution order.
+[Agreed norm](LMX_semantics.en.md#call-frame-20261115),
 [single M14 task](../next_core_tasks_v3.md#native-structures).
 
 The source callable Structure retains its head and written data/return/code parts. The local namespace
 is not its child field. The code snapshot is execution state, not a second permanent graph.
 Former args and code-to-data auto-fill are removed through one representation/consumer change,
-not parallel semantic paths. Exact new abbreviated headers still require agreement.
+not parallel semantic paths. Abbreviated fn/sub/catch headers remain with unified data;
+a header without code describes a call signature, not a separate complete function.
 
 ### 3.5 Names: words in the graph, resolution by the traversal (decision, checked by Codex, review 2)
 
-Root-name visibility does not depend on declaration-line position. Namespace preparation considers only
-data/code roots, without auto-filling graph data. A new branch name is visible at its level and below,
-not outside; repeating a visible declaration uses the selected place. Name availability does not imply
-that its computed value already exists. The 2026-11-15 clarification replaces the old auto-fill wording.
+Variables and const are visible sequentially from their initial declaration in their scope and below.
+Named Structures and callables are visible in both directions; a variable holding a callable stays a variable.
+The namespace collects only data/code roots, without graph auto-fill or initializer execution at entry.
+Data inputs are available to executing code; collecting the code root does not expose future locals.
+A new branch name is not visible outside; repeating an already visible declaration preserves RHS evaluation,
+admission and writing to the selected place. Before a local declaration, ordinary available outer bindings
+can apply, without a separate TDZ. The 2026-11-15 clarification replaces general bidirectional visibility.
 [Norm](LMX_semantics.en.md#call-frame-20261115).
 
 The builder **does not bake hidden bindings** for a future traversal into the graph: written heads, paths, expression
@@ -1738,14 +1766,19 @@ root code declarations absent from the input places then supply remaining locals
 neither nested branches nor graph references. Ready values use ordinary copying; computed declarations
 are not executed early. uninit:T retains absence of a value.
 
-@x addresses this call's local cell; @(data\x) addresses the original graph cell. Do not merge them
+@x addresses this call's local cell. @(data\x) retains a ready source place's address;
+for a computed declaration, it addresses the ordinary result without replacing the source declaration.
+For a computed input, @x obtains the value and the ordinary local cell's address. Use the existing
+result place without an additional cell for @. Do not merge the local and source places
 to preserve the former stable-cell model. Local-place pointers follow ordinary lifetime rules;
 introduce no speculative escaped-local infrastructure. Recursive/repeated calls receive other local places.
 Return and nested calls neither publish these places nor reload suspended callers' locals.
 
-Executable code is selected as a snapshot before initializers. Native and interpreter continue that
-selected version; changing the original graph affects the next entry after native is cleared, without
-restarting the current call. Snapshot boundaries and early computed-declaration consumption remain M14 questions.
+Entry selects only what compilation puts into the corresponding C function, before statements.
+Bindings are passed as hidden arguments; the entire lexical tree and environment are not copied.
+Native and interpreter continue that version; source mutation clears native for the next entry without
+restarting the current call. No initializers run at entry. An early explicit field read does not suppress
+execution of the declaration statement when reached. These clarifications are agreed; M14 implementation remains OPEN.
 
 Slices through400 implemented working rows with loaded/dirty and publication: that previous mechanism
 must be simplified while retaining necessary typed storage and the ordinary stack/GC. Those functions
@@ -1831,7 +1864,7 @@ native copy and M13/M14 remain OPEN.
 
 An explicit write to executable source code clears affected native before the next dispatch.
 Changing a local variable is not a source-graph change. The current frame continues its snapshot
-selected at entry before initializers; completed effects are not repeated. Use the existing common
+of the corresponding C function's code, selected at entry before statements; completed effects are not repeated. Use the existing common
 invalidation mechanism, without a publication journal, version registry, or deoptimization.
 
 <a id="flush-receiver-contract"></a>
@@ -1913,7 +1946,7 @@ This describes call(D,C), not a new header syntax.
 
 `@x` addresses the second column; `@(data\x)` the third. Return does not copy 2 into D.
 A new call gets a fresh namespace from current input data. Executable C is selected as a snapshot
-before initializers. Changing source C clears native for the next entry while preserving the current continuation.
+at entry before statements, covering only the corresponding C function's code. Changing source C clears native for the next entry while preserving the current continuation.
 
 D[n] := p stores only void*: no former x requirement or slot fact is transferred. Named D\x := value
 selects the current named place and checks its requirement during clean-graph construction where known.

@@ -19,7 +19,7 @@ Graph objects share a flat `Lmx` with fields ordered `parent`, `native`, `length
 
 An ordinary Structure and an untyped-pointer Array<@> are fully interchangeable for the same contents: index, length, named access when names exist, admission, copying, execution, `sys\typeof` and descriptor access follow the same rules. Equal C layout without those operations is insufficient. Numeric Arrays retain T-storage, and growable List remains separate. The header is not part of the element sequence: `S[i]` selects from storage and `length(S)` reads length.
 
-`parent` describes structural nesting, not Message parentage. For an Array created at an `arr` field, its parent is the graph occurrence representing that field; for a Structure constructed as an owned Array element, its parent is the Array. Storing a reference to an existing Structure in an element does not reparent that referent. Likewise a mention of the name of a known Structure is not expanded -- neither by the parser nor when the clean graph is built: the tree holds an atom, a pointer to that Structure, while that Structure's `parent`, that is its place in the tree, does not change, and no subtree arises under the Structure that mentions it (the author's answers of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#known-name-not-expanded), [L3](LMX_semantics.en.md#colon-declares)). Lexical visibility follows the place of construction in the tree -- the structural `parent` -- not the position of the declaring line: visibility in data runs in both directions ([L3](LMX_semantics.en.md#declaration-visibility)); no additional hidden context is created. `native` selects a native entry; zero walks the stored body. A graph object has no stored name, model tag, or extra execution-state fields. Structure field count and Array element count are fixed at construction; addressable cells do not move. Primitive elements remain typed cells and need no individual `parent` field.
+`parent` describes structural nesting, not Message parentage. For an Array created at an `arr` field, its parent is the graph occurrence representing that field; for a Structure constructed as an owned Array element, its parent is the Array. Storing a reference to an existing Structure in an element does not reparent that referent. Likewise a mention of the name of a known Structure is not expanded -- neither by the parser nor when the clean graph is built: the tree holds an atom, a pointer to that Structure, while that Structure's `parent`, that is its place in the tree, does not change, and no subtree arises under the Structure that mentions it (the author's answers of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#known-name-not-expanded), [L3](LMX_semantics.en.md#colon-declares)). Structural `parent` defines lexical nesting. Within it, variables and const are visible sequentially from their initial declaration, while named Structures and callables are bidirectional ([L3](LMX_semantics.en.md#declaration-visibility)); no additional hidden context is created. `native` selects a native entry; zero walks the stored body. A graph object has no stored name, model tag, or extra execution-state fields. Structure field count and Array element count are fixed at construction; addressable cells do not move. Primitive elements remain typed cells and need no individual `parent` field.
 
 <a id="interpretable-tree"></a>
 ### 2.1. Interpretable tree
@@ -169,26 +169,45 @@ Execution uses the source Structure and a separate local call frame under the [n
 ## 11. Call
 
 <a id="call-frame-20261115"></a>
-Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
-become one input data part. Supplied values replace the corresponding frame initializers;
-a replaced initializer is not executed. Preparation considers only data/code roots, without
-visiting branches or graph references. Code places are never appended to source data.
+Every call, including `call(D,C)`, creates its own namespace. For fn/sub/catch, args/data
+are unified into one input data; short headers remain. An actual replaces the corresponding
+source declaration in the frame, and its initializer does not execute. Preparation collects only
+data/code roots, without visiting branches or graph references or auto-filling source data.
 
-Ready declarations fold during clean-graph construction without program calls.
-Computed declarations are not executed early; uninit:T types remain.
-Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
-is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
-fields remain separate occurrences selected by `S\[n]x`.
+Entry has no initializer-execution phase. Ready declarations fold during clean-graph construction
+without program calls; uninit:T remains. An unused computed data field is not executed.
+Reading obtains its value through the common mechanism, as with `data\field`: the written RHS
+executes, not an implicit call on the obtained reference. Given `@: fptr getFuncPtr()`,
+`fptr("hello world")` first obtains the pointer, then calls the resulting function.
 
-Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Variables and const are visible from their initial declaration onward in their scope and below.
+Names of Structures and callables retain bidirectional visibility; a function-pointer variable does not.
+A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
+admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
+fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
+order of a bare name. Earlier reading through a path does not suppress the RHS when its code statement is reached.
+
+Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
+even before the first read: the selected value or computed description is retained.
+The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
+referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
+For computed input `int: x next()`, @x obtains the value and the local cell's address.
+With `@(data\field)` and source `int: field getValue()`, the addressed value is getValue()'s result;
+the examined native path already has l2_tN, so &l2_tN requires no additional allocation.
+A ready place is addressed directly; reading the result does not replace the source declaration.
+Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
+
+Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
+This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
+and other functions' code are not copied for the snapshot. Function-code selection is shared.
+Changing source code clears native for the next call;
+an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
+without data=code. Different actual argument sets produce different C signatures;
+a header without code describes a call.
+
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
-direct writes are observed through actual aliases in execution order.
-
-The executable code snapshot is selected at entry before initializers. Changing source code clears
-its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
-compilation without data=code. C signatures derive from actual calls; different argument sets yield
-different signatures. A header without code describes a call.
-[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+explicit writes are observed through actual aliases in execution order.
+[Agreed norm](LMX_semantics.en.md#call-frame-20261115),
 [single M14 task](../next_core_tasks_v3.md#native-structures).
 
 <a id="native-structures"></a>
@@ -221,7 +240,7 @@ The first operand fixes model slot order; a matching field of a later operand re
 <a id="implements"></a>
 ## 14. implements
 
-The proven mapping from used fields of the receiving model to physical fields of the candidate for an admitted pair of Structures is data of the reception or traversal that established it (the author's decision of 2026-11-08 on service traversal tables, confirmed by Codex; [implementation specification §5.2](kernel-implementation.en.md#tables)): a reception holds its map for the duration of the operations it needs -- reads, writes, address taking, and direct publication of ready `dirty` values, including differing field order -- and the next traversal rebuilds it from the graph; the arena keeps no persistent store of mappings, and there is no separate map for `call` or `data`. The interface-checking part of `implements` is performed once for each candidate: at clean-graph construction if the candidate is known, or at run time if selected dynamically ([cases](../steps/implements-runtime-cases-20261111.md)). Graph construction does not execute `test`; for a dynamic candidate it is the second admission step ([the author's clarification of 2026-11-13](../LMX_blog/2026-11-13.md#implements-and-test-phases)). An assignment of primitives is not checked for admissibility at run time (the author's decision of 2026-11-11, [L3](LMX_semantics.en.md#data-code-roles); the rule speaks of the admission `implements`, not of conversion: the range check on receiving a number of another type, `u16(256)` into `u8`, remains at run time); the translators do not execute this rule yet ([plan](../next_core_tasks_v3.md#m11)). In data every declaring form is an occurrence of the name: a sole occurrence is addressed `s\field`, with two or more the name is addressed only with the index of an occurrence -- a repeated declaration neither replaces the former one nor writes into it ([L3](LMX_semantics.en.md#fields)); `s\[N]field` with zero-based `N` addresses the Nth occurrence of the name -- a form of the data that declares that name -- not an Array element. The map does not look up runtime names, copy the candidate, or waive a new Consumer's checks. Admission semantics and explicit tests are in [L3 §7](LMX_semantics.en.md#admission).
+The proven mapping from used fields of the receiving model to physical fields of the candidate for an admitted pair of Structures is data of the reception or traversal that established it (the author's decision of 2026-11-08 on service traversal tables, confirmed by Codex; [implementation specification §5.2](kernel-implementation.en.md#tables)): a reception holds its map for the duration of the operations it needs -- reads, address taking, and explicit writes to the original graph, including differing field order -- and the next traversal rebuilds it from the graph; the arena keeps no persistent store of mappings, and there is no separate map for `call` or `data`. Call-local places are not published back into the graph. The interface-checking part of `implements` is performed once for each candidate: at clean-graph construction if the candidate is known, or at run time if selected dynamically ([cases](../steps/implements-runtime-cases-20261111.md)). Graph construction does not execute `test`; for a dynamic candidate it is the second admission step ([the author's clarification of 2026-11-13](../LMX_blog/2026-11-13.md#implements-and-test-phases)). An assignment of primitives is not checked for admissibility at run time (the author's decision of 2026-11-11, [L3](LMX_semantics.en.md#data-code-roles); the rule speaks of the admission `implements`, not of conversion: the range check on receiving a number of another type, `u16(256)` into `u8`, remains at run time); the translators do not execute this rule yet ([plan](../next_core_tasks_v3.md#m11)). In data every declaring form is an occurrence of the name: a sole occurrence is addressed `s\field`, with two or more the name is addressed only with the index of an occurrence -- a repeated declaration neither replaces the former one nor writes into it ([L3](LMX_semantics.en.md#fields)); `s\[N]field` with zero-based `N` addresses the Nth occurrence of the name -- a form of the data that declares that name -- not an Array element. The map does not look up runtime names, copy the candidate, or waive a new Consumer's checks. Admission semantics and explicit tests are in [L3 §7](LMX_semantics.en.md#admission).
 
 <a id="gc"></a>
 ## 15. Collection
@@ -254,7 +273,11 @@ M3 orders flat declarations as name followed by requirement/value. A place is de
 
 In `@: ptr method`, the `@` receiver comes first, while `ptr` and `method` are bare atoms: an atom is not a call. The form therefore assigns a reference to `ptr` under the `@` contract even when `ptr` already contains a callable; `ptr(args)` invokes it. Unary `@ptr` separately takes the reference cell's address. The detailed rules of the special name `data` and of these forms are in [L3](LMX_semantics.en.md#ordinary-var) and [method-reference assignment](LMX_semantics.en.md#method-reference-assignment).
 
-For a namespace variable, unary `@x` addresses the current call's real local cell; `@(data\x)` addresses the original graph cell. Writing through the former changes bare x, through the latter the graph; no automatic transfer connects them. A reference field retains its exact pointer type; a primitive uses its typed cell. An ordinary graph slot physically holds void*; an alias through Lmx** does not replace that representation. Pointer depth is unrestricted, and an evaluation temporary's address cannot replace the selected place's address.
+For a namespace variable, unary `@x` addresses the current call's real local cell. For computed input `int: x next()`, `@x` obtains its value and the address of its ordinary local int cell. When `data\x` selects a ready source-graph place, `@(data\x)` retains that place's own address. When data retains computed declaration `int: field getValue()`, `@(data\field)` addresses the result of getValue(); that result does not replace the source declaration. Writing through the result's address changes the result, while explicit `data\field := ...` changes the source field. No automatic transfer connects the local place and the graph. [Common rule](LMX_semantics.en.md#computed-field-address).
+
+In the existing native path, `emit_call_result_value` declares typed `l2_tN`, and `emit_dyn_tail_value` passes `&l2_tN` as the result destination. Reuse this place when taking the address, without another call, a second cell, or a special allocation for `@`. The walker uses the ordinary addressable result cell. The existing place's ordinary lifetime rules apply.
+
+A reference field retains its exact pointer type; a primitive uses its typed cell. An ordinary graph slot physically holds void*; an alias through Lmx** does not replace that representation. Pointer depth is unrestricted; an evaluation temporary's address does not replace a ready place's own address.
 
 Prefix `\p` follows a reference; `p\field` accesses either a graph field or an explicitly imported machine ABI according to `p`'s category. `@array[i]` addresses the actual backing element. L2 adds no automatic bounds check; checked access belongs to L3. Address operations neither bypass `const`/`immutable` nor extend target lifetime.
 

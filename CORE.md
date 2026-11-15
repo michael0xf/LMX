@@ -4,6 +4,15 @@
 [M14 and sys tools](next_core_tasks_v3.md#native-structures) replace load-dirty, local publication,
 shared caching, flush, and frozen physical-slot requirements. Dated receipts below remain implementation history.
 
+Slice402 (2026-11-15), bounded code gates PASS: frozen index requirements and their tables/transfers/emission
+are removed. Structure/pointer-Array index operations use actual cells and exact callbacks through the common
+ValueOwned store. Invalidation is prepared before the store and completed only after success. Future execution
+is not prechecked by a code write; reached machine code still returns UNSUPPORTED. Source09:935, genuine G1/G2
+quick, fixedpoint38, actual G2 targeted2 and Graph7 triple PASS. Whole namespace/path/Array receiving and the
+replacement call-frame model remain OPEN. [Evidence402](steps/witnesses/m14-raw-index-20261115/notes.md).
+The complete author documentation package is reviewed and fresh docs-check passes; final index gates follow.
+Work and commits stay directly on main.
+
 
 Slice393 (2026-11-14), bounded code acceptance and docs-check PASS, on main after accepted392/b2899ec9: the existing implements resolver borrows an optional
 Graph SourceReader. Physical facts retain their meanings; exact source descriptions and receiving chains are
@@ -401,10 +410,13 @@ A callable remains an ordinary source Structure. Former args/data merge into one
 return where applicable and code remain. Every call, including call(D,C), creates its own namespace.
 Only root declarations of data and code prepare that namespace; no branch traversal or graph-reference
 walk occurs. Code locals never auto-fill source data. Ready declarations fold at clean-graph construction
-without program calls; computed declarations are not executed early. Types without a value remain.
+without program calls. There is no initializer execution at entry; unused computed inputs are never
+evaluated. Types without a value remain. Abbreviated headers remain with unified data.
 
 Actuals replace corresponding frame defaults, suppressing those original initializers. Bare x and @x
-use the same call-local cell; data\x, code\x, and @(data\x) address the source graph. Local writes
+use the same call-local cell; data\x and code\x access the source graph. Selected values or computed
+descriptions are independent of later source writes immediately at entry, even before their first read;
+this also applies to lexical and dynamic bindings. References still retain their targets. Local writes
 never publish back. Nested and recursive calls have independent locals. Direct writes affect actual cells
 in sequential order, with no separate shared direct-access cache or flush receiver.
 
@@ -412,15 +424,26 @@ in sequential order, with no separate shared direct-access cache or flush receiv
 
 Repeated int: x bump() retains bump(), type reception, and assignment to the visible x; only a repeated
 C declaration is omitted. Repeated graph fields remain separate occurrences selected by S\[n]x.
-New branch-local names are visible there and below, not outside. Address lifetime follows ordinary
-language rules; a local address is not replaced with the source graph's address.
+Variables, including const, are visible sequentially from their initial declaration; named Structures
+and callables remain bidirectional. New branch-local names are visible there and below, not outside.
+Root collection does not expose future code locals. An earlier explicit field read does not suppress
+the RHS when execution later reaches that declaration statement.
 
-Entry selects an executable code snapshot before initializers. The walker retains the corresponding
-copy; native agrees observably. Explicit source-code mutation clears affected native for the next call;
+Computed inputs use the common field-read mechanism: with @: fptr getFuncPtr(), fptr("hello world")
+first calls getFuncPtr(), then invokes its result. @x also evaluates a computed input and addresses
+its local cell. For int: field getValue() in data, @(data\field) addresses the computed result,
+using the existing native l2_tN (&l2_tN) or ordinary walker result cell, without replacing the source
+declaration. A ready field retains its own cell address. Ordinary lifetime rules apply; no extra result
+heap or special @f() support/prohibition task is introduced.
+
+Entry selects only the code that compilation puts into the corresponding C function, before statements.
+The walker retains that code, not the entire lexical tree. Bindings are passed as hidden arguments;
+no lexical-environment copy is needed. Reuse the common function-code selection; native agrees observably.
+Explicit source-code mutation clears affected native for the next call;
 the current call continues its selected snapshot. Methods and ordinary Structures share compilation
 without data=code. C signatures derive from actual calls; different supplied argument sets produce
 different signatures. A signature without code describes a call, not a full particular function.
-[Norm and remaining questions](docs/LMX_semantics.en.md#call-frame-20261115).
+[Agreed norm; implementation remains open](docs/LMX_semantics.en.md#call-frame-20261115).
 
 ## 4. Declaration, assignment, call, and admission
 

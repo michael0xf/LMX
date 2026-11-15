@@ -6,27 +6,41 @@
 flush() и frozen требования слотов при S[n] заменены [M14](next_core_tasks_v3.md#native-structures).
 
 - [ ] Единая data вместо args/data; свежие локальные места всех вызовов; нет автозаполнения графа.
-- [ ] Root-only подготовка data/code без вычислений; uninit:T сохранён; actual подавляет свой default.
-- [ ] Локальные x/@x отделены от исходных data\/code\; повторное объявление сохраняет RHS и присваивание.
+- [ ] Root-only сбор data/code; при входе нет инициализаторов; uninit:T сохранён; actual подавляет свой default,
+  неиспользованное вычисляемое входное поле не вызывается. Сокращённые заголовки сохраняются с единой data.
+- [ ] Переменные и const видны последовательно; Structure/callable — в обе стороны. Повторы полей и S\[n]field сохранены.
+- [ ] Локальные x/@x независимы от data\/code\ сразу после входа, включая вычисляемое описание до первого чтения;
+  то же правило у лексических и динамических связей. Повторное объявление сохраняет RHS и присваивание.
+- [ ] Вычисляемое поле читается общим механизмом; @x тоже вычисляет вход. @(data\field) для int: field getValue()
+  адресует существующий результат (native &l2_tN), без отдельной return-кучи и изменения исходного объявления.
 - [ ] Удалены load-dirty, публикации, таблицы/копирование фактов/ветки генератора отменённых проверок;
   shared cache и flush сняты с очереди, не оставлены запасным механизмом.
 - [ ] Structure/Array<void*>: одинаковая сырая индексная запись и структурное именованное обращение.
-- [ ] Native/обходчик: снимок code до инициализаторов; правка исходника очищает native; сигнатуры из вызовов.
+- [ ] Native/обходчик: при входе снимок только того, что компилируется в соответствующую C-функцию;
+  связывание передаётся скрытыми аргументами, всё дерево и окружение не копируются. Правка исходника очищает native
+  для следующего вызова, активный продолжает снимок; разные наборы actuals дают разные C-сигнатуры.
 - [ ] Построитель и проверки работают в сборщике; runtime использует только реально нужный общий код.
 - [ ] sys\indexof(field parent) требует единственного вхождения; sys\indexof(field index parent)
   выбирает указанное вхождение той же ссылки. Нумерация с нуля; отсутствие/неоднозначность — ошибка.
   Общий путь Structure/Array<@>, без отдельной инфраструктуры индексов.
 - [ ] Группа sys без глобальных запретов; check/checkL3 и translate → L1 + errors, перенос вспомогательных
   native/storage/descriptor/typeof/toLmx/fromLmx/assert. length и parent остаются вне sys.
-- [ ] Уточнены оставшиеся вопросы M14; пройдены только затронутые языковые проверки и штатные docs gates.
+- [x] Автор уточнил прежние вопросы M14: повторное исполнение, отсутствие входной инициализации,
+  границу снимка, сокращения, видимость, независимость связей и адрес вычисляемого поля. Реализация остаётся OPEN.
+- [ ] Пройдены только затронутые языковые проверки и штатные docs gates на новой реализации.
 
 - [x] Ограниченный401: общий typed overlap merge с receiving-group closure, root-first aliases,
   shared CHILDREN backing и late composed REF_LMX Value-cell. Source07:934 canonical; private1/0,
   controls4/0, genuine G1/G2 quick, fixedpoint36, actual G2 targeted5/0 и Graph6 triple PASS.
   Это не новая модель исполнения — [свидетельство401](steps/witnesses/m13-overlap-20261115/notes.md).
-- [ ] Ближайший кодовый шаг новой M14: удалить frozen index-slot requirements вместе с receiving tables,
-  переносами facts и emitted slot_prepare; использовать общий physical pointer decoder без referent-kind whitelist.
-  Bounds, физическую защиту записи, native invalidation и именованный допуск сохранить.
+- [x] Ограниченный402: frozen index-slot requirements, их receiving tables, переносы facts и emitted preparation
+  удалены; raw index использует общий physical pointer decoder и ValueOwned store без referent-kind whitelist.
+  Bounds, физическая защита, native invalidation и именованный допуск сохранены; future-machine write preflight снят.
+  Source09:935, genuine G1/G2 quick, fixedpoint38, actual G2 targeted2/0 и Graph7 triple PASS.
+  Это физический foundation, полный Array namespace/path/receiving OPEN; docs/index ещё pending.
+  [Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md).
+- [ ] Следующий связанный кодовый шаг M14: activation-local places для чтения/записи/@/свободных входов
+  и удаление implicit publication по полному обновлению Astra; сохранить receiving, snapshots, GC/cleanup.
 
 
 

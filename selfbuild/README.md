@@ -6,6 +6,15 @@ and grouped sys tools (translate returns L1 and diagnostics). Existing accepted 
 still describe their actual earlier behavior; they do not establish this replacement. No speculative runtime;
 share necessary working builder code for concrete operations.
 
+Slice402 (2026-11-15), bounded code gates PASS: raw Structure/pointer-Array index writes use exact physical cells
+and the common ValueOwned store. Frozen slot requirements/tables/transfers/emitted preparation and future-machine
+write preflight are removed. Physical barriers, current payload interpretation and native reset remain.
+Source09:935 canonical; genuine G1/G2 quick smoke9/0, fixedpoint38, actual G2 targeted2/0 and Graph7 triple PASS.
+Working G2: `build2/codex_fix250generationchain01/sol-m14-index-01/boot-m14-index-01/g2`;
+frontend SHAc9b3a640, Tool SHAe81ecdcb, Graph SHA9185c1a7. [Evidence402](../steps/witnesses/m14-raw-index-20261115/notes.md).
+Final docs/index gates follow the complete Astra package. Unified frames, snapshot/visibility and whole
+Array namespace/receiving support remain OPEN. Root is the sole code/test/build writer; work is directly on main.
+
 Slice401 (2026-11-15), bounded code gates PASS: the common mapped copier supports typed overlapping Graph merge.
 Receiving-group closure fixes final layouts before Value edges. Root-first place/alias preparation preserves
 shared physical CHILDREN slots and reference Value cells. Managed consumers use explicit Graph get_in/put_in.

@@ -2834,10 +2834,11 @@ fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
     # Q52 (the author: «нет видимого поля "y" у структуры "s" ... поля такого нет (потому что объявление не там)»;
     # «0 — меняется лишь скрытый вход s»): a field of the unit that a method sees is not the method's -- its name is a
     # hidden input of the method, the caller's current value handed over at the call (book :1182); a bare write changes
-    # only that activation's value.  A type with no value cell (an Array) cannot travel as an input: it stays the place
-    # it is declared at, read and written there.  A named Structure's procedure too: a procedure without arguments,
-    # «that is, a procedure with hidden arguments» (the author, 2026-09-28, OPUS-CODEX-20260928-08).
-    if: oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0 && c.lm_compiler_dt_of_own(own_ty_cell[0][oi]) != 0
+    # only that activation's value.  An Array travels as an input too: a free name is bound dynamically first (the caller's
+    # binding, a CODE-local Array included), lexically after.  A named Structure's procedure stays the place it is declared
+    # at: a procedure without arguments, «that is, a procedure with hidden arguments» (the author, 2026-09-28,
+    # OPUS-CODEX-20260928-08).
+    if: oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0 && (c.lm_compiler_dt_of_own(own_ty_cell[0][oi]) != 0 || c.lm_compiler_own_is_array(own_ty_cell[0][oi]) != 0)
         return: (cast: (int) (c.lm_compiler_dyn_add(mi, t, c.lm_compiler_free_dt())))
     if: oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0
         if: c.lm_compiler_own_off(mi, oi) = (cast: (size_t) -1)
@@ -5525,13 +5526,7 @@ fn: lm_compiler_emit_body (const: (@: body c.LmP0Structure); int: mi; const: (@:
 end: lm_compiler_emit_body
 
 fn: lm_compiler_emit_body_with_position (const: (@: body c.LmP0Structure); int: mi; const: (@: ind char); int: empty_body; c.long: emitted_from) int
-    @: bseq_n_cell int (cast: (@: int) (@ c.l2_bseq_n))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
-    @@: own_bseq_cell int (cast: (@@: int) (@ c.l2_own_bseq))
-    @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
-    int: s0 bseq_n_cell[0]
-    int: k 0
     int: binding_scope -1
     if: empty_body != 0
         emitted_from := (cast: (c.long) c.ftell(out_cell[0]))
@@ -5539,13 +5534,34 @@ fn: lm_compiler_emit_body_with_position (const: (@: body c.LmP0Structure); int: 
         return: 1
     if: binding_scope >= 0 && lm_compiler_lp_push(2, binding_scope) != 0
         return: 1
-    if: lm_compiler_emit_body_in(body, mi, ind) != 0
+    if: lm_compiler_emit_body_statements(body, mi, ind, 0, (cast: (c.long) 0)) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_emit_bindings_restore(mi, ind, binding_scope) != 0
         return: 1
     if: binding_scope >= 0
         lm_compiler_lp_pop()
     ---
+    if: empty_body != 0
+        return: (cast: (int) (lm_compiler_emit_empty_body(emitted_from, ind)))
+    return: (cast: (int) (0))
+end: lm_compiler_emit_body_with_position
+
+# The statements of one block and the end of their compile-time visibility. The caller owns the activation-binding scope
+# of the block's locals: an ordinary body takes it around the statements (lm_compiler_emit_body_with_position); a block closed
+# by until keeps it until the condition has read the locals of the turn that ended (the block-until loop of
+# lm_compiler_emit_stmts_with_position).
+fn: lm_compiler_emit_body_statements (const: (@: body c.LmP0Structure); int: mi; const: (@: ind char); int: empty_body; c.long: emitted_from) int
+    @: bseq_n_cell int (cast: (@: int) (@ c.l2_bseq_n))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @@: own_bseq_cell int (cast: (@@: int) (@ c.l2_own_bseq))
+    @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
+    int: s0 bseq_n_cell[0]
+    int: k 0
+    if: empty_body != 0
+        emitted_from := (cast: (c.long) c.ftell(out_cell[0]))
+    if: lm_compiler_emit_body_in(body, mi, ind) != 0
+        return: (cast: (int) (1))
     while: k < own_n_cell[0]
         if: own_bseq_cell[0][k] > s0 && c.lm_compiler_host_is_body(own_host_cell[0][k], body) != 0
             own_bseq_cell[0][k] := 0
@@ -5554,7 +5570,7 @@ fn: lm_compiler_emit_body_with_position (const: (@: body c.LmP0Structure); int: 
     if: empty_body != 0
         return: (cast: (int) (lm_compiler_emit_empty_body(emitted_from, ind)))
     return: (cast: (int) (0))
-end: lm_compiler_emit_body_with_position
+end: lm_compiler_emit_body_statements
 
 # Original: l2src/l2trans.lm1:17873
 fn: lm_compiler_emit_body_in (const: (@: body c.LmP0Structure); int: mi; const: (@: ind char)) int
@@ -6783,14 +6799,6 @@ fn: lm_compiler_emit_path_index (const: (@: path c.L2Path); int: ordinal; int: c
     @: base char (cast: (@: char) base_storage\buffer)
     c.L2FrontendScratchChar96: name_storage
     @: name char (cast: (@: char) name_storage\buffer)
-    c.L2FrontendScratchChar1024: type_buf_storage
-    @: type_buf char (cast: (@: char) type_buf_storage\buffer)
-    c.L2Tx: type_tx
-    @: type_text c.L2Tx c.lm_compiler_tx_local(@ type_tx, type_buf, 1024U)
-    c.L2FrontendScratchChar1024: decl_buf_storage
-    @: decl_buf char (cast: (@: char) decl_buf_storage\buffer)
-    c.L2Tx: decl_tx
-    @: declaration c.L2Tx c.lm_compiler_tx_local(@ decl_tx, decl_buf, 1024U)
     c.L2FrontendScratchChar1024: expr_buf_storage
     @: expr_buf char (cast: (@: char) expr_buf_storage\buffer)
     c.L2Tx: expr_tx
@@ -6835,17 +6843,10 @@ fn: lm_compiler_emit_path_index (const: (@: path c.L2Path); int: ordinal; int: c
         return: (cast: (int) (1))
     if: c.snprintf(name, 96U, "l2_index%d_array", t) < 0 || c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", name, -1) != 0
         return: 1
-    if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0
-        if: index_full = 0 || lm_compiler_emit_numeric_receive_span_full((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, ind, expression, index_full) != 0
-            return: 1
-        if: index_full\data[0] != 0 && lm_compiler_emit_full_number_use(ind, (cast: (const: @: char) index_full\data)) != 0
-            return: 1
-        ---
-    else:
-        if: lm_compiler_emit_numeric_receive_span((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, ind, expression) != 0
-            return: 1
-        ---
-    ---
+    if: index_full = 0 || lm_compiler_emit_numeric_receive_span_full((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, ind, expression, index_full) != 0
+        return: 1
+    if: index_full\data[0] != 0 && lm_compiler_emit_full_number_use(ind, (cast: (const: @: char) index_full\data)) != 0
+        return: 1
     if: c.fprintf(out_cell[0], "%ssize_t: l2_index%d_at %s\n", ind, t, expression\data) < 0
         return: (cast: (int) (1))
     if: c.snprintf(base, 96U, "l2_index%d_array", t) < 0 || c.snprintf(name, 96U, "l2_index%d_at", t) < 0 || lm_compiler_emit_array_cell(base, name, mi, ind, place) != 0
@@ -10076,8 +10077,6 @@ fn: lm_compiler_emit_array_cell (const: (@: descriptor char); const: (@: index c
     if: c.snprintf(name, 96U, "l2_array_place%d", t) < 0 || c.lm_compiler_tx_set(place, name) != 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sLmxWalkPlace: %s\n%sint: l2_array_status%d lmx_value_array_place(l2_program_arena, %s, %s, @ %s)\n%sif: l2_array_status%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, name, ind, t, descriptor, index, name, ind, t) < 0 || lm_compiler_emit_null_use(mi, ind) != 0
-        return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_array_status%d != c.LMX_WALK_OK\n", ind, ind, t) < 0 || c.lm_compiler_emit_path_bail(mi, ind) != 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%s---\n", ind) < 0
         return: 1
@@ -18953,14 +18952,19 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             if: lm_compiler_eval_cond((cast: (@: c.LmP0Field) (lm_compiler_port_structure_first_field((cast: (const: @: c.LmP0Structure) (c.lm_compiler_block_until(stmt)))))), (cast: (int) (c.lm_compiler_count_active(c.lm_compiler_block_until(stmt)))), mi, wdeep, (cast: (const: @: char) (wcond\data))) != 0
                 c.lm_compiler_scope_pop()
                 return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "%sif: %s != 0\n%s    %s: 0\n%s---\n%s%s: 0\n%sif: %s\n", wdeep, wcond\data, wdeep, wkeep\data, wdeep, deep, wfirst\data, deep, wkeep\data) < 0
+            if: c.fprintf(out_cell[0], "%sif: %s != 0\n%s    %s: 0\n%s---\n%s%s: 0\n", wdeep, wcond\data, wdeep, wkeep\data, wdeep, deep, wfirst\data) < 0
+                c.lm_compiler_scope_pop()
+                return: (cast: (int) (1))
+            # The condition has read the locals of the turn that ended; they leave the activation's bindings here, before the
+            # next turn's body, and not at the end of that body (the walker's UNTIL keeps them until its condition too).
+            if: c.lm_compiler_emit_bindings_restore(mi, deep, binding_statement) != 0 || c.fprintf(out_cell[0], "%sif: %s\n", deep, wkeep\data) < 0
                 c.lm_compiler_scope_pop()
                 return: (cast: (int) (1))
             if: lm_compiler_emit_poll(mi, wdeep) != 0
                 c.lm_compiler_scope_pop()
                 return: (cast: (int) (1))
             loop_depth_cell[0] := loop_depth_cell[0] + 1
-            if: lm_compiler_lp_push(0, loop_roots) != 0 || lm_compiler_emit_body((cast: (const: @: c.LmP0Structure) (stmt\as\structure)), mi, wdeep, 1) != 0
+            if: lm_compiler_lp_push(0, loop_roots) != 0 || lm_compiler_emit_body_statements((cast: (const: @: c.LmP0Structure) (stmt\as\structure)), mi, wdeep, 1, (cast: (c.long) 0)) != 0
                 loop_depth_cell[0] := loop_depth_cell[0] - 1
                 c.lm_compiler_scope_pop()
                 return: (cast: (int) (1))
@@ -19958,6 +19962,10 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             if: pret != 0 || lm_compiler_own_store_full(mi, oi, ind, (cast: (const: @: char) (tok_cell[0]\data)), store_full) != 0
                 return: (cast: (int) (1))
         ---
+        # A first declaration that stores nothing -- an Array, a place with no initializer -- is still a reached declaration:
+        # its local joins the activation's bindings here, where a stored one joins at its store (lm_compiler_emit_work_binding).
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && own_decl_cell[0][oi] = stmt && c.lm_compiler_own_formal(mi, oi) < 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_own_bound(mi, oi) != 0 && c.lm_compiler_own_code_local(mi, oi) != 0 && c.lm_compiler_emit_work_binding(oi, ind) != 0
+            return: (cast: (int) (1))
         # Slice 300 (Codex's review of 299, item 3): a single-field repeat whose route is unavailable checks the known place
         # where it is reached (lm_compiler_emit_single_repeat_check); a compatible one emits nothing.
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && own_decl_cell[0][oi] != stmt && lm_compiler_emit_single_repeat_check(stmt, oi, mi, ind) != 0

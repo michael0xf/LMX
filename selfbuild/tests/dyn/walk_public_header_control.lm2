@@ -1,0 +1,24 @@
+# Control for walk_private_header: the same program with a PUBLIC header input. The dynamic x of relay is visible to Library\read():
+# 25 * 100 + 25. Native and forced must agree. Entry 7.
+Library:
+    int: x 10
+    fn: read () int
+        return: x
+    end: read
+end: Library
+
+fn: relay (int: x 0) int
+    return: x * 100 + Library\read()
+end: relay
+
+fn: probe_d1c () int
+    int: got relay(25)
+    if: got = 2510
+        return: 83
+    if: got != 2525
+        return: 84
+    return: 7
+end: probe_d1c
+
+send: exit(exit_code: probe_d1c(); stdout: ""; stderr: "")
+return

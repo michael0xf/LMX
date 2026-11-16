@@ -1721,8 +1721,10 @@ Separately represented expressions keep their general form: an operation is an u
 written as a Frame included, §3.3), a path, `:=`. A bare atom does not call ([READ.ME](../READ.ME)); an ordinary
 Structure is executed by the receiver `call` or, in code, by a launch by name -- `S()`, `S(D)`; slice 372 extends shared
 named-head dispatch to the root and a self launch. Root numeric/reference publication and direct path-head calls remain open.
-A standalone written anonymous Structure remains a value: its fields do not execute or become inputs or own places;
-control bodies execute under the explicit contract of their receiving expression (Р17).
+By the author's decision of 2026-11-16 the written forms of a standalone written anonymous Structure in code are executed
+in place, in the current activation ([semantics](LMX_semantics.en.md#data-code-roles)); the clean graph of slice 372 still
+keeps it a value and does not execute its written forms -- the migration is open ([M10](../next_core_tasks_v3.md#m10),
+the decisions of 2026-11-16, item 4). Control bodies execute under the explicit contract of their receiving expression.
 An expression `a op b` is
 three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type, a nested
 Lmx -- the result of its traversal, a name -- reading the cell of the place found, by its type (an `uninit:T` value -- by

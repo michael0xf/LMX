@@ -1,0 +1,17 @@
+# Control for the nested data field probes: the same field is ALSO read at the top level of the body, so the entry creates its row. 5 + 5 + 2 = 12.
+fn: top_and_nested () int (int: k 5)
+    int: first k
+    if: 1
+        return: k + first + 2
+    return: 0
+end: top_and_nested
+
+fn: probe_d3c () int
+    int: got top_and_nested()
+    if: got != 12
+        return: 83
+    return: 7
+end: probe_d3c
+
+send: exit(exit_code: probe_d3c(); stdout: ""; stderr: "")
+return

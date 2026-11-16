@@ -1,0 +1,31 @@
+# A CODE-local array is a binding of its activation; the free name of a callee finds it.
+# Lifted from outer_array of dyn/free_index_places.lm2 (that file does not translate as a whole: frame Box\items[1U]).
+# Norm: docs/LMX_semantics.ru.md#declaration-visibility and the dynamic binding of a free name (local binding of the caller first).
+# Without the array binding read_int() falls to the lexical root int `quote`, indexing it is the implicit `convert` (code 88).
+int: quote 0
+size_t: at 0U
+fn: read_int () int
+    return: quote[at]
+end: read_int
+
+fn: probe_d2 () int
+    []: int quote 3
+    quote[0U] := 3
+    quote[1U] := 4
+    quote[2U] := 7
+    size_t: at 1U
+    int: got 0
+    ---
+        got := read_int()
+        catch: convert ()
+            got := 0 - 1
+    ---
+    if: got = 0 - 1
+        return: 88
+    if: got != 4
+        return: 89
+    return: 7
+end: probe_d2
+
+send: exit(exit_code: probe_d2(); stdout: ""; stderr: "")
+return

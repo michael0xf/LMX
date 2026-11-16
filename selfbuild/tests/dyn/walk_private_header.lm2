@@ -1,0 +1,26 @@
+# An explicit actual takes the private attribute of the receiving header cell.
+# The caller and the callee both run in the walker when forced; native and forced must agree. Entry 7.
+# Norm: docs/LMX_semantics.ru.md#private-binding -- a private field is skipped by dynamic binding, the lexical Library\x remains.
+# relay(25) binds a private x; Library\read() must not see it: 25 * 100 + 10. Public x would give 2525 (code 83).
+Library:
+    int: x 10
+    fn: read () int
+        return: x
+    end: read
+end: Library
+
+fn: relay (private: (int: x 0)) int
+    return: x * 100 + Library\read()
+end: relay
+
+fn: probe_d1 () int
+    int: got relay(25)
+    if: got = 2525
+        return: 83
+    if: got != 2510
+        return: 84
+    return: 7
+end: probe_d1
+
+send: exit(exit_code: probe_d1(); stdout: ""; stderr: "")
+return

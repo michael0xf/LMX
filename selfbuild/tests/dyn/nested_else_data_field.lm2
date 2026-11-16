@@ -1,0 +1,20 @@
+# The own DATA field is read only in an else body (the other branch is taken for flag 0). 5 + 2 = 7.
+fn: only_else (int: flag) int (int: k 5)
+    int: r 0
+    if: flag
+        r := 1
+    else:
+        r := k + 2
+    ---
+    return: r
+end: only_else
+
+fn: probe_d3e () int
+    int: got only_else(0)
+    if: got != 7
+        return: 83
+    return: 7
+end: probe_d3e
+
+send: exit(exit_code: probe_d3e(); stdout: ""; stderr: "")
+return

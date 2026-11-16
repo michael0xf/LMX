@@ -1,0 +1,19 @@
+# The own DATA field is read only in a while body (one turn). 5 + 2 = 7.
+fn: only_while () int (int: k 5)
+    int: r 0
+    int: i 0
+    while: i < 1
+        r := k + 2
+        i := i + 1
+    return: r
+end: only_while
+
+fn: probe_d3w () int
+    int: got only_while()
+    if: got != 7
+        return: 83
+    return: 7
+end: probe_d3w
+
+send: exit(exit_code: probe_d3w(); stdout: ""; stderr: "")
+return

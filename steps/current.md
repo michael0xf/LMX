@@ -1,5 +1,155 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-16 — Fable: срез410 принят; рабочий набор и следующий шаг
+
+Срез410 — исправления принятого409 (находки Д1–Д4 и два дефекта, найденные теми же запусками) и путь
+элемента массива без отменённых проверок. Код: opus (lmx_walk_values.lm2, tools/build.lm2), sonnet
+(l2_frontend_lower.lm2, l2_frontend_types.lm2), фикстуры — haiku; заморозка и приёмка — Fable.
+Source17:958/SHA59438d92 canonical в репозитории и stage, verify958/0. Whole02 bootstrap quick
+boot-f410-02 PASS: genuine G1 и actual G1→G2 по9 smoke/0; fixedpoint01 CHECKS18/0 (11 same, 3 exe-same,
+runtime G2 побайтово равен o410-rt-01, две сверки источника). Первый запуск boot-f410-01 остановлен
+оболочкой сессии из-за нехватки памяти во время сборки G2 — не результат.
+
+**Рабочий набор.** Stage S = build2/codex_fix250generationchain01/sol-m14-field-values-01; tool
+S/boot-f410-02/lmxtool.exe 06ac1cd2; frontend S/boot-f410-02/g2/frontend/l2trans.exe 63010ca6; runtime
+S/boot-f410-02/g2/runtime: driver.c 3e6b904d, driver.o 20069522, driver-observe.o d0cd3d64; Graph
+S/graph-f410-01/graph_trans-prod.exe 3e1dad12.
+
+**Приёмка на actual G2.** Targeted12/0 во всех4 режимах (72 PASS). Полный набор g2-full01:
+**SUITE 192 rows, 116 failures**, 1222 PASS, 14 минут. По именам фикстур в строках FAIL: в базе на G2
+среза409 —46 красных, здесь37, новых красных нет; снова зелёные composed_declares_structure,
+free_c_pointer, free_field_places, index_numeric_receive, index_numeric_unavailable,
+numeric_unavailable_norow, root_pointer_index, whole_direct_fields, whole_field_refused. Оставшиеся37 —
+receipts/fable/g2-full01-red-names.txt; этот список — база для следующих срезов и может только сокращаться.
+Graph: private_binding и call_frame_local, обе тройки interp/native/forced PASS. Mutant в отдельном stage
+fable-m14-binding-mutant-01: в lmx_walk_input_origin `binding_private[0] := metadata\binding_private`
+заменено на `binding_private[0] := 0`; walk_private_header даёт native7 и forced83 на обоих корнях.
+Docs render semantics:35 глав,14 случаев; git diff --check чист; индексная docs-check — в теле коммита.
+[Свидетельство410](witnesses/m14-binding-fixes-20261116/notes.md).
+
+**Следующий шаг.** Срез411 (sonnet, подготовлен вне дерева): общий `lm_compiler_path_leaf_descriptor` для
+записи по пути (structure_path_write), повторная регистрация в catch («out of memory» у
+explicit_data_var_field и written_form), ребро own_source_visible → own_code_local. Затем перенос M10:
+шаг3 (opus, вне дерева: lmx_call_launch, удаление lmx_call_selected_structure) и миграция фикстур с
+отменёнными ожиданиями (черновики haiku). Порядок жетона и владение файлами — в разделе ниже.
+
+## 2026-11-16 — Fable: пауза снята, срез410 начат; порядок работы помощников и конвейера
+
+Автор снял паузу: работа продолжается по [плану v3](../next_core_tasks_v3.md) до его выполнения, без ожидания
+нового поручения между срезами. Сверка перед стартом: HEAD == origin/main == b795a69d, индекс пуст, в дереве
+только два чужих untracked-файла с прежними SHA, producers не запущены. Canonical Source16:944/SHA6e394104;
+рабочий набор — actual G2 среза409 в stage sol-m14-field-values-01/boot-m14-native-private-02:
+tool bb7132fe, frontend c8dc8d5a, runtime prod a9d6a398/obs28a0d532, Graph-native-private-03 879815fe.
+
+Codex отвечает только на вопросы: запрос идёт через peer-сессию lmx_uds в чат
+01a1d3c8-3541-7120-985e-7236aa852743 с адресатом TO CODEX, отправителем fable_pc и уникальным request ID,
+после собственного разбора по норме, коду и минимальному запуску. ACK Codex для старта, обычных шагов и
+публикации не нужен; отчёты ему не посылаются. Маршрут проверен: разовая проверка связи
+CODEX-FABLE-PC-QA-20261116100859Z пришла через lmx_uds, ответ отправлен тем же путём.
+
+Исполнители — отдельные peer-сессии (SendMessage): sonnet — основной, opus — редкие наиболее сложные части,
+haiku — простые части; opus и sonnet могут передавать простое haiku. Fable, opus и sonnet субагентов и
+ревьюверов не запускают; haiku это ограничение не касается. Fable кода не пишет: координирует, сводит и
+ведёт единственный последовательный конвейер compiler/test/docs.
+
+**Жетон конвейера.** lmxtool, l2trans, l1trans, gcc и graph-инструменты запускает только держатель жетона.
+Жетон передаёт Fable сообщением; исполнитель возвращает его словами «PIPELINE RELEASED» в отчёте. Каждый
+запуск получает новый label со своим префиксом (s410-, o410-, h410-); чужие labels и принятые артефакты не
+перезаписываются. Receipts среза410: build2/codex_fix250generationchain01/runs/fable-m10-call-forms-20261116-01.
+
+**Владение файлами в срезе410.** sonnet — selfbuild/src/l2src/l2_frontend_*.lm2 и область decl_l2_application
+в selfbuild/tools/build.lm2; opus — lmx_walk_values.lm2, lmx_call.lm2 и области списков export/decl Walk и Call
+в build.lm2; haiku — фикстуры: черновики в receipts-каталоге до появления frontend, который их читает, затем
+selfbuild/tests и строки suite. Чужие файлы не правятся; нужная правка в чужом файле передаётся владельцу.
+Документы плана, чек-лист, steps/current.md, READ.ME и коммиты ведёт Fable.
+
+Первый шаг — воспроизведение находок Д1–Д4 (ниже) минимальными программами на actual G2 среза409; подтверждённое
+исправляет владелец файла. Затем шаги1–5 [описи M10](handoff/m10-struct-call-inventory-20261116.md).
+
+**Д1–Д4 подтверждены запуском** (sonnet, пробы и логи — receipts/sonnet, probes01.tsv/probe01.log, 10 строк,
+16 отказов, три контрольные программы PASS). Д1 d1_walk_private_header: native7, forced не7 в root0/root1.
+Д2 d2_local_array_binding: native не7, forced exit3 [RUN]. Д3 d3_nested_{if,else,while,until}_data_field:
+native7, forced exit3 [RUN]. Д4 d4_until_body_locals: native не7, forced7. Исправления идут отдельным малым
+срезом раньше410: Д1 и Д3 — opus (lmx_walk_values), Д2 и Д4 — sonnet (frontend); до его приёмки правки
+шагов410 в дерево не вносятся.
+
+**Базовый full-suite на принятом G2 среза409 (Fable, 10:31–10:43 UTC).** Список stage tests/full-suite.tsv
+(Source16), tool bb7132fe, FE c8dc8d5a, runtime a9d6a398/28a0d532, вывод S/f410-baseline-full-01, лог
+receipts/fable/baseline-full01.log: **SUITE 178 rows, 132 failures**, 1098 PASS; красных фикстур45, а не шесть
+известных. Последний полностью зелёный полный набор был 162 строки на срезах около350; срезы384–409
+принимались по прицельным спискам. Таблицы — receipts/fable/baseline-full01-triage.txt и baseline-full01-exits.txt.
+Отказы трансляции (26 фикстур): «root operation not walkable yet: this reference path» —12 (bound_order_axby,
+bound_typed_reception, callable_place_fields, callable_place_signature, entry_admission_order, formal_defaults,
+immutable_reached_write, map_chain, named_actuals_selected, place_write_form, structure_slot_write,
+written_path_form); падение транслятора exit −1073741571 (stack overflow) с пустым логом —7 (split_formal_data,
+split_selected_code, split_copy_bound_data, free_field_places, whole_arguments, whole_direct_fields,
+composed_declares_structure), и whole_field_refused получает то же падение вместо ожидаемого отказа;
+«unknown field path segment» —3 (sub_parts, var_own_fields, var_own_nested); «out of memory» frame=catch —2
+(explicit_data_var_field, written_form); «unsupported index» — free_index_places; «assignment value has unknown
+type» — structure_path_write. Неверный результат в обоих режимах (14): code_write_words81, struct_call_throws81,
+unary_data_selection85, held_structure_places86, source_occurrences90, place_map92,
+unit_n4_inline_named_incompatible92, unit_n4_inline_named_rebind97, free_c_abi1, free_graph_address1,
+free_model_admit1, free_pointer_paths1, root_path_read_os/unit. Forced INVALID при native7 (4):
+index_numeric_receive, index_numeric_unavailable, numeric_unavailable_norow, root_pointer_index; free_c_pointer —
+native1 и forced INVALID. Строки не отключаются и expected не ослабляются.
+Первичная классификация haiku чтением исходников и логов (receipts/haiku/baseline-classification.txt, части
+baseline-parts/G1–G9; Fable её по существу ещё не проверил): ОТМЕНЕНО нормой —14 (code_write_words,
+free_pointer_paths, held_structure_places, place_map, root_path_read_os, root_path_read_unit, source_occurrences,
+struct_call_throws, unary_data_selection, unit_n4_inline_named_incompatible, unit_n4_inline_named_rebind, sub_parts,
+var_own_fields, var_own_nested); ДЕФЕКТ —22; НЕЯСНО —9 (callable_place_signature, entry_admission_order,
+formal_defaults, structure_path_write, structure_slot_write, written_path_form, free_c_abi, free_graph_address,
+split_copy_bound_data). Семейство «root operation not walkable yet» отказывает на записи ссылки по пути
+(`@: Places\f Hw` внутри тела метода); семь падений транслятора — вызовы с целыми аргументами и split-данными.
+Полный набор с этого среза входит в приёмку каждого кодового среза: список красных строк ведётся явно и может
+только сокращаться.
+
+**Вопрос нормы Codex, FABLE-CODEX-NORM-20261116-01** (что наблюдается при call(D s), где s объявлена через sub).
+Ответ: общее исполнение поданной s и отсутствие автоматического выбора s\code подтверждены; значение5
+верно лишь если имена data/code только адресуют безымянные части, а не являются головами обычных записей.
+В дереве представление неоднородно (lmx_graph_run.lm2:7252–7253 против7411–7412), норма его однозначно
+не определяет; Codex задал автору один вопрос. Автор ответил тремя репликами (дословно —
+[журнал](../LMX_blog/2026-11-16.md#receiver-creates-structure)): имя s называет строго Structure, созданную
+ресивером, а не запись объявления и её скобки; такие случаи — следствия общих механизмов, отдельных
+разрешений, запретов и поддержки сочетаний не вводить; в call можно передать любую Structure, костыли
+«чтобы работало» не нужны. Итог: ни5, ни отказ, ни иное значение нормой не закрепляются, особой ветви для
+вызываемого на месте code нет, поданный объект исполняет общий исполнитель по его фактическим полям;
+необычный результат такого примера сам по себе не дефект. Q1 закрыт и перенесён в
+[архив](../LMX_blog/q/callable-as-code-answered-20261116.md). Q2 о записи required автор закрыл прямым ответом
+исполнителю (дословно — [журнал](../LMX_blog/2026-11-16.md#required-anywhere),
+[архив](../LMX_blog/q/required-anywhere-answered-20261116.md)): required пишется где угодно и в любом объявлении,
+как private:; пометка `required: (int: a)` в заголовке и строка `required: a` в коде — разные пути к одной
+проверке; возможны все сочетания и любое число проверок одной переменной; в data запуска поле сначала
+заполняется аргументами, и если значения нет — ошибка; в code проверка выполняется на той же строке; отдельных
+ходов инициализации при входе в вызываемое нет, кроме подачи аргументов и вызовов по факту; видимости required
+не меняет. Первый вывод Fable, оставлявший только строку в коде и снимавший пометку объявления, автор отверг;
+книга, план, чек-лист, READ.ME, Р29–Р31 и опись M10 исправлены вторично. Вывод исполнителя из слов о видимости:
+пометка срабатывает только там, где её объявление само действует (входное место запуска или достигнутая запись
+кода) и условий связыванию не добавляет. Открытых вопросов автору нет.
+Книга (части вызываемой Structure, ресиверы call и fncall) приведена к этому различению объявления и результата.
+**Указание автора об упрощениях (через Codex, CODEX-FABLE-PC-SIMPLIFICATION-20261116-01; выдержка —
+[журнал](../LMX_blog/2026-11-16.md#l2-has-no-checks)).** Упрощения плана — утверждённые задачи удаления,
+а не оптимизация на потом: на L2 проверок нет вообще. Перепись имён по дереву b795a69d: slot_requirement,
+slot_prepare, slot_fact_copy, slot_fact, slot_admit, emit_publish, emit_publish_table, _dirty и work_flush уже
+удалены (срезы402–409). Остались: проверяющий lmx_value_array_place (6 строк в3 файлах; Lower
+lm_compiler_emit_array_cell эмитит его в машинный путь) — [M13 п.3](../next_core_tasks_v3.md#flat-lmx-descriptor);
+отслеживание правок ради native — lmx_graph_invalidate (11), lmx_graph_code_uses (3), lmx_code_reset_from (8),
+changed_cell (11), LmxCodeLink (26), reset_gen (10) — [M14 п.10](../next_core_tasks_v3.md#explicit-compilation-plan)
+после шага404; eval_index_write (4), index_write (11), work_load (7), work_finish (9) — проверить настоящих
+потребителей. Прямое поручение автора (CODEX-FABLE-PC-SIMPLIFY-NOW-20261116-01): упрощения делаются сразу в
+затронутых частях кода, не откладываются на конец плана. Поэтому удаление проверок индексирования
+(M13 п.3) входит в текущий срез исправлений Д, который уже меняет путь массивов: sonnet — машинный L2-путь
+в Lower (lm_compiler_emit_array_cell, emit_path_index, raw-index lowering) как расчёт смещения без проверяющего
+helper; opus — в Walk от lmx_value_array_place для L3 остаётся одна проверка итогового индекса по length.
+Первоначальная постановка Fable «отдельным срезом после Д, сейчас не трогать» отменена поправками
+FABLE-S410-C и FABLE-O410-F. Правило для каждого среза: меняя участок, в той же правке удалять его отменённое
+обслуживание целиком; защитные ветки «чтобы работало» не добавлять; незатронутые части M13/M14 разом не
+переписывать. Проверка L2 — чтение фактически выпущенного C на отсутствие проверяющих helpers, без матрицы
+индексов и глубин. На момент записи удаление не выполнено: в дереве только исправления Д1 и Д3.
+
+Попутно Codex указал устаревший абзац книги (docs/LMX_semantics.ru.md:748, источник provenance/semantics-book.md:1140):
+«безымянная Structure отдельным оператором остаётся значением данных, её поля не исполняются» — отменено решением
+автора 2026-11-16; исправить в источнике RU/EN вместе с ответом исполнителя Р17 и перегенерировать.
+
 ## 2026-11-16 — Fable: решения автора по норме, итог сверки409, запрет новых ревьюверов
 
 Автор ответил на три вопроса нормы к срезу410 и велел исправить документацию; дословно —

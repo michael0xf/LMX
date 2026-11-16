@@ -2882,34 +2882,18 @@ fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: inde
     return: c.LMX_WALK_OK
 end: lmx_walk_value_field_store
 
+# Slice 410 (plan M13 item 3; the book: L3 access checks only its one final element): an L3 element of an Array
+# checks only its linear index against the current length; the place is the descriptor's cell of the element type.
+# No arena, range, pool, stride or former-field check. A null reference is the caller's general rule.
 fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: index; @: out c.LmxWalkPlace) int
-    int: type 0
-    size_t: stride 0U
-    if: array = 0
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    if: out = 0 || c.lmx_domain_kind(arena, (cast: (@: void) array)) != c.LMX_KIND_ARRAY
-        return: c.LMX_WALK_INVALID
     @: fields c.VoidArray @ array\array
     if: index >= fields\size
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    if: fields\data = 0 || lmx_walk_array_elem_meta((cast: (int) c.lmx_domain_type(arena, (cast: (@: void) array))), @ type, @ stride) = 0
-        return: c.LMX_WALK_INVALID
     out\address := c.lmx_array_cell_in(arena, array, index)
     out\storage := out\address
-    out\type := type
+    out\type := c.lmx_type_element((cast: (int) c.lmx_domain_type(arena, (cast: (@: void) array))))
     out\descriptor := 0
     out\context := c.lmx_pointer_cell_context(arena, out\address)
-    if: out\address = 0 || c.lmx_range_type_of(arena, out\address) != type
-        return: c.LMX_WALK_INVALID
-    if: c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE
-        if: c.lmx_pointer_pool_in(arena, out\address) = 0
-            return: c.LMX_WALK_INVALID
-        ---
-    else:
-        if: c.lmx_range_stride(arena, out\address) != stride
-            return: c.LMX_WALK_INVALID
-        ---
-    ---
     return: c.LMX_WALK_OK
 end: lmx_value_array_place
 
@@ -2943,10 +2927,7 @@ fn: lmx_walk_value_index_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; s
     int: kind
     int: ty
     size_t: stride 0U
-    size_t: offset 0U
     @: target void 0
-    @: owner c.LmxWalkValue 0
-    @: interval c.LmxRange 0
     if: holder = 0 || out = 0 || holder\present = 0
         return: c.LMX_WALK_INVALID
     if: holder\kind != c.LMX_WALK_VALUE_REFERENCE
@@ -2958,31 +2939,17 @@ fn: lmx_walk_value_index_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; s
         return: lmx_value_array_place(arena, (cast: (@: c.LmxArray) holder\ref), index, out)
     if: kind = c.LMX_KIND_STRUCT
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    # A machine pointer's element is a plain offset from it (the book: no length, sign, arena or former-field check).
     status := lmx_walk_value_deref_actual(arena, holder, out)
     if: status != c.LMX_WALK_OK || index = 0U
         return: status
-    owner := holder\referent
-    if: owner != 0 && lmx_walk_value_storage(owner) = holder\ref
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
     ty := c.lmx_type_base((cast: (int) out\type))
     stride := c.lmx_range_stride(arena, holder\ref)
     if: stride = 0U
         stride := lmx_walk_type_size(ty)
-    ---
     if: stride = 0U
         return: c.LMX_WALK_UNSUPPORTED
-    if: index > c.SIZE_MAX / stride
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    offset := index * stride
-    if: (cast: (size_t) holder\ref) > c.SIZE_MAX - offset
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    target := (cast: (@: void) ((cast: (@: char) holder\ref) + offset))
-    interval := c.lmx_range_entry_at(arena, holder\ref)
-    if: interval != 0
-        if: c.lmx_range_entry_at(arena, target) != interval || c.lmx_range_type_of(arena, target) != out\type
-            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-        ---
-    ---
+    target := (cast: (@: void) ((cast: (@: char) holder\ref) + index * stride))
     out\address := target
     out\storage := target
     out\context := c.lmx_value_address_context(arena, target, 0)
@@ -3099,44 +3066,6 @@ fn: lmx_walk_arg_write_witness (@: f c.LmxWalkFrame; size_t: k; int: ty; @: witn
         return: status
     return: lmx_walk_place_load(arena, place, out)
 end: lmx_walk_arg_write_witness
-
-fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) int
-    ulong: ulong_probe 0U
-    size_t: size_probe 0U
-    @: pointer_probe void 0
-    if: out_ety = 0 || out_stride = 0
-        return: 0
-    int: base_type c.lmx_type_base(aty)
-    int: element_type c.lmx_type_element(aty)
-    if: element_type = c.LMX_TYPE_NONE
-        return: 0
-    \out_ety := element_type
-    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
-        \out_stride := c.sizeof(c.char)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
-        \out_stride := c.sizeof(c.char)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_INT
-        \out_stride := c.sizeof(c.int)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
-        \out_stride := c.sizeof(size_probe)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
-        \out_stride := c.sizeof(ulong_probe)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
-        \out_stride := c.sizeof(pointer_probe)
-        return: 1
-    if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
-        \out_stride := c.sizeof(pointer_probe)
-        return: 1
-    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-        \out_stride := c.sizeof(pointer_probe)
-        return: 1
-    return: 0
-end: lmx_walk_array_elem_meta
 
 # One raw native result boundary: absent witness is not a present null reference.
 fn: lmx_walk_native_result_context (@: f c.LmxWalkFrame; @: witness void; @: raw void; @: out c.LmxWalkValue; @: context c.LmxWalkValue) int
@@ -3760,12 +3689,9 @@ fn: lmx_walk_entry_node (@: f c.LmxWalkFrame; @: operand c.Lmx; @@: entries c.Lm
             ---
         ---
     ---
+    # Slice 410 (D3): nested control bodies are prepared like the rest of the body. The rule above already keeps
+    # their future CODE declarations out (rows only for the DATA holder); the DATA roots they read are captured here.
     while: i < operand_fields\size
-        # A nested control body has its own reached scope. Preparing this
-        # activation must not expose its future CODE declarations.
-        if: load != 0 && (((op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_UNTIL || op = c.LMX_WALK_OP_FOR) && i = 2U) || (op = c.LMX_WALK_OP_FOR && i = 3U) || (op = c.LMX_WALK_OP_ELSE && i = 1U) || (op = c.LMX_WALK_OP_PAD && i + 1U = operand_fields\size))
-            i := i + 1U
-            continue
         child := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, i)
         if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT
             @: nested c.Lmx (cast: (@: c.Lmx) child)
@@ -7773,6 +7699,84 @@ fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
     return: lmx_walk_selected_ready_values(f, code, callee, inputs, binding_p, first, transport_count, written_count, sources, width, written, refs_out, values_out, out_count, 0, 0U)
 end: lmx_walk_selected_values
 
+# Slice 410 (D1; the book #private-binding: an explicit actual takes the attribute of the field that receives it): the
+# canonical origin and the private mark of formal input `index` of a callable's args header -- its own header cell,
+# exactly what a generated native call passes (lm_compiler_emit_dyn_tail_origins: l2_cor, l2_cpr).  A hidden input
+# keeps no origin here; its entry or its held capture resolves one.  The one reader of both executors' rows.
+fn: lmx_walk_input_origin (@: arena c.LmxArena; @: inputs c.Lmx; size_t: index; @@: origin void; @: binding_private int) int
+    @@: cell void 0
+    @: metadata c.LmxSourceName 0
+    size_t: physical (cast: (size_t) -1)
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: origin = 0 || binding_private = 0
+        return: c.LMX_WALK_INVALID
+    origin[0] := 0
+    binding_private[0] := 0
+    if: lmx_walk_args_formal(arena, inputs, index) = 0
+        return: c.LMX_WALK_OK
+    if: c.lmx_implements_exec_slot(arena, inputs, index, @ physical, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_OK
+    cell := c.lmx_graph_ref_cell_in(arena, inputs, physical)
+    origin[0] := (cast: (@: void) cell)
+    metadata := c.lmx_source_places(arena, (cast: (@: void) cell))
+    if: metadata != 0
+        binding_private[0] := metadata\binding_private
+    return: c.LMX_WALK_OK
+end: lmx_walk_input_origin
+
+# The origins of the selected callable's count inputs for an ordinary call of the walk (lmx_walk_call_in); the
+# arrays come from the caller's scratch and live through the call.
+fn: lmx_walk_input_origins (@: f c.LmxWalkFrame; @: callee c.Lmx; size_t: count; @@@: out_origins void; @@: out_private int) int
+    @: context c.LmxWalkContext 0
+    @: scratch c.LmxScratch 0
+    @: inputs c.Lmx 0
+    @: room void 0
+    @@: origins void 0
+    @: private_flags int 0
+    size_t: i 0U
+    int: scratch_status
+    int: status
+    if: out_origins = 0 || out_private = 0
+        return: c.LMX_WALK_INVALID
+    out_origins[0] := 0
+    out_private[0] := 0
+    if: f = 0 || f\context = 0
+        return: c.LMX_WALK_INVALID
+    if: count = 0U
+        return: c.LMX_WALK_OK
+    status := lmx_walk_selected_inputs(f, callee, @ inputs)
+    if: status != c.LMX_WALK_OK
+        return: status
+    context := (cast: (@: c.LmxWalkContext) f\context)
+    scratch := (cast: (@: c.LmxScratch) context\scratch)
+    if: scratch = 0
+        return: c.LMX_WALK_INVALID
+    if: count > (cast: (size_t) -1) / sizeof(room) || count > (cast: (size_t) -1) / c.sizeof(c.int)
+        return: c.LMX_WALK_NOMEM
+    scratch_status := c.lmx_scratch_take(scratch, count * sizeof(room), @ room)
+    if: scratch_status != c.LMX_SCRATCH_OK || room = 0
+        if: scratch_status = c.LMX_SCRATCH_NOMEM
+            return: c.LMX_WALK_NOMEM
+        return: c.LMX_WALK_INVALID
+    origins := (cast: (@@: void) room)
+    c.memset(room, 0, count * sizeof(room))
+    scratch_status := c.lmx_scratch_take(scratch, count * c.sizeof(c.int), @ room)
+    if: scratch_status != c.LMX_SCRATCH_OK || room = 0
+        if: scratch_status = c.LMX_SCRATCH_NOMEM
+            return: c.LMX_WALK_NOMEM
+        return: c.LMX_WALK_INVALID
+    private_flags := (cast: (@: int) room)
+    c.memset(room, 0, count * c.sizeof(c.int))
+    while: i < count
+        status := lmx_walk_input_origin((cast: (@: c.LmxArena) f\arena), inputs, i, origins + i, private_flags + i)
+        if: status != c.LMX_WALK_OK
+            return: status
+        i := i + 1U
+    out_origins[0] := origins
+    out_private[0] := private_flags
+    return: c.LMX_WALK_OK
+end: lmx_walk_input_origins
+
 fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) int
     @: callee c.Lmx 0
     @: data c.Lmx 0
@@ -7783,6 +7787,9 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     @: header_source void 0
     @@: refs void 0
     @: values c.LmxWalkValue 0
+    @@: input_origins void 0
+    @: input_private int 0
+    size_t: origin_count 0U
     size_t: n 0U
     size_t: arg_at 5U
     size_t: contract_count 0U
@@ -7903,6 +7910,13 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
             status := lmx_walk_actuals_values(f, code, arg_at, n, inputs, callee, 0, @ refs, @ values)
         ---
     ---
+    # Slice 410 (D1): the inputs carry the origin and private mark of their receiving fields into the callee's
+    # activation, as a native caller hands them (lmx_walk_input_origins).
+    if: status = c.LMX_WALK_OK && selected_signature != 0 && n != 0U
+        status := lmx_walk_input_origins(f, callee, n, @ input_origins, @ input_private)
+        if: input_origins != 0
+            origin_count := n
+        ---
     if: status = c.LMX_WALK_OK && selected_signature != 0
         # Source edge1 must be an ordinal return edge, not the LAST half
         # of a one-edge projection. Re-read after actual operand effects.
@@ -7956,7 +7970,7 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     ---
     if: status = c.LMX_WALK_OK
         called := 1
-        status := lmx_walk_dispatch_values(f, code, callee, data, refs, n, values, rtype, split_call, out, 0, 0, 0U)
+        status := lmx_walk_dispatch_values(f, code, callee, data, refs, n, values, rtype, split_call, out, input_origins, input_private, origin_count)
     ---
     # The receiving CALL contract owns result presence in both dispatch modes.
     # A void body may execute valued statements, but does not return their value.
@@ -8334,6 +8348,13 @@ fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxW
         if: status != c.LMX_WALK_OK
             return: status
         work := lmx_walk_work_find(f, slot)
+        # Slice 410 (D2): a reached declaration without a candidate -- the IMPLICIT statement lm_compiler_rw_stmt marks --
+        # is the CODE declaration itself; like a reached SET it creates its local binding in the code. A read never does.
+        if: work = 0 && lmx_walk_source_of(f, code) = c.LMX_WALK_SOURCE_IMPLICIT && lmx_walk_inside(f, (cast: (@: c.Lmx) f\code), (cast: (@: void) wholder)) != 0 && lmx_walk_inside(f, (cast: (@: c.Lmx) f\source), (cast: (@: void) wholder)) = 0 && lmx_walk_inside(f, (cast: (@: c.Lmx) f\node), (cast: (@: void) wholder)) = 0
+            status := lmx_walk_work_make(f, code, wholder, index, slot)
+            if: status != c.LMX_WALK_OK
+                return: status
+            work := lmx_walk_work_find(f, slot)
         if: work = 0
             return: c.LMX_WALK_INVALID
         c.memcpy((cast: (@: void) out), (cast: (@: void) (@ work\value)), c.sizeof(c.LmxWalkValue))
@@ -9427,6 +9448,10 @@ fn: lmx_walk_call_rows (@: arena c.LmxArena; @: code c.Lmx; @@: source_refs void
     ---
     while: status = c.LMX_WALK_OK && i < width
         @: item c.LmxWalkValue (values + i)
+        # Slice 410 (D1): each formal carries the origin and private mark of its receiving header field.
+        status := lmx_walk_input_origin(arena, args, i, origins + i, private_flags + i)
+        if: status != c.LMX_WALK_OK
+            return: status
         if: lmx_activation_input_formal(arena, code, i) = 0
             if: i < written
                 return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL

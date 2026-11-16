@@ -1,0 +1,25 @@
+# The locals of an anonymous block closed by until live until its condition is evaluated.
+# Norm: docs/LMX_semantics.ru.md (while/until paragraph: the body runs, then the condition decides) and the condition sees the
+# block's own fields (graph/post_loop.lm2 body_fields; comment before lm_compiler_block_until in l2_frontend_lower).
+# peek() reads the free name t: the dynamic binding of the caller's body local t = 5 comes before the lexical root t = 100.
+# The condition holds after the first turn: n = 1. A lost binding gives peek() = 100 and the guard stops the loop at n = 3 (code 83).
+int: t 100
+fn: peek () int
+    return: t
+end: peek
+
+fn: probe_d4 () int
+    int: n 0
+    ---
+        int: t 5
+        n := n + 1
+    until: peek() = 5 || n >= 3
+    if: n = 3
+        return: 83
+    if: n != 1
+        return: 84
+    return: n + 6
+end: probe_d4
+
+send: exit(exit_code: probe_d4(); stdout: ""; stderr: "")
+return

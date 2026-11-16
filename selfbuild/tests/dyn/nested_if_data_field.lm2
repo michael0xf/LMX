@@ -1,0 +1,18 @@
+# A field of the own written DATA of the method, read only inside a nested if body.
+# Entry preparation must not make the field unreachable: native and forced give k + 2 = 7. Claimed regression against 30b4564e.
+# Norm: docs/LMX_semantics.ru.md#method-parts -- the written data of a callable is its input description, available to its code.
+fn: only_nested () int (int: k 5)
+    if: 1
+        return: k + 2
+    return: 0
+end: only_nested
+
+fn: probe_d3 () int
+    int: got only_nested()
+    if: got != 7
+        return: 83
+    return: 7
+end: probe_d3
+
+send: exit(exit_code: probe_d3(); stdout: ""; stderr: "")
+return

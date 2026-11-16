@@ -1,0 +1,21 @@
+# Control for the until body locals probe: the same loop, but t is declared BEFORE the block, so the binding outlives every turn. n = 1.
+int: t 100
+fn: peek () int
+    return: t
+end: peek
+
+fn: probe_d4c () int
+    int: t 5
+    int: n 0
+    ---
+        n := n + 1
+    until: peek() = 5 || n >= 3
+    if: n = 3
+        return: 83
+    if: n != 1
+        return: 84
+    return: n + 6
+end: probe_d4c
+
+send: exit(exit_code: probe_d4c(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,11 @@
+# Micro-probe of a CODE-local Array: read through a pointer to an element in the walker. Expected 7.
+fn: probe_e3_pointer_read () int
+    []: int quote 3
+    quote[0U] := 4
+    quote[1U] := 4
+    @: q int @ quote[0U]
+    return: q[1U] + 3
+end: probe_e3_pointer_read
+
+send: exit(exit_code: probe_e3_pointer_read(); stdout: ""; stderr: "")
+return

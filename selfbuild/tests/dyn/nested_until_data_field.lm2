@@ -1,0 +1,18 @@
+# The own DATA field is read only in the body of an anonymous block closed by until (one turn). 5 + 2 = 7.
+fn: only_until () int (int: k 5)
+    int: r 0
+    ---
+        r := k + 2
+    until: 1
+    return: r
+end: only_until
+
+fn: probe_d3u () int
+    int: got only_until()
+    if: got != 7
+        return: 83
+    return: 7
+end: probe_d3u
+
+send: exit(exit_code: probe_d3u(); stdout: ""; stderr: "")
+return

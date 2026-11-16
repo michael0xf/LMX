@@ -475,20 +475,21 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
     @@: own_fchild_cell int (cast: (@@: int) (@ c.l2_own_fchild))
     @@: own_uchild_cell int (cast: (@@: int) (@ c.l2_own_uchild))
     @: host c.LmP0Node c.lm_compiler_scope_host()
+    @: activation_host c.LmP0Node 0
     int: i
     int: prior 0
+    int: repeated -1
+    int: lexical 0
     if: mi < 0 || (t = 0 && at = 0)
         if: c.lm_compiler_error(path, at, "incompatible entry signature") != 0
             return: (cast: (int) (-1))
         return: (cast: (int) (-1))
-    # Slice 295 (VAR-OWN-NESTED-AND-REFERENCE; the book, docs/LMX_semantics.ru.md :133, :387, :422, :424, :441): in a method with
-    # parts (a `fn`, a `sub`) an inline statement -- `if`, `else`, `while`, `for`, an anonymous body -- opens no binding area: the
-    # depth of a declaration chooses no other place and shadows nothing, so its row is the activation's one row of that name.
-    # A catch keeps its own host for its parameters and own fields (lm_compiler_own_same_activation; Codex 295 (c)).  The rule
-    # has no exception in the norm (Codex 295): a machine function still keeps its C block scopes (MACHINE-NO-SHADOW), the
-    # file's root and an `fm` their nested hosts (ROOT-FILE-INLINE-DATA, VAR-OWN-NESTED-AND-REFERENCE) -- open debts.
+    # own_mi identifies the activation; host retains the declaration's actual
+    # lexical scope. Repeating a visible place reuses it, while a new name in
+    # a sibling or earlier scope must retain its own source field and origin.
     if: c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_fn_parts_on(mi) != 0
-        host := lm_compiler_own_activation_host()
+        lexical := 1
+        activation_host := lm_compiler_own_activation_host()
     # RR2c-3: the hidden row of a returned merge is named by the statement's own word, `return` (l2_return_merge): no
     # program binds a word of the language, so no written name reaches the row; the admission is for written names.
     # An unnamed source field has a place by occurrence, without a binding.
@@ -507,22 +508,31 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
         if: own_decl_cell[0][i] = at && c.lm_compiler_own_nsty_set(i, lm_compiler_declaration_model(at, 0)) != 0
             return: (cast: (int) (-1))
         return: (cast: (int) (i))
-    # Only the host participates: the immediately enclosing body, or the activation in a method with parts (above).  A
-    # nested body of another host may shadow the name with its own first field.
+    # The exact source-to-place association above survives later passes. For a
+    # new source, choose the nearest already visible declaration, preserving
+    # its receiving type, origin and private attribute. Machine hosts keep
+    # their previous same-host reception rule.
     if: t != 0 && c.lm_compiler_frame_head(at, "return") = 0
         while: prior < own_n_cell[0]
-            if: own_mi_cell[0][prior] = mi && own_host_cell[0][prior] = host && own_decl_cell[0][prior] != at && c.lm_compiler_text_same(own_name_cell[0][prior], t) != 0
-                # Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483; Codex 295 review): a repeat
-                # of another number type neither redeclares the place nor makes a second field -- the check pass gives
-                # its candidate to the place by the ordinary reception (lm_compiler_check_repeat_type).  A repeat whose
-                # place or written type is no number keeps this refusal: a limit of the implementation, OPEN.
-                if: own_ty_cell[0][prior] != ty && lm_compiler_repeat_receives(own_ty_cell[0][prior], ty) = 0
-                    c.lm_compiler_error(path, c.lm_compiler_bind_at(at, t), "assignment value has incompatible type")
-                    return: (cast: (int) (-1))
-                if: lm_compiler_own_reuse_add(mi, at, prior, path) != 0
-                    return: (cast: (int) (-1))
-                return: (cast: (int) (prior))
+            if: own_mi_cell[0][prior] = mi && own_decl_cell[0][prior] != at && c.lm_compiler_text_same(own_name_cell[0][prior], t) != 0
+                if: lexical = 0 && own_host_cell[0][prior] = host
+                    repeated := prior
+                    break
+                if: lexical != 0 && (activation_host = 0 || c.lm_compiler_node_in(activation_host, own_decl_cell[0][prior]) != 0) && c.lm_compiler_own_source_visible(prior, mi, at) != 0 && c.lm_compiler_own_binding_after(prior, repeated) != 0
+                    repeated := prior
+                ---
+            ---
             prior := prior + 1
+        ---
+        if: repeated >= 0
+            # A repeat of another number type receives into the same place.
+            # Other unsupported type changes keep their existing refusal.
+            if: own_ty_cell[0][repeated] != ty && lm_compiler_repeat_receives(own_ty_cell[0][repeated], ty) = 0
+                c.lm_compiler_error(path, c.lm_compiler_bind_at(at, t), "assignment value has incompatible type")
+                return: (cast: (int) (-1))
+            if: lm_compiler_own_reuse_add(mi, at, repeated, path) != 0
+                return: (cast: (int) (-1))
+            return: repeated
         ---
     ---
     if: own_n_cell[0] >= c.INT_MAX
@@ -2418,7 +2428,11 @@ fn: lm_compiler_own_work_store_context (int: k0; const: (@: ind char); const: (@
         if: lm_compiler_emit_call_value_record(c.lm_compiler_value_ft_of_own(ty), 0, (cast: (const: @: char) (cq_name\data)), -1, ind, (cast: (const: @: char) (owner\data))) != 0
             return: (cast: (int) (1))
         # The shared numeric packer leaves its failure arm open for the caller.
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%s    return: 0\n%s---\n%s%s_dirty: 1\n", ind, ind, ind, cq_name\data) < 0))))
+        if: c.fprintf(out_cell[0], "%s    return: 0\n%s---\n", ind, ind) < 0
+            return: 1
+        if: c.lm_compiler_own_code_local(work_mi_cell[0], k) != 0 && c.lm_compiler_emit_work_binding(k, ind) != 0
+            return: 1
+        return: 0
     ---
     if: c.lm_compiler_own_is_pointer(ty) = 0 || c.lm_compiler_tx_join(cell, "(@ ", (cast: (const: @: char) (cq_name\data)), ")", 0, 0) != 0 || c.lm_compiler_tx_set(owner, "(@ ") != 0 || c.lm_compiler_tx_own_cname(owner, "l2_wv", k, ")") != 0
         return: (cast: (int) (1))
@@ -2428,11 +2442,13 @@ fn: lm_compiler_own_work_store_context (int: k0; const: (@: ind char); const: (@
     # payload. Keep the already emitted working Value in sync with its C q.
     if: c.lm_compiler_tx_own_cname(txt, "l2_wv", k, "") != 0 || c.fprintf(out_cell[0], "%s%s.present: 1\n%s%s.kind: c.LMX_WALK_VALUE_REFERENCE\n%s%s.ref: (cast: (@: void) %s)\n", ind, txt\data, ind, txt\data, ind, txt\data, cq_name\data) < 0
         return: 1
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%s%s_dirty: 1\n", ind, cq_name\data) < 0))))
+    if: c.lm_compiler_own_code_local(work_mi_cell[0], k) != 0 && c.lm_compiler_emit_work_binding(k, ind) != 0
+        return: 1
+    return: 0
 end: lm_compiler_own_work_store_context
 
-# Store a captured result in this activation's working cell. Publication still
-# belongs to the existing dirty boundary; a typed pointer uses its C ABI writer.
+# Store a captured result in this activation's independent working cell.
+# A typed pointer uses its existing exact C ABI writer.
 fn: lm_compiler_own_work_store_value (int: mi; int: k0; const: (@: ind char); const: (@: value_record char)) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
     @: work_mi_cell int (cast: (@: int) (@ c.l2_work_mi))
@@ -2490,7 +2506,9 @@ fn: lm_compiler_own_work_store_value (int: mi; int: k0; const: (@: ind char); co
         return: 1
     if: c.fprintf(out_cell[0], "%sint: l2_ows%d lmx_walk_value_store_with_writer(l2_program_arena, @ l2_owp%d, @ l2_owv%d, %s)\n%sif: l2_ows%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ows%d)\n%s    return: 0\n%s---\n", ind, t, t, t, writer, ind, t, ind, t, ind, ind) < 0
         return: 1
-    if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ %s)), (cast: (@: void) (@ l2_owv%d)), c.sizeof(c.LmxWalkValue))\n%s%s_dirty: 1\n", ind, wv\data, t, ind, q\data) < 0
+    if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ %s)), (cast: (@: void) (@ l2_owv%d)), c.sizeof(c.LmxWalkValue))\n", ind, wv\data, t) < 0
+        return: 1
+    if: c.lm_compiler_own_code_local(mi, k) != 0 && c.lm_compiler_emit_work_binding(k, ind) != 0
         return: 1
     return: 0
 end: lm_compiler_own_work_store_value
@@ -5272,10 +5290,12 @@ fn: lm_compiler_emit_loop_exit (int: closed; const: (@: ind char)) int
     @: deep char 0
     if: c.lm_compiler_roots_enabled(cur_mi_cell[0]) != 0 && c.lm_compiler_bump_ind(ind, @ deep) != 0
         return: 1
-    if: lp_n_cell[0] > 0
-        topk := lpk_cell[0][lp_n_cell[0] - 1]
-        top := lpp_cell[0][lp_n_cell[0] - 1]
+    i := c.lm_compiler_lp_control_index()
+    if: i >= 0
+        topk := lpk_cell[0][i]
+        top := lpp_cell[0][i]
     ---
+    i := 0
     while: i < lp_n_cell[0]
         if: lpk_cell[0][i] = 1 && topk = 1 && lpp_cell[0][i] = top
             if: c.fprintf(out_cell[0], "%sif: l2_go%d != 0\n%s    l2_go%d: 0\n", ind, top, ind, top) < 0 || c.lm_compiler_emit_roots_loop_restore(cur_mi_cell[0], deep, topk, top) != 0 || c.fprintf(out_cell[0], "%s    continue\n", ind) < 0
@@ -5512,10 +5532,20 @@ fn: lm_compiler_emit_body_with_position (const: (@: body c.LmP0Structure); int: 
     @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
     int: s0 bseq_n_cell[0]
     int: k 0
+    int: binding_scope -1
     if: empty_body != 0
         emitted_from := (cast: (c.long) c.ftell(out_cell[0]))
+    if: c.lm_compiler_emit_bindings_mark(mi, ind, @ binding_scope) != 0
+        return: 1
+    if: binding_scope >= 0 && lm_compiler_lp_push(2, binding_scope) != 0
+        return: 1
     if: lm_compiler_emit_body_in(body, mi, ind) != 0
         return: (cast: (int) (1))
+    if: c.lm_compiler_emit_bindings_restore(mi, ind, binding_scope) != 0
+        return: 1
+    if: binding_scope >= 0
+        lm_compiler_lp_pop()
+    ---
     while: k < own_n_cell[0]
         if: own_bseq_cell[0][k] > s0 && c.lm_compiler_host_is_body(own_host_cell[0][k], body) != 0
             own_bseq_cell[0][k] := 0
@@ -5657,8 +5687,6 @@ fn: lm_compiler_emit_throw (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind
     ---
     # §7b: the throw is an exit -- its payload is evaluated above, and what is marked is published before it leaves
     # (book §14).
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     if: n > 0 && c.fprintf(out_cell[0], "%sl2_out_throw[0]: l2_tp%d\n%sreturn: %d\n", ind, t, ind, pos) < 0
         return: (cast: (int) (1))
     if: n = 0 && c.fprintf(out_cell[0], "%sl2_out_throw[0]: 0\n%sreturn: %d\n", ind, ind, pos) < 0
@@ -7526,7 +7554,7 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
     if: full\data[0] != 0
         if: req >= 0 && c.lm_compiler_emit_model_admit_record_core(mi, req, @ source, (cast: (const: @: char) tok_cell[0]\data), ind, 1, 0, -1, at_mi, at_mi, -1, 0, 0, 0, 0, -1, (cast: (const: @: char) full\data)) != 0
             return: 1
-        if: c.lm_compiler_emit_publish(ind) != 0 || lm_compiler_emit_poll(mi, ind) != 0
+        if: lm_compiler_emit_poll(mi, ind) != 0
             return: 1
         t := tn_cell[0]
         tn_cell[0] := t + 1
@@ -7563,7 +7591,7 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
         return: 1
     if: req < 0 && cls = 5 && c.lm_compiler_emit_result_context(result_context, ind) != 0
         return: 1
-    if: c.lm_compiler_emit_publish(ind) != 0 || lm_compiler_emit_poll(mi, ind) != 0
+    if: lm_compiler_emit_poll(mi, ind) != 0
         return: 1
     if: c.fprintf(out_cell[0], "%sif: l2_result_context != 0\n%s    l2_result_context\\present: 1\n%s---\n%sl2_out_result[0]: %s\n%sreturn: 0\n", ind, ind, ind, ind, tok_cell[0]\data, ind) < 0
         return: 1
@@ -7893,6 +7921,8 @@ fn: lm_compiler_hidden_from_context_record (int: mi; int: callee; int: k; int: c
         return: (cast: (int) (lm_compiler_cap_host_src_context(mi, nm, ind, dest, context)))
     pi := -1
     pi := c.lm_compiler_param_find(mi, nm)
+    if: pi >= 0 && pi < m_arity_cell[0][mi] && c.lm_compiler_binding_private((cast: (const: @: c.LmP0Node) c.lm_compiler_formal_decl_at(mi, pi))) != 0
+        pi := -1
     if: pi >= 0
         if: computed_record != 0
             status := lm_compiler_tok_formal_context_full(mi, pi, ind, dest, context, full)
@@ -7903,10 +7933,12 @@ fn: lm_compiler_hidden_from_context_record (int: mi; int: callee; int: k; int: c
         return: (cast: (int) (lm_compiler_tok_formal_context(mi, pi, ind, dest, context)))
     ---
     oi := -1
-    oi := c.lm_compiler_own_visible(mi, nm)
+    oi := c.lm_compiler_own_dynamic_visible(mi, nm)
     fi := -1
     if: oi >= 0 && m_uses_cell[0][c.lm_compiler_own_off(mi, oi)] != 0
         fi := m_alias_cell[0][c.lm_compiler_own_off(mi, oi)]
+    if: fi >= 0 && fi < m_arity_cell[0][mi] && c.lm_compiler_binding_private((cast: (const: @: c.LmP0Node) c.lm_compiler_formal_decl_at(mi, fi))) != 0
+        fi := -1
     if: fi >= 0
         if: computed_record != 0
             status := lm_compiler_tok_formal_context_full(mi, fi, ind, dest, context, full)
@@ -7927,6 +7959,18 @@ fn: lm_compiler_hidden_from_context_record (int: mi; int: callee; int: k; int: c
         if: computed_record != 0
             return: lm_compiler_hidden_copy_record(ind, computed_record, record_written, full, dest)
         return: (cast: (int) (0))
+    ---
+    # A private dynamic source is skipped, but its exact lexical binding
+    # remains the caller's live local, independently of the source graph.
+    oi := c.lm_compiler_own_lexical(callee, nm)
+    if: oi >= 0 && c.lm_compiler_own_visible(mi, nm) = oi && m_uses_cell[0][c.lm_compiler_own_off(mi, oi)] != 0
+        if: computed_record != 0
+            status := lm_compiler_own_load_context_full(oi, mi, ind, dest, context, full)
+            if: status != 0
+                return: status
+            return: lm_compiler_hidden_copy_record(ind, computed_record, record_written, full, dest)
+        ---
+        return: lm_compiler_own_load_context(oi, mi, ind, dest, context)
     ---
     # No caller binding: use the declaration in the selected callee's lexical
     # node.  This is deliberately after declared and inherited caller inputs,
@@ -8103,6 +8147,7 @@ fn: lm_compiler_emit_native_input_default (int: mi; int: fi; int: ft; const: (@:
     int: t
     int: status
     @: deep char 0
+    @: default_ind char 0
     c.L2FrontendScratchChar96: type_storage
     @: type char (cast: (@: char) type_storage\buffer)
     c.L2FrontendScratchChar64: record_storage
@@ -8152,6 +8197,15 @@ fn: lm_compiler_emit_native_input_default (int: mi; int: fi; int: ft; const: (@:
     ---
     if: c.fprintf(out_cell[0], "%s@@: void l2_dfs%d lmx_graph_ref_cell_in(l2_call_arena, l2_dfh%d, %uU)\n%sif: l2_dfs%d = 0\n%s    l2_dfi%d\\present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, t, t, (cast: (unsigned) slot), deep, t, deep, t, deep, deep, deep) < 0
         return: 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dfv%d\n%slmx_walk_value_clear(@ l2_dfv%d)\n%sint: l2_dft%d c.LMX_WALK_OK\n%s@: void l2_dfo%d (cast: (@: void) l2_dfs%d)\n%sint: l2_dfprivate%d 0\n%s@: LmxActivation l2_dfa%d (cast: (@: LmxActivation) l2_call_arena\\activation)\n%s@: LmxActivation l2_dfparent%d 0\n", deep, t, deep, t, deep, t, deep, t, t, deep, t, deep, t, deep, t) < 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_dfa%d != 0\n%s    l2_dfparent%d: l2_dfa%d\\parent\n%s---\n%sint: l2_dflive%d lmx_activation_resolve_origin(l2_call_arena, l2_dfparent%d, 0U, @ l2_dfv%d, @ l2_dfo%d, @ l2_dfprivate%d, 2)\n%sif: l2_dflive%d = 0\n", deep, t, deep, t, t, deep, deep, t, t, t, t, t, deep, t) < 0
+        return: 1
+    default_ind := deep
+    if: c.lm_compiler_bump_ind(default_ind, @ deep) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sl2_dfo%d: (cast: (@: void) l2_dfs%d)\n%s@: LmxSourceName l2_dfmeta%d lmx_source_places(l2_call_arena, l2_dfo%d)\n%sif: l2_dfmeta%d != 0\n%s    l2_dfprivate%d: l2_dfmeta%d\\binding_private\n%s---\n", deep, t, t, deep, t, t, deep, t, deep, t, t, deep) < 0
+        return: 1
     if: array_source != 0 || graph_source != 0
         if: c.snprintf(selected, 64U, "l2_dfs%d", t) < 0 || c.snprintf(place, 64U, "l2_dfp%d", t) < 0 || c.snprintf(select_status, 64U, "l2_dfps%d", t) < 0 || lm_compiler_emit_selected_graph_place("l2_call_arena", selected, array_source, deep, place, select_status) != 0
             return: 1
@@ -8172,9 +8226,14 @@ fn: lm_compiler_emit_native_input_default (int: mi; int: fi; int: ft; const: (@:
             return: 1
         ---
     ---
-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dfv%d\n%sint: l2_dft%d lmx_walk_place_load(l2_call_arena, @ l2_dfp%d, @ l2_dfv%d)\n%sl2_dfi%d\\present: 0\n%sif: l2_dft%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dft%d)\n%s    return: 0\n%s---\n", deep, t, deep, t, t, t, deep, t, deep, t, deep, t, deep, deep) < 0
+    if: c.fprintf(out_cell[0], "%sl2_dft%d: lmx_walk_place_load(l2_call_arena, @ l2_dfp%d, @ l2_dfv%d)\n%sif: l2_dft%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dft%d)\n%s    return: 0\n%s---\n", deep, t, t, t, deep, t, deep, t, deep, deep) < 0
         return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sl2_dfi%d\\present: 0\n", default_ind, default_ind, t) < 0
+        return: 1
+    deep := default_ind
     if: lm_compiler_emit_native_input_store(mi, fi, ft, deep, record, 1) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_dfa%d != 0 && %dU < l2_dfa%d\\origin_count && l2_dfa%d\\input_origins != 0 && l2_dfa%d\\input_private != 0\n%s    @@: void l2_dfos%d l2_dfa%d\\input_origins\n%s    @: int l2_dfps%d l2_dfa%d\\input_private\n%s    l2_dfos%d[%d]: l2_dfo%d\n%s    l2_dfps%d[%d]: l2_dfprivate%d\n%s---\n", deep, t, fi, t, t, t, deep, t, t, deep, t, t, deep, t, fi, t, deep, t, fi, t, deep) < 0
         return: 1
     if: c.fprintf(out_cell[0], "%s---\n", ind) < 0
         return: 1
@@ -11209,8 +11268,6 @@ fn: lm_compiler_prep_context_full (const: (@: source_node c.LmP0Node); int: mi; 
         ---
         if: c.lm_compiler_tok_tx(s1, (cast: (const: @: c.LmP0Text) (port_call\head))) != 0 || c.lm_compiler_tx_join(dest, (cast: (const: @: char) (s1\data)), "(", (cast: (const: @: char) (s0\data)), ")", 0) != 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory")))
-        if: c.lm_compiler_emit_publish(ind) != 0
-            return: (cast: (int) (1))
         return: (cast: (int) (0))
     ---
     raw_status := 2
@@ -11487,10 +11544,10 @@ fn: lm_compiler_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: s
         full_record := 0
         if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0
             full_record := (cast: (int) (c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(hid, m_arity_cell[0][hid] + ai))) = 0))
-        # Slice 254 (design 4.5 B1): a free input without a schema or capture is not formed here -- the callee resolves it
-        # once at its entry from the chain of activation records (lmx_activation_resolve_input); the record travels marked
-        # LMX_WALK_VALUE_FREE, absent until then.  An input with a schema (a model, a capture) keeps the formed path.
-        if: full_record != 0 && c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(hid, m_arity_cell[0][hid] + ai)) != 0
+        # Selection of an ordinary hidden input belongs to the common entry
+        # resolver, including private eligibility and the selected origin.
+        # Opaque by-value C inputs retain their existing typed ABI adapter.
+        if: full_record != 0
             if: c.lm_compiler_tx_set(c.lm_compiler_act_tx(hides, ai), "ABSENT") != 0 || c.fprintf(out_cell[0], "%slmx_walk_value_free_mark(%s)\n", ind, value_record) < 0
                 return: (cast: (int) (1))
             ai := ai + 1
@@ -11530,16 +11587,21 @@ fn: lm_compiler_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: se
     @: value_dest char (cast: (@: char) value_dest_storage\buffer)
     c.L2FrontendScratchChar64: input_span_storage
     @: input_span char (cast: (@: char) input_span_storage\buffer)
-    # §7b: control passes to another callable -- the actuals and hidden inputs are evaluated above, so what is marked
-    # is published now, before the call (book §12, the `9 0` order).
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
+    c.L2FrontendScratchChar64: origins_storage
+    @: origins char (cast: (@: char) origins_storage\buffer)
+    c.L2FrontendScratchChar64: flags_storage
+    @: flags char (cast: (@: char) flags_storage\buffer)
+    # Ready actuals and hidden input markers share the reached call boundary.
     # Selection is complete. Every occurrence now uses the same typed transport
     # and dispatches by its actual native word, independently of selector syntax.
     if: nact + nhid > 0 && c.fprintf(out_cell[0], "%s[]: @(void) l2_cfr%d %d\n", ind, t, nact + nhid) < 0
         return: (cast: (int) (1))
     if: nact + nhid > 0 && c.fprintf(out_cell[0], "%s[]: LmxWalkValue l2_cav%d %d\n", ind, t, nact + nhid) < 0
         return: (cast: (int) (1))
+    if: nact + nhid > 0 && c.fprintf(out_cell[0], "%s[]: @(void) l2_cor%d %d\n%s[]: int l2_cpr%d %d\n%sc.memset((cast: (@: void) l2_cor%d), 0, c.sizeof(l2_cor%d))\n%sc.memset((cast: (@: void) l2_cpr%d), 0, c.sizeof(l2_cpr%d))\n", ind, t, nact + nhid, ind, t, nact + nhid, ind, t, t, ind, t, t) < 0
+        return: 1
+    if: nact > 0 && c.fprintf(out_cell[0], "%s@: Lmx l2_cih%d lmx_graph_ref_struct_in(l2_call_arena, l2_c%d, lmx_implements_exec_index(l2_call_arena, l2_c%d, lmx_callable_part(l2_call_arena, l2_c%d, 0U)))\n", ind, t, self_t, self_t, self_t) < 0
+        return: 1
     if: c.lm_compiler_emit_roots_values(mi, ind, "l2_call_arena", "l2_cav", t, nact + nhid, 1, 1) != 0
         return: 1
     ai := 0
@@ -11552,6 +11614,8 @@ fn: lm_compiler_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: se
             return: (cast: (int) (1))
         if: c.fprintf(out_cell[0], "%s%s: lmx_walk_value_storage(%s)\n", ind, ref_dest, value_dest) < 0
             return: (cast: (int) (1))
+        if: c.fprintf(out_cell[0], "%sl2_cor%d[%d]: (cast: (@: void) lmx_graph_ref_cell_in(l2_call_arena, l2_cih%d, lmx_implements_exec_index(l2_call_arena, l2_cih%d, %dU)))\n%s@: LmxSourceName l2_cpm%d_%d lmx_source_places(l2_call_arena, l2_cor%d[%d])\n%sif: l2_cpm%d_%d != 0\n%s    l2_cpr%d[%d]: l2_cpm%d_%d\\binding_private\n%s---\n", ind, t, ai, t, t, ai, ind, t, ai, t, ai, ind, t, ai, ind, t, ai, t, ai, ind) < 0
+            return: 1
         ai := ai + 1
     ai := 0
     while: ai < nhid
@@ -11565,9 +11629,13 @@ fn: lm_compiler_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: se
             return: (cast: (int) (1))
         ai := ai + 1
     c.sprintf(input_span, "0")
+    c.sprintf(origins, "0")
+    c.sprintf(flags, "0")
     if: nact + nhid > 0 && c.sprintf(input_span, "l2_cav%d", t) < 0
         return: (cast: (int) (1))
-    if: lm_compiler_emit_dyn_call_value(mi, idx, t, self_t, ind, nact + nhid, context, input_span) != 0
+    if: nact + nhid > 0 && (c.sprintf(origins, "l2_cor%d", t) < 0 || c.sprintf(flags, "l2_cpr%d", t) < 0)
+        return: 1
+    if: c.fprintf(out_cell[0], "%s@: void l2_o%d 0\n", ind, t) < 0 || lm_compiler_emit_dyn_tail_origins(mi, idx, t, self_t, ind, nact + nhid, context, input_span, origins, flags, nact + nhid) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_call_go_value
@@ -13325,6 +13393,10 @@ end: lm_compiler_emit_machine_call_arguments
 
 # Original: l2src/l2trans.lm1:31299
 fn: lm_compiler_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: (@: ind char); int: nargs; int: context; const: (@: input_values char)) int
+    return: lm_compiler_emit_dyn_tail_origins(mi, idx, t, self_t, ind, nargs, context, input_values, 0, 0, 0)
+end: lm_compiler_emit_dyn_tail_value
+
+fn: lm_compiler_emit_dyn_tail_origins (int: mi; int: idx; int: t; int: self_t; const: (@: ind char); int: nargs; int: context; const: (@: input_values char); const: (@: origins char); const: (@: private_flags char); int: origin_count) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: cls c.lm_compiler_tramp_class(idx)
     int: ret c.lm_compiler_sig_ret(idx)
@@ -13332,6 +13404,9 @@ fn: lm_compiler_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; con
     @: result_name char (cast: (@: char) result_name_storage\buffer)
     c.L2FrontendScratchChar64: args_storage
     @: args char (cast: (@: char) args_storage\buffer)
+    const: (@: call_name char "lmx_call_prim_values")
+    if: origins != 0
+        call_name := "lmx_call_prim_values_origins"
     # Decoding the legacy character word requires an actual present result.
     # A dropped call may finish without a value, so capture without refusing it.
     if: context >= 0 && c.sprintf(result_name, "l2_cv%d", context) < 0
@@ -13350,9 +13425,9 @@ fn: lm_compiler_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; con
     # A held actual can differ from the formal's source method (for example,
     # a merged callable). The arena role of the selected occurrence chooses
     # unary data without a runtime spelling lookup in generated native code.
-    if: c.lm_compiler_call_status(mi, idx) != 0 && c.fprintf(out_cell[0], "%sl2_ts%d: lmx_call_prim_values(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, t, self_t, self_t, args) < 0
+    if: c.lm_compiler_call_status(mi, idx) != 0 && c.fprintf(out_cell[0], "%sl2_ts%d: %s(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, t, call_name, self_t, self_t, args) < 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_call_status(mi, idx) = 0 && c.fprintf(out_cell[0], "%sif: lmx_call_prim_values(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, self_t, self_t, args) < 0
+    if: c.lm_compiler_call_status(mi, idx) = 0 && c.fprintf(out_cell[0], "%sif: %s(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, call_name, self_t, self_t, args) < 0
         return: (cast: (int) (1))
     if: (cls = 0 || cls = 5) && c.fputs("0", out_cell[0]) < 0
         return: (cast: (int) (1))
@@ -13360,12 +13435,16 @@ fn: lm_compiler_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; con
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], ", @ l2_o%d, %s, ", t, input_values) < 0
         return: (cast: (int) (1))
-    if: context >= 0 && c.fprintf(out_cell[0], "@ l2_cv%d)", context) < 0
+    if: context >= 0 && c.fprintf(out_cell[0], "@ l2_cv%d", context) < 0
         return: (cast: (int) (1))
-    if: context < 0 && ret = 1 && c.fprintf(out_cell[0], "@ %s)", result_name) < 0
+    if: context < 0 && ret = 1 && c.fprintf(out_cell[0], "@ %s", result_name) < 0
         return: (cast: (int) (1))
-    if: context < 0 && ret != 1 && c.fputs("0)", out_cell[0]) < 0
+    if: context < 0 && ret != 1 && c.fputs("0", out_cell[0]) < 0
         return: (cast: (int) (1))
+    if: origins != 0 && c.fprintf(out_cell[0], ", %s, %s, %dU", origins, private_flags, origin_count) < 0
+        return: 1
+    if: c.fputs(")", out_cell[0]) < 0
+        return: 1
     if: c.lm_compiler_call_status(mi, idx) = 0 && c.fprintf(out_cell[0], " != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable that cannot throw reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0
         return: (cast: (int) (1))
     if: c.lm_compiler_call_status(mi, idx) != 0 && c.fprintf(out_cell[0], "\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_o%d)\n", ind, t, ind, t, t) < 0
@@ -13381,7 +13460,7 @@ fn: lm_compiler_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; con
     if: ret = 1 && c.lm_compiler_call_status(mi, idx) != 0 && c.fprintf(out_cell[0], "%sif: l2_ts%d = 0 && %s.present != 0\n%s    l2_t%d: (cast: (char) lmx_char_value_known(l2_o%d))\n%s---\n", ind, t, result_name, ind, t, t, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
-end: lm_compiler_emit_dyn_tail_value
+end: lm_compiler_emit_dyn_tail_origins
 
 # Original: l2src/l2trans.lm1:31351
 fn: lm_compiler_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: (@: ind char); int: nargs; int: context; const: (@: input_values char)) int
@@ -13458,14 +13537,14 @@ fn: lm_compiler_primary_array_value (@: value c.L2ValueSpan; int: mi; @: operand
     if: operand\grammar = 3 && c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) (operand\values)), (cast: (int) (operand\value_n))) = 0
         return: (cast: (int) (1))
     kind := c.lm_compiler_value_span_type(operand, mi, @ type)
-    # Slice 272: the Array of a runtime-typed value is its actual value (lmx_walk_value_length).
+    # Length consumes a runtime Value or a known collection descriptor.
     if: kind = -20
         return: 0
     # A failed source contract is final. Never compare its sentinel with
     # another failed query (including allocation failure in type interning).
     if: type < 0
         return: (cast: (int) (1))
-    return: (cast: (int) ((cast: (int) (type != c.lm_compiler_array_desc_ty()))))
+    return: (cast: (int) (type != c.lm_compiler_array_desc_ty() && type != c.lm_compiler_graph_ft()))
 end: lm_compiler_primary_array_value
 
 # Original: l2src/l2trans.lm1:32540
@@ -13655,7 +13734,7 @@ fn: lm_compiler_emit_free_sizeof (@: value c.L2ValueSpan; int: mi; const: (@: in
     return: t
 end: lm_compiler_emit_free_sizeof
 
-# Slice 272: `length` of a runtime-typed value: the kernel reads the actual Array from the operand's record.
+# Length reads the actual Array/Structure from the selected operand's Value.
 fn: lm_compiler_emit_free_length (@: operand c.L2ValueSpan; @: at c.LmP0Node; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
@@ -13887,7 +13966,8 @@ fn: lm_compiler_emit_primary_value_full (@: value c.L2ValueSpan; int: mi; const:
         return: 0
     if: lm_compiler_primary_array_value(value, mi, @ operand) != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_value_span_type(@ operand, mi, @ source_type) = -20
+    source_kind := c.lm_compiler_value_span_type(@ operand, mi, @ source_type)
+    if: source_kind = -20 || source_type = c.lm_compiler_graph_ft()
         return: lm_compiler_emit_free_length(@ operand, (cast: (@: c.LmP0Node) value\node), mi, ind, dest, full_value)
     if: full_value != 0 && mi >= 0 && c.lm_compiler_m_machine(mi) = 0
         status := lm_compiler_emit_native_span_full(@ operand, mi, ind, result, 0, full_value)
@@ -14699,8 +14779,6 @@ fn: lm_compiler_emit_msend (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind
     ---
     # §7b: a letter leaves the activation -- the letter's fields are evaluated above, and what is marked is published
     # before it is sent.
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: send failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (nf + has_ref), ind, ind, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
@@ -15881,8 +15959,6 @@ fn: lm_compiler_prep_held_arguments_full (const: (@: source_node c.LmP0Node); in
         written := written + 1
     ---
     # §7b: the held callable runs after its arguments are evaluated -- what is marked is published before it.
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     # Item 6 (interpreter-throw closure): the model's status comes back from the adapter (its ordinal, as any call's) with
     # the thrown record in the out local; the method, on the status channel by its held call (l2_check_held_call), routes
     # it as a call's -- its own handler or the re-encoded return (l2_emit_propagate).  The model is known at every held
@@ -15925,8 +16001,6 @@ fn: lm_compiler_mad_cap_emit (int: mi; int: j; const: (@: tgt char); const: (@: 
     if: lm_compiler_cap_host_src(mi, mcap_name_cell[0][j], ind, src) != 0
         return: (cast: (int) (1))
     # §7b: a capture copies graph state -- what is marked is published before it.
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     # Forming a retained captured input uses the ordinary admission edge.
     # A proved producer layout is not itself a materialized map to the
     # receiving model; establish that correspondence before copying it.
@@ -15990,7 +16064,7 @@ fn: lm_compiler_t7_write (int: site; const: (@: ind char); int: do_ret) int
     if: t7_ret_cell[0][site] != 0 || t7_steps_cell[0][site] < 1
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], t7_at_cell[0][site], "a callable merge needs a walkable body")))
     c.lm_compiler_tx_clear(tok)
-    if: full = 0 || lm_compiler_tok_method_occ(t7_model_cell[0][site], tok) != 0 || c.lm_compiler_emit_publish(ind) != 0
+    if: full = 0 || lm_compiler_tok_method_occ(t7_model_cell[0][site], tok) != 0
         return: (cast: (int) (1))
     host := t7_host_cell[0][site]
     if: c.fprintf(out_cell[0], "%s@: Lmx l2_t7from%d %s\n", ind, site, tok\data) < 0
@@ -16093,8 +16167,6 @@ fn: lm_compiler_emit_poll (int: mi; const: (@: ind char)) int
         return: (cast: (int) (1))
     # §7b: the stop is an exit (book §12, Lingvamyxa spec 21.6: stop and cancellation) -- what is marked is published
     # on the way out, and only there: the poll itself is no boundary.
-    if: c.lm_compiler_emit_publish(deep) != 0
-        return: (cast: (int) (1))
     if: m_ret_cell[0][mi] = 8
         return: (cast: (int) (c.lm_compiler_emit_empty_return(mi, deep)))
     if: c.fprintf(out_cell[0], "%sreturn: 0\n", deep) < 0
@@ -16431,8 +16503,6 @@ fn: lm_compiler_emit_ccall_value (@: value c.L2ValueSpan; int: mi; const: (@: in
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], stmt, "out of memory")))
     # §7b: a c.* call is a foreign boundary (book §12; Lingvamyxa spec 21.6: an uncertain external call is one) -- its
     # actuals are spelled above, so what is marked is published before the statement that calls it.
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     if: into_buf != 0
         if: c.lm_compiler_tx_set(into_buf, (cast: (const: @: char) (buf\data))) != 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], stmt, "out of memory")))
@@ -17621,8 +17691,6 @@ fn: lm_compiler_emit_return_merge (int: mi; int: own; const: (@: ind char)) int
         return: (cast: (int) (1))
     if: c.lm_compiler_input_model(mi, -1) >= 0 && dyn = 0 && lm_compiler_emit_model_admit_value(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ source, result, ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context") != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     if: lm_compiler_emit_poll(mi, ind) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_m_machine(mi) = 0 && c.fprintf(out_cell[0], "%sif: l2_result_context != 0\n%s    l2_result_context\\present: 1\n%s---\n", ind, ind, ind) < 0
@@ -18328,8 +18396,6 @@ fn: lm_compiler_emit_ns_exec_at (int: ni; int: mi; const: (@: source_node c.LmP0
     # §7b: control passes to another callable -- the hidden inputs are evaluated above, so what is marked is published
     # now, before the call (book §12), as before every call (l2_emit_call): the procedure may read the caller's fields
     # through the graph (a method's own named Structure's `node\x`, slice 2c-4).
-    if: c.lm_compiler_emit_publish(ind) != 0
-        return: (cast: (int) (1))
     if: site != 0 && site\split != 0 && c.lm_compiler_m_is_place(pr) != 0 && lm_compiler_emit_split_admission(mi, pr, k, (cast: (int) (site\can_fail)), ind) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_call_status(mi, pr) != 0
@@ -18455,7 +18521,7 @@ fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node
             return: 1
         ---
     ---
-    if: c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_end", k) != 0 || c.snprintf(dname, 32U, "l2_end%d", k) < 0 || c.lm_compiler_emit_publish(ind) != 0
+    if: c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_end", k) != 0 || c.snprintf(dname, 32U, "l2_end%d", k) < 0
         return: 1
     return: lm_compiler_emit_current_structure(mi, source_node, ind, k, dname)
 end: lm_compiler_emit_empty_struct_at
@@ -18622,6 +18688,8 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
     @: unit_resume c.LmP0Field 0
     int: unit_body 0
     int: roots_scope -1
+    int: binding_statement -1
+    int: binding_control -1
     int: loop_roots -1
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: loop_depth_cell int (cast: (@: int) (@ c.l2_loop_depth))
@@ -18798,6 +18866,12 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
     unit_body := c.lm_compiler_part_source_body(body)
     field := from
     while: (field != 0 || unit_resume != 0) && (stop = 0 || field != stop)
+        if: binding_statement >= 0
+            if: c.lm_compiler_emit_bindings_restore(mi, ind, binding_statement) != 0
+                return: 1
+            lm_compiler_lp_pop()
+            binding_statement := -1
+        ---
         if: unit_body != 0
             field := c.lm_compiler_unit_cursor_field_until(field, @ unit_resume, stop)
             if: field = 0 || (stop != 0 && field = stop)
@@ -18806,6 +18880,13 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         if: c.lm_compiler_emit_roots_restore(mi, ind, "l2_call_arena", roots_scope) != 0
             return: 1
         stmt := field\value
+        if: stmt != 0 && (stmt\kind = c.LM_P0_NODE_STRUCTURE || c.lm_compiler_frame_head(stmt, "if") != 0 || c.lm_compiler_frame_head(stmt, "while") != 0 || c.lm_compiler_frame_head(stmt, "until") != 0 || c.lm_compiler_frame_head(stmt, "for") != 0)
+            if: c.lm_compiler_emit_bindings_mark(mi, ind, @ binding_statement) != 0
+                return: 1
+            if: binding_statement >= 0 && lm_compiler_lp_push(2, binding_statement) != 0
+                return: 1
+            ---
+        ---
         oi := c.lm_compiler_own_by_decl(mi, stmt)
         c.lm_compiler_vis_stmt(mi, stmt)
         c.lm_compiler_here_at(stmt)
@@ -19094,7 +19175,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                     own_excl_cell[0] := excluded
                     return: (cast: (int) (1))
                 # The actual operand, including a held alias, supplies its physical
-                # profile. This is the same runtime classification as PRIM_PUB.
+                # profile. This is the same runtime classification as PRIM.
                 if: c.lm_compiler_emit_merge_profile(ind, msf, k) != 0
                     return: (cast: (int) (1))
                 k := k + 1
@@ -19118,8 +19199,6 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 mq := mq + 1
             ---
             # §7b: merge copies graph state (the walk's PRIM) -- what is marked is published before it.
-            if: c.lm_compiler_emit_publish(ind) != 0
-                return: (cast: (int) (1))
             # READ-FIELD-CLOSURE: the uses of the operands' copied code; none, and the chains are links only.
             if: lm_compiler_merge_uses_native(ind, msf, n, @ mq, @ mslots) != 0
                 return: (cast: (int) (1))
@@ -19687,26 +19766,28 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         # K03: `continue`, `break` and `return` with no written argument -- the bare word or its empty Frame, one
         # application (l2_stmt_word) -- are emitted here, one consumer for both spellings.
         if: lm_compiler_stmt_word(stmt, mi, "continue") != 0 && c.lm_compiler_count_active(c.lm_compiler_app_actuals(stmt)) = 0
-            if: lp_n_cell[0] > 0 && c.lm_compiler_emit_roots_loop_restore(mi, ind, lpk_cell[0][lp_n_cell[0] - 1], lpp_cell[0][lp_n_cell[0] - 1]) != 0
+            binding_control := c.lm_compiler_lp_control_index()
+            if: binding_control >= 0 && c.lm_compiler_emit_roots_loop_restore(mi, ind, lpk_cell[0][binding_control], lpp_cell[0][binding_control]) != 0
                 return: 1
-            if: lp_n_cell[0] > 0 && lpk_cell[0][lp_n_cell[0] - 1] = 1 && c.fprintf(out_cell[0], "%sl2_uc%d: 1\n%sbreak\n", ind, lpp_cell[0][lp_n_cell[0] - 1], ind) < 0
+            if: binding_control >= 0 && lpk_cell[0][binding_control] = 1 && c.fprintf(out_cell[0], "%sl2_uc%d: 1\n%sbreak\n", ind, lpp_cell[0][binding_control], ind) < 0
                 return: (cast: (int) (1))
-            if: (lp_n_cell[0] = 0 || lpk_cell[0][lp_n_cell[0] - 1] = 0) && c.fprintf(out_cell[0], "%scontinue\n", ind) < 0
+            if: (binding_control < 0 || lpk_cell[0][binding_control] = 0) && c.fprintf(out_cell[0], "%scontinue\n", ind) < 0
                 return: (cast: (int) (1))
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         if: lm_compiler_stmt_word(stmt, mi, "break") != 0 && c.lm_compiler_count_active(c.lm_compiler_app_actuals(stmt)) = 0
-            if: lp_n_cell[0] > 0 && c.lm_compiler_emit_roots_loop_restore(mi, ind, lpk_cell[0][lp_n_cell[0] - 1], lpp_cell[0][lp_n_cell[0] - 1]) != 0
+            binding_control := c.lm_compiler_lp_control_index()
+            if: binding_control >= 0 && c.lm_compiler_emit_roots_loop_restore(mi, ind, lpk_cell[0][binding_control], lpp_cell[0][binding_control]) != 0
                 return: 1
-            if: lp_n_cell[0] > 0 && lpk_cell[0][lp_n_cell[0] - 1] = 1 && c.fprintf(out_cell[0], "%sl2_ub%d: 1\n%sbreak\n", ind, lpp_cell[0][lp_n_cell[0] - 1], ind) < 0
+            if: binding_control >= 0 && lpk_cell[0][binding_control] = 1 && c.fprintf(out_cell[0], "%sl2_ub%d: 1\n%sbreak\n", ind, lpp_cell[0][binding_control], ind) < 0
                 return: (cast: (int) (1))
-            if: (lp_n_cell[0] = 0 || lpk_cell[0][lp_n_cell[0] - 1] = 0) && c.fprintf(out_cell[0], "%sbreak\n", ind) < 0
+            if: (binding_control < 0 || lpk_cell[0][binding_control] = 0) && c.fprintf(out_cell[0], "%sbreak\n", ind) < 0
                 return: (cast: (int) (1))
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         if: lm_compiler_stmt_word(stmt, mi, "return") != 0 && c.lm_compiler_count_active(c.lm_compiler_app_actuals(stmt)) = 0 && (m_ret_cell[0][mi] = 8 || c.lm_compiler_m_machine(mi) = 0)
             # §7b: a return is an exit -- what is marked is published before it (book §14).
-            if: c.lm_compiler_emit_publish(ind) != 0 || lm_compiler_emit_poll(mi, ind) != 0
+            if: lm_compiler_emit_poll(mi, ind) != 0
                 return: (cast: (int) (1))
             if: c.lm_compiler_emit_empty_return(mi, ind) != 0
                 return: (cast: (int) (1))
@@ -19887,7 +19968,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0
             fr := stmt\as\frame
-        # §7b: a return is an exit -- what is marked is published before it (book §14), after its value.  A `return` with
+        # The return value is received before the result/status leaves. A `return` with
         # no value is emitted above, for both spellings; one with a value in a callable that returns nothing was refused.
         # `return: v` evaluates v as every value is evaluated -- a callable named there is called
         # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
@@ -19920,8 +20001,6 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) >= 0 && lm_compiler_return_opaque((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi) = 0 && c.lm_compiler_d105_refusable(mi, @ return_source) = 0 && lm_compiler_emit_model_admit_computed(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ return_source, tok_cell[0], ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", return_context) != 0
             return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) < 0 && c.lm_compiler_tramp_class(mi) = 5 && c.lm_compiler_emit_result_context(return_context, ind) != 0
-            return: (cast: (int) (1))
-        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_emit_publish(ind) != 0
             return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && lm_compiler_emit_poll(mi, ind) != 0
             return: (cast: (int) (1))
@@ -20148,6 +20227,11 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
     # to the caller. This is L1 structure only; no loop action.
     if: need_cut != 0 && c.fprintf(out_cell[0], "%s---\n", ind) < 0
         return: (cast: (int) (1))
+    if: binding_statement >= 0
+        if: c.lm_compiler_emit_bindings_restore(mi, ind, binding_statement) != 0
+            return: 1
+        lm_compiler_lp_pop()
+    ---
     if: c.lm_compiler_emit_roots_restore(mi, ind, "l2_call_arena", roots_scope) != 0
         return: 1
     if: empty_body != 0

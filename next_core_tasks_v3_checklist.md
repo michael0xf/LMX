@@ -29,6 +29,13 @@ flush() и frozen требования слотов при S[n] заменены
   live lexical reuse и frame0/FREE полный контекст. Actual G2 target9/0 nf/root0/root1,
   private/local Graph triples PASS; whole/fixedpoint14 точно Source14, final Source16:943.
   Native/Walk origin409 и qualifier lowering OPEN; [границы408](steps/witnesses/m14-private-binding-20261116/notes.md).
+- [x] Ограниченные native/Walk origin code gates409: current Values и canonical origins в прежних
+  activation bindings, private hidden/lexical reuse, CODE без DATA backfill и публикации, reached scopes.
+  Whole02 genuine G1/G2 и fixedpoint14 точно Source16:944; actual G2 target12/0 nf/root0/root1,
+  private/local Graph triples PASS; mutant origin→0 даёт exit86 во всех4 запусках.
+  Opaque by-value hidden ABI, public ambiguity, прямой typed native body и перенос M10
+  (struct_call_operands, шесть форм, var_own_nested) остаются OPEN;
+  [конвейер](steps/current.md), [свидетельство409](steps/witnesses/m14-native-private-20261116/notes.md).
 - [ ] Root-only сбор data/code; при входе нет инициализаторов; uninit:T сохранён; actual подавляет свой default,
   неиспользованное вычисляемое входное поле не вызывается. Сокращённые заголовки сохраняются с единой data.
 - [ ] Переменные и const видны последовательно; Structure/callable — в обе стороны. Повторы полей и S\[n]field сохранены.

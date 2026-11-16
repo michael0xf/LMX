@@ -1,0 +1,181 @@
+# Ordinary frontend fixture: native and forced method bodies must agree.
+# Entry 7. Private belongs to a binding; current, lexical and explicit reads remain available.
+Library:
+    private: (int: x 10)
+    fn: read () int
+        return: x
+    end: read
+end: Library
+
+fn: CodePrivate () int
+    private: (int: x 20)
+    x := 21
+    return: x * 100 + Library\read()
+end: CodePrivate
+
+fn: CodePublic () int
+    int: x 20
+    x := 21
+    return: x * 100 + Library\read()
+end: CodePublic
+
+fn: explicit_relay (int: x) int
+    Library\x := 10
+    return: Library\read()
+end: explicit_relay
+
+fn: Explicit () int
+    private: (int: x 99)
+    Library\x := 30
+    int: direct Library\x
+    int: passed explicit_relay(Library\x)
+    return: direct * 100 + passed
+end: Explicit
+
+Other:
+    int: x 40
+    fn: other_read () int
+        return: x
+    end: other_read
+end: Other
+
+PrivateLex:
+    private: (int: x 20)
+    fn: private_current () int
+        return: x
+    end: private_current
+    fn: private_relay () int
+        int: selected x
+        if: selected != 20
+            return: 81
+        x := 21
+        return: PrivateLex\private_current() * 100 + Other\other_read()
+    end: private_relay
+end: PrivateLex
+
+PublicLex:
+    int: x 20
+    fn: public_current () int
+        return: x
+    end: public_current
+    fn: public_relay () int
+        int: selected x
+        if: selected != 20
+            return: 82
+        x := 21
+        return: PublicLex\public_current() * 100 + Other\other_read()
+    end: public_relay
+end: PublicLex
+
+fn: HiddenPrivate () int
+    return: PrivateLex\private_relay()
+end: HiddenPrivate
+
+fn: HiddenPublic () int
+    return: PublicLex\public_relay()
+end: HiddenPublic
+
+Counter:
+    int: calls 0
+end: Counter
+
+fn: GetValue () int
+    Counter\calls := Counter\calls + 1
+    return: 9
+end: GetValue
+
+fn: LazyPrivate () int
+    if: 0
+        private: (int: pending GetValue())
+        return: pending
+    end: if
+    return: 42
+end: LazyPrivate
+
+fn: BranchPublic (int: flag) int
+    int: inside 0
+    if: flag
+        int: x 20
+        x := 21
+        inside := Library\read()
+    end: if
+    return: inside * 100 + Library\read()
+end: BranchPublic
+
+fn: BranchPrivate (int: flag) int
+    int: inside 0
+    if: flag
+        private: (int: x 20)
+        x := 21
+        inside := Library\read()
+    end: if
+    return: inside * 100 + Library\read()
+end: BranchPrivate
+
+fn: SequentialPublic () int
+    int: before Library\read()
+    int: x 20
+    x := 21
+    return: before * 10000 + x * 100 + Library\read()
+end: SequentialPublic
+
+fn: SiblingBranches (int: flag) int
+    int: inside 0
+    if: flag
+        private: (int: x 20)
+        x := 21
+        inside := Library\read()
+    else:
+        int: x 30
+        x := 31
+        inside := Library\read()
+    ---
+    return: inside * 100 + Library\read()
+end: SiblingBranches
+
+fn: VisibleRepeat () int
+    private: (int: x 20)
+    if: 1
+        int: x 30
+        x := 31
+    end: if
+    return: x * 100 + Library\read()
+end: VisibleRepeat
+
+fn: verify_private_hidden () int
+    if: CodePrivate() != 2110
+        return: 83
+    if: CodePublic() != 2121
+        return: 84
+    if: Explicit() != 3030 || Library\x != 10
+        return: 85
+    if: HiddenPrivate() != 2140
+        return: 86
+    if: HiddenPublic() != 2121
+        return: 87
+    if: PrivateLex\x != 20 || PublicLex\x != 20
+        return: 88
+    # A local CODE declaration does not overwrite its SOURCE or backfill DATA.
+    if: CodePrivate\code\x != 20
+        return: 89
+    if: length(CodePrivate\data) != 0
+        return: 90
+    if: LazyPrivate() != 42 || Counter\calls != 0
+        return: 91
+    if: BranchPublic(1) != 2110 || BranchPublic(0) != 10
+        return: 92
+    if: BranchPrivate(1) != 1010 || BranchPrivate(0) != 10
+        return: 93
+    if: SequentialPublic() != 102121
+        return: 94
+    if: length(Library) != 2
+        return: 95
+    if: SiblingBranches(1) != 1010 || SiblingBranches(0) != 3110
+        return: 96
+    if: VisibleRepeat() != 3110
+        return: 97
+    return: 7
+end: verify_private_hidden
+
+send: exit(exit_code: verify_private_hidden(); stdout: ""; stderr: "")
+return

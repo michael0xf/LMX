@@ -8,6 +8,18 @@ replaces edit tracking/native reset; mandatory executable-code snapshots are can
 Sys\endturn exits through finally to the normal turn boundary; it does not compile by itself.
 Implementation is OPEN; dated receipts below describe earlier code.
 
+Slice409 (2026-11-16), bounded code gates PASS: canonical field origins and the selected private
+attribute travel in the existing activation bindings and call-input rows of native code and the
+walker, separately from Value. CODE locals are no longer backfilled into DATA; local publication,
+Work.dirty and PRIM_PUB are removed together. Call19/Walk191. Source16:944 is canonical and verified;
+whole02 bootstrap quick passes genuine G1/G2 with9 smoke rows each and fixedpoint14 on exactly that source.
+Actual G2 targeted12/0 native/forced/root0/root1 and the private/local Graph triples pass; the one-line
+origin mutant exits86 in all four runs. Stage: `build2/codex_fix250generationchain01/sol-m14-field-values-01`;
+working G2 bundle `boot-m14-native-private-02/g2`: tool SHAbb7132fe, frontend SHAc8dc8d5a,
+runtime production a9d6a398, observe28a0d532, Graph03 SHA879815fe.
+[Evidence409](../steps/witnesses/m14-native-private-20261116/notes.md). The M10 struct-call migration,
+public-source ambiguity, unified native DATA and direct typed native calls remain OPEN.
+
 Step405 (2026-11-15) retains pending actuals through later argument effects/GC using existing execution roots.
 GraphRun admission/whole-argument/invocation and GraphTool success/error cleanup share those lifetime rules.
 Graph data/code/scope use graph roots; the WalkPlace slot remains a real place or null.

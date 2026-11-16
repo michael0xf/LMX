@@ -1,209 +1,329 @@
-# LMX: продолжение работы Opus — инструкция Fable
+# Передача LMX от Sol к Fable — 2026-11-16
 
-**Передача роли 2026-11-08:** по новому прямому поручению автора Codex принял единственный writer/build/docs и
-существующий pipeline чистого графа. Fable остановлен после исчерпания credits; после их пополнения самостоятельно
-не возобновлять правки/сборки. Действующее назначение и продолжение — [steps/current.md](steps/current.md),
-[to_codex.md](to_codex.md). Инструкция Opus ниже — история; числовые коды отменены новой моделью чистого Lmx-графа.
+Состояние зафиксировано около 07:16 UTC. Эта передача заменяет прежний текст файла;
+старые назначения и инструкции доступны в истории Git.
 
-Написал Opus 2026-11-07 ~17:45Z по указанию автора: «остановись и напиши инструкцию to_fable.md по продолжению
-работы». Эта версия заменяет прежний текст файла целиком; поручение 2026-11-01 о редизайне — история Git.
+## Обновление Fable — 2026-11-16, после приёмки409
 
-## Владение
+Срез409 принят и опубликован Fable; шаги1–7 раздела «Ближайший порядок продолжения409» выполнены.
+Точные результаты — в начале [steps/current.md](steps/current.md) и в
+[свидетельстве409](steps/witnesses/m14-native-private-20261116/notes.md). Текст ниже —
+состояние на момент передачи Sol, он сохранён как история.
 
-- Opus остановлен 2026-11-07 17:43Z: фоновых задач нет, процессов pipeline (`l2trans`, `l1trans`, `cc1`, `gcc`,
-  `lmxtool`, `lmxtool-tool`) нет (проверка 17:43Z), свободно ~7.7 ГиБ физической памяти. Opus больше не пишет и не строит.
-- Fable — единственный writer/build/docs LMX с момента принятия этой инструкции; сообщи Codex о принятии (ID
-  `FABLE-ACCEPT-<UTC>`). Codex — консультант через lmx_uds: сам не кодит и сборок не запускает; все технические,
-  нормативные и организационные вопросы — ему, не автору. В каждый момент один writer/build и один pipeline
-  compiler/test/docs.
-- Законченный проверенный срез — commit/push в main без ACK, только по точному allowlist. Периодических отчётов не
-  нужно; статус автору — короткие строки по-русски.
+- Canonical R/selfbuild/inputs.sha256 и S/inputs.sha256 теперь Source16:944/SHA6e394104;
+  предупреждение ниже о Source15 больше не действует.
+- Рабочий набор — настоящий G2 из S/boot-m14-native-private-02/g2: tool
+  bb7132feed30717d73107810c4d17aee8fb459a8c292a3a13c5433976fde92d4, frontend
+  c8dc8d5a8fad1175c95c6da62239ab01eea98bfe4092055affd75c8eec9add63, runtime равен Runtime13.
+- Связи с Codex нет: lmx_uds закрыт, codex_inbound не привязан. Помощники — peer-сессии
+  opus, sonnet, haiku (SendMessage); to_opus.md устарел.
+- По указанию автора после коммита409 работа на паузе до его нового поручения.
+- Следующий срез410 — перенос M10 из раздела «Что остаётся OPEN после409»: struct_call_operands
+  и шесть форм на общий data-first worker с миграцией var_own_nested. Opus готовил его опись
+  только на чтение; кода410 в дереве нет.
 
-## Читать сначала (по порядку)
+## Остановка и владение
 
-1. `AGENTS.md`, `READ.ME`.
-2. `steps/current.md`: датированные абзацы 2026-11-07 (строки 13–58) — действующие поручения; ниже — записи срезов
-   286–301 (образец объёма записи среза).
-3. `LMX_blog/2026-11-07.md` — дословные слова автора.
-4. `steps/witnesses/fix302-20261107/notes.md` — проект среза 302, карта строковых путей до среза, устройство, сборки
-   кандидата, отклонения, открытое.
-5. `steps/witnesses/named-assign-20261107/notes.md` — проба `:=`/`merge` на кортеже 301, места в коде, документация.
-6. `steps/witnesses/fix301-20261107/notes.md` — полный образец среза: рецепты, мутанты, приёмка, посадка, docs, архив.
-7. `steps/defects.md` — NAMED-BINDING-BY-HEAD, ASSIGN-KNOWN-OPERATOR, MERGE-OPERAND-FORMS,
-   CALL-WHOLE-ARGUMENTS-STRUCTURE, CALL-ARGUMENT-ORDER-AXBY, REPEATED-DECL-*.
+Автор попросил написать передачу и остановить счедулер. Sol остановлен и новых
+правок ядра, сборок, проверок или коммитов после передачи не начинает.
 
-## Действующие поручения (кратко; норма — current.md и журнал)
+- Goal «Продолжать next_core_tasks_v3.md до самого конца» имеет статус **paused**,
+  проверенный штатным get_goal.
+- Почасовой heartbeat **goal-lmx / «Проверять goal LMX»** переведён штатным
+  automation_update в **PAUSED**. Состояние подтверждено в automation.toml.
+  Не включать его обратно по старому поручению о поддержании goal активной.
+- Все мои producer sessions завершены. Последняя suite завершилась успешно;
+  процессов l2trans/l1trans/lmxtool-tool/gcc/cc1 при проверке не обнаружено.
+- Subagents вернули ownership; незавершённых source edits от них нет.
+- Продолжение Fable — по новому поручению автора. Один writer и один
+  последовательный compiler/test/docs pipeline. Старое требование в этом файле
+  сообщать Codex через UDS и ждать его ACK больше не действует.
+- Работа идёт прямо в **main**, без отдельного Sol worktree.
 
-1. **IDENTIFIER-CODES** (автор, CODEX-OPUS-AUTHOR-COMPLETE-ALL-ID-PATHS-20261107-01): каждый идентификатор — код своего
-   написания, новое написание — следующий номер (без хеша), таблиц «код → имя» и «имя → код» ровно две, обе
-   информационные; ни native, ни обходчик, ни семантические проходы frontend не сравнивают имена строками; загрузка
-   единицы — явная граница нормализации; один сервис процесса `lmx_ids`; copy/merge/attach переносят коды. Довести до
-   конца во всех путях; подтверждения автора не ждать; промежуточный срез задачу не закрывает. Итог — один RESULT Codex:
-   граница изменения, кортеж и manifest, receipts, карта потребителей и удалённых строковых путей; доказательство, что
-   одно написание из разных единиц — один код при любом порядке ввода; тесты: одно написание в разных областях,
-   единицах и аренах, разные написания, затенение тем же кодом, копия в другую арену без текста, узнавание
-   скопированной головы. В том же переходе — AXBY и ранняя проверка имён и формы (CALL-ARGUMENT-ORDER-AXBY).
-2. **`:=` и пример с `merge`** (автор, CODEX-OPUS-AUTHOR-FINISH-ASSIGN-MERGE-NATIVE-WALKER-20261107-01 и уточнения того
-   же дня): приёмка — `steps/current.md` строки 29–58 (дословно перечислено: запись известного места, отказ неизвестной
-   левой части, ссылка на метод, `mytest(a := 5)`, `mytest(a := a(5))`, `mytest(merge(mytest\args; (a: int: 5)))` = 35,
-   та же Structure через переменную, регрессия NAMED-BINDING-BY-HEAD: `mytest(a(5))` и `mytest(a: 5)` вызывают `a` ровно
-   один раз и подают результат позиционно; `:=` — общий оператор с узкой функцией, его проверки и вне вызовов;
-   прежние формы остаются; перенос одной формы `:=` в контекст без известного места — отказ без нового поля).
-3. **Узкая пауза**: только исправление поведения повторного объявления (REPEATED-DECL-*) ждёт упрощения автора; новых
-   правил смены или сохранения типа не вводить; многократные типизированные записи известного места допустимы.
+## Прочитать сначала
 
-Порядок: закончить срез 302 (промежуточный срез IDENTIFIER-CODES), затем срез `:=`/`merge`, затем остаток
-IDENTIFIER-CODES и итоговый RESULT.
+1. [AGENTS.md](AGENTS.md), [READ.ME](READ.ME).
+2. Начало [steps/current.md](steps/current.md).
+3. Начало [to_sol.md](to_sol.md), M10/M13/M14 [основного v3](next_core_tasks_v3.md).
+4. [Чек-лист](next_core_tasks_v3_checklist.md).
+5. [Свидетельство409](steps/witnesses/m14-native-private-20261116/notes.md).
+   Оно пока WIP и не содержит окончательной приёмки.
+6. Нормы в provenance/semantics-book.md и generated RU/EN; авторский пакет
+   17e8af6f уже принят. Не возвращать историческую модель публикации.
 
-## Состояние на 2026-11-07 17:43Z
+Семантические вопросы из последних сообщений автора закрыты; реализация M14
+остаётся OPEN. Новые зависимые работы записывать в основной v3.
 
-- `HEAD` = `origin/main` = `e85a3861`. P = `C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01` (не в git).
-- WIP среза 302 — только рабочая копия и стейдж, не закоммичен. 14 изменённых путей `selfbuild/` (кандидат a07,
-  список `P/pins/tp164-changed-a07.list`, хэши `P/pins/tp164-changed-a07.sha256`): `inputs.list` (238 входов, +
-  `src/l2src/lmx_ids.lm2`), ядро `lmx_ids.lm2` (новый, untracked), `lmx_source_names`, `lmx_call`, `lmx_walk_values`,
-  `lmx_implements`, `lmx_graph_copy_owned`, драйвер `l2_driver`, frontend `l2_frontend_values`, `_emit`, `_core`,
-  `_lower`, `tools/build.lm2`, фикстура `tests/dyn/free_c_pointer.lm2`. Запись — `steps/witnesses/fix302-20261107/notes.md`
-  (untracked).
-- В коммиты не включать: `to_codex.md` (чужой dirty); `steps/witnesses/fix249-20261101/notes.md` и
-  `steps/witnesses/fix250-20261101/` (прежний WIP Opus, держать отдельно); прочие untracked witnesses из `git status`
-  на старте сессии. Этот файл — по решению автора/Codex.
-- Стейдж `P/cold-tp140` = кандидат a07, **кроме мутанта m1**: в `cold-tp140/src/l2src/lmx_ids.lm2`, строка 124,
-  `if: r = 0 && nb = 0U` (в a07 — `if: r = 0`). Вариант `P/variants/tp164` — байты a07 всех 14 путей; manifest стейджа
-  `P/pins/source-tp164-a07.sha256` (238 входов). Сборка rt164m1 перегенерировала заголовки стейджа
-  (`src/l2src/lmx_ids.h.lm1` `44f17b95…`, `lmx_source_names.h.lm1` `623625c6…`, `lmx_walk_values.h.lm1` `e755f33b…`) —
-  те же байты, что у rt164b.
-- Кортеж кандидата: tool `cold-tp140/tool164a/lmxtool-tool.exe` `059c4603626ffe9c37ce66f7d068206e282463a1857aeb49494b6cde0ec14796`
-  (из a01; `tools/build.lm2` не менялся до a07); runtime `cold-tp140/rt164b` — driver.o
-  `f5eaed6ff0c8ccfdd27a3198f3e9c7ff70a7743751a311f0809a26b674eba8d8`, driver-observe.o
-  `4e3fc11a68706feab90af250a594212451abaff260a76921ce7c81c13560ada6` (ядро a03 = a07); frontend
-  `cold-tp140/fe164d/l2trans.exe` `b5d87c158a643f4496c064ea2e3079b36a661b981b4e5d08a26b3dcd175842e3` (a06 = a07 по
-  frontend). История сборок и отказов — таблица «Сборки кандидата» в записи.
-- Результаты (receipts в `P/pins`):
-  - фокус f302a (`f302a.tsv`, 21 ряд реестра по путям имён): 21/0 — `tp151-probe-f302a.log`;
-  - весь реестр r302a (`registry302-a.tsv` = байты `selfbuild/tests/full-suite.tsv`): 113 рядов, 2 отказа — только
-    `free_c_pointer`, оба режима, ошибка gcc: фикстура звала C-дверью `lmx_walk_value_field_place` прежней сигнатуры
-    (6 аргументов, `char *` селектора; теперь код имени и ещё два аргумента) — `tp151-probe-r302a.log`. В a07 `door_text`
-    переведён на `const char *` у `lmx_ids_code` (длина 0 → 0 без чтения указателя); ряд на a07 — f302b 1/0
-    (`f302b.tsv`, `tp151-probe-f302b.log`). Это миграция теста из-за сигнатуры ядра, не ошибка именованного связывания —
-    так и записать;
-  - мутант m1 (rt164m1: `lmx_ids_put` не находит прежнее написание) по `mut302.tsv` (9 рядов реестра: строки 12 56 100
-    103 115 119 120 138 165): 36 отказов из 36 запусков — убит (`tp151-probe-m302a.log`). Отказ ли это только самопроверки
-    драйвера `ids_check` или и программ — не разделено: посмотреть `P/tp151-probe/m302a/<ряд>-native/run-root0.log`
-    одного ряда.
-- Пункт «Открыто» записи о голове ссылки любой глубины устарел: в a07 `receiving_reference_head` читает метку кода
-  `lmx_ids_reference` (её ставит `lmx_ids_put` на границе ввода написания) — поправить запись.
+## Git и чужой WIP
 
-## Срез 302: что осталось (по порядку)
+Репозиторий: C:/Nyasha_Planet/LMX.
 
-0. **Вернуть стейдж из m1.** Записать инструментом Write `P/pins/mut302-restore.tsv` (две строки через табуляцию, по
-   образцу `steps/witnesses/fix301-20261107/records/pins/mut301-restore.tsv`):
-   `stage-copy	P/pins/tp164-changed-a07.sha256	P/variants/tp164	P/cold-tp140` и
-   `verify	P/pins/source-tp164-a07.sha256	P/cold-tp140` (P — полный путь); запуск `lmxtool steps` рабочего tool boot163a
-   (`P/cold-boot163a/quick163a/lmxtool.exe 0 entry 0 -- steps <список> > <лог> 2>&1`) из нового каталога запуска;
-   ждать `VERIFIED 238 files, 0 failed`.
-1. **Мутанты m2–m4** (каждый: Edit файла стейджа; сборка отдельным сообщением — runtime `P/pins/tp164-rt.command` с
-   `TP_LABEL=rt164mN TP_TRY=mN` или frontend `P/pins/tp164-fe.command` с `TP_LABEL=fe164mN TP_TRY=mN`; ряды `mut302.tsv`
-   рецептом `P/pins/tp151-probe.command` с `TP_TOOL=cold-tp140/tool164a/lmxtool-tool.exe`, `TP_FE`, `TP_RT` на
-   мутантную сборку; затем возврат шагом 0):
-   - m2 — `lmx_graph_copy_owned.lm2`, `lmx_copy_name_prepare`: имя вхождения (порт 0) копируется кодом `0U` вместо
-     `c.lmx_source_name_get(src_arena, source)` — копия теряет имя;
-   - m3 — `lmx_walk_values.lm2`, `lmx_walk_table_cells`: прежнее условие 301 `if: \tokens = 0` вместо
-     `if: \tokens = 0 && place_map[0][1] != (cast: (size_t) -1)` — таблица именованного режима снова требует токенов;
-   - m4 — `l2_frontend_values.lm2`, `lm_compiler_path_selector_parts`: `selected[0]: v` → `selected[0]: (cast: (size_t) -1)`
-     — записанное `[N]` теряется в обоих исполнителях.
-   Выживший мутант — пробел реестра: добавить фикстуру, которая его убивает (RESULT всё равно требует тестов «копия в
-   другую арену без текста» и «узнавание скопированной головы»).
-2. **Whole bootstrap boot164a quick.** Рецепты `P/pins/boot164-quick.command` и `boot164-detached.command` написать
-   вручную по `boot163-quick.command`/`boot163-detached.command`: **G0 — tool164a** (`059c4603…`: `tools/build.lm2`
-   изменён срезом, рабочий tool boot163a не годится), предыдущий frontend — G2 boot163a
-   (`cold-boot163a/quick163a/g2/frontend`: l2trans `57ad3f2e8a05b4262c6a690c5e7dc4751611d5a486c77801d6c4d8390da69ffb`,
-   l1trans `85b0c8c4cc29f2d802f99ec6f6dbc52c78afa6668dc642dcf2abaddf3105ac6d`, l2_libc `af9fdae3…`), база
-   `cold-candidate48/full48/g2/frontend` (хэши — как в boot163-quick), smoke `tests/smoke-kernel225.tsv`. Стейдж
-   `cold-boot164a` — список `boot164a-prepare.tsv` по `boot163a-prepare.tsv` с `source-tp164-a07.sha256`. Детачированный
-   запуск — через pwsh 7 (у 301 запуск из Windows PowerShell 5.1 дал BOM в терминале — отклонение 1 записи 301).
-3. **Приёмка**: `boot164a-check.tsv` по `boot163a-check.tsv` (38 команд `lmxtool checks`): стейдж против manifest,
-   записи producers G1/G2 замкнуты, G1 против G2 (`exe-same`/`same`), рабочий tool и bundle = G2, rt164b = G2 runtime
-   байт в байт, fe164d = G2 frontend по `exe-same`. Самотест G2 tool — `P/pins/tp152-selftest.command`.
-4. **Посадка**: `land302.tsv` по `land301.tsv` (вариант `tp164`, 238 входов, `selfbuild/inputs.sha256`).
-5. **Docs** (часть IDENTIFIER-CODES): по находке Codex книга `provenance/semantics-book.md` (RU ~:100, :683, :685; EN
-   ~:518) всё ещё говорит, что обходчик узнаёт голову по таблице имён, — исправить на коды; описать границу загрузки
-   единицы и сервис `lmx_ids` там, где документы описывают имена; затем `docs render/verify semantics` и `docs check`
-   (PRIVATE_OUT создать заранее; staged allowlist; копии с CR — удалить по точному списку и `git checkout-index --stdin`).
-6. **Записи и коммит**: дописать `fix302-20261107/notes.md` (результаты, мутанты, приёмка, посадка, кортеж); `records/` —
-   копии рецептов, списков, логов, терминалов и цитируемых сообщений Codex (`P/pins/codex-302-*.txt`, в том числе ещё
-   нигде не архивированные: `codex-302-named-assign-docs-review-complete.txt`, `opus-codex-302-named-assign-published.txt`,
-   `codex-302-author-finish-assign-merge.txt`, `codex-302-author-assign-general-known.txt`,
-   `codex-302-author-assign-preserve.txt`, `codex-302-author-repeated-typed-intent.txt`, `codex-302-author-assign-narrow.txt`;
-   `codex-302-ids-home-scope-answer.txt`), `evidence.sha256`; абзац среза 302 в `steps/current.md` (промежуточный срез:
-   IDENTIFIER-CODES не закончен); `steps/defects.md`; commit/push по allowlist; сообщение Codex — промежуточный результат,
-   не RESULT.
+На момент передачи HEAD == origin/main ==
+**30b4564ef7ff35c7c6b9ce319f75d531fd66f99f**,
+«[codex] Preserve field privacy and ready Graph bindings» — принятый срез408.
+Авторский **17e8af6f** уже в истории main; повторно его не коммитить.
 
-## После 302: срез `:=` и `merge`
+**Срез409 не закоммичен и не запушен.** Ничего не staged. Не принимать его за
+готовый только по зелёному targeted: новая полная G1/G2 ещё не выполнена.
 
-Места, найденные пробой (номера строк — рабочей копии a07, могли сдвинуться):
-- P0 `selfbuild/src/l2src/p0_parser.lm2`: скан головы останавливается на `:` (около :2144 и :2501) и делает COLON Frame
-  (около :2522–2531), поэтому `a:=5` сейчас — голова `a:` с телом `=5`. По грамматике §21 (`provenance/grammar.json`)
-  `:=` — один операторный токен: левая часть, `:=`, правая часть; `a := 5` и `a:=5` — одна запись.
-- Связыватель трансляции `lm_compiler_bind_value_actuals_into` (`l2_frontend_lower.lm2` :880–960): именование по
-  совпадению головы Frame с формалом (:901–923) — это NAMED-BINDING-BY-HEAD; убрать механизм, не обходить условием;
-  именованная подача — только `a := value`.
-- Обходчик — `lmx_callable_bind_prefix` (`lmx_implements.lm2`), native — `lmx_call_bind_actuals` (`lmx_call.lm2`); оба
-  должны дать одно соответствие.
-- Операнды `merge`: `lm_compiler_merge_value_refusal` и `lm_compiler_merge_decl_operand` (lower),
-  `lm_compiler_merge_operand_node` (emit): формы `f\args`, `a: int: 5`, `(a: int: 5)` сейчас «not lowered yet».
-- Вся структура аргументов одной Structure (результат `merge` и переменная) — CALL-WHOLE-ARGUMENTS-STRUCTURE.
-- Фикстуры пробы `p302n_*` — в `P/cold-tp140/tests/dyn` (копии в
-  `steps/witnesses/named-assign-20261107/records/cold-tp140/tests/dyn`): d1/d2 сейчас 35 и ни одного вызова `a` (должно
-  стать 62 и один вызов), b/b2/c/c2 — отказ «tst has no argument a» (норма 35), m*/e* — «not lowered yet».
-- Имя `test` — слово языка (ресивер `test:`): программы автора с `test` пишутся как `mytest`/`tst`.
-- Неразрешённый общий случай — производитель всей структуры аргументов с эффектами и ранняя проверка имён/формы — вопрос
-  Codex с первоисточником; остальное продолжать.
+Наши tracked WIP:
 
-## Затем остаток IDENTIFIER-CODES
+- next_core_tasks_v3.md, next_core_tasks_v3_checklist.md;
+- selfbuild/inputs.list, selfbuild/inputs.sha256;
+- selfbuild/src/l2src/l2_driver.lm2;
+- frontend modules: context, core, emit, helpers, lower, resolve, types,
+  useplan, values;
+- lmx_call.lm2, lmx_gc_graph.lm2, lmx_merge_owned.lm2, lmx_walk_values.lm2;
+- selfbuild/tests/full-suite.tsv, selfbuild/tests/os/os_walk_values.lm2;
+- selfbuild/tools/build.lm2, steps/current.md;
+- эта передача to_fable.md.
 
-- Внутренние сравнения frontend по кодам: P0, области видимости, resolve, intern сигнатур, ключи бросков.
-- Транслятор L1 (backend) — тот же переход.
-- AXBY и ранняя проверка имён и формы до эффектов аргументов (в том числе через изменяемое место callable).
-- Итоговый RESULT по списку раздела «Действующие поручения», п. 1.
+Новые наши файлы: selfbuild/tests/dyn/private_hidden_binding.lm2 и
+steps/witnesses/m14-native-private-20261116/notes.md.
 
-## Правила и ловушки практики
+**Не захватывать два чужих untracked WIP:**
 
-- Корневой `C:/Nyasha_Planet/LMX/build` не читать, не перечислять, не трогать. Файл `l2_driver_launch.err` не
-  защищён и не нужен (слова автора 2026-11-11: «Я его не защищал»): это файл перехвата `stderr`, который драйвер
-  оставляет в рабочем каталоге запуска; прежний запрет читать и перечислять его снят.
-  `steps/witnesses/used-scope-20261020/reference-producer117.patch` — непрочитанным и неизменённым.
-- Только точные пути, manifests и явные git pathspec: без `git status` без путей, без листингов каталогов и
-  рекурсивного поиска по стейджу и каталогам запусков (логи ряда — по известным именам: `p.L2.log`, `p.L1.log`,
-  `p.CC.log`, `run-root{0,1}.log`). После коммита — только `git status --porcelain -uno -- <точные файлы>`.
-- Без reset/clean/массового add, новых веток/worktree/PR. Frozen inputs и исторические receipts не переписывать.
-- Правки исходников — вручную (Edit/Write); рецепты и списки — руками (Write или `printf`/одна команда `sed -n` по
-  точным строкам), без циклов и скриптов-генераторов, без новых проб и тестовых систем; только существующий pipeline
-  языка (`lmxtool steps/checks/suite/rebuild/build-runtime/build-frontend/bootstrap/docs`), каждый запуск — из своего
-  нового каталога.
-- Запуск рецептов `.command`: pwsh 7 по полному пути
-  `/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe` (в PATH bash его
-  нет) формой `"$PW" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('<рецепт>')))"`; `-File`
-  принимает только `.ps1`. Параметры — переменные окружения (`TP_LABEL`, `TP_TRY`, `TP_LIST`, `TP_TOOL`, `TP_FE`,
-  `TP_RT`). Один рецепт на фоновую команду; правку и сборку, которая её читает, не класть в одно параллельное сообщение;
-  сборка runtime перегенерирует заголовки стейджа — не запускать suite одновременно с ней. Рецепты сами проверяют
-  свободную память и живой pipeline.
-- После мутанта — всегда возврат стейджа из варианта и verify.
-- Ловушки L2 этого среза: слова языка (`length`, `test`, `table` и др.) нельзя связывать; спуск уровня P0 больше чем на
-  шаг — только через `---`; поле локальной структуры по значению (`t\length`) в аргументе C-вызова распадается в C на
-  `t, ., length` — передавать отдельной переменной; новые функции машинного модуля — в конец модуля (нумерация
-  параметров заголовка), экспорт — в список имён `tools/build.lm2`; изменение прототипа ядра требует пересборки
-  заголовков (build-runtime).
-- `LMX_blog/` — только дословные технические ответы автора (дата и источник вне цитаты, выдержки помечены,
-  организационное исключено); правила цитат — `READ.ME`.
-- Коммиты — с атрибуцией своей модели; identity репозитория общая.
+| Файл | SHA256, проверен при передаче |
+| --- | --- |
+| steps/handoff/m11-step5b-inventory-appendix-20261111.md | 627ceecbc7bca3fb54ff8b6fa866f4ee48b5578d671cdc2cb9372db20993b125 |
+| steps/witnesses/used-scope-20261020/reference-producer117.patch | b6db206a6f05cc58d086aa3c6575c6b27a0e252785c09f6be5c0e87e51e7d910 |
 
-## Связь с Codex
+Добавлять в индекс точный allowlist, не git add -A. Завершённый срез commit/push
+в main уже был разрешён автором. Не коммитить текущую непроверенную работу
+лишь ради передачи. Исторические receipts и неудачные попытки сохранять.
 
-- Через существующий мост lmx_uds (свежий ListAgents перед отправкой). Сообщение — файлом:
-  `python claude_chat/codex_inbound.py send --sender <своё имя> --request-id <ID> < "<файл>"` из
-  `C:/Nyasha_Planet/LMX`; JSON доставки — не ответ Codex. Ответ Codex сверять с транскриптом relay
-  (`~/.claude/projects/C--Nyasha-Planet-LMX/ff11f4c5-75c5-499f-a9c2-7d5b4fc7efea.jsonl`, первое вхождение
-  `REQUEST_ID: <ID>`) и архивировать дословно в `P/pins` (инструмент Write срезает хвостовые пробелы — проверить).
-- Большие ревью — через Codex, не своими агентами. Вывод Codex не выдавать за дословное решение автора (пример —
-  поправка атрибуции CODEX-OPUS-REDECL-TYPE-PROVENANCE-CORRECTION-20261107-01 в записи 302). OPEN-статусы дефектов
-  менять только по реальным результатам.
+## Пути и действующие артефакты
+
+Ниже R/S/B/O/T/FE/RT — сокращения только для чтения команд, не новые скрипты.
+
+| Имя | Абсолютный путь |
+| --- | --- |
+| R | C:/Nyasha_Planet/LMX |
+| S | C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/sol-m14-field-values-01 |
+| B | C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-candidate48/full48/g2/frontend |
+| O | C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/sol-m14-native-private-20261116-01 |
+| T | S/tool-native-private-07/lmxtool-tool.exe |
+| FE | S/frontend-native-private-10/l2trans.exe |
+| RT | S/runtime-native-private-13 |
+
+Все сокращения S/... и O/... разрешать от абсолютных корней таблицы.
+
+- Tool07 SHA **a9489942513e2102c5f5e53dbfd241aa490846a3ac346118629bb2386d9a4211**.
+- Hosted FE10 SHA **c0837ba65ec12cb950ab5a24bcbe34f03f2b35429bb46ddfa5594edfb9df749d**.
+  Он построен на Source15 и связан с Runtime12.
+- Raw FE10 сохранён штатным manifest/stage-copy вместе с backend/libc в
+  O/consumed-frontend10; SHA **4b762102f2f3b8684bdcb8384bf8a9727c61e716bd67fb31258150ff25243ce5**.
+  Не перезаписывать consumed producer при hosted-link.
+- Runtime13 driver.c SHA
+  **fb84a3afbf606a0314648f75e3f0a659c8f3feaa2b8c65ffd10de84f572b16ae**.
+- Runtime13 driver.o SHA
+  **a9d6a398cda47dc25beac5036aed7b117d7854aa7161eed85d16a76d2cd567cb**.
+- Runtime13 driver-observe.o SHA
+  **28a0d53228c9b04218740c7d0bc8b1138849da04a80d7c90fc1c90bd0310c774**.
+
+**Последний frozen/staged Source16:** O/source16.sha256, **944** входа, SHA
+**6e394104f5b0eb335dbaea2a095f6f0005f8cbf02de760ceed7145de6af94cf4**.
+Он включает последний compact-output fix Walk и исправленный OS oracle.
+
+**Внимание: R/selfbuild/inputs.sha256 и S/inputs.sha256 ещё содержат Source15**,
+SHA **5c1b822606a5cc818b2fb9e54790e5e827a7f8828ae8de5c6c7db18f02b8767b**.
+Они устарели относительно двух изменений Source16. После проверок обновить их
+штатно из актуального manifest и проверить обе копии. Не объявлять canonical
+равным Source16 до этой операции.
+
+## Что сделано в409
+
+1. Private/origin идут через существующие ActivationBinding, Activation и
+   CallInputRows, отдельно от Value. Explicit actual берёт атрибут принимающего
+   DATA поля; hidden/FREE сохраняет выбранный source attribute. Exact lexical
+   reuse ищет живой local по canonical origin.
+2. Borrowed metadata spans удерживаются до завершения вызова; padded owned spans
+   сохраняют префикс. Pop освобождает только owned spans. GC отмечает pending
+   origins и activation origins существующими root loops.
+3. Native регистрирует current working Value вместе с canonical field origin.
+   CODE locals больше не дописываются в DATA. Новые bindings появляются на
+   достигнутом store, с existing activation scope checkpoint/truncation.
+4. Walk использует существующий nwork как активный префикс Work chain. Lookup,
+   origin resolution и GC видят один префикс; retired rows переиспользуются.
+   Body восстанавливает nwork при любом выходе без scratch rewind. UNTIL держит
+   locals до условия; FOR держит counter до конца цикла.
+5. CODE SET создаёт Work после RHS; OWN-read не создаёт будущую переменную.
+   Последний Source16 fix разрешает то же для доказанного compact OWN output:
+   target==holder, width2/index1, canonical cell==slot и принадлежность code.
+   Это исправляет root qualified merge без общего entry preload CODE.
+6. FE хранит actual lexical host отдельно от принадлежности активации.
+   Sibling declarations сохраняют разные origin/private. Visible repeat
+   использует прежнее принимающее поле. CODE source visibility проверяет
+   активную область и source position. Имена Structure/callable этим не
+   превращены в последовательные переменные.
+7. Удалены frontend/runtime публикации локалов, Call publish exports, Walk
+   publisher/calls, Work.dirty, PRIM_PUB и его generator/driver ветки.
+   Остальные numeric opcode values не перенумерованы. Explicit graph writes
+   и stop/order/receiver/destination checks сохранены.
+8. Согласованы private binding view в NS classification, известный Graph FT
+   для Structure/method-part paths, length через общий descriptor, ready NSF
+   без лишнего SET. Добавлен пропущенный prototype уже существующего export
+   lmx_callable_part. Новый API для length не создавался.
+9. Ordinary complete-record hidden RW input оставляет FREE общему resolver,
+   как native. Default OF/OF_EDGE получает origin через existing closed place
+   projection; произвольный RHS ради metadata не исполняется.
+
+**ABI recipe:** Call **19**, Walk **191**. Все alloc/init/consumer counts должны
+совпадать. Не возвращать старый Call consume25: он уже приводил к AV.
+Work.dirty удалён из сгенерируемого layout. FE exports: Helpers263, Values184,
+Context113, Useplan149, Core445. Последние scope/compact fixes новых exports
+и record fields не добавляли.
+
+## Реальные проверки и незавершённая приёмка
+
+### Source15 / FE10 / Runtime12
+
+- Ordinary11:3 rows/0 failures, native/forced/root0/root1.
+- Targeted12:12 rows/0 failures во всех4 режимах.
+- Fixture private_hidden_binding проверяет private/public/explicit, live lexical,
+  source20/local21, DATA0, cold RHS, ветви, последовательность, sibling fields
+  и видимый repeat. Ожидания остаются7; коды83–97 различают отказы.
+- FE part10 Context/Lower: reuse474 и ABI103 VERIFIED; raw и hosted build PASS.
+- Graph02, связанный с Runtime12: SHA
+  d42e220d1de4e7bb6160fe582d9cc1aee20462f50fb54899e9027ec48994cdc8.
+  private_binding и call_frame_local прошли interp/native/forced.
+
+### Неудачная whole01 на Source15
+
+O/whole01.log; S/boot-m14-native-private-01.
+
+Whole G1 runtime и frontend действительно собраны из исходников. G1 smoke:
+9 rows/**6 failures**. Четыре OS отказа81 были отменённым ожиданием публикации;
+два RR qualified_merge_root — native/forced **root1** exit3 при root0 PASS.
+G1 tool не построен, **G2 не начинался**, fixedpoint отсутствует.
+Не использовать старые g2 paths среза408 как будто это409.
+
+### Source16 / Runtime13 — последнее завершённое действие Sol
+
+- OS oracle теперь читает os_mix\code\last и требует0 после обоих вызовов.
+  Вычисления47/21 и выбор OS сохранены.
+- Compact reached-output fix описан выше.
+- Normal Runtime13 build PASS: O/runtime13.log.
+- **Smoke16 PASS:9 rows/0 failures**, native/forced/root0/root1,
+  O/smoke16.log, S/smoke-native-private-16.
+  Исправлены оба вида отказов whole01 без изменения RR expected7.
+- **Полный targeted12 на Runtime13 ещё не запускался.**
+- Новая genuine G1/G2, финальный G2 targeted/Graph, mutant, docs/index gates,
+  commit и push409 **не выполнены**.
+
+Последний git diff --check прошёл. Документы семантики/грамматики Sol этим
+срезом не менял; авторская генерация17e8af6f сохранена.
+
+## Ближайший порядок продолжения409
+
+1. Сверить git status, эти hashes и актуальный Source16 с R/selfbuild и S.
+2. На FE10/Runtime13 выполнить прежний O/targeted01.tsv, используя новый
+   output label. Не менять expectations. Это12 rows, включая private/GC/scalar.
+3. Обновить canonical manifests на Source16 после verify. Затем штатная
+   bootstrap quick под **новым label**, например boot-m14-native-private-02.
+   Не перезаписывать failed whole01. Нужны настоящие G1 и G2 и fixedpoint.
+4. На actual новом G2 повторить целевые12 rows и Graph private/local triples
+   с актуальным runtime/Graph helper. Graph02 относится к Runtime12.
+5. Для чувствительности origin-проверки возможен один изолированный mutant:
+   в resolve_origin mode2 заменить expected_origin := origin[0] на0.
+   Ожидается отказ HiddenPrivate86 вместо PASS; unchanged fixture должен
+   ловить потерю live lexical reuse. Это предложение, mutant409 ещё не строился.
+   Только isolated stage, normal L2 build, без правки generated L1/C.
+6. Обновить current/receipt, checklist, to_sol, READ.ME/selfbuild README точными
+   финальными результатами и OPEN границами. Авторский пакет не коммитить повторно.
+7. Штатный docs check и diff checks, точный staged allowlist и финальная проверка
+   индекса. Затем завершённый срез commit/push в main, сохраняя чужой WIP.
+
+Все maintained sources/tests/tools — L2/L3. Не писать новые PS/Python/C/L1
+runners или вручную generated L1/C. Допустимы разовые команды Git/файлового
+инвентаря/редактирования; оркестрация проверок — существующий L2 tool.
+
+### Штатные команды
+
+CWD — S, каждый output label свежий. Разрешить сокращения таблицы в полные пути.
+
+```text
+T 0 entry 0 -- manifest R/selfbuild/inputs.list R/selfbuild O/sourceNN.sha256
+T 0 entry 0 -- stage-copy O/sourceNN.sha256 R/selfbuild S
+T 0 entry 0 -- verify O/sourceNN.sha256 R/selfbuild
+T 0 entry 0 -- verify O/sourceNN.sha256 S
+T 0 entry 0 -- suite O/targeted01.tsv R S B FE RT/driver.o ABS_NEW_OUT RT/driver-observe.o
+T 0 entry 0 -- build-runtime R S B FE runtime-NEW
+T 0 entry 0 -- build-graph R S B FE RT graph-NEW
+T 0 entry 0 -- graph-check R S B FE RT GRAPH_EXE ABS_NEW_OUT SOURCE EXPECTED
+T 0 entry 0 -- bootstrap quick R S B FE boot-NEW S/tests/smoke-kernel225.tsv
+T 0 entry 0 -- docs check R R/provenance/semantics-sources/l1.txt R/provenance/semantics-sources/older.txt C:/Git/cmd/git.exe ABS_NEW_DOCS_OUT
+```
+
+Raw frontend не поддерживает --graph CLI, нужный build-runtime для части
+модулей: использовать hosted FE. Для component reuse нужны точный полный
+unchanged closure и ABI manifests; сохранять raw producer3 до hosted-link.
+В O лежат reuse07.list/.sha256 и abi07.list/.sha256 для уже выполненного part10.
+Не переносить их автоматически на другой набор selected modules.
+
+## Что остаётся OPEN после409
+
+### M10: обычный frontend и общий A/D/R/C
+
+Конкретный разбор следующего вертикального переноса уже добавлен в основной v3.
+
+- Lower.struct_call_operands около7690 ещё принимает только call/1–2 operands,
+  первый кладёт в CODE, второй в DATA; aliases data/code этого не исправляют.
+- Core.check_struct_call около10478 и Emit около5788 принимают старые формы;
+  fncall отсутствует в Helpers.receiver_word около691.
+- Использовать existing L2StructCallPlan и prepared actual binder
+  Lower847–946, сохраняя written rank, NAMED/WHOLE, однократное вычисление.
+- Existing Emit10104 строит EXEC
+  [DATA,CODE,contract,written-count,actuals…]. Explicit call около15028
+  пока создаёт только width5, Lower около18571 — empty struct call.
+- Walk около7833 пропускает selected_structure только при contract0 и n0.
+  selected_structure около9446 использует written0/defaults, native
+  result_context0 и стирает успешный result. Продолжить existing
+  selected_values → written/ready values → dispatch_values, с общими
+  admission/namespace/result/cleanup, не создавать второй dispatcher.
+- Header inputs и written DATA всё ещё разные physical parts:
+  Emit7353/13792 и Values3423. Их объединение — реальный native DATA долг.
+  rw_fn_parts достижим, но rw_body_var_slots сейчас фактически пуст:
+  Context method_part_contains_own для part13 возвращает0. DATA0 PASS
+  private fixture настоящий; не возвращать CODE backfill. При переносе
+  убрать этот пустой legacy helper/calls.
+- Нужны Lower/Core/Emit/Values/Helpers/WalkValues и build recipe;
+  проверить useplan coordinates. Новые P0-правила и фиктивные методы не нужны.
+- Известные native→native должны стать прямыми typed C calls существующим
+  body/trampoline механизмом; нынешний boxed путь не объявлять готовым.
+- Приёмка всех шести форм должна проверять настоящий CODE эффект/result,
+  actual7/default suppression/однократный next(), D.x остаётся10,
+  CODE-source20/30 сохраняется. Не доказывать успех только неизменностью D.
+
+Активный var_own_nested.lm2/full-suite169 содержит отменённые publication,
+backfill, call: one D и missing-CODE-local admission oracles. Не отключать row
+и не ослаблять expected ради зелёной suite. Мигрировать вместе с data-first
+common worker: сохранить loop/branch/repeat/explicit write/catch проверки,
+использовать настоящее DATA requirement. Standalone --- там теперь DATA;
+исполняемые группы нужно выражать явно. Исторический full suite пока не PASS.
+
+### Неоднозначность динамических источников
+
+Runtime по-прежнему выбирает первый public кандидат слоя. Private должен
+фильтроваться до подсчёта. Считать ready и выбранные deferred описания по metadata
+без RHS; читать payload после единственности. Разные occurrences не дедуплицировать
+по origin. Сохранить ready / missing / failure через всех consumers.
+
+Проверенные места следующего переноса: Walk inputs_find, record_find,
+resolve_origin, held_capture, resolve_input, entry_resolve, ARG default;
+Lower native_input_default и emit_native_input_entry. Internal exact-origin
+unready -1 отличать от отрицательного semantic failure. Entry failure должен
+использовать existing emit_received_place_failure(..., at_entry=1), чтобы не
+попасть в собственные catch callee. Требуется также producer, сохраняющий
+физические повторные DATA occurrences; resolver-only тест не закрывает этот путь.
+
+### Остальные границы
+
+Opaque C by-value inherited hidden ABI, bare/uninitialized CODE без reached SET,
+дополнительные PAD payload events, полноценная root-only DATA/CODE подготовка,
+остальные qualifier lowerings, general reference store context,
+NUMBER→FOREIGN exact ABI, primitive int→C double profile, native signature variants,
+явная compile/endturn, отмена tracking/reset/mandatory CODE copy, flat Lmx/capacity/
+resize/reserve/call tables и Thread serialization остаются в общем v3.
+Не возвращать отменённую семантику ради старой проверки и не отмечать весь M14
+готовым по одному ограниченному срезу.

@@ -46,9 +46,14 @@ private/local Graph triples PASS. Genuine G1/G2 smoke9/0 и fixedpoint14 — т�
 поздние differential context witness и удаление мёртвой ветки проверены actual G2 Runtime11.
 Полная M10/M14 OPEN; финальные gates — steps/current.md,
 [точные границы408](steps/witnesses/m14-private-binding-20261116/notes.md).
-Далее409 из основного M14: existing activation binding переносит origin/выбранный private
-для native/Walk hidden inputs, без private в Value и нового registry. Explicit actual берёт
-атрибут принимающего DATA-поля; lexical reuse требует точного совпадения origin.
+409: native/Walk origin code gates PASS (принял Fable после передачи Sol) — existing activation
+binding переносит origin/выбранный private для hidden inputs, без private в Value и нового
+registry; explicit actual берёт атрибут принимающего DATA-поля, lexical reuse требует точного
+origin; CODE locals без DATA backfill и публикации. Source16:944, whole02 genuine G1/G2
+smoke9/0 и fixedpoint14 точно на нём, actual G2 target12/0 во всех4 режимах, Graph triples
+PASS, mutant exit86. [Границы409](steps/witnesses/m14-native-private-20261116/notes.md).
+Далее410 из основного M10: struct_call_operands и шесть форм на общий data-first worker
+с миграцией var_own_nested; затем неоднозначность public источников native/Walk.
 Runtime lowering остальных qualifier chains не считать готовым по private-only fold.
 
 Действующее ТЗ — [M14 основного v3](next_core_tasks_v3.md#native-structures), включая

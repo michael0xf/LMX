@@ -2908,6 +2908,8 @@ fn: lm_compiler_source_cells_emit (int: kind; int: index; const: (@: root char))
     int: ni
     c.L2FrontendScratchChar64: holder_storage
     @: holder char (cast: (@: char) holder_storage\buffer)
+    c.L2FrontendScratchChar96: private_key_storage
+    @: private_key char (cast: (@: char) private_key_storage\buffer)
     if: frames_on_cell[0] != 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: a source body's cells are written inside a method's frames builder")))
     while: row != 0
@@ -2926,6 +2928,8 @@ fn: lm_compiler_source_cells_emit (int: kind; int: index; const: (@: root char))
                 return: (cast: (int) (1))
             field := row\fields
             while: field != 0
+                if: c.snprintf(private_key, 96U, "lmx_arena_ref_cell(l2_sc%zu, %uU)", row\id, (cast: (unsigned) field\slot)) < 0 || c.lm_compiler_emit_binding_private(private_key, own_decl_cell[0][field\own], "        ", "return: 1", 0) != 0
+                    return: 1
                 if: c.lm_compiler_source_ns_constructor(row, (cast: (int) (field\own))) >= 0 || c.lm_compiler_source_definition_ns((cast: (int) (field\own))) >= 0 || c.lm_compiler_source_definition_method((cast: (int) (field\own))) >= 0
                     field := field\next
                     continue
@@ -7367,6 +7371,11 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         # and type. Projection changes its physical slot, not its interface.
         if: c.lm_compiler_rw_declared_source(entry, mi, j) != 0
             return: (cast: (int) (1))
+        if: rw_emit_cell[0] != 0
+            if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_binding_private(place, (cast: (const: @: c.LmP0Node) c.lm_compiler_formal_decl_at(mi, j)), "        ", "return: 1", 0) != 0
+                return: 1
+            ---
+        ---
         if: descriptor != 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_ft(mi, j)) = 0 || c.lm_compiler_oc_is_scalar(ty) != 0
             if: lm_compiler_rw_witness(entry, 1, ty, descriptor) != 0
                 return: (cast: (int) (1))
@@ -7793,11 +7802,16 @@ fn: lm_compiler_rw_primary_value (@: value c.L2ValueSpan; int: parent; @: out in
     if: role = 2
         if: c.lm_compiler_primary_array_value(value, rw_mi_cell[0], @ operand) != 0
             return: (cast: (int) (c.lm_compiler_rw_refuse((cast: (const: @: c.LmP0Node) (value\node)), "an Array value")))
-        # Slice 272: a runtime-typed Array is evaluated as it is.
+        # LENGTH consumes the selected Value. A known Structure keeps its
+        # graph contract, rather than being projected into an Array witness.
         int: exact_type -1
         type := (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_array_desc_ty())))
         if: c.lm_compiler_value_span_type(@ operand, rw_mi_cell[0], @ exact_type) = -20
             type := c.lm_compiler_free_own()
+        else:
+            if: exact_type = c.lm_compiler_graph_ft()
+                type := c.lm_compiler_own_ty_of_param(exact_type)
+            ---
         ---
         if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || lm_compiler_rw_evaluate_span(@ operand, type, (cast: (int) (\out)), @ child) != 0
             return: (cast: (int) (1))
@@ -9039,8 +9053,8 @@ fn: lm_compiler_rw_model (const: (@: stmt c.LmP0Node); const: (@: h c.LmP0Text);
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a field declared in a nested body")))
     if: ni < 0 || c.lm_compiler_own_nsty_get(oi) != ni || ns_parent_cell[0][ni] >= 0 || ns_eternal_cell[0][ni] >= 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a Structure-typed field")))
-    # §7b: making a Model is a merge -- a receiver that copies graph state, so PRIM_PUB publishes before it; the result
-    # goes to m's working value when it has one (l2_rw_write).
+    # Model construction copies the selected graph state; its result goes to
+    # the binding's working Value through the ordinary receiving write.
     source\schema := ni
     source\path := 0
     source\origin := stmt
@@ -9049,7 +9063,7 @@ fn: lm_compiler_rw_model (const: (@: stmt c.LmP0Node); const: (@: h c.LmP0Text);
     source\layout := ni
     source\method := -1
     source\place := -1
-    if: lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), out, @ vs) != 0 || lm_compiler_rw_admit_project((cast: (int) (\out)), ni, @ source, 0, -1, -1, -1, @ admission, 0) != 0 || c.lm_compiler_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0 || c.lm_compiler_use_unit_child(7, ni) != 0
+    if: lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), out, @ vs) != 0 || lm_compiler_rw_admit_project((cast: (int) (\out)), ni, @ source, 0, -1, -1, -1, @ admission, 0) != 0 || c.lm_compiler_rw_frame(admission, "LMX_WALK_OP_PRIM", 4, @ prim) != 0 || c.lm_compiler_use_unit_child(7, ni) != 0
         return: (cast: (int) (1))
     if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_program_arena, l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: (cast: (int) (1))
@@ -9167,7 +9181,7 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
             np := np + 1
         q := q + 1
     ---
-    # §7b: merge copies graph state -- PRIM_PUB publishes after its operands, before it runs.
+    # Merge reads the selected graph state after evaluating its operands.
     # The pair count, the qualified-branch count, the use-cell count and the two boxed producer tokens precede the
     # operands; the qualified branch roots follow the pair cells, and their exact profiles are retained as the
     # operands' are, so the copied lexical chain keeps each independent: const: immutable branch itself (docs
@@ -9198,7 +9212,7 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
         nrec := mur_n_cell[0]
         nt := 3 * mur_n_cell[0] + mur_slots_cell[0]
     ---
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + ebr_n_cell[0] + nt + 3 * selected + qx, @ prim) != 0
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", n + 9 + 3 * np + ebr_n_cell[0] + nt + 3 * selected + qx, @ prim) != 0
         return: (cast: (int) (1))
     if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, rec, prim, prim, prim, prim) < 0
         return: (cast: (int) (1))
@@ -10419,6 +10433,11 @@ fn: lm_compiler_rw_dyn_arg_choice (const: (@: source_node c.LmP0Node); int: idx;
     chosen[0] := -1
     if: idx < 0 || k < 0 || k >= m_dyn_cell[0][idx]
         return: 1
+    # Match the native complete-record hidden-input path: the reached entry
+    # selects its source and private eligibility through the common resolver.
+    # Opaque by-value C inputs retain the existing typed operand adapter.
+    if: rw_mi_cell[0] >= 0 && c.lm_compiler_m_machine(rw_mi_cell[0]) = 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(idx, m_arity_cell[0][idx] + k))) = 0
+        return: 0
     nm := c.lm_compiler_dn(idx, k)
     oty := c.lm_compiler_own_of_dt(c.lm_compiler_dt(idx, k))
     if: c.lm_compiler_schema_kind(c.lm_compiler_cap_arg_ns(idx, m_arity_cell[0][idx] + k)) != 0 && c.lm_compiler_mad_host_of(idx) = rw_mi_cell[0] && c.lm_compiler_param_find(rw_mi_cell[0], nm) >= 0
@@ -11682,7 +11701,7 @@ fn: lm_compiler_rw_send (@: stmt c.LmP0Node; int: into; @: out int) int
     # order: the optional Ref expression, then the message Structure. The
     # semantic operands below borrow its nodes (the Ref node itself, the
     # NAMED field nodes); they do not make a second tree.
-    if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PRIM_PUB", 3 + nf + has_ref, out) != 0 || c.lm_compiler_rw_source_name((cast: (int) (\out)), (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
+    if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PRIM", 3 + nf + has_ref, out) != 0 || c.lm_compiler_rw_source_name((cast: (int) (\out)), (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
         return: (cast: (int) (1))
     result_view := c.lm_compiler_method_body_result(rw_mi_cell[0])
     if: construct_phase_cell[0] = 1 && ((result_view < 0 && construct_view_kind_cell[0] = 0 && construct_view_index_cell[0] = rw_mi_cell[0]) || (result_view >= 0 && construct_view_kind_cell[0] = 2 && construct_view_index_cell[0] = result_view))
@@ -13951,8 +13970,8 @@ fn: lm_compiler_rw_t7_build (int: site; int: parent; @: out int) int
     ---
     if: c.sprintf(cname, "l2_t7_construct_%d", site) < 0
         return: (cast: (int) (1))
-    # Graph copying observes published values, as the other callable constructor does.
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + nv, @ prim) != 0
+    # Callable construction consumes the selected graph and capture values.
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + nv, @ prim) != 0
         return: (cast: (int) (1))
     occ := rw_t_cell[0]
     rw_t_cell[0] := rw_t_cell[0] + 1
@@ -14034,8 +14053,8 @@ fn: lm_compiler_rw_mad_build (int: mi; int: parent; @: out int) int
     ---
     if: c.sprintf(cname, "l2_mad_construct_%d", mi) < 0
         return: (cast: (int) (1))
-    # §7b: building the callable copies its captures -- graph copying, so PRIM_PUB publishes first.
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + nc, @ prim) != 0
+    # Construct the callable from its already selected capture values.
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + nc, @ prim) != 0
         return: (cast: (int) (1))
     mref := rw_t_cell[0]
     rw_t_cell[0] := rw_t_cell[0] + 1
@@ -14371,8 +14390,8 @@ fn: lm_compiler_rw_mad_call_arguments (const: (@: source_node c.LmP0Node); int: 
     if: arguments\count != n
         return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "this call's inputs")))
     mad_need_call_cell[0] := 1
-    # §7b: a held callable is LMX code -- PRIM_PUB publishes after its operands, before the call.
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + n, out) != 0
+    # Invoke the held callable after evaluating its operands.
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + n, out) != 0
         return: (cast: (int) (1))
     # Item 6 of the interpreter-throw closure, the walked route: the record binds the walked variant of the adapter,
     # which says the model's throw in the primitive protocol (THROWN + the key of the name) for the walker to land on
@@ -17823,9 +17842,6 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: k > 0 && c.fputs("\nprototype:\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: k > 0 && c.lm_compiler_emit_publish_helpers(1) != 0
-        c.fclose(out_cell[0])
-        return: 1
     i := 0
     while: i < m_n_cell[0]
         if: c.fputs("    fn: ", out_cell[0]) < 0
@@ -17885,10 +17901,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: k > 0 && c.fputs("end: prototype\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: c.lm_compiler_emit_publish_helpers(2) != 0
-        c.fclose(out_cell[0])
-        return: 1
-    if: c.fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own field used by a bare name has a working value l2_qN, loaded at entry from its cell in the selected occurrence `self` (slot handle l2_qN_from); a write changes l2_qN and sets l2_qN_dirty; a call, a c.* call, a copying receiver, send and every exit first publish the marked fields in field order and unmark them; a clean one is not written back and nothing is reloaded after a call (book section 12, 14; Lingvamyxa spec 21.5, 21.6). An explicit path and @x of an own field are its cell. Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. Every mutable numeric field, including char, has a distinct owned cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 value; a callable is invoked only by an explicit call Frame. Body reference declarations designate real typed pointer-value cells. Pointer results pass their stored reference; sub: is void. Native @ of a Structure or nonprimitive formal forwards its descriptor; @ of an explicit pointer binding addresses its typed pointer-value cell. Primitive formals address their local parameter cells, not graph fields. Nonprimitive signature descriptions never address the hidden machine parameter transporting the descriptor. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| use guarded evaluation through the common expression path; skipped RHS neither prepares actuals nor reads fields or Array elements.\n\n", out_cell[0]) < 0
+    if: c.fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own field used by a bare name has a working value l2_qN, loaded at entry from its cell in the selected occurrence `self` (slot handle l2_qN_from); a bare write changes its invocation-local payload and full Value. Calls and exits do not publish locals back to the source graph. An explicit path selects the original graph; @x addresses the local place. Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. Every mutable numeric field, including char, has a distinct owned cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 value; a callable is invoked only by an explicit call Frame. Body reference declarations designate real typed pointer-value cells. Pointer results pass their stored reference; sub: is void. Native @ of a Structure or nonprimitive formal forwards its descriptor; @ of an explicit pointer binding addresses its typed pointer-value cell. Primitive formals address their local parameter cells, not graph fields. Nonprimitive signature descriptions never address the hidden machine parameter transporting the descriptor. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| use guarded evaluation through the common expression path; skipped RHS neither prepares actuals nor reads fields or Array elements.\n\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     i := 0
@@ -18019,10 +18032,6 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             return: (cast: (int) (1))
         # Descriptor-only rows emit no native body (catalog addr stays 0).
         if: c.lm_compiler_emit_ret_tr(i, "    ", c.lm_compiler_ret_tr(c.lm_compiler_callable_source_frame(i))) != 0
-            c.fclose(out_cell[0])
-            return: (cast: (int) (1))
-        # §7b: running off the end of the body is an exit (book §14): what is marked is published.
-        if: c.lm_compiler_emit_publish("    ") != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         # Falling off an ordinary graph body returns status0 without writing a

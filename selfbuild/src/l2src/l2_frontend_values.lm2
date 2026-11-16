@@ -841,6 +841,57 @@ fn: lm_compiler_contract_new (int: kind; int: depth; const: (@: word c.LmP0Text)
     return: (cast: (@: c.L2TypeContract) (result))
 end: lm_compiler_contract_new
 
+# A field attribute borrows the receiver's one written operand. It is not a
+# type constructor, and never unwraps an arbitrary singleton value.
+fn: lm_compiler_binding_node (const: (@: source_node c.LmP0Node)) const: @: c.LmP0Node
+    @: body c.LmP0Structure 0
+    @: field c.LmP0Field 0
+    while: source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && c.lm_compiler_text_eq(source_node\as\frame\head, "private") != 0
+        body := source_node\as\frame\body
+        if: body = 0 || c.lm_compiler_count_active(body) != 1
+            return: 0
+        field := c.lm_compiler_next_active(body\first_field)
+        source_node := field\value
+        if: source_node != 0 && source_node\kind = c.LM_P0_NODE_STRUCTURE && source_node\as != 0 && source_node\as\structure != 0 && c.lm_compiler_count_active(source_node\as\structure) = 1
+            field := c.lm_compiler_next_active(source_node\as\structure\first_field)
+            source_node := field\value
+        ---
+    ---
+    return: source_node
+end: lm_compiler_binding_node
+
+fn: lm_compiler_binding_private (const: (@: source_node c.LmP0Node)) int
+    @: body c.LmP0Structure 0
+    @: field c.LmP0Field 0
+    @: head c.LmP0Text 0
+    while: source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0
+        head := source_node\as\frame\head
+        if: c.lm_compiler_text_eq(head, "private") != 0
+            return: 1
+        if: c.lm_compiler_text_eq(head, "const") = 0 && c.lm_compiler_text_eq(head, "immutable") = 0 && c.lm_compiler_text_eq(head, "independent") = 0
+            return: 0
+        body := source_node\as\frame\body
+        if: body = 0 || c.lm_compiler_count_active(body) != 1
+            return: 0
+        field := c.lm_compiler_next_active(body\first_field)
+        source_node := field\value
+        if: source_node != 0 && source_node\kind = c.LM_P0_NODE_STRUCTURE && source_node\as != 0 && source_node\as\structure != 0 && c.lm_compiler_count_active(source_node\as\structure) = 1
+            field := c.lm_compiler_next_active(source_node\as\structure\first_field)
+            source_node := field\value
+        ---
+    ---
+    return: 0
+end: lm_compiler_binding_private
+
+fn: lm_compiler_emit_binding_private (const: (@: key char); const: (@: source_node c.LmP0Node); const: (@: ind char); const: (@: fail char); const: (@: fail2 char)) int
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    if: lm_compiler_binding_private(source_node) = 0
+        return: 0
+    if: c.fprintf(output[0], "%sif: lmx_source_place_private_set(l2_program_arena, (cast: (@: void) %s), 1) != 0\n", ind, key) < 0 || c.lm_compiler_emit_source_failure(ind, fail, fail2) != 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_binding_private
+
 fn: lm_compiler_contract_type (const: (@: source_node c.LmP0Node)) @: c.L2TypeContract
     @: field c.LmP0Field
     @: operand c.L2TypeContract
@@ -1641,9 +1692,9 @@ fn: lm_compiler_method_part_seg (int: mi; const: (@: pd char); size_t: off; size
         \out_part := 0
     if: len = 6U && c.memcmp(pd + off, "return", 6U) = 0
         \out_part := 1
-    if: len = 3U && c.memcmp(pd + off, "var", 3U) = 0
+    if: (len = 3U && c.memcmp(pd + off, "var", 3U) = 0) || (len = 4U && c.memcmp(pd + off, "data", 4U) = 0)
         \out_part := 2
-    if: len = 4U && c.memcmp(pd + off, "body", 4U) = 0
+    if: len = 4U && (c.memcmp(pd + off, "body", 4U) = 0 || c.memcmp(pd + off, "code", 4U) = 0)
         \out_part := 3
     # A part the method does not have is no part: a `sub` returns no value, so `s\return` is read as any other name, and refused as one.
     if: lm_compiler_part_slot(mi, \out_part) < 0
@@ -2098,12 +2149,25 @@ end: lm_compiler_path_typed_prefix
 
 fn: lm_compiler_path_rec_leaf_ft (const: (@: path c.L2Path)) int
     int: ft
+    const: (@: last c.L2PathStep 0)
     if: path = 0 || path\fail_why != 0
         return: (cast: (int) (0 - 1))
     # A whole Array's semantic contract is already closed. Its descriptor
     # ABI is a representation projection, not another source/type lookup.
     if: path\array_leaf != 0
         return: (cast: (int) (lm_compiler_array_desc_ty()))
+    # These successful path roles select a Structure descriptor, as the
+    # common Value reader does. This supplies no model/admission verdict.
+    if: path\leaf_kind = 2 || path\leaf_kind = 3 || path\leaf_kind = 4
+        return: lm_compiler_graph_ft()
+    if: path\leaf_kind = 12 && path\n > 0 && path\steps != 0
+        last := path\steps + (path\n - 1)
+        # Kind 12 also represents retained data atoms. Only an actual
+        # method-part step proves a descriptor here.
+        if: last\locus = 5
+            return: lm_compiler_graph_ft()
+        ---
+    ---
     ft := c.lm_compiler_path_kind_ft(path\leaf_kind)
     if: path\leaf_kind = 10 || path\leaf_kind = 11
         ft := path\leaf_mi
@@ -3629,9 +3693,63 @@ fn: lm_compiler_emit_roots_held (int: mi; const: (@: ind char); const: (@: arena
         return: 1
     return: (cast: (int) (c.fprintf(out_cell[0], "%sLmxExecutionRoots: l2_gh_%s\n%slmx_execution_roots_push(%s, @ l2_gh_%s, 0, 0U, 0, 0U, (cast: (@: void) %s), 0)\n", ind, name, ind, arena, name, name) < 0))
 
+fn: lm_compiler_lp_control_index () int
+    @: count_cell int (cast: (@: int) (@ c.l2_lp_n))
+    @@: kinds int (cast: (@@: int) (@ c.l2_lpk))
+    int: i count_cell[0] - 1
+    while: i >= 0
+        if: kinds[0][i] != 2
+            return: i
+        i := i - 1
+    return: -1
+end: lm_compiler_lp_control_index
+
+# Lexical scopes borrow a suffix of the existing activation binding vector.
+# Truncation never restores a larger count after a nonlocal exit.
+fn: lm_compiler_emit_bindings_mark (int: mi; const: (@: ind char); @: id int) int
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    id[0] := -1
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    id[0] := tn_cell[0]
+    tn_cell[0] := tn_cell[0] + 1
+    return: (cast: (int) (c.fprintf(output[0], "%s@: LmxActivation l2_binding_act%d (cast: (@: LmxActivation) l2_call_arena\\activation)\n%ssize_t: l2_binding_count%d 0U\n%sif: l2_binding_act%d != 0\n%s    l2_binding_count%d: l2_binding_act%d\\nbind\n%s---\n", ind, id[0], ind, id[0], ind, id[0], ind, id[0], id[0], ind) < 0))
+end: lm_compiler_emit_bindings_mark
+
+fn: lm_compiler_emit_bindings_restore (int: mi; const: (@: ind char); int: id) int
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    if: id < 0 || lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    return: (cast: (int) (c.fprintf(output[0], "%sif: l2_binding_act%d != 0 && l2_binding_act%d\\nbind > l2_binding_count%d\n%s    l2_binding_act%d\\nbind: l2_binding_count%d\n%s---\n", ind, id, id, id, ind, id, id, ind) < 0))
+end: lm_compiler_emit_bindings_restore
+
+fn: lm_compiler_emit_bindings_exit (int: mi; const: (@: ind char); int: kind; int: id) int
+    @: count_cell int (cast: (@: int) (@ c.l2_lp_n))
+    @@: kinds int (cast: (@@: int) (@ c.l2_lpk))
+    @@: places int (cast: (@@: int) (@ c.l2_lpp))
+    int: i count_cell[0] - 1
+    int: target -1
+    while: i >= 0 && target < 0
+        if: kinds[0][i] = kind && places[0][i] = id
+            target := i
+        i := i - 1
+    ---
+    if: target < 0
+        return: 0
+    i := target + 1
+    while: i < count_cell[0]
+        if: kinds[0][i] = 2
+            return: lm_compiler_emit_bindings_restore(mi, ind, places[0][i])
+        i := i + 1
+    return: 0
+end: lm_compiler_emit_bindings_exit
+
 fn: lm_compiler_emit_roots_loop_restore (int: mi; const: (@: ind char); int: kind; int: id) int
     if: id < 0
         return: 0
+    if: lm_compiler_emit_bindings_exit(mi, ind, kind, id) != 0
+        return: 1
     if: kind = 1
         return: lm_compiler_emit_roots_restore_named(mi, ind, "l2_call_arena", "l2_pad_roots", id)
     return: lm_compiler_emit_roots_restore(mi, ind, "l2_call_arena", id)

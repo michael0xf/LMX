@@ -1,5 +1,171 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-16 — Fable: срез409 принят, code gates PASS; docs/index и commit
+
+Fable (fable_pc) принял [передачу Sol](../to_fable.md) и является единственным writer/build.
+Связь с Codex не установлена: почтальон lmx_uds закрыт 2026-11-10, `codex_inbound.py status`
+отвечает «MCP connection closed», pipe и процессов Codex нет; bind за Codex не выполнялся.
+Передача сверена по фактам: HEAD == origin/main == 30b4564e, индекс пуст, producers отсутствуют,
+SHA Tool07/FE10/Runtime13, Source16 и двух чужих WIP совпали с to_fable.md.
+
+Код409 — работа Sol, без изменений после Source16:944/SHA6e394104; Fable выполнил оставшиеся gates.
+Verify944/0 repo и stage; targeted13 на FE10/Runtime13 PASS12/0 native/forced/root0/root1.
+Canonical inputs.sha256 пересозданы штатным manifest в repo и stage: обе копии SAME с
+source16.sha256, verify944/0. Whole02 bootstrap quick boot-m14-native-private-02 PASS точно
+Source16: genuine G1 и actual G1→G2 по9 smoke/0; fixedpoint14 (11 same, 3 exe-same) PASS;
+consumed snapshot382/SHA9f528b15. Actual G2 FEc8dc8d5a/Toolbb7132fe; runtime G2 побайтово
+равен Runtime13: Cfb84a3af/proda9d6a398/obs28a0d532. Отказы whole01 не повторились.
+Actual G2 targeted14 PASS12/0 во всех4 режимах; Graph-native-private-03 normal PASS879815fe,
+private_binding и call_frame_local — обе тройки interp/native/forced PASS.
+Mutant в отдельном stage sol-m14-native-private-mutant-01: одна строка resolve_origin mode2,
+expected_origin := origin[0] заменено на0; normal runtime PASS Cb46fe6dd/prode99e89d2/obs42ed0ceb;
+неизменённая private_hidden_binding строится nf и во всех4 запусках даёт exit86 вместо7.
+Root/stage без мутации. Generated L1/C вручную не правились, expected не менялись.
+Docs01 actual G2 PASS35/14/27/44/615, links/opening, LF28316, exit0; working diff-check PASS.
+Semantics/grammar sources не менялись, render автора17e8af6f сохранён. Final indexed
+docs-check выполняется после этой записи; его итог — в теле коммита409.
+Помощники opus/sonnet/haiku (peer-сессии) во время приёмки работали только на чтение:
+сверка заявлений409 с кодом и подготовка переноса M10. to_opus.md устарел.
+Следующий срез410 — vertical M10 основного v3: struct_call_operands и шесть форм на общий
+data-first worker вместе с миграцией var_own_nested; затем неоднозначность public источников.
+Receipts: build2/codex_fix250generationchain01/runs/sol-m14-native-private-20261116-01;
+[свидетельство409](witnesses/m14-native-private-20261116/notes.md).
+По указанию автора после коммита409 работа ставится на паузу до его нового поручения.
+
+## 2026-11-16 07:16 UTC — передача Fable, работа Sol остановлена
+
+По поручению автора подготовлен [to_fable.md](../to_fable.md). Goal paused;
+почасовой heartbeat goal-lmx переведён штатным automation_update в PAUSED.
+Все producer sessions завершены. HEAD/main/origin —30b4564e, срез409 не закоммичен.
+Последний frozen/staged Source16:944/SHA6e394104; normal Runtime13 PASS
+Cfb84a3af/proda9d6a398/obs28a0d532. Smoke16 PASS9/0 nf/root0/root1:
+OS source oracle и compact reached-output исправляют все6 отказов failed whole01.
+Canonical inputs.sha256 пока Source15. Новые targeted на Runtime13, genuine G1/G2,
+финальные Graph/mutant/docs/index gates и commit/push409 не выполнены.
+Передача содержит точные пути, hashes, команды и открытые границы. Старые записи ниже — история.
+
+## 2026-11-16 — срез409 WIP: origin в native/Walk binding
+
+408 принят и отправлен30b4564e, main==origin/main перед началом409. Goal ACTIVE.
+Final indexed docs03 PASS35/14/27/44/615, links/opening, LF28316, exit0;
+результат также в теле коммита408. Два чужих WIP сохранены, их hashes прежние.
+Accepted base — Source16:943/SHA445ff00f, actual G2 FE4c40c01f/Tool8eacbaa7,
+Runtime-private-11 и Graph-private-05. Все producers terminal.
+
+409 переносит canonical field origin и выбранный private через существующие activation
+bindings и call input rows. Value не получает private; отдельный registry не создаётся.
+Учесть hidden capture до push, owned-Value retarget, input/local/FREE приоритет,
+лексическое повторное использование живого local по точному origin и GC borrowed origin.
+Explicit actual берёт атрибут принимающего DATA поля; dynamic private фильтруется до выбора.
+Прямой известный native→native C-вызов остаётся требованием, не результатом409;
+нынешний boxed путь и единая физическая native DATA ещё OPEN.
+Root — единственный producer и владелец build ABI recipe. Runtime/FE helpers пишут только
+назначенные source files; новый обычный runs/nf fixture private_hidden_binding уже подготовлен.
+Call25/Walk192: origin/private в Binding/Activation/CallInputRows, compatibility wrappers
+повторно используют общий worker; общий resolver mode2 выбирает точный lexical origin.
+Перед источником CODE остаётся его поле; current @working Value заменяет старый DATA backfill
+и публикацию. Весь native/private перенос не считать готовым без source20/local21 и no-backfill.
+Новый receipt root: build2/codex_fix250generationchain01/runs/sol-m14-native-private-20261116-01.
+Tool-native-private-01 PASSd058cf54 на frozen base Source16 + recipe01 (manifest/stage-copy1).
+Tool02 PASS на recipe02; Tool03 PASS47da46cb после обновления FE export lists.
+Runtime-native-private-04 normal PASS: C3420ee3f/prodbac5cef8/obs5f7d4740;
+accepted408 G2 frontend с новым runtime прошёл baseline controls01:9 rows/0 failures
+native/forced/root0/root1. Это проверка совместимости, не приёмка frontend409.
+Source01/02 frozen/staged944. Normal frontend-host03 PASS8247e737 после исправления
+неверного end target нового Lower helper. Первый ordinary private01 nf gate отказал
+на Library\x: NS classifier ещё читал raw private head вместо общего binding view.
+Root исправил три classification readers, сохранив raw NSF SOURCE для metadata.
+Source03 frozen/staged944; frontend-host04, построенный frontend03, дошёл до host CC,
+где новый bind emitter потерял суффикс Value C-name. Root/helper исправили только
+emit_work_binding через existing tx_own_cname. Source04 frozen/staged944.
+Normal frontend-part05/Core PASSf73a023c с explicit reuse477 и ABI103 VERIFIED;
+raw producer/backend/libc сохранены normal manifest/stage-copy3 в receipt consumed-frontend05.
+Hosted link05 использует этот сохранённый новый producer, не перезаписывая свой вход.
+Hosted05 PASSc660f64c; private02 nf build дошёл до length(CodePrivate\data), где
+старый Array-only reader отказал Structure. Runtime05 normal PASSc1aaca6a/prodc05cee7a/
+obsff281ce4 расширяет существующий descriptor length на Structure, без нового API.
+На hosted05+Runtime05 controls02: прежние9 rows PASS во всех4 режимах; добавленные
+ordinary GC/scalar rows отказали CC на lmx_callable_part. Пробная замена на
+lmx_callable_headers тоже отказала CC: diagnosis был неверным. Part уже экспортирован70,
+но отсутствует в decl_implements; headers wrapper не экспортирован. Root вернул исходный
+part reader и дополнил только его пропущенный ABI prototype в recipe04.
+Source05:944/SHAeb5c6bfc frozen/staged; normal part06 Lower+Emit с reuse474/ABI103
+проверяет также общий length(Value) для Structure в native/RW. Исполнение ещё впереди.
+Part06 PASS21f7ccb3/reuse474/ABI103; archived raw producer3 и hosted06 PASS0afa1c48.
+Ordinary03 повторил L2 length отказ (method-part FT терялся в общем path projector)
+и CC headers refusal. Values.path_rec_leaf_ft теперь согласуется с готовым Value reader
+для Structure/callable и точного method-part locus5; retained WORD12/unknown не расширять.
+Tool04 normal PASS5f646999 на recipe04; Runtime06 regenerates missing existing prototype.
+Runtime06 PASS с теми же05 C/objects, ABI header теперь содержит existing part70 prototype.
+Ordinary-controls04 на hosted05 PASS2/0 nf/root0/root1 (GC и public scalar calls).
+Source06:944/SHAb4966f0f; normal Values/Lower part07 PASS55b27cdd/reuse474/ABI103,
+archived raw3, hosted07 PASS63d8c260. Ordinary04: GC/scalar обе PASS; private native
+проходит все прежние assertions до нового Library length2, но видит3 (лишний SET).
+Forced private даёт83: RW передаёт private OWN как готовый hidden, обходя resolver.
+Обычные временные L2 probes подтвердили Library3 в обоих режимах и private suffix10/21.
+Ожидания основного fixture сохранены. Types ready NSF proof убирает только лишний SET;
+RW dyn choice обычных complete-record inputs оставляет прежний absent/FREE, как native.
+Source07 frozen/staged944; normal Types/Emit part08 строится с reuse474/ABI103.
+Part08 PASSc5e73fba, archived raw3, hosted08 PASS4e28fd67. Ordinary05:
+native private PASS7 со всеми assertions, GC/scalars PASSnf; forced дошёл до86.
+Probe HiddenPrivate-2000 дал140 native и121 forced: default OF(NODE,index) терял
+origin/private. Existing closed place projection добавлен в ARG origin extraction;
+Source08/Kernel07 отказал из-за block-local foreign temp, temp перенесён в начало fn.
+Source09:944/SHA9839c387; Runtime08 normal PASS C432c1ad6/prod59f62269/obs9b1b8801.
+Ordinary06: nativeprivate7, GC/scalars PASSnf; forced прошёл2140 и отказал89:
+остаточный lmx_walk_publish перезаписывал CODE source. Это актуальный blocker.
+
+Source10 frozen/staged944: отменённые Call publish helpers, Walk publisher/calls,
+Work.dirty ABI и PRIM_PUB удалены; обычный PRIM использует прежний dispatch.
+Call19/Walk191. Прочие numeric opcode values сохранены. Driver generic shape использует
+prim/endprim; удалены2 отменённых stop publication assertions и их unused carrier,
+остальные stop/order/receiver/destination проверки сохранены. Source20 oracle не менялся.
+Normal Tool05 bridge строится на accepted hosted08/Runtime08 перед новым Runtime09.
+Все runtime/FE/driver helpers вернули ownership; Root — единственный writer/producer.
+Новый обычный fixture включает cold RHS, branch public/private и sequential-before-call.
+Исполнение private409 пока не принято.
+Tool05 bridge выявил несогласованный Call count19/25 в runtime recipe; исправлен именно
+consumer count, Call19/Walk191. После восстановления штатно генерируемых headers normal
+Tool07 PASSa9489942 и Runtime11 PASS: Cf35b7c6d/prod1227b92c/obs725f07ab.
+Source11:944/SHAf73643eb frozen/staged; frontend-part09 Emit/Lower PASS3487ea8c,
+raw producer3 сохранён в consumed-frontend09, hosted09 PASS470fca8a.
+Ordinary07: native private PASS7 во всех root modes; forced проходит SOURCE20, DATA0,
+live lexical2140 и cold RHS, затем отказывает92 на времени жизни branch-local.
+Обе обычные GC/scalar rows проходят native/forced/root0/root1. Приёмка409 ещё OPEN.
+Исправляется существующий Walk Work chain: nwork ограничивает активный префикс,
+CODE binding появляется по достижении объявления после RHS; выход из блока завершает
+его привязки без отката scratch/result. GC отмечает тот же активный префикс.
+Source12:944/SHA973521ae; normal Runtime12 PASS C921ce8f7/prod93075a86/obs784a2c02.
+Ordinary08 PASS3/0 и Controls05 PASS11/0 native/forced/root0/root1. Body wrapper
+ограничивает lifetime; UNTIL сохраняет locals до condition, FOR — counter до выхода.
+Read-only проверка генератора подтвердила, что ordinary FOR уже uses SET_OF/OWN_OF;
+гипотетическая замена его PUT не применялась. Явные graph PUT сохранены.
+Новый sibling-field witness воспроизводит отдельную ошибку: прежний own_add объединяет
+разные branch fields через общий activation host и переносит private первого поля.
+Source13 отказал на неверном трейлере теста; Source14 с исправленным --- строится
+в обоих режимах, но private10 даёт96 во всех4 запусках. Expected1010/3110 не меняется.
+Helper исправляет существующие Lower/Context scope readers; новый VisibleRepeat
+одновременно защищает повторное присваивание уже видимой private переменной.
+Source15:944/SHA5c1b8226 frozen/staged; нормальный part10 Context/Lower PASS4b762102,
+reuse474/ABI103 VERIFIED, raw3 сохранён в consumed-frontend10. Hosted10 PASSc0837ba6
+с Runtime12. Ordinary11 PASS3/0 native/forced/root0/root1, включая sibling96 и repeat97.
+Реальный lexical host не сводится к activation host; source_visible ограничивает CODE
+областью и позицией, а existing reuse association сохраняет уже видимое принимающее поле.
+Ни ABI, ни новые exports для этого исправления не понадобились. Далее targeted12 и whole.
+Targeted12 PASS12/0 во всех4 режимах; новый Graph02 d42e220d с Runtime12 прошёл
+private_binding/call_frame_local interp/native/forced. Canonical Source15 и stage verified944.
+Whole01 завершился отказом на G1 smoke:9 rows/6 failures; G2 не начинался.
+Четыре os_walk_values дают81 из-за отменённого ожидания публикации os_mix\last.
+Root переносит oracle на исходный os_mix\code\last==0 после двух вызовов, сохраняя
+вычисления47/21 и OS selection. Ещё2 RR qualified_merge_root отказа — native/forced root1
+exit3 при root0 PASS: достигнутый SET использует compact OWN output, который прежняя
+широкая entry-preload создавала заранее. Helper исправляет только создание этого уже
+доказанного output по достижении SET после RHS; expected7 остаётся прежним.
+Failed whole01 и его G1 binaries сохранены. Новая frozen source/whole ещё впереди.
+Preexisting runtime resolver first-match для нескольких public кандидатов одного слоя
+не считать проверенной неоднозначностью: bool result ещё не переносит этот отказ через
+consumers. Graph408 uniqueness gate не доказывает native/Walk ambiguity.
+
 ## 2026-11-16 — срез408: code gates PASS, docs/index
 
 407 принят и отправлен85881b5f; авторский17e8af6f сохранён. Goal ACTIVE, работа прямо main.

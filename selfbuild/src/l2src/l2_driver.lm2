@@ -88,8 +88,6 @@ fn: shape_op_code (const: (@: word char)) int
         return: c.LMX_WALK_OP_OWN_OF
     if: c.strcmp(word, "LIT") = 0
         return: c.LMX_WALK_OP_LIT
-    if: c.strcmp(word, "PRIM_PUB") = 0
-        return: c.LMX_WALK_OP_PRIM_PUB
     if: c.strcmp(word, "BREAK") = 0
         return: c.LMX_WALK_OP_BREAK
     if: c.strcmp(word, "ARG") = 0
@@ -2349,7 +2347,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
     int: seen_n 0
     int: seen_i 0
     int: call_open 0
-    int: pub_open 0
+    int: prim_open 0
     int: method_open 0
     int: nest_open 0
     int: skip 0
@@ -2390,11 +2388,11 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             tok := tok + 1
         ---
         skip := 1
-        while: exact = 0 && (call_open > 0 || pub_open > 0 || method_open > 0 || nest_open > 0) && i < lim && skip != 0
+        while: exact = 0 && (call_open > 0 || prim_open > 0 || method_open > 0 || nest_open > 0) && i < lim && skip != 0
             child := c.lmx_arena_ref_value(box, i)
             if: child != 0 && c.strcmp(gargv_cell[0][tok], "call") = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_CALL
                 skip := 0
-            if: child != 0 && c.strcmp(gargv_cell[0][tok], "pub") = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM_PUB
+            if: child != 0 && c.strcmp(gargv_cell[0][tok], "prim") = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM
                 skip := 0
             if: child != 0 && (c.strcmp(gargv_cell[0][tok], "method") = 0 || c.strcmp(gargv_cell[0][tok], "nest") = 0) && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_node_op(child, arena) < 0
                 skip := 0
@@ -2474,13 +2472,13 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             tok := tok + 1
             opened := 1
         ---
-        if: opened = 0 && c.strcmp(gargv_cell[0][tok], "pub") = 0
-            check((cast: (int) (i < lim && depth < capacity)), "pub opens a publish node")
+        if: opened = 0 && c.strcmp(gargv_cell[0][tok], "prim") = 0
+            check((cast: (int) (i < lim && depth < capacity)), "prim opens a primitive node")
             if: i >= lim || depth >= capacity
                 return: 0
             child := c.lmx_arena_ref_value(box, i)
-            check((cast: (int) (shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM_PUB)), "pub opens a PRIM_PUB")
-            if: shape_node_op(child, arena) != c.LMX_WALK_OP_PRIM_PUB
+            check((cast: (int) (shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM)), "prim opens a PRIM")
+            if: shape_node_op(child, arena) != c.LMX_WALK_OP_PRIM
                 return: 0
             stack_box[depth] := box
             stack_at[depth] := i + 1U
@@ -2493,15 +2491,15 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             ---
             i := 0U
             lim := box_fields\size
-            pub_open := pub_open + 1
+            prim_open := prim_open + 1
             tok := tok + 1
             opened := 1
         ---
-        if: opened = 0 && c.strcmp(gargv_cell[0][tok], "endpub") = 0
-            check((cast: (int) (i = lim && depth > 0U && pub_open > 0)), "endpub closes a publish that was fully read")
-            if: i != lim || depth = 0U || pub_open = 0
+        if: opened = 0 && c.strcmp(gargv_cell[0][tok], "endprim") = 0
+            check((cast: (int) (i = lim && depth > 0U && prim_open > 0)), "endprim closes a primitive that was fully read")
+            if: i != lim || depth = 0U || prim_open = 0
                 return: 0
-            pub_open := pub_open - 1
+            prim_open := prim_open - 1
             depth := depth - 1U
             box := stack_box[depth]
             box_fields := 0
@@ -2705,7 +2703,6 @@ sub: stop_probe_adapter (@: method c.Lmx; @: arena c.LmxArena)
 end: stop_probe_adapter
 
 fn: stop_first (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @@: stop_published_cell void (cast: (@@: void) (@ c.stop_published))
     @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
     @: stop_calls_cell int (cast: (@: int) (@ c.stop_calls))
     @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
@@ -2713,12 +2710,10 @@ fn: stop_first (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: o
     int: status
     int: k 0
     @: current c.LmxThread c.lmx_thread_current()
-    @: published void stop_published_cell[0]
     @: receiver void stop_received_cell[0]
     stop_calls_cell[0] := stop_calls_cell[0] + 1
     check((cast: (int) (current != 0 && c.lmx_msg_poll_escape() = 0)), "stop is requested in a genuinely running Message")
     check((cast: (int) (nargs = 0U && dest != 0 && out != 0)), "first actual has its declared scalar result storage")
-    check((cast: (int) (published != 0 && c.lmx_int_value_known(published) = 73)), "first actual sees caller dirty value published before call")
     check((cast: (int) (receiver != 0 && c.lmx_int_value_known(receiver) = 99)), "receiving place has its old published value")
     check((cast: (int) (c.lmx_stop_request(current, 1U, 0U) = c.LMX_THREAD_OK && c.lmx_msg_poll_escape() != 0)), "actual stop request clears current Message running")
     c.lmx_int_store_known(dest, 31415)
@@ -2752,7 +2747,6 @@ end: stop_receiver_probe
 
 fn: stop_root_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
     @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
-    @@: stop_published_cell void (cast: (@@: void) (@ c.stop_published))
     @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
     @: stop_root_returns_cell int (cast: (@: int) (@ c.stop_root_returns))
     @: stop_late_calls_cell int (cast: (@: int) (@ c.stop_late_calls))
@@ -2760,12 +2754,10 @@ fn: stop_root_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; 
     int: status
     c.LmxPrimitiveEntry: entry stop_saved_view[1]
     status := entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
-    @: published void stop_published_cell[0]
     @: receiver void stop_received_cell[0]
     stop_root_returns_cell[0] := stop_root_returns_cell[0] + 1
     check((cast: (int) (c.lmx_msg_poll_escape() != 0)), "root unwinds with Message still stopped")
     check((cast: (int) (out != 0 && status = 0 && out[0] = 0)), "root stop is absent result, not a throw or success payload")
-    check((cast: (int) (published != 0 && c.lmx_int_value_known(published) = 73)), "unwind preserves published caller working value")
     check((cast: (int) (receiver != 0 && c.lmx_int_value_known(receiver) = 99)), "stopped first actual never updates receiving field")
     check((cast: (int) (stop_late_calls_cell[0] = 0 && stop_receiver_calls_cell[0] = 0)), "stop skips later actual and receiver body")
     return: status
@@ -2795,7 +2787,6 @@ end: stop_int_cell
 
 fn: stop_install (@: arena c.LmxArena; @: graph c.Lmx; int: at) int
     @@: stop_caller_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_caller))
-    @@: stop_published_cell void (cast: (@@: void) (@ c.stop_published))
     @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
     @@: stop_later_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_later))
     @@: stop_receiver_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_receiver))
@@ -2812,7 +2803,6 @@ fn: stop_install (@: arena c.LmxArena; @: graph c.Lmx; int: at) int
     stop_cells := c.lmx_arena_ref_struct(stop_caller_cell[0], 3U)
     if: stop_cells = 0
         return: 1
-    stop_published_cell[0] := stop_int_cell(arena, stop_cells, 0)
     stop_received_cell[0] := stop_int_cell(arena, stop_cells, 1)
     stop_later_cell[0] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 6)))
     stop_receiver_cell[0] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 7)))

@@ -6,6 +6,7 @@ predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>"
 
@@ -76,94 +77,6 @@ fn: lmx_call_cell (@: arena c.LmxArena; @: cell void) @: void
     return: cell
 end: lmx_call_cell
 
-sub: lmx_publish_guard (@: arena c.LmxArena; @: cell void; int: guard; @@: roots c.Lmx; size_t: count)
-    if: guard != 0 && (c.lmx_range_has_root_profile(arena, cell, roots, count) != 0 || c.lmx_range_sealed_profile(arena, cell) != 0)
-        lmx_call_note_walk_fail(c.LMX_CALL_WALK_ERR_LO)
-    ---
-    return
-end: lmx_publish_guard
-
-sub: lmx_publish_failed (int: k)
-    c.fprintf(c.l1_stderr(), "lmx: invariant: own field %d store failed\n", k)
-    c.abort()
-    return
-end: lmx_publish_failed
-
-sub: lmx_publish_int (@: dirty int; @: arena c.LmxArena; @: cell void; int: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_int_store_known(cell, value) != 0
-        lmx_publish_failed(k)
-    else:
-        c.lmx_code_changed_cell(arena, cell)
-    ---
-    \dirty := 0
-    return
-end: lmx_publish_int
-
-sub: lmx_publish_char (@: dirty int; @: arena c.LmxArena; @: cell void; int: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_char_store_known(cell, value) != 0
-        lmx_publish_failed(k)
-    else:
-        c.lmx_code_changed_cell(arena, cell)
-    ---
-    \dirty := 0
-    return
-end: lmx_publish_char
-
-sub: lmx_publish_size (@: dirty int; @: arena c.LmxArena; @: cell void; size_t: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_size_store_known(cell, value) != 0
-        lmx_publish_failed(k)
-    else:
-        c.lmx_code_changed_cell(arena, cell)
-    ---
-    \dirty := 0
-    return
-end: lmx_publish_size
-
-sub: lmx_publish_unsigned (@: dirty int; @: arena c.LmxArena; @: cell void; unsigned: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_unsigned_store_known(cell, value) != 0
-        lmx_publish_failed(k)
-    else:
-        c.lmx_code_changed_cell(arena, cell)
-    ---
-    \dirty := 0
-    return
-end: lmx_publish_unsigned
-
-sub: lmx_publish_ulong (@: dirty int; @: arena c.LmxArena; @: cell void; ulong: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_ulong_store_known(cell, value) != 0
-        lmx_publish_failed(k)
-    else:
-        c.lmx_code_changed_cell(arena, cell)
-    ---
-    \dirty := 0
-    return
-end: lmx_publish_ulong
-
-sub: lmx_publish_pointer (@: dirty int; @: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue; int: k; int: guard; @@: roots c.Lmx; size_t: count)
-    if: dirty = 0 || \dirty = 0
-        return
-    lmx_publish_guard(arena, cell, guard, roots, count)
-    if: c.lmx_pointer_store_context_in(arena, cell, raw, context) != 0
-        lmx_publish_failed(k)
-    \dirty := 0
-    return
-end: lmx_publish_pointer
-
 fn: lmx_call_ready (@: arena c.LmxArena; @: callable c.Lmx) int
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
@@ -215,6 +128,14 @@ sub: lmx_activation_pop (@: arena c.LmxArena; @: record c.LmxActivation)
     record\bindings := 0
     record\nbind := 0U
     record\cap := 0U
+    if: record\origins_owned != 0
+        c.free((cast: (@: void) record\input_origins))
+        c.free((cast: (@: void) record\input_private))
+    ---
+    record\input_origins := 0
+    record\input_private := 0
+    record\origin_count := 0U
+    record\origins_owned := 0
     arena\activation := (cast: (@: void) record\parent)
     return
 end: lmx_activation_pop
@@ -223,9 +144,14 @@ end: lmx_activation_pop
 # IDENTIFIER-CODES; the unit normalized its spelling once at its input boundary) with its `storage` and `type`, or a
 # complete LmxWalkValue record (`value`) where the cell holds one.  1 for no code, or when the C heap refuses.
 fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void) int
+    return: lmx_activation_bind_origin(arena, code, storage, type, value, 0)
+end: lmx_activation_bind
+
+fn: lmx_activation_bind_origin (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void; @: origin void) int
     @: record c.LmxActivation 0
     @: grown c.LmxActivationBinding 0
     @: slot c.LmxActivationBinding 0
+    @: metadata c.LmxSourceName 0
     size_t: cap 0U
     if: arena = 0 || code = 0U
         return: 1
@@ -247,9 +173,40 @@ fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int
     slot\storage := storage
     slot\type := type
     slot\value := value
+    slot\origin := origin
+    slot\binding_private := 0
+    metadata := c.lmx_source_places(arena, origin)
+    if: metadata != 0
+        slot\binding_private := metadata\binding_private
     record\nbind := record\nbind + 1U
     return: 0
-end: lmx_activation_bind
+end: lmx_activation_bind_origin
+
+# A call owns these mutable metadata spans until its activation returns.
+# Entry may replace a short borrow with its own padded spans.
+fn: lmx_activation_origins (@: arena c.LmxArena; @@: origins void; @: private_flags int; size_t: count) int
+    @: record c.LmxActivation 0
+    if: arena = 0 || (count != 0U && (origins = 0 || private_flags = 0))
+        return: 1
+    record := (cast: (@: c.LmxActivation) arena\activation)
+    if: record = 0
+        return: 1
+    if: record\input_origins = origins && record\input_private = private_flags
+        if: count > record\origin_count
+            return: 1
+        record\origin_count := count
+        return: 0
+    ---
+    if: record\origins_owned != 0
+        c.free((cast: (@: void) record\input_origins))
+        c.free((cast: (@: void) record\input_private))
+    ---
+    record\input_origins := origins
+    record\input_private := private_flags
+    record\origin_count := count
+    record\origins_owned := 0
+    return: 0
+end: lmx_activation_origins
 
 # Explicit typed borrows, including operations before the first activation.
 # A checkpoint closes an operation, including every nested temporary span.
@@ -347,10 +304,15 @@ end: lmx_call0
 
 # The ordinary selected code/data ABI: actual declared-width storage and value context, no runtime backend registry.
 fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    return: lmx_call_prim_values_origins(arena, code, data, refs, nargs, dest, out, lmx_input_values, lmx_result_context, 0, 0, 0U)
+end: lmx_call_prim_values
+
+fn: lmx_call_prim_values_origins (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue; @@: origins void; @: private_flags int; size_t: origin_count) int
     int: status
     c.LmxWalkValue: result_context
     c.LmxExecutionRoots: result_roots
     c.LmxExecutionRoots: input_roots
+    c.LmxExecutionRoots: origin_roots
     @: roots_mark c.LmxExecutionRoots 0
     size_t: input_count 0U
     if: out = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
@@ -358,11 +320,14 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
         c.abort()
     ---
     \out := 0
+    if: origin_count != 0U && (origins = 0 || private_flags = 0)
+        return: lmx_call_note_walk_fail(c.LMX_WALK_INVALID)
     c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     roots_mark := lmx_execution_roots_mark(arena)
     if: lmx_input_values != 0
         input_count := nargs
     lmx_execution_roots_push(arena, @ input_roots, (cast: (@: void) lmx_input_values), input_count, refs, nargs, (cast: (@: void) data), 0)
+    lmx_execution_roots_push(arena, @ origin_roots, 0, 0U, origins, origin_count, 0, 0)
     lmx_execution_roots_push(arena, @ result_roots, (cast: (@: void) (@ result_context)), 1U, out, 1U, dest, 0)
     c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
     c.LmxActivation: act
@@ -370,13 +335,14 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
         c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
         # The native activation's record (slice 254): its inputs are the arrays the entry receives.
         lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@: void) lmx_input_values), nargs, 0)
+        lmx_activation_origins(arena, origins, private_flags, origin_count)
         status := entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
         # The entry's stack Values have ended. Drop its typed borrows before
         # any other runtime action; caller inputs/result remain below them.
         lmx_execution_roots_restore(arena, @ result_roots)
         lmx_activation_pop(arena, @ act)
     else:
-        status := c.lmx_walk_call_prim_dispatch(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
+        status := c.lmx_walk_call_prim_dispatch_origins(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context, origins, private_flags, origin_count)
     ---
     if: c.lmx_msg_poll_escape() != 0
         \out := 0
@@ -391,7 +357,7 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
     ---
     lmx_execution_roots_restore(arena, roots_mark)
     return: status
-end: lmx_call_prim_values
+end: lmx_call_prim_values_origins
 
 fn: lmx_call_prim (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void) int
     return: lmx_call_prim_values(arena, code, data, refs, nargs, dest, out, 0, 0)

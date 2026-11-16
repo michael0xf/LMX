@@ -445,10 +445,25 @@ end: lm_compiler_own_binding_after
 fn: lm_compiler_own_source_visible (int: row; int: mi; const: (@: at c.LmP0Node)) int
     @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
     @: here_source_mi_cell int (cast: (@: int) (@ c.l2_here_source_mi))
+    @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
     const: (@: source c.LmP0Node c.lm_compiler_head_source_node(own_decl_cell[0][row]))
     @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
     @: binding c.L2DataBinding bindings[0]
+    # An activation owns all its CODE storage, but only reached declarations
+    # in the current lexical chain answer a name. A missing source position
+    # is not permission to select a future or sibling CODE declaration.
+    if: c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_fn_parts_on(mi) != 0 && lm_compiler_own_code_local(mi, row) != 0
+        if: own_host_cell[0][row] != 0 && lm_compiler_scope_has(own_host_cell[0][row]) = 0
+            return: 0
+        if: at = 0 && here_mi_cell[0] = mi
+            at := here_node_cell[0]
+        at := c.lm_compiler_head_source_node(at)
+        if: at = 0 || at\span = 0 || source = 0 || source\span = 0
+            return: (cast: (int) (source != 0 && source = at))
+        return: (cast: (int) (source\span\offset <= at\span\offset))
+    ---
     while: binding != 0
         if: binding\binding = row
             return: 1
@@ -461,6 +476,7 @@ fn: lm_compiler_own_source_visible (int: row; int: mi; const: (@: at c.LmP0Node)
 end: lm_compiler_own_source_visible
 
 fn: lm_compiler_own_same_activation (int: row; int: mi) int
+    # Storage ownership only; own_source_visible separately checks CODE scope.
     @@: for_mi_cell int (cast: (@@: int) (@ c.l2_for_mi))
     @@@: for_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_for_node))
     @@: for_parent_cell int (cast: (@@: int) (@ c.l2_for_parent))
@@ -547,19 +563,22 @@ fn: lm_compiler_own_find_last (int: mi; const: (@: t c.LmP0Text)) int
     return: (cast: (int) (hit))
 end: lm_compiler_own_find_last
 
-fn: lm_compiler_own_local_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node)) int
+fn: lm_compiler_own_local_at_mode (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node); int: dynamic) int
     @: own_excl_cell int (cast: (@: int) (@ c.l2_own_excl))
     @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     int: i 0
     int: hit -1
     if: t = 0
         return: (cast: (int) (-1))
     i := lm_compiler_oix_first(t)
     while: i >= 0
-        if: i != own_excl_cell[0] && own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && (lm_compiler_scope_has(own_host_cell[0][i]) != 0 || lm_compiler_own_same_activation(i, mi) != 0)
+        if: i != own_excl_cell[0] && (dynamic = 0 || c.lm_compiler_binding_private(own_decl_cell[0][i]) = 0) && own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && (lm_compiler_scope_has(own_host_cell[0][i]) != 0 || lm_compiler_own_same_activation(i, mi) != 0)
+            # Same activation does not bypass a CODE declaration's lexical
+            # host or its sequential source visibility.
             if: lm_compiler_own_source_visible(i, mi, at) != 0 && lm_compiler_own_binding_after(i, hit) != 0
                 hit := i
         ---
@@ -567,25 +586,42 @@ fn: lm_compiler_own_local_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c
     if: hit >= 0
         return: (cast: (int) (hit))
     return: (cast: (int) (-1))
+end: lm_compiler_own_local_at_mode
+
+fn: lm_compiler_own_local_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node)) int
+    return: lm_compiler_own_local_at_mode(mi, t, at, 0)
 end: lm_compiler_own_local_at
 
-fn: lm_compiler_own_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node)) int
+fn: lm_compiler_own_at_mode (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node); int: dynamic) int
     @: own_excl_cell int (cast: (@: int) (@ c.l2_own_excl))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     int: i 0
-    int: hit lm_compiler_own_local_at(mi, t, at)
+    int: hit lm_compiler_own_local_at_mode(mi, t, at, dynamic)
     if: hit >= 0
         return: (cast: (int) (hit))
     i := lm_compiler_oix_first(t)
     while: i >= 0
-        if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0
+        if: i != own_excl_cell[0] && (dynamic = 0 || c.lm_compiler_binding_private(own_decl_cell[0][i]) = 0) && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0
             if: c.lm_compiler_own_source_after(i, hit) != 0
                 hit := i
         ---
         i := lm_compiler_oix_after(i)
     return: (cast: (int) (hit))
+end: lm_compiler_own_at_mode
+
+fn: lm_compiler_own_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0Node)) int
+    return: lm_compiler_own_at_mode(mi, t, at, 0)
 end: lm_compiler_own_at
+
+fn: lm_compiler_own_dynamic_visible (int: mi; const: (@: t c.LmP0Text)) int
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
+    if: here_mi_cell[0] = mi
+        return: lm_compiler_own_at_mode(mi, t, here_node_cell[0], 1)
+    return: lm_compiler_own_at_mode(mi, t, 0, 1)
+end: lm_compiler_own_dynamic_visible
 
 fn: lm_compiler_own_visible (int: mi; const: (@: t c.LmP0Text)) int
     @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
@@ -1631,30 +1667,23 @@ fn: lm_compiler_body_head_word (const: (@: t c.LmP0Text)) int
     return: (cast: (int) (0))
 end: lm_compiler_body_head_word
 
-# Slice 292 (VAR-PATH-OF-SHORT-FN; the book, docs/LMX_semantics.ru.md :437, :451; Codex, the 285 norm answers, item 1): the part
-# of a method an own field is in, by the layout -- part 2 its var, which holds the written var's fields and the own fields
-# its body declares (lm_compiler_body_own_in_var), part 3 its body, which holds the other own fields of its source.  Part 12
-# asks the written var part alone (the scan binds those at the entry; an own field of the body stays a hidden input before
-# its declaration), part 13 the body's own fields var holds alone.
+# DATA contains only its written declarations. CODE source fields remain in
+# their own body; activation locals are not appended to the graph DATA.
 fn: lm_compiler_method_part_contains_own (int: mi; int: part; int: own) int
-    if: part = 12
-        return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 2, own)))
-    if: part = 13
-        return: (cast: (int) (lm_compiler_body_own_in_var(mi, own)))
-    if: part = 2
-        if: lm_compiler_method_source_contains_own(mi, 2, own) != 0
-            return: (cast: (int) (1))
-        ---
-        return: (cast: (int) (lm_compiler_body_own_in_var(mi, own)))
-    ---
+    if: part = 2 || part = 12
+        return: lm_compiler_method_source_contains_own(mi, 2, own)
     if: part = 3
-        if: lm_compiler_body_own_in_var(mi, own) != 0
-            return: (cast: (int) (0))
-        ---
-        return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own)))
-    ---
-    return: (cast: (int) (0))
+        return: lm_compiler_method_source_contains_own(mi, 3, own)
+    return: 0
 end: lm_compiler_method_part_contains_own
+
+fn: lm_compiler_own_code_local (int: mi; int: own) int
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    if: own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || c.lm_compiler_source_definition_method(own) >= 0 || c.lm_compiler_source_definition_ns(own) >= 0
+        return: 0
+    return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own) != 0 || lm_compiler_inline_body_holds(mi, own) != 0))
+end: lm_compiler_own_code_local
 
 fn: lm_compiler_path_fact_same (const: (@: fact c.L2PathFact); const: (@: path c.L2Path)) int
     @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
@@ -2641,36 +2670,7 @@ fn: lm_compiler_method_source_contains_own (int: mi; int: part; int: own) int
     return: (cast: (int) (0))
 end: lm_compiler_method_source_contains_own
 
-# Slice 292: an own field the body of a method with parts (a `fn`, a `sub`) declares, whose place stands in its var (the book,
-# docs :437: the own fields found in the body join the written var's as its fields, before an occurrence is laid out; :451:
-# the place is physically in var, the body's statement reaches it and makes no second cell).  Its statement and initializer
-# stay in the body and run when reached.  The answer reads the source tables alone, so the checks and the layout agree.  The
-# layout keeps the other own fields where they were (a boundary of the slice): one declared in a nested body (own_host), a
-# written definition (a method, a Structure, a written form), a receiver's output operand, a reference to a graph Structure
-# (its declaration decides its storage), those of a callable merge's factory or a part constructor (their own layouts).
-fn: lm_compiler_body_own_in_var (int: mi; int: own) int
-    @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
-    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
-    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
-    if: own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || own_host_cell[0][own] != 0
-        return: (cast: (int) (0))
-    if: c.lm_compiler_fn_parts_on(mi) = 0 || c.lm_compiler_mad_on(mi) != 0 || c.lm_compiler_pap_on(mi) != 0
-        return: (cast: (int) (0))
-    if: c.lm_compiler_source_definition_method(own) >= 0 || c.lm_compiler_source_definition_ns(own) >= 0 || c.lm_compiler_mres_of_own(own) >= 0
-        return: (cast: (int) (0))
-    # A written form (lm_compiler_own_written) holds a reference to its Structure: the next test keeps it too.
-    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) != 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][own]) != 0
-        return: (cast: (int) (0))
-    if: lm_compiler_method_source_contains_own(mi, 3, own) != 0
-        return: (cast: (int) (1))
-    # Slice 295 (VAR-OWN-NESTED-AND-REFERENCE; the book :441): a declaration an inline statement of the body holds names the
-    # activation's one place too (lm_compiler_own_add gives its row the method's host): var holds it.  The body's part keeps
-    # the heads of its root level alone (:441, :497).
-    return: (cast: (int) (lm_compiler_inline_body_holds(mi, own)))
-end: lm_compiler_body_own_in_var
-
-# Slice 295 (VAR-OWN-NESTED-AND-REFERENCE): whether the declaration of a method's own row stands in an inline statement of the
+# Whether a declaration of this activation belongs to an inline statement of the
 # method's written body -- the body of an `if`, of its `else`, of a `while`, of a C-style `for` (with its first declaration),
 # an anonymous body -- at any depth, by the statements lm_compiler_collect_decls walks for that method.  A catch's handler is
 # another activation's (lm_compiler_own_same_activation) and a retained definition no statement of this body; the walk

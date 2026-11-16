@@ -411,6 +411,7 @@ fn: lmx_gc_walk_frame (@: arena c.LmxArena; @: frame c.LmxWalkFrame; unsigned: g
     @: work c.LmxWalkWork 0
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
+    size_t: i 0U
     int: status c.LMX_GC_OK
     if: frame = 0
         return: status
@@ -431,11 +432,12 @@ fn: lmx_gc_walk_frame (@: arena c.LmxArena; @: frame c.LmxWalkFrame; unsigned: g
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\immutable_profile), gen, 0))
         status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) context\immutable_roots), context\immutable_root_count, gen))
     work := (cast: (@: c.LmxWalkWork) frame\work)
-    while: work != 0 && status = c.LMX_GC_OK
+    while: i < frame\nwork && work != 0 && status = c.LMX_GC_OK
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) work\holder), gen, 0))
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) work\slot), gen, 0))
         status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ work\value)), gen, 0))
         work := (cast: (@: c.LmxWalkWork) work\next)
+        i := i + 1U
     return: status
 
 fn: lmx_gc_graph_frames (@: arena c.LmxArena; @: frame c.LmxGraphFrame; unsigned: gen) int
@@ -496,12 +498,16 @@ fn: lmx_gc_mark_execution (@: arena c.LmxArena; unsigned: gen) int
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) active\code), gen, 0))
         status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (@: c.LmxWalkValue) active\values), active\width, gen))
         status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) active\refs), active\width, gen))
+        if: active\origin_count != 0U && (active\input_origins = 0 || active\input_private = 0)
+            return: c.LMX_GC_INVALID
+        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) active\input_origins), (cast: (size_t) active\origin_count), gen))
         bindings := (cast: (@: c.LmxActivationBinding) active\bindings)
         if: active\nbind > active\cap || (active\nbind != 0U && bindings = 0)
             return: c.LMX_GC_INVALID
         i := 0U
         while: i < active\nbind && status = c.LMX_GC_OK
             binding := bindings + i
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) binding\origin), gen, 0))
             status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) binding\storage), gen, 0))
             status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) binding\value), gen, 0))
             i := i + 1U

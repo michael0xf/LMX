@@ -158,22 +158,33 @@ fn: lm_compiler_ns_constructed_row (int: mi; const: (@: source_node c.LmP0Node))
     @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
     @@@: nsf_source_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_nsf_source))
     @@: nsf_kind_cell int (cast: (@@: int) (@ c.l2_nsf_kind))
+    @@: nsf_bare_cell int (cast: (@@: int) (@ c.l2_nsf_bare))
     @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     int: ni c.lm_compiler_m_nsof(mi)
     int: row 0
     int: found -1
     int: match
+    @: declaration c.L2Declaration
     @: body c.LmP0Structure c.lm_compiler_ns_source_body(ni)
     if: body = 0 || source_node = 0 || source_node\as = 0
         return: (cast: (int) (-1))
     if: c.lm_compiler_body_has_source(body, source_node) = 0
         return: (cast: (int) (-1))
+    declaration := c.lm_compiler_declaration(source_node)
     while: row < nsf_n_cell[0]
         match := 0
         if: nsf_owner_cell[0][row] = ni && nsf_source_cell[0][row] = source_node
             if: nsf_kind_cell[0][row] = 2 || nsf_kind_cell[0][row] = 4 || nsf_kind_cell[0][row] = 5 || nsf_kind_cell[0][row] = 6 || (nsf_kind_cell[0][row] = 12 && nsf_fname_cell[0][row] = 0)
                 match := 1
+            ---
+            # A literal primitive already filled by the NSF constructor is
+            # this one source field, not storage followed by another SET.
+            # Bare rows also cover computed/absent values and stay deferred.
+            if: nsf_kind_cell[0][row] = 0 || nsf_kind_cell[0][row] = 1 || nsf_kind_cell[0][row] = 7 || nsf_kind_cell[0][row] = 8 || nsf_kind_cell[0][row] = 9
+                if: nsf_bare_cell[0][row] = 0 && declaration != 0 && declaration\name != 0 && nsf_fname_cell[0][row] = declaration\name
+                    match := 1
+                ---
             ---
         ---
         if: match != 0

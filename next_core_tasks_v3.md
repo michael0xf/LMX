@@ -2944,7 +2944,16 @@ Frame0 read и FREE snapshot сохраняют отдельный от physical
 Это не закрывает native/Walk hidden transport или qualifier lowering ниже.
 [Свидетельство408](steps/witnesses/m14-private-binding-20261116/notes.md).
 
-Следующий перенос409 (OPEN): передавать canonical CHILDREN origin и выбранный private через
+Ограниченный native/Walk срез409 прошёл code gates: Source16:944, whole02 bootstrap quick
+с genuine G1/G2 по9 smoke и fixedpoint14 точно на этом источнике, actual G2 targeted12/0
+во всех4 режимах и private/local Graph triples. Origin и выбранный private идут через
+существующие activation bindings и call input rows; CODE locals не дописываются в DATA,
+публикация локалов и её носители удалены. Mutant resolve_origin mode2 (origin→0) даёт
+exit86 вместо7 во всех4 запусках. Это не закрывает неоднозначность public источников,
+единую native DATA, прямой typed native body и перенос M10 ниже.
+[Свидетельство409](steps/witnesses/m14-native-private-20261116/notes.md).
+
+Перенос409 (приёмка выше, остатки OPEN): передавать canonical CHILDREN origin и выбранный private через
 существующую activation binding, отдельно от Value. Заполнять привязку после окончательного
 DATA projection; explicit actual получает признак принимающего поля, hidden/FREE — выбранного
 источника. Согласовать существующие WalkValues capture/resolve и native producers: ready Value
@@ -2953,6 +2962,43 @@ FE dynamic selector исключает private до ambiguity. При точно
 использовать живое local/full Value, не исходный CODE field и не отдельную копию окружения.
 Общий named-formal binder не запрещает explicit actual в private принимающее поле.
 GC отмечает borrowed origin через существующий activation loop; отдельный registry не нужен.
+Связанные FE prerequisites409: current working Value регистрируется вместе с canonical
+origin, а CODE locals не дописываются в физическую DATA через прежний body_own_in_var.
+RW producer обычных complete-record hidden inputs должен оставлять прежний отсутствующий
+операнд/FREE тому же entry resolver, как native; заранее переданный OWN обходит private.
+Known Structure и method-part paths сохраняют Graph FT в общем projector; length читает
+тот же Value/descriptor. Ready materialized NSF declaration занимает один исходный child,
+без второго SET в layout; computed/absent и reached RHS этим proof не упрощаются.
+Динамическое связывание читает local Value без публикации; отменённые publication emission,
+носители и неиспользуемые helpers удаляются вместе. Приёмка native/forced обязательно
+сверяет local21 с исходным CODE20 и отсутствием DATA backfill, иначе private может получить
+ложный PASS на старой модели. Existing hidden FREE capture используется тем же resolver;
+при динамическом отсутствии lexical fallback сначала ищет live binding точного origin.
+Требования единой native DATA и прямых известных C-вызовов остаются OPEN до собственного
+переноса; добавление origin API само по себе их не закрывает.
+Для прямой известной native edge использовать существующие emit_sig/emit_formal и вызов
+body из emit_tramp_call: один typed body ABI для доказанных FT, а trampoline остаётся
+динамическим адаптером к нему. Сохранить порядок actuals, допуск, default suppression,
+hidden selection и существующую activation/GC lifetime. Передавать нужный Value-контекст
+скрытыми аргументами по use plan; смена имени boxed dispatcher без снятия обязательных
+vectors у body не является прямым C-вызовом. Unknown target использует общий worker.
+Отдельно довести прежний runtime first-match: несколько допустимых public источников
+одного слоя требуют отказа неоднозначности с переносом результата через consumers,
+без lexical fallback после такого отказа. Bool resolver и Graph408 uniqueness не являются
+приёмкой этого native/Walk случая; private исключается до подсчёта кандидатов.
+При выборе сначала считать подходящие описания без чтения их RHS: готовые и вычисляемые
+поля участвуют одинаково. Через capture, resolve_input, entry и native default передавать
+различие «готово / отсутствует / неоднозначно»; отказ не превращать в lexical fallback.
+Входной отказ проходит существующий путь допуска до тела и не попадает в catch самого
+вызываемого тела. Отдельно сохранить физические повторные DATA поля в producer: повтор
+уже видимого CODE объявления и разные исходные вхождения DATA не являются одним случаем.
+Конкретный оставшийся M10 consumer: `struct_call_operands` в frontend Lower ещё назначает
+первый операнд code, второй data; `data`/`code` aliases этого не исправляют. Перенести его
+вместе с plan/check/emission на все шесть форм и общий worker, с реальным CODE эффектом
+в обычной языковой приёмке. Вместе с этим мигрировать активный `var_own_nested`: убрать
+ожидания CODE→DATA backfill и публикации, старый порядок `call: one D` и отказ из-за
+отсутствующего CODE-локала. Сохранить проверки циклов/ветвей/повторов/прямой graph записи
+и допуска настоящего DATA входа; строку suite не отключать и expected не ослаблять.
 Graph runtime lowering композиций const/immutable/independent также OPEN: construction fold
 только private-only chain сохраняет остальные qualifiers и не подтверждает их готовность.
 

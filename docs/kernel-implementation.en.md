@@ -1177,6 +1177,10 @@ decision and the code as it stands, and is not a task to continue that mechanism
 - **`uninit:T`.** One record: the code `uninit:T`, then a complete record of T (§3.2). The slot refers to the outer
   record, the name and `@x` to the inner one; the pointer of the earlier representation is the constant offset
   between them.
+- **Codes.** A distinction the kernel needs is expressed by a new type code: the code word of a record holds a
+  code and nothing else, with no flag bits or masks (the author: "заводите просто новые типы себе и всё",
+  [journal](../LMX_blog/2026-11-16.md#new-types-not-bits)). Different Structures are not different types: a user
+  model produces no code.
 - **Immutability** is told by the code -- the immutable variant of a type --, not by the interval of a region.
 - **Dense storage.** The elements of a numeric `Array<T>` and the slots of a Structure are dense and carry no codes;
   the element type is told by the code of the Array's record. Typed native locals and temporaries are not packed into

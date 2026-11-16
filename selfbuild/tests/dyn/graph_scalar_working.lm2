@@ -191,7 +191,9 @@ fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out
 
 # The assertion owner keeps the current int-reference chunk through one real
 # reference cell. It fills that chunk before the call, isolating pending actuals in a new chunk.
-# No source edge can then mask a missing pending span during collection.
+# The full-Value route no longer consumes that temporary reference wrapper.
+# Its target survives as the received Value; this unused wrapper is reclaimed.
+# Complete pending-Value metadata lifetime is covered by graph_call_values.
 fn: gs_pending_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: pool c.LmxPool arena\arrays
     @: pending void 0
@@ -209,7 +211,7 @@ fn: gs_pending_collect (@: owner void; @@: refs void; size_t: nargs; @: dest voi
         pool := pool\next
     if: pending = 0 || c.lmx_range_cell_pool(arena, pending) = 0
         return: 121
-    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_range_cell_pool(arena, pending) = 0
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_range_cell_pool(arena, pending) != 0
         return: 122
     if: c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0 || c.lmx_walk_value_foreign_capture(arena, @ number, c.LMX_TYPE_FOREIGN, abi, 0, 0, @ value) != c.LMX_WALK_OK
         return: 123

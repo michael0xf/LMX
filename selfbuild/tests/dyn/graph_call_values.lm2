@@ -1,0 +1,498 @@
+# The C assertion owner supplies already received full Values to the public
+# Graph invocation adapter. Parsed bodies exercise the same interpreter frame;
+# the native entry below checks the ordinary selected-code/data C ABI.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<float.h>"
+
+fn: gv_binding (@: name char; @@: source void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), source)
+
+# Each metadata node has its own allocation profile. An unrelated live node
+# cannot preserve it merely by sharing the ordinary Structure chunk.
+fn: gv_node (@: arena c.LmxArena; int: tag) @: c.Lmx
+    @: pool_profile c.Lmx c.lmx_node_new_owned(arena)
+    @: graph_node c.Lmx c.lmx_node_new_profiled(arena, pool_profile)
+    @: number int c.lmx_int_new_profiled(arena, pool_profile)
+    if: pool_profile = 0 || graph_node = 0 || number = 0 || c.lmx_int_store_known(number, tag) != 0 || c.lmx_arena_refs_open_owned(arena, graph_node, 1U) != 0 || c.lmx_arena_ref_store(arena, graph_node, 0U, (cast: (@: void) number)) != 0
+        return: (cast: (@: c.Lmx) 0)
+    return: graph_node
+
+fn: gv_tag (@: arena c.LmxArena; @: graph_node void) int
+    if: graph_node = 0 || c.lmx_range_classify(arena, graph_node) != c.LMX_KIND_STRUCT
+        return: -1
+    @: number void c.lmx_arena_ref_value((cast: (@: c.Lmx) graph_node), 0U)
+    if: number = 0 || c.lmx_range_type_of(arena, number) != c.LMX_TYPE_INT
+        return: -1
+    return: c.lmx_int_value_known(number)
+
+fn: gv_metadata (@: arena c.LmxArena; @: value c.LmxWalkValue; size_t: slot; @: source void; const: (@: abi c.LmxScalarABI)) int
+    @: referent_cell void 0
+    @: referent_profile c.Lmx gv_node(arena, 500 + (cast: (int) slot))
+    value\model := gv_node(arena, 100 + (cast: (int) slot))
+    value\references := gv_node(arena, 200 + (cast: (int) slot))
+    value\physical_profile := gv_node(arena, 300 + (cast: (int) slot))
+    value\source_type := source
+    if: source = 0
+        value\source_type := gv_node(arena, 400 + (cast: (int) slot))
+    referent_cell := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, referent_profile, abi, 1U)
+    value\referent := c.lmx_value_cell_context(arena, referent_cell)
+    if: value\model = 0 || value\references = 0 || value\physical_profile = 0 || value\source_type = 0 || referent_profile = 0 || referent_cell = 0 || value\referent = 0
+        return: 1
+    return: 0
+
+fn: gv_check_metadata (@: arena c.LmxArena; @: value c.LmxWalkValue; size_t: slot) int
+    @: source void 0
+    @: referent_owner void 0
+    const: (@: abi c.LmxScalarABI 0)
+    if: value = 0 || value\present = 0 || gv_tag(arena, (cast: (@: void) value\model)) != 100 + (cast: (int) slot) || gv_tag(arena, (cast: (@: void) value\references)) != 200 + (cast: (int) slot) || gv_tag(arena, (cast: (@: void) value\physical_profile)) != 300 + (cast: (int) slot)
+        return: 1
+    if: slot = 4U || slot = 6U
+        if: slot = 4U
+            abi := gv_binding("f64", @ source)
+        else:
+            abi := gv_binding("double", @ source)
+        ---
+        if: value\kind != c.LMX_WALK_VALUE_FOREIGN || value\scalar_abi != abi || value\source_type != source || c.lmx_walk_value_scalar_storage(arena, value, c.LMX_TYPE_FOREIGN, abi) != c.LMX_WALK_OK
+            return: 1
+        ---
+    else:
+        if: gv_tag(arena, (cast: (@: void) value\source_type)) != 400 + (cast: (int) slot)
+            return: 1
+    ---
+    referent_owner := c.lmx_value_context_cell_in(arena, (cast: (@: c.LmxWalkValue) value\referent))
+    if: referent_owner = 0 || c.lmx_range_cell_pool(arena, referent_owner) = 0 || gv_tag(arena, (cast: (@: void) c.lmx_range_profile(arena, referent_owner))) != 500 + (cast: (int) slot)
+        return: 1
+    return: 0
+
+fn: gv_check_inputs (@: arena c.LmxArena; @: inputs c.LmxWalkValue; @@: refs void; size_t: nargs) int
+    @: value c.LmxWalkValue 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: immutable_precise (cast: (double) 2) + (cast: (double) 2) * c.DBL_EPSILON
+    size_t: i 0U
+    if: inputs = 0 || refs = 0 || nargs != 7U
+        return: 1
+    while: i < nargs
+        value := inputs + i
+        if: refs[i] != c.lmx_walk_value_storage(value)
+            return: 1
+        if: i = 1U || i = 3U
+            if: value\present != 0 || value\kind != 0 || refs[i] != 0
+                return: 1
+            ---
+        else:
+            if: gv_check_metadata(arena, value, i) != 0
+                return: 1
+        ---
+        i := i + 1U
+    ---
+    value := inputs
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE || value\type != c.LMX_TYPE_CELL_POINTER || value\ref != 0 || refs[0] = 0
+        return: 1
+    value := inputs + 2U
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE || value\type != c.LMX_TYPE_LMX || gv_tag(arena, (cast: (@: void) value\ref)) != 702
+        return: 1
+    value := inputs + 4U
+    if: value\type != 0 - c.LMX_TYPE_FOREIGN || c.memcmp((cast: (const: @: void) value\ref), @ immutable_precise, sizeof(double)) != 0
+        return: 1
+    value := inputs + 5U
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER || value\type != c.LMX_TYPE_INT || value\number != 73
+        return: 1
+    value := inputs + 6U
+    if: value\type != c.LMX_TYPE_FOREIGN || c.memcmp((cast: (const: @: void) value\ref), @ precise, sizeof(double)) != 0
+        return: 1
+    return: 0
+
+# Remove backup Model/reference edges from mutable physical companions. The
+# callback still owns no root of its projected copy: the input contexts of
+# the existing call/activation must retain these isolated graph dependencies.
+sub: gv_clear_companions (@: arena c.LmxArena)
+    @: pool c.LmxPool arena\arrays
+    @: chunk c.LmxChunk 0
+    @: contexts c.LmxWalkValue 0
+    @: context c.LmxWalkValue 0
+    size_t: i 0U
+    while: pool != 0
+        if: pool\type = c.LMX_TYPE_FOREIGN
+            chunk := c.lmx_pool_chunk_head(pool)
+            while: chunk != 0
+                contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+                i := 0U
+                while: contexts != 0 && i < c.lmx_chunk_cells(chunk, pool\stride)
+                    context := contexts + i
+                    context\model := 0
+                    context\references := 0
+                    context\referent := 0
+                    context\source_type := 0
+                    i := i + 1U
+                ---
+                chunk := (cast: (@: c.LmxChunk) chunk\next)
+            ---
+        ---
+        pool := pool\next
+    ---
+end: gv_clear_companions
+
+fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: projected c.LmxWalkValue c.calloc(7U, c.sizeof(c.LmxWalkValue))
+    @@: projected_refs void c.calloc(7U, sizeof(@: void))
+    if: g = 0 || owner = (cast: (@: void) code) || owner != (cast: (@: void) c.lmx_graph_method_data(g, code)) || projected = 0 || projected_refs = 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0
+        return: 151
+    if: c.lmx_walk_values_project(inputs, refs, nargs, 0U, projected, projected_refs, 7U) != c.LMX_WALK_OK || gv_check_inputs(arena, projected, projected_refs, 7U) != 0 || c.memcmp((cast: (const: @: void) inputs), (cast: (const: @: void) projected), 7U * c.sizeof(c.LmxWalkValue)) != 0
+        return: 152
+    gv_clear_companions(arena)
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || gv_check_inputs(arena, inputs, refs, nargs) != 0 || gv_check_inputs(arena, projected, projected_refs, 7U) != 0 || c.memcmp((cast: (const: @: void) inputs), (cast: (const: @: void) projected), 7U * c.sizeof(c.LmxWalkValue)) != 0
+        return: 153
+    c.free(projected_refs)
+    c.free(projected)
+    return: c.lmx_call_result_value(arena, code, inputs + 4U, dest, out, result)
+
+fn: gv_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: gv_install_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx) int
+    size_t: slot c.lmx_graph_named(g, code, c.lmx_graph_intern("data", 4U))
+    if: slot >= c.lmx_graph_count(code) || c.lmx_graph_name(g, (cast: (@: void) data), "data", 4U) != 0 || c.lmx_graph_put_in(g, code, slot, (cast: (@: void) data)) != 0
+        return: 1
+    data\parent := code
+    return: 0
+
+fn: gv_witness (@: g c.LmxGraph; const: (@: abi c.LmxScalarABI); @: source void; @: name char) @: void
+    @: cell void c.lmx_arena_scalar_cells_profiled(g\arena, c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+    @: context c.LmxWalkValue c.lmx_value_cell_context(g\arena, cell)
+    if: cell = 0 || context = 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        return: (cast: (@: void) 0)
+    context\source_type := source
+    return: cell
+
+# Produce returns fresh storage and isolated metadata only through its Value.
+# No source field or retained C owner stores any of those graph addresses.
+fn: gv_produce (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: counter void c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
+    @: source void 0
+    const: (@: abi c.LmxScalarABI gv_binding("double", @ source))
+    c.LmxWalkValue: value
+    @: value_p c.LmxWalkValue @ value
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    if: nargs != 0U || counter = 0 || abi = 0 || c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0
+        return: 171
+    c.lmx_walk_value_clear(value_p)
+    if: gv_metadata(arena, value_p, 9U, 0, abi) != 0 || c.lmx_walk_value_foreign_capture(arena, @ precise, c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) value_p\physical_profile), value_p, value_p) != c.LMX_WALK_OK
+        return: 171
+    return: c.lmx_call_result_value(arena, code, value_p, dest, out, result)
+
+fn: gv_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: counter void c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
+    c.LmxWalkValue: value
+    if: nargs != 0U || counter = 0 || c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0
+        return: 172
+    # Every backup scalar companion, including the completed Produce result,
+    # loses its semantic edges before the next activation has been entered.
+    gv_clear_companions(arena)
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_walk_value_num(@ value, c.LMX_TYPE_INT, 9U) != c.LMX_WALK_OK
+        return: 172
+    return: c.lmx_call_result_value(arena, code, @ value, dest, out, result)
+
+fn: gv_pending_value (@: g c.LmxGraph; @: root c.Lmx) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: produce c.Lmx gv_named(g, root, "Produce")
+    @: collect c.Lmx gv_named(g, root, "Collect")
+    @: use c.Lmx gv_named(g, root, "Use")
+    @: caller c.Lmx gv_named(g, root, "PendingCaller")
+    @: produce_data c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: collect_data c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: use_data c.Lmx c.lmx_graph_lmx(g, 0, 3U)
+    @: made void c.lmx_graph_int(g, 0)
+    @: collected void c.lmx_graph_int(g, 0)
+    @: used void c.lmx_graph_int(g, 0)
+    @: second void c.lmx_graph_int(g, 0)
+    @@: codes void c.calloc(4U, sizeof(@: void))
+    @: source void 0
+    const: (@: abi c.LmxScalarABI gv_binding("double", @ source))
+    c.LmxWalkValue: result
+    @: value c.LmxWalkValue @ result
+    c.LmxExecutionRoots: code_roots
+    @: roots_before c.LmxExecutionRoots 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    int: status 0
+    if: produce = 0 || collect = 0 || use = 0 || caller = 0 || produce_data = 0 || collect_data = 0 || use_data = 0 || made = 0 || collected = 0 || used = 0 || second = 0 || codes = 0 || abi = 0
+        return: 173
+    if: c.lmx_graph_name(g, made, "made", 4U) != 0 || c.lmx_graph_name(g, collected, "collected", 9U) != 0 || c.lmx_graph_name(g, used, "used", 4U) != 0 || c.lmx_graph_name(g, second, "second", 6U) != 0 || c.lmx_graph_put_in(g, produce_data, 0U, made) != 0 || c.lmx_graph_put_in(g, collect_data, 0U, collected) != 0 || c.lmx_graph_put_in(g, use_data, 0U, gv_witness(g, abi, source, "first")) != 0 || c.lmx_graph_put_in(g, use_data, 1U, second) != 0 || c.lmx_graph_put_in(g, use_data, 2U, used) != 0 || gv_install_data(g, produce, produce_data) != 0 || gv_install_data(g, collect, collect_data) != 0 || gv_install_data(g, use, use_data) != 0
+        return: 173
+    produce\native := (cast: (c.LmxEntry) c.gv_produce)
+    collect\native := (cast: (c.LmxEntry) c.gv_collect)
+    # Retain the assertion owner's callable references, not any produced Value.
+    codes[0] := (cast: (@: void) produce)
+    codes[1] := (cast: (@: void) collect)
+    codes[2] := (cast: (@: void) use)
+    codes[3] := (cast: (@: void) caller)
+    roots_before := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ code_roots, 0, 0U, codes, 4U, (cast: (@: void) root), 0)
+    status := c.lmx_graph_invoke_values(g, caller, 0, 0U, 0, value)
+    if: status != 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_FOREIGN || value\type != c.LMX_TYPE_FOREIGN || value\scalar_abi != abi || gv_check_metadata(arena, value, 9U) != 0 || c.lmx_walk_value_scalar_storage(g\arena, value, c.LMX_TYPE_FOREIGN, abi) != c.LMX_WALK_OK || c.memcmp((cast: (const: @: void) value\ref), @ precise, abi\size) != 0 || c.lmx_int_value_known(made) != 1 || c.lmx_int_value_known(collected) != 1 || c.lmx_int_value_known(used) != 1 || arena\activation != 0 || arena\execution_roots != @ code_roots
+        c.fprintf(c.stderr, "graph call pending Value status=%d made=%d collected=%d used=%d\n", status, (cast: (int) c.lmx_int_value_known(made)), (cast: (int) c.lmx_int_value_known(collected)), (cast: (int) c.lmx_int_value_known(used)))
+        return: 174
+    c.lmx_execution_roots_restore(g\arena, roots_before)
+    c.free(codes)
+    if: arena\execution_roots != 0
+        return: 174
+    return: 0
+
+# A C int enters a physical Graph INT place through the exact ABI bridge.
+# A reached numeric write then drops value context, as the common writer does.
+fn: gv_number_checks (@: g c.LmxGraph; @: root c.Lmx) int
+    @: arena c.LmxArena g\arena
+    @: code c.Lmx gv_named(g, root, "IntStore")
+    @: data c.Lmx c.lmx_graph_method_data(g, code)
+    @: source void 0
+    const: (@: abi c.LmxScalarABI gv_binding("c.int", @ source))
+    int: native_int 73
+    c.LmxWalkValue: metadata
+    @: metadata_p c.LmxWalkValue @ metadata
+    c.LmxWalkValue: foreign_value
+    @: foreign_p c.LmxWalkValue @ foreign_value
+    c.LmxWalkValue: received
+    @: received_p c.LmxWalkValue @ received
+    c.LmxWalkValue: before_foreign
+    c.LmxWalkValue: before_number
+    c.LmxWalkValue: result
+    @: result_p c.LmxWalkValue @ result
+    int: status 0
+    if: code = 0 || data = 0 || abi = 0 || c.lmx_graph_scalar_type(abi) != c.LMX_TYPE_INT
+        return: 180
+    c.lmx_walk_value_clear(metadata_p)
+    if: gv_metadata(arena, metadata_p, 8U, source, abi) != 0 || c.lmx_walk_value_foreign_capture(arena, @ native_int, c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) metadata_p\physical_profile), metadata_p, foreign_p) != c.LMX_WALK_OK
+        return: 180
+    c.memcpy((cast: (@: void) (@ before_foreign)), (cast: (const: @: void) foreign_p), c.sizeof(c.LmxWalkValue))
+    status := c.lmx_graph_admit_value(g, code, data, 0U, foreign_p, received_p)
+    if: status != 0 || received_p\present = 0 || received_p\kind != c.LMX_WALK_VALUE_NUMBER || received_p\type != c.LMX_TYPE_INT || received_p\number != 73 || received_p\scalar_abi != abi || received_p\source_type != source || received_p\model != metadata_p\model || received_p\references != metadata_p\references || received_p\referent != metadata_p\referent || received_p\referent = 0 || received_p\physical_profile != metadata_p\physical_profile || c.memcmp((cast: (const: @: void) foreign_p), (cast: (const: @: void) (@ before_foreign)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 181
+    c.memcpy((cast: (@: void) (@ before_number)), (cast: (const: @: void) received_p), c.sizeof(c.LmxWalkValue))
+    status := c.lmx_graph_invoke_values(g, code, received_p, 1U, 0, result_p)
+    if: status != 0 || result_p\present = 0 || result_p\kind != c.LMX_WALK_VALUE_NUMBER || result_p\type != c.LMX_TYPE_INT || result_p\number != 9 || result_p\model != 0 || result_p\references != 0 || result_p\referent != 0 || result_p\source_type != source || result_p\scalar_abi != abi || result_p\physical_profile != metadata_p\physical_profile || c.memcmp((cast: (const: @: void) received_p), (cast: (const: @: void) (@ before_number)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) foreign_p), (cast: (const: @: void) (@ before_foreign)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) foreign_p\ref), @ native_int, abi\size) != 0 || arena\activation != 0 || arena\execution_roots != 0
+        c.fprintf(c.stderr, "graph call Values IntStore status=%d\n", status)
+        return: 182
+    return: 0
+
+# Real parsed applications and the explicit args/data/code form share the
+# complete-record receiver, including generic LMX and untyped index pointers.
+fn: gv_reference_calls (@: g c.LmxGraph; @: root c.Lmx) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: model_read c.Lmx gv_named(g, root, "ModelRead")
+    @: int_read c.Lmx gv_named(g, root, "IntRead")
+    @: model_call c.Lmx gv_named(g, root, "ModelCall")
+    @: int_call c.Lmx gv_named(g, root, "IntCall")
+    @: model_data c.Lmx c.lmx_graph_method_data(g, model_read)
+    @: model_code c.Lmx c.lmx_graph_method_code(g, model_read)
+    @: int_data c.Lmx c.lmx_graph_method_data(g, int_read)
+    @: int_code c.Lmx c.lmx_graph_method_code(g, int_read)
+    @: a c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) gv_named(g, root, "A"))))
+    @: args c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: int_args c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: cell void 0
+    @: int_word char c.lmx_graph_intern("int", 3U)
+    c.LmxWalkValue: actual
+    c.LmxWalkValue: received
+    c.LmxWalkValue: result
+    int: number 0
+    int: status 0
+    if: model_read = 0 || int_read = 0 || model_call = 0 || int_call = 0 || a = 0 || args = 0 || int_args = 0 || c.lmx_graph_kind(g, (cast: (@: void) a)) != 4
+        return: 160
+    status := c.lmx_graph_invoke_values(g, model_call, 0, 0U, 0, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 7
+        c.fprintf(c.stderr, "graph call Values ModelCall status=%d number=%d\n", status, number)
+        return: 161
+    status := c.lmx_graph_invoke_values(g, int_call, 0, 0U, 0, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 8
+        c.fprintf(c.stderr, "graph call Values IntCall status=%d number=%d\n", status, number)
+        return: 162
+    if: c.lmx_walk_value_ref(@ actual, c.LMX_TYPE_LMX, (cast: (@: void) a)) != c.LMX_WALK_OK || c.lmx_graph_admit_value(g, model_read, c.lmx_graph_method_data(g, model_read), 0U, @ actual, @ received) != 0 || received\kind != c.LMX_WALK_VALUE_REFERENCE || received\type != c.LMX_TYPE_LMX || received\ref != (cast: (@: void) a)
+        return: 163
+    status := c.lmx_graph_invoke_values(g, model_read, @ received, 1U, 0, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 7
+        return: 163
+    if: c.lmx_walk_value_materialize(g\arena, @ actual, @ cell) != c.LMX_WALK_OK || c.lmx_graph_name(g, cell, "value", 5U) != 0 || c.lmx_graph_put_in(g, args, 0U, cell) != 0
+        return: 164
+    status := c.lmx_graph_launch_value(g, args, model_data, int_word, model_code, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 7
+        c.fprintf(c.stderr, "graph call Values explicit ModelRead status=%d number=%d\n", status, number)
+        return: 164
+    if: c.lmx_graph_index(g, (cast: (@: void) a), 1, @ cell) != 0 || c.lmx_graph_kind(g, cell) != 7 || c.lmx_graph_name(g, cell, "p", 1U) != 0 || c.lmx_graph_put_in(g, int_args, 0U, cell) != 0
+        return: 165
+    if: c.lmx_walk_value_cell(g\arena, cell, @ actual) != c.LMX_WALK_OK || actual\kind != c.LMX_WALK_VALUE_REFERENCE || actual\type != c.LMX_TYPE_GRAPH_REF || c.lmx_graph_admit_value(g, int_read, c.lmx_graph_method_data(g, int_read), 0U, @ actual, @ received) != 0 || received\type != c.LMX_TYPE_GRAPH_INT_REF || received\ref != actual\ref
+        return: 166
+    status := c.lmx_graph_invoke_values(g, int_read, @ received, 1U, 0, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 8
+        return: 166
+    status := c.lmx_graph_launch_value(g, int_args, int_data, int_word, int_code, @ result)
+    if: status != 0 || c.lmx_graph_result_int(g, @ result, @ number) != 0 || number != 8
+        c.fprintf(c.stderr, "graph call Values explicit IntRead status=%d number=%d\n", status, number)
+        return: 165
+    if: arena\activation != 0 || arena\execution_roots != 0
+        return: 167
+    return: 0
+
+fn: gv_values_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: probe c.Lmx 0
+    @: echo c.Lmx 0
+    @: store c.Lmx 0
+    @: data c.Lmx 0
+    @: echo_data c.Lmx 0
+    @: store_data c.Lmx 0
+    @: file c.FILE 0
+    @: source void 0
+    @: alias_source void 0
+    const: (@: abi c.LmxScalarABI gv_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI gv_binding("f64", @ alias_source))
+    @: actuals c.LmxWalkValue c.calloc(5U, c.sizeof(c.LmxWalkValue))
+    @: before c.LmxWalkValue c.calloc(5U, c.sizeof(c.LmxWalkValue))
+    @: pair c.LmxWalkValue c.calloc(2U, c.sizeof(c.LmxWalkValue))
+    @: bindings size_t c.calloc(5U, sizeof(size_t))
+    @: pair_bindings size_t c.calloc(2U, sizeof(size_t))
+    @@: codes void c.calloc(3U, sizeof(@: void))
+    @: value c.LmxWalkValue 0
+    @: context c.LmxWalkValue 0
+    @: witness void 0
+    @: target c.Lmx 0
+    @: returned_pool c.LmxPool 0
+    c.LmxWalkValue: returned
+    c.LmxWalkValue: metadata
+    c.LmxWalkValue: immutable_context
+    c.LmxExecutionRoots: roots
+    @: roots_before c.LmxExecutionRoots 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: immutable_precise (cast: (double) 2) + (cast: (double) 2) * c.DBL_EPSILON
+    size_t: i 0U
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: abi = 0 || alias_abi != abi || alias_source = source || actuals = 0 || before = 0 || pair = 0 || bindings = 0 || pair_bindings = 0 || codes = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 140
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_call_values_code.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 140
+    if: c.fputs("fn: NativeProbe () double\n    return: immutable\nend: NativeProbe\n\nfn: Echo () double\n    return: first\nend: Echo\n\nfn: Store () double\n    first := second\n    return: first\nend: Store\n", file) < 0 || c.fclose(file) != 0
+        return: 141
+    file := c.fopen("graph_call_values_code.lm2", "ab")
+    if: file = 0
+        return: 141
+    if: c.fputs("\n@: Model (int: x 0)\n@: A (int: x 7; int: y 8)\n\nfn: ModelRead (@: value Model) int\n    return: value\\x\nend: ModelRead\n\nfn: IntRead (@: p int) int\n    return: \\p\nend: IntRead\n\nfn: ModelCall () int\n    return: ModelRead(A)\nend: ModelCall\n\nfn: IntCall () int\n    return: IntRead(A[1])\nend: IntCall\n", file) < 0 || c.fclose(file) != 0
+        return: 141
+    file := c.fopen("graph_call_values_code.lm2", "ab")
+    if: file = 0
+        return: 141
+    if: c.fputs("\nfn: Produce () double\n    return: first\nend: Produce\n\nfn: Collect () int\n    return: 9\nend: Collect\n\nfn: Use () double\n    data\\used := data\\used + 1\n    return: first\nend: Use\n\nfn: PendingCaller () double\n    return: Use(Produce(); Collect())\nend: PendingCaller\n", file) < 0 || c.fclose(file) != 0
+        return: 141
+    file := c.fopen("graph_call_values_code.lm2", "ab")
+    if: file = 0
+        return: 141
+    if: c.fputs("\nfn: IntStore (int: x 0) int\n    x := 9\n    return: x\nend: IntStore\n", file) < 0 || c.fclose(file) != 0
+        return: 141
+    status := c.lm_graph_build_file(g, "graph_call_values_code.lm2", @ root)
+    c.remove("graph_call_values_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 141
+    status := gv_reference_calls(g, root)
+    if: status != 0
+        return: status
+    status := gv_number_checks(g, root)
+    if: status != 0
+        return: status
+    status := gv_pending_value(g, root)
+    if: status != 0
+        return: status
+    probe := gv_named(g, root, "NativeProbe")
+    echo := gv_named(g, root, "Echo")
+    store := gv_named(g, root, "Store")
+    data := c.lmx_graph_lmx(g, 0, 7U)
+    echo_data := c.lmx_graph_lmx(g, 0, 1U)
+    store_data := c.lmx_graph_lmx(g, 0, 2U)
+    if: probe = 0 || echo = 0 || store = 0 || data = 0 || echo_data = 0 || store_data = 0
+        return: 142
+    codes[0] := (cast: (@: void) probe)
+    codes[1] := (cast: (@: void) echo)
+    codes[2] := (cast: (@: void) store)
+    roots_before := c.lmx_execution_roots_mark(@ arena)
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, codes, 3U, (cast: (@: void) root), 0)
+    while: i < 7U
+        witness := c.lmx_graph_int(g, 0)
+        if: i = 0U
+            witness := c.lmx_pointer_new_profiled(c.LMX_TYPE_CELL_POINTER, @ arena, 0)
+        if: i = 2U
+            witness := c.lmx_pointer_new_profiled(c.LMX_TYPE_LMX, @ arena, 0)
+        if: i = 4U
+            witness := gv_witness(g, abi, alias_source, "immutable")
+        if: i = 6U
+            witness := gv_witness(g, abi, source, "mutable")
+        if: witness = 0 || c.lmx_graph_put_in(g, data, i, witness) != 0
+            return: 142
+        i := i + 1U
+    ---
+    if: c.lmx_graph_put_in(g, echo_data, 0U, gv_witness(g, abi, source, "first")) != 0 || c.lmx_graph_put_in(g, store_data, 0U, gv_witness(g, abi, source, "first")) != 0 || c.lmx_graph_put_in(g, store_data, 1U, gv_witness(g, abi, source, "second")) != 0 || gv_install_data(g, probe, data) != 0 || gv_install_data(g, echo, echo_data) != 0 || gv_install_data(g, store, store_data) != 0
+        return: 142
+    bindings[0] := 5U
+    bindings[1] := 0U
+    bindings[2] := 6U
+    bindings[3] := 2U
+    bindings[4] := 4U
+    if: c.lmx_walk_value_num(actuals, c.LMX_TYPE_INT, 73U) != c.LMX_WALK_OK || gv_metadata(@ arena, actuals, 5U, 0, abi) != 0 || c.lmx_walk_value_ref(actuals + 1U, c.LMX_TYPE_CELL_POINTER, 0) != c.LMX_WALK_OK || gv_metadata(@ arena, actuals + 1U, 0U, 0, abi) != 0
+        return: 143
+    c.lmx_walk_value_clear(@ metadata)
+    if: gv_metadata(@ arena, @ metadata, 6U, source, abi) != 0 || c.lmx_walk_value_foreign_capture(@ arena, @ precise, c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) metadata\physical_profile), @ metadata, actuals + 2U) != c.LMX_WALK_OK
+        return: 143
+    target := gv_node(@ arena, 702)
+    if: target = 0 || c.lmx_walk_value_ref(actuals + 3U, c.LMX_TYPE_LMX, (cast: (@: void) target)) != c.LMX_WALK_OK || gv_metadata(@ arena, actuals + 3U, 2U, 0, abi) != 0
+        return: 143
+    c.lmx_walk_value_clear(@ metadata)
+    if: gv_metadata(@ arena, @ metadata, 4U, alias_source, abi) != 0 || c.lmx_walk_value_foreign_capture(@ arena, @ immutable_precise, 0 - c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) metadata\physical_profile), @ metadata, actuals + 4U) != c.LMX_WALK_OK
+        return: 143
+    value := actuals + 4U
+    context := c.lmx_value_cell_context(@ arena, (cast: (@: void) value\ref))
+    if: context = 0
+        return: 143
+    c.memcpy((cast: (@: void) (@ immutable_context)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue))
+    probe\native := (cast: (c.LmxEntry) c.gv_native)
+    status := c.lmx_graph_invoke_values(g, probe, actuals, 5U, bindings, @ returned)
+    if: status != 0 || c.memcmp((cast: (const: @: void) (@ returned)), (cast: (const: @: void) (actuals + 4U)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue)) != 0 || arena\activation != 0 || arena\execution_roots != @ roots
+        c.fprintf(c.stderr, "graph call Values native status=%d\n", status)
+        return: 144
+    pair_bindings[0] := 0U
+    pair_bindings[1] := 1U
+    c.memcpy((cast: (@: void) pair), (cast: (const: @: void) (actuals + 4U)), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) (pair + 1U)), (cast: (const: @: void) (actuals + 2U)), c.sizeof(c.LmxWalkValue))
+    if: echo\native != 0 || store\native != 0 || c.lmx_graph_invoke_values(g, echo, pair, 1U, pair_bindings, @ returned) != 0 || c.memcmp((cast: (const: @: void) (@ returned)), (cast: (const: @: void) pair), c.sizeof(c.LmxWalkValue)) != 0
+        return: 145
+    status := c.lmx_graph_invoke_values(g, store, pair, 2U, pair_bindings, @ returned)
+    value := pair + 1U
+    returned_pool := c.lmx_range_cell_pool(@ arena, (cast: (@: void) returned\ref))
+    if: status != 0 || returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\type != c.LMX_TYPE_FOREIGN || returned\scalar_abi != abi || returned\source_type != alias_source || returned\model != value\model || returned\references != value\references || returned\referent != value\referent || returned\physical_profile != 0 || returned_pool = 0 || returned_pool\type != c.LMX_TYPE_FOREIGN || returned_pool\scalar_abi != abi || returned_pool\profile != 0 || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0
+        c.fprintf(c.stderr, "graph call Values Store status=%d\n", status)
+        return: 146
+    value := actuals + 4U
+    if: c.memcmp((cast: (const: @: void) value\ref), @ immutable_precise, abi\size) != 0 || c.memcmp((cast: (const: @: void) context), (cast: (const: @: void) (@ immutable_context)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) pair), (cast: (const: @: void) (actuals + 4U)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) (pair + 1U)), (cast: (const: @: void) (actuals + 2U)), c.sizeof(c.LmxWalkValue)) != 0 || arena\activation != 0 || arena\execution_roots != @ roots
+        return: 147
+    value := actuals + 2U
+    if: c.memcmp((cast: (const: @: void) value\ref), @ precise, abi\size) != 0
+        return: 147
+    c.lmx_execution_roots_restore(@ arena, roots_before)
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    c.free(codes)
+    c.free(pair_bindings)
+    c.free(bindings)
+    c.free(pair)
+    c.free(before)
+    c.free(actuals)
+    return: 7

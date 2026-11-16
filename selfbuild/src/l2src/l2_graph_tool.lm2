@@ -313,7 +313,8 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     # Actual storage is live before evaluating the first operand. A later
     # operand may collect; the selected target and pending result share the
     # same existing root span until this call's success or error cleanup.
-    c.fprintf(f, "        []: @(void) l2_args%d %zuU\n        c.memset((cast: (@: void) l2_args%d), 0, sizeof(l2_args%d))\n        @: LmxExecutionRoots l2_arm%d lmx_execution_roots_mark(lmx_call_arena)\n        LmxExecutionRoots: l2_ar%d\n        lmx_execution_roots_push(lmx_call_arena, @ l2_ar%d, (cast: (@: void) @ l2_cv%d), 1U, l2_args%d, %zuU, (cast: (@: void) l2_call%d), 0)\n", call_id, count + 1U, call_id, call_id, call_id, call_id, call_id, call_id, call_id, count, call_id)
+    c.fprintf(f, "        []: LmxWalkValue l2_av%d %zuU\n        c.memset((cast: (@: void) l2_av%d), 0, sizeof(l2_av%d))\n        @: LmxExecutionRoots l2_arm%d lmx_execution_roots_mark(lmx_call_arena)\n        LmxExecutionRoots: l2_ar%d\n        LmxExecutionRoots: l2_ap%d\n", call_id, count + 1U, call_id, call_id, call_id, call_id, call_id)
+    c.fprintf(f, "        lmx_execution_roots_push(lmx_call_arena, @ l2_ar%d, (cast: (@: void) @ l2_cv%d), 1U, 0, 0U, (cast: (@: void) l2_call%d), 0)\n        lmx_execution_roots_push(lmx_call_arena, @ l2_ap%d, (cast: (@: void) l2_av%d), %zuU, 0, 0U, 0, 0)\n", call_id, call_id, call_id, call_id, call_id, count)
     failed := temps[0]
     finished := failed + 1
     temps[0] := finished + 1
@@ -323,11 +324,12 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     # binding map carries that choice; no lexical prediction is repeated here.
     if: count = 1U && status = 0
         done := temps[0]
-        value := done + 1
-        temps[0] := value + 1
-        c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            @: void l2_v%d lmx_graph_get_in(l2_g, ", call_id, value)
+        temps[0] := done + 1
+        c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            if: l2_binding%d[1U] = 1U\n                if: lmx_graph_eval_record(l2_g, lmx_call_code, lmx_graph_get_in(l2_g, ", call_id, call_id)
         status := lm_graph_emit_address(g, f, scope, expression)
-        c.fprintf(f, ", 0U)\n            if: l2_binding%d[1U] = 1U && lmx_graph_eval_value(l2_g, lmx_call_code, l2_v%d, @ l2_v%d) != 0\n                %s\n            if: lmx_graph_call_single_value(l2_g, l2_call%d, l2_v%d, @ l2_cv%d) != 0\n                %s\n            goto: l2_label%d\n", call_id, value, value, leave_failure, call_id, value, call_id, leave_failure, done)
+        c.fprintf(f, ", 0U), @ l2_av%d[0U]) != 0\n                    %s\n                ---\n            else:\n                if: lmx_walk_value_cell(lmx_call_arena, lmx_graph_get_in(l2_g, ", call_id, leave_failure)
+        status := lm_graph_emit_address(g, f, scope, expression)
+        c.fprintf(f, ", 0U), @ l2_av%d[0U]) != 0\n                    %s\n                ---\n            ---\n            if: lmx_graph_call_single_record(l2_g, l2_call%d, @ l2_av%d[0U], @ l2_cv%d) != 0\n                %s\n            goto: l2_label%d\n", call_id, leave_failure, call_id, call_id, call_id, leave_failure, done)
     while: i < count && status = 0
         holder := expression
         at := i
@@ -339,18 +341,16 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
             at := 2U
         actual := c.lmx_graph_get_in(g, holder, at)
         if: c.lmx_graph_written_group(g, actual) != 0
-            value := temps[0]
-            temps[0] := temps[0] + 1
-            c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_read_actual(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get_in(l2_g, ", value, call_id, call_id, i)
+            c.fprintf(f, "        if: lmx_graph_read_actual_value(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get_in(l2_g, ", call_id, call_id, i)
             status := lm_graph_emit_address(g, f, scope, holder)
-            c.fprintf(f, ", %zuU), @ l2_v%d) != 0\n            %s\n", at, value, leave_failure)
+            c.fprintf(f, ", %zuU), @ l2_av%d[%zuU]) != 0\n            %s\n", at, call_id, i, leave_failure)
         else:
-            status := lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ value)
-            c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, l2_binding%d[%zuU], l2_v%d, @ l2_v%d) != 0\n            %s\n", call_id, call_id, i, value, value, leave_failure)
-        c.fprintf(f, "        l2_args%d[%zuU]: l2_v%d\n", call_id, i, value)
+            status := lm_graph_emit_record(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ value)
+            c.fprintf(f, "        c.memcpy((cast: (@: void) (@ l2_av%d[%zuU])), (cast: (const: @: void) (@ l2_cv%d)), c.sizeof(LmxWalkValue))\n", call_id, i, value)
+            c.fprintf(f, "        if: lmx_graph_admit_value(l2_g, l2_call%d, lmx_graph_method_data(l2_g, l2_call%d), l2_binding%d[%zuU], @ l2_av%d[%zuU], @ l2_av%d[%zuU]) != 0\n            %s\n", call_id, call_id, call_id, i, call_id, i, call_id, i, leave_failure)
         i := i + 1U
     ---
-    c.fprintf(f, "        if: lmx_graph_invoke_bound_value(l2_g, l2_call%d, l2_args%d, %zuU, l2_binding%d, @ l2_cv%d) != 0\n            %s\n", call_id, call_id, count, call_id, call_id, leave_failure)
+    c.fprintf(f, "        if: lmx_graph_invoke_values(l2_g, l2_call%d, l2_av%d, %zuU, l2_binding%d, @ l2_cv%d) != 0\n            %s\n", call_id, call_id, count, call_id, call_id, leave_failure)
     if: done != 0
         c.fprintf(f, "        l2_label%d:\n", done)
     if: want_result = 1
@@ -379,6 +379,16 @@ fn: lm_graph_emit_record (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: c.lmx_graph_kind(g, raw) = 2
+        # A bare name already has its complete selected working Value. Do
+        # not materialize a numeric cell and reload away its SOURCE/Model.
+        result := temps[0]
+        temps[0] := result + 1
+        c.fprintf(f, "        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n        if: lmx_graph_eval_record(l2_g, lmx_call_code, lmx_graph_get_in(l2_g, ", result, result)
+        status := lm_graph_emit_address(g, f, scope, holder)
+        c.fprintf(f, ", %zuU), @ l2_cv%d) != 0\n            %s\n", index, result, leave_failure)
+        temp[0] := result
+        return: status
     if: c.lmx_graph_kind(g, raw) = 4
         word := c.lmx_graph_name_of(g, raw)
         if: word = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U && c.lmx_graph_group_expression(g, scope, raw) != 0

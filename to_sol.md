@@ -32,6 +32,14 @@ bounded scalar/native-body/name-retirement fixes. Полный Value transport, 
 producers/consumers и private остаются OPEN. Не возвращать отменённые публикации/flush.
 [Точные результаты406](steps/witnesses/m10-unified-data-20261115/notes.md).
 
+407 переносит Graph actuals на полный Value в том же worker. Hosted target8/0 во всех4 режимах
+и final Graph triple PASS; physical INT ABI proof, referent и numeric-store context исправлены.
+Source05:940; whole G1/G2/fixedpoint14 — точно Source03 до этих3 поздних body-fixes.
+Это не закрывает FREE/no-frame capture, общий reference-store context, NUMBER→FOREIGN exact ABI
+bridge, остальные DATA producers/consumers, private и native variants. Следующий общий selector
+готового/deferred Value и field private origin ведётся в основном M10/M14, без второго dispatcher.
+[Границы407](steps/witnesses/m10-full-values-20261115/notes.md), [финальные gates](steps/current.md).
+
 Действующее ТЗ — [M14 основного v3](next_core_tasks_v3.md#native-structures), включая
 [группу sys](next_core_tasks_v3.md#graph-tools). Это замена старой модели, а не ещё один слой поверх неё.
 

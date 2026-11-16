@@ -1703,6 +1703,16 @@ CODE-декларации используют строки существующ
 genuine G1/G2/fixedpoint14 относятся точно к Source10. Поздние исправления сохраняют layout
 и существующие сигнатуры; новый retirement export добавлен в конец Graph83.
 [Свидетельство406](steps/witnesses/m10-unified-data-20261115/notes.md).
+Срез407 перенёс actuals этого же worker на complete Value, с ABI refs из окончательных
+records и кадрами на activation.values. Compiled actual expressions остаются в GraphTool; admission
+и mutable scalar snapshot выполняются до следующего actual. Ограниченная приёмка407 PASS:
+Source05:940, hosted target8/0 nf/root0/root1, Graph triple и final mutant174 во всех4 режимах.
+Genuine G1/G2 по9 smoke/fixedpoint14 относятся точно к Source03 до3 поздних numeric body-fixes.
+Полный Value route M10/M14 OPEN; [точные результаты407](steps/witnesses/m10-full-values-20261115/notes.md).
+Затем тот же resolver должен отдавать выбранный готовый Value либо deferred описание и private-origin
+поля: FREE capture сохраняет context без перечитывания companion и копирует RHS без исполнения на входе.
+Named Structure/callable сохраняет свою binding-категорию; не превращать его в присваиваемое место
+из-за внутреннего REFERENCE Value. Private переносится через тот же выбор поля и hidden inputs M14.
 Следующая работа — полный Value route и единая DATA остальных producers/consumers,
 затем private/hidden args и выбранный compiled signature перед снятием tracking по M14.
 Все эти дополнения ведутся здесь, без отдельного конкурирующего плана.
@@ -2912,6 +2922,31 @@ M14 остаётся частью единственного основного 
 каждого прямого чтения. В существующей языковой приёмке сопоставить исключение динамической
 связи с сохранённым прямым/лексическим доступом; отдельную тестовую инфраструктуру не создавать.
 [Норма](docs/LMX_semantics.ru.md#private-binding), [слова автора](LMX_blog/2026-11-15.md#private-binding).
+
+Ближайший перенос после full-Value actuals407: хранить один binding_private в существующей
+SourceName metadata конкретной canonical CHILDREN-ячейки (port SIZE_MAX), не на referent/имени/profile.
+Инициализация, cancel/drop, weak-key GC и attach используют прежний lifecycle. Общий copier переносит
+признак по точному source-cell→mapped target-cell; для объединённой fn DATA сдвиг полей исключает
+копирование по одному ordinal. Не выбирать признак позднего alias по hash-порядку вместо исходного
+поля receiving layout. Тот же selector отдаёт выбранные row/held Value/origin: parent dynamic private
+пропускается до определения неоднозначности, current/lexical/explicit доступны. FREE row сохраняет
+private происхождения; явный actual в публичное входное поле берёт свойство принимающего поля.
+При копировании готового Value не перечитывать companion, deferred RHS не исполнять на входе.
+Native image и hidden-input selection переносят то же свойство; новые subsystem/обёртки не нужны.
+Готовность этого переноса, включая private на data/code и цепочку lexical capture→следующий вызов, OPEN.
+
+Зависимая граница M11/public primitive profile, найденная при407: FE ret_type_word пока выбирает
+фиксированный native FT для int до чтения active description, а native_type_text применяет table
+spelling только к foreign FT. Поэтому профиль int→C double ещё не готов; новый alias (как ProbeReal)
+не доказывает эту замену. В дальнейшей общей нормализации scalar SOURCE/physical ABI учесть этот
+путь вместе с declarations/headers/sizeof/native/walk; не менять одну C-строку без транспорта Value.
+Физический INT сборщика/сохранённого графа проверять по доказанному ABI actual, не по слову int
+текущего профиля. Приёмка407 этого FE-переноса не заявляет; он остаётся OPEN в общем v3.
+В том же переносе remaining Value consumers закрыть ещё два случая: reference working-store
+обновляет контекст выбранного нового referent общим writer/admission, без старых Model/reference
+edges от входа; NUMBER с уже доказанным exact scalar ABI при приёме в FOREIGN witness использует
+существующий scalar_box, сохраняя полный контекст, без автоматической смены типа по размеру.
+Полные FREE/no-frame reads, reference stores и этот numerical ABI bridge пока OPEN.
 
 1. **Объединить описание входов.** У fn/sub/catch одна data с описанием входов. В ресиверах
    call(args data code) и fncall(args data return code) args — фактические значения обычного вызова,

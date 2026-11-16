@@ -1,5 +1,41 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез407: full Value actuals, финальные gates
+
+406 принят и отправлен b901f2bf; авторский17e8af6f сохранён, повторно не фиксировался.
+Goal ACTIVE, работа прямо main. Root — единственный producer; helpers завершили правки и review.
+Graph ordinary/single/bound/explicit call используют complete Value и один invoke worker.
+Native refs строятся из final DATA-ordered records; frame читает activation.values.
+Admission/snapshot предшествует следующему actual. GraphTool продолжает компилировать actuals.
+Run71 заменяет unused physical read_actual новым reader; layouts/primitive entry ABI прежние.
+Scalar/reference ingress сохраняет SOURCE/Model/references/referent. Numeric store использует
+общий context_copy; physical INT проверяется по actual ABI, без lookup логического слова int.
+
+Финальный frozen Source05:940 SHAab46bcdabe08c676ebc0ff0767e41558554331b7f66dffff31cf6d50b6f113d2.
+Runtime-values-04 actual G2 PASS101: Cdfe62429, prodae0567c8, obs96e64511.
+Hosted frontend-values-01 normal link/reuse3 PASS9229fd9b (genuine G2 frontend + final Runtime04).
+Targeted06 PASS8/0 native/forced/root0/root1: GV, CF, typed/copy, scalar/immutable, name lifetime,
+exact scalar, execution roots и прежний supported custom-alias control public_scalar_active.
+Graph-values-02 normal PASS101/SHA76f14c1b; graph-local02 interpreter/native/forced PASS.
+Whole01 точно Source03:940: genuine G1 и actual G1→G2 по9 smoke/0, fixedpoint14 PASS,
+consumed snapshot377 SHAef5c4b65. Actual G2 FE98f007c4/Tool47a63682; поздние3 numeric body-fixes
+проверены actual G2 Runtime04 и hosted gates выше. Compiler/records/signatures не менялись;
+не выдавать этот whole за новый full bootstrap Source05.
+
+Ранний Source03 и final Source05 mutant count0 дают174/status4/made1/collected1/used0 во всех4режимах;
+final mutant-runtime02 PASS68; mutant03 включает новые numeric181/182 cases. Все producers terminal.
+Source05 canonical/SAME и repo/stage verify940/0 PASS. Далее normal docs gate,
+Explicit owned index14: docs01 PASS35/14/27/44/615, links/opening, LF28312, exit0.
+Working/cached diff-check PASS; docs-index01 также PASS35/14/27/44/615, LF28312.
+После уточнения статуса407 в основном v3 — final docs-index02, затем commit/push407. Semantics/grammar
+не менялись: генерация автора17e8af6f сохраняется. Чужие2 WIP не включать.
+Подробные artifacts/попытки и границы: [свидетельство407](witnesses/m10-full-values-20261115/notes.md).
+Следующее в основном v3: единый selector готового/deferred FREE Value с field private origin,
+canonical CHILDREN metadata/copy/hidden args, затем selected signature/native arena variants.
+Reference-store context и NUMBER→FOREIGN exact ABI bridge также OPEN; новые вопросы автору не нужны.
+Проба int→Cdouble выявила отдельный FE fixed-FT gap; она сохранена приватно, не подменена PASS.
+Основной v3 содержит этот OPEN путь; target8 использует прежний supported-alias control.
+
 ## 2026-11-15 — срез406: единая Graph data, кодовые gates PASS
 
 Предыдущий405 принят/отправлен d653e06c, main==origin/main; canonical Source05:935.

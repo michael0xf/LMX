@@ -14,6 +14,9 @@ flush() и frozen требования слотов при S[n] заменены
   Targeted6/0 nf/root0/root1 и Graph triple PASS; [границы](steps/witnesses/m10-unified-data-20261115/notes.md).
 - [ ] Все шесть форм call/fncall из [M10](next_core_tasks_v3.md#m10): args — фактические значения,
   data — описание входов. Пропущенные args не подаются; пропущенная data равна code.
+- [x] Ограниченная Graph-приёмка407: full Value actuals общего worker; target8/0/Graph triple PASS,
+  final pending-Value mutant174 во всех4режимах. Docs01 PASS; final index — [конвейер](steps/current.md),
+  полный Value/общие stores/private OPEN — [границы](steps/witnesses/m10-full-values-20261115/notes.md).
 - [ ] Обычные, указательные, динамические и явные вызовы fn/sub/catch/Structure идут одним путём
   интерпретатора, включая binding/admission/namespace/result; calls из test/конвертеров — туда же.
   Нет второго dispatcher, подмены args формалами или обязательной графовой упаковки native→native.

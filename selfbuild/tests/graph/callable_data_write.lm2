@@ -1,5 +1,13 @@
 # A write by a path in the code of a callable writes the Structure of its data itself (plan M11 5b; R20): the next
 # call and a read from outside see what was written.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+        int: outside 0
+)
+@: shared data[0]
 fn: f () int (
     Point(int: x 1)
 )
@@ -9,3 +17,9 @@ end: f
 int: first f()
 int: second f()
 int: outside f\data\Point\x
+
+sub: main ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\outside := outside
+main()

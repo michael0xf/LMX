@@ -1,7 +1,21 @@
+---
+    Observed:
+        int: r 52
+        int: v 3
+        int: b 7
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f1 (int: a; int: b 2) int
     return: ((a * 10) + b)
 end: f1
 fn: f2 (int: b 7) int
-int: r 52
-int: v 3
-int: b 7
+int: r (f1 5)
+int: v ((merge (f2 \ data) ((int q 3))) \ q)
+int: b ((f2 \ data) \ b)
+sub: main ()
+    :=: ((shared \ Observed) \ r) r
+    :=: ((shared \ Observed) \ v) v
+    :=: ((shared \ Observed) \ b) b
+end: main
+main:

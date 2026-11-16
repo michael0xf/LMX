@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: r 1
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Point:
         int: y 0
@@ -8,7 +14,11 @@ sub: main () (
     fn: take (@: p Point; int: q) int
         return: (((p \ y) * 10) + q)
     end: take
-    :=: r (take Point 1)
+    :=: (data \ r) (take Point 1)
 end: main
 main:
-int: r 1
+int: r ((main \ data) \ r)
+sub: observe ()
+    :=: ((shared \ Observed) \ r) r
+end: observe
+observe:

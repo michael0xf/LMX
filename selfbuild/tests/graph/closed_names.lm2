@@ -3,8 +3,18 @@
 # has one field.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
 # the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 sub: main () (
     A: B
     B: A
 ) ()
 int: seen length(main\data\A)
+
+sub: observe ()
+    shared\Observed\seen := seen
+observe()

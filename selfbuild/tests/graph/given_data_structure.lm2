@@ -3,10 +3,18 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 # Inner is written in the compact form inside D, so that the blocks in the parentheses stay one level. The fields of D,
 # which the dump of D showed, are the places inner_x and d_y of the root.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: inner_x 0
+        int: d_y 0
+)
+@: shared data[0]
 sub: main () (
     Code:
         int: y
-        y := Inner\x
+        data\y := Inner\x
     D:
         Inner(int: x 4)
         int: y 0
@@ -16,3 +24,9 @@ main()
 int: seen main\data\D\y
 int: inner_x main\data\D\Inner\x
 int: d_y main\data\D\y
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\inner_x := inner_x
+    shared\Observed\d_y := d_y
+observe()

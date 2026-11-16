@@ -1,3 +1,12 @@
+---
+    Observed:
+        int: body_raw 2
+        int: descriptor_raw 2
+        int: body_fields 2
+        int: descriptor_fields 2
+    end: Observed
+---
+@: shared (data [] 0)
 fn: A () int
     return: 7
 end: A
@@ -15,7 +24,14 @@ Hold:
     @: held outer
     @: held_descriptor descriptor
 end: Hold
-int: body_raw 2
-int: descriptor_raw 2
-int: body_fields 2
-int: descriptor_fields 2
+int: body_raw (length (((((Hold \ held) \ data) \ inner) \ code) [] 0))
+int: descriptor_raw (length (((((Hold \ held_descriptor) \ data) \ inner) \ code) [] 0))
+int: body_fields (length ((Hold \ held) \ data))
+int: descriptor_fields (length ((Hold \ held_descriptor) \ data))
+sub: main ()
+    :=: ((shared \ Observed) \ body_raw) body_raw
+    :=: ((shared \ Observed) \ descriptor_raw) descriptor_raw
+    :=: ((shared \ Observed) \ body_fields) body_fields
+    :=: ((shared \ Observed) \ descriptor_fields) descriptor_fields
+end: main
+main:

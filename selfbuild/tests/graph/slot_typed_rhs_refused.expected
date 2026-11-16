@@ -1,6 +1,14 @@
+---
+    Observed:
+        int: calls 1
+        int: before 1
+        int: after 1
+    end: Observed
+---
+@: shared (data [] 0)
 int: calls 1
-int: before 1
-int: after 1
+int: before 0
+int: after 0
 Holder:
     A:
         int: value 1
@@ -17,3 +25,9 @@ end: rhs
 :=: before 1
 :=: ((Holder \ Target) [] 0) (Holder [] (rhs))
 :=: after 1
+sub: main ()
+    :=: ((shared \ Observed) \ calls) (node \ calls)
+    :=: ((shared \ Observed) \ before) before
+    :=: ((shared \ Observed) \ after) after
+end: main
+main:

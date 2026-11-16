@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: calls 4
+        int: total 4
+    end: Observed
+---
+@: shared (data [] 0)
 int: calls 4
 sub: tick ()
     :=: (node \ calls) ((node \ calls) + 1)
@@ -14,4 +21,9 @@ sub: selected ()
     finally: (((tick)))
 end: selected
 selected:
-int: total 4
+int: total (data \ calls)
+sub: main ()
+    :=: ((shared \ Observed) \ calls) (node \ calls)
+    :=: ((shared \ Observed) \ total) total
+end: main
+main:

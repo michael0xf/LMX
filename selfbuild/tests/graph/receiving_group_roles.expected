@@ -1,3 +1,13 @@
+---
+    Observed:
+        int: effects 1
+        int: arithmetic 15
+        int: called 6
+        int: indexed 12
+        int: via_whole 13
+    end: Observed
+---
+@: shared (data [] 0)
 int: effects 1
 fn: produce () int
     :=: (node \ effects) ((node \ effects) + 1)
@@ -8,8 +18,8 @@ fn: add (int: value; int: other 2) int
 end: add
 int: a 6
 int: b 7
-int: arithmetic 15
-int: called 6
+int: arithmetic (add ((a + b)))
+int: called (add ((produce)))
 Any:
 end: Any
 fn: frame_value (@: value Any; int: other 12) int
@@ -18,7 +28,7 @@ end: frame_value
 Carrier:
     const: ((@ field Any))
 end: Carrier
-int: indexed 12
+int: indexed (frame_value (Carrier [] 0))
 Env:
     Written: (const ((@ field Any)))
     Pass:
@@ -26,7 +36,7 @@ Env:
         int: other 13
     end: Pass
 end: Env
-int: via_whole 13
+int: via_whole (frame_value (Env \ Pass))
 fn: qualified ((const ((int value)))) int
     return: 1
 end: qualified
@@ -41,3 +51,11 @@ fn: profile (c.uint8_t: value) int
 end: profile
 if: 0 ((qualified ((const ((int value 9))))) (deep ((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ value c.FILE))) (array ((char ([] ([] value))))) (profile ((c.uint8_t value 7))))
 int: done 1
+sub: main ()
+    :=: ((shared \ Observed) \ effects) (node \ effects)
+    :=: ((shared \ Observed) \ arithmetic) arithmetic
+    :=: ((shared \ Observed) \ called) called
+    :=: ((shared \ Observed) \ indexed) indexed
+    :=: ((shared \ Observed) \ via_whole) via_whole
+end: main
+main:

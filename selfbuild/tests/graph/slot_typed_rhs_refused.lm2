@@ -1,3 +1,11 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: calls 0
+        int: before 0
+        int: after 0
+)
+@: shared data[0]
 int: calls 0
 int: before 0
 int: after 0
@@ -8,3 +16,9 @@ fn: rhs () int
 before := 1
 Holder\Target[0] := Holder[rhs()]
 after := 1
+
+sub: main ()
+    shared\Observed\calls := node\calls
+    shared\Observed\before := before
+    shared\Observed\after := after
+main()

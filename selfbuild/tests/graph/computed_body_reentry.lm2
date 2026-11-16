@@ -1,3 +1,10 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+)
+@: shared data[0]
 fn: leaf () int
     return: 90
 end: leaf
@@ -8,3 +15,8 @@ fn: outer () int (int: inside 0; int: outside 0)
 end: outer
 int: first outer()
 int: second outer()
+
+sub: main ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+main()

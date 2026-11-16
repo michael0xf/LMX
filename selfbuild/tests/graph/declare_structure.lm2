@@ -5,6 +5,13 @@
 # Struct1 would be ambiguous, `main\data\[N]Struct1` selects an occurrence.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
 # the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: through 0
+)
+@: shared data[0]
 sub: main () (
     Struct2: a b c
     Struct1: q w e r t
@@ -12,3 +19,8 @@ sub: main () (
 ) ()
 int: first length(main\data\[0]Struct1)
 int: through length(main\data\[1]Struct1\Struct2)
+
+sub: observe ()
+    shared\Observed\first := first
+    shared\Observed\through := through
+observe()

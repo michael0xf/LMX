@@ -1,3 +1,12 @@
+---
+    Observed:
+        int: seen 500
+        int: again 7
+        int: n_i 1
+        int: n_x 1
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     timeout:
         ms:
@@ -11,8 +20,15 @@ sub: main () (
     x: 4
 )
 end: main
-int: seen 500
+int: seen ((((main \ data) \ timeout) \ ms) \ time)
 :=: ((((main \ data) \ timeout) \ ms) \ time) 7
-int: again 7
-int: n_i 1
-int: n_x 1
+int: again ((((main \ data) \ timeout) \ ms) \ time)
+int: n_i (length ((main \ data) \ i))
+int: n_x (length ((main \ data) \ x))
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ again) again
+    :=: ((shared \ Observed) \ n_i) n_i
+    :=: ((shared \ Observed) \ n_x) n_x
+end: observe
+observe:

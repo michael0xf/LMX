@@ -1,25 +1,59 @@
+---
+    Observed:
+        int: r1 5
+        int: r2 12
+        int: r3 4
+        int: r4 42
+        int: r5 31
+        int: c3 2
+        int: r6 7
+        int: r7 9
+        int: r8 10
+        int: total 6
+        int: r9 101
+        int: r10 202
+        int: r11 303
+    end: Observed
+---
+@: shared (data [] 0)
 fn: (:= name k1) (:= args ((int a))) (:= return int) (:= code ((return (a + 1))))
 fn: (:= name k2) (:= args ((int a))) (:= return int) (:= code ((return (a * 3))))
-int: r1 5
-int: r2 12
-int: r3 4
-fn: (:= name k3) (:= args ((int a) (int b))) (:= return int) (:= data ((int calls 0))) (:= code ((:= calls (calls + 1)) (return ((a * 10) + b))))
-int: r4 42
-int: r5 31
-int: c3 2
+int: r1 (k1 4)
+int: r2 (k2 4)
+int: r3 (k1 (k2 1))
+fn: (:= name k3) (:= args ((int a) (int b))) (:= return int) (:= data ((int calls 0))) (:= code ((:= (data \ calls) ((data \ calls) + 1)) (return ((a * 10) + b))))
+int: r4 (k3 4 2)
+int: r5 (k3 (:= b 1) (:= a 3))
+int: c3 ((k3 \ data) \ calls)
 fn: (:= name k4) (:= args ()) (:= return int) (:= data ((int n 7))) (:= code ((return n)))
 fn: ((name k5) (args ()) (return int) (data ((int m 8))) (code ((return (m + 1)))))
-int: r6 7
-int: r7 9
+int: r6 (k4)
+int: r7 (k5)
 fn: ((name k6) (args (int a) (int b)) (return int) (code (int d (a - b)) (return (d * 2))))
-int: r8 10
-sub: (:= name s1) (:= args ((int d 1))) (:= data ((int total 0))) (:= code ((:= total (total + d))))
+int: r8 (k6 9 4)
+sub: (:= name s1) (:= args ((int d 1))) (:= data ((int total 0))) (:= code ((:= (data \ total) ((data \ total) + d))))
 s1: 5
 s1:
-int: total 6
+int: total ((s1 \ data) \ total)
 fn: (:= name "t1") (:= args ((int a))) (:= return int) (:= code ((return (a + 100))))
 fn: ((name "t2") (args ((int a))) (return int) (code ((return (a + 200)))))
 fn: (:= name "t\x33") (:= args ((int a))) (:= return int) (:= code ((return (a + 300))))
-int: r9 101
-int: r10 202
-int: r11 303
+int: r9 (t1 1)
+int: r10 (t2 2)
+int: r11 (t3 3)
+sub: main ()
+    :=: ((shared \ Observed) \ r1) r1
+    :=: ((shared \ Observed) \ r2) r2
+    :=: ((shared \ Observed) \ r3) r3
+    :=: ((shared \ Observed) \ r4) r4
+    :=: ((shared \ Observed) \ r5) r5
+    :=: ((shared \ Observed) \ c3) c3
+    :=: ((shared \ Observed) \ r6) r6
+    :=: ((shared \ Observed) \ r7) r7
+    :=: ((shared \ Observed) \ r8) r8
+    :=: ((shared \ Observed) \ total) total
+    :=: ((shared \ Observed) \ r9) r9
+    :=: ((shared \ Observed) \ r10) r10
+    :=: ((shared \ Observed) \ r11) r11
+end: main
+main:

@@ -3,18 +3,32 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 # Self is launched over itself in the code of main, which reads first and second after each launch; self_x is the x of
 # Self at the end, which the dump of the root Structure Self used to show.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+        int: self_x 0
+)
+@: shared data[0]
 sub: main () (
     Self:
         int: x 5
-        x := x + 1
+        data\x := data\x + 1
     int: first 0
     int: second 0
 )
     call: Self
-    first := Self\x
+    data\first := Self\x
     call: Self
-    second := Self\x
+    data\second := Self\x
 main()
 int: first main\data\first
 int: second main\data\second
 int: self_x main\data\Self\x
+
+sub: observe ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\self_x := self_x
+observe()

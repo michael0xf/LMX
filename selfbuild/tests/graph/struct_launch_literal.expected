@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: seen 8
+        int: after 12
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Total:
         int: sum 0
@@ -10,9 +17,14 @@ sub: main () (
         call: ((int v 3)) Add
         return: (Total \ sum)
     end: f
-    :=: seen ((f))
+    :=: (data \ seen) (f)
 end: main
 main:
-int: seen 8
+int: seen ((main \ data) \ seen)
 call: ((int v 4)) ((main \ data) \ Add)
-int: after 12
+int: after (((main \ data) \ Total) \ sum)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ after) after
+end: observe
+observe:

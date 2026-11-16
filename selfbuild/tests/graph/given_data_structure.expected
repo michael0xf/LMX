@@ -1,7 +1,15 @@
+---
+    Observed:
+        int: seen 4
+        int: inner_x 4
+        int: d_y 4
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Code:
         int: y
-        :=: y (Inner \ x)
+        :=: (data \ y) (Inner \ x)
     end: Code
     D:
         Inner:
@@ -13,6 +21,12 @@ sub: main () (
     call: D Code
 end: main
 main:
-int: seen 4
-int: inner_x 4
-int: d_y 4
+int: seen (((main \ data) \ D) \ y)
+int: inner_x ((((main \ data) \ D) \ Inner) \ x)
+int: d_y (((main \ data) \ D) \ y)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ inner_x) inner_x
+    :=: ((shared \ Observed) \ d_y) d_y
+end: observe
+observe:

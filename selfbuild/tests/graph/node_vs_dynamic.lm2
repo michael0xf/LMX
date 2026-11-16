@@ -1,5 +1,11 @@
 # A bare free name takes the caller's binding first (dynamic), `node\x` the field of the space above the method (the
 # book, ~977; plan M11 5b part 2): probe called by caller reads the bare x 25 and `node\x` 10 -- 2510.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+)
+@: shared data[0]
 int: x 10
 fn: probe () int
     return: x * 100 + node\x
@@ -7,3 +13,7 @@ fn: caller () int
     int: x 25
     return: probe()
 int: r caller()
+
+sub: main ()
+    shared\Observed\r := r
+main()

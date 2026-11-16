@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: seen 4
+        int: seen_in_code 4
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Struct1: Struct2
     Struct2:
@@ -5,8 +12,13 @@ sub: main () (
     end: Struct2
     int: in_code 0
 )
-    :=: in_code ((Struct1 \ Struct2) \ v)
+    :=: (data \ in_code) ((Struct1 \ Struct2) \ v)
 end: main
 main:
-int: seen 4
-int: seen_in_code 4
+int: seen ((((main \ data) \ Struct1) \ Struct2) \ v)
+int: seen_in_code ((main \ data) \ in_code)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ seen_in_code) seen_in_code
+end: observe
+observe:

@@ -1,11 +1,27 @@
+---
+    Observed:
+        int: result 7
+        int: arity 2
+        int: escaped_arity 1
+        int: escaped_result 8
+    end: Observed
+---
+@: shared (data [] 0)
 fn: description (char: letter; int: count 4) int
 fn: identity (int: value) int
     return: value
 end: identity
-int: result 7
-int: arity 2
+int: result (identity 7)
+int: arity (length (description \ data))
 fn: escaped (int: a`b) int
     return: a`b
 end: escaped
-int: escaped_arity 1
-int: escaped_result 8
+int: escaped_arity (length (escaped \ data))
+int: escaped_result (escaped 8)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+    :=: ((shared \ Observed) \ arity) arity
+    :=: ((shared \ Observed) \ escaped_arity) escaped_arity
+    :=: ((shared \ Observed) \ escaped_result) escaped_result
+end: main
+main:

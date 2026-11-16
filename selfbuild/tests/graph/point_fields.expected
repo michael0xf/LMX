@@ -1,3 +1,13 @@
+---
+    Observed:
+        int: reordered 31
+        int: defaulted 42
+        int: nested 32
+        int: only_used_len 1
+        int: reordered_len 3
+    end: Observed
+---
+@: shared (data [] 0)
 fn: bump (int: v) int
     return: (v + 1)
 end: bump
@@ -21,13 +31,21 @@ sub: main () (
     fn: take (@: p Point; int: q 2) int
         return: (((p \ y) * 10) + q)
     end: take
-    :=: reordered (take Reordered 1)
-    :=: defaulted (take OnlyUsed)
-    :=: nested (take Reordered (bump 1))
+    :=: (data \ reordered) (take Reordered 1)
+    :=: (data \ defaulted) (take OnlyUsed)
+    :=: (data \ nested) (take Reordered (bump 1))
 end: main
 main:
-int: reordered 31
-int: defaulted 42
-int: nested 32
-int: only_used_len 1
-int: reordered_len 3
+int: reordered ((main \ data) \ reordered)
+int: defaulted ((main \ data) \ defaulted)
+int: nested ((main \ data) \ nested)
+int: only_used_len (length ((main \ data) \ OnlyUsed))
+int: reordered_len (length ((main \ data) \ Reordered))
+sub: observe ()
+    :=: ((shared \ Observed) \ reordered) reordered
+    :=: ((shared \ Observed) \ defaulted) defaulted
+    :=: ((shared \ Observed) \ nested) nested
+    :=: ((shared \ Observed) \ only_used_len) only_used_len
+    :=: ((shared \ Observed) \ reordered_len) reordered_len
+end: observe
+observe:

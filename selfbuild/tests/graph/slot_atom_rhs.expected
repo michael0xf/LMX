@@ -1,5 +1,12 @@
+---
+    Observed:
+        int: calls 1
+        int: seen 7
+    end: Observed
+---
+@: shared (data [] 0)
 int: calls 1
-int: seen 7
+int: seen 0
 Holder:
     C:
         int: value 9
@@ -20,3 +27,8 @@ fn: rhs () int
 end: rhs
 :=: ((Holder \ Slots) [] 0) (merge ((Holder \ Choices) [] (rhs)))
 :=: seen (((Holder \ Slots) [] 0) \ value)
+sub: main ()
+    :=: ((shared \ Observed) \ calls) (node \ calls)
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

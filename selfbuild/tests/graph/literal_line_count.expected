@@ -1,17 +1,31 @@
+---
+    Observed:
+        int: first 6
+        int: second 7
+        int: self_x 7
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Self:
         int: x 5
-        :=: x (x + 1)
+        :=: (data \ x) ((data \ x) + 1)
     end: Self
     int: first 0
     int: second 0
 )
     call: Self
-    :=: first (Self \ x)
+    :=: (data \ first) (Self \ x)
     call: Self
-    :=: second (Self \ x)
+    :=: (data \ second) (Self \ x)
 end: main
 main:
-int: first 6
-int: second 7
-int: self_x 7
+int: first ((main \ data) \ first)
+int: second ((main \ data) \ second)
+int: self_x (((main \ data) \ Self) \ x)
+sub: observe ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ self_x) self_x
+end: observe
+observe:

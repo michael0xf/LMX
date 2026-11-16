@@ -1,7 +1,16 @@
+---
+    Observed:
+        int: result 2
+    end: Observed
+---
+@: shared (data [] 0)
 fn: auto (int: x) int
     int: x 2
     return: x
 end: auto
 int: caller 7
-int: result 7
-int: field 2
+int: result (auto caller)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+end: main
+main:

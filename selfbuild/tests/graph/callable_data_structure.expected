@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: seen 4
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f () int (
     Point:
         int: x 4
@@ -5,4 +11,8 @@ fn: f () int (
 )
     return: (Point \ x)
 end: f
-int: seen 4
+int: seen (f)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

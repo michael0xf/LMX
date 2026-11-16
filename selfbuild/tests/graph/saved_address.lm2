@@ -1,7 +1,19 @@
 # A reference saved before the first write must address that same int cell after both writes.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+)
+@: shared data[0]
 int: i
 @: p int @i
 i := 5
 int: first \p
 i := 7
 int: second \p
+
+sub: main ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+main()

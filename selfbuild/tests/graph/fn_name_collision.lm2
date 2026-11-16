@@ -1,11 +1,25 @@
 # Slice 334 (the author 2026-11-09: `name := "test"` names the part explicitly whatever callable name exists): with the
 # function name declared, `fn: name := k3; ...` still binds the part name by its name and creates k3; name stays the
 # callable it is (name(2) 200, one call).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r1 0
+        int: r2 0
+        int: c 0
+)
+@: shared data[0]
 fn: name (int: x) int (int: calls 0)
-    calls := calls + 1
+    data\calls := data\calls + 1
     return: x * 100
 end: name
 fn: name := k3; args := (int: a); return := int; code := (return: a + 2)
 int: r1 k3(1)
 int: r2 name(2)
 int: c name\data\calls
+
+sub: main ()
+    shared\Observed\r1 := r1
+    shared\Observed\r2 := r2
+    shared\Observed\c := c
+main()

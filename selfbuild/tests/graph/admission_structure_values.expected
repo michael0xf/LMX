@@ -1,3 +1,16 @@
+---
+    Watch:
+        int: calls 3
+        int: literal 7
+        int: by_place 7
+        int: by_alias 7
+        int: updated 8
+        int: shared 8
+        int: same_alias 8
+        int: untouched 0
+    end: Watch
+---
+@: seen_root (data [] 0)
 Model:
     int: v 0
     int: unused 0
@@ -6,10 +19,7 @@ Candidate:
     int: extra 99
     int: v 8
 end: Candidate
-Alias:
-    int: extra 99
-    int: v 8
-end: Alias
+@: Alias Candidate
 int: calls 3
 fn: read (@: value Model) int
     :=: (node \ calls) ((node \ calls) + 1)
@@ -19,10 +29,21 @@ fn: bump (@: value Model) int
     :=: (value \ v) ((value \ v) + 1)
     return: (value \ v)
 end: bump
-int: literal 7
-int: by_place 7
-int: by_alias 7
-int: updated 8
-int: shared 8
-int: same_alias 8
-int: untouched 0
+int: literal (read ((int v 7)))
+int: by_place (read Candidate)
+int: by_alias (read Alias)
+int: updated (bump Alias)
+int: shared (Candidate \ v)
+int: same_alias (Alias \ v)
+int: untouched (Model \ v)
+sub: main ()
+    :=: ((seen_root \ Watch) \ calls) (node \ calls)
+    :=: ((seen_root \ Watch) \ literal) literal
+    :=: ((seen_root \ Watch) \ by_place) by_place
+    :=: ((seen_root \ Watch) \ by_alias) by_alias
+    :=: ((seen_root \ Watch) \ updated) updated
+    :=: ((seen_root \ Watch) \ shared) shared
+    :=: ((seen_root \ Watch) \ same_alias) same_alias
+    :=: ((seen_root \ Watch) \ untouched) untouched
+end: main
+main:

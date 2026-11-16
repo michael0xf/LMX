@@ -1,3 +1,18 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: x 0
+        int: base 0
+        int: local_value 0
+        int: own_value 0
+        int: formal_value 0
+        int: local_address 0
+        int: unchanged 0
+        int: next_local 0
+        int: outside 0
+        int: next_relay 0
+)
+@: shared data[0]
 int: x 5
 fn: leaf () int
     return: x
@@ -36,3 +51,16 @@ x := 20
 int: next_local local()
 int: outside x
 int: next_relay relay()
+
+sub: main ()
+    shared\Observed\x := x
+    shared\Observed\base := base
+    shared\Observed\local_value := local_value
+    shared\Observed\own_value := own_value
+    shared\Observed\formal_value := formal_value
+    shared\Observed\local_address := local_address
+    shared\Observed\unchanged := unchanged
+    shared\Observed\next_local := next_local
+    shared\Observed\outside := outside
+    shared\Observed\next_relay := next_relay
+main()

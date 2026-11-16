@@ -1,3 +1,12 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: before 0
+        int: after 0
+        int: indexed 0
+        int: called 0
+)
+@: shared data[0]
 fn: inc (int: x) int (return: x + 1)
 @: `R\Q` (Cell(int: value 11); inc)
 int: before `R\Q`\Cell\value
@@ -5,3 +14,10 @@ int: before `R\Q`\Cell\value
 int: after `R\Q`\Cell\value
 int: indexed `R\Q`[0]\value
 int: called `R\Q`\inc(5)
+
+sub: main ()
+    shared\Observed\before := before
+    shared\Observed\after := after
+    shared\Observed\indexed := indexed
+    shared\Observed\called := called
+main()

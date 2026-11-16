@@ -1,14 +1,28 @@
+---
+    Observed:
+        int: first 1
+        int: second 2
+        int: count 2
+    end: Observed
+---
+@: shared (data [] 0)
 Scope:
     fn: leaf () int (
         int: count 0
     )
-        :=: count (count + 1)
-        return: count
+        :=: (data \ count) ((data \ count) + 1)
+        return: (data \ count)
     end: leaf
     fn: main () int
         return: (leaf)
     end: main
 end: Scope
-int: first 1
-int: second 2
-int: count 2
+int: first Scope\main()
+int: second Scope\main()
+int: count (((Scope \ leaf) \ data) \ count)
+sub: observe ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ count) count
+end: observe
+observe:

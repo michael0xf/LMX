@@ -1,3 +1,18 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: literal 0
+        int: first 0
+        int: second 0
+        int: literal_after 0
+        int: first_after 0
+        int: second_after 0
+        int: quoted_first 0
+        int: quoted_second 0
+        int: quoted_literal 0
+        int: quoted_after 0
+)
+@: shared data[0]
 @: S (int: x 7; int: x 9; int: `[0]x` 11)
 @: Alias S
 int: literal S \ `[0]x`
@@ -14,3 +29,16 @@ int: quoted_second Weird\[1]`a\b`
 int: quoted_literal Weird\`[0]a\b`
 Weird\[1]`a\b`:=16
 int: quoted_after Weird\[1]`a\b`
+
+sub: main ()
+    shared\Observed\literal := literal
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\literal_after := literal_after
+    shared\Observed\first_after := first_after
+    shared\Observed\second_after := second_after
+    shared\Observed\quoted_first := quoted_first
+    shared\Observed\quoted_second := quoted_second
+    shared\Observed\quoted_literal := quoted_literal
+    shared\Observed\quoted_after := quoted_after
+main()

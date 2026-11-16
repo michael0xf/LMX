@@ -1,3 +1,13 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: effects 0
+        int: arithmetic 0
+        int: called 0
+        int: indexed 0
+        int: via_whole 0
+)
+@: shared data[0]
 int: effects 0
 fn: produce () int
     node\effects := node\effects + 1
@@ -24,3 +34,11 @@ if: 0
     array((char([]([](value)))))
     profile((c.uint8_t: value 7))
 int: done 1
+
+sub: main ()
+    shared\Observed\effects := node\effects
+    shared\Observed\arithmetic := arithmetic
+    shared\Observed\called := called
+    shared\Observed\indexed := indexed
+    shared\Observed\via_whole := via_whole
+main()

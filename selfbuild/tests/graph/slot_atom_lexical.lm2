@@ -1,3 +1,9 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 sub: main () (
     A(int: value 1)
     B(int: value 7)
@@ -7,6 +13,10 @@ sub: main () (
     fn: patch (int: A) int
         Slots[0] := B
         return: Slots[0]\value
-    seen := patch(9)
+    data\seen := patch(9)
 main()
 int: seen main\data\seen
+
+sub: observe ()
+    shared\Observed\seen := seen
+observe()

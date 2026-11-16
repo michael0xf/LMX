@@ -1,4 +1,17 @@
 # Shared logical declaration names; receiving chains remain written until typed lowering.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: qualified_shape 0
+        int: qualified_inner 0
+        int: primitive_shape 0
+        int: deep_shape 0
+        int: array_shape 0
+        int: rectangular_shape 0
+        int: ctype_shape 0
+        int: call_shape 0
+)
+@: shared data[0]
 fn: rn_shadow () int
     return: 7
 @: rn_qualified (rn_A(int: v 9); const: (@: rn_shadow rn_A); @: held rn_shadow)
@@ -16,3 +29,14 @@ int: rectangular_shape length(rn_rect[1])
 int: ctype_shape length(rn_ctype[1])
 @: rn_call (c.printf("x"))
 int: call_shape length(rn_call\`c.printf`)
+
+sub: main ()
+    shared\Observed\qualified_shape := qualified_shape
+    shared\Observed\qualified_inner := qualified_inner
+    shared\Observed\primitive_shape := primitive_shape
+    shared\Observed\deep_shape := deep_shape
+    shared\Observed\array_shape := array_shape
+    shared\Observed\rectangular_shape := rectangular_shape
+    shared\Observed\ctype_shape := ctype_shape
+    shared\Observed\call_shape := call_shape
+main()

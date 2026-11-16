@@ -1,5 +1,15 @@
 # Slice 309: precedence and a parenthesized group over int places; a computed declaration publishes its value.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: c 0
+)
+@: shared data[0]
 int: a 2
 int: b 3
 int: c a + b * 4
 c := (c - 2) * 2 + b % 2
+
+sub: main ()
+    shared\Observed\c := c
+main()

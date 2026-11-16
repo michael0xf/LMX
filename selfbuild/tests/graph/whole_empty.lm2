@@ -1,3 +1,12 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: z0 0
+        int: z1 0
+        int: d0 0
+        int: d1 0
+)
+@: shared data[0]
 fn: zero () int
     return: 7
 end: zero
@@ -8,3 +17,10 @@ int: z0 zero()
 int: z1 zero(zero\data)
 int: d0 defaults()
 int: d1 defaults(zero\data)
+
+sub: main ()
+    shared\Observed\z0 := z0
+    shared\Observed\z1 := z1
+    shared\Observed\d0 := d0
+    shared\Observed\d1 := d1
+main()

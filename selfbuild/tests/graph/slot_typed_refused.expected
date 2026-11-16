@@ -1,9 +1,13 @@
-int: stage 2
+---
+    Observed:
+        int: stage 2
+    end: Observed
+---
+@: shared (data [] 0)
+int: stage 0
 int: j 41
 State:
-    Typed:
-        int: j 41
-    end: Typed
+    Typed: 41
     B:
         int: value 7
     end: B
@@ -12,3 +16,7 @@ end: State
 :=: stage 1
 :=: ((State \ Typed) [] 0) (@ j)
 :=: stage 2
+sub: main ()
+    :=: ((shared \ Observed) \ stage) stage
+end: main
+main:

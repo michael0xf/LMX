@@ -1,4 +1,15 @@
 # M11.5e: An anonymous written code group stays inert while the method is created.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: fields 0
+        int: after 0
+)
+@: shared data[0]
 fn: name := f; args := (); return := int; code := (missing_code())
 int: fields length(f\code)
 int: after 2
+sub: main ()
+    shared\Observed\fields := fields
+    shared\Observed\after := after
+main()

@@ -1,8 +1,17 @@
 # Slice 333: g is the function `fn: g merge(f1)` creates at the root; twice, declared at the root, applies it in a
 # statement and in its result: r = g(1) + 1 = 16 with k 5, f1 never called (c1 0), g twice (c2 2).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: k 0
+        int: r 0
+        int: c1 0
+        int: c2 0
+)
+@: shared data[0]
 int: k 2
 fn: f1 (int: a) int (int: calls 0)
-    calls := calls + 1
+    data\calls := data\calls + 1
     return: a * 10 + k
 end: f1
 fn: g merge(f1)
@@ -14,3 +23,10 @@ k := 5
 int: r twice(1)
 int: c1 f1\data\calls
 int: c2 g\data\calls
+
+sub: main ()
+    shared\Observed\k := k
+    shared\Observed\r := r
+    shared\Observed\c1 := c1
+    shared\Observed\c2 := c2
+main()

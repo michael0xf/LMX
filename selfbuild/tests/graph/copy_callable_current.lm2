@@ -1,6 +1,20 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+        int: third 0
+        int: held 0
+        int: copied 0
+        int: source 0
+        int: independent 0
+        int: again 0
+        int: source_again 0
+)
+@: shared data[0]
 fn: leaf () int (int: count 0)
-    count := count + 1
-    return: count
+    data\count := data\count + 1
+    return: data\count
 int: first leaf()
 int: second leaf()
 int: third leaf()
@@ -13,3 +27,15 @@ descriptor\data\count := 20
 int: independent clone\data\count
 int: again clone()
 int: source_again leaf()
+
+sub: main ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\third := third
+    shared\Observed\held := held
+    shared\Observed\copied := copied
+    shared\Observed\source := source
+    shared\Observed\independent := independent
+    shared\Observed\again := again
+    shared\Observed\source_again := source_again
+main()

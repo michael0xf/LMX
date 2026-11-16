@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: k 8
+        int: result 10550
+        int: outside 8
+    end: Observed
+---
+@: shared (data [] 0)
 int: k 8
 fn: local (int: value) int
     return: (value + 100)
@@ -15,9 +23,16 @@ fn: outer () int (
     int: seeded (change)
     int: before 0
 )
+    int: used seeded
     :=: before (local (k))
     fn: local prepared
     return: ((before * 100) + (local (k)))
 end: outer
-int: result 10550
-int: outside 8
+int: result (outer)
+int: outside (data \ k)
+sub: main ()
+    :=: ((shared \ Observed) \ k) (node \ k)
+    :=: ((shared \ Observed) \ result) result
+    :=: ((shared \ Observed) \ outside) outside
+end: main
+main:

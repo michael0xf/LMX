@@ -1,3 +1,16 @@
+---
+    Observed:
+        int: calls 2
+        int: quiet_fields 0
+        int: after_body 0
+        int: after_ast 1
+        int: math 5
+        int: after_math 2
+        int: arithmetic 14
+        int: body_x 3
+    end: Observed
+---
+@: shared (data [] 0)
 int: calls 2
 fn: tick () int
     :=: (node \ calls) ((node \ calls) + 1)
@@ -20,7 +33,7 @@ sub: quiet ()
     missing_a: missing_b missing_c
 end: quiet
 quiet:
-int: quiet_fields 0
+int: quiet_fields (length (quiet \ data))
 ---
     tick:
 ---
@@ -30,13 +43,24 @@ Body:
         tick:
     ---
     missing_a: missing_b missing_c
-    :=: x (x + 2)
+    :=: (data \ x) ((data \ x) + 2)
 end: Body
 call: Body
-int: after_body 0
+int: after_body (data \ calls)
 +: ((tick) + 1)
-int: after_ast 1
-int: math 5
-int: after_math 2
-int: arithmetic 14
-int: body_x 3
+int: after_ast (data \ calls)
+int: math ((tick) + 1)
+int: after_math (data \ calls)
+int: arithmetic (2 + (3 * 4))
+int: body_x (Body \ x)
+sub: main ()
+    :=: ((shared \ Observed) \ calls) (node \ calls)
+    :=: ((shared \ Observed) \ quiet_fields) quiet_fields
+    :=: ((shared \ Observed) \ after_body) after_body
+    :=: ((shared \ Observed) \ after_ast) after_ast
+    :=: ((shared \ Observed) \ math) math
+    :=: ((shared \ Observed) \ after_math) after_math
+    :=: ((shared \ Observed) \ arithmetic) arithmetic
+    :=: ((shared \ Observed) \ body_x) body_x
+end: main
+main:

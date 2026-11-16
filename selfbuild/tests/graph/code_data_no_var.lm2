@@ -4,13 +4,25 @@
 # Structure that had none.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
 # main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: root_x 0
+)
+@: shared data[0]
 int: x 5
 sub: main () (
     Code:
         int: x
-        x := 7
+        data\x := 7
 )
     call: Code
 main()
 int: seen main\data\Code\x
 int: root_x x
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\root_x := root_x
+observe()

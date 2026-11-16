@@ -1,8 +1,24 @@
-int: hits 101
-D:
-    int: hits 100
-end: D
-Bump: (:= (node \ hits) (hits + 1))
-call: D Bump
-int: seen 101
-int: kept 100
+---
+    Observed:
+        int: seen 101
+        int: kept 100
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main () (
+    int: hits 4
+    D:
+        int: hits 100
+    end: D
+    Bump: (:= (node \ hits) (hits + 1))
+)
+    call: D Bump
+end: main
+main:
+int: seen ((main \ data) \ hits)
+int: kept (((main \ data) \ D) \ hits)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ kept) kept
+end: observe
+observe:

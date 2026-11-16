@@ -1,7 +1,19 @@
+---
+    Observed:
+        int: x 30
+        int: r 1130
+    end: Observed
+---
+@: shared (data [] 0)
 int: x 30
 fn: probe () int
     :=: x (x + 1)
     :=: (node \ x) 30
     return: ((x * 100) + (node \ x))
 end: probe
-int: r 1130
+int: r (probe)
+sub: main ()
+    :=: ((shared \ Observed) \ x) (node \ x)
+    :=: ((shared \ Observed) \ r) r
+end: main
+main:

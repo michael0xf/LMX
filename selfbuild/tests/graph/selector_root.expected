@@ -1,3 +1,12 @@
+---
+    Observed:
+        int: before 11
+        int: after 12
+        int: indexed 12
+        int: called 6
+    end: Observed
+---
+@: shared (data [] 0)
 fn: inc (int: x) int
     return: (x + 1)
 end: inc
@@ -7,8 +16,15 @@ R\Q:
     end: Cell
     inc
 end: R\Q
-int: before 11
+int: before ((`R\Q` \ Cell) \ value)
 :=: ((`R\Q` \ Cell) \ value) 12
-int: after 12
-int: indexed 12
-int: called 6
+int: after ((`R\Q` \ Cell) \ value)
+int: indexed ((`R\Q` [] 0) \ value)
+int: called `R\Q`\inc(5)
+sub: main ()
+    :=: ((shared \ Observed) \ before) before
+    :=: ((shared \ Observed) \ after) after
+    :=: ((shared \ Observed) \ indexed) indexed
+    :=: ((shared \ Observed) \ called) called
+end: main
+main:

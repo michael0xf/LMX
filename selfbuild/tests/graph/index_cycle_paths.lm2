@@ -4,6 +4,14 @@
 # the first return. The dump prints the data part of main as written, so the print of the cycle by name is not checked
 # here: the root Structures A and B of the fixture index_cycle_dump show it (R26, item 8).
 # The declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: back 0
+        int: deep 0
+)
+@: shared data[0]
 sub: main () (
     A:
         Inner()
@@ -16,3 +24,9 @@ main()
 int: seen length(main\data\A[0])
 int: back length(main\data\A[0][0])
 int: deep length(main\data\A[0][0][0])
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\back := back
+    shared\Observed\deep := deep
+observe()

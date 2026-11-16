@@ -1,3 +1,15 @@
+---
+    Observed:
+        int: fields 1
+        int: after 2
+    end: Observed
+---
+@: shared (data [] 0)
 fn: (:= name f) (:= args ()) (:= return int) (:= code ((missing_code)))
-int: fields 1
+int: fields (length (f \ code))
 int: after 2
+sub: main ()
+    :=: ((shared \ Observed) \ fields) fields
+    :=: ((shared \ Observed) \ after) after
+end: main
+main:

@@ -1,4 +1,12 @@
 # Source-known shape and inert DATA are checked without running dead operands.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: positional 0
+        int: named 0
+        int: whole 0
+)
+@: shared data[0]
 int: effects 0
 fn: touch () int
     node\effects := node\effects + 1
@@ -18,3 +26,9 @@ int: positional take(5)
 int: named take(other := 4; value := 3)
 int: whole take((int: value 8; int: other 1))
 int: done 1
+
+sub: main ()
+    shared\Observed\positional := positional
+    shared\Observed\named := named
+    shared\Observed\whole := whole
+main()

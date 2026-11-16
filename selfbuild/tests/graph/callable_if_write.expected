@@ -1,7 +1,17 @@
+---
+    Observed:
+        int: seen 5
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f () int (
     int: v 0
 )
     if: 1 ((:= v 5))
     return: v
 end: f
-int: seen 5
+int: seen (f)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

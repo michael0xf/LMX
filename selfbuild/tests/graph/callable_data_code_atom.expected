@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: n 3
+        int: m 3
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f () int (
     Alias: code
 )
@@ -5,5 +12,10 @@ fn: f () int (
     int: b 2
     return: 1
 end: f
-int: n 3
-int: m 3
+int: n (length (f \ code))
+int: m (length (((f \ data) \ Alias) \ code))
+sub: main ()
+    :=: ((shared \ Observed) \ n) n
+    :=: ((shared \ Observed) \ m) m
+end: main
+main:

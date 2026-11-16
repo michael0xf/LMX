@@ -1,5 +1,11 @@
 # The control bodies are no callables (the author 2026-11-11, LMX_blog/2026-11-11.md#callable-parts-visibility): a write
 # from the body of if in a method's code changes the method's variable.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 fn: f () int (int: v 0)
     if: 1
         v := 5
@@ -7,3 +13,7 @@ fn: f () int (int: v 0)
     return: v
 end: f
 int: seen f()
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

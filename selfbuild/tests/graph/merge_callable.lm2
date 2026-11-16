@@ -3,9 +3,20 @@
 # this traversal (the author 2026-11-09). g's data is the copy of f1's data at the merge (calls 0) completed by the own
 # fields of the code: the counters stay apart (c1 1, c2 2). g's code is the copy of f1's; its free name k is resolved
 # from g, created at the root -- k is 5 when g runs (r2 15, r3 25). g is interpreted: no native code exists for it.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: k 0
+        int: r1 0
+        int: r2 0
+        int: r3 0
+        int: c1 0
+        int: c2 0
+)
+@: shared data[0]
 int: k 2
 fn: f1 (int: a) int (int: calls 0)
-    calls := calls + 1
+    data\calls := data\calls + 1
     return: a * 10 + k
 end: f1
 fn: g merge(f1)
@@ -15,3 +26,12 @@ int: r2 g(1)
 int: r3 g(2)
 int: c1 f1\data\calls
 int: c2 g\data\calls
+
+sub: main ()
+    shared\Observed\k := k
+    shared\Observed\r1 := r1
+    shared\Observed\r2 := r2
+    shared\Observed\r3 := r3
+    shared\Observed\c1 := c1
+    shared\Observed\c2 := c2
+main()

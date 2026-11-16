@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: effects 3
+        int: after 9
+        int: called 3
+    end: Observed
+---
+@: shared (data [] 0)
 int: effects 3
 fn: f\g (int: value) int
     :=: (node \ effects) ((node \ effects) + value)
@@ -9,5 +17,11 @@ S:
 end: S
 :=: (S \ `a\b`) 9
 S\`f\g`(3)
-int: after 9
-int: called 3
+int: after (S \ `a\b`)
+int: called (data \ effects)
+sub: main ()
+    :=: ((shared \ Observed) \ effects) (node \ effects)
+    :=: ((shared \ Observed) \ after) after
+    :=: ((shared \ Observed) \ called) called
+end: main
+main:

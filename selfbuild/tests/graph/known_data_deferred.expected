@@ -1,4 +1,11 @@
-int: calls 0
+---
+    Observed:
+        int: before 1
+        int: after 2
+    end: Observed
+---
+@: shared (data [] 0)
+int: calls 1
 fn: factory () int
     :=: (node \ calls) ((node \ calls) + 1)
     return: 7
@@ -6,8 +13,13 @@ end: factory
 Box:
     @: pick (factory)
 end: Box
-int: before 1
+int: before 0
 int: after 0
 :=: before 1
 int: result (Box \ pick)
 :=: after 2
+sub: main ()
+    :=: ((shared \ Observed) \ before) before
+    :=: ((shared \ Observed) \ after) after
+end: main
+main:

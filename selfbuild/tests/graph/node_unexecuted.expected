@@ -1,6 +1,16 @@
+---
+    Observed:
+        int: r 7
+    end: Observed
+---
+@: shared (data [] 0)
 int: hits 4
 fn: f () int
     if: 0 ((return (node \ hits)))
     return: 7
 end: f
-int: r 7
+int: r (f)
+sub: main ()
+    :=: ((shared \ Observed) \ r) r
+end: main
+main:

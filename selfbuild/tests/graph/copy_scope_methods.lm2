@@ -1,13 +1,28 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: first 0
+        int: second 0
+        int: third 0
+        int: copied 0
+        int: copied_again 0
+        int: copy_count 0
+        int: copy_sub 0
+        int: copy_marks 0
+        int: source 0
+        int: source_marks 0
+)
+@: shared data[0]
 @: Scope (
     int: marks 0
     fn: leaf () int (int: count 0)
-        count := count + 1
+        data\count := data\count + 1
         node\marks := node\marks + 1
-        return: count
+        return: data\count
     fn: main () int
         return: leaf()
     sub: bump () (int: n 0)
-        n := n + 1
+        data\n := data\n + 1
         node\marks := node\marks + 10
 )
 call(Scope)
@@ -24,3 +39,16 @@ int: copy_sub duplicate\bump\data\n
 int: copy_marks duplicate\marks
 int: source Scope\leaf\data\count
 int: source_marks Scope\marks
+
+sub: observe ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\third := third
+    shared\Observed\copied := copied
+    shared\Observed\copied_again := copied_again
+    shared\Observed\copy_count := copy_count
+    shared\Observed\copy_sub := copy_sub
+    shared\Observed\copy_marks := copy_marks
+    shared\Observed\source := source
+    shared\Observed\source_marks := source_marks
+observe()

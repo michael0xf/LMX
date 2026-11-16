@@ -1,12 +1,28 @@
 # Backquoted identifiers and plain names have the same canonical address.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+        int: arity 0
+        int: escaped_arity 0
+        int: escaped_result 0
+)
+@: shared data[0]
 fn: `description` (`char`: `letter`; `int`: `count` 4) int
 fn: `identity` (`int`: `value`) int
     return: `value`
 end: identity
 int: result `identity`(7)
-int: arity length(description\args)
+int: arity length(description\data)
 fn: escaped (`int`: `a``b`) int
     return: `a``b`
 end: escaped
-int: escaped_arity length(escaped\args)
+int: escaped_arity length(escaped\data)
 int: escaped_result escaped(8)
+
+sub: main ()
+    shared\Observed\result := result
+    shared\Observed\arity := arity
+    shared\Observed\escaped_arity := escaped_arity
+    shared\Observed\escaped_result := escaped_result
+main()

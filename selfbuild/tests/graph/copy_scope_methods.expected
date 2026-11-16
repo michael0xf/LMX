@@ -1,11 +1,26 @@
+---
+    Observed:
+        int: first 1
+        int: second 2
+        int: third 3
+        int: copied 1
+        int: copied_again 2
+        int: copy_count 2
+        int: copy_sub 2
+        int: copy_marks 25
+        int: source 3
+        int: source_marks 3
+    end: Observed
+---
+@: shared (data [] 0)
 Scope:
     int: marks 3
     fn: leaf () int (
         int: count 0
     )
-        :=: count (count + 1)
+        :=: (data \ count) ((data \ count) + 1)
         :=: (node \ marks) ((node \ marks) + 1)
-        return: count
+        return: (data \ count)
     end: leaf
     fn: main () int
         return: (leaf)
@@ -13,39 +28,37 @@ Scope:
     sub: bump () (
         int: n 0
     )
-        :=: n (n + 1)
+        :=: (data \ n) ((data \ n) + 1)
         :=: (node \ marks) ((node \ marks) + 10)
     end: bump
 end: Scope
 call: Scope
-int: first 1
-int: second 2
-int: third 3
-duplicate:
-    int: marks 25
-    fn: leaf () int (
-        int: count 0
-    )
-        :=: count (count + 1)
-        :=: (node \ marks) ((node \ marks) + 1)
-        return: count
-    end: leaf
-    fn: main () int
-        return: (leaf)
-    end: main
-    sub: bump () (
-        int: n 0
-    )
-        :=: n (n + 1)
-        :=: (node \ marks) ((node \ marks) + 10)
-    end: bump
-end: duplicate
-int: copied 1
-int: copied_again 2
+int: first Scope\leaf()
+int: second Scope\leaf()
+int: third Scope\leaf()
+@:
+    duplicate
+    merge: Scope
+end: @
+int: copied duplicate\main()
+int: copied_again duplicate\main()
 duplicate\bump()
 duplicate\bump()
-int: copy_count 2
-int: copy_sub 2
-int: copy_marks 25
-int: source 3
-int: source_marks 3
+int: copy_count (((duplicate \ leaf) \ data) \ count)
+int: copy_sub (((duplicate \ bump) \ data) \ n)
+int: copy_marks (duplicate \ marks)
+int: source (((Scope \ leaf) \ data) \ count)
+int: source_marks (Scope \ marks)
+sub: observe ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ third) third
+    :=: ((shared \ Observed) \ copied) copied
+    :=: ((shared \ Observed) \ copied_again) copied_again
+    :=: ((shared \ Observed) \ copy_count) copy_count
+    :=: ((shared \ Observed) \ copy_sub) copy_sub
+    :=: ((shared \ Observed) \ copy_marks) copy_marks
+    :=: ((shared \ Observed) \ source) source
+    :=: ((shared \ Observed) \ source_marks) source_marks
+end: observe
+observe:

@@ -1,18 +1,47 @@
+---
+    Observed:
+        int: first 1
+        int: second 2
+        int: third 3
+        int: held 3
+        int: copied 4
+        int: source 3
+        int: independent 4
+        int: again 5
+        int: source_again 4
+    end: Observed
+---
+@: shared (data [] 0)
 fn: leaf () int (
     int: count 0
 )
-    :=: count (count + 1)
-    return: count
+    :=: (data \ count) ((data \ count) + 1)
+    return: (data \ count)
 end: leaf
-int: first 1
-int: second 2
-int: third 3
-@: descriptor leaf
-int: held 3
+int: first (leaf)
+int: second (leaf)
+int: third (leaf)
+@:
+    descriptor
+    merge: leaf
+end: @
+int: held ((descriptor \ data) \ count)
 fn: clone descriptor
-int: copied 4
-int: source 3
+int: copied (clone)
+int: source ((leaf \ data) \ count)
 :=: ((descriptor \ data) \ count) 20
-int: independent 4
-int: again 5
-int: source_again 4
+int: independent ((clone \ data) \ count)
+int: again (clone)
+int: source_again (leaf)
+sub: main ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ third) third
+    :=: ((shared \ Observed) \ held) held
+    :=: ((shared \ Observed) \ copied) copied
+    :=: ((shared \ Observed) \ source) source
+    :=: ((shared \ Observed) \ independent) independent
+    :=: ((shared \ Observed) \ again) again
+    :=: ((shared \ Observed) \ source_again) source_again
+end: main
+main:

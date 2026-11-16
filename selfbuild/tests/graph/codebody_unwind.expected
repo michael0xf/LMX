@@ -1,10 +1,18 @@
-fn: ordered () int (
-    int: trace 0
-)
-    finally: (:= trace ((trace * 10) + 1))
-    finally: ((:= trace ((trace * 10) + 2)))
-    finally: (((:= trace ((trace * 10) + 3))))
+---
+    Observed:
+        int: result 9
+        int: trace 21
+    end: Observed
+---
+@: shared (data [] 0)
+fn: ordered () int
+    finally: (:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 1))
+    finally: ((:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 2)))
+    finally: (((:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 3))))
     return: 9
 end: ordered
-int: result 9
-int: trace 21
+int: result (ordered)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+end: main
+main:

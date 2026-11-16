@@ -1,3 +1,12 @@
+---
+    Observed:
+        int: v1 7
+        int: t 42
+        int: h 16
+        int: v2 42
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Box:
         int: hits 0
@@ -16,12 +25,19 @@ sub: main () (
         :=: ((Box \ Inner) \ v) (x * 2)
         return: ((Box \ Inner) \ v)
     end: twice
-    :=: t ((twice 21))
+    :=: (data \ t) (twice 21)
 end: main
 :=: (((main \ data) \ Box) \ hits) 5
 :=: ((((main \ data) \ Box) \ Inner) \ v) ((((main \ data) \ Box) \ hits) + 2)
-int: v1 7
+int: v1 ((((main \ data) \ Box) \ Inner) \ v)
 main:
-int: t 42
-int: h 16
-int: v2 42
+int: t ((main \ data) \ t)
+int: h (((main \ data) \ Box) \ hits)
+int: v2 ((((main \ data) \ Box) \ Inner) \ v)
+sub: observe ()
+    :=: ((shared \ Observed) \ v1) v1
+    :=: ((shared \ Observed) \ t) t
+    :=: ((shared \ Observed) \ h) h
+    :=: ((shared \ Observed) \ v2) v2
+end: observe
+observe:

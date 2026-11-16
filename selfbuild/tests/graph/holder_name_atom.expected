@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: seen 3
+        int: seen_in_code 3
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     A:
         int: v 3
@@ -5,8 +12,13 @@ sub: main () (
     end: A
     int: in_code 0
 )
-    :=: in_code (((A \ A) \ A) \ v)
+    :=: (data \ in_code) (((A \ A) \ A) \ v)
 end: main
 main:
-int: seen 3
-int: seen_in_code 3
+int: seen (((((main \ data) \ A) \ A) \ A) \ v)
+int: seen_in_code ((main \ data) \ in_code)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ seen_in_code) seen_in_code
+end: observe
+observe:

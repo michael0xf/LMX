@@ -1,6 +1,18 @@
+---
+    Observed:
+        int: r 3
+        int: s 3
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f (int: a) int
     return: a
 end: f
 @: h f
-int: r 3
-int: s 3
+int: r (h 3)
+int: s (f 3)
+sub: main ()
+    :=: ((shared \ Observed) \ r) r
+    :=: ((shared \ Observed) \ s) s
+end: main
+main:

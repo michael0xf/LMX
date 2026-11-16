@@ -4,6 +4,13 @@
 # (`Add((int: v 7))` is `Add: int: v 7`), whose one field is a place.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places, the call
 # main() and the launch of Add by the path main\data\Add.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
 sub: main () (
     Total:
         int: sum 0
@@ -15,8 +22,13 @@ sub: main () (
         Add(data := (int: v 5))
         call((int: v 3); Add)
         return: Total\sum
-    seen := f()
+    data\seen := f()
 main()
 int: seen main\data\seen
 call((int: v 4); main\data\Add)
 int: after main\data\Total\sum
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\after := after
+observe()

@@ -1,8 +1,17 @@
-int: k 5
+---
+    Observed:
+        int: k 5
+        int: r 16
+        int: c1 0
+        int: c2 2
+    end: Observed
+---
+@: shared (data [] 0)
+int: k 2
 fn: f1 (int: a) int (
     int: calls 0
 )
-    :=: calls (calls + 1)
+    :=: (data \ calls) ((data \ calls) + 1)
     return: ((a * 10) + k)
 end: f1
 fn:
@@ -14,6 +23,13 @@ fn: twice (int: a) int
     return: ((g a) + 1)
 end: twice
 :=: k 5
-int: r 16
-int: c1 0
-int: c2 2
+int: r (twice 1)
+int: c1 ((f1 \ data) \ calls)
+int: c2 ((g \ data) \ calls)
+sub: main ()
+    :=: ((shared \ Observed) \ k) k
+    :=: ((shared \ Observed) \ r) r
+    :=: ((shared \ Observed) \ c1) c1
+    :=: ((shared \ Observed) \ c2) c2
+end: main
+main:

@@ -1,3 +1,10 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: quiet 0
+        int: selected 0
+)
+@: shared data[0]
 fn: leaf () int
     return: 90
 end: leaf
@@ -16,3 +23,8 @@ fn: outer (int: enabled) int (
 end: outer
 int: quiet outer(0)
 int: selected outer(1)
+
+sub: main ()
+    shared\Observed\quiet := quiet
+    shared\Observed\selected := selected
+main()

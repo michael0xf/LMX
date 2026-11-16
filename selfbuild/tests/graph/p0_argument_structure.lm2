@@ -1,5 +1,12 @@
 # M8: the same written shape is a value for a Structure formal, or fields for
 # numeric formals. Restoring parser unwrapping loses the first argument's shape.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: retained 0
+        int: unpacked 0
+)
+@: shared data[0]
 sub: main () (
     Q(int: x 0)
     int: retained 0
@@ -9,8 +16,13 @@ sub: main () (
         return: value\x
     fn: take_field (int: x) int
         return: x
-    retained := take_value((int: x 7))
-    unpacked := take_field((int: x 7))
+    data\retained := take_value((int: x 7))
+    data\unpacked := take_field((int: x 7))
 main()
 int: retained main\data\retained
 int: unpacked main\data\unpacked
+
+sub: observe ()
+    shared\Observed\retained := retained
+    shared\Observed\unpacked := unpacked
+observe()

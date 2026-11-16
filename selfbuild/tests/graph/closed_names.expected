@@ -1,6 +1,16 @@
+---
+    Observed:
+        int: seen 1
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     A: B
     B: A
 )
 end: main
-int: seen 1
+int: seen (length ((main \ data) \ A))
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+end: observe
+observe:

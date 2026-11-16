@@ -1,5 +1,12 @@
 # An end trailer closes two levels inside a method's multi-line data argument.
 # The same fields must survive construction, interpreted execution and both emitted modes.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+        int: stored 0
+)
+@: shared data[0]
 fn: main () int (
     Outer:
         Inner:
@@ -8,7 +15,12 @@ fn: main () int (
     int: y 2
     int: result 0
 )
-    result := Outer\Inner\x + y
-    return: result
+    data\result := Outer\Inner\x + y
+    return: data\result
 int: result main()
 int: stored main\data\result
+
+sub: observe ()
+    shared\Observed\result := result
+    shared\Observed\stored := stored
+observe()

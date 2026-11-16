@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: positional 7
+        int: named 7
+        int: whole 9
+    end: Observed
+---
+@: shared (data [] 0)
 int: effects 0
 fn: touch () int
     :=: (node \ effects) ((node \ effects) + 1)
@@ -16,7 +24,13 @@ end: opaque
     take: (:= unknown (touch))
 ---
 if: 0 ((deferred) (opaque))
-int: positional 7
-int: named 7
-int: whole 9
+int: positional (take 5)
+int: named (take (:= other 4) (:= value 3))
+int: whole (take ((int value 8) (int other 1)))
 int: done 1
+sub: main ()
+    :=: ((shared \ Observed) \ positional) positional
+    :=: ((shared \ Observed) \ named) named
+    :=: ((shared \ Observed) \ whole) whole
+end: main
+main:

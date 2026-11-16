@@ -1,16 +1,24 @@
+---
+    Observed:
+        int: self_value 5
+        int: given_value 11
+        int: kept_value 3
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Table:
-        Code: (:= x (x + 1))
+        Code: (:= (data \ x) ((data \ x) + 1))
         Self:
             int: x 1
-            :=: x (x + 2)
+            :=: (data \ x) ((data \ x) + 2)
         end: Self
         Data:
             int: x 10
         end: Data
-        `Kept[x]`:
+        Kept[x]:
             int: value 3
-        end: `Kept[x]`
+        end: Kept[x]
     end: Table
 )
     Table\Self()
@@ -18,6 +26,12 @@ sub: main () (
     Table\Code((Table \ Data))
 end: main
 main:
-int: self_value 5
-int: given_value 11
-int: kept_value 3
+int: self_value ((((main \ data) \ Table) \ Self) \ x)
+int: given_value ((((main \ data) \ Table) \ Data) \ x)
+int: kept_value ((((main \ data) \ Table) [] 3) \ value)
+sub: observe ()
+    :=: ((shared \ Observed) \ self_value) self_value
+    :=: ((shared \ Observed) \ given_value) given_value
+    :=: ((shared \ Observed) \ kept_value) kept_value
+end: observe
+observe:

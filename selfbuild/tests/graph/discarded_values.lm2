@@ -1,5 +1,14 @@
 # Scalar fields stand as values in every BODY, without an implicit call or
 # input capture. Formed operator expressions still run their operands.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: calls 0
+        int: before_effect 0
+        int: after_effect 0
+        int: after_call 0
+)
+@: shared data[0]
 int: calls 0
 fn: effect () int
     node\calls := node\calls + 1
@@ -24,3 +33,10 @@ int: before_effect data\calls
 int: after_effect data\calls
 quiet()
 int: after_call data\calls
+
+sub: main ()
+    shared\Observed\calls := node\calls
+    shared\Observed\before_effect := before_effect
+    shared\Observed\after_effect := after_effect
+    shared\Observed\after_call := after_call
+main()

@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: fields 2
+        int: untouched 7
+    end: Observed
+---
+@: shared (data [] 0)
 S:
     int: a[ 7
 end: S
@@ -5,5 +12,10 @@ Box:
     int: seed 0
     S\`a[`(9)
 end: Box
-int: fields 2
-int: untouched 7
+int: fields (length Box)
+int: untouched (S \ `a[`)
+sub: main ()
+    :=: ((shared \ Observed) \ fields) fields
+    :=: ((shared \ Observed) \ untouched) untouched
+end: main
+main:

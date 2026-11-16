@@ -1,3 +1,11 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: effects 0
+        int: after 0
+        int: called 0
+)
+@: shared data[0]
 int: effects 0
 fn: `f\g` (int: value) int
     node\effects := node\effects + value
@@ -8,3 +16,9 @@ S\`a\b`:=9
 S\`f\g`:3
 int: after S\`a\b`
 int: called data\effects
+
+sub: main ()
+    shared\Observed\effects := node\effects
+    shared\Observed\after := after
+    shared\Observed\called := called
+main()

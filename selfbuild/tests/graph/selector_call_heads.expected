@@ -1,8 +1,22 @@
+---
+    Observed:
+        int: first 11
+        int: second 12
+        int: literal 13
+    end: Observed
+---
+@: shared (data [] 0)
 Calls:
     Box: (fn pick ((int x)) int ((return (x + 1))))
     Box: (fn pick ((int x)) int ((return (x + 2))))
     [0]Box: (fn pick ((int x)) int ((return (x + 3))))
 end: Calls
-int: first 11
-int: second 12
-int: literal 13
+int: first Calls\[0]Box\pick(10)
+int: second Calls\[1]Box\pick(10)
+int: literal Calls\`[0]Box`\pick(10)
+sub: main ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ literal) literal
+end: main
+main:

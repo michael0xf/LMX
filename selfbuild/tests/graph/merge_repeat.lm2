@@ -1,4 +1,13 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+        int: s 0
+        int: m_a 0
+        int: n_a 0
+)
+@: shared data[0]
 sub: main () (
     M:
         int: a 1
@@ -9,12 +18,19 @@ sub: main () (
     int: m_a 0
     int: n_a 0
 )
-    r := merge(M; N; M)\a
-    s := merge(N; M; N)\a
-    m_a := M\a
-    n_a := N\a
+    data\r := merge(M; N; M)\a
+    data\s := merge(N; M; N)\a
+    data\m_a := M\a
+    data\n_a := N\a
 main()
 int: r main\data\r
 int: s main\data\s
 int: m_a main\data\m_a
 int: n_a main\data\n_a
+
+sub: observe ()
+    shared\Observed\r := r
+    shared\Observed\s := s
+    shared\Observed\m_a := m_a
+    shared\Observed\n_a := n_a
+observe()

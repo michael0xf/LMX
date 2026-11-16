@@ -1230,7 +1230,8 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
             lmx_graph_code_body(g, current, 0U, @ header, @ code_from, @ code_to)
             status := lmx_graph_work_scan_body(g, frame, header, code_from, code_to, @ queue, @ count, @ cap)
             continue
-        if: framed != 0 && (lead = state\w_fn || lead = state\w_sub || lead = state\w_fm)
+        # The operand of include and predef is text, not a name: it is no free input.
+        if: framed != 0 && (lead = state\w_fn || lead = state\w_sub || lead = state\w_fm || lead = state\w_include || lead = state\w_predef)
             continue
         # An expression head is consumed first. Its actuals borrow the same
         # call view as a named Frame; the application marker is never an input.
@@ -1666,6 +1667,9 @@ fn: lmx_graph_place_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; @: token
         if: lmx_graph_work_method(g, frame, name) != 0
             return: 4
         return: 3
+    # A callable of this scope named like a free input is no place: the input row does not make it one.
+    if: row\slot = (cast: (size_t) -1) && lmx_graph_work_method(g, frame, name) != 0
+        return: 4
     at := 0U
     while: at < frame\count && frame\rows + at != row
         at := at + 1U
@@ -2331,9 +2335,30 @@ fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: o
     int: status 0
     return: lmx_graph_atom_target_context(g, holder, word, owner_out, slot_out, 0, @ status)
 
+# The value of a written declaration that no reached statement has filled, read through an explicit path (the book,
+# call-frame-20261115: a computed place is read by executing the expression its declaration writes, with no publication
+# and no cache -- every read executes it again). Its scope is the Structure that holds the declaration. `int: name expr`
+# gives a new int cell; `@: name Template` and `@: name int expr` give what their last operand reads, as the reached
+# statement reads it (lmx_graph_block_body). 0 and the value in out, or the answer of the expression.
+fn: lmx_graph_declared_value (@: g c.LmxGraph; @: owner c.Lmx; @: declaration c.Lmx; @@: out void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    size_t: n c.lmx_graph_count(declaration)
+    int: number 0
+    int: status 0
+    if: c.lmx_graph_name_of(g, (cast: (@: void) declaration)) != state\w_int
+        return: lmx_graph_read_received_value(g, owner, c.lmx_graph_get_in(g, declaration, n - 1U), lmx_graph_value_contract(g, declaration, n - 1U), out)
+    status := lmx_graph_eval(g, owner, declaration, 1U, n, @ number)
+    if: status != 0
+        return: status
+    out[0] := c.lmx_graph_int(g, number)
+    if: out[0] = 0
+        return: 4
+    return: 0
+
 # The step `\word` of a path read from value: the field lmx_graph_step_index names in the Structure value stands for --
 # the target of a reference, the same instance --; a field that is an atom answers the entity its word refers to
-# (lmx_graph_atom_target), and the slot keeps the atom. 0 and the value in out; 3 for no such field, an ambiguous name
+# (lmx_graph_atom_target), and the slot keeps the atom; a field that is a computed declaration answers what the
+# expression it writes gives (lmx_graph_declared_value). 0 and the value in out; 3 for no such field, an ambiguous name
 # or an atom that refers to nothing.
 fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: step void; @@: out void) int
     @: base void c.lmx_graph_target(g, value)
@@ -2357,11 +2382,15 @@ fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: step void; @@: out void) 
     ---
     if: field = 0
         return: 3
-    if: lmx_graph_deferred_kind(g, field) != 0 || (c.lmx_graph_kind(g, field) = 4 && c.lmx_graph_declaration_place_name(g, field) != 0)
+    if: lmx_graph_deferred_kind(g, field) = 0 && c.lmx_graph_kind(g, field) = 4 && c.lmx_graph_declaration_place_name(g, field) != 0
         return: 5
+    if: lmx_graph_deferred_kind(g, field) != 0
+        status := lmx_graph_declared_value(g, owner, (cast: (@: c.Lmx) c.lmx_graph_binding_leaf(g, field)), @ field)
+        if: status != 0
+            return: status
+    ---
     out[0] := field
     return: 0
-end: lmx_graph_step
 
 # The place the step `\word` of a path names for a write through it (the book, fields; plan M11 5a): the field
 # lmx_graph_step_index names in the Structure value stands for or, when that field is an atom, the record its word

@@ -1,4 +1,17 @@
 # M11.7: consume the selected Structure value without changing the caller's reference cell.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Watch:
+        int: calls 0
+        int: literal 0
+        int: by_place 0
+        int: by_alias 0
+        int: updated 0
+        int: shared 0
+        int: same_alias 0
+        int: untouched 0
+)
+@: seen_root data[0]
 @: Model (int: v 0; int: unused 0)
 @: Candidate (int: extra 99; int: v 7)
 @: Alias Candidate
@@ -18,3 +31,14 @@ int: updated bump(Alias)
 int: shared Candidate\v
 int: same_alias Alias\v
 int: untouched Model\v
+
+sub: main ()
+    seen_root\Watch\calls := node\calls
+    seen_root\Watch\literal := literal
+    seen_root\Watch\by_place := by_place
+    seen_root\Watch\by_alias := by_alias
+    seen_root\Watch\updated := updated
+    seen_root\Watch\shared := shared
+    seen_root\Watch\same_alias := same_alias
+    seen_root\Watch\untouched := untouched
+main()

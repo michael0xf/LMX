@@ -1,7 +1,17 @@
-fn: ordered () int (int: trace 0)
-    finally: trace := trace * 10 + 1
-    finally: (trace := trace * 10 + 2)
-    finally: ((trace := trace * 10 + 3))
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+# п.3: накопление trace перенесено в shared\Observed\trace (явное место данных корня); порядок finally и значения прежние
+(
+    Observed:
+        int: result 0
+        int: trace 0
+)
+@: shared data[0]
+fn: ordered () int
+    finally: shared\Observed\trace := shared\Observed\trace * 10 + 1
+    finally: (shared\Observed\trace := shared\Observed\trace * 10 + 2)
+    finally: ((shared\Observed\trace := shared\Observed\trace * 10 + 3))
     return: 9
 int: result ordered()
-int: trace ordered\data\trace
+sub: main ()
+    shared\Observed\result := result
+main()

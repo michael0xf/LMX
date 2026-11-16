@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: result 7
+    end: Observed
+---
+@: shared (data [] 0)
 fn: take (int: value; int: other 2) int
     return: (value + other)
 end: take
@@ -5,4 +11,8 @@ fn: holder () int
     if: 0 ((take))
     return: 7
 end: holder
-int: result 7
+int: result (holder)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+end: main
+main:

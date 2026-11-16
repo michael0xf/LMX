@@ -6,6 +6,15 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 # The two root writes and v1 stay at the root as paths into the data of main and run before main(); bump and twice are
 # written in the code of main and write Box by its name there.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: v1 0
+        int: t 0
+        int: h 0
+        int: v2 0
+)
+@: shared data[0]
 sub: main () (
     Box:
         int: hits 0
@@ -19,7 +28,7 @@ sub: main () (
     fn: twice (int: x) int
         Box\Inner\v := x * 2
         return: Box\Inner\v
-    t := twice(21)
+    data\t := twice(21)
 main\data\Box\hits := 5
 main\data\Box\Inner\v := main\data\Box\hits + 2
 int: v1 main\data\Box\Inner\v
@@ -27,3 +36,10 @@ main()
 int: t main\data\t
 int: h main\data\Box\hits
 int: v2 main\data\Box\Inner\v
+
+sub: observe ()
+    shared\Observed\v1 := v1
+    shared\Observed\t := t
+    shared\Observed\h := h
+    shared\Observed\v2 := v2
+observe()

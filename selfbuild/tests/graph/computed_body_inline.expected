@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: quiet 90
+        int: selected 790
+    end: Observed
+---
+@: shared (data [] 0)
 fn: leaf () int
     return: 90
 end: leaf
@@ -15,5 +22,10 @@ fn: outer (int: enabled) int (
     :=: outside (leaf)
     return: ((inside * 100) + outside)
 end: outer
-int: quiet 90
-int: selected 790
+int: quiet (outer 0)
+int: selected (outer 1)
+sub: main ()
+    :=: ((shared \ Observed) \ quiet) quiet
+    :=: ((shared \ Observed) \ selected) selected
+end: main
+main:

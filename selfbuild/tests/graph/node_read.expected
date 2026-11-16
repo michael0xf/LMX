@@ -1,5 +1,15 @@
+---
+    Observed:
+        int: seen 4
+    end: Observed
+---
+@: shared (data [] 0)
 int: hits 4
 fn: read () int
     return: (node \ hits)
 end: read
-int: seen 4
+int: seen (read)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

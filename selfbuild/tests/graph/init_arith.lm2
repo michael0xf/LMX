@@ -1,5 +1,15 @@
 # Slice 309, the vertical slice (a) of the kernel implementation specification: an initialized int, arithmetic and a
 # repeated write on the clean graph. The check compares the graph after execution with init_arith.expected.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: x 0
+)
+@: shared data[0]
 int: x 5
 x := x + 1
 x := 7
+
+sub: main ()
+    shared\Observed\x := x
+main()

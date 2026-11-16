@@ -1,7 +1,18 @@
+---
+    Observed:
+        int: first 36
+        int: after_first 1
+        int: second 36
+        int: after_second 2
+        int: altered 7
+        int: preserved 5
+    end: Observed
+---
+@: shared (data [] 0)
 fn: a (int: x) int (
     int: calls 0
 )
-    :=: calls (calls + 1)
+    :=: (data \ calls) ((data \ calls) + 1)
     return: (x + 1)
 end: a
 fn: mytest (int: a) int
@@ -11,10 +22,19 @@ fn: alter (int: x) int
     :=: x (x + 2)
     return: x
 end: alter
-int: first 36
-int: after_first 1
-int: second 36
-int: after_second 2
+int: first (mytest (a 5))
+int: after_first ((a \ data) \ calls)
+int: second (mytest (a 5))
+int: after_second ((a \ data) \ calls)
 int: original 5
-int: altered 7
-int: preserved 5
+int: altered (alter original)
+int: preserved original
+sub: main ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ after_first) after_first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ after_second) after_second
+    :=: ((shared \ Observed) \ altered) altered
+    :=: ((shared \ Observed) \ preserved) preserved
+end: main
+main:

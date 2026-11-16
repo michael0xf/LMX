@@ -1,3 +1,10 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: calls 0
+        int: total 0
+)
+@: shared data[0]
 int: calls 0
 sub: tick () ()
     node\calls := node\calls + 1
@@ -13,3 +20,8 @@ sub: selected () ()
     finally: ((tick()))
 selected()
 int: total data\calls
+
+sub: main ()
+    shared\Observed\calls := node\calls
+    shared\Observed\total := total
+main()

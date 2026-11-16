@@ -1,8 +1,20 @@
+---
+    Observed:
+        int: first 5
+        int: through 3
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Struct2: a b c
     Struct1: q w e r t
     Struct1: Struct2
 )
 end: main
-int: first 5
-int: through 3
+int: first (length ((main \ data) \ [0]Struct1))
+int: through (length (((main \ data) \ [1]Struct1) \ Struct2))
+sub: observe ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ through) through
+end: observe
+observe:

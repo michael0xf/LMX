@@ -1,12 +1,30 @@
 # M11.5e: fn/sub use the common binder. Direct named actuals use only `:=`; colon fields belong to one supplied
 # whole descriptor DATA. Written groups keep all their fields. Both forms preserve the previous numeric oracles,
 # defaults, own-data updates and string names ("t\x33" names t3).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r1 0
+        int: r2 0
+        int: r3 0
+        int: r4 0
+        int: r5 0
+        int: c3 0
+        int: r6 0
+        int: r7 0
+        int: r8 0
+        int: total 0
+        int: r9 0
+        int: r10 0
+        int: r11 0
+)
+@: shared data[0]
 fn: name := k1; args := (int: a); return := int; code := (return: a + 1)
 fn: name := k2; args := (int: a); return := int; code := (return: a * 3)
 int: r1 k1(4)
 int: r2 k2(4)
 int: r3 k1(k2(1))
-fn: name := k3; args := (int: a; int: b); return := int; data := (int: calls 0); code := (calls := calls + 1; return: a * 10 + b)
+fn: name := k3; args := (int: a; int: b); return := int; data := (int: calls 0); code := (data\calls := data\calls + 1; return: a * 10 + b)
 int: r4 k3(4; 2)
 int: r5 k3(b := 1; a := 3)
 int: c3 k3\data\calls
@@ -27,7 +45,7 @@ fn: (
     end: code
 )
 int: r8 k6(9; 4)
-sub: name := s1; args := (int: d 1); data := (int: total 0); code := (total := total + d)
+sub: name := s1; args := (int: d 1); data := (int: total 0); code := (data\total := data\total + d)
 s1(5)
 s1()
 int: total s1\data\total
@@ -37,3 +55,19 @@ fn: name := "t\x33"; args := (int: a); return := int; code := (return: a + 300)
 int: r9 t1(1)
 int: r10 t2(2)
 int: r11 t3(3)
+
+sub: main ()
+    shared\Observed\r1 := r1
+    shared\Observed\r2 := r2
+    shared\Observed\r3 := r3
+    shared\Observed\r4 := r4
+    shared\Observed\r5 := r5
+    shared\Observed\c3 := c3
+    shared\Observed\r6 := r6
+    shared\Observed\r7 := r7
+    shared\Observed\r8 := r8
+    shared\Observed\total := total
+    shared\Observed\r9 := r9
+    shared\Observed\r10 := r10
+    shared\Observed\r11 := r11
+main()

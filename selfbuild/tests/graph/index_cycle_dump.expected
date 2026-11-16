@@ -1,7 +1,17 @@
+---
+    Observed:
+        int: seen 1
+    end: Observed
+---
+@: shared (data [] 0)
 graph:
     A: (B A)
     B: (A B)
 end: graph
 :=: ((graph \ A) [] 0) (graph \ B)
 :=: ((graph \ B) [] 0) (graph \ A)
-int: seen 1
+int: seen (length ((graph \ A) [] 0))
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

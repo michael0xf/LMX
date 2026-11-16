@@ -1,6 +1,16 @@
 # The root selects an occurrence through the special name data (the author 2026-11-11, R6; plan M11 5a): the root run
 # over itself is its data, and data\[1]x is the second declaration of x, with the value 3.
 # Plan M11 5v: the root declares no ordinary Structure; the occurrences are the places x (they were the records Model).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 int: x 2
 int: x 3
 int: seen data\[1]x
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

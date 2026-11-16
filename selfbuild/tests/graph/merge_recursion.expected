@@ -1,7 +1,18 @@
+---
+    Observed:
+        int: r1 6
+        int: c1 3
+        int: c2 1
+        int: r2 3
+        int: c3 6
+        int: c4 1
+    end: Observed
+---
+@: shared (data [] 0)
 fn: f1 (int: a) int (
     int: calls 0
 )
-    :=: calls (calls + 1)
+    :=: (data \ calls) ((data \ calls) + 1)
     if: (a = 0) ((return 0))
     return: (a + (f1 (a - 1)))
 end: f1
@@ -9,9 +20,18 @@ fn:
     g
     merge: f1
 end: fn
-int: r1 6
-int: c1 3
-int: c2 1
-int: r2 3
-int: c3 6
-int: c4 1
+int: r1 (g 3)
+int: c1 ((f1 \ data) \ calls)
+int: c2 ((g \ data) \ calls)
+int: r2 (f1 2)
+int: c3 ((f1 \ data) \ calls)
+int: c4 ((g \ data) \ calls)
+sub: main ()
+    :=: ((shared \ Observed) \ r1) r1
+    :=: ((shared \ Observed) \ c1) c1
+    :=: ((shared \ Observed) \ c2) c2
+    :=: ((shared \ Observed) \ r2) r2
+    :=: ((shared \ Observed) \ c3) c3
+    :=: ((shared \ Observed) \ c4) c4
+end: main
+main:

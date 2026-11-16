@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: sum 492
+        int: last 2
+        int: count 12
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     A:
         int: value 1
@@ -19,12 +27,18 @@ sub: main () (
 )
     while: (i < 12) ((:= (Grid [] i) B) (:= i (i + 1)))
     :=: i 0
-    while: (i < 12) ((:= (Grid [] i) (@ j)) (:= p (Grid [] i)) (:= sum (sum + (\ p))) (:= i (i + 1)))
+    while: (i < 12) ((:= (Grid [] i) (@ j)) (:= p (Grid [] i)) (:= (data \ sum) ((data \ sum) + (\ p))) (:= i (i + 1)))
     :=: (Grid [] 11) C
-    :=: last (length (Grid [] 11))
-    :=: count (length Grid)
+    :=: (data \ last) (length (Grid [] 11))
+    :=: (data \ count) (length Grid)
 end: main
 main:
-int: sum 492
-int: last 2
-int: count 12
+int: sum ((main \ data) \ sum)
+int: last ((main \ data) \ last)
+int: count ((main \ data) \ count)
+sub: observe ()
+    :=: ((shared \ Observed) \ sum) sum
+    :=: ((shared \ Observed) \ last) last
+    :=: ((shared \ Observed) \ count) count
+end: observe
+observe:

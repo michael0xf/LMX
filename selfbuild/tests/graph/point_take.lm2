@@ -1,4 +1,10 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+)
+@: shared data[0]
 sub: main () (
     Point:
         int: y 0
@@ -7,6 +13,10 @@ sub: main () (
 )
     fn: take (@: p Point; int: q) int
         return: p\y * 10 + q
-    r := take(Point, 1)
+    data\r := take(Point, 1)
 main()
 int: r main\data\r
+
+sub: observe ()
+    shared\Observed\r := r
+observe()

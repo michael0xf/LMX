@@ -2,6 +2,12 @@
 # item 4): inner, written in the code of main, reads the Point of outer's data, not the Point of main.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the
 # call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 sub: main () (
     Point: a b
     int: seen 0
@@ -12,6 +18,10 @@ sub: main () (
         Point: a b c
     )
         return: inner()
-    seen := outer()
+    data\seen := outer()
 main()
 int: seen main\data\seen
+
+sub: observe ()
+    shared\Observed\seen := seen
+observe()

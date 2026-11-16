@@ -1,6 +1,16 @@
 # The root holds the actual graph value. AFTER traverses the created cycle,
 # not a written prototype: A[0] is B, B[0] is A, and recursive print terminates.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 @: graph (A(Inner()); B(Inner()))
 graph\A[0] := graph\B
 graph\B[0] := graph\A
 int: seen length(graph\A[0])
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

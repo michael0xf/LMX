@@ -1,3 +1,10 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+        int: computed_result 0
+)
+@: shared data[0]
 fn: leaf () int
     return: 90
 fn: outer () int (int: inside 0; int: outside 0)
@@ -19,3 +26,8 @@ fn: computed () int (
     outside := leaf()
     return: inside * 100 + outside
 int: computed_result computed()
+
+sub: main ()
+    shared\Observed\result := result
+    shared\Observed\computed_result := computed_result
+main()

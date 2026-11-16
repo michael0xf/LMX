@@ -1,12 +1,24 @@
+---
+    Observed:
+        int: seen 7
+        int: root_x 5
+    end: Observed
+---
+@: shared (data [] 0)
 int: x 5
 sub: main () (
     Code:
         int: x
-        :=: x 7
+        :=: (data \ x) 7
     end: Code
 )
     call: Code
 end: main
 main:
-int: seen 7
-int: root_x 5
+int: seen (((main \ data) \ Code) \ x)
+int: root_x x
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ root_x) root_x
+end: observe
+observe:

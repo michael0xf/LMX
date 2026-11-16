@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: result 6
+        int: stored 6
+    end: Observed
+---
+@: shared (data [] 0)
 fn: main () int (
     Outer:
         Inner:
@@ -7,8 +14,13 @@ fn: main () int (
     int: y 2
     int: result 0
 )
-    :=: result (((Outer \ Inner) \ x) + y)
-    return: result
+    :=: (data \ result) (((Outer \ Inner) \ x) + y)
+    return: (data \ result)
 end: main
-int: result 6
-int: stored 6
+int: result (main)
+int: stored ((main \ data) \ result)
+sub: observe ()
+    :=: ((shared \ Observed) \ result) result
+    :=: ((shared \ Observed) \ stored) stored
+end: observe
+observe:

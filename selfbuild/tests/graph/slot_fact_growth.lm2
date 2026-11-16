@@ -1,4 +1,12 @@
 # Repeated mixed-pointer writes and copied layouts, without per-slot fact state.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: sum 0
+        int: last 0
+        int: count 0
+)
+@: shared data[0]
 sub: main () (
     A(int: value 1)
     B(int: value 7)
@@ -18,12 +26,18 @@ sub: main () (
     while: i < 12
         Grid[i] := @j
         p := Grid[i]
-        sum := sum + \p
+        data\sum := data\sum + \p
         i := i + 1
     Grid[11] := C
-    last := length(Grid[11])
-    count := length(Grid)
+    data\last := length(Grid[11])
+    data\count := length(Grid)
 main()
 int: sum main\data\sum
 int: last main\data\last
 int: count main\data\count
+
+sub: observe ()
+    shared\Observed\sum := sum
+    shared\Observed\last := last
+    shared\Observed\count := count
+observe()

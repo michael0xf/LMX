@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: retained 7
+        int: unpacked 7
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Q:
         int: x 0
@@ -11,9 +18,14 @@ sub: main () (
     fn: take_field (int: x) int
         return: x
     end: take_field
-    :=: retained (take_value ((int x 7)))
-    :=: unpacked (take_field ((int x 7)))
+    :=: (data \ retained) (take_value ((int x 7)))
+    :=: (data \ unpacked) (take_field ((int x 7)))
 end: main
 main:
-int: retained 7
-int: unpacked 7
+int: retained ((main \ data) \ retained)
+int: unpacked ((main \ data) \ unpacked)
+sub: observe ()
+    :=: ((shared \ Observed) \ retained) retained
+    :=: ((shared \ Observed) \ unpacked) unpacked
+end: observe
+observe:

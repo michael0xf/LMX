@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: result 790
+    end: Observed
+---
+@: shared (data [] 0)
 fn: leaf () int
     return: 90
 end: leaf
@@ -17,4 +23,8 @@ fn: outer () int (
     :=: outside (helper)
     return: ((inside * 100) + outside)
 end: outer
-int: result 790
+int: result (outer)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+end: main
+main:

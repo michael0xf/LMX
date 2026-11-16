@@ -2,6 +2,12 @@
 # the launch's data, then the lexical levels): the Point of f's data shadows the Point of main, the level around f.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the
 # call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 sub: main () (
     Point: a b
     int: seen 0
@@ -10,6 +16,10 @@ sub: main () (
         Point: a b c
     )
         return: length(Point)
-    seen := f()
+    data\seen := f()
 main()
 int: seen main\data\seen
+
+sub: observe ()
+    shared\Observed\seen := seen
+observe()

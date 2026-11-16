@@ -1,10 +1,26 @@
+---
+    Observed:
+        int: z0 7
+        int: z1 7
+        int: d0 3
+        int: d1 3
+    end: Observed
+---
+@: shared (data [] 0)
 fn: zero () int
     return: 7
 end: zero
 fn: defaults (int: c 3) int
     return: c
 end: defaults
-int: z0 7
-int: z1 7
-int: d0 3
-int: d1 3
+int: z0 (zero)
+int: z1 (zero (zero \ data))
+int: d0 (defaults)
+int: d1 (defaults (zero \ data))
+sub: main ()
+    :=: ((shared \ Observed) \ z0) z0
+    :=: ((shared \ Observed) \ z1) z1
+    :=: ((shared \ Observed) \ d0) d0
+    :=: ((shared \ Observed) \ d1) d1
+end: main
+main:

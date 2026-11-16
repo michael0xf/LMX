@@ -1,6 +1,12 @@
 # A write through an atom writes the field of the Structure the atom names, one instance (the author 2026-11-11; plan
 # M11 5a): after `Struct1\Struct2\v := 7` the place v of Struct2 holds 7. The mention stands above the declaration.
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 sub: main () (
     Struct1: Struct2
     Struct2:
@@ -9,3 +15,7 @@ sub: main () (
     Struct1\Struct2\v := 7
 main()
 int: seen main\data\Struct2\v
+
+sub: observe ()
+    shared\Observed\seen := seen
+observe()

@@ -4,13 +4,25 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 # The path is read in the code of main (in_code) and from the root through main\data (seen); the data part of main is
 # read whole as well.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: seen_in_code 0
+)
+@: shared data[0]
 sub: main () (
     Struct1: Struct2
     Struct2:
         int: v 4
     int: in_code 0
 )
-    in_code := Struct1\Struct2\v
+    data\in_code := Struct1\Struct2\v
 main()
 int: seen main\data\Struct1\Struct2\v
 int: seen_in_code main\data\in_code
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\seen_in_code := seen_in_code
+observe()

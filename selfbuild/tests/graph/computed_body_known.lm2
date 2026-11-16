@@ -1,3 +1,9 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+)
+@: shared data[0]
 fn: outer () int (
     prepared:
         args: (int: a 2)
@@ -7,3 +13,6 @@ fn: outer () int (
     fn: local prepared; return: local(a := 3)
 end: outer
 int: result outer()
+sub: main ()
+    shared\Observed\result := result
+main()

@@ -1,4 +1,14 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: reordered 0
+        int: defaulted 0
+        int: nested 0
+        int: only_used_len 0
+        int: reordered_len 0
+)
+@: shared data[0]
 fn: bump (int: v) int
     return: v + 1
 sub: main () (
@@ -17,12 +27,20 @@ sub: main () (
 )
     fn: take (@: p Point; int: q 2) int
         return: p\y * 10 + q
-    reordered := take(Reordered, 1)
-    defaulted := take(OnlyUsed)
-    nested := take(Reordered, bump(1))
+    data\reordered := take(Reordered, 1)
+    data\defaulted := take(OnlyUsed)
+    data\nested := take(Reordered, bump(1))
 main()
 int: reordered main\data\reordered
 int: defaulted main\data\defaulted
 int: nested main\data\nested
 int: only_used_len length(main\data\OnlyUsed)
 int: reordered_len length(main\data\Reordered)
+
+sub: observe ()
+    shared\Observed\reordered := reordered
+    shared\Observed\defaulted := defaulted
+    shared\Observed\nested := nested
+    shared\Observed\only_used_len := only_used_len
+    shared\Observed\reordered_len := reordered_len
+observe()

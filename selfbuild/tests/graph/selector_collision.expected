@@ -1,28 +1,52 @@
+---
+    Observed:
+        int: literal 11
+        int: first 7
+        int: second 9
+        int: literal_after 31
+        int: first_after 7
+        int: second_after 29
+        int: quoted_first 4
+        int: quoted_second 6
+        int: quoted_literal 8
+        int: quoted_after 16
+    end: Observed
+---
+@: shared (data [] 0)
 S:
     int: x 7
     int: x 29
     int: [0]x 31
 end: S
-Alias:
-    int: x 7
-    int: x 29
-    int: [0]x 31
-end: Alias
-int: literal 11
-int: first 7
-int: second 9
+@: Alias S
+int: literal (S \ `[0]x`)
+int: first (S \ [0]x)
+int: second (S \ [1]x)
 :=: (S \ `[0]x`) 31
 :=: (S \ [1]x) 29
-int: literal_after 31
-int: first_after 7
-int: second_after 29
+int: literal_after (Alias \ `[0]x`)
+int: first_after (Alias \ [0]x)
+int: second_after (Alias \ [1]x)
 Weird:
     int: a\b 4
     int: a\b 16
     int: [0]a\b 8
 end: Weird
-int: quoted_first 4
-int: quoted_second 6
-int: quoted_literal 8
+int: quoted_first (Weird \ [0]`a\b`)
+int: quoted_second (Weird \ [1]`a\b`)
+int: quoted_literal (Weird \ `[0]a\b`)
 :=: (Weird \ [1]`a\b`) 16
-int: quoted_after 16
+int: quoted_after (Weird \ [1]`a\b`)
+sub: main ()
+    :=: ((shared \ Observed) \ literal) literal
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+    :=: ((shared \ Observed) \ literal_after) literal_after
+    :=: ((shared \ Observed) \ first_after) first_after
+    :=: ((shared \ Observed) \ second_after) second_after
+    :=: ((shared \ Observed) \ quoted_first) quoted_first
+    :=: ((shared \ Observed) \ quoted_second) quoted_second
+    :=: ((shared \ Observed) \ quoted_literal) quoted_literal
+    :=: ((shared \ Observed) \ quoted_after) quoted_after
+end: main
+main:

@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: first 790
+        int: second 790
+    end: Observed
+---
+@: shared (data [] 0)
 fn: leaf () int
     return: 90
 end: leaf
@@ -9,5 +16,10 @@ fn: outer () int (
     if: 1 ((:= outside (leaf)))
     return: ((inside * 100) + outside)
 end: outer
-int: first 790
-int: second 790
+int: first (outer)
+int: second (outer)
+sub: main ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ second) second
+end: main
+main:

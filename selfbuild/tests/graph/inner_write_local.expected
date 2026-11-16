@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: seen 19
+    end: Observed
+---
+@: shared (data [] 0)
 fn: outer () int (
     int: v 1
 )
@@ -8,4 +14,8 @@ fn: outer () int (
     int: r (inner)
     return: ((v * 10) + r)
 end: outer
-int: seen 19
+int: seen (outer)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

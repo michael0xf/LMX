@@ -1,3 +1,9 @@
+---
+    Observed:
+        int: seen 7
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     A:
         int: value 1
@@ -12,7 +18,11 @@ sub: main () (
         :=: (Slots [] 0) B
         return: ((Slots [] 0) \ value)
     end: patch
-    :=: seen (patch 9)
+    :=: (data \ seen) (patch 9)
 end: main
 main:
-int: seen 7
+int: seen ((main \ data) \ seen)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+end: observe
+observe:

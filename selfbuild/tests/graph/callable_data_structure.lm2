@@ -2,9 +2,19 @@
 # of the part data, shared by every call): the code finds Point in the registry of the launch's data, with no row. The
 # Structure is written in one line: a block closed by `end:` inside the parentheses of the part data is a later step
 # of 5b.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
 fn: f () int (
     Point(int: x 4)
 )
     return: Point\x
 end: f
 int: seen f()
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

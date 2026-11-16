@@ -1,4 +1,17 @@
 # Internal indirection must remain an int in expressions and argument admission.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: direct 0
+        int: through 0
+        int: argument 0
+        int: literal 0
+        int: defaulted 0
+        int: later 0
+        int: saved 0
+        int: again 0
+)
+@: shared data[0]
 fn: plusone (int: x) int
     return: x + 1
 end: plusone
@@ -17,3 +30,14 @@ i := 7
 int: later i
 int: saved \p
 int: again plusone(i)
+
+sub: main ()
+    shared\Observed\direct := direct
+    shared\Observed\through := through
+    shared\Observed\argument := argument
+    shared\Observed\literal := literal
+    shared\Observed\defaulted := defaulted
+    shared\Observed\later := later
+    shared\Observed\saved := saved
+    shared\Observed\again := again
+main()

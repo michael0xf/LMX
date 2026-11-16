@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: seen 1
+        int: back 1
+        int: deep 1
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     A: (Inner)
     B: (Inner)
@@ -6,6 +14,12 @@ sub: main () (
     :=: (B [] 0) A
 end: main
 main:
-int: seen 1
-int: back 1
-int: deep 1
+int: seen (length (((main \ data) \ A) [] 0))
+int: back (length ((((main \ data) \ A) [] 0) [] 0))
+int: deep (length (((((main \ data) \ A) [] 0) [] 0) [] 0))
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ back) back
+    :=: ((shared \ Observed) \ deep) deep
+end: observe
+observe:

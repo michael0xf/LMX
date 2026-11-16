@@ -8,8 +8,8 @@
 # its reception), not 1233 (both actuals, then both receptions); the result 1234.  With the receiver refusing (Fail\on):
 # the implicit `convert` after a1 and its reception, a2 not evaluated -- 13.  Two\f (int x; int y) holding gq (int p;
 # int q): Two\f(x := touch(); y := 1) -- gq has no formal x: `call` without touch().  Dflt\f (int x 1; int y 2) holding
-# g2 (int y; int x) with no defaults: Dflt\f(x := touch()) -- y has no input: `call` without touch().  Entry 7; 80..88
-# name the failing check.
+# g2 (int y; int x) with no defaults: Dflt\f(x := touch()) -- y has no input, and the call is not refused (the author's decision
+# of 2026-11-16): touch() runs, g2's body starts (Trace 95) and returns x (9).  Entry 7; 80..88 name the failing check.
 Trace:
     int: t 0
 end: Trace
@@ -44,7 +44,8 @@ fn: gq (int: p; int: q) int
     return: p * 10 + q
 end: gq
 fn: g2 (int: y; int: x) int
-    return: x * 10 + y
+    Trace\t := Trace\t * 10 + 5
+    return: x
 end: g2
 Places:
     fn: f (int: x; int: y; char: u; char: v) int
@@ -91,12 +92,8 @@ fn: no_name () int
     ---
 end: no_name
 fn: no_input () int
-    ---
-        int: got Dflt\f(x := touch())
-        return: got
-        catch: call ()
-            return: 22
-    ---
+    int: got Dflt\f(x := touch())
+    return: got
 end: no_input
 fn: run () int
     @: Hw g g
@@ -128,10 +125,10 @@ fn: run () int
     if: Trace\t != 0
         return: 86
     ---
-    if: no_input() != 22
+    if: no_input() != 9
         return: 87
     ---
-    if: Trace\t != 0
+    if: Trace\t != 95
         return: 88
     ---
     return: 7

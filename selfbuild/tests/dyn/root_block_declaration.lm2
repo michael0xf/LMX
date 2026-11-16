@@ -1,0 +1,23 @@
+# Witness (sonnet, 2026-11-16; slice 412): a declaration in a nested block of the root (`int: root_refused 0` in
+# `if: code = 7`) binds in the walked root (walkroot 1) as in the native one.  Before 412 the walker refused it: a
+# walked root's data, code and node are one Structure, and the source/node exclusions of the binding rule fired.
+UsedRoot:
+    int: u 1
+    int: w 2
+NoU:
+    int: w 6
+fn: read_used_u () int
+    return: UsedRoot\u
+int: code 7
+if: code = 7
+    int: root_refused 0
+    ---
+        UsedRoot := NoU
+        catch: implements ()
+            root_refused := 1
+    ---
+    if: root_refused != 1 || read_used_u() != 1
+        code := 96
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

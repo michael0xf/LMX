@@ -1680,9 +1680,14 @@ end: lm_compiler_method_part_contains_own
 fn: lm_compiler_own_code_local (int: mi; int: own) int
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     if: own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || c.lm_compiler_source_definition_method(own) >= 0 || c.lm_compiler_source_definition_ns(own) >= 0
         return: 0
-    return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own) != 0 || lm_compiler_inline_body_holds(mi, own) != 0))
+    if: lm_compiler_method_source_contains_own(mi, 3, own) = 0 && lm_compiler_inline_body_holds(mi, own) = 0
+        return: 0
+    # A declaration the Structure's constructor filled is inert when reached (lm_compiler_inert_source_row): its value
+    # is in the cell of the run's data, so it is no CODE variable that acquires a value at its declaration.
+    return: (cast: (int) (c.lm_compiler_ns_constructed_row(mi, own_decl_cell[0][own]) < 0))
 end: lm_compiler_own_code_local
 
 fn: lm_compiler_path_fact_same (const: (@: fact c.L2PathFact); const: (@: path c.L2Path)) int

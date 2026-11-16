@@ -3,6 +3,14 @@
 Состояние зафиксировано около 07:16 UTC. Эта передача заменяет прежний текст файла;
 старые назначения и инструкции доступны в истории Git.
 
+## Обновление Fable — 2026-11-16, после приёмки412
+
+Срез412 принят и опубликован. Canonical inputs.sha256 — Source29:959/SHAfe326e0c. Рабочий набор — настоящий
+G2 из S/boot-f412-02: tool lmxtool.exe c99879ae, frontend g2/frontend/l2trans.exe d7167335, runtime
+g2/runtime (driver.o 8d7b0805 / driver-observe.o eb8c4b47), Graph S/graph-f412-01 9594dee3. Полный набор:193
+строки/106 отказов, красных фикстур28. Подробности — в начале [steps/current.md](steps/current.md) и в
+[свидетельстве412](steps/witnesses/m10-call-launch-20261116/notes.md). Пункты ниже о G2 срезов411 и410 — история.
+
 ## Обновление Fable — 2026-11-16, после приёмки411
 
 Срез411 принят и опубликован. Canonical inputs.sha256 — Source22:958/SHAb62971de. Рабочий набор — настоящий

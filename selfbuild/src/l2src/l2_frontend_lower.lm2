@@ -18459,6 +18459,9 @@ fn: lm_compiler_emit_selected_pads (int: mi; int: k; const: (@: ind char); const
     return: 0
 end: lm_compiler_emit_selected_pads
 
+# A Structure call whose code is known at run time -- `call: code [data]` -- is a launch (lmx_call_launch): the code runs as it is over
+# its data, and a statement writes no actuals, so the launch takes no values and no plan (count 0). A throw leaves with its key in the
+# status and its payload in the value, as the walker's launch returns it.
 fn: lm_compiler_emit_current_structure (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); int: k; const: (@: data_name char)) int
     @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: index mi
@@ -18479,14 +18482,13 @@ fn: lm_compiler_emit_current_structure (int: mi; const: (@: source_node c.LmP0No
         return: 1
     if: c.fprintf(output[0], "%sLmxWalkValue: l2_svalue%d\n", ind, k) < 0 || c.lm_compiler_emit_roots_values(mi, ind, "l2_call_arena", "l2_svalue", k, 1, 0, 1) != 0
         return: 1
-    if: c.fprintf(output[0], "%sint: l2_sstatus%d lmx_call_selected_structure(l2_call_arena, 0, l2_call_code, l2_cp%d, l2_ens%d, %s, @ l2_svalue%d)\n%sif: l2_sstatus%d >= c.LMX_WALK_THROWN\n", ind, k, at, k, data_name, k, ind, k) < 0
+    if: c.fprintf(output[0], "%sint: l2_sstatus%d lmx_call_launch(l2_call_arena, l2_call_code, l2_cp%d, l2_ens%d, %s, 0, 0U, 0, @ l2_svalue%d)\n%sif: l2_sstatus%d >= c.LMX_WALK_THROWN\n", ind, k, at, k, data_name, k, ind, k) < 0
         return: 1
     if: c.fprintf(output[0], "%ssize_t: l2_skey%d (cast: (size_t) (l2_sstatus%d - c.LMX_WALK_THROWN))\n%s@: Lmx %s (cast: (@: Lmx) l2_svalue%d.ref)\n", deep, k, k, deep, payload, k) < 0 || lm_compiler_emit_selected_pads(mi, k, deep, payload) != 0
         return: 1
     if: c.fprintf(output[0], "%ssize_t: l2_so%d 0U\n%sif: lmx_walk_ordinal_from_key(l2_call_arena, l2_call_code, l2_skey%d, @ l2_so%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%sl2_out_throw[0]: %s\n%sreturn: (cast: (int) l2_so%d)\n%s---\n%sif: l2_sstatus%d != c.LMX_WALK_OK && l2_sstatus%d != c.LMX_WALK_STOPPED\n%s    lmx_call_note_walk_fail(l2_sstatus%d)\n%s---\n", deep, k, deep, k, k, deep, deep, deep, payload, deep, k, ind, ind, k, k, ind, k, ind) < 0
         return: 1
     return: lm_compiler_emit_poll(mi, ind)
-end: lm_compiler_emit_current_structure
 
 fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); const: (@: at char)) int
     @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))

@@ -4,10 +4,10 @@
 # declaration forms is the implicit `implements` before anything changes: the old callable still answers.  A sub gives a
 # fn's call no result and a fn gives a sub's call one, and the declared throws are the same names in the same order, as
 # the static rule says (lm_compiler_sig_takes).  One that takes that call stands there, and the place's caller catches
-# its declared throw.  The `call` receiver over a fn whose written formal it forms no input for is that call's implicit
-# `call`, before the body.  Each free holder below holds one callable.  Entry 7.
+# its declared throw.  The `call` receiver over a fn whose written formal it forms no input for is not refused (the author's
+# decision of 2026-11-16): the input holds «T без инициализации», and the body runs (here it returns 1).  Each free holder below holds one callable.  Entry 7.
 fn: g (int: a) int
-    return: a
+    return: 1
 end: g
 fn: h () int
     return: 5
@@ -194,8 +194,6 @@ fn: call_missing () int
     ---
         call: Hw
         return: 1
-        catch: call ()
-            return: 22
         catch: implements ()
             return: 24
     ---
@@ -249,7 +247,7 @@ fn: run () int
     if: r != 1
         return: 40 + r
     r := call_missing()
-    if: r != 22
+    if: r != 1
         return: 60 + r
     return: 0
 end: run

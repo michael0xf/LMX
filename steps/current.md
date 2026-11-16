@@ -1,72 +1,36 @@
 # LMX: текущие рабочие инструкции
 
-## 2026-11-16 — Fable: срез411 принят; рабочий набор и очередь
+## 2026-11-16 — Fable: срез412 принят; рабочий набор и очередь
 
-Срез411 (код — sonnet): запись Structure по пути через общую категорию листа и однократный сбор безымянной
-группы. Source22:958/SHAb62971de canonical в репозитории и stage. Whole bootstrap boot-f411-01 PASS: genuine G1
-и actual G1→G2 по9 smoke/0; fixedpoint411-01 CHECKS18/0, runtime побайтно равен срезу410.
-
-**Рабочий набор.** Stage S = build2/codex_fix250generationchain01/sol-m14-field-values-01; tool
-S/boot-f411-01/lmxtool.exe 6fd82910; frontend S/boot-f411-01/g2/frontend/l2trans.exe dfbe6110; runtime
-S/boot-f411-01/g2/runtime (driver.o 20069522, driver-observe.o d0cd3d64); Graph
-S/graph-f411-01/graph_trans-prod.exe 02f67180.
-
-**Приёмка на actual G2.** Targeted12/0. Полный набор g2-411-full01: **SUITE 192 rows, 108 failures**,
-1282 PASS; красных фикстур29 против37 после410, новых красных нет; список —
-receipts/fable/g2-411-full01-red-names.txt, он — база следующих срезов. Graph: private_binding и
-call_frame_local, обе тройки PASS. Мутант sonnet возвращает те же8 фикстур в красные. В diff среза нет
-добавленных `end:` и оград. [Свидетельство411](witnesses/m10-path-leaf-20261116/notes.md).
-
-**Очередь.** Общий срез412: перенос шага3 M10 (opus: lmx_call_launch вместо выбора части, правка объявления
-во вложенном блоке корня в обходчике, две функции410 без лишнего `end:`) вместе с правкой Lower (sonnet);
-сборку ведёт opus. Затем шаг1 M15 пятью частями (заготовлены opus вне дерева). Черновики миграции фикстур
-с отменёнными формами (haiku, receipts/haiku/red29.md) проверяются запуском после412. Разбор29 красных:
-19 — отменённые формы с готовым черновиком, 3 — с неполным, 2 — дефекты при законной форме, 5 — причина
-не установлена.
-
-## 2026-11-16 — Fable: срез410 принят; рабочий набор и следующий шаг
-
-Срез410 — исправления принятого409 (находки Д1–Д4 и два дефекта, найденные теми же запусками) и путь
-элемента массива без отменённых проверок. Код: opus (lmx_walk_values.lm2, tools/build.lm2), sonnet
-(l2_frontend_lower.lm2, l2_frontend_types.lm2), фикстуры — haiku; заморозка и приёмка — Fable.
-Source17:958/SHA59438d92 canonical в репозитории и stage, verify958/0. Whole02 bootstrap quick
-boot-f410-02 PASS: genuine G1 и actual G1→G2 по9 smoke/0; fixedpoint01 CHECKS18/0 (11 same, 3 exe-same,
-runtime G2 побайтово равен o410-rt-01, две сверки источника). Первый запуск boot-f410-01 остановлен
-оболочкой сессии из-за нехватки памяти во время сборки G2 — не результат.
+Срез412 (ядро — opus, frontend — sonnet, фикстуры — haiku): шаг3 M10 — один запуск `lmx_call_launch`, `call(C)` =
+`call(C C)`, вектор входов по заголовку без отказа, корни данных запуска в поиске свободного имени, объявление во
+вложенном блоке корня в обходчике, загрузка конструкторного корневого объявления во frontend. Source29:959/SHAfe326e0c
+canonical в репозитории и stage. Whole bootstrap boot-f412-02 PASS: genuine G1 и actual G1→G2 по9 smoke/0;
+fixedpoint412-02 CHECKS18/0, объекты runtime побайтно равны кандидату opus.
 
 **Рабочий набор.** Stage S = build2/codex_fix250generationchain01/sol-m14-field-values-01; tool
-S/boot-f410-02/lmxtool.exe 06ac1cd2; frontend S/boot-f410-02/g2/frontend/l2trans.exe 63010ca6; runtime
-S/boot-f410-02/g2/runtime: driver.c 3e6b904d, driver.o 20069522, driver-observe.o d0cd3d64; Graph
-S/graph-f410-01/graph_trans-prod.exe 3e1dad12.
+S/boot-f412-02/lmxtool.exe c99879ae; frontend S/boot-f412-02/g2/frontend/l2trans.exe d7167335; runtime
+S/boot-f412-02/g2/runtime (driver.o 8d7b0805, driver-observe.o eb8c4b47); Graph
+S/graph-f412-01/graph_trans-prod.exe 9594dee3.
 
-**Приёмка на actual G2.** Targeted12/0 во всех4 режимах (72 PASS). Полный набор g2-full01:
-**SUITE 192 rows, 116 failures**, 1222 PASS, 14 минут. По именам фикстур в строках FAIL: в базе на G2
-среза409 —46 красных, здесь37, новых красных нет; снова зелёные composed_declares_structure,
-free_c_pointer, free_field_places, index_numeric_receive, index_numeric_unavailable,
-numeric_unavailable_norow, root_pointer_index, whole_direct_fields, whole_field_refused. Оставшиеся37 —
-receipts/fable/g2-full01-red-names.txt; этот список — база для следующих срезов и может только сокращаться.
-Graph: private_binding и call_frame_local, обе тройки interp/native/forced PASS. Mutant в отдельном stage
-fable-m14-binding-mutant-01: в lmx_walk_input_origin `binding_private[0] := metadata\binding_private`
-заменено на `binding_private[0] := 0`; walk_private_header даёт native7 и forced83 на обоих корнях.
-Docs render semantics:35 глав,14 случаев; git diff --check чист; индексная docs-check — в теле коммита.
-[Свидетельство410](witnesses/m14-binding-fixes-20261116/notes.md).
+**G0 при смене списков модулей.** Списки функций ядра (`--machine`) живут в инструменте (tools/build.lm2). Срез,
+который удаляет или добавляет такую функцию, инструментом прошлого среза не собирается (boot-f412-01 упал за
+минуту: «--machine lmx_call_selected_structure names no function»). G0 тогда — инструмент-кандидат из нового
+build.lm2 (S/s412-tool-01/lmxtool-tool.exe), предыдущий frontend — кандидат среза.
 
-**Следующий шаг.** Срез411 (sonnet, подготовлен вне дерева): общий `lm_compiler_path_leaf_descriptor` для
-записи по пути (structure_path_write), повторная регистрация в catch («out of memory» у
-explicit_data_var_field и written_form), ребро own_source_visible → own_code_local. Затем перенос M10:
-шаг3 (opus, вне дерева: lmx_call_launch, удаление lmx_call_selected_structure) и миграция фикстур с
-отменёнными ожиданиями (черновики haiku). После них — шаги1–2 [M15](../next_core_tasks_v3.md#typed-value-records).
-Порядок жетона и владение файлами — в разделе ниже.
+**Приёмка на actual G2.** Targeted12/0. Полный набор g2-412-full01: **SUITE 193 rows, 106 failures**,
+1290 PASS; красных фикстур28 против29 после411, новых красных нет, позеленела structure_slot_write; список —
+[full-suite-red-names.txt](witnesses/m10-call-launch-20261116/full-suite-red-names.txt), он — база следующих срезов.
+Graph: private_binding и call_frame_local, обе тройки PASS; чистый граф на этом G2 —60 проходят,205 нет,1 не завершается, новых красных нет
+([graph-baseline.tsv](witnesses/m10-call-launch-20261116/graph-baseline.tsv)). Три мутанта opus убиты. В diff пять
+добавленных оград, каждая закрывает больше одного уровня, `end:` не добавлено.
+[Свидетельство412](witnesses/m10-call-launch-20261116/notes.md).
 
-**Решение автора 2026-11-16: запись значения (M15).** Физический тип и значение хранятся в одной записи — код
-типа и сразу за ним значение; типизация и извлечение значения идут через запись, без проверки адресов
-([журнал](../LMX_blog/2026-11-16.md#typed-value-decision)). Документы L2 §3–§4 и ядра §2.0 приведены к норме,
-порядок работ — M15 плана; язык не меняется. Выравнивание выбрано исполнителем по поручению автора: значение
-выровнено по своему типу, код — в четырёх байтах перед ним, оба читаются типизированным обращением. Переход — в
-два этапа по решению автора: записи внутри нынешних типизированных кусков, затем один поток записей. Ссылка хранит адрес значения, код типа —
-по адресу − 4 (ответ автора, [вопрос и ответ](../LMX_blog/q/typed-value-reference-encoding-answered-20261116.md)); все нынешние адреса
-сохраняют смысл. Материалы — [запись исследования](witnesses/typed-value-research-20261116/notes.md): описи нынешней
-схемы (opus, sonnet), стенд на настоящем runtime (opus), C99-прототип представлений (sonnet).
+**Очередь.** (1) Графовый срез — жетон у sonnet: три правки lmx_graph_run (чтение вычисляемого места по явному
+пути, скан `include:`, отказ записи в имя функции и ранняя неоднозначность) и117 переведённых фикстур haiku;
+состав — receipts/sonnet/graph-slice/PLAN.txt. (2) Миграция фикстур полного набора с отменёнными формами
+(haiku, receipts/haiku/red29.md) и снятие обслуживания `var:` во frontend. (3) Шаг1 M15 пятью частями
+(заготовлены opus вне дерева, синхронизированы с обходчиком412).
 
 **Правила записи нового кода (автор, повтор 2026-11-16; обязательны для исполнителей и входят в приёмку).**
 Блок, закрытый уходом на один уровень, не получает ни `---`, ни `end: имя`; отсекатель ставится только там, где
@@ -76,18 +40,35 @@ explicit_data_var_field и written_form), ребро own_source_visible → own_
 lm_compiler_emit_body_statements и lm_compiler_emit_body_with_position закрыты лишним `end:`; владельцы
 исправляют их в срезах411 и412 ([инструкция](../L2_L3_CODING_INSTRUCTION.md), [журнал](../LMX_blog/2026-11-16.md#new-types-not-bits)).
 
-**Чистый граф: базовый прогон и новая проверка приёмки.** На actual G2 среза411 прогнаны все266 графовых
+**Чистый граф: базовый прогон, разбор и новая проверка приёмки.** На actual G2 среза411 прогнаны все266 графовых
 фикстур с `.expected` и закреплённой строкой graph-check: **60 проходят, 205 нет, 1 не завершается**
-(computed_body_loop). Почти все положительные программы отказывают уже в интерпретаторе (ответы3,4,5 вместо0),
-отказные проходят; среди красных typeof и struct_index. Это не от срезов410 и411: граница — между
-инструментами graph-call-01 (2026-11-15 19:41, typeof.lm2 проходит с закреплёнными ответами) и graph-frame-01
-(20:33, ответ5), между ними коммит b901f2bf «Unify Graph DATA and activation-local calls». Что из205 — дефект,
-а что — ожидание, отменённое нормой кадров вызова 2026-11-15, не установлено. С этого среза список —
-проверка приёмки наравне с полным набором: 206 имён receipts/fable/graph-baseline411-red-names.txt могут
-только сокращаться; таблица по строкам — graph-baseline411-result.tsv, запуск с пределом времени —
-graph-baseline411-rows.sh. Вне списка: 88 фикстур без `.expected`, post_loop (не завершается),
-private_binding и call_frame_local (проходят тройками). Подробно —
-[свидетельство411](witnesses/m10-path-leaf-20261116/notes.md).
+(computed_body_loop). Граница — коммит b901f2bf (2026-11-15, «Unify Graph DATA and activation-local calls»):
+typeof.lm2 проходит на инструменте graph-call-01 (19:41) и отказывает на graph-frame-01 (20:33). Список красных —
+проверка приёмки наравне с полным набором: 206 имён
+[graph-red-names.txt](witnesses/m10-path-leaf-20261116/graph-red-names.txt) могут только сокращаться; запуск — построчно
+с пределом времени ([скрипт](witnesses/m10-path-leaf-20261116/graph-baseline-rows.sh)), у `checks` предела нет.
+Вне списка: 88 фикстур без `.expected`, post_loop (не завершается), private_binding и call_frame_local (тройки PASS).
+
+Разбор205 (haiku — таблицы и перевод, sonnet — причины; всё вне дерева, каталоги receipts/haiku и
+receipts/sonnet/graph-regress). Решения исполнителя по норме, [ответ Р35](../LMX_blog/q/fable-self-answers-20261110.md):
+
+- **127 — интерпретатор отвечает0.** Причина — действующая норма «кадры data и code не публикуются в граф»
+  ([книга](../docs/LMX_semantics.ru.md#flush-receiver-contract)): фикстуры закрепляли отменённую публикацию. Перевод на
+  явные операции по образцу call_frame_local с сохранением прежних закреплённых значений: наблюдение — блок данных
+  корня и запись через путь; постоянное состояние вызываемого — `data\имя`; поле корня из метода — `node\имя`,
+  из кода самого корня — `data\имя` (`node` в коде корня не определён); неиспользуемый вычисляемый инициализатор
+  data на входе не исполняется — добавляется его чтение. Готовы95 (receipts/haiku/graph-ready), находок19
+  (graph-findings.md), пропал закреплённый отказ —10, отказывает построение графа —3.
+- **78 — ненулевой ответ** (5:33, 3:29, 4:13, 1:2, 8:1); 17 из них не проходили и до b901f2bf. По вердиктам sonnet
+  (groups-verdict.tsv): 19 — **дефект**: шаг явного пути через объявление с вычисляемым значением отвечает5, а по
+  [норме кадра вызова](../docs/LMX_semantics.ru.md#call-frame-20261115) чтение вычисляемого места исполняет написанное
+  выражение объявления; общего механизма такого чтения по пути нет и для int — правка lmx_graph_step подготовлена вне
+  дерева (fix-step-computed). 1 — **дефект**: скан имён принимает строку `include:` за имя (fix-scan-include).
+  24 — миграция: `call(D s)` → `call(D s\code)` ([callable — просто Structure](../LMX_blog/2026-11-16.md#callable-is-structure),
+  особого правила в ядро не вводится), `f\args` → `f\data`, обращение или присваивание выше объявления, имя ветви
+  снаружи, корневые именованные формы до вида M11 5в. 34 не разведены.
+
+Порядок: графовый срез (две правки ядра + переведённые фикстуры) собирается после коммита412; жетон — sonnet.
 
 ## 2026-11-16 — Fable: пауза снята, срез410 начат; порядок работы помощников и конвейера
 

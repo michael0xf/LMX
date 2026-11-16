@@ -4,6 +4,9 @@
 # value of the caller is no argument; static calls by position and by name, a sub, a path, a recursion, a callable place
 # (declared default, a fn written with another default, a fn written with none: the implicit `call`), the `call`
 # receiver over a free holder, a callable formal.  Entry 7, codes 81-107.
+# Migrated (FABLE-H-RED-C): the formal x of g2 has no default and no argument; the author's decision of 2026-11-16 makes
+# the call admitted, not refused.  g2 writes 22 through put and returns it, so the expectations 22 stay, and the call's
+# effect is observed.  The catch blocks for the cancelled refusal are removed.
 fn: d (int: a 5) int
     return: a
 end: d
@@ -62,15 +65,13 @@ fn: g (int: x 8) int
     return: x
 end: g
 fn: g2 (int: x) int
-    return: x
+    return: put(22)
 end: g2
 int: Hw 0
 fn: place_call () int
     ---
         int: got Places\f()
         return: got
-        catch: call ()
-            return: 22
         catch: implements ()
             return: 24
     ---
@@ -105,8 +106,6 @@ fn: call_free () int
     ---
         call: Hw
         return: read_seen()
-        catch: call ()
-            return: 22
         catch: implements ()
             return: 24
     ---

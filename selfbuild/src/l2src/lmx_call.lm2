@@ -147,13 +147,16 @@ fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int
     return: lmx_activation_bind_origin(arena, code, storage, type, value, 0)
 end: lmx_activation_bind
 
+# Slice 412: a binding with an origin and no name -- an actual a launch supplied to an unnamed root of its data -- is
+# found only by that origin (lookup mode 2); no name lookup matches code 0 (lmx_activation_name_is).  1 for neither a
+# code nor an origin, or when the C heap refuses.
 fn: lmx_activation_bind_origin (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void; @: origin void) int
     @: record c.LmxActivation 0
     @: grown c.LmxActivationBinding 0
     @: slot c.LmxActivationBinding 0
     @: metadata c.LmxSourceName 0
     size_t: cap 0U
-    if: arena = 0 || code = 0U
+    if: arena = 0 || (code = 0U && origin = 0)
         return: 1
     record := (cast: (@: c.LmxActivation) arena\activation)
     if: record = 0

@@ -1,0 +1,283 @@
+# FABLE-R-TV-A (opus, 2026-11-16): опись ТЕКУЩЕЙ схемы хранения «адрес → физический тип» в runtime.
+# Только чтение. Ревизия: дерево b795a69d + правки среза 410 (строки lmx_walk_values.lm2 — по дереву с 410).
+# Раскладки — из сгенерированных заголовков stage S/src/l2src/*.h.lm1 (пишутся L3-кодом build.lm2, decl_lmx/decl_arena).
+# Размеры — Win64/mingw: указатель и size_t по 8, int/unsigned по 4; посчитаны по раскладке, не измерены.
+# Пометка [код] — следует из текста кода; [артефакт] — из готового лога; [оценка] — мой вывод.
+
+## 1. Выделение: пулы, ячейки, чанки, диапазоны
+
+Записи (порядок полей как в заголовке):
+- LmxRange (lmx.h.lm1): lo, hi, array(LmxPool*), owner(void*), chunk(void*), chunk_gen(size_t), links(LmxCodeLink**),
+  slot_owner(Lmx**), holder(Lmx*), side_cells(size_t), side_stride(size_t), kind(int).
+  ≈96 Б. Одна запись на ИНТЕРВАЛ (чанк), не на пул.
+- LmxPool: head, tail (LmxChunk*), stride, chunk_capacity (size_t), kind, type (int), role (unsigned),
+  pointer_read, pointer_write (fn*), scalar_abi (const LmxScalarABI*), profile (Lmx*), sealed (unsigned),
+  next (LmxPool*), chain_gen (size_t). ≈104 Б.
+- LmxChunk: cells (LmxCharDynamicArray{len, data, capacity} = 24 Б), value_contexts (LmxWalkValue*), next, mark
+  (unsigned). ≈48 Б.
+- LmxArena (lmx_arena.h.lm1): blocks (LmxArenaBlock*), arrays (LmxPool* — односвязный список всех пулов),
+  index (LmxRangeDynamicArray{len, data, capacity}), generation, simple, source_view (unsigned), impl, impl_len,
+  reset_gen, activation, call_places, execution_roots, impl_cap.
+- Lmx (= LmxArray, `type: LmxArray struct Lmx`): parent (Lmx*), native (LmxEntry), array (VoidArray{size, data}) — 32 Б.
+- LmxArenaBlock: base, n, class, dispose, next — ≈40 Б; на каждый чанк их ДВА (полезная нагрузка и запись чанка).
+
+Виды и типы (lmx.h.lm1, enum LmxKind / LmxType).
+- Виды: PRIMITIVE 1, ARRAY 3, CHILDREN 4, REF 5, STRUCT 6, LIST 21, SOURCE_NAME 22, SOURCE_SYMBOL 23,
+  FIELD_ADDRESSES 24.
+- Типы: CHAR 1, INT 2, SIZE_T 3, UNSIGNED 15, UNSIGNED_CHAR 17, ULONG 19, REFS 7 (массив указателей на детей),
+  LMX 8, DESC 9, STRUCT 13, CHAR_PTR 14, ARRAY_OF_* 5/6/10/11/16/18/20, FOREIGN 40,
+  POINTER_BASE 1024 + id (указатель @T — свой домен), UNINIT_INT 1001024, GRAPH_INT_REF / GRAPH_LMX_REF / GRAPH_REF /
+  UNINIT_GRAPH_* 1001025–1001029, CELL_POINTER 1088. Отрицательный тип — неизменяемый вариант (lmx_type_base: -t → t).
+
+Пул:
+- выбор на каждое выделение — lmx_arena.lm2:lmx_arena_find_profiled:147-178 [код]. ЛИНЕЙНЫЙ проход по списку
+  arena\arrays со сравнением (kind, type, profile, role) плюс проверка указательных колбэков. Ключ включает profile
+  (Lmx-профиль места), поэтому пулов — (тип × профиль), а не по одному на тип;
+- новый пул — lmx_pool.lm2:lmx_pool_make_profiled:419-523: один calloc на запись пула + первый чанк + контексты.
+  chunk_capacity := count первого запроса (стр. 471).
+
+Рост: lmx_pool.lm2:lmx_pool_add_chunk:116-240 [код].
+- Ёмкость нового чанка = max(pool\chunk_capacity, want). Геометрического роста НЕТ.
+- Значит, пул, рождённый одноячеечным take (lmx_scalar_new_physical_profiled → lmx_arena_take_profiled(count 1)),
+  получает новый чанк и новую запись LmxRange на КАЖДУЮ следующую ячейку.
+- Каждый чанк — 4 calloc: полезная нагрузка, LmxChunk(+контексты), 2 × LmxArenaBlock — плюс lmx_arena_span →
+  lmx_range_add.
+- Для указательных и FOREIGN-пулов к LmxChunk приклеен массив LmxWalkValue по одному на ячейку (value_contexts,
+  стр. 147-150): у таких ячеек уже есть внеполосная запись на ячейку.
+
+Выдача: lmx_pool.lm2:lmx_pool_take_n:341-417 — плюс lmx_range_interval_pool (одна бисекция) на каждую выдачу, проверка
+регистрации хвостового чанка.
+
+Регистрация диапазона: lmx_range.lm2:lmx_range_add_view:169-280.
+- Бисекция места, проверка перекрытия, lmx_range_reserve (рост таблицы).
+- Затем СДВИГ хвоста индекса поэлементно, 12 полей на запись, O(n) — малой ценой только при вставке в конец (адреса
+  calloc обычно растут, но не гарантированно).
+- Удаление (lmx_range_drop) — такой же сдвиг.
+
+Размер ячейки = stride пула:
+- int 4, char 1, size_t 8, unsigned 4, ulong (по C-типу);
+- указательные ячейки 8 (+ LmxWalkValue-контекст в чанке);
+- Structure-заголовок Lmx 32;
+- дочерний массив REFS 8 на слот;
+- Array-дескриптор 32; SourceName 72 [артефакт: «stride 72»].
+
+## 2. Классификация адреса — фактическая стоимость
+
+Базовая операция — lmx_range.lm2:lmx_range_entry_at:343-366 [код].
+- Двоичный поиск по отсортированному массиву LmxRange: ⌈log2 N⌉ итераций, в каждой 1–2 сравнения указателей.
+- Каждая итерация зовёт lmx_arena_index_data(arena) — отдельная C-функция с проверкой arena=0 (lmx_arena.lm2:36-44),
+  без кеша последнего диапазона.
+- null → 0; адрес вне арены → 0.
+
+lmx_range_cell_pool:457-482 — «живая ячейка ровно с этого адреса»:
+- entry_at (бисекция);
+- lmx_range_entry_chunk:405-433 — кешированный в записи чанк проверяется по chain_gen и lo; промах — проход цепочки
+  чанков пула, O(чанков);
+- проверки cells ≤ room, offset % stride == 0 (внутренний адрес ячейки → 0), индекс < выданных.
+Итого: 1 бисекция + ~6 разыменований + 2 деления.
+
+Построены поверх cell_pool, каждый — ОТДЕЛЬНЫЙ полный проход, без общего результата:
+- lmx_range_classify:495-506 → pool\kind;
+- lmx_range_type_of:508-519 → pool\type;
+- lmx_range_stride:521-532;
+- lmx_range_profile:663-669;
+- lmx_range_pool:537-545 — делает cell_pool, затем ещё entry_at;
+- lmx_pointer_pool_in:381-387 — cell_pool + 5 проверок.
+lmx_domain_kind / lmx_domain_type (lmx_implements.lm2:41-47) — обёртки classify / type_of.
+
+Элемент плотного массива классифицируется как ячейка своего backing-пула: элемент — ячейка stride = размер элемента.
+Внутренний байт ячейки или поле внутри Lmx-заголовка → NONE.
+
+Источник контекста:
+- lmx_value_owned.lm2:lmx_value_cell_context:367-380 — ячейка → контекст: cell_pool + чанк;
+- lmx_value_context_cell_in:389-432 — ОБРАТНО (контекст → ячейка): ЛИНЕЙНЫЙ проход по ВСЕМ записям индекса с
+  lmx_range_cell_pool на каждую, O(N log N) на вызов. Зовётся из GC на каждый корень Value с referent
+  (lmx_gc_graph.lm2:lmx_gc_value:65-81).
+
+Графовые аксессоры (lmx_arena_refs.lm2) — главная стоимость обхода [код, подсчёт по тексту].
+- lmx_graph_node_in:27-37 = classify + stride = 2 бисекции.
+- lmx_graph_backing_cell_in:39-~90 — около 7 бисекций:
+  - node_in(массив) — 2;
+  - cell_pool(data), stride(data), entry_at(data) — 3;
+  - classify и type_of(массив) — 2;
+  - lmx_pool_chunk_at — ЛИНЕЙНЫЙ проход цепочки чанков пула детей;
+  - финальный cell_pool(cell) — ещё одна.
+- lmx_graph_cell_in:93-115 = backing_cell_in + classify(cell) (+ ветка FIELD_ADDRESSES: cell_pool и type_of заголовка).
+- lmx_graph_value_in:222-240 = graph_cell_in + ещё cell_pool(cell).
+Итого ≈ 9–11 бисекций + 1 проход цепочки чанков на ОДНО чтение слота графа.
+lmx_graph_ref_struct_in = value_in + node_in (+2).
+
+## 3. Горячие пути обходчика (lmx_walk_values.lm2)
+
+Каждое чтение операнда записи кода идёт через c.lmx_graph_value_in(arena, code, k) — 198 вызовов в файле. Обходчик
+классифицирует собственные записи кода (операторы, операнды) на КАЖДОМ шаге оценки; типы операторов дополнительно
+читает lmx_walk_code_in (classify + type_of + stride op-ячейки, ~:1680).
+
+По местам:
+- Чтение OWN/OWN_OF (lmx_walk_eval_result_in, ветка OWN):
+  - lmx_walk_work_cell:3418-3461 — вычисляет holder/index/slot через graph_value_in/node_in: полная классификация;
+  - lmx_walk_work_find:3463-3475 — ЛИНЕЙНЫЙ поиск по списку Work-строк фрейма по адресу слота;
+  - значение берётся из строки без повторной классификации. Тип строки (e\ty, e\kind) определён один раз в
+    lmx_walk_work_make:3478-3573.
+- Создание строки (work_make):
+  - lmx_walk_is_pointer_cell;
+  - lmx_walk_kind (classify);
+  - lmx_walk_numeric_type:182-196 (domain_kind + domain_type);
+  - lmx_walk_value_cell:1099-1111 (domain_kind + domain_type, затем lmx_walk_value_load).
+- lmx_walk_value_load:1044-1097:
+  - для int/size_t/… тип уже передан → прямое чтение (lmx_int_value_known), без классификации;
+  - указательная ячейка: lmx_value_cell_access (cell_pool) + lmx_pointer_cell_context (pointer_pool_in +
+    cell_context) — ~3 бисекции;
+  - FOREIGN: cell_pool + cell_context.
+- Загрузка/запись места (lmx_walk_place_load:2434-2459, lmx_walk_value_store:2709-2712):
+  - тип берётся из LmxWalkPlace\type (уже известен);
+  - контекст места — lmx_walk_place_context:2461, при указательных ещё классификация;
+  - запись: lmx_walk_immutable:6404-6414 → lmx_range_write_exact_blocked (type_of + sealed_profile + profile — до
+    3 бисекций) на каждую запись в обход неизменяемости.
+- SET в строку-ссылку: lmx_implements_receive_cell (допуск модели по слоту; в implements 36 domain_kind и
+  99 graph_node_in — допуск сам многократно классифицирует).
+- Индекс (lmx_walk_value_index_place:2925-2957, после 410):
+  - domain_kind(holder\ref);
+  - Array: lmx_value_array_place — lmx_array_cell_in + domain_type(массива) + lmx_pointer_cell_context;
+  - машинный указатель: lmx_walk_value_deref_actual:2534-2578 (domain_kind + domain_type пункта) +
+    lmx_range_stride(holder) — до 4 бисекций.
+- Вызов:
+  - выбор и данные — graph_value_in/node_in на каждом слоте EXEC;
+  - lmx_range_cell_pool(callee) для роли FN;
+  - lmx_callable_* / lmx_implements_exec_slot — повторные классификации заголовков на каждом вызове
+    (exec-карта ищется lmx_implements_find).
+- Повторное определение типа: тип ячейки ПЕРЕЧИТЫВАЕТСЯ классификацией везде, кроме Work-строки (e\ty) и
+  LmxWalkPlace\type, где он передан. Карты мест (place_table/place_slots) дают индекс, не тип.
+
+Счётчики вызовов (по тексту; столбцы: walk / implements / graph_copy_owned):
+- lmx_walk_kind 38 / – / –;
+- lmx_range_classify 26 / 6 / 45;
+- lmx_domain_kind 31 / 36 / 0;
+- lmx_domain_type 22 / 18 / 0;
+- lmx_range_cell_pool 22 / 8 / 13;
+- lmx_graph_node_in 66 / 99 / 21;
+- lmx_graph_value_in 198 / 47 / 13;
+- lmx_range_profile 7 / 0 / 26.
+
+## 4. LmxWalkValue и LmxWalkPlace
+
+LmxWalkValue (lmx.h.lm1) ≈112 Б при 8-байтовом ulong; точный размер ulong — по C-маппингу L1, не проверял.
+- Поля: present, kind, type (int); ref (void*); number (int); wide (size_t); natural (unsigned); longnum (ulong);
+  byte (char); model, references (Lmx*); referent (LmxWalkValue*); scalar_abi; physical_profile (Lmx*);
+  source_type (void*).
+- Дублирует с ячейкой: type (физический тип значения); ref (адрес для ссылок); referent (контекст ячейки-владельца);
+  physical_profile (профиль пула).
+- Числа хранятся в ОТДЕЛЬНЫХ полях по типам (не union): number/wide/natural/longnum/byte.
+
+LmxWalkPlace (lmx_walk.h.lm1) 32 Б: address, storage (void*), type, descriptor (int), context (LmxWalkValue*).
+
+Временные создаются на C-стеке почти в каждой функции (c.LmxWalkValue: temp/value/current …) и в scratch-векторах
+lmx_walk_value_vector:22-~50 (вектор + дескриптор корней). Каждый живой Value регистрируется в
+lmx_execution_roots_push для GC.
+
+## 5. uninit:T
+
+Только в чистом графе (lmx_graph.lm2), обходчик и native-путь его не используют (0 упоминаний).
+- lmx_graph_uninit_int:401-415: отдельная int-ячейка (lmx_int_new_profiled, байты не пишутся) плюс указательная
+  ячейка пула LMX_TYPE_UNINIT_INT (8 Б + LmxWalkValue-контекст в чанке), указывающая на неё. Слот держит указательную
+  ячейку и после присваиваний.
+- Различение — тип пула указательной ячейки: lmx_graph_kind:492-520 (classify + type_of → 3 для UNINIT_INT);
+  lmx_graph_address_of:2762-, стр. 2775: UNINIT_INT — сервисный указатель, не значение.
+- Физически: инициализированная int-ячейка — 4 Б в int-пуле; «без инициализации» — 4 Б int + 8 Б указатель +
+  контекст + два диапазона, если пулы одноячеечные.
+В рабочем frontend/обходчике «T без инициализации» отдельного представления не имеет: ячейка обнулена calloc.
+
+## 6. Имена и требования
+
+LmxSourceName (lmx_source_names.h.lm1), 72 Б: key (void*), port, code (size_t), place_spec (size_t*),
+model_layout (void*), place_uses (size_t*), place_callable (void*), pending_next, binding_private (int).
+- Строки — ячейки сервисного пула kind SOURCE_NAME.
+- Ключ — АДРЕС: вхождение (Frame/лист) или владеющая дочерняя ячейка слота, плюс port (-1 для мест, 0 для имени,
+  -2 для имени у ячейки и др.).
+
+Поиск: lmx_source_names.lm2:lmx_source_name_local:22-53 [код].
+- ЛИНЕЙНЫЙ проход по всем пулам арены (arena\arrays) до пулов SOURCE_NAME.
+- Затем по всем чанкам: lmx_range_interval_pool на чанк, бисекция; затем по всем строкам: сравнение key и port.
+- Хеша нет. Промах в своей арене → lmx_range_home (бисекция) → тот же проход в домашней арене
+  (lmx_source_name_row_at:58-70).
+- Зовётся на lmx_source_name_get / lmx_source_places: имя корня, private, place_spec, имена actuals и формалов в
+  binder, активационные имена.
+
+## 7. Адрес, разыменование, typeof
+
+- Чистый граф: lmx_graph_address_type:2783-2789 через lmx_graph_address_of:2762.
+  - Для ячейки примитива — тип её пула (type_of).
+  - Для элемента плотного массива — тип backing-пула элемента.
+  - Для null — NONE (код 0, LMX_TYPE_NONE).
+  - Для внешнего адреса — NONE.
+  - Для поля внутри Lmx-заголовка (sys\descriptor указывает внутрь записи) — внутренний адрес → NONE: смещение не
+    кратно stride.
+- Обходчик:
+  - взятие адреса — LmxWalkValue{kind REFERENCE, ref = ячейка, referent = контекст};
+  - разыменование — lmx_walk_value_deref_actual:2534-2578: тип пункта = domain_kind/domain_type адреса, для
+    CHILDREN/REF — ещё чтение и domain_kind цели; если не классифицируется — lmx_type_pointee(holder\type).
+
+## 8. GC, копирование, merge, образ
+
+GC (lmx_gc_graph.lm2).
+- Единица владения и отметки — ЧАНК (chunk\mark).
+- lmx_gc_mark_value:186-218: lmx_range_pool (cell_pool + entry_at, 2 бисекции) + lmx_range_cell_chunk (ещё
+  cell_pool + entry_at + entry_chunk) → отметка чанка → обход ячеек чанка (lmx_gc_cells:82-) по типу пула.
+- Корни-Value: lmx_gc_value:65-81 — до 5 полей-указателей (ref, model, references, physical_profile, source_type)
+  плюс referent через ЛИНЕЙНЫЙ lmx_value_context_cell_in.
+- Глубина рекурсии ограничена LMX_GC_DEPTH 64 (lmx_gc.h.lm1:66) → PARTIAL.
+- Освобождение — по блокам арены (lmx_gc_block_live:243).
+
+Копирование (lmx_graph_copy_owned.lm2).
+- Карта источник→копия LmxCopyMap{keys, vals, n, unmapped, value_policy} — открытая адресация по адресу
+  (lmx_copy_hash:149-153, lmx_copy_map_get:198-213).
+- Тип каждой копируемой ячейки — снова классификацией: 45 classify, 29 type_of, 14 stride, 26 profile,
+  13 cell_pool в файле. Профиль копии берётся из пула источника.
+Merge (lmx_merge_owned.lm2): 15 classify, 3 profile.
+Образ: toLmx/fromLmx в просмотренных файлах как отдельный модуль не встретился, этот пункт не описан [не найдено].
+
+## 9. Числа без запуска
+
+- [артефакт] Дамп арены R0 крошечной пробы e5_length (S/o410-probe-01/e5_length-native/run-root0.log) — 64 пула:
+  - Structure-пул a0: 35 заголовков по 32 Б;
+  - дочерние REFS-пулы kind 4 type 7 по 1–6 слотов каждый — их десятки (a1, a4, a6, a7, a10, a13…);
+  - int-пул a9: 7 ячеек; SourceName a5: 22 строки по 72 Б.
+  Число ЧАНКОВ (= диапазонов) дамп не печатает. По коду (п. 1) пулы с chunk_capacity 1 дают по диапазону на ячейку,
+  так что диапазонов не меньше 64, вероятно в разы больше.
+- [оценка] N диапазонов ≈ Σ чанков ≈ число одноячеечных выделений в «одноячеечных» пулах + по чанку на прочие.
+  Бисекция — ⌈log2 N⌉; при N ~ 10^3–10^4 это 10–14 итераций на запрос, и ~10 запросов на одно чтение слота графа.
+- Метаданные на одну 4-байтовую int-ячейку в одноячеечном пуле [оценка по раскладкам]:
+  - LmxRange 96 + LmxChunk 48 + 2 × LmxArenaBlock 80 = ≈224 Б;
+  - плюс накладные malloc на 4 calloc;
+  - у указательной ячейки ещё +112 Б контекста.
+
+## Оценка: что уходит при метке типа в записи, что остаётся
+
+Перестают нуждаться в классификации, если у записи есть свой type (p->type):
+- lmx_walk_value_cell / numeric_type / work_make (kind+type слота);
+- domain_kind/domain_type в deref, index, value_load указательных;
+- lmx_graph_node_in («это Structure?») и проверка stride;
+- typeof;
+- выбор приёма по типу места (receive_root, receive_cell — только тип, не допуск модели);
+- обход ячеек GC по типу;
+- классификация при копировании и merge;
+- lmx_walk_code_in для оператора.
+Главный выигрыш — graph_value_in/cell_in: сейчас ≈9–11 бисекций и проход цепочки чанков на чтение слота. С меткой —
+одно разыменование слота плюс чтение type.
+
+Остаются (общий адресный API для произвольных адресов):
+- неизменяемость и запечатанные профили (lmx_range_write_exact_blocked по интервалу) — пока она привязана к диапазону;
+- принадлежность арене и время жизни (owner/home: lmx_range_home, импортированные view при attach);
+- GC: «чей чанк» и освобождение блоков; если единица владения останется чанком, адрес→чанк всё равно нужен;
+- внутренние адреса (адрес поля внутри записи, байт массива, C-память) и внешние C-указатели: метки у них нет,
+  классификация по диапазону остаётся единственной;
+- обратная карта контекст→ячейка (сейчас линейная) — исчезает, если контекст живёт в самой записи;
+- поиск имён (линейный, по адресу) — от метки типа не зависит, но тот же ключ-адрес.
+Отдельно от метки — линейные места:
+- lmx_arena_find_profiled;
+- lmx_source_name_local;
+- lmx_pool_chunk_at;
+- lmx_value_context_cell_in;
+- сдвиг индекса при вставке;
+- чанки ёмкостью 1.
+Это стоимость текущей реализации, которую честное сравнение должно учитывать отдельно от «тег против диапазона».

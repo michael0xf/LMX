@@ -17,9 +17,10 @@ The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an int
 
 Structures and Arrays share a flat `parent/length/storage` header, without native, capacity,
 or an embedded VoidArray. In L2 order: `@: parent Lmx`, `size_t: length`, `@: storage void`.
-A reference points to the header's start. Structure and Array<@> store void* elements and are fully
+A reference points to the record of the Structure or Array: its type code, then this header
+([§3](#value-record)). Structure and Array<@> store void* elements and are fully
 interchangeable in indexing, named paths, admission, copying, and execution.
-Numeric Array<T> stores T itself; arena typed allocation determines its type.
+Numeric Array<T> stores T itself; the code of the Array's record tells the element type.
 
 Parent is the structural parent. Passing an existing value's reference neither changes parent nor
 expands it into the tree. An Array descriptor retains its address; length and storage use common size
@@ -94,25 +95,46 @@ nested Structures nor graph references. Structure and Array<@> use one mechanism
 elements. Reuse existing addressing; no reverse-index table or per-write maintenance is needed.
 
 <a id="type-by-range"></a>
-## 3. Type by address range
+<a id="value-record"></a>
+## 3. Value record: the type beside the value
 
-Derived graph objects preserve the common `Lmx` contract. The pool and range identify the physical kind selected at construction and, for an Array, its element type. This classifies an address; it is not a stored name or opcode in the graph, nor a separate user-defined type for every Structure model. The old layout in which `Lmx` contains `VoidArray` remains transitional, not the template for the new Array variants.
+**Author's decision of 2026-11-16** ([journal](../LMX_blog/2026-11-16.md#typed-value-raw-layout)): the physical type and the value are stored in one record, and both are obtained from the record itself. The earlier scheme of this section -- a cell without a type tag, whose type the arena learnt by classifying its address through registered ranges -- is superseded. The code still executes the earlier scheme; the transition is [M15](../next_core_tasks_v3.md#typed-value-records).
 
-An arena classifies an address through a registered half-open `LmxRange` interval and its owning pool. A cell has no in-band type tag. Ordinary Structures and graph Arrays share the `Lmx` base while ranges distinguish storage shape and element type; user models do not generate one C type or pool apiece. Primitive, reference, graph-object, and backing pools differ by physical access contract. Typed arena arrays are storage, not separate language Arrays. Ordinary and `immutable` Structures are allocated in separate pools; an already published ordinary Structure cannot become `immutable` in place. `implements`, not physical type, establishes model compatibility.
+A value that a Structure or `Array<@>` slot, a reference or `parent` refers to is a **record**: `int type`, the code of its physical type, and immediately after it, without a gap, exactly as many raw bytes as a value of that type occupies -- a number, a reference, or the `parent/length/storage` descriptor of a Structure or an Array. The elements of an Array and the slots of a Structure lie in the storage that the descriptor names, not in the record. The size of a record is `sizeof(int) + size(type)`: no record reserves room for the largest kind of value, and the layout does not follow the rules of a C `union`.
 
-Every primitive type T has a distinct type “T without initialization”, identified by its address region.
-A declaration without an initializer has its own pre-existing cell of T and an internal pointer to that cell:
+Every slot holds one pointer to the start of a record, the address of its `type`; the value lies four bytes further. A read of a known type takes the value at that constant offset; a read of a type unknown at translation reads `type` through the same pointer and then the value:
+
+```text
+p = storage[index]     # the slot: a pointer to the record
+p\type                 # the code of the physical type, at offset 0
+value at p + 4         # the raw bytes of that type
+```
+
+Whether the pointer kept in a slot is the address of `type` or the address of the value four bytes further is an encoding of the implementation over the same record in memory; the choice is an [open question to the author](../LMX_blog/q/current/README.md).
+
+**No operation learns a type or reads a value by classifying an address.** Reading and writing a slot, loading a value of a type unknown at translation, `sys\typeof`, indexing, dereferencing, admission by `implements`, copying, `merge` and collection take the kind and the size of a value from the code in its record. The arena's index of address intervals stays only for ownership: which arena and which chunk an address belongs to.
+
+**Alignment** (the author left the choice to the implementation: optimal and universal, not by `union` rules). A value stands at an address aligned as its type requires, but not less than four; the code occupies the four bytes immediately before it; padding, where needed, lies between records. A record that fits into 64 bytes does not cross the boundary of a 64-byte block. So the code and the value are read by ordinary aligned accesses on every platform, the descriptor fields keep their natural alignment, and one access to a record does not touch two cache blocks. With eight-byte pointers a record of `int` takes 8 bytes, a record of `double`, `size_t` or a reference 12 bytes and a step of 16, a descriptor 28 bytes and a step of 32.
+
+The inventory of physical types is the former inventory of region types ([kernel specification §2.2](kernel-implementation.en.md#arena)): number primitives, the word, the reference, “T without initialization”, the ordinary, immutable and `fn`-result Structure, an Array with its element type. A user model produces no code of its own: `implements`, not the physical type, establishes model compatibility. An ordinary and an `immutable` Structure differ by the code; an already published ordinary Structure cannot become `immutable` in place. The old layout in which `Lmx` contains `VoidArray` remains transitional, not the template for the new Array variants.
+
+A numeric `Array<T>` stores T itself, densely and without codes; the code of the Array's record tells the element type. The address of such an element is a raw L2 address, not a pointer to a record. A typed native local or a temporary result is an ordinary machine value and is not packed into a record.
+
+For every primitive type T there is a distinct type “T without initialization”. A declaration without an initializer has one record: the code `uninit:T` and, right after it, a complete record of T -- the code of T and the cell of T:
 
 | Declaration | How the Structure field reaches the value |
 |---|---|
-| `int: x` | Field → internal `uninit:int` pointer → the `int` cell of `x` |
-| `int: x 0` | Field → the `int` cell of `x`, initially 0 |
+| `int: x` | Field → record `uninit:int`, whose value is the record `int` of `x` |
+| `int: x 0` | Field → record `int` of `x`, initially 0 |
 
 Here a Structure field is an address-holding cell, called a “slot” in the kernel specification.
 Assignment changes only the value in the existing cell of T. Even on the first write, neither the field nor
-its internal pointer is replaced or redirected; the cell's address and physical type remain unchanged too.
-For `int: x`, the indirect path is the same before and after `x := 5`, and a previously taken `@x` addresses
-that same cell. Internal storage does not make `x` a language pointer: its language type remains `int`.
+the codes change; the cell's address and physical type remain unchanged too.
+For `int: x`, the path is the same before and after `x := 5`, and a previously taken `@x` addresses
+that same cell: `@x` and the name of `x` refer to the inner record of T, which starts a constant four bytes
+after the outer one, with no stored pointer between them and no second allocation. `sys\typeof` of the
+slot's content answers `uninit:int` and `sys\typeof(@x)` answers `int`, as before.
+Internal storage does not make `x` a language pointer: its language type remains `int`.
 
 `uninit:T` describes a declaration without an initializer, not a “never written yet” flag.
 The earlier explanation about redirecting the field on its first write was superseded by the
@@ -120,11 +142,11 @@ The earlier explanation about redirecting the field on its first write was super
 See [kernel specification §3.2](kernel-implementation.en.md#primitive-storage) for the representation.
 
 <a id="pool"></a>
-## 4. Typed pool
+## 4. Allocation of records
 
-A pool issues fixed-stride cells and grows by adding chunks, without `realloc` of live cells. Each chunk registers an interval of the same type. An issued address stays stable until its ownership is released. The arena manages the range index.
+Records are issued from the chunks of the arena. A chunk is never reallocated: growth adds a chunk, and an issued address stays stable until its ownership is released. How the arena divides its memory into chunks is the allocator's matter, not a contract: a chunk may hold records of one type and one step, as the present pools do, or records of several types one after another. Nothing reads a type from a chunk or from an address. At the first stage of the transition the present pools are kept: a cell of a pool becomes a record with the step of that pool, which gives the alignment of [§3](#value-record) by itself.
 
-In a graph Array, `void *storage` holds the backing address of the selected typed pool; it does not make the elements untyped. L2 obtains a pointer to the actual element type from that address for loads and stores; the arena range confirms that type, cell stride, and alignment. A pre-existing pool of `void *` slots cannot be read as an arbitrary `T` array merely by casting its pointer. Addressable graph-reference slots retain their own `void **` and stored-value conversion contract.
+In a graph Array, `void *storage` holds the address of the element storage. For a numeric `Array<T>` it is a dense block of T; L2 obtains a pointer to the actual element type from the code of the Array's record, not by classifying the storage address. A pre-existing block of `void *` slots cannot be read as an arbitrary `T` array merely by casting its pointer. Addressable graph-reference slots retain their own `void **` and stored-value conversion contract.
 
 <a id="method-array"></a>
 ## 5. Native entry and Array
@@ -134,7 +156,7 @@ Native is an ordinary descriptor in call tables containing entry variants, signa
 <a id="arena"></a>
 ## 6. Arena
 
-Each Message owns one logical arena, which may contain multiple chunks and ranges. `lmx_arena_attach` transfers ownership without moving addresses. `mark/revert` rolls back a failed copy or `merge` construction. Simple mode retains classification and address stability but does not run GC. An independent immutable branch may remain in its owner's arena under the [L3 contract](LMX_semantics.en.md#eternal); a separate pool alone grants no such right.
+Each Message owns one logical arena, which may contain multiple chunks. `lmx_arena_attach` transfers ownership without moving addresses: the chunks of the attached arena become chunks of the receiver, their records keep their addresses and codes, and nothing is registered anew to tell their types. One arena is never accessed from several threads, so the codes and the allocation need no synchronization. `mark/revert` rolls back a failed copy or `merge` construction. Simple mode retains address stability but does not run GC. An independent immutable branch may remain in its owner's arena under the [L3 contract](LMX_semantics.en.md#eternal); a separate pool alone grants no such right.
 
 
 <a id="array-capacity"></a>
@@ -330,12 +352,12 @@ The proven mapping from used fields of the receiving model to physical fields of
 <a id="gc"></a>
 ## 15. Collection
 
-GC belongs to the arena. Roots include Message, live graph, mail, execution state, and `Thread.children`; Thread state retains that List independently of source fields. From a live value, collection also follows an established `implements` correspondence to its required Structure: replacing a graph field does not release the model while that value still needs its admission. This rule does not retain a transient admitting frame; retirement of the frame removes a record that depends on it. These are address-proof dependencies, not hidden graph fields. The owner retains constructed `independent: immutable` branches until its arena is destroyed. Simple mode does not collect. Unloading a later module needs a separate contract and is not invented here.
+GC belongs to the arena. The kind and the size of every traced value come from the code of its record ([§3](#value-record)). Roots include Message, live graph, mail, execution state, and `Thread.children`; Thread state retains that List independently of source fields. From a live value, collection also follows an established `implements` correspondence to its required Structure: replacing a graph field does not release the model while that value still needs its admission. This rule does not retain a transient admitting frame; retirement of the frame removes a record that depends on it. These are address-proof dependencies, not hidden graph fields. The owner retains constructed `independent: immutable` branches until its arena is destroyed. Simple mode does not collect. Unloading a later module needs a separate contract and is not invented here.
 
 <a id="special"></a>
 ## 16. Special L2 operations
 
-The kernel provides address classification, cell allocation, arena attach/revert, mail, Thread turns, calls, child reservation, copying/merge, and collection. These operations do not create another namespace or auxiliary execution graph.
+The kernel provides record allocation, the reading of a record's type, arena attach/revert, mail, Thread turns, calls, child reservation, copying/merge, and collection. These operations do not create another namespace or auxiliary execution graph.
 
 <a id="lowlevel-scope"></a>
 ## 17. Machine profile

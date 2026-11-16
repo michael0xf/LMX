@@ -1,0 +1,190 @@
+ОПИСЬ: как тип и значение живут в native lowering (только чтение; ничего не запускалось и не правилось)
+Автор: sonnet, 2026-11-16, по запросу fable_pc FABLE-R-TV-B.
+Артефакты: S = build2/codex_fix250generationchain01/sol-m14-field-values-01; F = S/s410-full-01/<фикстура>-native/p.lm1 (выпуск по принятой S/s410-frontend-03); G2 = S/boot-m14-native-private-02/g2.
+Исходники: FE = selfbuild/src/l2src/l2_frontend_*.lm2 (эмиттеры), RT = selfbuild/src/l2src/lmx_*.lm2 (рантайм, который зовёт выпущенный код).
+Номера строк эмиттеров — по рабочему дереву на 2026-11-16 (после 410, до коммита). Строки F — в файле p.lm1 фикстуры.
+
+ОБЩАЯ КАРТА (читать первой)
+Выпущенное native-тело графового метода (l2_mN) оперирует тремя вещами:
+ (а) C-локалами ТОЧНОГО типа (int, size_t, unsigned, @: void) — рабочие копии и временные;
+ (б) записью LmxWalkValue (present, kind, type, объединение number/wide/natural/longnum/byte, ref, model, referent, physical_profile, source_type, scalar_abi…) —
+     это УЖЕ типизированная запись «тип + значение + контекст»; она живёт в C-локале (компаньон) и пробрасывается в helper-ы;
+ (в) адресом ячейки арены (void*), которая БЕЗ метки: физический тип ячейки узнают helper-ы по диапазону арены (lmx_range_cell_pool → LmxPool{kind,type,stride,profile,sealed,…}).
+Прямого разыменования ячейки арены в выпущенном коде нет вообще (ни чтения, ни записи): всегда helper.
+Тип в большинстве мест передаёт ТРАНСЛЯТОР статической константой (c.LMX_TYPE_INT и т.д.); классификация адреса даёт другое: права записи (immutable/sealed/profile),
+компаньон-контекст ячейки (модель/происхождение), callback-и чтения указателя, и ТИП только там, где транслятор его не знал.
+
+======================================================================================================
+1. Значение известного типа в native-коде
+------------------------------------------------------------------------------------------------------
+Три вида:
+1a. Поле графового кода (own, `int: z`, `@: p`, `[]: T a n`), используемое в теле по голому имени. Эмитирует FE core.lm2:lm_compiler_emit_work_decl 4042–(4150)
+    (сайты 4089, 4114) и FE emit.lm2:lm_compiler_emit_unit (сайт 17966 — таблица мест `[]: size_t l2_cpl`). В F (whole_direct_fields l2_m4, строки 2440–2470 артефакта):
+        @@: void l2_q0_z_from 0 ; l2_q0_z_from: lmx_arena_ref_cell(self, l2_cpl[0U])   # адрес СЛОТА в Structure данных (void**), не значение
+        size_t: l2_q0_z_bound 0U                                                        # номер строки привязки в активации
+        int: l2_q0_z 0                                                                  # C-локал ТОЧНОГО типа — рабочая копия
+        LmxWalkValue: l2_wv0_z ; lmx_walk_value_clear(@ l2_wv0_z)                       # компаньон: тип+значение, выставлен как execution root
+    Указательное поле — `@: void l2_q2_q 0` вместо int. Массив-поле — только компаньон (см. п. 6).
+    Запись в такое поле (FE lower.lm2:lm_compiler_own_work_store_value 2452–2514, сайт 2507; F free_field_places 5228–5290):
+        value → LmxWalkValue → if: lmx_range_write_exact_blocked(arena, from[0], 0,0,0U) != 0  return 4   # барьер: сам адрес арены, не локал
+        LmxWalkPlace{address=@ l2_q5_caught (АДРЕС C-ЛОКАЛА), type=c.LMX_TYPE_INT, context=0} ; lmx_walk_value_store_with_writer(arena,@place,@value,0)
+        memcpy(@ l2_wv5_caught, @ received) ; lmx_activation_bind_origin(arena, id, 0, LMX_TYPE_NONE, @ l2_wv5_caught, origin = l2_q5_caught_from)  # один раз на активацию
+    Т.е. ЗНАЧЕНИЕ типизированного own-поля лежит в C-локале + компаньоне; ячейка арены служит ИДЕНТИЧНОСТЬЮ (origin) и предметом барьера записи.
+    Чтение обратно — не прямое: `c.memcpy(@ l2_cvN, @ l2_wvM)` и `lmx_walk_value_number(@cv,@n,@ty)` + `((cast: (@: int) lmx_walk_value_storage(@ cv))[0])` (F whole_direct_fields 129–133).
+    ЧЕГО НЕ ВИДНО в прочитанных телах: записи C-локала обратно в ячейку арены при выходе из активации (это работа рабочего состояния обходчика §7b / lmx_walk.*);
+    я её не читал — для исследования стоит проследить, кто и когда пишет `*_from[0]` по значению локала.
+1b. Временные результаты: `int: l2_mv17 ((l2_lv15.number))`, `size_t: l2_t39 l2_q1_at` (F local_array_var_index 299), `int: l2_nv44`, `@: void l2_t2 (cast … l2_cv2.ref)`.
+    Это обычные типизированные C-локалы; они упаковываются в LmxWalkValue ТОЛЬКО на границе интерфейса: `lmx_walk_value_num(@ mvv, c.LMX_TYPE_INT, (cast: (size_t) mv))` (FE lower.lm2 сайт 11409, 9572, 10240)
+    перед записью или вызовом, и распаковываются `lmx_walk_value_storage(@ v)[0]`/`.number` после чтения. Арифметика между ними — обычный C без записей.
+1c. Обычные native-функции самого инструментария (frontend.c, lmxtool.c: 11 МБ и 2.8 МБ C) — чистый C с типизированными локалами; lmx_range_* встречается 90 раз в frontend.c и 334 в lmxtool.c (п. 7) — это вызовы рантайма
+    встроенных графовых программ и самого рантайма, а не локалы транслятора. Упаковка в TypedValue там не нужна и не используется.
+Где значение только в C-локале: 1b целиком; own-поле скаляра (1a) между записью и выходом (по прочитанному). Где в ячейке арены: поля Structure (п. 2), элементы Array (п. 6), слоты ссылок.
+
+======================================================================================================
+2. Чтение/запись поля графа из native-кода при ИЗВЕСТНОМ типе
+------------------------------------------------------------------------------------------------------
+Эмитирует FE lower.lm2:lm_compiler_emit_path_cursor_slot 6321–6769 (сайты 6683, 6722, 6736), lm_compiler_emit_place_slot 6302–6317 (сайт 6310), lm_compiler_own_cell_load 2517–2553,
+lm_compiler_own_load_context_full 2270–2378; запись — useplan.lm2:lm_compiler_emit_path_write_guard 600–617 / emit_write_guard 588–596, lower.lm2:lm_compiler_emit_received_place_store_field 20253–20294.
+Выпущенная последовательность чтения `h\x` с известным int (F whole_direct_fields 1148+ артефакта, l2_m3, строки ~37–134 вырезки):
+   l2_cv2 = lmx_walk_value_cell(arena, lmx_arena_ref_value(node,2U), @cv2)         # КЛАССИФИКАЦИЯ: lmx_domain_kind/type адреса → ссылка на Structure (RT walk_values 1099–1111)
+   l2_pst = cv2.ref                                                                 # узел
+   pslot: if cv2.model != 0: lmx_walk_value_slot(arena,@cv2,2U,1,@pslot) else статический индекс   # RT 1164 — карта модели (п. 4)
+   l2_pxp = lmx_graph_ref_cell_in(arena, pst, pslot)                                # КЛАССИФИКАЦИЯ слота: pool.kind ∈ {CHILDREN,REF} и stride == sizeof(void*) (RT arena_refs 178–186); null → abort
+   if l2_pxp[0] = 0 → abort "reads an absent place"                                 # разыменование СЛОТА (void*), не ячейки значения
+   LmxWalkPlace p{ address = lmx_call_cell(arena, xp[0]), type = c.LMX_TYPE_INT, context = lmx_pointer_cell_context(arena, address) }
+        lmx_call_cell (RT call 72): lmx_domain_kind(arena,cell) == NONE → note_fail + abort (проверка «адрес вообще в арене»)
+        lmx_pointer_cell_context (RT value_owned 382): lmx_pointer_pool_in(arena,cell)=0 → нет контекста, иначе lmx_value_cell_context (компаньон ячейки по адресной арифметике чанка)
+   lmx_walk_place_load(arena,@p,@cv)  → (RT walk_values 2434–2456) lmx_walk_value_load(arena, address, TYPE_INT, out) → для INT: `(cast: (int) c.lmx_int_value_known(storage))` — ПРЯМОЕ чтение
+        по ТРАНСЛЯТОРНОМУ типу, без классификации; для POINTER/LMX/DESC/CHAR_PTR — lmx_value_cell_access(arena,cell,&read,&write) (RT value_owned 454): ЗДЕСЬ классификатор
+        (lmx_range_cell_pool) выбирает callback чтения указателя; для FOREIGN — pool сверяется с type (RT walk_values 1052–1060).
+Запись `h\x := v` (F free_field_places 5228–5265): если-барьер `lmx_range_write_exact_blocked(arena, xp[0], 0,0,0U)` → RT range 114–121 = ТРИ поиска по диапазонам:
+   lmx_type_is_immutable(lmx_range_type_of(p)) ; lmx_range_sealed_profile(p) (профиль «квалифицирован» — членство в типизированном диапазоне, не флаг) ; lmx_range_has_root_profile(p, roots…).
+   затем LmxWalkPlace{address, type=статический} + lmx_walk_value_store_with_writer (RT 2743: ещё lmx_range_write_exact_blocked, lmx_range_cell_pool для FOREIGN, lmx_value_cell_context, lmx_range_links_of)
+Итог по п. 2: НИ ОДНОГО прямого разыменования; на каждое поле 3–6 вызовов классификатора. Тип числа — от транслятора; классификатор отвечает за (i) «этот адрес вообще жив в арене»,
+(ii) права записи (immutable/sealed/profile), (iii) компаньон-контекст, (iv) способ чтения/записи указателя. lmx_domain_type/kind в телах методов — по 4 на весь файл (не на каждое поле), т.е. при известном типе на поле они не вызываются; где именно эти 4 — не прослеживал.
+
+======================================================================================================
+3. Чтение значения с НЕИЗВЕСТНЫМ при трансляции типом (FREE/hidden-вход, S[i], runtime-typed корень, приём по Model)
+------------------------------------------------------------------------------------------------------
+3a. FREE / hidden-вход: FE lower.lm2:lm_compiler_emit_native_input_default 8134–8242 (сайт 8224); F free_graph_address 300–335:
+        @: void l2_dfc0 l2_dfs0[0] ; l2_dfc0: lmx_call_cell(arena, l2_dfc0)
+        l2_dfp0.type: lmx_range_type_of(l2_call_arena, l2_dfc0)      # ← ТИП ПО АДРЕСУ: pool->type (RT range 508–517)
+        l2_dfp0.context: lmx_pointer_cell_context(arena, address) ; lmx_walk_place_load(arena,@l2_dfp0,@l2_dfv0)
+    То есть именно здесь тип ячейки берётся из диапазона и отдаётся как place.type обычному lmx_walk_place_load. Рядом `lmx_activation_resolve_origin(...)` (связка с вызывающим).
+3b. Значение слота неизвестной природы: `lmx_walk_value_cell(arena, cell, @out)` (RT walk_values 1099–1111): kind = lmx_domain_kind(cell): STRUCT → ref(TYPE_LMX), ARRAY → ref(TYPE_DESC),
+    PRIMITIVE → lmx_walk_value_load(arena, cell, lmx_domain_type(cell), out) — ТИП И ВИД ЦЕЛИКОМ из диапазона. Эмитеры: core.lm2:lm_compiler_emit_work_decl 4089/4114, lower.lm2:own_load_context_full 2325,
+    useplan.lm2:lm_compiler_model_inst_full 1314–1412 (сайт 1401: `l2_cv = lmx_walk_value_cell(…lmx_arena_ref_value(node,N)…)` — значение «модели»).
+    Затем тип читают из записи: `lmx_walk_value_number(@cv,@n,@ty)` (RT 800) возвращает вид и ТИП (ty) для числа; арифметика runtime-typed — `lmx_walk_value_bin` (в F не встретилась в прочитанных фикстурах; упомянута в шапке free_machine_ops.lm2).
+3c. Приём по ожидаемому типу места (FE lower.lm2:lm_compiler_emit_dyn_receive_place 9086–9189, сайты 9153/9163): по форме места
+        lmx_walk_value_receive_graph(arena,@cv,@rv)                      # граф-место: допуск по ФАКТИЧЕСКОМУ pointee через классификатор арены
+        lmx_walk_value_receive_pointer(arena,@cv,ptr_ty,depth,leaf,@rv)  # RT 2250+: каждый уровень — lmx_walk_value_deref_actual (pool/owning record), лист классифицирует арена
+        lmx_walk_value_receive_c_pointer(…)                              # F free_c_pointer 529
+        lmx_walk_value_admit(arena,@received, lmx_walk_slot_model(arena,holder,i), cp)   # FE core.lm2:emit_tramp_receptions 12681–12722 (сайт 12715), useplan.lm2:emit_model_admit_record_core 4638–4742 (сайт 4717);
+                                                                          # модель берётся из компаньона ячейки: lmx_walk_slot_model → lmx_pointer_cell_context(...)->model
+3d. Индекс S[i] Structure: FE lower.lm2:lm_compiler_emit_path_index 6793–6867 (сайт 6855): `lmx_walk_place_load(arena,@l2_indexN_place,@value)` над местом из
+    lmx_walk_value_index_place (RT 2930+: kind = lmx_domain_kind(holder.ref); для Array — элемент по дескриптору, для машинного указателя — «тот же классификатор pointee, что у DEREF»).
+Итог п. 3: тип определяется в RT walk_values 188–191/1099–1111/2340–2351/2555–2570/2637–2656/2838–2847/2937/3020 (lmx_domain_kind/type), range 495–517 (classify/type_of), 663 (profile);
+в выпущенном коде: lmx_range_type_of (F free_field_places 22 раза, place_map 10), lmx_walk_value_cell (6/58), lmx_domain_kind/type (по 4 на файл).
+
+======================================================================================================
+4. Карта соответствия полей (place map / exec_slot / implements) → индекс слота → чтение ячейки
+------------------------------------------------------------------------------------------------------
+Эмиссия: FE emit.lm2:lm_compiler_emit_unit (сайт 17966) — статическая таблица `l2_cptN` {m, k, k строк по (1+m)} и локальный `[]: size_t l2_cpl m`; lower.lm2:lm_compiler_emit_split_admission 18233–18252 (сайт 18237).
+Выпущено (F whole_direct_fields l2_m4, ~2440):
+    if: lmx_implements_places(arena, self, 0, l2_cptN, l2_cpl) != c.LMX_IMPLEMENTS_YES   → abort "split-called code reached data without its place row"
+    l2_qK_name_from: lmx_arena_ref_cell(self, l2_cpl[j])      # = &va.data[slot]; ТОЛЬКО проверка index < size (RT arena_refs 302–313); классификации нет
+RT lmx_implements_places (RT implements 5027–5075): если k == -1 — именованный путь (arena->call_places либо lmx_implements_named_places 4825); иначе
+    layout = lmx_implements_layout(arena,data) (4635–4645: ЛИНЕЙНЫЙ скан arena->impl по entry->value==data, возвращает entry->layout — идентичность схемы, записанная при допуске);
+    строка таблицы выбирается СРАВНЕНИЕМ адреса токена `tokens+row[0] == layout`; row[1+j]==SIZE_MAX → NO; row[1+j] >= data.array.size → UNKNOWN; иначе out[j]=row[1+j].
+Одиночный ребро: lmx_call_index(arena,data,code,edge) (RT call 50–68) → lmx_implements_code_slot (RT implements 7179+): если value==code → lmx_implements_exec_slot (7078) ; иначе композиция exec-карты code
+    и допуска data к code (lmx_implements_find(arena,code,code)->exec_map, scope arena->call_places). Предварительно lmx_graph_node_in(arena,value) для обоих (классификация: kind ∈ {STRUCT,ARRAY} и stride == sizeof(Lmx)).
+    UNKNOWN/NO → note_walk_fail + abort. Результат — size_t индекс слота.
+Чтение ячейки после индекса: `from = lmx_arena_ref_cell(self, idx)`, затем на каждое использование `from[0]` (void*) — ТЕКУЩЕЕ значение слота, повторная проверка `if from[0]=0 → заново ref_cell` (F free_field_places 5244–5247).
+При ЗАМЕНЕ ссылки в слоте (RT arena_refs lmx_arena_ref_store / lmx_graph_ref_fill_in с lmx_code_rebind_prepare/commit): адрес слота `from` остаётся тем же, читается новый referent при следующем `from[0]`;
+    его физический тип/вид заново определяет классификатор по НОВОМУ адресу (lmx_walk_value_cell, п. 3b). Что НЕ обновляется само: C-локал l2_qK_name, компаньон l2_wvK и строка привязки (`_bound`, origin=from) —
+    это рабочая копия значения, взятая при записи/загрузке (по прочитанному; см. оговорку п. 1a).
+Итого: «слот» — это индекс в массиве void* Structure; запись типа в нём нет; тип referent-а = тип пула по адресу referent-а.
+
+======================================================================================================
+5. `@x`, разыменование, sys\typeof в native
+------------------------------------------------------------------------------------------------------
+@x типизированного локала/поля: FE lower.lm2:lm_compiler_emit_address_context_full 10254–10334 (сайт 10292), emit_free_input_address 8674–8721 (сайт 8712). Выпуск (F free_graph_address 565–568):
+    LmxWalkValue l2_cv13 ; l2_as13 = lmx_walk_place_address(arena, @ l2_ip12, @ l2_cv13)
+    RT walk_values 2586–2603: storage=place.storage|address; ty = lmx_type_pointer_to(place.type) (чистая таблица кодов, RT ~2500–2560); lmx_walk_value_ref(out, ty, storage);
+    out.referent = lmx_walk_place_context(arena, place) = place.context, иначе lmx_value_address_context(arena, address) (классификация, RT value_owned 565).
+    Адрес own-локала — адрес C-локала (`l2_owpN.address: (cast: (@: void) (@ l2_q5_caught))`), т.е. указатель может указывать НЕ в арену (контекст тогда 0 / компаньон `l2_wvK`).
+Разыменование `\p`: FE lower.lm2:lm_compiler_emit_indirect_span_full 4148–4242 (сайт 4219); F free_graph_address 645: lmx_walk_value_deref_place(arena,@holder,c.LMX_TYPE_POINTER_BASE+101,@place)
+    RT walk_values (deref_place ~2475–2500): place{address=storage=holder.ref, type=ty ТРАНСЛЯТОРНЫЙ, descriptor=0, context=lmx_value_address_context(arena, holder.ref, holder)}; далее обычные place_load/store.
+    Free-указатель (тип pointee транслятору неизвестен): lmx_walk_value_deref_actual (RT ~2530) типизирует по ФАКТИЧЕСКОМУ pointee (lmx_type_pointee / пул).
+sys\typeof (receiver `typeof`): в ЭМИТТЕРАХ FE его НЕТ (grep typeof по l2_frontend_*.lm2 — 0 вхождений; ни одного p.lm1 не содержит lmx_graph_address_type). Реализован в интерпретаторе/инструменте:
+    RT lmx_graph_run.lm2:5275–5287 (`word = state\w_typeof` → lmx_graph_address_type), RT lmx_graph.lm2:2781–2790: out = lmx_range_type_of(g.arena, address) — ТИП РЕГИОНА АРЕНЫ, ДЕРЖАЩЕГО АДРЕС; null → LMX_TYPE_NONE.
+    l2_graph_tool.lm2:614–616 — то же для tool. Тесты: selfbuild/tests/graph/struct_index.lm2:29 (`typeof(S[0])`), received_structure_values.lm2:11.
+    ⇒ typeof ПО ОПРЕДЕЛЕНИЮ НА 100% КЛАССИФИКАЦИЯ АДРЕСА (по книге get-type); это единственное место, где семантика языка прямо задана через диапазоны.
+
+======================================================================================================
+6. Плотные Array<T> и указатели
+------------------------------------------------------------------------------------------------------
+Локальный/полевой `[]: int quote 3` — ячейка в Structure хранит ДЕСКРИПТОР (LmxArray*); компаньон грузится классификацией (`lmx_walk_value_cell`, F local_array_var_index 39).
+Доступ к элементу (FE lower.lm2:lm_compiler_emit_array_cell 10070–10084 (сайт 10079), emit_array_place 10182–10247, emit_path_index 6793–6867); F local_array_var_index 417–460:
+    l2_a5_leaf = lmx_arena_ref_cell(l2_gp20, 0U) ; l2_a5_desc = (cast: (@: LmxArray) l2_a5_leaf[0])        # дескриптор из слота
+    l2_index6_at = size_t значение индекса (lmx_walk_value_number(@cv,@fun,@fut), затем `size_t: l2_index38_at (l2_t39)`)
+    int st = lmx_value_array_place(arena, array_desc, index, @place)     # RT walk_values 2888–2897:
+         if index >= fields.size → THROWN+INTERPRETER ; place.address = lmx_array_cell_in(arena,array,index) ;
+         place.type = lmx_type_element(lmx_domain_type(arena, array))  # ТИП ЭЛЕМЕНТА — из пула ДЕСКРИПТОРА (одна классификация на массив, не на элемент)
+         place.context = lmx_pointer_cell_context(arena, place.address)
+    запись: lmx_range_write_exact_blocked(arena, place.address…) ; lmx_walk_value_store(arena,@place,@pwv) ; чтение: lmx_walk_place_load(arena,@place,@cv) → lmx_walk_value_load(…ty элемента…) → lmx_int_value_known — прямая загрузка.
+Плотность сохраняется: элемент — голый int в плотном пуле; тип один на пул (pool->type / stride); компаньон-контекст на ячейку лежит в ПАРАЛЛЕЛЬНОМ пуле (lmx_value_context_cell_in, RT value_owned ~410+: обратное отображение «контекст→ячейка» тоже
+идёт через диапазоны и stride), т.е. запись на элемент не встроена в сам элемент.
+Указатели: машинные указатели @:T — `@: void` C-локал + компаньон; `[]` индексирование машинного указателя — «тот же классификатор pointee, что у DEREF» (RT 2926 комментарий); lmx_graph_ref_cell_in/lmx_arena_ref_cell дают void**-слоты.
+Чистый native массив (`[]: T a n` без графа) в выпуске F не встретился; в инструментарии это обычные C-массивы.
+
+======================================================================================================
+7. Частота вызовов классификаторов и родственных helper-ов (grep -o по тексту; полный перечень top-15 в каждой строке)
+------------------------------------------------------------------------------------------------------
+Источник: F = S/s410-full-01/{whole_direct_fields,free_field_places,place_map}-native/p.lm1; G2 tool = S/boot-m14-native-private-02/g2/tool/lmxtool.lm1; frontend-source.lm1 (S/s410-frontend-03, 1563 байта) — только список import: , вхождений lmx_* = 0;
+frontend.c (11,3 МБ C): lmx_range_=90, lmx_domain_=9, lmx_walk_value_=121, lmx_graph_*_in=16, lmx_value_=15; lmxtool.c (2,8 МБ C): range=334, domain=18, walk_value=127, graph_in=26, value=18 (в C — включая определения и обёртки, не только вызовы).
+Разделение «тела методов» / «конструкторы кода для обходчика» — важно: lmx_range_profile/lmx_range_classify стоят почти только в КОНСТРУКТОРАХ walker-кода (`lmx_walk_plain_profiled(arena, node, n, lmx_range_profile(arena, node))` — метка «квалифицирован»
+ФИЗИЧЕСКОГО ПУЛА переносится в новый узел при построении, и `lmx_range_classify(arena, lmx_arena_ref_value(rw, i)) != c.LMX_KIND_STRUCT` — проверка частей конструируемого кода). Это не чтение значений.
+-- whole_direct_fields-native/p.lm1, whole file (6237 lines): total 451; by family range=332, walk_value=91, graph_*_in=19, domain=8, value=1
+   top15: lmx_range_profile 303; lmx_range_classify 23; lmx_walk_value_clear 20; lmx_graph_ref_cell_in 17; lmx_walk_value_number 16; lmx_walk_value_num 14; lmx_walk_value_cell 11; lmx_walk_value_slot 10; lmx_walk_value_storage 10; lmx_range_write_exact_blocked 6; lmx_domain_kind 4; lmx_domain_type 4; lmx_walk_value_store 3; lmx_walk_value_ref 2; lmx_graph_ref_struct_in 2
+-- whole_direct_fields-native/p.lm1, native method bodies only (l2_m0..frames0, 3224 lines): total 124; by family walk_value=91, graph_*_in=19, domain=8, range=6
+   top15: lmx_walk_value_clear 20; lmx_graph_ref_cell_in 17; lmx_walk_value_number 16; lmx_walk_value_num 14; lmx_walk_value_cell 11; lmx_walk_value_slot 10; lmx_walk_value_storage 10; lmx_range_write_exact_blocked 6; lmx_domain_kind 4; lmx_domain_type 4; lmx_walk_value_store 3; lmx_walk_value_ref 2; lmx_graph_ref_struct_in 2; lmx_walk_value_store_with_writer 2; lmx_walk_value_load 2
+-- whole_direct_fields-native/p.lm1, walker-code constructors (frames*, after bodies): total 326; by family range=326
+   top15: lmx_range_profile 303; lmx_range_classify 23
+-- free_field_places-native/p.lm1, whole file (19259 lines): total 1302; by family range=932, walk_value=321, graph_*_in=39, domain=8, value=2
+   top15: lmx_range_profile 792; lmx_range_classify 86; lmx_walk_value_clear 85; lmx_walk_value_num 47; lmx_graph_ref_cell_in 39; lmx_range_write_exact_blocked 32; lmx_walk_value_number 31; lmx_walk_value_store_with_writer 27; lmx_walk_value_storage 26; lmx_walk_value_store 23; lmx_range_type_of 22; lmx_walk_value_scalar_storage 22; lmx_walk_value_free_mark 15; lmx_walk_value_ref 6; lmx_walk_value_cell 6
+-- free_field_places-native/p.lm1, native method bodies only (l2_m0..frames0, 11853 lines): total 423; by family walk_value=321, range=54, graph_*_in=39, domain=8, value=1
+   top15: lmx_walk_value_clear 85; lmx_walk_value_num 47; lmx_graph_ref_cell_in 39; lmx_range_write_exact_blocked 32; lmx_walk_value_number 31; lmx_walk_value_store_with_writer 27; lmx_walk_value_storage 26; lmx_walk_value_store 23; lmx_range_type_of 22; lmx_walk_value_scalar_storage 22; lmx_walk_value_free_mark 15; lmx_walk_value_ref 6; lmx_walk_value_cell 6; lmx_walk_value_named_place 5; lmx_walk_value_field_place 4
+-- free_field_places-native/p.lm1, walker-code constructors (frames*, after bodies): total 878; by family range=878
+   top15: lmx_range_profile 792; lmx_range_classify 86
+-- place_map-native/p.lm1, whole file (35625 lines): total 2358; by family range=1729, walk_value=489, graph_*_in=125, domain=8, value=7
+   top15: lmx_range_profile 1535; lmx_range_classify 130; lmx_graph_ref_cell_in 121; lmx_walk_value_clear 115; lmx_walk_value_slot 75; lmx_walk_value_cell 58; lmx_walk_value_num 58; lmx_range_write_exact_blocked 52; lmx_walk_value_number 40; lmx_walk_value_store_with_writer 35; lmx_walk_value_ref 25; lmx_walk_value_storage 21; lmx_walk_value_store 13; lmx_walk_value_admit 11; lmx_range_type_of 10
+-- place_map-native/p.lm1, native method bodies only (l2_m0..frames0, 21061 lines): total 692; by family walk_value=489, graph_*_in=125, range=64, domain=8, value=6
+   top15: lmx_graph_ref_cell_in 121; lmx_walk_value_clear 115; lmx_walk_value_slot 75; lmx_walk_value_cell 58; lmx_walk_value_num 58; lmx_range_write_exact_blocked 52; lmx_walk_value_number 40; lmx_walk_value_store_with_writer 35; lmx_walk_value_ref 25; lmx_walk_value_storage 21; lmx_walk_value_store 13; lmx_walk_value_admit 11; lmx_range_type_of 10; lmx_walk_value_scalar_storage 10; lmx_walk_value_field_place 6
+-- place_map-native/p.lm1, walker-code constructors (frames*, after bodies): total 1665; by family range=1665
+   top15: lmx_range_profile 1535; lmx_range_classify 130
+-- G2 tool lmxtool.lm1 (4060 lines): total 334; by family range=261, walk_value=58, domain=8, value=4, graph_*_in=3
+   top15: lmx_range_profile 218; lmx_range_classify 25; lmx_range_write_exact_blocked 18; lmx_walk_value_store_with_writer 13; lmx_walk_value_num 13; lmx_walk_value_clear 10; lmx_walk_value_number 7; lmx_walk_value_ref 4; lmx_domain_kind 4; lmx_domain_type 4; lmx_graph_ref_cell_in 3; lmx_value_array_place 3; lmx_walk_value_ref_context 3; lmx_walk_value_index_place 3; lmx_walk_value_store 3
+
+======================================================================================================
+8. Что изменилось бы при собственной метке типа у записи (TypedValue; слот → запись; тип = p->type) и что — нет
+------------------------------------------------------------------------------------------------------
+ИЗМЕНИЛОСЬ БЫ (убирается/упрощается):
+ - п. 3a/3b: lmx_range_type_of / lmx_domain_kind / lmx_domain_type ради ТИПА (FREE-вход, lmx_walk_value_cell, index_place, Array place.type = element(type_of(descriptor)), typeof) — чтение p->type вместо бисекции диапазонов;
+   typeof становился бы чтением поля (но «тип региона арены» ≠ «тип записи» для сырых указателей на не-запись — пришлось бы определить).
+ - lmx_walk_value_cell: ветвление STRUCT/ARRAY/PRIMITIVE по классификации заменилось бы переключением по p->type; пропали бы FOREIGN-проверки pool->type == ty.
+ - п. 2: lmx_pointer_cell_context/lmx_value_cell_context (компаньон по адресной арифметике чанка) могли бы жить В записи (model/referent/source_type), а lmx_value_context_cell_in (обратное отображение) исчез бы.
+ - lmx_call_cell («адрес жив в арене») как проверка stale/посторонней ссылки частично заменялась бы валидностью записи (но если слот хранит указатель на запись, то проверка валидности самой записи остаётся).
+ - п. 4: слот хранит запись, а не голый void*: «замена ссылки в слоте» меняет саму запись целиком (тип+значение атомарно), тогда как сейчас referent и тип referent-а меняются независимо (тип по новому адресу).
+НЕ ИЗМЕНИЛОСЬ БЫ ВОВСЕ:
+ - Права записи: lmx_range_write_exact_blocked = immutable(type_of) + sealed_profile (членство в «квалифицированной» ветке) + root_profile — это свойства ПУЛА/ВЕТКИ, а не типа значения; метка типа записи их не несёт.
+   52 вхождения в place_map, 32 в free_field_places, 18 в tool — все остаются, пока «квалифицированность»/eternal определяется диапазоном.
+ - lmx_range_profile/lmx_range_classify в конструкторах walker-кода (в трёх F: 326 из 451, 878 из 1302, 1665 из 2358 вхождений = 67–72%; весь lmx_range_profile — только там): профиль пула переносится в узел; не зависит от типа значения.
+ - Транслятор по-прежнему передаёт тип СТАТИЧЕСКИ в известных случаях (c.LMX_TYPE_INT в place.type): прямые загрузки lmx_int_value_known(storage) остаются, там классификатор не вызывается.
+ - Плотные Array<T> и типизированные C-локалы/временные (п. 1b, 6): упаковка в запись не нужна и по условию исследования не вводится; element type — одно поле пула дескриптора.
+ - Карты соответствия полей (п. 4): lmx_implements_places/code_slot/layout работают с ИДЕНТИЧНОСТЬЮ схемы data и индексами слотов; запись типа в слоте их не затрагивает.
+ - Идентичность/происхождение: lmx_activation_bind_origin(origin = адрес слота-ячейки) — адрес остаётся ключом; запись в слоте дала бы второй уровень адресации (адрес записи vs адрес слота), и origin пришлось бы определить заново.
+ОТКРЫТЫЕ ВОПРОСЫ для исследования (я их не закрывал, только вижу по коду):
+ - Кто пишет C-локал own-поля обратно в ячейку арены (п. 1a оговорка) — от этого зависит, ЧТО именно «в записи».
+ - lmx_range_stride и stride-арифметика в lmx_value_context_cell_in опираются на однородность пула: запись переменного размера или union ломает «тип пула = тип ячейки» для плотных массивов (по условию массивы остаются плотными — значит записи только у слотов Structure, не у элементов Array).
+ - typeof(x) для x внутри плотного Array/C-локала: сейчас тип пула; при записи у слотов и плотном массиве без записей потребуется два пути.

@@ -29,7 +29,14 @@ Native-дескрипторы и capacity — в таблицах арены; to
 и закреплённых результатов для таких сочетаний нет ([журнал](LMX_blog/2026-11-16.md#receiver-creates-structure)).
 (5) Упрощения делаются сразу в затронутых частях кода: на L2 проверок нет, отменённое обслуживание удаляется
 целиком ([журнал](LMX_blog/2026-11-16.md#l2-has-no-checks)).
-Документы приведены к норме; реализация — OPEN в [M10](next_core_tasks_v3.md#m10) и [M14](next_core_tasks_v3.md#native-structures).
+(6) Физический тип и значение хранятся в одной записи: код типа и сразу за ним значение; типизация и извлечение
+значения идут через запись, без проверки адресов. Значение выровнено по своему типу, код стоит в четырёх байтах перед
+ним; место под самый большой вид значения не резервируется. Язык не меняется
+([журнал](LMX_blog/2026-11-16.md#typed-value-decision), [L2 §3–§4](docs/L2_spec_ru.md#value-record),
+[ядро §2.0](docs/kernel-implementation.ru.md#value-record), [план M15](next_core_tasks_v3.md#typed-value-records),
+[запись исследования](steps/witnesses/typed-value-research-20261116/notes.md)).
+Документы приведены к норме; реализация — OPEN в [M10](next_core_tasks_v3.md#m10), [M14](next_core_tasks_v3.md#native-structures)
+и [M15](next_core_tasks_v3.md#typed-value-records).
 
 **Срез410, 2026-11-16 — исправления принятого409 и путь массива без отменённых проверок; code gates PASS.**
 Находки Д1–Д4 сверки409 воспроизведены запуском и исправлены. Обходчик передаёт canonical origin и private

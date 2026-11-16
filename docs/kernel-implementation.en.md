@@ -1,5 +1,9 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Norm of 2026-11-16:** [the value record](#value-record) -- the physical type and the value lie in one record; a type is
+no longer learnt from an address range ([L2 §3](L2_spec_en.md#value-record), [plan M15](../next_core_tasks_v3.md#typed-value-records)).
+Dated records below that speak of typed regions describe the earlier scheme and the present code.
+
 **Norm of 2026-11-15:** [local frames without write-back](LMX_semantics.en.md#call-frame-20261115),
 [single M14 and sys tools](../next_core_tasks_v3.md#native-structures). Dated records below describe implementation history;
 their load-dirty, shared-cache, and flush references are not tasks to continue those mechanisms.
@@ -1053,16 +1057,18 @@ of this document and in §6.1. The working frontend reads the former names and o
    and strings never move; growth and attaching of regions keep them (§2.3).
 3. **The only non-Structure is the primitive** (the author, 17:22Z; the term -- 18:20Z: "Это надо называть не атом а
    примитив. Атом это понятие парсера"). `int: i 5` is put as a primitive: a typed arena cell holding 5. Its address
-   tells everything: the **type** -- from the registered typed region of the arena in which the address lies; the **name**
+   tells everything: the **type** -- from the code in the record at that address (the author's decision of 2026-11-16, §2.0; before it, from
+   the typed region in which the address lay); the **name**
    -- from the address → name table; the **value** -- by reading the cell itself. No wrappers, leaves, "occurrences" or
    other entities between the field of the containing Lmx and the primitive; the field of an Lmx is a `void *` cell
    referring to the primitive's cell itself or to an Lmx (§3.1).
 4. **One mechanism of uninitialized primitives in all structures and in the signature** (the author, 18:00Z and 18:10Z).
    For every primitive type T there is a distinct type "T without initialization", told apart by the same mechanism --
-   by the region in which the address lies. The author, 19:02Z: "Сделайте тип "int без инициализации" указателем на ту
+   by the region in which the address lies (since 2026-11-16 -- by the code of the record, §2.0). The author, 19:02Z: "Сделайте тип "int без инициализации" указателем на ту
    самую ячейку (массив в арене, указателей на такие ячейки), при этом даже отпадает необходимость менять тип при первом
    присваивании" -- `uninit:T` is a **pointer primitive** from a typed region of pointers, pointing at a **pre-existing**
-   cell of T with an unchanging address and type, not yet written. `int: i` is a `void *` field pointing at such an
+   cell of T with an unchanging address and type, not yet written. Since the decision of 2026-11-16 the record `uninit:T`
+   holds the record of T right after its code: the pointer of the quotation is the constant offset between them (§3.2). `int: i` is a `void *` field pointing at such an
    `uninit:int` pointer, which points at the `int` cell of the place `i`; `int: i 0` is a field pointing at an `int` cell
    holding 0 directly; one representation in code, data and signatures, with no mark, flag, bitmap or walker table. **The
    first assignment and all later assignments** write into **the same** cell of T. The slot and internal pointer retain
@@ -1087,7 +1093,8 @@ of this document and in §6.1. The working frontend reads the former names and o
    структура"): `for`, `=`, `**`, `fn`, `merge` are the same strings of the `text` region, recognized by address; there
    are no separate codes of operators, receivers or language words -- neither as numbers nor as kinds of memory regions
    (§2.2); there is no hidden program of codes (§3.3, §6.2).
-7. **The arena attaches new memory regions and types them.** Addressable cells never move; the graph needs no dynamic
+7. **The arena attaches new memory chunks; a record carries its type** (the decision of 2026-11-16; before it the arena
+   typed the regions). Addressable cells never move; the graph needs no dynamic
    arrays in the arena: sizes are known at construction, growth attaches a new region instead of moving the old one.
 8. **One contract for all:** source → construction of a clean Lmx graph → that same graph is consumed by **both** the
    translator **and** the interpreter (§1a). The built graph holds nothing but Lmx and primitives: no prepared interfaces,
@@ -1143,6 +1150,48 @@ defaults and `test` do not execute while finding a known candidate; this does no
 <a id="arena"></a>
 ## 2. The arena
 
+<a id="value-record"></a>
+### 2.0 The value record (norm: the author's decision of 2026-11-16)
+
+The author ([journal](../LMX_blog/2026-11-16.md#typed-value-raw-layout)): the physical type and the value lie in one
+record and are obtained from it; typing and the extraction of a value no longer go through the checking of addresses.
+The exact contract is [L2 §3–§4](L2_spec_en.md#value-record). This subsection says what it changes in this document;
+the dated text below that tells a type "from the region in which the address lies" describes the scheme before the
+decision and the code as it stands, and is not a task to continue that mechanism.
+
+- **Record.** `int type`, the code of the physical type, and right after it the raw bytes of the value: a number, a
+  word, a reference, or the `parent/length/storage` descriptor. Every reference of the graph -- a slot, an element of
+  `Array<@>`, a reference cell, `parent`, a key of the address → name table and of a copy map, an execution root --
+  refers to a record. The size of a record follows from its code; nothing is sized by the largest kind. Whether a
+  stored reference is the address of the code or of the value four bytes further is an encoding over the same record,
+  [asked of the author](../LMX_blog/q/current/README.md).
+- **Alignment.** The value stands at an address that is a multiple of `max(alignof(T), 4)`, the code in the four bytes
+  right before it, padding between records; a record that fits into 64 bytes does not cross a 64-byte block boundary.
+  The descriptor inside a record is therefore naturally aligned, and its fields are read as before.
+- **Type and value without classifying an address.** `lmx_range_classify`, `lmx_range_type_of`, `lmx_range_stride`,
+  `lmx_domain_kind`, `lmx_domain_type` and the readers built on them (`lmx_graph_node_in`, `lmx_graph_cell_in`,
+  `lmx_graph_value_in`, `lmx_walk_value_cell`, `lmx_graph_kind`, `lmx_graph_address_type`) take the kind, the type
+  and the step from the code of the record. `sys\typeof` answers with that code; zero and an address outside the
+  Message's arena give “no type” by a null test and the chunk list, with no search by type.
+- **`uninit:T`.** One record: the code `uninit:T`, then a complete record of T (§3.2). The slot refers to the outer
+  record, the name and `@x` to the inner one; the pointer of the earlier representation is the constant offset
+  between them.
+- **Immutability** is told by the code -- the immutable variant of a type --, not by the interval of a region.
+- **Dense storage.** The elements of a numeric `Array<T>` and the slots of a Structure are dense and carry no codes;
+  the element type is told by the code of the Array's record. Typed native locals and temporaries are not packed into
+  records.
+- **Chunks.** The interval index tells only which arena and which chunk own an address: transfer, collection, the
+  home of a name. The division of the arena into chunks is the allocator's policy; at the first stage the present
+  pools are kept and a cell of a pool becomes a record with the pool's step. On attach the donor's chunks become
+  chunks of the receiver: records keep their addresses and codes, and nothing is registered anew for typing. One
+  arena is never accessed from several threads.
+
+Why: on the accepted G2 of slice 410 one read of a graph slot through the ordinary accessors costs 107–170 ns against
+0.35–0.53 ns of the same loop without kernel calls, one classification of an address 10.6 ns at 100 intervals and
+80 ns at 10,000, and an `int` allocated on its own holds 289 bytes of heap against 4 in a bulk allocation
+([research record](../steps/witnesses/typed-value-research-20261116/notes.md)). Implementation is OPEN:
+[plan M15](../next_core_tasks_v3.md#typed-value-records).
+
 ### 2.1 Regions (decision)
 
 The arena of a Message is a list of **regions** (`LmxSegment`). A region is one contiguous block of cells of one C type
@@ -1152,9 +1201,11 @@ Address → type is a lookup of the region by the half-open interval `[base, bas
 ordered by address and lives outside the graph as arena state (not a traversal table: it is the means of learning a type
 from an address, §1 item 2). Today's `LmxPool`/`LmxChunk`/`LmxRange` are the same idea (a pool of chunks of one stride,
 intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `holder`, `side_cells`) that §9 removes.
+Since the decision of 2026-11-16 (§2.0) an interval tells ownership only: the type is read from the record, and a
+region of cells of one type is the allocator's present policy, not the means of typing.
 
-A program gets the same answer from the receiver `sys\typeof(arg)` — the code of the type of the region that holds the
-address — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
+A program gets the same answer from the receiver `sys\typeof(arg)` — the code of the type of the value at the address, read from
+its record since the decision of 2026-11-16 (the present code asks the region) — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
 [book](LMX_semantics.en.md#get-type), [journal](../LMX_blog/2026-11-10.md)); the numeric values of the codes are not
 fixed by the norm. The receiver is implemented in the clean graph by one kernel operation for both consumers —
 `lmx_graph_address_type` over `lmx_range_type_of`: a Structure is the address of its own header, a reference the
@@ -1167,12 +1218,12 @@ the graph; the read is `lmx_graph_index`, the write against the physical slot's 
 through `lmx_graph_int_ref_of` — one kernel operation each for both consumers. An index outside the fields is the
 interpreter's answer 7; native and forced stop R0.
 
-### 2.2 Region types (decision; a finite inventory)
+### 2.2 Types of records and regions (decision; a finite inventory)
 
 | Type | Cell | Content |
 |---|---|---|
 | `int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong` | a number of the machine type | a number primitive; `int: i 5` is an `int` cell holding 5 |
-| `uninit:int`, `uninit:char`, `uninit:unsigned char`, `uninit:size_t`, `uninit:unsigned`, `uninit:ulong` | `void *` -- a pointer to a cell of T | the internal pointer primitive of a declaration without an initializer (§1 item 4); refers to a pre-existing cell of T and persists after writes. It does not make the language place a reference. In a signature it distinguishes a mandatory formal from a default; it does not track the first write |
+| `uninit:int`, `uninit:char`, `uninit:unsigned char`, `uninit:size_t`, `uninit:unsigned`, `uninit:ulong` | `void *` -- a pointer to a cell of T; since 2026-11-16 the record of T itself, right after the code (§3.2) | the internal pointer primitive of a declaration without an initializer (§1 item 4); refers to a pre-existing cell of T and persists after writes. It does not make the language place a reference. In a signature it distinguishes a mandatory formal from a default; it does not track the first write |
 | `uninit:ref` | `void *` -- a pointer to a `ref` cell | a reference place without a promised initial address -- `@: p` ([book :487](LMX_semantics.en.md#explicit-copy)); the author's analogy "for all primitives" extends directly to the pointer receiver, which has "the same place and value forms as `int`" (confirmed by Codex, review 2) |
 | `word` | `const char *` | a word primitive: a pointer to the interned string of a spelling -- operators (`+`, `\`, `[]`, `:=`), receiver and language words (`fn`, `if`, `return`, `node`, `int`), any written name (§3.5) |
 | `ref` | `void *` | a reference cell: a slot of an Lmx field or of an Array element, the cell of a pointer `@: p T` after the first address write; holds the address of a primitive or an Lmx, or 0 |
@@ -1182,8 +1233,9 @@ interpreter's answer 7; native and forced stop R0.
 | `name` | `{ void *address; const char *name }` | a row of the address → name table (§5.1) |
 
 The header kinds are the finite inventory of the physical kinds of [L2 §3](L2_spec_en.md#type-by-range): ordinary,
-immutable, an `fn` result, an Array with its element type; the kind is read from the region in which the Lmx's own address
-lies, with one common Lmx record (§3.1); neither the header nor a cell carries a tag. **A region kind is not an opcode:**
+immutable, an `fn` result, an Array with its element type; the kind is read from the code of the record (§2.0; before
+2026-11-16 -- from the region in which the Lmx's own address lay, with no tag in the header or a cell), with one
+common Lmx record (§3.1). **A region kind is not an opcode:**
 an `fn`/`sub` definition, a statement, an expression and a data Structure are the same Lmx of the ordinary kind;
 what a form is, is read not from the header's region but from the role of the Structure in the launch and from the
 address of the head word (§3.3, §6.1). The service types
@@ -1226,7 +1278,7 @@ struct: Lmx
 ```
 
 The flat header contains only parent/length/storage, with neither native nor capacity.
-A Structure or Array reference points to this descriptor's start. Its address survives resizing;
+A Structure or Array reference points to its record: the type code, then this descriptor (§2.0). Its address survives resizing;
 storage may move. The arena table “descriptor address → capacity” records reserved elements.
 One allocation/resizing mechanism serves Structure, Array<@>, typed and service arrays; no separate
 List/DynamicArray family is needed. Stable standalone primitive cells and canonical strings retain
@@ -1311,7 +1363,8 @@ before 18:20Z it was called an "atom" -- those quotations are not rewritten, and
 only for the parser's notion (a P0 atom).
 
 A primitive is one arena cell outside the `lmx:*` regions: a number, a pointer "without initialization", a word (§2.2) or
-a reference. A primitive has no header; its type is the region's type, its name a row of the address → name table (if the
+a reference. A primitive has no header; its type is the code that stands right before its cell in the record (§2.0; before 2026-11-16 -- the
+region's type), its name a row of the address → name table (if the
 primitive is named), its value the cell. `int: i 5` in the body of a Structure `S`: an `int` cell = 5 in the `int` region;
 a slot of `S` holds its address; a row of the name table `(the cell's address) → "i"`. Reading `S\i`: find the slot of `S`
 whose cell is named `i` (§5.1), read the cell by its type. Writing `S\i := 7` writes into the same cell by the ordinary write
@@ -1328,6 +1381,9 @@ separate policy of repeated declarations; REPEATED-DECL-OTHER-KINDS is unchanged
 = 0 directly. The difference between a mandatory formal `int: q` and a default `int: q 0` is the general address
 classification of what the slot points at, without a signature wrapper, a mask or a side mark. The name `x` is a table
 row for the address of the `int` cell (it exists from construction; the `uninit:int` pointer is not named).
+Since the decision of 2026-11-16 the place is one record: the code `uninit:int`, then the record `int` of the place --
+the code `int` and the cell; the slot refers to the outer record, the name and `@x` to the inner one, and the pointer
+of the earlier representation is the constant offset between them (§2.0).
 
 **Assignment** (`x := 5`, an argument received into a frame place): the received value is written into **the same** `int`
 cell. The slot, internal `uninit:int` pointer, target address and physical type remain unchanged on every write;
@@ -1337,7 +1393,8 @@ The check by both executors:
 `int: i`; keep `@i` without reading unwritten bytes; `i := 5`; reading through the kept address gives 5; `i := 7` gives 7 at
 the same address.
 
-**Reading and admission.** Internal indirection is transparent: address classification determines access to the
+**Reading and admission.** Internal indirection is transparent: the code `uninit:T` (before 2026-11-16 -- address classification)
+determines access to the
 `int` cell, from which the value is read. The presence of `uninit:int` proves neither that a write occurred nor that
 none occurred. Codex's review-2 explanation requiring a runtime refusal on that basis is superseded by the author's
 latest clarification. Before a write no initial value is promised; checks do not read those bytes or demand zero,
@@ -1655,7 +1712,7 @@ author's norm of 17:22Z: the address of a primitive gives its type, name and val
 the slot's address, not an "occurrence", not a key "owner + number") and `name` a pointer to an interned string.
 Operations: `name_of(address)` (bisection by address in the ordered table or an index by regions -- decision),
 `named_field(lmx, name)` -- the slot of the Lmx whose content (the address of a primitive or an Lmx; for a place without a
-value -- the address of the cell of T behind the `uninit:T` pointer) is named `name`: a walk over the Lmx's slots with one
+value -- the record of T inside the record `uninit:T`, formerly the cell of T behind the `uninit:T` pointer) is named `name`: a walk over the Lmx's slots with one
 `name_of` per slot and pointer comparison. A place's cell is named from construction, and the first assignment changes
 nothing in the table (§3.2). The table is filled at construction (the names of declarations), at `merge`/copying (the
 copy of a named address gets a row with the same name pointer), at `sys\fromLmx`; the rows of dead addresses are removed by
@@ -1937,7 +1994,7 @@ implementation is an explicit [M13](../next_core_tasks_v3.md#flat-lmx-descriptor
 | A place without an initializer | no hidden initialized flag and no promotion of internal indirection to a language reference type | a persistent `uninit:T` pointer onto the same T; every write goes into T, without rebinding the slot; `i` remains `int` (§3.2) |
 | The walker's frames `LMX_WALK_OP_*` (66 operations), `LmxOp {code}`, `lmx_walk_frame_profiled`, numeric selectors in slots (`lmx_walk_store_size`), `OF`/`AT`/`PUT_OF` by slot numbers | a second tree of the body -- pre-translation into operations | remove (K03): a body is an Lmx of words, primitives and nested Lmx (§3.3, §6.1) |
 | The binder's `l2_bn` name arrays, `lmx_call_bind_*` by codes | argument names as codes | by the string pointers in the word primitives of the named supply |
-| `LmxPool.role/profile/sealed`, `LmxRange.links/slot_owner/holder/side_*` | side arrays of intervals and result profiles | the physical kinds are header regions (§2.2, [L2 §3](L2_spec_en.md#type-by-range)); the role of a definition is its head word |
+| `LmxPool.role/profile/sealed`, `LmxRange.links/slot_owner/holder/side_*` | side arrays of intervals and result profiles | the physical kinds are codes of records (§2.0, [L2 §3](L2_spec_en.md#value-record)); the role of a definition is its head word |
 | `LmxImplEntry/LmxImplContract` (`implements` maps) | the address correspondence of a model and a candidate | data of the reception/traversal (§5.2): held for the duration of its operations, rebuilt by the next traversal |
 | The arena's persistent `implements` map (`lmx_arena_impl`, `LmxImplEntry.exec_map`, `lmx_arena_impl_prune`) | prepared correspondences that outlive a traversal | data of the reception/traversal (§5.2): remove the persistent store, L2 §14 updated |
 | `LmxCodeLink` / reset-only `lmx_code_*`, `reset_gen`, code_uses and invalidation | edit tracking to clear native | remove with supporting tables, transfers and generation; retain shared contexts/GC for independent purposes (§6.5) |
@@ -1946,7 +2003,7 @@ implementation is an explicit [M13](../next_core_tasks_v3.md#flat-lmx-descriptor
 | The P0 parse tree as the translator's input (the frontend reads `LmP0Node/Frame/Field`), its arenas and indexes (`l2_pd`, `pdx`) | a separate form of the program for one consumer | the translator reads the clean Lmx graph (§1a, §7); P0 is inside the builder and is destroyed with the construction |
 | The unit's graph builders in emitted code: `lmx_walk_frame_profiled` with operations, `lmx_source_name_set*`, `l2_ids_load`, place tables, `l2_sc*` | a generated second form of the program (operations, places, hidden interfaces) | remove; what remains is the generated initialization of the **clean** graph through the common constructor -- cells, slots, words, address → name, regions, `native` references (§1a) |
 
-What stays: `Lmx.parent/length/storage`, call and capacity tables, the arena with regions and the interval index, Message/Thread/mail, `implements`
+What stays: `Lmx.parent/length/storage`, call and capacity tables, the arena with its chunks and the interval index of ownership, Message/Thread/mail, `implements`
 as a rule (its carrier is a service table of the reception), copying by one map, collection by reachability.
 
 <a id="example"></a>

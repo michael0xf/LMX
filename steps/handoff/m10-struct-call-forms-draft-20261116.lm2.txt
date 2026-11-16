@@ -1,0 +1,101 @@
+# DRAFT (opus, FABLE-O410-A) -- ordinary frontend fixture for slice 410 (M10): the six call/fncall forms and the
+# launch by name use one worker. Native and forced bodies must agree. Entry 7; 81.. name the failing check.
+# Suite row: runs<TAB>dyn/call_forms_data_first.lm2<TAB>7<TAB>nf
+# 94/95 need one physical DATA (slice 411): until then they stay OPEN and are not part of this row.
+Counter:
+    int: calls 0
+    int: steps 0
+end: Counter
+
+fn: next () int
+    Counter\calls := Counter\calls + 1
+    return: 7
+end: next
+
+D:
+    int: x 10
+end: D
+
+A:
+    int: x 7
+end: A
+
+Step:
+    Counter\steps := Counter\steps + x
+end: Step
+
+Self:
+    int: n 3
+    n := n + 2
+    Counter\steps := Counter\steps + n
+end: Self
+
+Add:
+    return: x + 1
+end: Add
+
+Value:
+    int: y 30
+    y := y + 1
+    return: y
+end: Value
+
+Code:
+    int: y 20
+    y := y + x + 1
+    Counter\steps := Counter\steps + y
+end: Code
+
+fn: g (int: a next()) int
+    return: a + 1
+end: g
+
+fn: verify_call_forms () int
+    # call(data code): D supplies x by its declaration; the code runs; D is not written back.
+    call(D Step)
+    if: Counter\steps != 10 || D\x != 10
+        return: 81
+    # call(args data code): the actual 7 suppresses the default 10 and is evaluated once.
+    call((next()) D Step)
+    if: Counter\steps != 17 || Counter\calls != 1 || D\x != 10
+        return: 82
+    # call(code): the data is the code itself; its root declaration n gives the input place; the source stays 3.
+    call(Self)
+    if: Counter\steps != 22 || Self\n != 3
+        return: 83
+    # fncall(return code): the result of the code over itself; the source field stays 30.
+    if: fncall(int Value) != 31 || Value\y != 30
+        return: 84
+    # fncall(data return code)
+    if: fncall(D int Add) != 11 || D\x != 10
+        return: 85
+    # fncall(args data return code): the actual by position, once.
+    if: fncall((next()) D int Add) != 8 || Counter\calls != 2
+        return: 86
+    # A named Structure as args: its fields are the actuals (whole arguments).
+    if: fncall(A D int Add) != 8 || A\x != 7 || D\x != 10
+        return: 87
+    # A local of the code changes; its source declaration keeps 20.
+    call((x := 7) D Code)
+    if: Counter\steps != 50 || Code\y != 20
+        return: 88
+    # Launch by name in code: S() = call(S S), S(D) = call(D S), S(data := D) = S(D).
+    Self()
+    if: Counter\steps != 55 || Self\n != 3
+        return: 89
+    Step(D)
+    if: Counter\steps != 65 || D\x != 10
+        return: 90
+    Step(data := A)
+    if: Counter\steps != 72
+        return: 91
+    # The ordinary call: the actual suppresses the computed default, the default runs once when omitted.
+    if: g(7) != 8 || Counter\calls != 2
+        return: 92
+    if: g() != 8 || Counter\calls != 3
+        return: 93
+    return: 7
+end: verify_call_forms
+
+send: exit(exit_code: verify_call_forms(); stdout: ""; stderr: "")
+return

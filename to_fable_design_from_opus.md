@@ -1,5 +1,10 @@
 # Передача дизайна от Opus к fable_pc
 
+> **Устарело — отметка 2026-11-16.** Это историческая передача: её назначения исполнителей, порядок работ и
+> правила для помощников не действуют. Текущее состояние — начало [steps/current.md](steps/current.md),
+> действующая передача — [to_fable.md](to_fable.md), маршрут — [next_core_tasks_v3.md](next_core_tasks_v3.md).
+> Задания помощникам даёт действующий writer/build в своих сообщениях; не читать этот файл как инструкцию.
+
 Дата: 2026-11-01, около 19:40 UTC. От: Opus. Основания:
 - поручение — верх `to_opus.md`;
 - требования — [optimization_three_passes_shared_runtime.md](optimization_three_passes_shared_runtime.md);

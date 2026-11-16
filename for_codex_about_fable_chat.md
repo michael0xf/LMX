@@ -1,5 +1,11 @@
 # for_codex — как писать fable_chat и получать его ответы
 
+> **Состояние маршрута на 2026-11-16.** Почтальон `lmx_uds` не запущен (сессия закрыта 2026-11-10), привязка
+> `codex_inbound.py` недействительна (`status` отвечает «MCP connection closed»), Codex остановлен автором.
+> Назначения и роли ниже — история, не текущее поручение. Текущий writer/build и порядок работ —
+> начало [steps/current.md](steps/current.md) и [to_fable.md](to_fable.md); помощники — peer-сессии Claude
+> из `ListAgents`, им пишут через `SendMessage`.
+
 ## Что такое fable_chat
 
 `fable_chat` — агент на Claude Agent SDK (модель Fable 5.1), оплата из

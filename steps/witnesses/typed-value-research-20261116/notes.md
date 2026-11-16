@@ -97,7 +97,12 @@ scheme done well (the prototype's `cur_range` and `cur_chunkhdr`), and the recor
 
 ## The prototype (`prototype/`)
 
-Nine representations with one inline API and one benchmark driver, a separate executable each:
+Sources, build and run commands are in `prototype/` (`README.md`, `build.sh`, `run_matrix.sh`); raw
+timings in `prototype/out/results-*.tsv` (first run) and `results2-*.tsv` (second run), sizes in
+`out/sizes_all.txt`, protocols in `out/selftest_*.txt`, the read kernels in `asm/key/`. Executables
+and full listings are not kept.
+
+Nine representations in the first run, with one inline API and one benchmark driver, a separate executable each:
 `cur_range` (untagged cells in typed pools, one binary search of 24-byte range rows — the present
 layout at its best), `cur_chunkhdr` (the same cells, type from the header of a 64 KB-aligned
 chunk), `tv_full` (the literal `union`), `tv_compact` (16-byte record, large values by reference),
@@ -160,17 +165,68 @@ What the numbers say:
    the same; both are 2.2–2.5 times cheaper than one bisection on large data, and the present code
    pays about ten bisections where the prototype's best pays one.
 3. An eight-byte value at offset 4 is read and written 2.2–3 times slower than an aligned one while
-   the data fits the cache (1.80–2.48 ns against 0.74–0.90). Whether the cause is the unaligned
-   access or the byte copying, which makes the compiler reload pointers in the loop, is not
-   separated yet. Hence the alignment of the norm: the value at its natural alignment.
+   the data fits the cache (1.80–2.48 ns against 0.74–0.90). The second run below separates the
+   causes: most of it is the copying of bytes, not the offset. Hence the norm: the value at its
+   natural alignment, read by an ordinary typed access.
 4. On data beyond the cache one stream of records is 1.3–1.8 times faster than pools by type —
    10.8 against 19.5 ns for a known `int`, 137 against 247 for the chase — because the descriptor,
    the slots and the fields of one Structure lie side by side. This is locality, not the code: the
    pools with a code are no faster than the pools without one. It is the reason for step 7 of M15.
-5. Dense storage must be aligned: the array sum is twice slower in the stream, whose raw blocks
-   were aligned to 8 bytes only.
+5. The dense array sum is twice slower in the stream of this run. The first version of this record
+   blamed the 8-byte alignment of the stream's raw blocks; that was wrong. The second run shows the
+   cause is again the copying of bytes: the build that reads the descriptor by `memcpy` cannot keep
+   the storage pointer in a register, and a stream with 8-aligned blocks and typed access is as
+   fast as the pools.
 6. The literal `union` record costs 2.4 times the memory of the chosen record for a Structure of
    `int` fields and is not faster in any test.
+
+## Second run: the layout of the norm and the control builds
+
+Added after the first run: `tv_align` (one stream; the value at an address that is a multiple of
+`max(alignof(T), 4)`, the code in the four bytes before it, the slot holds the address of the code,
+typed access; a record of up to 64 bytes does not cross a 64-byte block boundary, and the skipped
+tail is given to the next 8-byte record), `tv_align_noline` (the same without the block rule),
+`tv_align_memcpy` (the same addresses, access by `memcpy`), `tv_align_raw8` (dense storage aligned
+to 8 instead of 64), `tv_word_typed` (the addresses of `tv_word`, typed access through a pointer of
+reduced alignment — a GNU extension used for this control only). The machine was busier than in
+the first run, so compare within a run, not across runs.
+
+Read and write of a known 8-byte field inside the cache, ns:
+
+| | typed access | access by copying bytes |
+| --- | --- | --- |
+| value aligned (`tv_align`, `tv_align_memcpy`) | 0.97 | 2.20 |
+| value at offset 4 (`tv_word_typed`, `tv_word`) | 1.23 | 2.49 |
+| value at offset 4, every record crossing a block boundary | 1.75 | 3.34 |
+
+Copying bytes costs about 1.2 ns here, the offset 0.3 ns, a crossing 0.5–0.9 ns. The copying makes
+every store a store through a character type, so the compiler reloads the map pointer and the loop
+bound on every iteration (visible in `asm/key/tv_word_t1w_known_rw.s`). The same shows in the
+control test: the dense array sum takes 0.83 ns in `tv_align_memcpy` and 0.61 in `tv_word` against
+0.37 in `tv_align`, `tv_align_raw8` and `tv_word_typed`.
+
+Large data, ns per operation:
+
+| Test | `tv_align` | `tv_align_noline` | `tv_word` | `tv_tagged` (pools) |
+| --- | --- | --- | --- | --- |
+| known `int` field | 13.5–17.2 | 13.7–16.4 | 13.9–16.4 | 21.6–24.4 |
+| known 8-byte field | 18.2–21.1 | 19.0–21.1 | 24.6 (35.8 crossing) | 20.4 |
+| type found at run time | 39.4–44.2 | 46.0–49.3 | 39.9–42.5 | 52.0–53.0 |
+| dependent chase | 138 | 138 | 139 | 271 |
+| alias and slot replacement | 79–98 | 91 | 72–75 | 145–147 |
+| collector marking | 42 | 42–45 | 29–33 | 53–54 |
+
+What the second run adds:
+
+1. The layout of the norm in one stream keeps the locality gain of the first run and removes the
+   penalty of the 8-byte values.
+2. The block rule gives nothing measurable: `tv_align_noline` is within the noise of `tv_align`. It
+   skips 93 KB of 8 MB in the mixed stream of the dynamic-read test and gets 84 % of that back
+   through the remembered hole, so it is cheap, but it has no measured ground and is not in the
+   norm.
+3. Aligning dense storage to 64 bytes gives no speed (`tv_align_raw8` is not slower) and costs
+   memory: 18.5 against 14.8 bytes per record of that mixed stream, a Structure of four `int`
+   fields 128 bytes against 96. Dense storage keeps the natural alignment of its element.
 
 ## Alignment: the calculation
 
@@ -179,18 +235,29 @@ crosses a 64-byte block boundary when the record starts at 56 modulo 64 — one 
 12.5 % under a uniform distribution; in an actual stream it is 0 % after an even and 25 % after an
 odd number of preceding 8-byte records. A descriptor has three such fields. With the value aligned
 and the code right before it, the value never crosses, but the code may stay in the previous block
-with the same frequency (a remark by Codex, passed on by the author). So the rule of the norm has
-two parts: the value at an address that is a multiple of `max(alignof(T), 4)` with the code in the
-four bytes before it, and a record that fits into 64 bytes not crossing a 64-byte block boundary.
-In pools of equal step the second part holds by itself.
+with the same frequency (a remark by Codex, passed on by the author). The first version of the norm
+therefore had two parts: the value at an address that is a multiple of `max(alignof(T), 4)` with the
+code in the four bytes before it, and a record that fits into 64 bytes not crossing a 64-byte block
+boundary. The second run found no measurable effect of the second part, and the norm keeps the
+first only; in pools of equal power-of-two step the second holds by itself anyway.
+
+## The order decided by the author
+
+After the first large run the author ordered two stages
+([journal](../../../LMX_blog/2026-11-16.md#typed-value-two-stages)): first the records inside the
+present typed chunks, then the typed chunks removed and one stream. Plan M15 has them as steps 1–6
+and step 7.
 
 ## Open and not done
 
 - One encoding is left to the author: whether a stored reference is the address of the code or of
   the value ([question](../../../LMX_blog/q/current/typed-value-reference-encoding-20261116.md)).
-- The exact layout of the norm in one stream (`tv_align`, with and without the block rule) and the
-  control builds that separate unaligned access from byte copying are being added to the prototype;
-  their timings and the prototype sources follow in the next commit of this directory.
+- The timings are single-machine and single-session; the second run was taken on a busier machine
+  and differs from the first by up to 40 % in absolute numbers. Ratios within a run are what the
+  conclusions use.
+- In the prototype a Structure and its fields are created one after another, as the graph builder
+  does; on a long-lived arena with reused free places the neighbourhood, and the gain of the
+  stream, will be smaller than measured.
 - No hardware counters were available; cache misses are inferred from the small/large difference.
 - A whole LMX scenario on records can be measured only after steps 1–2 of M15; the scenario
   numbers above are the baseline for it.

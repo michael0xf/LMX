@@ -1,0 +1,1391 @@
+== representation tv_align, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 28 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)         128.14
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        18.470
+  waste (padding, fillers, unused tails)      1768748 bytes = 22.10% of all 8002108 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1207208 (included in raw blocks' neighbours' waste), value alignment padding 546248,
+  line tails skipped 93132, of them reused by the hole 77840 (tv_align only)
+  bytes_live of the arena                     8015396
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 36 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)          128.15
+  Array<int>, 1000 elements (header + data)         4102.18
+  Structure with 4 int fields (all included)         128.24
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        20.344
+  waste (padding, fillers, unused tails)      1993132 bytes = 23.23% of all 8579916 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1243088 (included in raw blocks' neighbours' waste), value alignment padding 573612,
+  line tails skipped 828796, of them reused by the hole 652364 (tv_align only)
+  bytes_live of the arena                     8598900
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_noline, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 28 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = OFF
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)         128.14
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        18.546
+  waste (padding, fillers, unused tails)      1792272 bytes = 22.33% of all 8025632 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1253072 (included in raw blocks' neighbours' waste), value alignment padding 539200,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8038920
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_noline, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 36 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = OFF
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)          128.12
+  Array<int>, 1000 elements (header + data)         4101.12
+  Structure with 4 int fields (all included)         128.24
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        20.529
+  waste (padding, fillers, unused tails)      2050156 bytes = 23.74% of all 8636940 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1510944 (included in raw blocks' neighbours' waste), value alignment padding 539212,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8655924
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 32 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)         128.14
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        19.053
+  waste (padding, fillers, unused tails)      1948672 bytes = 23.82% of all 8182032 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1195856 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8195456
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 40 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)          128.12
+  Array<int>, 1000 elements (header + data)         4101.12
+  Structure with 4 int fields (all included)         128.24
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        20.983
+  waste (padding, fillers, unused tails)      2190376 bytes = 24.96% of all 8777160 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1437560 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8796280
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word_typed, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 32 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)         128.14
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        19.053
+  waste (padding, fillers, unused tails)      1948672 bytes = 23.82% of all 8182032 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1195856 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8195456
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word_typed, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 40 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)          128.12
+  Array<int>, 1000 elements (header + data)         4101.12
+  Structure with 4 int fields (all included)         128.24
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        20.983
+  waste (padding, fillers, unused tails)      2190376 bytes = 24.96% of all 8777160 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1437560 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     8796280
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_memcpy, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 28 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)         128.14
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        18.470
+  waste (padding, fillers, unused tails)      1768748 bytes = 22.10% of all 8002108 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1207208 (included in raw blocks' neighbours' waste), value alignment padding 546248,
+  line tails skipped 93132, of them reused by the hole 77840 (tv_align only)
+  bytes_live of the arena                     8015396
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_memcpy, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 36 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)          128.15
+  Array<int>, 1000 elements (header + data)         4102.18
+  Structure with 4 int fields (all included)         128.24
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        20.344
+  waste (padding, fillers, unused tails)      1993132 bytes = 23.23% of all 8579916 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 1243088 (included in raw blocks' neighbours' waste), value alignment padding 573612,
+  line tails skipped 828796, of them reused by the hole 652364 (tv_align only)
+  bytes_live of the arena                     8598900
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word_raw8, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 32 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.25
+  Structure with 4 int fields (all included)          96.14
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        15.175
+  waste (padding, fillers, unused tails)       752816 bytes = 10.78% of all 6986176 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 0 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     6998384
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_word_raw8, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  word records ([int type][content at +4][filler to 8], start 8-aligned, one untyped bump stream):
+    int record                   = 8 bytes (uninit:int nested = 16, flat single record = 8)
+    double / size_t / ref record = 16 bytes
+    Lmx descriptor record        = 40 bytes
+    chunk: header 64 bytes, unit = 8-byte word
+  Chunk                        size= 64 align= 8
+  Arena                        size=144 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)           72.10
+  Array<int>, 1000 elements (header + data)         4045.25
+  Structure with 4 int fields (all included)         104.15
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        16.321
+  waste (padding, fillers, unused tails)       752816 bytes = 10.26% of all 7339600 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 0 (included in raw blocks' neighbours' waste), value alignment padding 0,
+  line tails skipped 0, of them reused by the hole 0 (tv_align only)
+  bytes_live of the arena                     7352192
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_raw8, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 28 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.26
+  Structure with 4 int fields (all included)          96.14
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           12.734
+  stream bytes per record (net + waste)        14.828
+  waste (padding, fillers, unused tails)       645776 bytes = 9.39% of all 6879136 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 27840 (included in raw blocks' neighbours' waste), value alignment padding 552708,
+  line tails skipped 361864, of them reused by the hole 296636 (tv_align only)
+  bytes_live of the arena                     6891336
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_align_raw8, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  aligned tag+value records (tag at 4 mod 8 for 8-byte values, any multiple of 4 for int), one untyped bump stream:
+    int record                   = 8 bytes
+    double / size_t / ref record = 12 bytes (+4 padding after a record ending on a multiple of 8)
+    Lmx descriptor record        = 36 bytes (+4 padding likewise)
+    uninit:int nested            = 12 bytes [UNINIT_INT][INT|EMBEDDED][int]
+    uninit:T, 8-byte T, nested   = 16 bytes [UNINIT_T][T|EMBEDDED][8 bytes], start 0 mod 8 (formula only, not built)
+    64-byte line rule            = ON (records never cross a line; one hole of >= 8 bytes is reused)
+  Chunk                        size= 64 align= 8
+  Arena                        size=200 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.81
+  Structure, 4 slots (header + slots array)           80.12
+  Array<int>, 1000 elements (header + data)         4053.24
+  Structure with 4 int fields (all included)         104.15
+-- mixed stream of the T2 test (20000 structures x 12 fields, same roll distribution) --
+  records                                      308356
+  net bytes per record (tag + value)           13.880
+  stream bytes per record (net + waste)        16.271
+  waste (padding, fillers, unused tails)       737284 bytes = 10.07% of all 7324068 stream bytes (raw blocks 2306848)
+  dense-storage alignment padding 26052 (included in raw blocks' neighbours' waste), value alignment padding 557416,
+  line tails skipped 620900, of them reused by the hole 467084 (tv_align only)
+  bytes_live of the arena                     7336652
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_prefix, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  struct PfInt                 size=  8 align= 4
+  offsetof(struct PfInt, value) = 4
+  struct PfUninit              size= 12 align= 4
+  offsetof(struct PfUninit, tag_int) = 4
+  offsetof(struct PfUninit, value) = 8
+  struct PfReal                size= 16 align= 8
+  offsetof(struct PfReal, value) = 8
+  struct PfSize                size= 16 align= 8
+  struct PfRef                 size= 16 align= 8
+  struct PfLmx                 size= 32 align= 8
+  offsetof(struct PfLmx, lmx) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=240 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)           96.14
+  Array<int>, 1000 elements (header + data)         4067.31
+  Structure with 4 int fields (all included)         128.15
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_prefix, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  struct PfInt                 size=  8 align= 4
+  offsetof(struct PfInt, value) = 4
+  struct PfUninit              size= 12 align= 4
+  offsetof(struct PfUninit, tag_int) = 4
+  offsetof(struct PfUninit, value) = 8
+  struct PfReal                size= 16 align= 8
+  offsetof(struct PfReal, value) = 8
+  struct PfSize                size= 16 align= 8
+  struct PfRef                 size= 16 align= 8
+  struct PfLmx                 size= 40 align= 8
+  offsetof(struct PfLmx, lmx) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=240 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)          104.15
+  Array<int>, 1000 elements (header + data)         4075.34
+  Structure with 4 int fields (all included)         136.15
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_tagged, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  struct TvInt                 size=  8 align= 4
+  offsetof(struct TvInt, value) = 4
+  struct TvReal                size= 16 align= 8
+  offsetof(struct TvReal, value) = 8
+  struct TvSize                size= 16 align= 8
+  struct TvRef                 size= 16 align= 8
+  struct TvLmx                 size= 32 align= 8
+  offsetof(struct TvLmx, lmx) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=216 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)           96.14
+  Array<int>, 1000 elements (header + data)         4067.31
+  Structure with 4 int fields (all included)         128.15
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_tagged, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  struct TvInt                 size=  8 align= 4
+  offsetof(struct TvInt, value) = 4
+  struct TvReal                size= 16 align= 8
+  offsetof(struct TvReal, value) = 8
+  struct TvSize                size= 16 align= 8
+  struct TvRef                 size= 16 align= 8
+  struct TvLmx                 size= 40 align= 8
+  offsetof(struct TvLmx, lmx) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=216 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      16.02
+  Structure, 4 slots (header + slots array)          104.15
+  Array<int>, 1000 elements (header + data)         4075.34
+  Structure with 4 int fields (all included)         136.15
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation cur_range, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  Range                        size= 24 align= 8
+  Pool                         size= 56 align= 8
+  Arena                        size=480 align= 8
+  strides: int=4 double=8 size_t=8 ref=8 Lmx header=24 uninit pointer cell=8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    4.00
+  double cell / record                                 8.00
+  size_t cell / record                                 8.00
+  reference cell / record                              8.00
+  uninit:int (nested form where the rep has one)      12.00
+  Structure, 4 slots (header + slots array)           56.00
+  Array<int>, 1000 elements (header + data)         4024.00
+  Structure with 4 int fields (all included)          72.01
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation cur_range, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  Range                        size= 24 align= 8
+  Pool                         size= 56 align= 8
+  Arena                        size=480 align= 8
+  strides: int=4 double=8 size_t=8 ref=8 Lmx header=32 uninit pointer cell=8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    4.00
+  double cell / record                                 8.00
+  size_t cell / record                                 8.00
+  reference cell / record                              8.00
+  uninit:int (nested form where the rep has one)      12.00
+  Structure, 4 slots (header + slots array)           64.00
+  Array<int>, 1000 elements (header + data)         4032.19
+  Structure with 4 int fields (all included)          80.01
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation cur_chunkhdr, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  Chunk                        size= 64 align= 8
+  Arena                        size=288 align= 8
+  strides: int=4 double=8 size_t=8 ref=8 Lmx header=24 uninit pointer cell=8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    4.00
+  double cell / record                                 8.01
+  size_t cell / record                                 8.01
+  reference cell / record                              8.01
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)           56.08
+  Array<int>, 1000 elements (header + data)         4029.28
+  Structure with 4 int fields (all included)          72.07
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation cur_chunkhdr, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  Chunk                        size= 64 align= 8
+  Arena                        size=288 align= 8
+  strides: int=4 double=8 size_t=8 ref=8 Lmx header=32 uninit pointer cell=8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    4.00
+  double cell / record                                 8.01
+  size_t cell / record                                 8.01
+  reference cell / record                              8.01
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)           64.09
+  Array<int>, 1000 elements (header + data)         4037.28
+  Structure with 4 int fields (all included)          80.08
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_packed, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  packed records (tag + value, no padding, bump-allocated, handle = record start):
+    int record                   = 8 bytes (uninit:int nested = 12, flat single record = 8)
+    double / size_t / ref record = 12 bytes
+    Lmx descriptor record        = 28 bytes
+    chunk: header 64 + record-start bitmap 0 = 64 bytes before the first record
+  Chunk                        size= 64 align= 8
+  Arena                        size=160 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                12.01
+  size_t cell / record                                12.01
+  reference cell / record                             12.01
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)           92.14
+  Array<int>, 1000 elements (header + data)         4063.28
+  Structure with 4 int fields (all included)         124.14
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_packed, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  packed records (tag + value, no padding, bump-allocated, handle = record start):
+    int record                   = 8 bytes (uninit:int nested = 12, flat single record = 8)
+    double / size_t / ref record = 12 bytes
+    Lmx descriptor record        = 36 bytes
+    chunk: header 64 + record-start bitmap 0 = 64 bytes before the first record
+  Chunk                        size= 64 align= 8
+  Arena                        size=160 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.01
+  double cell / record                                12.01
+  size_t cell / record                                12.01
+  reference cell / record                             12.01
+  uninit:int (nested form where the rep has one)      12.01
+  Structure, 4 slots (header + slots array)          100.14
+  Array<int>, 1000 elements (header + data)         4071.31
+  Structure with 4 int fields (all included)         132.15
+  uninit:int, FLAT single record                       8.01   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_packed_map, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  packed records (tag + value, no padding, bump-allocated, handle = record start):
+    int record                   = 8 bytes (uninit:int nested = 12, flat single record = 8)
+    double / size_t / ref record = 12 bytes
+    Lmx descriptor record        = 28 bytes
+    chunk: header 64 + record-start bitmap 2048 = 2112 bytes before the first record
+  Chunk                        size= 64 align= 8
+  Arena                        size=160 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.26
+  double cell / record                                12.39
+  size_t cell / record                                12.39
+  reference cell / record                             12.39
+  uninit:int (nested form where the rep has one)      12.39
+  Structure, 4 slots (header + slots array)           93.04
+  Array<int>, 1000 elements (header + data)         4063.28
+  Structure with 4 int fields (all included)         126.07
+  uninit:int, FLAT single record                       8.26   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_packed_map, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  packed records (tag + value, no padding, bump-allocated, handle = record start):
+    int record                   = 8 bytes (uninit:int nested = 12, flat single record = 8)
+    double / size_t / ref record = 12 bytes
+    Lmx descriptor record        = 36 bytes
+    chunk: header 64 + record-start bitmap 2048 = 2112 bytes before the first record
+  Chunk                        size= 64 align= 8
+  Arena                        size=160 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                    8.26
+  double cell / record                                12.39
+  size_t cell / record                                12.39
+  reference cell / record                             12.39
+  uninit:int (nested form where the rep has one)      12.39
+  Structure, 4 slots (header + slots array)          101.29
+  Array<int>, 1000 elements (header + data)         4072.34
+  Structure with 4 int fields (all included)         134.32
+  uninit:int, FLAT single record                       8.26   <- flat form {UNINIT_INT; int}: typeof(@u) = UNINIT_INT, FAILS the protocol (nested form above passes)
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_full, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  TypedValue                   size= 32 align= 8
+  offsetof(TypedValue, value) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=168 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                   32.04
+  double cell / record                                32.04
+  size_t cell / record                                32.04
+  reference cell / record                             32.04
+  uninit:int (nested form where the rep has one)      64.10
+  Structure, 4 slots (header + slots array)           96.14
+  Array<int>, 1000 elements (header + data)         4067.28
+  Structure with 4 int fields (all included)         224.34
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_full, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  TypedValue                   size= 40 align= 8
+  offsetof(TypedValue, value) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=168 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                   40.05
+  double cell / record                                40.05
+  size_t cell / record                                40.05
+  reference cell / record                             40.05
+  uninit:int (nested form where the rep has one)      80.12
+  Structure, 4 slots (header + slots array)          104.15
+  Array<int>, 1000 elements (header + data)         4075.31
+  Structure with 4 int fields (all included)         264.38
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_compact, native word off (struct Lmx 24 bytes) ==
+  struct Lmx                   size= 24 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  TypedValue16                 size= 16 align= 8
+  offsetof(TypedValue16, value) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=192 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                   16.02
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      32.04
+  Structure, 4 slots (header + slots array)          104.15
+  Array<int>, 1000 elements (header + data)         4075.31
+  Structure with 4 int fields (all included)         168.29
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16
+
+== representation tv_compact, native word ON (struct Lmx 32 bytes) ==
+  struct Lmx                   size= 32 align= 8
+  offsetof(struct Lmx, parent) = 0
+  offsetof(struct Lmx, length) = 8
+  offsetof(struct Lmx, storage) = 16
+  pointer=8 size_t=8 int=4 double=8 long=4 (LP64 / LLP64 neutral code)
+-- records of this representation --
+  TypedValue16                 size= 16 align= 8
+  offsetof(TypedValue16, value) = 8
+  Chunk                        size= 64 align= 8
+  Arena                        size=192 align= 8
+-- full storage cost of typical values, bytes per value (a slot pointer in a Structure is +8) --
+  int cell / record                                   16.02
+  double cell / record                                16.02
+  size_t cell / record                                16.02
+  reference cell / record                             16.02
+  uninit:int (nested form where the rep has one)      32.04
+  Structure, 4 slots (header + slots array)          112.15
+  Array<int>, 1000 elements (header + data)         4083.31
+  Structure with 4 int fields (all included)         176.30
+-- walker value record --
+  struct WalkValueNow          size=112 align= 8
+  offsetof(struct WalkValueNow, ref) = 16
+  offsetof(struct WalkValueNow, number) = 24
+  offsetof(struct WalkValueNow, wide) = 32
+  offsetof(struct WalkValueNow, natural) = 40
+  offsetof(struct WalkValueNow, longnum) = 48
+  offsetof(struct WalkValueNow, byte) = 56
+  offsetof(struct WalkValueNow, model) = 64
+  offsetof(struct WalkValueNow, references) = 72
+  offsetof(struct WalkValueNow, referent) = 80
+  offsetof(struct WalkValueNow, scalar_abi) = 88
+  offsetof(struct WalkValueNow, physical_profile) = 96
+  offsetof(struct WalkValueNow, source_type) = 104
+  struct WalkValueTv           size= 24 align= 8
+  offsetof(struct WalkValueTv, flags) = 4
+  offsetof(struct WalkValueTv, value) = 8
+  offsetof(struct WalkValueTv, context) = 16

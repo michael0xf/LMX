@@ -1166,8 +1166,8 @@ decision and the code as it stands, and is not a task to continue that mechanism
   stored reference is the address of the code or of the value four bytes further is an encoding over the same record,
   [asked of the author](../LMX_blog/q/current/README.md).
 - **Alignment.** The value stands at an address that is a multiple of `max(alignof(T), 4)`, the code in the four bytes
-  right before it, padding between records; a record that fits into 64 bytes does not cross a 64-byte block boundary.
-  The descriptor inside a record is therefore naturally aligned, and its fields are read as before.
+  right before it, padding between records. The code and the value are read by ordinary typed accesses, not by
+  copying bytes; the descriptor inside a record is naturally aligned, and its fields are read as before.
 - **Type and value without classifying an address.** `lmx_range_classify`, `lmx_range_type_of`, `lmx_range_stride`,
   `lmx_domain_kind`, `lmx_domain_type` and the readers built on them (`lmx_graph_node_in`, `lmx_graph_cell_in`,
   `lmx_graph_value_in`, `lmx_walk_value_cell`, `lmx_graph_kind`, `lmx_graph_address_type`) take the kind, the type
@@ -1181,8 +1181,9 @@ decision and the code as it stands, and is not a task to continue that mechanism
   the element type is told by the code of the Array's record. Typed native locals and temporaries are not packed into
   records.
 - **Chunks.** The interval index tells only which arena and which chunk own an address: transfer, collection, the
-  home of a name. The division of the arena into chunks is the allocator's policy; at the first stage the present
-  pools are kept and a cell of a pool becomes a record with the pool's step. On attach the donor's chunks become
+  home of a name. The division of the arena into chunks is the allocator's policy. By the author's order the
+  transition has two stages: first a cell of a present pool becomes a record with the pool's step; then the chunks
+  by type are removed and the records of an arena go in one stream. On attach the donor's chunks become
   chunks of the receiver: records keep their addresses and codes, and nothing is registered anew for typing. One
   arena is never accessed from several threads.
 

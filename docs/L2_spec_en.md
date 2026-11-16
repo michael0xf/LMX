@@ -17,8 +17,8 @@ The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an int
 
 Structures and Arrays share a flat `parent/length/storage` header, without native, capacity,
 or an embedded VoidArray. In L2 order: `@: parent Lmx`, `size_t: length`, `@: storage void`.
-A reference points to the record of the Structure or Array: its type code, then this header
-([§3](#value-record)). Structure and Array<@> store void* elements and are fully
+A reference points to the header's start; the code of the record's type stands in the four bytes
+before it ([§3](#value-record)). Structure and Array<@> store void* elements and are fully
 interchangeable in indexing, named paths, admission, copying, and execution.
 Numeric Array<T> stores T itself; the code of the Array's record tells the element type.
 
@@ -102,15 +102,13 @@ elements. Reuse existing addressing; no reverse-index table or per-write mainten
 
 A value that a Structure or `Array<@>` slot, a reference or `parent` refers to is a **record**: `int type`, the code of its physical type, and immediately after it, without a gap, exactly as many raw bytes as a value of that type occupies -- a number, a reference, or the `parent/length/storage` descriptor of a Structure or an Array. The elements of an Array and the slots of a Structure lie in the storage that the descriptor names, not in the record. The size of a record is `sizeof(int) + size(type)`: no record reserves room for the largest kind of value, and the layout does not follow the rules of a C `union`.
 
-Every slot holds one pointer to the start of a record, the address of its `type`; the value lies four bytes further. A read of a known type takes the value at that constant offset; a read of a type unknown at translation reads `type` through the same pointer and then the value:
+Every slot, and every other reference of the graph, holds one pointer: the address of the value. The code of its type stands in the four bytes right before that address (the author's answer of 2026-11-16, [journal](../LMX_blog/2026-11-16.md#typed-value-reference-answer)). So an address keeps the meaning it has always had -- the address of an `int` cell, the address of a header -- and `@x`, `parent`, the name table and the C door use it unchanged. A read of a known type takes the value at the pointer; a read of a type unknown at translation reads the code four bytes before it and then the value:
 
 ```text
-p = storage[index]     # the slot: a pointer to the record
-p\type                 # the code of the physical type, at offset 0
-value at p + 4         # the raw bytes of that type
+p = storage[index]     # the slot: the address of the value
+code at p - 4          # the code of the physical type
+value at p             # the raw bytes of that type
 ```
-
-Whether the pointer kept in a slot is the address of `type` or the address of the value four bytes further is an encoding of the implementation over the same record in memory; the choice is an [open question to the author](../LMX_blog/q/current/README.md).
 
 **No operation learns a type or reads a value by classifying an address.** Reading and writing a slot, loading a value of a type unknown at translation, `sys\typeof`, indexing, dereferencing, admission by `implements`, copying, `merge` and collection take the kind and the size of a value from the code in its record. The arena's index of address intervals stays only for ownership: which arena and which chunk an address belongs to.
 

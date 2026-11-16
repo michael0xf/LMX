@@ -1162,9 +1162,10 @@ decision and the code as it stands, and is not a task to continue that mechanism
 - **Record.** `int type`, the code of the physical type, and right after it the raw bytes of the value: a number, a
   word, a reference, or the `parent/length/storage` descriptor. Every reference of the graph -- a slot, an element of
   `Array<@>`, a reference cell, `parent`, a key of the address → name table and of a copy map, an execution root --
-  refers to a record. The size of a record follows from its code; nothing is sized by the largest kind. Whether a
-  stored reference is the address of the code or of the value four bytes further is an encoding over the same record,
-  [asked of the author](../LMX_blog/q/current/README.md).
+  refers to a record. The size of a record follows from its code; nothing is sized by the largest kind. A stored
+  reference is the address of the value, and the code stands in the four bytes before it (the author's answer of
+  2026-11-16, [journal](../LMX_blog/2026-11-16.md#typed-value-reference-answer)): every address keeps its present
+  meaning, and only the places that learnt a type from an address change -- they read the code at value − 4.
 - **Alignment.** The value stands at an address that is a multiple of `max(alignof(T), 4)`, the code in the four bytes
   right before it, padding between records. The code and the value are read by ordinary typed accesses, not by
   copying bytes; the descriptor inside a record is naturally aligned, and its fields are read as before.
@@ -1279,7 +1280,8 @@ struct: Lmx
 ```
 
 The flat header contains only parent/length/storage, with neither native nor capacity.
-A Structure or Array reference points to its record: the type code, then this descriptor (§2.0). Its address survives resizing;
+A Structure or Array reference points to this descriptor's start; the code of its record stands in the four bytes
+before it (§2.0). Its address survives resizing;
 storage may move. The arena table “descriptor address → capacity” records reserved elements.
 One allocation/resizing mechanism serves Structure, Array<@>, typed and service arrays; no separate
 List/DynamicArray family is needed. Stable standalone primitive cells and canonical strings retain

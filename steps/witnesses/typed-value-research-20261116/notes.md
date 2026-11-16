@@ -250,8 +250,11 @@ and step 7.
 
 ## Open and not done
 
-- One encoding is left to the author: whether a stored reference is the address of the code or of
-  the value ([question](../../../LMX_blog/q/current/typed-value-reference-encoding-20261116.md)).
+- The encoding of a reference was asked of the author and answered the same day: a stored
+  reference is the address of the value, the code is four bytes before it
+  ([question and answer](../../../LMX_blog/q/typed-value-reference-encoding-answered-20261116.md)). In the prototype this is
+  the convention of `tv_prefix`; `tv_align` keeps the address of the code in the slot and differs
+  from the norm by that constant only.
 - The timings are single-machine and single-session; the second run was taken on a busier machine
   and differs from the first by up to 40 % in absolute numbers. Ratios within a run are what the
   conclusions use.

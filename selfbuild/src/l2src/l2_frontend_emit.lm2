@@ -516,6 +516,11 @@ fn: lm_compiler_ns_proc_add (int: ni; const: (@: path char)) int
     return: (cast: (int) (0))
 end: lm_compiler_ns_proc_add
 
+# A namespace row of an anonymous `---` group: no name, no defining frame, not a source part.
+fn: lm_compiler_ns_anonymous_group (int: ni) int
+    @@@: ns_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_ns_name))
+    return: (cast: (int) (ns_name_cell[0][ni] = 0 && c.lm_compiler_ns_defining_frame(ni) = 0 && c.lm_compiler_ns_part(ni) < 0))
+
 # Original: l2src/l2trans.lm1:3612
 fn: lm_compiler_ns_procs (const: (@: path char)) int
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
@@ -533,10 +538,11 @@ fn: lm_compiler_ns_procs (const: (@: path char)) int
             return: (cast: (int) (c.lm_compiler_error(path, ns_stmt_cell[0][i], "a statement in a nested or qualified named Structure is not supported yet")))
         i := i + 1
     ---
-    # Registration may append nested definitions. The live bound includes them.
+    # Registration may append nested definitions. The live bound includes them. An anonymous group has no activation of its own: the
+    # declaration collection of the body that holds it walks its fields and its code in that body's activation (once per lexical scope).
     i := 0
     while: i < ns_n_cell[0]
-        if: ns_proc_cell[0][i] < 0 && c.lm_compiler_ns_original_body(i) != 0
+        if: ns_proc_cell[0][i] < 0 && c.lm_compiler_ns_original_body(i) != 0 && lm_compiler_ns_anonymous_group(i) = 0
             int: part c.lm_compiler_ns_part(i)
             const: (@: source_path char path)
             if: part >= 0
@@ -8375,7 +8381,7 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
             asserted_model := c.lm_compiler_contract_model(asserted, 0)
         ---
     ---
-    if: path[3] < 0
+    if: path[3] < 0 || c.lm_compiler_path_leaf_descriptor(resolved) != 0
         kind := path[7 + 6 * (path[2] - 1)]
         # A physical own-row coordinate does not replace its value category.
         if: kind = 16 && c.lm_compiler_own_is_slot(path[6 + 6 * (path[2] - 1)]) != 0 && c.lm_compiler_own_schema(path[6 + 6 * (path[2] - 1)]) != -1

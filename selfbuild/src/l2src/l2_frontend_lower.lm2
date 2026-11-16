@@ -5540,11 +5540,9 @@ fn: lm_compiler_emit_body_with_position (const: (@: body c.LmP0Structure); int: 
         return: 1
     if: binding_scope >= 0
         lm_compiler_lp_pop()
-    ---
     if: empty_body != 0
         return: (cast: (int) (lm_compiler_emit_empty_body(emitted_from, ind)))
     return: (cast: (int) (0))
-end: lm_compiler_emit_body_with_position
 
 # The statements of one block and the end of their compile-time visibility. The caller owns the activation-binding scope
 # of the block's locals: an ordinary body takes it around the statements (lm_compiler_emit_body_with_position); a block closed
@@ -5566,11 +5564,9 @@ fn: lm_compiler_emit_body_statements (const: (@: body c.LmP0Structure); int: mi;
         if: own_bseq_cell[0][k] > s0 && c.lm_compiler_host_is_body(own_host_cell[0][k], body) != 0
             own_bseq_cell[0][k] := 0
         k := k + 1
-    ---
     if: empty_body != 0
         return: (cast: (int) (lm_compiler_emit_empty_body(emitted_from, ind)))
     return: (cast: (int) (0))
-end: lm_compiler_emit_body_statements
 
 # Original: l2src/l2trans.lm1:17873
 fn: lm_compiler_emit_body_in (const: (@: body c.LmP0Structure); int: mi; const: (@: ind char)) int

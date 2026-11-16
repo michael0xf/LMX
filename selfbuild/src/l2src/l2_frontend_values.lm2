@@ -2147,27 +2147,31 @@ fn: lm_compiler_path_typed_prefix (const: (@: path c.L2Path); int: n; @: out c.L
     return: 0
 end: lm_compiler_path_typed_prefix
 
+# A successful path whose leaf is a Structure descriptor: a Structure place or branch, or a method part. One category for
+# the readers of the leaf (lm_compiler_path_rec_leaf_ft) and the writer of a Structure through a path
+# (lm_compiler_rw_path_write_rec). It supplies no model/admission verdict.
+fn: lm_compiler_path_leaf_descriptor (const: (@: path c.L2Path)) int
+    const: (@: last c.L2PathStep 0)
+    if: path = 0 || path\fail_why != 0
+        return: (cast: (int) (0))
+    if: path\leaf_kind = 2 || path\leaf_kind = 3 || path\leaf_kind = 4
+        return: (cast: (int) (1))
+    if: path\leaf_kind != 12 || path\n < 1 || path\steps = 0
+        return: (cast: (int) (0))
+    last := path\steps + (path\n - 1)
+    # Kind 12 also represents retained data atoms. Only an actual method-part step proves a descriptor here.
+    return: (cast: (int) (last\locus = 5))
+
 fn: lm_compiler_path_rec_leaf_ft (const: (@: path c.L2Path)) int
     int: ft
-    const: (@: last c.L2PathStep 0)
     if: path = 0 || path\fail_why != 0
         return: (cast: (int) (0 - 1))
     # A whole Array's semantic contract is already closed. Its descriptor
     # ABI is a representation projection, not another source/type lookup.
     if: path\array_leaf != 0
         return: (cast: (int) (lm_compiler_array_desc_ty()))
-    # These successful path roles select a Structure descriptor, as the
-    # common Value reader does. This supplies no model/admission verdict.
-    if: path\leaf_kind = 2 || path\leaf_kind = 3 || path\leaf_kind = 4
+    if: lm_compiler_path_leaf_descriptor(path) != 0
         return: lm_compiler_graph_ft()
-    if: path\leaf_kind = 12 && path\n > 0 && path\steps != 0
-        last := path\steps + (path\n - 1)
-        # Kind 12 also represents retained data atoms. Only an actual
-        # method-part step proves a descriptor here.
-        if: last\locus = 5
-            return: lm_compiler_graph_ft()
-        ---
-    ---
     ft := c.lm_compiler_path_kind_ft(path\leaf_kind)
     if: path\leaf_kind = 10 || path\leaf_kind = 11
         ft := path\leaf_mi
@@ -2176,7 +2180,6 @@ fn: lm_compiler_path_rec_leaf_ft (const: (@: path c.L2Path)) int
     if: path\leaf_kind = 13
         ft := path\leaf_ty
     return: (cast: (int) (ft))
-end: lm_compiler_path_rec_leaf_ft
 
 fn: lm_compiler_formal_decl (int: mi; const: (@: t c.LmP0Text)) @: c.LmP0Node
     return: (cast: (@: c.LmP0Node) (lm_compiler_formal_decl_at(mi, lm_compiler_formal_find(mi, t))))

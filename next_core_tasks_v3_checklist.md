@@ -6,6 +6,12 @@
 flush() и frozen требования слотов при S[n] заменены [M14](next_core_tasks_v3.md#native-structures).
 
 - [ ] Единое описание входов data; свежие локальные места всех вызовов; нет автозаполнения графа.
+  Срез406: Graph fn/sub constructor и общий launch/invoke worker перенесены; приёмка всего
+  пункта ещё OPEN. Текущие code/GC/native gates — в [конвейере](steps/current.md).
+- [x] Ограниченная Graph-приёмка406: единая DATA, ленивый default/actual suppression,
+  последовательный CODE, независимость выбранного описания, без local publication;
+  immutable scalar local store, совпадение выбранного native body и GC name lifetime.
+  Targeted6/0 nf/root0/root1 и Graph triple PASS; [границы](steps/witnesses/m10-unified-data-20261115/notes.md).
 - [ ] Все шесть форм call/fncall из [M10](next_core_tasks_v3.md#m10): args — фактические значения,
   data — описание входов. Пропущенные args не подаются; пропущенная data равна code.
 - [ ] Обычные, указательные, динамические и явные вызовы fn/sub/catch/Structure идут одним путём

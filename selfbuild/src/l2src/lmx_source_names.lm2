@@ -13,6 +13,7 @@
 # lmx_pool_is_sealed, lmx_pool_chunk_at) and the C library's are the kernel's C functions, called through the C door.
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<string.h>"
 
@@ -212,6 +213,7 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     size_t: key 0U
     size_t: place 0U
     size_t: declared 0U
+    c.lmx_graph_names_drop(arena, lo, hi)
     pool := (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME

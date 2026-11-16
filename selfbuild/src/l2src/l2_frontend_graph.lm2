@@ -209,7 +209,7 @@ end: lm_compiler_graph_formal
 # The signature of the machine function made (the Structure the traversal created, named name, function mi of the
 # module): `fn: name (formals) T`. 0; 1 for a formal of another form; 2 for a result that is no C scalar or door type.
 fn: lm_compiler_graph_sig (@: g c.LmxGraph; @: f c.FILE; @: made c.Lmx; @: name char; int: mi) int
-    @: args c.Lmx c.lmx_graph_method_args(g, made)
+    @: args c.Lmx c.lmx_graph_method_data(g, made)
     @: rtext char c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made))
     size_t: j 0U
     if: args = 0
@@ -734,7 +734,7 @@ fn: lm_compiler_graph_keep (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         if: callee != 1 && callee != 2
             return: 0
         if: callee = 2
-            cargs := c.lmx_graph_method_args(g, (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head)))
+            cargs := c.lmx_graph_method_data(g, (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head)))
         while: i < count
             status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get_in(g, expression, i), level, cond, src, fname, at)
             if: status != 0
@@ -817,7 +817,7 @@ fn: lm_compiler_graph_callee (@: g c.LmxGraph; @: root c.Lmx; @: value void) int
     made := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
     if: made = 0 || c.lmx_graph_method(g, made) = 0
         return: 0
-    if: c.lmx_graph_count(c.lmx_graph_method_args(g, made)) != c.lmx_graph_count((cast: (@: c.Lmx) value))
+    if: c.lmx_graph_count(c.lmx_graph_method_data(g, made)) != c.lmx_graph_count((cast: (@: c.Lmx) value))
         return: 3
     return: 2
 end: lm_compiler_graph_callee
@@ -1150,7 +1150,7 @@ end: lm_compiler_graph_door
 # One function of the module: its signature, its own places declared at its entry (numbered from k0), its body, its end.
 # The count of its own places in places[0], 0; or the refusal.
 fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: made c.Lmx; @: name char; int: mi; int: k0; @@: dheads char; @: droles int; size_t: dn; @: places size_t; const: (@: src char)) int
-    @: args c.Lmx c.lmx_graph_method_args(g, made)
+    @: args c.Lmx c.lmx_graph_method_data(g, made)
     @: body c.Lmx c.lmx_graph_method_code(g, made)
     size_t: room 0U
     @@: names char 0

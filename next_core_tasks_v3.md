@@ -1691,12 +1691,21 @@ args — Structure поданных значений обычного вызов
 Без args нет дополнительной подачи; без data используется code. Поэтому
 call(C) = call(C C), fncall(R C) = fncall(C R C). Дочернюю data из code не выбирать.
 
-**Реализация OPEN.** Регистрация шести форм уже есть в lmx_graph_run.lm2:
-lmx_graph_receiver_form задаёт соответствующие арности и имена. Этого недостаточно:
-lmx_graph_launch_value трактует given_args как места ограниченных видов, передаёт
-их в work_open_parts как формалы, имеет отдельный маршрут к invoke_data_value
-для callable без args и ограничение результата int. Это состояние реализации,
-которое нужно заменить общим механизмом; приёмка старого среза353 новой нормы не доказывает.
+**Реализация OPEN; ограниченный срез406 заменил прежний Graph worker.** Шесть форм используют
+invoke_data_value после общего связывания и допуска. Graph fn/sub создают единую DATA
+из заголовка и написанной DATA, без физического args и без добавления CODE-локалов.
+Вход сохраняет локальные значения/вычисляемые описания, не исполняя defaults; достигнутые
+CODE-декларации используют строки существующего кадра. Graph work_flush удалён.
+Прицельные проверки406 покрывают int/reference/default/local и scalar working Values;
+они не закрывают перенос всех producers/consumers, full-Value actual ABI, произвольные
+описания результата, private и общую native-модель M14. Приёмка старого353 новой нормы
+не доказывает. Source16:939, actual G2 targeted6/0 nf/root0/root1 и Graph triple PASS;
+genuine G1/G2/fixedpoint14 относятся точно к Source10. Поздние исправления сохраняют layout
+и существующие сигнатуры; новый retirement export добавлен в конец Graph83.
+[Свидетельство406](steps/witnesses/m10-unified-data-20261115/notes.md).
+Следующая работа — полный Value route и единая DATA остальных producers/consumers,
+затем private/hidden args и выбранный compiled signature перед снятием tracking по M14.
+Все эти дополнения ведутся здесь, без отдельного конкурирующего плана.
 
 **Необходимая кодовая зависимость405:** pending actuals должны оставаться живыми во время
 вычисления следующих actuals и допуска. GraphRun и GraphTool используют существующие

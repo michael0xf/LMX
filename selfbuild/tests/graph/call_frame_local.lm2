@@ -1,0 +1,83 @@
+(
+    # One call worker: actuals suppress defaults, locals never publish to DATA.
+    Counter:
+        int: calls 0
+    end: Counter
+    Observed:
+        int: ordinary 0
+        int: once 0
+        int: unused 0
+        int: local_result 0
+        int: local_source 0
+        int: snapshot_result 0
+        int: snapshot_source 0
+        int: supplied 0
+        int: lazy 0
+        int: own 0
+        int: separate 0
+        int: explicit 0
+        int: count 0
+        int: original 0
+    end: Observed
+)
+@: shared data[0]
+fn: bump () int
+    shared\Counter\calls := shared\Counter\calls + 1
+    return: 9
+end: bump
+fn: f (int: a bump()) int (int: b 2)
+    int: t a + b
+    t := t + 1
+    return: t
+end: f
+fn: ignore (int: a bump()) int
+    return: 42
+end: ignore
+fn: local () int (int: x 10)
+    x := 21
+    return: x
+end: local
+fn: snapshot () int (int: x 10)
+    data\x := 99
+    return: x
+end: snapshot
+sub: main () (
+    D:
+        int: a 1
+    end: D
+    A:
+        int: a 7
+    end: A
+    Add:
+        return: a + 1
+    end: Add
+    Self:
+        int: n 3
+        n := n + 2
+        return: n
+    end: Self
+    Step:
+        int: t 3
+        t := t + 1
+        shared\Counter\calls := shared\Counter\calls + 1
+    end: Step
+)
+    shared\Observed\ordinary := f(5)
+    shared\Observed\once := f(bump())
+    shared\Observed\unused := ignore()
+    shared\Observed\local_result := local()
+    shared\Observed\local_source := local\data\x
+    shared\Observed\snapshot_result := snapshot()
+    shared\Observed\snapshot_source := snapshot\data\x
+    shared\Observed\supplied := fncall(A; f\data; int; f\code)
+    shared\Observed\lazy := fncall(f\data; int; f\code)
+    shared\Observed\own := fncall(int; Self)
+    shared\Observed\separate := fncall(D; int; Add)
+    shared\Observed\explicit := fncall(A; D; int; Add)
+    call(Step)
+    call(D; Step)
+    call(A; D; Step)
+    shared\Observed\count := shared\Counter\calls
+    shared\Observed\original := D\a
+end: main
+main()

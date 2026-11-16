@@ -33,7 +33,10 @@ fn: gs_cell (@: g c.LmxGraph; @: name char; const: (@: abi c.LmxScalarABI); @: s
             return: 0
         cell := value_p\ref
     ---
-    if: cell = 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+    if: cell = 0
+        return: 0
+    if: c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        c.fprintf(c.stderr, "scalar name failed: wanted=%s cell=%p previous=%s\n", name, cell, (cast: (@: char) c.lmx_graph_name_of(g, cell)))
         return: 0
     return: cell
 
@@ -58,8 +61,8 @@ fn: gs_expect (@: arena c.LmxArena; @: cell void; const: (@: abi c.LmxScalarABI)
         return: 1
     return: c.memcmp(cell, bytes, abi\size)
 
-# A real callable supplies its physical model to the public frame entry.
-# Its first model row must retain ABI/context even for a present0 input.
+# A real callable enters over supplied DATA through the public frame entry.
+# Its first local row must retain ABI/context even for a present0 input.
 fn: gs_model_entry (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: model c.Lmx; const: (@: absent_abi c.LmxScalarABI); @: source void; @: receiving_model c.Lmx) int
     c.LmxActivation: activation
     c.LmxGraphFrame: frame
@@ -78,6 +81,52 @@ fn: gs_model_entry (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: model c.Lm
         current := (cast: (@: c.LmxWalkValue) (@ row\value))
         if: absent_abi != 0 && (frame_p\count = 0U || current\present != 0 || current\kind != c.LMX_WALK_VALUE_FOREIGN || current\scalar_abi != absent_abi || current\source_type != source || current\model != receiving_model)
             status := 98
+        status := c.lmx_graph_work_finish(g, frame_p, status)
+    ---
+    c.lmx_activation_pop(g\arena, @ activation)
+    return: status
+
+# Entry keeps a ready immutable value's identity. An absent immutable local
+# owns initialized storage without loading the source's poisoned payload.
+fn: gs_immutable_entry (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: raw void; @: bytes void; int: present) int
+    c.LmxActivation: activation
+    c.LmxGraphFrame: frame
+    c.LmxWalkValue: expected
+    @: expected_p c.LmxWalkValue @ expected
+    @: frame_p c.LmxGraphFrame @ frame
+    @: row c.LmxGraphWork 0
+    @: current c.LmxWalkValue 0
+    @: context c.LmxWalkValue c.lmx_value_cell_context(g\arena, raw)
+    @: pool c.LmxPool 0
+    @: name char 0
+    int: status 0
+    if: context = 0
+        return: 129
+    status := c.lmx_activation_push(g\arena, @ activation, 2, code, 0, 0, 0U, 0)
+    if: status != 0
+        return: 129
+    status := c.lmx_graph_work_open_data(g, code, data, frame_p)
+    if: status = 0
+        if: frame_p\count = 0U
+            status := 129
+        else:
+            row := frame_p\rows
+            current := (cast: (@: c.LmxWalkValue) (@ row\value))
+            pool := c.lmx_range_cell_pool(g\arena, (cast: (@: void) row\cell))
+            c.memcpy((cast: (@: void) expected_p), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+            expected_p\ref := row\cell
+            if: pool = 0 || pool\type != 0 - c.LMX_TYPE_FOREIGN || pool\profile != context\physical_profile || pool\scalar_abi != context\scalar_abi || current\present != present || c.memcmp((cast: (const: @: void) current), (cast: (const: @: void) expected_p), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) row\cell), bytes, pool\scalar_abi\size) != 0
+                status := 129
+            if: present != 0
+                name := c.lmx_graph_name_of(g, raw)
+                if: row\cell != raw || name = 0 || c.lmx_graph_operand_name(g, code, name) != raw
+                    status := 129
+                ---
+            else:
+                if: row\cell = raw
+                    status := 129
+            ---
+        ---
         status := c.lmx_graph_work_finish(g, frame_p, status)
     ---
     c.lmx_activation_pop(g\arena, @ activation)
@@ -140,8 +189,8 @@ fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out
         c.lmx_walk_value_clear(result)
     return: 0
 
-# The formal's uninit wrapper keeps its first int-reference chunk. The owner
-# fills that chunk before the call, isolating pending actuals in a new chunk.
+# The assertion owner keeps the current int-reference chunk through one real
+# reference cell. It fills that chunk before the call, isolating pending actuals in a new chunk.
 # No source edge can then mask a missing pending span during collection.
 fn: gs_pending_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: pool c.LmxPool arena\arrays
@@ -177,11 +226,16 @@ fn: gs_pending_actuals () int
     @: pool c.LmxPool 0
     @: first_chunk c.LmxChunk 0
     @: target void 0
+    @: anchor void 0
     @: pending c.Lmx 0
     @: file c.FILE 0
+    c.LmxExecutionRoots: anchor_roots
+    @: roots_before c.LmxExecutionRoots 0
+    unsigned: gen 0U
     int: opened 0
     int: status 0
     int: number 0
+    int: span_ok 0
     c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: c.lmx_arena_open(@ arena) != 0
         return: 124
@@ -189,36 +243,55 @@ fn: gs_pending_actuals () int
     file := c.fopen("graph_pending_actuals.lm2", "wb")
     if: g = 0 || file = 0
         return: 124
-    if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer Pending(@number; Collect())\nanswer := Pending(@number; Collect())\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer 0\nanswer := Pending(@number; Collect())\nanswer := Pending(@number; Collect())\ndata\\answer := answer\n", file) < 0 || c.fclose(file) != 0
         return: 124
     status := c.lm_graph_build_file(g, "graph_pending_actuals.lm2", @ root)
     c.remove("graph_pending_actuals.lm2")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        c.fprintf(c.stderr, "pending setup build/space status=%d root=%p opened=%d\n", status, (cast: (@: void) root), opened)
         return: 125
     collect := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Collect", 7U)))
     data := c.lmx_graph_method_data(g, collect)
     counter := c.lmx_graph_get(data, 0U)
     if: collect = 0 || counter = 0
+        c.fprintf(c.stderr, "pending setup Collect=%p data=%p counter=%p\n", (cast: (@: void) collect), (cast: (@: void) data), counter)
         return: 125
     pending := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Pending", 7U)))
-    target := c.lmx_arena_pointer_void_read(c.lmx_graph_get(c.lmx_graph_method_args(g, pending), 0U))
-    pool := c.lmx_range_cell_pool(@ arena, target)
     target := c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("number", 6U)))
-    if: pool = 0 || pool\type != c.LMX_TYPE_GRAPH_INT_REF || pool\head = 0 || pool\head != pool\tail || c.lmx_graph_kind(g, target) != 1
+    anchor := c.lmx_graph_ref_int(g, target)
+    pool := c.lmx_range_cell_pool(@ arena, anchor)
+    if: pending = 0 || pool = 0 || pool\type != c.LMX_TYPE_GRAPH_INT_REF || pool\tail = 0 || c.lmx_graph_kind(g, target) != 1
+        c.fprintf(c.stderr, "pending setup Pending=%p target=%p kind=%d anchor=%p pool=%p\n", (cast: (@: void) pending), target, c.lmx_graph_kind(g, target), anchor, (cast: (@: void) pool))
+        if: pool != 0
+            c.fprintf(c.stderr, "pending setup pool type=%d expected=%d head=%p tail=%p\n", (cast: (int) pool\type), c.LMX_TYPE_GRAPH_INT_REF, (cast: (@: void) pool\head), (cast: (@: void) pool\tail))
+        ---
         return: 125
-    first_chunk := pool\head
+    first_chunk := c.lmx_pool_chunk_at(pool, anchor)
+    if: first_chunk = 0 || first_chunk != pool\tail
+        c.fprintf(c.stderr, "pending setup anchor chunk=%p tail=%p\n", (cast: (@: void) first_chunk), (cast: (@: void) pool\tail))
+        return: 125
     while: c.lmx_chunk_cells(first_chunk, pool\stride) < c.lmx_chunk_room(first_chunk, pool\stride)
         if: c.lmx_graph_ref_int(g, target) = 0
+            c.fprintf(c.stderr, "pending setup filling reference anchor chunk: cells=%zu room=%zu\n", (cast: (size_t) c.lmx_chunk_cells(first_chunk, pool\stride)), c.lmx_chunk_room(first_chunk, pool\stride))
             return: 125
     ---
     collect\native := (cast: (c.LmxEntry) c.gs_pending_collect)
+    roots_before := c.lmx_execution_roots_mark(@ arena)
+    c.lmx_execution_roots_push(@ arena, @ anchor_roots, 0, 0U, (cast: (@@: void) (@ anchor)), 1U, 0, 0)
     status := c.lmx_graph_call(g, root)
+    span_ok := (cast: (int) (arena\execution_roots = @ anchor_roots))
+    c.lmx_execution_roots_restore(@ arena, roots_before)
     answer := c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("answer", 6U)))
-    if: status != 0 || c.lmx_graph_value_int(g, answer, @ number) != 0 || number != 80 || c.lmx_int_value_known(counter) != 2 || arena\activation != 0 || arena\execution_roots != 0
+    if: status != 0 || c.lmx_graph_value_int(g, answer, @ number) != 0 || number != 80 || c.lmx_int_value_known(counter) != 2 || arena\activation != 0 || span_ok = 0 || arena\execution_roots != 0
         c.fprintf(c.stderr, "pending actuals status=%d answer=%d counter=%d\n", status, number, c.lmx_int_value_known(counter))
         return: 126
+    # The retained declaration namespace legitimately owns older reference
+    # chunks. Close it before proving that only the explicit anchor survives.
+    c.lmx_graph_space_close(opened)
+    opened := 0
     # Neither an execution span nor its transient pointers survive the call.
-    if: c.lmx_gc_sweep(@ arena, c.lmx_arena_generation_next(@ arena)) != c.LMX_GC_OK
+    gen := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_mark_value(@ arena, anchor, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ arena, gen) != c.LMX_GC_OK
         return: 127
     pool := arena\arrays
     while: pool != 0
@@ -250,6 +323,8 @@ fn: gs_working_check () int
     double: zero (cast: (double) 0)
     double: precise (cast: (double) 1) + c.DBL_EPSILON
     double: replacement c.strtod("3.5", 0)
+    double: empty_bytes zero
+    double: immutable_bytes zero
     float: narrow (cast: (float) 1) + c.FLT_EPSILON
     @: physical c.Lmx c.lmx_node_new_owned(@ arena)
     @: profile_a c.Lmx c.lmx_node_new_owned(@ arena)
@@ -264,11 +339,17 @@ fn: gs_working_check () int
     @: empty void gs_cell(g, "empty", abi, source, model_b, physical, 0)
     @: copy_code c.Lmx 0
     @: fill_code c.Lmx 0
+    @: protected_code c.Lmx 0
     @: snapshot_code c.Lmx 0
     @: touch_code c.Lmx 0
     @: read_code c.Lmx 0
     @: rejected c.Lmx 0
     @: empty_data c.Lmx 0
+    @: immutable_data c.Lmx 0
+    @: immutable_empty_data c.Lmx 0
+    @: immutable_x void 0
+    @: immutable_empty void 0
+    @: returned_pool c.LmxPool 0
     @: wrong void 0
     @: scalar_model c.Lmx 0
     @: scalar_actual c.Lmx 0
@@ -306,7 +387,9 @@ fn: gs_working_check () int
     int: opened 0
     if: g = 0 || file = 0 || abi = 0 || alias_abi != abi || alias_source = source || narrow_abi = 0 || physical = 0 || profile_a = 0 || profile_b = 0 || model_a = 0 || model_b = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0
         return: 81
-    if: c.fputs("Copy:\n    x := y\n    y := z\n    saved := x\nend: Copy\n\nFill:\n    empty := y\nend: Fill\n\nsub: Read ()\n    saved := x\nend: Read\n\nTouch:\nend: Touch\n\nSnapshot:\n    x := y\n    call: data Touch\n    saved := x\nend: Snapshot\n", file) < 0
+    if: c.fputs("Copy:\n    x := y\n    y := z\n    saved := x\n    return: saved\nend: Copy\n\nFill:\n    empty := y\n    return: empty\nend: Fill\n\nsub: Read ()\n    saved := x\nend: Read\n\nTouch:\nend: Touch\n\nSnapshot:\n    x := y\n    call: data Touch\n    saved := x\n    return: saved\nend: Snapshot\n", file) < 0
+        return: 82
+    if: c.fputs("\nProtected:\n    data\\x := data\\y\nend: Protected\n", file) < 0
         return: 82
     if: c.fputs("\nfn: GSHold () double\n    finally:\n        call: data Touch\n    end: finally\n    return: data\\y\nend: GSHold\n\nfn: GSReplace () f64\n    finally:\n        return: data\\z\n    end: finally\n    return: data\\y\nend: GSReplace\n\nfn: GSCInt () int\n    return: data\\number\nend: GSCInt\n\nfn: GSForward () int\n    return: GSCInt()\nend: GSForward\n\nfn: GSForwardHold () double\n    return: GSHold()\nend: GSForwardHold\n", file) < 0 || c.fclose(file) != 0
         return: 82
@@ -318,32 +401,65 @@ fn: gs_working_check () int
         return: 83
     copy_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Copy", 4U))))
     fill_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Fill", 4U))))
+    protected_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Protected", 9U))))
     snapshot_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Snapshot", 8U))))
     touch_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Touch", 5U))))
     read_code := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Read", 4U)))
-    if: copy_code = 0 || fill_code = 0 || snapshot_code = 0 || touch_code = 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0
+    if: copy_code = 0 || fill_code = 0 || protected_code = 0 || snapshot_code = 0 || touch_code = 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0
         return: 84
-    if: c.lmx_graph_call_data(g, data, copy_code, 0) != 0 || gs_expect(@ arena, x, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement) != 0
+    if: c.lmx_graph_launch_value(g, 0, data, c.lmx_graph_intern("double", 6U), copy_code, @ returned) != 0 || returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\scalar_abi != abi || returned\source_type != source || returned\model != model_a || returned\physical_profile != physical || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0 || gs_expect(@ arena, x, abi, source, model_b, physical, @ zero) != 0 || gs_expect(@ arena, saved, abi, source, model_b, physical, @ zero) != 0 || gs_expect(@ arena, y, abi, alias_source, model_a, physical, @ precise) != 0
         return: 85
     if: c.lmx_graph_get(data, 0U) != x || c.lmx_graph_get(data, 1U) != y || c.lmx_graph_get(data, 2U) != z || c.lmx_graph_get(data, 3U) != saved
         return: 86
+    immutable_data := c.lmx_graph_lmx(g, 0, 4U)
+    context := c.lmx_value_cell_context(@ arena, x)
+    if: immutable_data = 0 || c.lmx_walk_value_foreign_capture(@ arena, x, 0 - c.LMX_TYPE_FOREIGN, abi, physical, context, @ boxed) != c.LMX_WALK_OK
+        return: 130
+    immutable_x := boxed\ref
+    context := c.lmx_value_cell_context(@ arena, immutable_x)
+    if: immutable_x = 0 || context = 0 || c.lmx_graph_name(g, immutable_x, "x", 1U) != 0 || c.lmx_range_type_of(@ arena, immutable_x) != 0 - c.LMX_TYPE_FOREIGN || c.lmx_range_write_exact_blocked(@ arena, immutable_x, 0, 0, 0U) = 0 || c.lmx_graph_put(immutable_data, 0U, immutable_x) != 0 || c.lmx_graph_put(immutable_data, 1U, y) != 0 || c.lmx_graph_put(immutable_data, 2U, z) != 0 || c.lmx_graph_put(immutable_data, 3U, saved) != 0
+        return: 130
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    if: gs_immutable_entry(g, copy_code, immutable_data, immutable_x, @ zero, 1) != 0 || c.lmx_graph_launch_value(g, 0, immutable_data, c.lmx_graph_intern("double", 6U), copy_code, @ returned) != 0 || returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\type != c.LMX_TYPE_FOREIGN || returned\scalar_abi != abi || returned\source_type != source || returned\model != model_a || returned\physical_profile != physical || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0
+        return: 131
+    if: c.lmx_graph_launch_value(g, 0, immutable_data, 0, protected_code, @ returned) != 4 || c.memcmp(immutable_x, @ zero, abi\size) != 0 || c.memcmp((cast: (const: @: void) context), (cast: (const: @: void) (@ before)), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(immutable_data, 0U) != immutable_x || gs_expect(@ arena, y, abi, alias_source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, saved, abi, source, model_b, physical, @ zero) != 0
+        return: 132
     rejected := c.lmx_graph_lmx(g, 0, 4U)
     wrong := gs_cell(g, "y", narrow_abi, float_source, 0, physical, @ narrow)
     context := c.lmx_value_cell_context(@ arena, x)
     c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
-    if: rejected = 0 || wrong = 0 || c.lmx_graph_put(rejected, 0U, x) != 0 || c.lmx_graph_put(rejected, 1U, wrong) != 0 || c.lmx_graph_put(rejected, 2U, z) != 0 || c.lmx_graph_put(rejected, 3U, saved) != 0 || c.lmx_graph_call_data(g, rejected, copy_code, 0) != 4 || gs_expect(@ arena, x, abi, source, model_a, physical, @ precise) != 0 || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(rejected, 0U) != x
+    if: rejected = 0 || wrong = 0 || c.lmx_graph_put(rejected, 0U, x) != 0 || c.lmx_graph_put(rejected, 1U, wrong) != 0 || c.lmx_graph_put(rejected, 2U, z) != 0 || c.lmx_graph_put(rejected, 3U, saved) != 0 || c.lmx_graph_launch_value(g, 0, rejected, c.lmx_graph_intern("double", 6U), copy_code, @ returned) != 4 || gs_expect(@ arena, x, abi, source, model_b, physical, @ zero) != 0 || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(rejected, 0U) != x
         return: 87
     empty_data := c.lmx_graph_lmx(g, 0, 2U)
     c.memset(empty, 165, abi\size)
-    if: empty_data = 0 || c.lmx_walk_value_cell(@ arena, empty, @ absent) != c.LMX_WALK_OK || absent\present != 0 || c.lmx_graph_put(empty_data, 0U, empty) != 0 || c.lmx_graph_put(empty_data, 1U, y) != 0 || c.lmx_graph_call_data(g, empty_data, fill_code, 0) != 0 || gs_expect(@ arena, empty, abi, source, model_b, physical, @ replacement) != 0 || c.lmx_graph_get(empty_data, 0U) != empty
+    c.memcpy(@ empty_bytes, empty, abi\size)
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) c.lmx_value_cell_context(@ arena, empty)), c.sizeof(c.LmxWalkValue))
+    if: empty_data = 0 || c.lmx_walk_value_cell(@ arena, empty, @ absent) != c.LMX_WALK_OK || absent\present != 0 || c.lmx_graph_put(empty_data, 0U, empty) != 0 || c.lmx_graph_put(empty_data, 1U, y) != 0 || c.lmx_graph_launch_value(g, 0, empty_data, c.lmx_graph_intern("double", 6U), fill_code, @ returned) != 0 || returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\scalar_abi != abi || returned\source_type != source || returned\model != model_a || returned\physical_profile != physical || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0 || c.memcmp(empty, @ empty_bytes, abi\size) != 0 || c.memcmp((cast: (const: @: void) c.lmx_value_cell_context(@ arena, empty)), (cast: (const: @: void) (@ before)), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(empty_data, 0U) != empty
         return: 88
+    immutable_empty_data := c.lmx_graph_lmx(g, 0, 2U)
+    immutable_empty := c.lmx_arena_scalar_cells_profiled(@ arena, 0 - c.LMX_TYPE_FOREIGN, physical, abi, 1U)
+    context := c.lmx_value_cell_context(@ arena, immutable_empty)
+    if: immutable_empty_data = 0 || immutable_empty = 0 || context = 0 || c.lmx_graph_name(g, immutable_empty, "empty", 5U) != 0 || c.lmx_graph_put(immutable_empty_data, 0U, immutable_empty) != 0 || c.lmx_graph_put(immutable_empty_data, 1U, y) != 0
+        return: 133
+    context\source_type := source
+    context\model := model_b
+    c.memset(immutable_empty, 165, abi\size)
+    c.memcpy(@ immutable_bytes, immutable_empty, abi\size)
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    if: gs_immutable_entry(g, fill_code, immutable_empty_data, immutable_empty, @ zero, 0) != 0 || c.lmx_graph_launch_value(g, 0, immutable_empty_data, c.lmx_graph_intern("double", 6U), fill_code, @ returned) != 0
+        return: 134
+    returned_pool := c.lmx_range_cell_pool(@ arena, (cast: (@: void) returned\ref))
+    if: returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\type != c.LMX_TYPE_FOREIGN || returned\scalar_abi != abi || returned\source_type != source || returned\model != model_a || returned\physical_profile != 0 || returned_pool = 0 || returned_pool\type != c.LMX_TYPE_FOREIGN || returned_pool\profile != 0 || returned_pool\scalar_abi != abi || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0 || c.memcmp(immutable_empty, @ immutable_bytes, abi\size) != 0 || c.memcmp((cast: (const: @: void) context), (cast: (const: @: void) (@ before)), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(immutable_empty_data, 0U) != immutable_empty
+        return: 135
     scalar_model := c.lmx_graph_lmx(g, 0, 1U)
     scalar_actual := c.lmx_graph_lmx(g, 0, 2U)
     wrong_x := gs_cell(g, "x", narrow_abi, float_source, 0, physical, @ narrow)
     absent_x := gs_cell(g, "x", abi, alias_source, model_b, physical, 0)
     if: scalar_model = 0 || scalar_actual = 0 || wrong_x = 0 || absent_x = 0 || read_code = 0 || c.lmx_graph_method(g, read_code) = 0 || c.lmx_graph_name(g, (cast: (@: void) scalar_model), "data", 4U) != 0 || c.lmx_graph_put(read_code, c.lmx_graph_named(g, read_code, c.lmx_graph_intern("data", 4U)), scalar_model) != 0 || c.lmx_graph_put(scalar_model, 0U, x) != 0 || c.lmx_graph_put(scalar_actual, 0U, wrong_x) != 0 || c.lmx_graph_put(scalar_actual, 1U, saved) != 0
         return: 97
-    if: gs_model_entry(g, read_code, scalar_actual, scalar_model, 0, 0, 0) != 4
+    # Supplied DATA owns its declarations. Opening does not receive an unused
+    # float into the callable's separate former model; the reached store still refuses.
+    if: gs_model_entry(g, read_code, scalar_actual, scalar_model, 0, 0, 0) != 0 || c.lmx_graph_launch_value(g, 0, scalar_actual, 0, c.lmx_graph_method_code(g, read_code), @ returned) != 4 || gs_expect(@ arena, saved, abi, source, model_b, physical, @ zero) != 0 || gs_expect(@ arena, wrong_x, narrow_abi, float_source, 0, physical, @ narrow) != 0
         return: 97
     if: c.lmx_graph_put(scalar_actual, 0U, absent_x) != 0 || gs_model_entry(g, read_code, scalar_actual, scalar_model, abi, alias_source, model_b) != 0
         return: 98
@@ -367,14 +483,14 @@ fn: gs_working_check () int
     roots_before := c.lmx_execution_roots_mark(@ arena)
     c.lmx_execution_roots_push(@ arena, @ code_roots, 0, 0U, held_codes, 5U, (cast: (@: void) root), 0)
     touch_code\native := (cast: (c.LmxEntry) c.gs_touch)
-    status := c.lmx_graph_call_data(g, data, snapshot_code, 0)
+    status := c.lmx_graph_launch_value(g, 0, data, c.lmx_graph_intern("double", 6U), snapshot_code, @ returned)
     if: status != 0
         c.fprintf(c.stderr, "graph scalar Snapshot status %d\n", status)
         return: 90
     if: c.lmx_range_cell_pool(@ arena, (cast: (@: void) model_a)) = 0
         return: 96
-    if: gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement) != 0 || gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement) != 0
-        c.fprintf(c.stderr, "graph scalar Snapshot checks saved=%d x=%d y=%d\n", gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise), gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement), gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement))
+    if: returned\present = 0 || returned\kind != c.LMX_WALK_VALUE_FOREIGN || returned\scalar_abi != abi || returned\source_type != source || returned\model != model_a || returned\physical_profile != physical || c.memcmp((cast: (const: @: void) returned\ref), @ precise, abi\size) != 0 || gs_expect(@ arena, saved, abi, source, model_b, physical, @ zero) != 0 || gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement) != 0 || gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement) != 0
+        c.fprintf(c.stderr, "graph scalar Snapshot checks saved=%d x=%d y=%d model=%p\n", gs_expect(@ arena, saved, abi, source, model_b, physical, @ zero), gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement), gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement), (cast: (@: void) returned\model))
         return: 90
     if: arena\activation != 0 || arena\execution_roots != @ code_roots || c.lmx_graph_get(data, 0U) != x || c.lmx_graph_get(data, 3U) != saved
         return: 94
@@ -425,9 +541,11 @@ fn: gs_working_check () int
     int_data := c.lmx_graph_lmx(g, 0, 1U)
     int_cell := gs_cell(g, "number", int_abi, int_source, model_a, physical, @ integer)
     if: int_data = 0 || int_cell = 0 || c.lmx_graph_name(g, (cast: (@: void) int_data), "data", 4U) != 0 || c.lmx_graph_put(int_data, 0U, int_cell) != 0
+        c.fprintf(c.stderr, "int result setup data=%p cell=%p previous=%s\n", (cast: (@: void) int_data), int_cell, (cast: (@: char) c.lmx_graph_name_of(g, (cast: (@: void) int_data))))
         return: 105
     data_slot := c.lmx_graph_named(g, int_code, c.lmx_graph_intern("data", 4U))
     if: data_slot >= c.lmx_graph_count(int_code) || c.lmx_graph_put_in(g, int_code, data_slot, (cast: (@: void) int_data)) != 0
+        c.fprintf(c.stderr, "int result part setup code=%p slot=%zu\n", (cast: (@: void) int_code), data_slot)
         return: 105
     if: c.lmx_graph_invoke_value(g, forward_code, 0, 0U, @ returned) != 0 || returned\kind != c.LMX_WALK_VALUE_NUMBER || returned\number != integer || returned\scalar_abi != int_abi || returned\source_type != int_source || returned\model != model_a || returned\physical_profile != physical
         return: 106

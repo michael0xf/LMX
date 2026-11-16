@@ -1,0 +1,217 @@
+# Parsed language calls use the public common Graph worker. This assertion
+# owner uses the C door only to choose parts and inspect the unchanged graph.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: cf_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: cf_field (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: void
+    return: c.lmx_graph_get_in(g, root, c.lmx_graph_named(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: cf_number (@: g c.LmxGraph; @: root c.Lmx; @: name char) int
+    int: number -1000
+    if: c.lmx_graph_value_int(g, cf_field(g, root, name), @ number) != 0
+        return: -1000
+    return: number
+
+fn: cf_expect (@: g c.LmxGraph; int: status; @: value c.LmxWalkValue; int: number; int: case_number) int
+    int: actual -1000
+    if: status != 0 || c.lmx_graph_result_int(g, value, @ actual) != 0 || actual != number
+        c.fprintf(c.stderr, "call frame %d: status=%d value=%d expected=%d\n", case_number, status, actual, number)
+        return: case_number
+    return: 0
+
+# This entry implements the saved method body. Receiving its descriptor as
+# owner instead of the selected method DATA exposes a mismatched entry route.
+fn: cf_descriptor_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: decl c.Lmx 0
+    @: root c.Lmx 0
+    @: counter c.Lmx 0
+    @: cell void 0
+    int: calls 0
+    if: g = 0 || code = 0 || code\parent = 0 || nargs > 1U
+        return: 127
+    if: owner = (cast: (@: void) code)
+        return: 127
+    decl := (cast: (@: c.Lmx) code\parent)
+    root := (cast: (@: c.Lmx) decl\parent)
+    counter := cf_named(g, root, "Counter")
+    cell := cf_field(g, counter, "calls")
+    if: counter = 0 || cell = 0 || c.lmx_graph_value_int(g, cell, @ calls) != 0 || c.lmx_int_store_known(cell, calls + 1) != 0
+        return: 127
+    if: out != 0
+        out[0] := 0
+    if: result != 0
+        c.lmx_walk_value_clear(result)
+    return: 0
+
+fn: cf_frames_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: f c.Lmx 0
+    @: data c.Lmx 0
+    @: body c.Lmx 0
+    @: counter c.Lmx 0
+    @: ignore c.Lmx 0
+    @: ordinary c.Lmx 0
+    @: once c.Lmx 0
+    @: local c.Lmx 0
+    @: snapshot c.Lmx 0
+    @: d c.Lmx 0
+    @: a c.Lmx 0
+    @: add c.Lmx 0
+    @: step c.Lmx 0
+    @: self c.Lmx 0
+    @: seq_code c.Lmx 0
+    @: seq_actual c.Lmx 0
+    @: description c.Lmx 0
+    @: description_data c.Lmx 0
+    @: declaration c.Lmx 0
+    @: descriptor c.Lmx 0
+    @: file c.FILE 0
+    @@: actuals void c.calloc(1U, sizeof(@: void))
+    @: int_word char c.lmx_graph_intern("int", 3U)
+    c.LmxWalkValue: result
+    int: opened 0
+    int: status 0
+    int: rhs -1000
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: actuals = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_call_frames_code.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 101
+    if: c.fputs("Counter:\n    int: calls 0\nend: Counter\n\nfn: bump () int\n    Counter\\calls := Counter\\calls + 1\n    return: 9\nend: bump\n\nfn: f (int: a bump()) int (int: b 2)\n    int: t a + b\n    t := t + 1\n    return: t\nend: f\n\nfn: ordinary () int\n    return: f(5)\nend: ordinary\n\nfn: once () int\n    return: f(bump())\nend: once\n\nfn: ignore (int: a bump()) int\n    return: 42\nend: ignore\n\nfn: local () int (int: x 10)\n    x := 21\n    return: x\nend: local\n\nfn: snapshot () int (int: x 10)\n    data\\x := 99\n    return: x\nend: snapshot\n\nD:\n    int: a 1\nend: D\n\nAdd:\n    return: a + 1\nend: Add\n\nSelf:\n    int: n 3\n    n := n + 2\n    return: n\nend: Self\n\nStep:\n    int: t 3\n    t := t + 1\n    Counter\\calls := Counter\\calls + 1\nend: Step\n", file) < 0 || c.fclose(file) != 0
+        return: 102
+    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    if: file = 0
+        return: 120
+    if: c.fputs("\nint: cf_outer_x 7\ncf_seq:\n    int: cf_before cf_outer_x\n    int: cf_outer_x 1\n    return: cf_before\nend: cf_seq\n\ncf_seq_actual:\n    int: cf_actual_value bump()\n    int: cf_actual_after cf_actual_value\n    int: cf_actual_value bump()\n    return: cf_actual_after + cf_actual_value\nend: cf_seq_actual\n", file) < 0 || c.fclose(file) != 0
+        return: 120
+    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    if: file = 0
+        return: 122
+    if: c.fputs("\nfn: cf_description () int (int: cf_pending bump())\n    int: cf_five 5\n    data[0][1] := @cf_five\n    return: cf_pending\nend: cf_description\n", file) < 0 || c.fclose(file) != 0
+        return: 122
+    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    if: file = 0
+        return: 124
+    if: c.fputs("\nsub: cf_descriptor (int: cf_uninit_unused)\n    Counter\\calls := Counter\\calls + 1\nend: cf_descriptor\n", file) < 0 || c.fclose(file) != 0
+        return: 124
+    status := c.lm_graph_build_file(g, "graph_call_frames_code.lm2", @ root)
+    c.remove("graph_call_frames_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 103
+    f := cf_named(g, root, "f")
+    counter := cf_named(g, root, "Counter")
+    ignore := cf_named(g, root, "ignore")
+    ordinary := cf_named(g, root, "ordinary")
+    once := cf_named(g, root, "once")
+    local := cf_named(g, root, "local")
+    snapshot := cf_named(g, root, "snapshot")
+    d := cf_named(g, root, "D")
+    add := cf_named(g, root, "Add")
+    self := cf_named(g, root, "Self")
+    step := cf_named(g, root, "Step")
+    data := c.lmx_graph_method_data(g, f)
+    body := c.lmx_graph_method_code(g, f)
+    if: f = 0 || data = 0 || body = 0 || counter = 0 || ignore = 0 || local = 0 || snapshot = 0 || d = 0 || add = 0 || self = 0 || step = 0
+        return: 104
+    if: c.lmx_graph_count(f) != 3U || cf_field(g, f, "args") != 0 || c.lmx_graph_count(data) != 2U || cf_field(g, data, "t") != 0
+        return: 105
+    actuals[0] := c.lmx_graph_int(g, 5)
+    status := c.lmx_graph_invoke_value(g, f, actuals, 1U, @ result)
+    if: cf_expect(g, status, @ result, 8, 106) != 0 || cf_number(g, counter, "calls") != 0
+        return: 106
+    a := c.lmx_graph_lmx(g, 0, 1U)
+    if: a = 0 || c.lmx_graph_put_in(g, a, 0U, c.lmx_graph_int(g, 7)) != 0
+        return: 107
+    status := c.lmx_graph_launch_value(g, a, data, int_word, body, @ result)
+    if: cf_expect(g, status, @ result, 10, 108) != 0 || cf_number(g, counter, "calls") != 0 || cf_number(g, data, "b") != 2 || cf_field(g, data, "t") != 0
+        return: 108
+    status := c.lmx_graph_invoke_value(g, ordinary, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 8, 118) != 0 || cf_number(g, counter, "calls") != 0
+        return: 118
+    status := c.lmx_graph_invoke_value(g, once, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 12, 119) != 0 || cf_number(g, counter, "calls") != 1
+        return: 119
+    status := c.lmx_graph_invoke_value(g, ignore, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 42, 109) != 0 || cf_number(g, counter, "calls") != 1
+        return: 109
+    status := c.lmx_graph_launch_value(g, 0, data, int_word, body, @ result)
+    if: cf_expect(g, status, @ result, 12, 110) != 0 || cf_number(g, counter, "calls") != 2 || c.lmx_graph_kind(g, cf_field(g, data, "a")) != 4
+        return: 110
+    status := c.lmx_graph_invoke_value(g, local, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 21, 111) != 0 || cf_number(g, c.lmx_graph_method_data(g, local), "x") != 10
+        return: 111
+    status := c.lmx_graph_invoke_value(g, snapshot, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 10, 112) != 0 || cf_number(g, c.lmx_graph_method_data(g, snapshot), "x") != 99
+        return: 112
+    status := c.lmx_graph_launch_value(g, 0, 0, int_word, self, @ result)
+    if: cf_expect(g, status, @ result, 5, 113) != 0 || cf_number(g, self, "n") != 3
+        return: 113
+    status := c.lmx_graph_launch_value(g, 0, d, int_word, add, @ result)
+    if: cf_expect(g, status, @ result, 2, 114) != 0
+        return: 114
+    status := c.lmx_graph_launch_value(g, a, d, int_word, add, @ result)
+    if: cf_expect(g, status, @ result, 8, 115) != 0 || cf_number(g, d, "a") != 1
+        return: 115
+    if: c.lmx_graph_launch_value(g, 0, 0, 0, step, @ result) != 0 || c.lmx_graph_launch_value(g, 0, d, 0, step, @ result) != 0 || c.lmx_graph_launch_value(g, a, d, 0, step, @ result) != 0 || cf_number(g, counter, "calls") != 5 || cf_field(g, d, "t") != 0
+        return: 116
+    if: arena\activation != 0 || arena\execution_roots != 0
+        return: 117
+    seq_code := cf_named(g, root, "cf_seq")
+    seq_actual := cf_named(g, root, "cf_seq_actual")
+    if: seq_code = 0 || seq_actual = 0
+        return: 120
+    status := c.lmx_graph_launch_value(g, 0, 0, int_word, seq_code, @ result)
+    if: cf_expect(g, status, @ result, 7, 120) != 0 || cf_number(g, root, "cf_outer_x") != 7 || cf_number(g, seq_code, "cf_outer_x") != 1
+        return: 120
+    actuals[0] := c.lmx_graph_int(g, 5)
+    if: c.lmx_graph_put_in(g, a, 0U, actuals[0]) != 0
+        return: 121
+    status := c.lmx_graph_launch_value(g, a, 0, int_word, seq_actual, @ result)
+    if: cf_expect(g, status, @ result, 14, 121) != 0 || cf_number(g, counter, "calls") != 6 || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, seq_actual, 0U)) != 4 || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, seq_actual, 2U)) != 4 || arena\activation != 0 || arena\execution_roots != 0
+        return: 121
+    description := cf_named(g, root, "cf_description")
+    description_data := c.lmx_graph_method_data(g, description)
+    declaration := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, description_data, 0U))
+    if: description = 0 || description_data = 0 || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4
+        return: 122
+    status := c.lmx_graph_invoke_value(g, description, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 9, 122) != 0 || cf_number(g, counter, "calls") != 7 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4
+        return: 122
+    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5
+        return: 122
+    status := c.lmx_graph_invoke_value(g, description, 0, 0U, @ result)
+    if: cf_expect(g, status, @ result, 5, 123) != 0 || cf_number(g, counter, "calls") != 7 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4 || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5 || arena\activation != 0 || arena\execution_roots != 0
+        return: 123
+    descriptor := cf_named(g, root, "cf_descriptor")
+    if: descriptor = 0 || descriptor\native != 0
+        return: 124
+    status := c.lmx_graph_call_data(g, 0, descriptor, 1)
+    if: status != 0 || cf_number(g, counter, "calls") != 8
+        c.fprintf(c.stderr, "descriptor baseline: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))
+        return: 124
+    if: c.lmx_int_store_known(cf_field(g, counter, "calls"), 7) != 0
+        return: 124
+    descriptor\native := (cast: (c.LmxEntry) c.cf_descriptor_entry)
+    status := c.lmx_graph_call_data(g, 0, descriptor, 1)
+    if: status != 0 || cf_number(g, counter, "calls") != 8
+        c.fprintf(c.stderr, "descriptor native: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))
+        return: 125
+    status := c.lmx_graph_invoke_value(g, descriptor, 0, 0U, @ result)
+    if: status != 0 || cf_number(g, counter, "calls") != 9 || arena\activation != 0 || arena\execution_roots != 0
+        c.fprintf(c.stderr, "descriptor invoke: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))
+        return: 126
+    c.free(actuals)
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

@@ -78,12 +78,11 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     double: x_value zero
     double: y_value precise
     double: initialized precise
-    int: touched 0
     if: after != 0
         x_value := precise
         y_value := replacement
     ---
-    if: abi = 0 || alias_abi != abi || f = 0 || c.lmx_graph_method(g, f) = 0 || data = original || data != c.lmx_graph_method_data(g, f) || data\parent != f || c.lmx_graph_count(data) != 11U || c.lmx_graph_name_of(g, (cast: (@: void) data)) != c.lmx_graph_intern("data", 4U)
+    if: abi = 0 || alias_abi != abi || f = 0 || c.lmx_graph_method(g, f) = 0 || data = original || data != c.lmx_graph_method_data(g, f) || data\parent != f || c.lmx_graph_count(data) != 10U || c.lmx_graph_name_of(g, (cast: (@: void) data)) != c.lmx_graph_intern("data", 4U)
         return: 101
     if: fd_expect(arena, c.lmx_graph_get_in(g, data, 0U), abi, source, data, physical, @ x_value) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 1U), abi, alias_source, data, physical, @ y_value) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 2U), abi, source, data, physical, @ replacement) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 3U), abi, source, data, physical, @ x_value) != 0
         return: 102
@@ -93,13 +92,13 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
         return: 104
     if: word = 0 || word = c.lmx_graph_get_in(g, original, 5U) || word != c.lmx_graph_get_in(g, data, 6U) || other_word = word || other_word = c.lmx_graph_get_in(g, original, 7U) || pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, other_word) || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, original, 5U))
         return: 105
-    if: c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, data, 8U)) != data || c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, original, 8U)) != original || c.lmx_graph_slot_name(g, data, 10U) != c.lmx_graph_intern("touched", 7U)
+    if: c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, data, 8U)) != data || c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, original, 8U)) != original || c.lmx_graph_named(g, data, c.lmx_graph_intern("touched", 7U)) != c.lmx_graph_count(data)
         return: 106
     if: held = 0 || held = source_held || c.lmx_graph_fn_result(g, (cast: (@: void) held)) != 0 || c.lmx_graph_method(g, held) != 0 || fd_count(g, held, 3) != 0 || fd_count(g, source_held, 3) != 0
         return: 107
     if: after != 0
         @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
-        if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, data, 10U), @ touched) != 0 || touched != 7 || again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
+        if: again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
             return: 108
         ---
     ---
@@ -572,8 +571,8 @@ fn: fd_merge_check () int
     @: work c.Lmx 0
     @: bad_work c.Lmx 0
     @: bad_data c.Lmx 0
-    @: prior void 0
     size_t: bad_slot 0U
+    c.LmxWalkValue: invoked
     int: opened 0
     int: checked 0
     int: status 0
@@ -598,9 +597,10 @@ fn: fd_merge_check () int
     bad_work := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("BadMergeWork", 12U)))
     bad_data := c.lmx_graph_method_data(g, bad_work)
     bad_slot := c.lmx_graph_named(g, bad_data, c.lmx_graph_intern("merged", 6U))
-    prior := c.lmx_graph_reference_cell(g, c.lmx_graph_get_in(g, bad_data, bad_slot))
-    status := c.lmx_graph_call_data(g, 0, work, 1)
-    if: status != 0
+    if: bad_data = 0 || bad_slot != c.lmx_graph_count(bad_data)
+        return: 139
+    status := c.lmx_graph_invoke_value(g, work, 0, 0U, @ invoked)
+    if: status != 0 || invoked\present != 0
         c.fprintf(c.stderr, "merge work status %d\n", status)
         return: 137
     if: c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2
@@ -614,8 +614,8 @@ fn: fd_merge_check () int
         status := fd_merge_physical_aliases(g)
     if: status != 0
         return: status
-    status := c.lmx_graph_call_data(g, 0, bad_work, 1)
-    if: status != 4 || prior = 0 || c.lmx_graph_reference_cell(g, c.lmx_graph_get_in(g, bad_data, bad_slot)) != prior || c.lmx_pointer_value_in(@ arena, prior) != 0 || c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2 || fd_expect(@ arena, x, abi, source, m, 0, @ zero) != 0
+    status := c.lmx_graph_invoke_value(g, bad_work, 0, 0U, @ invoked)
+    if: status != 4 || c.lmx_graph_named(g, bad_data, c.lmx_graph_intern("merged", 6U)) != c.lmx_graph_count(bad_data) || arena\activation != 0 || arena\execution_roots != 0 || c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2 || fd_expect(@ arena, x, abi, source, m, 0, @ zero) != 0
         return: 139
     c.lmx_graph_space_close(opened)
     c.lmx_graph_close(g)
@@ -653,10 +653,12 @@ fn: fd_mapped_check () int
     @: make c.Lmx 0
     @: before c.Lmx 0
     @: verify c.Lmx 0
+    c.LmxWalkValue: warm_result
     int: opened 0
     int: status 0
     int: checked 0
     int: warm 0
+    int: warm_value 0
     if: g = 0 || file = 0 || abi = 0 || abi != alias_abi || source = alias_source || physical = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0 || word_a = 0 || word_b = 0 || self = 0
         return: 81
     status := fd_index_storage(g)
@@ -666,7 +668,7 @@ fn: fd_mapped_check () int
     c.lmx_charptr_store_known(word_a, c.lmx_graph_intern("token", 5U))
     c.lmx_charptr_store_known(word_b, c.lmx_graph_intern("token", 5U))
     c.memset(empty, 165, abi\size)
-    if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    count := count + 1\n    return: count\nend: Held\nBefore:\nend: Before\nVerify:\nend: Verify\nTransfer:\n    int: touched 7\n    x := y\n    y := z\n    saved := x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    call: F\\data Before\n    F()\n    fn: Again F\\data\\held\n    Again()\n    call: F\\data Verify\nend: Make\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    data\\count := data\\count + 1\n    return: data\\count\nend: Held\nBefore:\nend: Before\nVerify:\nend: Verify\nTransfer:\n    int: touched 7\n    data\\x := data\\y\n    data\\y := data\\z\n    data\\saved := data\\x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    call: F\\data Before\n    F()\n    fn: Again F\\data\\held\n    Again()\n    call: F\\data Verify\nend: Make\n", file) < 0 || c.fclose(file) != 0
         return: 82
     status := c.lm_graph_build_file(g, "graph_fn_data_typed_code.lm2", @ root)
     c.remove("graph_fn_data_typed_code.lm2")
@@ -677,7 +679,8 @@ fn: fd_mapped_check () int
         return: 84
     held := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("Held", 4U)))
     while: warm < 3
-        if: c.lmx_graph_call_data(g, 0, held, 1) != 0
+        status := c.lmx_graph_invoke_value(g, held, 0, 0U, @ warm_result)
+        if: status != 0 || c.lmx_graph_result_int(g, @ warm_result, @ warm_value) != 0 || warm_value != warm + 1
             return: 85
         warm := warm + 1
     ---
@@ -691,7 +694,16 @@ fn: fd_mapped_check () int
     verify\native := (cast: (c.LmxEntry) c.fd_callback)
     status := c.lmx_graph_call_data(g, data, make, 0)
     if: status != 0
-        c.fprintf(c.stderr, "fn_data Make status %d\n", status)
+        @: built_f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
+        @: built_again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        c.lmx_graph_value_int(g, fd_named(g, root, "checked"), @ checked)
+        c.fprintf(c.stderr, "fn_data Make status=%d checked=%d F=%p Again=%p\n", status, checked, (cast: (@: void) built_f), (cast: (@: void) built_again))
+        if: built_f != 0
+            c.fprintf(c.stderr, "fn_data F method=%d data=%p count=%zu\n", (cast: (int) c.lmx_graph_method(g, built_f)), (cast: (@: void) c.lmx_graph_method_data(g, built_f)), c.lmx_graph_count(c.lmx_graph_method_data(g, built_f)))
+        ---
+        if: built_again != 0
+            c.fprintf(c.stderr, "fn_data Again method=%d data=%p count=%zu\n", (cast: (int) c.lmx_graph_method(g, built_again)), (cast: (@: void) c.lmx_graph_method_data(g, built_again)), c.lmx_graph_count(c.lmx_graph_method_data(g, built_again)))
+        ---
         return: 87
     if: c.lmx_graph_value_int(g, fd_named(g, root, "checked"), @ checked) != 0 || checked != 2 || fd_word_cross() != 0
         return: 88

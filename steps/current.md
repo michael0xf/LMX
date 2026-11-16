@@ -1,5 +1,39 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез406: единая Graph data, кодовые gates PASS
+
+Предыдущий405 принят/отправлен d653e06c, main==origin/main; canonical Source05:935.
+Goal ACTIVE. Это связанная замена конструктора и executor по M10/M14, а не args→data alias.
+Авторский17e8af6f уже принят в main/origin/main; этот пакет повторно не фиксировать.
+Root единственный владелец последовательного producer конвейера. Helpers вернули production
+scope после DATA copier и sequential CODE fix; сейчас только read-only review, кроме явно
+назначенного дополнительного fixture case. Новые Frame/Work records не совместимы со старыми
+runtime objects. Native/Walk transport ещё не выдаётся за полную реализацию M14/private.
+Source16:939 canonical/verified repo+stage, SHA
+a68df8c469898fb738f1e638c58e259b19f1f58a051d0be6585074f5073893a2.
+Tool-frame-04 c521d00e; Runtime-frame-07 normal PASS98, Graph83/Run67/Walk189.
+Последние targeted01 и hosted-targeted02 PASS6/0 nf/root0/root1:
+GraphCallFrames, typed/copy, scalar/immutable, name lifetime, ExactScalar и ExecutionGC.
+Graph-frame-03 normal PASS100; Graph-local08 interpreter/native/forced PASS.
+Приёмка описания до первого чтения:9 затем5; original/source/no-publication/alias metadata проверены.
+Штатный whole01 bootstrap quick boot-m10-unified-data-01 завершён: genuine G1 затем actual G1→G2,
+smoke-kernel225 по9/0, fixedpoint14 и consumed snapshot369 SAME. Actual G2 FE9c59b04a и
+Tool409303f6 сохранились как поколение. Поздние bounded fixes: immutable scalar local write
+после RHS сохраняет исходный immutable Value/graph; native entry выбирается только для
+совпадающего body; weak Graph names уходят через existing range retirement. Отказы before:
+GS131, names105, descriptor125 подтверждены, после Runtime07 все соответствующие gates PASS.
+Record layout/старые сигнатуры после bootstrap не менялись, retirement export appended Graph83.
+Normal frontend-link frontend-frame-01 переиспользовал genuine G2 L1/backend/libc и связал
+Runtime07: hosted FE3b2c82c1, затем targeted02 и Graph08 PASS. Старый bootstrap относится
+точно к Source10, не выдавать его за whole-проверку Source16. Все code producers terminal;
+docs01 по explicit owned index24 PASS35/14/27/44/615, links/opening, LF28310, exit0.
+Semantics/grammar sources не менялись; render автора17e8af6f сохранён без повтора.
+Read-only final code review без новых замечаний; working/cached diff-check PASS.
+После записи результата — final indexed docs-check, затем commit/push406. Подробности и сохранённые неудачи —
+[свидетельство406](witnesses/m10-unified-data-20261115/notes.md).
+Goal ACTIVE. Следующая работа: full-Value common inputs/остальные DATA consumers,
+private с field origin/hidden args, затем M14 selected signature/native tables и снятие tracking.
+
 ## 2026-11-15 — шаг405: lifetime уже вычисленных actuals
 
 404 reader prerequisite принят/отправлен cb6d9305 поверх авторского c7f2825f прямо main.

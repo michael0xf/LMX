@@ -595,6 +595,58 @@ fn: lmx_graph_name_index_room (@: g c.LmxGraph) int
     return: 0
 end: lmx_graph_name_index_room
 
+# Address names are weak metadata. Retire only this arena's freed interval;
+# names of external addresses remain valid. Never initialize process state
+# or allocate while an existing range is being retired.
+sub: lmx_graph_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
+    @@: anchor c.LmxGraphState (cast: (@@: c.LmxGraphState) (@ c.lmx_graph_anchor))
+    @: state c.LmxGraphState 0
+    @: g c.LmxGraph 0
+    @: row c.LmxName 0
+    @: kept c.LmxName 0
+    size_t: low (cast: (size_t) lo)
+    size_t: high (cast: (size_t) hi)
+    size_t: address 0U
+    size_t: i 0U
+    size_t: used 0U
+    if: arena = 0 || high <= low
+        return
+    state := \anchor
+    if: state = 0
+        return
+    g := state\graphs
+    while: g != 0
+        if: g\arena = arena
+            i := 0U
+            used := 0U
+            while: i < g\names_len
+                row := g\names + i
+                address := (cast: (size_t) row\address)
+                if: address < low || address >= high
+                    if: used != i
+                        kept := g\names + used
+                        kept\address := row\address
+                        kept\name := row\name
+                    used := used + 1U
+                ---
+                i := i + 1U
+            ---
+            if: used != g\names_len
+                g\names_len := used
+                if: g\index_cap != 0U
+                    c.memset((cast: (@: void) g\names_index), 0, g\index_cap * c.sizeof(c.size_t))
+                    i := 0U
+                    while: i < used
+                        lmx_graph_name_index_put(g, i)
+                        i := i + 1U
+                    ---
+                ---
+            ---
+        ---
+        g := g\next
+    ---
+end: lmx_graph_names_drop
+
 # ---- The address -> name table of the arena (§5.1) ----------------------------------------------------------------
 
 # A row for address: its name is the canonical address of the spelling of nb bytes. 0, or 1 without memory.
@@ -730,13 +782,13 @@ fn: lmx_graph_part (@: g c.LmxGraph; @: value void; @: word char) @: void
     return: lmx_graph_target(g, lmx_graph_get_in(g, inner, slot))
 end: lmx_graph_part
 
-# A callable: a Structure created by fn or sub with its args and code parts; the interface descriptor (fn without a
+# A callable: a Structure created by fn or sub with its data and code parts; the interface descriptor (fn without a
 # body) is none (the book :691).
 fn: lmx_graph_method (@: g c.LmxGraph; @: code c.Lmx) int
     @: state c.LmxGraphState lmx_graph_state()
     if: state = 0 || lmx_graph_fn_result(g, (cast: (@: void) code)) = 0
         return: 0
-    return: (cast: (int) (lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_args))) = 4 && lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_code))) = 4))
+    return: (cast: (int) (lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_data))) = 4 && lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_code))) = 4))
 end: lmx_graph_method
 
 # A callable with a result: the one created by fn, which has the part return (sub has none).
@@ -744,11 +796,6 @@ fn: lmx_graph_has_result (@: g c.LmxGraph; @: code c.Lmx) int
     @: state c.LmxGraphState lmx_graph_state()
     return: (cast: (int) (lmx_graph_method(g, code) != 0 && lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return)) != 0))
 end: lmx_graph_has_result
-
-fn: lmx_graph_method_args (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
-    @: state c.LmxGraphState lmx_graph_state()
-    return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_args)))
-end: lmx_graph_method_args
 
 fn: lmx_graph_method_data (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
     @: state c.LmxGraphState lmx_graph_state()

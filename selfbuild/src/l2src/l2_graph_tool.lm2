@@ -494,17 +494,10 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
     value := temps[0]
     temps[0] := temps[0] + 1
     if: kind = 2
-        if: c.lmx_graph_method(g, scope) != 0
-            args := c.lmx_graph_method_args(g, scope)
-        slot := c.lmx_graph_formal(g, args, word)
-        if: args != 0 && slot < c.lmx_graph_count(args)
-            c.fprintf(f, "        @: void l2_v%d refs[%zuU]\n", value, slot)
-        else:
-            c.fprintf(f, "        @: void l2_v%d lmx_graph_operand_name(l2_g, lmx_call_code, ", value)
-            if: lm_graph_emit_word(g, f, scope, holder, index) != 0
-                return: 3
-            c.fputs(")\n", f)
-        ---
+        c.fprintf(f, "        @: void l2_v%d lmx_graph_operand_name(l2_g, lmx_call_code, ", value)
+        if: lm_graph_emit_word(g, f, scope, holder, index) != 0
+            return: 3
+        c.fputs(")\n", f)
     else:
         c.fprintf(f, "        @: void l2_v%d lmx_graph_get_in(l2_g, ", value)
         if: lm_graph_emit_address(g, f, scope, holder) != 0
@@ -512,7 +505,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
         c.fprintf(f, ", %zuU)\n", index)
     ---
     c.fprintf(f, "        if: l2_v%d = 0\n            %s\n", value, leave_failure)
-    if: kind != 2 || (args != 0 && slot < c.lmx_graph_count(args))
+    if: kind != 2
         c.fprintf(f, "        if: lmx_graph_reference_cell(l2_g, l2_v%d) != 0\n            l2_v%d: lmx_graph_reference_value(l2_g, l2_v%d)\n        if: l2_v%d = 0\n            %s\n", value, value, value, value, leave_failure)
     temp[0] := value
     return: 0
@@ -953,7 +946,7 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     if: step_label >= 0
         lm_graph_emit_pending(f, id, id + 5, id, "continue", 0)
         protected_step := id + 10
-    c.fprintf(f, "        l2_label%d:\n        if: l2_pending_error%d != 0 || l2_pending_word%d = l2_pending_words%d\\w_return\n            if: lmx_graph_work_flush(l2_g) != 0\n                l2_pending_error%d: 1\n        ---\n", id, id, id, id, id)
+    c.fprintf(f, "        l2_label%d:\n", id)
     temps[1] := id + 6
     temps[2] := id + 7
     c.lmx_graph_code_body(g, cleanup, 0U, @ cleanup_body, @ cleanup_from, @ cleanup_to)
@@ -1021,9 +1014,6 @@ fn: lm_graph_emit_model_kind (@: g c.LmxGraph; @: code c.Lmx; @: name char; int:
     int: kind 0
     if: name = 0 || mode != 0 || c.lmx_graph_method(g, code) = 0
         return: 0
-    model := c.lmx_graph_method_args(g, code)
-    if: c.lmx_graph_formal(g, model, name) < c.lmx_graph_count(model)
-        return: 0
     model := c.lmx_graph_method_data(g, code)
     slot := c.lmx_graph_formal(g, model, name)
     if: slot >= c.lmx_graph_count(model)
@@ -1049,6 +1039,10 @@ fn: lm_graph_emit_site (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: holder c
     c.fprintf(f, "        size_t: l2_s%d 0U\n        int: l2_k%d 0\n        if: lmx_graph_place_site(l2_g, lmx_call_code, ", place, place)
     status := lm_graph_emit_address(g, f, code, holder)
     c.fprintf(f, ", %zuU, @ l2_s%d, @ l2_k%d) != 0\n            %s\n", index, place, place, leave_failure)
+    if: status = 0
+        c.fprintf(f, "        int: l2_supplied%d lmx_graph_place_supplied(l2_g, lmx_call_code, ", place)
+        status := lm_graph_emit_address(g, f, code, holder)
+        c.fprintf(f, ", %zuU, l2_s%d)\n", index, place)
     return: status
 end: lm_graph_emit_site
 
@@ -1166,7 +1160,7 @@ end: lm_graph_emit_assignment
 # cells and publication. Every return/error passes through the entry wrapper's work_finish.
 # Select only the lexical cursor of the current activation. Address generation
 # still uses the selected launch code; no inline activation or method is made.
-fn: lm_graph_emit_scope (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; @: temps int) int
+fn: lm_graph_emit_scope (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; int: reset; @: temps int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     int: status 0
@@ -1175,7 +1169,7 @@ fn: lm_graph_emit_scope (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     status := lm_graph_emit_address(g, f, code, body)
     if: status != 0
         return: status
-    c.fprintf(f, ") != 0\n            %s\n", leave_failure)
+    c.fprintf(f, ", %d) != 0\n            %s\n", reset, leave_failure)
     return: 0
 end: lm_graph_emit_scope
 
@@ -1207,10 +1201,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     @: nested c.Lmx 0
     @: header c.Lmx 0
     @: raw void 0
-    status := lm_graph_emit_scope(g, f, code, body, temps)
+    status := lm_graph_emit_scope(g, f, code, body, (cast: (int) (from = 0U && (to = c.lmx_graph_count(body) || (to = 1U && body\parent != 0 && c.lmx_graph_name_of(g, (cast: (@: void) body\parent)) = state\w_for && c.lmx_graph_get_in(g, (cast: (@: c.Lmx) body\parent), 0U) = (cast: (@: void) body))))), temps)
     while: i < to && status = 0
         if: i != from
-            status := lm_graph_emit_scope(g, f, code, body, temps)
+            status := lm_graph_emit_scope(g, f, code, body, 0, temps)
         if: status != 0
             return: status
         raw := c.lmx_graph_get_in(g, body, i)
@@ -1228,6 +1222,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 if: status != 0
                     return: status
                 c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
+                c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
                 if: kind = 1
                     c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_get_in(l2_g, ", number)
                     if: lm_graph_emit_address(g, f, code, body) != 0
@@ -1235,6 +1230,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     c.fprintf(f, ", %zuU), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
                     c.fprintf(f, "        if: lmx_graph_place_store_int(l2_g, lmx_call_code, l2_s%d, l2_t%d) != 0\n            %s\n", number, number, leave_failure)
                 ---
+                c.fprintf(f, "        l2_site_done%d:\n", number)
             ---
             if: name != 0 && mode = 2 && kind = 1
                 c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
@@ -1260,6 +1256,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 if: status != 0
                     return: status
                 c.fprintf(f, "        if: l2_k%d != %d\n            %s\n", number, contract, leave_failure)
+                if: mode = 0
+                    c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
                 if: kind = 5 || kind = 6
                     status := lm_graph_emit_operand(g, f, code, body, i, temps, 0, 0, 0U, @ result)
                     if: status != 0
@@ -1271,6 +1269,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                         lm_graph_emit_quoted_word(f, name)
                         c.fprintf(f, ", %d, l2_v%d) != 0\n            %s\n", mode, result, leave_failure)
                 ---
+                if: mode = 0
+                    c.fprintf(f, "        l2_site_done%d:\n", number)
             ---
             i := i + 1U
             continue
@@ -1338,7 +1338,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             ---
             c.fprintf(f, "        l2_label%d:\n", end_label)
             if: status = 0
-                status := lm_graph_emit_scope(g, f, code, body, temps)
+                status := lm_graph_emit_scope(g, f, code, body, 0, temps)
             continue
         if: head = state\w_else
             return: 2
@@ -1361,9 +1361,9 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             c.fprintf(f, "        l2_label%d:\n", test_label)
             if: status = 0
                 if: head = state\w_for
-                    status := lm_graph_emit_scope(g, f, code, header, temps)
+                    status := lm_graph_emit_scope(g, f, code, header, 0, temps)
                 else:
-                    status := lm_graph_emit_scope(g, f, code, body, temps)
+                    status := lm_graph_emit_scope(g, f, code, body, 0, temps)
             ---
             if: status = 0
                 if: head = state\w_for
@@ -1384,7 +1384,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 status := lm_graph_emit_block(g, f, code, header, 2U, 3U, mode, exit_label, again_label, step_label, temps)
             c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", test_label, end_label)
             if: status = 0
-                status := lm_graph_emit_scope(g, f, code, body, temps)
+                status := lm_graph_emit_scope(g, f, code, body, 0, temps)
             i := i + 1U
             continue
         if: head = state\w_break || head = state\w_continue || head = state\w_redo
@@ -1443,6 +1443,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             c.fprintf(f, "        if: l2_k%d != %d\n            %s\n", number, kind, leave_failure)
             if: status != 0
                 return: status
+            if: mode = 0
+                c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
             contract := 0
             if: kind = 6
                 contract := 2
@@ -1455,6 +1457,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 c.fputs("        if: lmx_graph_store_reference(l2_g, lmx_call_code, ", f)
                 status := lm_graph_emit_word(g, f, code, statement, 0U)
                 c.fprintf(f, ", %d, l2_v%d) != 0\n            %s\n", mode, result, leave_failure)
+            if: mode = 0
+                c.fprintf(f, "        l2_site_done%d:\n", number)
             i := i + 1U
             continue
         if: head = state\w_include || head = state\w_predef
@@ -1481,10 +1485,12 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             temps[0] := temps[0] + 1
             status := lm_graph_emit_site(g, f, code, body, i, number, temps)
             c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
+            c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
             if: status = 0 && n > 1U
                 status := lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
                 c.fprintf(f, "        if: lmx_graph_place_store_int(l2_g, lmx_call_code, l2_s%d, l2_t%d) != 0\n            %s\n", number, result, leave_failure)
             ---
+            c.fprintf(f, "        l2_site_done%d:\n", number)
             i := i + 1U
             continue
         # Entry data and formals may shadow a lexical callable with an ordinary
@@ -2302,7 +2308,7 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     method := (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take", 4U))))
     if: c.lmx_graph_method(g, method) = 0
         return: 1
-    args := c.lmx_graph_method_args(g, method)
+    args := c.lmx_graph_method_data(g, method)
     body := c.lmx_graph_method_code(g, method)
     statement := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, body, 0U))
     expression := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 0U))

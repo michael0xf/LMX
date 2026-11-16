@@ -596,9 +596,12 @@ fn: lmx_walk_values_arg_place_scalar (@: arena c.LmxArena; @: owned c.LmxWalkVal
         if: item\present != 0
             if: abi\copy(cell, item\ref) != 0
                 return: c.LMX_WALK_INVALID
-            c.memcpy((cast: (@: void) stored), (cast: (const: @: void) item), c.sizeof(c.LmxWalkValue))
-        else:
-            # ABI.init initialized storage, not a present language value.
+            ---
+        ---
+        # An absent typed input also owns SOURCE/Model/reference context;
+        # ABI.init supplied storage, never a present language value.
+        c.memcpy((cast: (@: void) stored), (cast: (const: @: void) item), c.sizeof(c.LmxWalkValue))
+        if: item\present = 0
             stored\source_type := source_type
         ---
         stored\kind := c.LMX_WALK_VALUE_FOREIGN

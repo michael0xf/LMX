@@ -12,9 +12,9 @@ args — та же Structure фактически передаваемых зн�
 Обычный f(...) передаёт actuals A в fncall(A f\data f\return f\code), sub/catch —
 в call(A f\data f\code). Все эти вызовы, вызовы через указатели и запуск Structure
 должны использовать общий reader/binder, допуск, namespace, native/обходчик и результат.
-Шесть форм уже зарегистрированы; прежнее чтение args как формалов в launch_value,
-обход invoke_data_value для части случаев и int-only результат не означают готовности.
-Переработать существующие workers, без второго dispatcher, новых обёрток и runtime «на будущее».
+Срез406 заменил Graph launch/invoke одним worker с единой DATA и ленивыми defaults;
+это ещё не закрывает все producers/consumers и full-Value ABI. Довести существующие
+workers, без второго dispatcher, новых обёрток и runtime «на будущее».
 Известный native→native сохраняет прямой C-вызов. [Полное задание M10](next_core_tasks_v3.md#m10),
 [норма](docs/LMX_semantics.ru.md#call-receivers).
 
@@ -25,6 +25,12 @@ args — та же Structure фактически передаваемых зн�
 без нового реестра, защищённого типа или проверок прямых чтений. Все call/fncall,
 обычные вызовы, native и обходчик используют одно правило.
 [Обязательное задание M14](next_core_tasks_v3.md#private-binding-plan).
+
+Ограниченная приёмка406: Source16:939, actual G2/rehosted targeted6/0 во всех4 режимах,
+Graph call_frame_local triple PASS. G1/G2 по9 smoke/fixedpoint14 — на Source10 до поздних
+bounded scalar/native-body/name-retirement fixes. Полный Value transport, остальные DATA
+producers/consumers и private остаются OPEN. Не возвращать отменённые публикации/flush.
+[Точные результаты406](steps/witnesses/m10-unified-data-20261115/notes.md).
 
 Действующее ТЗ — [M14 основного v3](next_core_tasks_v3.md#native-structures), включая
 [группу sys](next_core_tasks_v3.md#graph-tools). Это замена старой модели, а не ещё один слой поверх неё.

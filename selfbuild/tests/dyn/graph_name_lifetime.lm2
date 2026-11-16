@@ -1,0 +1,76 @@
+# Graph spelling rows are weak address metadata. Real range retirement must
+# remove a dead name while preserving the hash lookup of a surviving row.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<string.h>"
+
+fn: gn_lifetime_check () int
+    c.LmxArena: arena
+    c.LmxExecutionRoots: roots
+    @: mark c.LmxExecutionRoots 0
+    @: g c.LmxGraph 0
+    @: old void 0
+    @: fresh void 0
+    @: keep c.Lmx 0
+    @: old_name char c.lmx_graph_intern("old", 3U)
+    @: keep_name char c.lmx_graph_intern("keep", 4U)
+    @: new_name char c.lmx_graph_intern("new", 3U)
+    @: external_name char c.lmx_graph_intern("external", 8U)
+    unsigned: generation 0U
+    int: rooted 0
+    int: foreign_cell 17
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    if: g = 0 || old_name = 0 || keep_name = 0 || new_name = 0 || external_name = 0
+        status := 102
+    if: status = 0
+        # Different physical pools prevent the kept header's chunk from
+        # accidentally retaining the only int cell.
+        old := c.lmx_graph_int(g, 11)
+        keep := c.lmx_graph_lmx(g, 0, 0U)
+        if: old = 0 || keep = 0 || c.lmx_range_cell_pool(@ arena, old) = c.lmx_range_cell_pool(@ arena, (cast: (@: void) keep))
+            status := 103
+        if: status = 0 && (c.lmx_graph_name_address(g, old, old_name) != 0 || c.lmx_graph_name_address(g, (cast: (@: void) keep), keep_name) != 0)
+            status := 103
+        if: status = 0 && c.lmx_graph_name_address(g, (cast: (@: void) (@ foreign_cell)), external_name) != 0
+            status := 103
+    ---
+    if: status = 0
+        mark := c.lmx_execution_roots_mark(@ arena)
+        c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, 0, 0U, (cast: (@: void) keep), 0)
+        rooted := 1
+        generation := c.lmx_arena_generation_next(@ arena)
+        if: c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK || c.lmx_range_cell_pool(@ arena, old) != 0
+            status := 104
+        # Only compare this retired address as a key; never read its payload.
+        if: status = 0 && c.lmx_graph_name_of(g, old) != 0
+            status := 105
+        if: status = 0 && (c.lmx_range_cell_pool(@ arena, (cast: (@: void) keep)) = 0 || c.lmx_graph_name_of(g, (cast: (@: void) keep)) != keep_name)
+            status := 106
+        if: status = 0 && c.lmx_graph_name_of(g, (cast: (@: void) (@ foreign_cell))) != external_name
+            status := 106
+    ---
+    if: status = 0
+        fresh := c.lmx_graph_int(g, 13)
+        if: fresh = 0 || c.lmx_graph_name_address(g, fresh, new_name) != 0 || c.lmx_graph_name_of(g, fresh) != new_name || c.lmx_graph_name_of(g, (cast: (@: void) keep)) != keep_name
+            status := 107
+    ---
+    if: rooted != 0
+        c.lmx_execution_roots_restore(@ arena, mark)
+        if: arena\execution_roots != mark
+            status := 108
+    ---
+    if: status != 0
+        c.fprintf(c.stderr, "graph name lifetime: %d\n", status)
+    if: g != 0
+        c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    if: status != 0
+        return: status
+    return: 7

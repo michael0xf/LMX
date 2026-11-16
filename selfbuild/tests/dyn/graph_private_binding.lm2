@@ -1,0 +1,218 @@
+# The assertion owner uses the C door only to invoke parsed language methods
+# and inspect their results. private belongs to each source field, while
+# current, lexical and explicit access use the ordinary language readers.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: gp_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+end: gp_named
+
+fn: gp_number (@: g c.LmxGraph; @: owner c.Lmx; @: name char) int
+    int: number -1000
+    @: raw void c.lmx_graph_place_cell(g, owner, c.lmx_graph_named(g, owner, c.lmx_graph_intern(name, c.strlen(name))))
+    if: c.lmx_graph_value_int(g, raw, @ number) != 0
+        return: -1000
+    return: number
+end: gp_number
+
+fn: gp_expect (@: g c.LmxGraph; int: status; @: value c.LmxWalkValue; int: number; int: case_number) int
+    int: actual -1000
+    if: status != 0 || c.lmx_graph_result_int(g, value, @ actual) != 0 || actual != number
+        c.fprintf(c.stderr, "private binding %d: status=%d value=%d expected=%d\n", case_number, status, actual, number)
+        return: case_number
+    return: 0
+end: gp_expect
+
+fn: gp_call (@: g c.LmxGraph; @: root c.Lmx; @: name char; int: expected; int: case_number) int
+    @: code c.Lmx gp_named(g, root, name)
+    c.LmxWalkValue: result
+    int: status 0
+    if: code = 0
+        c.fprintf(c.stderr, "private binding %d: method %s is missing\n", case_number, name)
+        return: case_number
+    status := c.lmx_graph_invoke_value(g, code, 0, 0U, @ result)
+    return: gp_expect(g, status, @ result, expected, case_number)
+end: gp_call
+
+fn: gp_metadata_flag (@: g c.LmxGraph; @: owner c.Lmx; size_t: index) int
+    @: cell void c.lmx_graph_ref_cell_in(g\arena, owner, index)
+    @: metadata c.LmxSourceName 0
+    if: cell = 0
+        return: -1
+    metadata := c.lmx_source_places(g\arena, cell)
+    if: metadata = 0
+        return: 0
+    return: metadata\binding_private
+end: gp_metadata_flag
+
+# Inspect the real receiving places after construction, including both
+# mapped Fn DATA and the ordinary copier. Sharing a value shares no flag.
+fn: gp_metadata_check (@: g c.LmxGraph; @: root c.Lmx) int
+    @: library c.Lmx gp_named(g, root, "Library")
+    @: other c.Lmx gp_named(g, root, "Other")
+    @: data_private c.Lmx c.lmx_graph_method_data(g, gp_named(g, root, "DataPrivate"))
+    @: offset c.Lmx c.lmx_graph_method_data(g, gp_named(g, root, "MetadataOffset"))
+    @: shared c.Lmx gp_named(g, root, "MetadataShared")
+    @: private_source c.Lmx gp_named(g, root, "MetadataPrivate")
+    @: public_source c.Lmx gp_named(g, root, "MetadataPublic")
+    @: target c.Lmx gp_named(g, root, "MetadataTarget")
+    @: copied c.Lmx 0
+    @: merged void 0
+    @: left void 0
+    @: right void 0
+    @@: operands void c.calloc(2U, sizeof(@: void))
+    int: status 0
+    if: library = 0 || other = 0 || data_private = 0 || offset = 0 || shared = 0 || private_source = 0 || public_source = 0 || target = 0 || operands = 0
+        return: 130
+    if: gp_metadata_flag(g, library, 0U) != 1 || gp_metadata_flag(g, other, 0U) != 0
+        return: 131
+    if: c.lmx_graph_count(data_private) != 1U || gp_metadata_flag(g, data_private, 0U) != 1 || gp_number(g, data_private, "x") != 20
+        return: 132
+    # Header a occupies slot 0; the separately written private x must be
+    # attached to its copied slot 1, rather than the source's ordinal 0.
+    if: c.lmx_graph_count(offset) != 2U || gp_metadata_flag(g, offset, 0U) != 0 || gp_metadata_flag(g, offset, 1U) != 1 || gp_number(g, offset, "a") != 1 || gp_number(g, offset, "x") != 2
+        return: 133
+    left := c.lmx_graph_target(g, c.lmx_graph_get_in(g, shared, 0U))
+    right := c.lmx_graph_target(g, c.lmx_graph_get_in(g, shared, 1U))
+    if: left != target || right != target || gp_metadata_flag(g, shared, 0U) != 1 || gp_metadata_flag(g, shared, 1U) != 0
+        return: 134
+    status := c.lmx_graph_copy_owned(shared, g\arena, g\arena, @ copied)
+    if: status != 0 || copied = 0 || copied = shared || gp_metadata_flag(g, copied, 0U) != 1 || gp_metadata_flag(g, copied, 1U) != 0
+        return: 135
+    left := c.lmx_graph_target(g, c.lmx_graph_get_in(g, copied, 0U))
+    right := c.lmx_graph_target(g, c.lmx_graph_get_in(g, copied, 1U))
+    if: left = 0 || left = target || left != right
+        return: 136
+    # Merge takes the attribute from the canonical receiving provider;
+    # a later value changes v without changing that field's attribute.
+    operands[0] := private_source
+    operands[1] := public_source
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ merged)
+    if: status != 0 || merged = 0 || gp_metadata_flag(g, (cast: (@: c.Lmx) merged), 0U) != 1 || gp_number(g, (cast: (@: c.Lmx) merged), "v") != 2
+        return: 137
+    operands[0] := public_source
+    operands[1] := private_source
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ merged)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || merged = 0 || gp_metadata_flag(g, (cast: (@: c.Lmx) merged), 0U) != 0 || gp_number(g, (cast: (@: c.Lmx) merged), "v") != 1 || gp_metadata_flag(g, private_source, 0U) != 1 || gp_metadata_flag(g, public_source, 0U) != 0
+        return: 138
+    return: 0
+end: gp_metadata_check
+
+fn: gp_private_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: counter c.Lmx 0
+    @: data_private c.Lmx 0
+    @: file c.FILE 0
+    @@: actuals void c.calloc(1U, sizeof(@: void))
+    c.LmxWalkValue: result
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: actuals = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_private_binding_code.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 101
+    # CODE private is readable by the current activation, excluded only
+    # from the child's dynamic sources. A public field of the same spelling
+    # still wins over the child's private lexical field.
+    if: c.fputs("private: (int: x 7)\n\nPrivateCounter:\n    int: calls 0\n    int: local 0\nend: PrivateCounter\n\nLibrary:\n    private: (int: x 10)\n    fn: read () int\n        return: x\n    end: read\nend: Library\n\nfn: CodePrivate () int\n    private: (int: x 20)\n    x := 21\n    return: x * 100 + Library\\read()\nend: CodePrivate\n\nfn: CodePublic () int\n    int: x 20\n    x := 21\n    return: x * 100 + Library\\read()\nend: CodePublic\n\nfn: DataPrivate (private: (int: x 20)) int\n    return: x * 100 + Library\\read()\nend: DataPrivate\n\nfn: DataPrivateSource () int\n    return: DataPrivate\\data\\x\nend: DataPrivateSource\n", file) < 0
+        return: 102
+    # This nested method reads the root's private x before the local
+    # declaration, then the live local's lexical origin after x := 21.
+    # The graph's original CODE declaration remains 20 throughout.
+    if: c.fputs("\nfn: F () int\n    int: before inner()\n    private: (int: x 20)\n    x := 21\n    return: before * 100 + inner()\n    fn: inner () int\n        return: x\n    end: inner\nend: F\n\nfn: FSource () int\n    return: F\\code\\x\nend: FSource\n\nOther:\n    int: x 40\n    fn: read () int\n        return: x\n    end: read\nend: Other\n\nPrivateLex:\n    private: (int: x 20)\n    fn: relay () int\n        int: selected x\n        x := 21\n        PrivateCounter\\local := x\n        return: Other\\read()\n    end: relay\nend: PrivateLex\n\nfn: InheritedPrivate () int\n    return: PrivateLex\\relay()\nend: InheritedPrivate\n\nfn: PrivateLexSource () int\n    return: PrivateLex\\x\nend: PrivateLexSource\n", file) < 0
+        return: 102
+    # The actual is read from a private source, but the receiving DATA field
+    # is public. Resetting the lexical field inside the callee makes an
+    # incorrectly inherited private bit observable as 10 instead of 30.
+    if: c.fputs("\nfn: explicit_relay (int: x) int\n    Library\\x := 10\n    return: Library\\read()\nend: explicit_relay\n\nfn: Explicit () int\n    private: (int: x 99)\n    Library\\x := 30\n    int: direct Library\\x\n    int: passed explicit_relay(Library\\x)\n    return: direct * 100 + passed\nend: Explicit\n\nfn: LibrarySource () int\n    return: Library\\x\nend: LibrarySource\n", file) < 0
+        return: 102
+    # A potentially consumed lexical FREE field is captured as a deferred
+    # description at entry. The false branch must not call private_bump.
+    # A later invocation changes the source RHS before its first read: the
+    # selected description still computes 9, while the next call selects 5.
+    if: c.fputs("\nfn: private_bump () int\n    PrivateCounter\\calls := PrivateCounter\\calls + 1\n    return: 9\nend: private_bump\n\nLazyLibrary:\n    int: x private_bump()\n    fn: guard () int\n        if: 0 (return: x)\n        return: 42\n    end: guard\n    fn: snapshot () int\n        int: five 5\n        LazyLibrary[0][1] := @five\n        return: x\n    end: snapshot\nend: LazyLibrary\n\nfn: LazyGuard () int\n    return: LazyLibrary\\guard()\nend: LazyGuard\n\nfn: LazySnapshot () int\n    return: LazyLibrary\\snapshot()\nend: LazySnapshot\n", file) < 0
+        return: 102
+    if: c.fputs("\nfn: MetadataOffset (int: a 1) int (private: (int: x 2))\n    return: a + x\nend: MetadataOffset\n\nMetadataTarget:\n    int: marker 3\nend: MetadataTarget\n\nMetadataShared:\n    private: (@: hidden MetadataTarget)\n    @: public MetadataTarget\nend: MetadataShared\n\nMetadataPrivate:\n    private: (int: v 1)\nend: MetadataPrivate\n\nMetadataPublic:\n    int: v 2\nend: MetadataPublic\n", file) < 0 || c.fclose(file) != 0
+        return: 102
+    file := c.fopen("graph_private_binding_code.lm2", "ab")
+    if: file = 0
+        return: 102
+    if: c.fputs("\nfn: Eligible (private: (int: x 20); int: x 30) int\n    return: Library\\read()\nend: Eligible\n", file) < 0 || c.fclose(file) != 0
+        return: 102
+    status := c.lm_graph_build_file(g, "graph_private_binding_code.lm2", @ root)
+    c.remove("graph_private_binding_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        c.fprintf(c.stderr, "private binding build: status=%d root=%p\n", status, (cast: (@: void) root))
+        return: 103
+    status := gp_metadata_check(g, root)
+    if: status != 0
+        return: status
+    counter := gp_named(g, root, "PrivateCounter")
+    data_private := gp_named(g, root, "DataPrivate")
+    if: counter = 0 || data_private = 0 || gp_number(g, counter, "calls") != 0 || gp_number(g, counter, "local") != 0
+        return: 104
+    status := gp_call(g, root, "Eligible", 30, 119)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "CodePrivate", 2110, 105)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "CodePublic", 2121, 106)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "DataPrivate", 2010, 107)
+    if: status != 0
+        return: status
+    actuals[0] := c.lmx_graph_int(g, 30)
+    if: actuals[0] = 0
+        return: 108
+    status := c.lmx_graph_invoke_value(g, data_private, actuals, 1U, @ result)
+    if: gp_expect(g, status, @ result, 3010, 108) != 0
+        return: 108
+    status := gp_call(g, root, "DataPrivateSource", 20, 109)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "F", 721, 110)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "FSource", 20, 111)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "InheritedPrivate", 40, 112)
+    if: status != 0 || gp_number(g, counter, "local") != 21
+        return: 112
+    status := gp_call(g, root, "PrivateLexSource", 20, 113)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "Explicit", 3030, 114)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "LibrarySource", 10, 115)
+    if: status != 0
+        return: status
+    status := gp_call(g, root, "LazyGuard", 42, 116)
+    if: status != 0 || gp_number(g, counter, "calls") != 0
+        return: 116
+    status := gp_call(g, root, "LazySnapshot", 9, 117)
+    if: status != 0 || gp_number(g, counter, "calls") != 1
+        return: 117
+    status := gp_call(g, root, "LazySnapshot", 5, 118)
+    if: status != 0 || gp_number(g, counter, "calls") != 1 || arena\activation != 0 || arena\execution_roots != 0
+        return: 118
+    c.free(actuals)
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7
+end: gp_private_check

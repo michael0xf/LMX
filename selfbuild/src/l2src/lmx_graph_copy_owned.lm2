@@ -3067,8 +3067,8 @@ end: lmx_graph_copy_drain_mapped
 
 # Prepare the name of an actual copied place: the code its source occurrence binds (IDENTIFIER-CODES), carried as it is
 # -- no spelling is read or copied, so a copy into another arena keeps the name's identity. The private map keeps
-# pending rows unpublished until the complete graph and every name are ready. A compiled interface row (layout) is
-# carried with its code 0.
+# pending rows unpublished until the complete graph and every name are ready.
+# Port-MAX field metadata, including private binding, travels with code 0.
 fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; size_t: code; @: layout c.LmxSourceName) int
     @: row c.LmxSourceName 0
     if: code = 0U && layout = 0
@@ -3076,7 +3076,7 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
     if: layout != 0
         @: known c.LmxSourceName c.lmx_source_places(dst_arena, destination)
         if: known != 0
-            if: known\place_spec != layout\place_spec || known\model_layout != layout\model_layout
+            if: known\place_spec != layout\place_spec || known\model_layout != layout\model_layout || known\binding_private != layout\binding_private
                 return: c.LMX_GRAPH_COPY_INVALID
             return: c.LMX_GRAPH_COPY_OK
         ---
@@ -3092,7 +3092,7 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
         row := row\pending_next
     ---
     if: row != 0
-        if: layout != 0 && (row\place_spec != layout\place_spec || row\model_layout != layout\model_layout)
+        if: layout != 0 && (row\place_spec != layout\place_spec || row\model_layout != layout\model_layout || row\binding_private != layout\binding_private)
             return: c.LMX_GRAPH_COPY_INVALID
         if: row\code != code
             return: c.LMX_GRAPH_COPY_INVALID
@@ -3103,6 +3103,7 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
         if: layout != 0
             row\place_spec := layout\place_spec
             row\model_layout := layout\model_layout
+            row\binding_private := layout\binding_private
         ---
         row\pending_next := head
         if: lmx_copy_map_put(pending, destination, (cast: (@: void) row)) != 0
@@ -3139,6 +3140,16 @@ fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: 
         return: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -1), layout\code, layout)
     return: c.LMX_GRAPH_COPY_OK
 end: lmx_copy_name_prepare
+
+# Custom receiving layouts choose their canonical provider in their existing
+# layout pass. Exact child-cell coordinates preserve offsets and shared slots;
+# this helper neither chooses a provider nor walks arbitrary map aliases.
+# The caller publishes/cancels these rows with the existing names_finish.
+fn: lmx_graph_copy_place_metadata_mapped (@: arena c.LmxArena; @: source_child void; @: target_child void; @: pending_names c.LmxCopyMap) int
+    if: arena = 0 || source_child = 0 || target_child = 0 || pending_names = 0
+        return: c.LMX_GRAPH_COPY_INVALID
+    return: lmx_copy_name_prepare(arena, arena, source_child, target_child, pending_names)
+end: lmx_graph_copy_place_metadata_mapped
 
 fn: lmx_copy_names (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: map c.LmxCopyMap; @: pending c.LmxCopyMap) int
     @: part_src_array c.VoidArray 0

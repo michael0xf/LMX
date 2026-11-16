@@ -1251,9 +1251,9 @@ end: decl_scratch
 # prototypes of its module (src/l2src/lmx_source_names.lm2). A row binds an occurrence to the code of its spelling
 # (IDENTIFIER-CODES); the spellings are only in the two tables of lmx_ids. 0, or 1 when a write fails.
 fn: decl_source_names (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_ids.h.lm1\"\n\n# The binding of graph occurrences to the codes of their spellings (lmx_ids.h.lm1) lives here: the walker reads\n# the fn occurrence's receiver head by its code from this table. Lowered body operations\n# still dispatch typed OP records until K03 removes that carrier; it is not a\n# second language-level head. Field bindings remain physical address maps.\n# A key is the actual occurrence (Frame/leaf) or an owning child-cell address,\n# not necessarily its referent. Neither Lmx nor an atom receives a name field.\n# A compiled place interface (port -1) is its spec: m, SIZE_MAX, then a (code, type) pair per name.\nstruct: LmxSourceName\n    @: void key\n    size_t: port\n    size_t: code\n    @: size_t place_spec\n    @: void model_layout\n    @: size_t place_uses\n    @: void place_callable\n    @: LmxSourceName pending_next\nend: LmxSourceName\n\nprototype:\n    # A stable arena service cell. prepare leaves key zero until publication.\n    fn: lmx_source_name_prepare (@: LmxArena arena; @: void key; size_t: code; @@: LmxSourceName out) int\n    fn: lmx_source_name_prepare_at (@: LmxArena arena; @: void key; size_t: port; size_t: code; @@: LmxSourceName out) int\n    fn: lmx_source_name_publish (@: LmxSourceName row; @: void key) void\n", f) < 0
+    if: c.fputs("predef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_ids.h.lm1\"\n\n# The binding of graph occurrences to the codes of their spellings (lmx_ids.h.lm1) lives here: the walker reads\n# the fn occurrence's receiver head by its code from this table. Lowered body operations\n# still dispatch typed OP records until K03 removes that carrier; it is not a\n# second language-level head. Field bindings remain physical address maps.\n# A key is the actual occurrence (Frame/leaf) or an owning child-cell address,\n# not necessarily its referent. Neither Lmx nor an atom receives a name field.\n# A compiled place interface (port -1) is its spec: m, SIZE_MAX, then a (code, type) pair per name.\nstruct: LmxSourceName\n    @: void key\n    size_t: port\n    size_t: code\n    @: size_t place_spec\n    @: void model_layout\n    @: size_t place_uses\n    @: void place_callable\n    @: LmxSourceName pending_next\n    int: binding_private\nend: LmxSourceName\n\nprototype:\n    # A stable arena service cell. prepare leaves key zero until publication.\n    fn: lmx_source_name_prepare (@: LmxArena arena; @: void key; size_t: code; @@: LmxSourceName out) int\n    fn: lmx_source_name_prepare_at (@: LmxArena arena; @: void key; size_t: port; size_t: code; @@: LmxSourceName out) int\n    fn: lmx_source_name_publish (@: LmxSourceName row; @: void key) void\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_source_name_cancel (@: LmxSourceName row) void\n    fn: lmx_source_name_set (@: LmxArena arena; @: void key; size_t: code) int\n    # A compiled place interface has the lifetime of its word. Copies retain it on the selected occurrence.\n    fn: lmx_source_places (@: LmxArena arena; @: void key) @: LmxSourceName\n    fn: lmx_source_place_model_set (@: LmxArena arena; @: void slot; @: void layout) int\n    fn: lmx_source_place_uses_set (@: LmxArena arena; @: void slot; @: size_t cells) int\n    # The callable a callable field's definition put in its slot: a later write there is admitted against it, and it\n    # lives while the slot does (lmx_gc_mark_impl).\n    fn: lmx_source_place_callable_set (@: LmxArena arena; @: void slot; @: void declared) int\n    fn: lmx_source_places_set (@: LmxArena arena; @: void key; @: size_t spec) int\n    fn: lmx_source_name_set_at (@: LmxArena arena; @: void key; size_t: port; size_t: code) int\n    # Inspection/copy runs with exclusive ownership of the searched source\n    # inventories, including a foreign home. Sealing a key alone does not\n    # make its owner's still-mutable metadata inventory concurrent-readable.\n    # The code of the occurrence's spelling, 0 for none.\n    fn: lmx_source_name_get (@: LmxArena arena; @: void key) size_t\n    fn: lmx_source_name_get_at (@: LmxArena arena; @: void key; size_t: port) size_t\n    # Retire before an address can be reused. The range has not been freed yet.\n    fn: lmx_source_names_drop (@: LmxArena arena; @: void lo; @: void hi) void\n    # Run only after a complete ordinary graph mark. Keys are weak: this pass\n    # never marks them; it keeps the rows of already-live occurrences only.\n    fn: lmx_source_names_mark (@: LmxArena arena; unsigned: gen) int\nend: prototype\n", f) < 0
+    if: c.fputs("    fn: lmx_source_name_cancel (@: LmxSourceName row) void\n    fn: lmx_source_name_set (@: LmxArena arena; @: void key; size_t: code) int\n    # A compiled place interface has the lifetime of its word. Copies retain it on the selected occurrence.\n    fn: lmx_source_places (@: LmxArena arena; @: void key) @: LmxSourceName\n    fn: lmx_source_place_model_set (@: LmxArena arena; @: void slot; @: void layout) int\n    fn: lmx_source_place_uses_set (@: LmxArena arena; @: void slot; @: size_t cells) int\n    # The callable a callable field's definition put in its slot: a later write there is admitted against it, and it\n    # lives while the slot does (lmx_gc_mark_impl).\n    fn: lmx_source_place_callable_set (@: LmxArena arena; @: void slot; @: void declared) int\n    fn: lmx_source_place_private_set (@: LmxArena arena; @: void slot; int: flag) int\n    fn: lmx_source_places_set (@: LmxArena arena; @: void key; @: size_t spec) int\n    fn: lmx_source_name_set_at (@: LmxArena arena; @: void key; size_t: port; size_t: code) int\n    # Inspection/copy runs with exclusive ownership of the searched source\n    # inventories, including a foreign home. Sealing a key alone does not\n    # make its owner's still-mutable metadata inventory concurrent-readable.\n    # The code of the occurrence's spelling, 0 for none.\n    fn: lmx_source_name_get (@: LmxArena arena; @: void key) size_t\n    fn: lmx_source_name_get_at (@: LmxArena arena; @: void key; size_t: port) size_t\n    # Retire before an address can be reused. The range has not been freed yet.\n    fn: lmx_source_names_drop (@: LmxArena arena; @: void lo; @: void hi) void\n    # Run only after a complete ordinary graph mark. Keys are weak: this pass\n    # never marks them; it keeps the rows of already-live occurrences only.\n    fn: lmx_source_names_mark (@: LmxArena arena; unsigned: gen) int\nend: prototype\n", f) < 0
         return: 1
     return: 0
 end: decl_source_names
@@ -1414,7 +1414,7 @@ fn: decl_graph_copy (@: f c.FILE) int
         return: 1
     if: c.fputs("    size_t: n\n    # Scratch report for a remapped copy: first reached sealed source profile\n    # absent from this map. Not graph metadata, and cleared before each run.\n    @: Lmx unmapped\n    # Operation policy: 1 preserves profiles; 2 defers Value edges; 4 copies ordinary parts.\n    int: value_policy\nend: LmxCopyMap\n\nstruct: LmxCopyStack\n    VoidDynamicArray: items\nend: LmxCopyStack\n\n# Machine scratch for a constructor's selected-profile coverage proof. These\n# intervals are never stored in the language graph or name/address registry.\nstruct: LmxQualifySpan\n    @: LmxPool pool\n    @: LmxChunk chunk\n    size_t: first\n    size_t: count\nend: LmxQualifySpan\n\nstruct: LmxQualifySpansDynamicArray\n    @: LmxQualifySpan data\n    size_t: size\n    size_t: capacity\nend: LmxQualifySpansDynamicArray\n\nprototype:\n    # Shared temporary address-map operations, including the receiving\n    # projection built by an enclosing constructor. No per-node metadata.\n    fn: lmx_copy_map_init (@: LmxCopyMap map) int\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_copy_map_dispose (@: LmxCopyMap map) void\n    fn: lmx_copy_map_get (@: LmxCopyMap map; @: void key) @: void\n    fn: lmx_copy_map_put (@: LmxCopyMap map; @: void key; @: void value) int\n    # Same-arena synchronous receiving construction: caller owns map/queue.\n    fn: lmx_graph_copy_value_mapped_staged (@: LmxArena arena; @: void source; @: LmxCopyMap map; @: LmxCopyStack todo; @@: void out) int\n    fn: lmx_graph_copy_drain_mapped (@: LmxArena arena; @: LmxCopyMap map; @: LmxCopyStack todo; int: chain) int\n    fn: lmx_copy_stack_dispose (@: LmxCopyStack stack) void\n    # A profiled forest copy for relocating several qualified roots as one\n    # operation.  One source-address map spans every root, so aliases and\n    # cross-root cycles are preserved.  On success `relocated` owns the\n    # operation-local map buffers; the caller disposes it after using the\n    # addresses to prepare incoming-edge rewrites.  On failure it is empty.\n    # Root qualification/sealing and publication of incoming edges remain the\n    # caller's separate transaction; this function alone publishes neither.\n", f) < 0
+    if: c.fputs("    fn: lmx_copy_map_dispose (@: LmxCopyMap map) void\n    fn: lmx_copy_map_get (@: LmxCopyMap map; @: void key) @: void\n    fn: lmx_copy_map_put (@: LmxCopyMap map; @: void key; @: void value) int\n    # Same-arena synchronous receiving construction: caller owns map/queue.\n    fn: lmx_graph_copy_value_mapped_staged (@: LmxArena arena; @: void source; @: LmxCopyMap map; @: LmxCopyStack todo; @@: void out) int\n    fn: lmx_graph_copy_drain_mapped (@: LmxArena arena; @: LmxCopyMap map; @: LmxCopyStack todo; int: chain) int\n    fn: lmx_copy_stack_dispose (@: LmxCopyStack stack) void\n    fn: lmx_graph_copy_place_metadata_mapped (@: LmxArena arena; @: void source_child; @: void target_child; @: LmxCopyMap pending_names) int\n    # A profiled forest copy for relocating several qualified roots as one\n    # operation.  One source-address map spans every root, so aliases and\n    # cross-root cycles are preserved.  On success `relocated` owns the\n    # operation-local map buffers; the caller disposes it after using the\n    # addresses to prepare incoming-edge rewrites.  On failure it is empty.\n    # Root qualification/sealing and publication of incoming edges remain the\n    # caller's separate transaction; this function alone publishes neither.\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_graph_copy_forest_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    # Address-keyed source-profile -> destination-profile map. Each copied\n    # qualified branch keeps its own profile, but all roots share one address\n    # relocation map; no source graph metadata or runtime name key is added.\n    fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void\n    # Complete an existing source->copy map with ONE receiving projection.\n", f) < 0
         return: 1
@@ -2235,11 +2235,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: array_names char c.calloc(7U, sizeof(@: char))
     @@: scratch_names char c.calloc(5U, sizeof(@: char))
     @@: value_names char c.calloc(63U, sizeof(@: char))
-    @@: source_names char c.calloc(15U, sizeof(@: char))
+    @@: source_names char c.calloc(16U, sizeof(@: char))
     @@: ids_names char c.calloc(6U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(77U, sizeof(@: char))
-    @@: copy_names char c.calloc(30U, sizeof(@: char))
+    @@: copy_names char c.calloc(31U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(22U, sizeof(@: char))
     @@: post_names char c.calloc(23U, sizeof(@: char))
@@ -2259,7 +2259,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(189U, sizeof(@: char))
-    @@: graph_names char c.calloc(83U, sizeof(@: char))
+    @@: graph_names char c.calloc(86U, sizeof(@: char))
     @@: graph_run_names char c.calloc(71U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
@@ -2365,6 +2365,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[80] := "lmx_graph_scalar_type"
     graph_names[81] := "lmx_graph_scalar_box"
     graph_names[82] := "lmx_graph_names_drop"
+    graph_names[83] := "lmx_graph_receiving_view"
+    graph_names[84] := "lmx_graph_field_prepare"
+    graph_names[85] := "lmx_graph_binding_leaf"
     graph_run_names[0] := "lmx_graph_eval"
     graph_run_names[1] := "lmx_graph_run"
     graph_run_names[2] := "lmx_graph_call"
@@ -2907,6 +2910,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     copy_names[27] := "lmx_graph_copy_value_mapped_staged"
     copy_names[28] := "lmx_graph_copy_drain_mapped"
     copy_names[29] := "lmx_copy_stack_dispose"
+    copy_names[30] := "lmx_graph_copy_place_metadata_mapped"
     implements_names[0] := "lmx_domain_register"
     implements_names[1] := "lmx_domain_kind"
     implements_names[2] := "lmx_domain_type"
@@ -3221,6 +3225,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     source_names[12] := "lmx_source_place_model_set"
     source_names[13] := "lmx_source_place_uses_set"
     source_names[14] := "lmx_source_place_callable_set"
+    source_names[15] := "lmx_source_place_private_set"
     ids_names[0] := "lmx_ids_code"
     ids_names[1] := "lmx_ids_name"
     ids_names[2] := "lmx_ids_count"
@@ -3259,19 +3264,19 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 63, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 83, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 86, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 71, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 15, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 16, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 77, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 30, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 31, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
         return: 1

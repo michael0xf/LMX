@@ -82,8 +82,8 @@ fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) size
     return: row\code
 end: lmx_source_name_get_at
 
-# A separate port records the physical occurrence's compiled data interface.
-# Its spec has exactly the lifetime of the compiled word.
+# A separate port records metadata of the physical occurrence/field. Its
+# optional compiled interface and private binding bit share the same weak key.
 fn: lmx_source_places (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
     if: arena = 0 || key = 0
         return: 0
@@ -97,6 +97,8 @@ fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout voi
         return: 1
     @: row c.LmxSourceName lmx_source_places(arena, slot)
     if: row != 0
+        if: row\model_layout = 0
+            row\model_layout := layout
         return: (cast: (int) (row\model_layout != layout))
     if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
@@ -124,6 +126,8 @@ fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: spec size_t) int
         return: 1
     @: row c.LmxSourceName lmx_source_places(arena, key)
     if: row != 0
+        if: row\place_spec = 0
+            row\place_spec := spec
         return: (cast: (int) (row\place_spec != spec))
     if: lmx_source_name_prepare_at(arena, key, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
@@ -131,6 +135,26 @@ fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: spec size_t) int
     lmx_source_name_publish(row, key)
     return: 0
 end: lmx_source_places_set
+
+# Private belongs to this actual owning child-cell, never to its current
+# referent or spelling. Clearing an absent flag needs no service allocation.
+fn: lmx_source_place_private_set (@: arena c.LmxArena; @: slot void; int: flag) int
+    @: row c.LmxSourceName 0
+    if: arena = 0 || slot = 0
+        return: 1
+    flag := (cast: (int) (flag != 0))
+    row := lmx_source_places(arena, slot)
+    if: row != 0
+        row\binding_private := flag
+        return: 0
+    if: flag = 0
+        return: 0
+    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
+        return: 1
+    row\binding_private := flag
+    lmx_source_name_publish(row, slot)
+    return: 0
+end: lmx_source_place_private_set
 
 # A stable arena service cell. prepare leaves key zero until publication.
 fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; size_t: code; @@: out c.LmxSourceName) int
@@ -168,6 +192,7 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     row\place_uses := 0
     row\place_callable := 0
     row\pending_next := 0
+    row\binding_private := 0
     out[0] := row
     return: 0
 end: lmx_source_name_prepare_at
@@ -184,6 +209,7 @@ sub: lmx_source_name_cancel (@: row c.LmxSourceName)
         row\key := 0
         row\pending_next := 0
         row\code := 0U
+        row\binding_private := 0
     ---
 end: lmx_source_name_cancel
 

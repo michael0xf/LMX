@@ -20,6 +20,7 @@ predef: "l1src/parser.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>"
@@ -868,18 +869,60 @@ fn: lm_graph_block_item (@: nd c.LmP0Node) int
     return: (cast: (int) (tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U)))
 end: lm_graph_block_item
 
-# Is field index of result, built from the written field nd, a data field of its Structure -- a named place, the data
-# part, a named block -- rather than a statement (a Frame named by its head, §3.3)? 1 or 0.
+# Preserve the old named-block trailer classification through the same known
+# qualifier operand shape. The graph's receiving decoder decides field meaning.
+fn: lm_graph_receiving_block (@: nd c.LmP0Node) int
+    @: current c.LmP0Node nd
+    @: fr c.LmP0Frame 0
+    @: field c.LmP0Field 0
+    @: body c.LmP0Structure 0
+    while: current != 0 && current\kind = c.LM_P0_NODE_FRAME
+        fr := lm_graph_p0_frame(current)
+        if: c.lmx_graph_declaration_receiver(lm_graph_p0_name_word(lm_graph_p0_head(fr))) != 3
+            break
+        body := lm_graph_p0_body(fr)
+        if: body = 0 || lm_graph_count_active(body) != 1U
+            return: 0
+        field := lm_graph_next_active(lm_graph_p0_first(body))
+        current := lm_graph_p0_value(field)
+        if: current != 0 && current\kind = c.LM_P0_NODE_STRUCTURE
+            body := lm_graph_p0_structure(current)
+            if: lm_graph_count_active(body) = 1U
+                field := lm_graph_next_active(lm_graph_p0_first(body))
+                current := lm_graph_p0_value(field)
+            ---
+        ---
+    ---
+    return: lm_graph_block_item(current)
+end: lm_graph_receiving_block
+
+# Is field index of result a named place/data block rather than a statement?
 fn: lm_graph_own_field (@: g c.LmxGraph; @: result c.Lmx; size_t: index; @: nd c.LmP0Node) int
-    int: kind c.lmx_graph_kind(g, c.lmx_graph_get_in(g, result, index))
+    @: leaf void 0
+    int: binding_private 0
+    int: kind 0
+    if: c.lmx_graph_receiving_view(g, c.lmx_graph_get_in(g, result, index), @ leaf, @ binding_private) != 0
+        return: 0
+    kind := c.lmx_graph_kind(g, leaf)
     if: kind = 3
         return: 1
     if: kind = 1 || kind = 5 || kind = 6 || kind = 8 || kind = 9
         return: (cast: (int) (c.lmx_graph_slot_name(g, result, index) != 0))
     if: kind = 4
-        return: lm_graph_block_item(nd)
+        return: lm_graph_receiving_block(nd)
     return: 0
 end: lm_graph_own_field
+
+# Rehoming a written field creates a different CHILDREN cell. Copy its field
+# attribute explicitly; sharing the same current value does not share a flag.
+fn: lm_graph_private_copy (@: g c.LmxGraph; @: source c.Lmx; size_t: from; @: target c.Lmx; size_t: to) int
+    @: cell void c.lmx_graph_cell_in(g\arena, source, from)
+    @: row c.LmxSourceName c.lmx_source_places(g\arena, cell)
+    if: row = 0 || row\binding_private = 0
+        return: 0
+    cell := c.lmx_graph_cell_in(g\arena, target, to)
+    return: c.lmx_source_place_private_set(g\arena, cell, 1)
+end: lm_graph_private_copy
 
 # Build data/signature fields through the same constructor. A body retains its written statements and effects.
 fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; int: declarations; @: tail c.LmP0Trailer; @@: out c.Lmx) int
@@ -890,6 +933,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
     size_t: j 0U
     @: item c.LmP0Field 0
     @: value void 0
+    @: folded void 0
     size_t: i 0U
     int: status 0
     if: source = 0 || out = 0
@@ -905,6 +949,13 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
             status := lm_graph_build_node(g, result, lm_graph_p0_value(item), @ value)
             if: status = 0
                 status := c.lmx_graph_put_in(g, result, i, value)
+            if: status = 0
+                status := c.lmx_graph_field_prepare(g, result, i, @ folded)
+            if: status = 0
+                folded := c.lmx_graph_binding_leaf(g, value)
+                if: folded != value
+                    status := lm_graph_build_put(g, result, i, folded)
+                ---
             ---
         ---
         i := i + 1U
@@ -930,6 +981,8 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         while: i < c.lmx_graph_count(result) && item != 0 && status = 0
             if: lm_graph_own_field(g, result, i, lm_graph_p0_value(item)) != 0
                 status := lm_graph_build_put(g, outer, j, c.lmx_graph_get_in(g, result, i))
+                if: status = 0
+                    status := lm_graph_private_copy(g, result, i, outer, j)
                 j := j + 1U
             i := i + 1U
             item := lm_graph_next_active(lm_graph_p0_next(item))
@@ -956,13 +1009,23 @@ end: lm_graph_data_head
 # head, a bare atom, a block). 0, 1 without memory, 2 for a nd of no known kind.
 fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.LmP0Node) int
     @: value void 0
+    @: folded void 0
     int: r 0
     if: g = 0 || root = 0 || nd = 0
         return: 2
     r := lm_graph_build_node(g, root, nd, @ value)
     if: r != 0
         return: r
-    return: c.lmx_graph_put_in(g, root, slot, value)
+    r := c.lmx_graph_put_in(g, root, slot, value)
+    if: r = 0
+        r := c.lmx_graph_field_prepare(g, root, slot, @ folded)
+    if: r = 0
+        folded := c.lmx_graph_binding_leaf(g, value)
+        if: folded != value
+            r := lm_graph_build_put(g, root, slot, folded)
+        ---
+    ---
+    return: r
 end: lm_graph_build_field
 
 # The root of a parsed document as a root Lmx of the arena of g: one slot per active field, built in the written order.

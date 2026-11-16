@@ -25,6 +25,10 @@ flush() и frozen требования слотов при S[n] заменены
   [Свидетельство](steps/witnesses/m10-pending-actuals-20261115/notes.md); общий DATA binder остаётся OPEN.
 - [ ] Ресивер private: исключает поле из динамических источников; прямой и лексический доступ сохраняются.
   Общий binder/hidden args для native и обходчика, без отдельной системы доступа — [M14](next_core_tasks_v3.md#private-binding-plan).
+- [x] Ограниченные Graph code gates408: canonical private/copy/merge/image, общий ready/deferred selector,
+  live lexical reuse и frame0/FREE полный контекст. Actual G2 target9/0 nf/root0/root1,
+  private/local Graph triples PASS; whole/fixedpoint14 точно Source14, final Source16:943.
+  Native/Walk origin409 и qualifier lowering OPEN; [границы408](steps/witnesses/m14-private-binding-20261116/notes.md).
 - [ ] Root-only сбор data/code; при входе нет инициализаторов; uninit:T сохранён; actual подавляет свой default,
   неиспользованное вычисляемое входное поле не вызывается. Сокращённые заголовки сохраняются с единой data.
 - [ ] Переменные и const видны последовательно; Structure/callable — в обе стороны. Повторы полей и S\[n]field сохранены.

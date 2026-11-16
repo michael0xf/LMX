@@ -1,5 +1,46 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-16 — срез408: code gates PASS, docs/index
+
+407 принят и отправлен85881b5f; авторский17e8af6f сохранён. Goal ACTIVE, работа прямо main.
+Root — единственный producer; helpers завершили scope/review. Полные M10/M14 ещё OPEN.
+Common Graph selector заимствует ready Value либо deferred RHS, не выполняя его при capture;
+private — атрибут canonical CHILDREN и локальной binding row, не Value/referent/имени.
+Динамические кандидаты фильтруются до ambiguity; current/lexical/explicit доступны.
+Точное live lexical origin использует существующий frame, не копию окружения.
+SourceName ABI дополнен binding_private после pending_next; Graph86/SourceNames16/Copy31/Run71.
+Raw qualifier SOURCE сохраняется. Только private-only receiving сворачивается при construction;
+const/immutable/independent chain не превращается в mutable place. Их полное lowering OPEN.
+Новое assertion owner graph_private_binding: private-focused03 PASS1/0 во всех4 режимах,
+включая Eligible119 и metadata copy/merge130–138. Native/Walk hidden transport остаётся OPEN,
+следующий перенос origin/private идёт через существующий activation binding в основном v3.
+
+Артефакты: build2/codex_fix250generationchain01/runs/sol-m14-private-binding-20261116-01.
+Whole01 genuine G1/G2 по9 smoke/0 и fixedpoint14 PASS точно Source14:943/SHA1298d28b.
+Consumed snapshot382/SHA7d6abc3c; actual G2 FE4c40c01f и Tool8eacbaa7 приняты как producer.
+Final Source16:943 frozen/staged/canonical SHA445ff00f. После Whole — differential GV witness,
+удаление недостижимой reference-copy ветки и старых комментариев, без ABI/compiler/recipe changes.
+Tool-private-03 normal PASS8b6696b5. Runtime-private-10 normal PASS: C9f785bf7/prod7ecddcba/obsf3199d28.
+Runtime-private-11 actual G2 normal PASS: Cf145b983/prod2452dca1/obs94c84985.
+Final targeted01 PASS9/0 nf/root0/root1, включая ready frame0/FREE с отличным от companion контекстом.
+Graph-private-05 normal PASS707c9cf4; private_binding и прежний call_frame_local — оба final triple PASS.
+Ранние Controls8/0 — Runtime09; GP03 — Runtime10. Не подменять ими final Runtime11 gates выше.
+Source15:943/SHA6c8ac20d — code gates; Source16 исправляет только LF в4 owned файлах,
+семантическое содержимое Git index прежнее. Docs01 остановился на этих4 EOL findings;
+после LF-исправления и пересоздания canonical manifest — normal docs02.
+Docs02 actual G2 PASS35/14/27/44/615, links/opening, LF28316, exit0.
+Working/cached diff-check PASS. После записи результата — final indexed docs03;
+его terminal result фиксируется в теле коммита, затем commit/push20 owned files.
+Bridge использовал ровно101 готовый C-header genuine G2 consumed snapshot407 через штатные
+manifest/stage-copy; Tool03 использовал accepted Runtime-values-04, а Runtime09–11 прошли
+полную генерацию. Все code producers terminal. Mutant в отдельном stage: ровно одна
+строка native held input→0, normal Runtime/Graph support PASS; GV builds nf, затем во всех4
+режимах status155/exit144 вместо7. Root/stage без мутации. Прежние Runtime01–08/Tool01–02 —
+сохранённые отказы: L2 fences, C-actual annotation, незаполненные exports и недостающий
+header после прерванной смены ABI. Сгенерированные L1/C вручную не правились.
+Подробности: [свидетельство408](witnesses/m14-private-binding-20261116/notes.md).
+Semantics/grammar sources не менялись; render автора17e8af6f сохраняется. Два чужих WIP
+не трогать и не индексировать. После code gates: обычный docs-check, diff-check, owned commit/push.
 ## 2026-11-15 — срез407: full Value actuals, финальные gates
 
 406 принят и отправлен b901f2bf; авторский17e8af6f сохранён, повторно не фиксировался.

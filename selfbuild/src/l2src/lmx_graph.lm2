@@ -35,6 +35,7 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
 predef: "l2src/lmx_primitive_profile.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -711,6 +712,8 @@ end: lmx_graph_name_of
 fn: lmx_graph_place_cell (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: void
     @: value void lmx_graph_get_in(g, lmx, index)
     int: kind lmx_graph_kind(g, value)
+    value := lmx_graph_binding_leaf(g, value)
+    kind := lmx_graph_kind(g, value)
     if: kind = 1
         return: value
     if: kind = 3
@@ -724,6 +727,7 @@ fn: lmx_graph_slot_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
     @: value void lmx_graph_get_in(g, lmx, index)
     @: cell void 0
     @: declared char 0
+    value := lmx_graph_binding_leaf(g, value)
     if: value = 0
         return: 0
     if: lmx_graph_kind(g, value) = 3 || lmx_graph_kind(g, value) = 8 || lmx_graph_kind(g, value) = 9
@@ -1194,7 +1198,7 @@ fn: lmx_graph_declaration_receiver (@: head char) int
     size_t: i 0U
     if: head = 0 || head[0] = 0
         return: 0
-    if: head = lmx_graph_intern("const", 5U) || head = lmx_graph_intern("immutable", 9U) || head = lmx_graph_intern("independent", 11U)
+    if: head = lmx_graph_intern("const", 5U) || head = lmx_graph_intern("immutable", 9U) || head = lmx_graph_intern("independent", 11U) || head = lmx_graph_intern("private", 7U)
         return: 3
     if: head[0] = 64
         while: head[i] = 64
@@ -1208,6 +1212,86 @@ fn: lmx_graph_declaration_receiver (@: head char) int
         return: 1
     return: lmx_graph_primitive_receiver(head)
 end: lmx_graph_declaration_receiver
+
+# A borrowed receiving view never rewrites its source or qualifier spine.
+# Only a known qualifier consumes a single written operand and its one group;
+# a named Structure/callable and an arbitrary singleton Structure stay whole.
+fn: lmx_graph_receiving_view (@: g c.LmxGraph; @: raw void; @@: leaf void; @: binding_private int) int
+    @: current void raw
+    @: checkpoint void raw
+    @: child void 0
+    @: head char 0
+    size_t: power 1U
+    size_t: span 0U
+    if: g = 0 || leaf = 0 || binding_private = 0
+        return: 2
+    leaf[0] := 0
+    binding_private[0] := 0
+    while: lmx_graph_kind(g, current) = 4
+        head := lmx_graph_name_of(g, current)
+        if: lmx_graph_declaration_receiver(head) != 3
+            break
+        if: lmx_graph_count((cast: (@: c.Lmx) current)) != 1U
+            return: 2
+        if: head = lmx_graph_intern("private", 7U)
+            binding_private[0] := 1
+        child := lmx_graph_get_in(g, (cast: (@: c.Lmx) current), 0U)
+        if: lmx_graph_kind(g, child) = 4 && lmx_graph_name_of(g, child) = 0 && lmx_graph_count((cast: (@: c.Lmx) child)) = 1U
+            child := lmx_graph_get_in(g, (cast: (@: c.Lmx) child), 0U)
+        if: child = checkpoint
+            return: 2
+        span := span + 1U
+        if: span = power
+            checkpoint := child
+            span := 0U
+            if: power <= (cast: (size_t) -1) / 2U
+                power := power * 2U
+            ---
+        ---
+        current := child
+    ---
+    leaf[0] := current
+    return: 0
+end: lmx_graph_receiving_view
+
+# The attribute belongs to the actual canonical CHILDREN cell. The original
+# source remains in that field; consumers use its borrowed receiving view.
+fn: lmx_graph_field_prepare (@: g c.LmxGraph; @: owner c.Lmx; size_t: index; @@: leaf void) int
+    @: raw void 0
+    @: slot void 0
+    int: binding_private 0
+    int: status 0
+    if: g = 0 || owner = 0 || leaf = 0 || index >= lmx_graph_count(owner)
+        return: 2
+    raw := lmx_graph_get_in(g, owner, index)
+    status := lmx_graph_receiving_view(g, raw, leaf, @ binding_private)
+    if: status != 0 || binding_private = 0
+        return: status
+    slot := c.lmx_graph_cell_in(g\arena, owner, index)
+    if: slot = 0
+        return: 2
+    return: c.lmx_source_place_private_set(g\arena, slot, 1)
+end: lmx_graph_field_prepare
+
+# Existing qualified receiving contracts stay whole until their physical
+# lowering is available. Private alone changes binding, never value admission.
+fn: lmx_graph_binding_leaf (@: g c.LmxGraph; @: raw void) @: void
+    @: leaf void 0
+    @: current void raw
+    int: flag 0
+    if: lmx_graph_receiving_view(g, raw, @ leaf, @ flag) != 0
+        return: raw
+    if: flag = 0
+        return: raw
+    while: current != leaf
+        if: lmx_graph_name_of(g, current) != lmx_graph_intern("private", 7U)
+            return: raw
+        current := lmx_graph_get_in(g, (cast: (@: c.Lmx) current), 0U)
+        if: lmx_graph_kind(g, current) = 4 && lmx_graph_name_of(g, current) = 0 && lmx_graph_count((cast: (@: c.Lmx) current)) = 1U
+            current := lmx_graph_get_in(g, (cast: (@: c.Lmx) current), 0U)
+    ---
+    return: leaf
+end: lmx_graph_binding_leaf
 
 # Borrowed receiving parts: the caller retains raw, including every qualifier/Array receiver.
 # Only that chain is read, never model/default contents or mutable payloads. A two-field reference
@@ -1223,6 +1307,7 @@ fn: lmx_graph_declaration_parts (@: g c.LmxGraph; @: raw void; @@: leaf void; @@
     size_t: span 0U
     int: kind 0
     int: family 0
+    int: binding_private 0
     leaf[0] := 0
     model[0] := 0
     candidate[0] := 0
@@ -1244,6 +1329,11 @@ fn: lmx_graph_declaration_parts (@: g c.LmxGraph; @: raw void; @@: leaf void; @@
             return: lmx_graph_name_of(g, current)
         head := lmx_graph_name_of(g, current)
         family := lmx_graph_declaration_receiver(head)
+        if: family = 3
+            if: lmx_graph_receiving_view(g, current, @ child, @ binding_private) != 0
+                return: 0
+            current := child
+            continue
         if: family = 1 && lmx_graph_primitive_receiver(head) = 0
             receiver_known[0] := 0
         n := lmx_graph_count((cast: (@: c.Lmx) current))
@@ -1251,7 +1341,7 @@ fn: lmx_graph_declaration_parts (@: g c.LmxGraph; @: raw void; @@: leaf void; @@
             return: 0
         child := lmx_graph_get_in(g, (cast: (@: c.Lmx) current), 0U)
         name := lmx_graph_word_text(g, child)
-        if: family != 3 && name != 0
+        if: name != 0
             if: (family = 1 && n > 2U) || (family = 2 && n > 3U)
                 return: 0
             leaf[0] := current
@@ -1275,10 +1365,6 @@ fn: lmx_graph_declaration_parts (@: g c.LmxGraph; @: raw void; @@: leaf void; @@
             return: 0
         if: (family = 1 || family = 4) && (lmx_graph_kind(g, child) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, child)) != 4)
             return: 0
-        # A qualifier consumes its written operand. One explicit group belongs to that operand's contract;
-        # this is not recursive unwrapping of an arbitrary args field or of its model/default.
-        if: family = 3 && lmx_graph_kind(g, child) = 4 && lmx_graph_name_of(g, child) = 0 && lmx_graph_count((cast: (@: c.Lmx) child)) = 1U
-            child := lmx_graph_get_in(g, (cast: (@: c.Lmx) child), 0U)
         if: child = checkpoint
             return: 0
         span := span + 1U
@@ -1479,6 +1565,8 @@ end: lmx_graph_assign_int
 # No payload is read, so this also selects a place without an initial address.
 fn: lmx_graph_reference_cell (@: g c.LmxGraph; @: value void) @: void
     int: kind lmx_graph_kind(g, value)
+    value := lmx_graph_binding_leaf(g, value)
+    kind := lmx_graph_kind(g, value)
     int: expected 0
     if: kind = 5 || kind = 6
         return: value

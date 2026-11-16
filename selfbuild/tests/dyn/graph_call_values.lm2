@@ -142,13 +142,52 @@ fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: ou
     @: g c.LmxGraph c.lmx_graph_find(arena)
     @: projected c.LmxWalkValue c.calloc(7U, c.sizeof(c.LmxWalkValue))
     @@: projected_refs void c.calloc(7U, sizeof(@: void))
-    if: g = 0 || owner = (cast: (@: void) code) || owner != (cast: (@: void) c.lmx_graph_method_data(g, code)) || projected = 0 || projected_refs = 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
+    @: free_echo c.Lmx 0
+    @: collect c.Lmx 0
+    @: collected void 0
+    @: immutable_word void 0
+    @: scalar_input c.LmxWalkValue 0
+    c.LmxWalkValue: direct
+    c.LmxWalkValue: captured
+    c.LmxExecutionRoots: saved_roots
+    @: roots_before c.LmxExecutionRoots 0
+    int: collected_before 0
+    int: cleared 0
+    int: status 0
+    if: active = 0 || active\frame != 0 || active\code != code || g = 0 || owner = (cast: (@: void) code) || owner != (cast: (@: void) c.lmx_graph_method_data(g, code)) || projected = 0 || projected_refs = 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0
         return: 151
     if: c.lmx_walk_values_project(inputs, refs, nargs, 0U, projected, projected_refs, 7U) != c.LMX_WALK_OK || gv_check_inputs(arena, projected, projected_refs, 7U) != 0 || c.memcmp((cast: (const: @: void) inputs), (cast: (const: @: void) projected), 7U * c.sizeof(c.LmxWalkValue)) != 0
         return: 152
     gv_clear_companions(arena)
     if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || gv_check_inputs(arena, inputs, refs, nargs) != 0 || gv_check_inputs(arena, projected, projected_refs, 7U) != 0 || c.memcmp((cast: (const: @: void) inputs), (cast: (const: @: void) projected), 7U * c.sizeof(c.LmxWalkValue)) != 0
         return: 153
+    # The native frame0 reader keeps the selected Value's semantic context.
+    # Its immutable companion still has distinct Model/reference edges.
+    immutable_word := c.lmx_graph_word(g, "immutable", 9U)
+    free_echo := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, code, c.lmx_graph_intern("FreeEcho", 8U)))
+    collect := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, code, c.lmx_graph_intern("Collect", 7U)))
+    if: immutable_word = 0 || free_echo = 0 || collect = 0 || free_echo\native != 0
+        return: 154
+    scalar_input := inputs + 4U
+    collected := c.lmx_graph_get(c.lmx_graph_method_data(g, collect), 0U)
+    if: c.lmx_graph_kind(g, collected) != 1
+        return: 154
+    collected_before := c.lmx_int_value_known(collected)
+    status := c.lmx_graph_eval_record(g, code, immutable_word, @ direct)
+    if: status != 0 || gv_check_metadata(arena, @ direct, 4U) != 0 || c.memcmp((cast: (const: @: void) (@ direct)), (cast: (const: @: void) scalar_input), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_int_value_known(collected) != collected_before
+        return: 155
+    # The child receives no actuals. Its first body call temporarily clears
+    # this parent input and physical companions, then collects. A later read
+    # can succeed only from the child's entry FREE snapshot, not frame0 again.
+    roots_before := c.lmx_execution_roots_mark(arena)
+    c.lmx_execution_roots_push(arena, @ saved_roots, (cast: (@: void) (@ direct)), 1U, 0, 0U, 0, 0)
+    status := c.lmx_graph_invoke_values(g, free_echo, 0, 0U, 0, @ captured)
+    cleared := (cast: (int) (scalar_input\kind = 0 && scalar_input\present = 0))
+    c.memcpy((cast: (@: void) scalar_input), (cast: (const: @: void) (@ direct)), c.sizeof(c.LmxWalkValue))
+    c.lmx_execution_roots_restore(arena, roots_before)
+    if: status != 0 || cleared = 0 || gv_check_metadata(arena, @ captured, 4U) != 0 || c.memcmp((cast: (const: @: void) (@ captured)), (cast: (const: @: void) (@ direct)), c.sizeof(c.LmxWalkValue)) != 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0 || c.lmx_int_value_known(collected) != collected_before + 1 || arena\activation != (cast: (@: void) active) || active\frame != 0
+        return: 156
     c.free(projected_refs)
     c.free(projected)
     return: c.lmx_call_result_value(arena, code, inputs + 4U, dest, out, result)
@@ -189,11 +228,27 @@ fn: gv_produce (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: o
 
 fn: gv_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: counter void c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
+    @: caller c.LmxActivation 0
     c.LmxWalkValue: value
     if: nargs != 0U || counter = 0 || c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0
         return: 172
+    # In FreeEcho this is the first body operation, after entry capture.
+    # Remove its native parent's selected input so a late fallback cannot
+    # masquerade as a captured FREE Value. gv_native restores it after return.
+    if: active != 0
+        caller := (cast: (@: c.LmxActivation) active\parent)
+    if: g != 0 && caller != 0 && c.lmx_graph_name_of(g, (cast: (@: void) caller\code)) = c.lmx_graph_intern("FreeEcho", 8U)
+        if: caller\frame = 0 || caller\parent = 0
+            return: 175
+        active := (cast: (@: c.LmxActivation) caller\parent)
+        if: active\frame != 0 || active\values = 0 || active\width <= 4U
+            return: 175
+        c.lmx_walk_value_clear((cast: (@: c.LmxWalkValue) active\values) + 4U)
+    ---
     # Every backup scalar companion, including the completed Produce result,
-    # loses its semantic edges before the next activation has been entered.
+    # loses its semantic edges before collection.
     gv_clear_companions(arena)
     if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_walk_value_num(@ value, c.LMX_TYPE_INT, 9U) != c.LMX_WALK_OK
         return: 172
@@ -344,6 +399,7 @@ fn: gv_values_check () int
     @: root c.Lmx 0
     @: probe c.Lmx 0
     @: echo c.Lmx 0
+    @: free_echo c.Lmx 0
     @: store c.Lmx 0
     @: data c.Lmx 0
     @: echo_data c.Lmx 0
@@ -358,7 +414,7 @@ fn: gv_values_check () int
     @: pair c.LmxWalkValue c.calloc(2U, c.sizeof(c.LmxWalkValue))
     @: bindings size_t c.calloc(5U, sizeof(size_t))
     @: pair_bindings size_t c.calloc(2U, sizeof(size_t))
-    @@: codes void c.calloc(3U, sizeof(@: void))
+    @@: codes void c.calloc(4U, sizeof(@: void))
     @: value c.LmxWalkValue 0
     @: context c.LmxWalkValue 0
     @: witness void 0
@@ -381,7 +437,7 @@ fn: gv_values_check () int
     file := c.fopen("graph_call_values_code.lm2", "wb")
     if: g = 0 || file = 0
         return: 140
-    if: c.fputs("fn: NativeProbe () double\n    return: immutable\nend: NativeProbe\n\nfn: Echo () double\n    return: first\nend: Echo\n\nfn: Store () double\n    first := second\n    return: first\nend: Store\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("fn: NativeProbe () double\n    return: immutable\nend: NativeProbe\n\nfn: Echo () double\n    return: first\nend: Echo\n\nfn: FreeEcho () double\n    Collect()\n    return: immutable\nend: FreeEcho\n\nfn: Store () double\n    first := second\n    return: first\nend: Store\n", file) < 0 || c.fclose(file) != 0
         return: 141
     file := c.fopen("graph_call_values_code.lm2", "ab")
     if: file = 0
@@ -413,17 +469,19 @@ fn: gv_values_check () int
         return: status
     probe := gv_named(g, root, "NativeProbe")
     echo := gv_named(g, root, "Echo")
+    free_echo := gv_named(g, root, "FreeEcho")
     store := gv_named(g, root, "Store")
     data := c.lmx_graph_lmx(g, 0, 7U)
     echo_data := c.lmx_graph_lmx(g, 0, 1U)
     store_data := c.lmx_graph_lmx(g, 0, 2U)
-    if: probe = 0 || echo = 0 || store = 0 || data = 0 || echo_data = 0 || store_data = 0
+    if: probe = 0 || echo = 0 || free_echo = 0 || store = 0 || data = 0 || echo_data = 0 || store_data = 0
         return: 142
     codes[0] := (cast: (@: void) probe)
     codes[1] := (cast: (@: void) echo)
     codes[2] := (cast: (@: void) store)
+    codes[3] := (cast: (@: void) free_echo)
     roots_before := c.lmx_execution_roots_mark(@ arena)
-    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, codes, 3U, (cast: (@: void) root), 0)
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, codes, 4U, (cast: (@: void) root), 0)
     while: i < 7U
         witness := c.lmx_graph_int(g, 0)
         if: i = 0U
@@ -456,9 +514,16 @@ fn: gv_values_check () int
     c.lmx_walk_value_clear(@ metadata)
     if: gv_metadata(@ arena, @ metadata, 4U, alias_source, abi) != 0 || c.lmx_walk_value_foreign_capture(@ arena, @ immutable_precise, 0 - c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) metadata\physical_profile), @ metadata, actuals + 4U) != c.LMX_WALK_OK
         return: 143
+    # Semantic Value context is independent of the physical companion.
+    # Keep its SOURCE/type/ref/profile, but give the Value distinct Model,
+    # references and referent edges with the same observable metadata tags.
+    c.lmx_walk_value_clear(@ metadata)
+    if: gv_metadata(@ arena, @ metadata, 4U, alias_source, abi) != 0
+        return: 143
+    c.lmx_value_context_copy(actuals + 4U, @ metadata)
     value := actuals + 4U
     context := c.lmx_value_cell_context(@ arena, (cast: (@: void) value\ref))
-    if: context = 0
+    if: context = 0 || value\model = context\model || value\references = context\references || value\referent = context\referent || value\source_type != context\source_type || value\type != context\type || value\ref != context\ref || value\physical_profile != context\physical_profile || value\scalar_abi != context\scalar_abi
         return: 143
     c.memcpy((cast: (@: void) (@ immutable_context)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
     c.memcpy((cast: (@: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue))

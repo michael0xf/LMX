@@ -2935,6 +2935,27 @@ private происхождения; явный actual в публичное вх
 Native image и hidden-input selection переносят то же свойство; новые subsystem/обёртки не нужны.
 Готовность этого переноса, включая private на data/code и цепочку lexical capture→следующий вызов, OPEN.
 
+Ограниченный Graph-срез408 прошёл code gates: Source16:943, actual G2 targeted9/0 во всех4
+режимах и private/local Graph triples. Canonical metadata, Fn DATA offsets/copy/merge/image,
+private до ambiguity, live lexical reuse и независимые ready/deferred FREE проверены.
+Frame0 read и FREE snapshot сохраняют отдельный от physical companion контекст; очистка
+исходного входа перед чтением и настоящий GC не меняют выбранный Value. Genuine G1/G2
+по9 smoke и fixedpoint14 относятся точно Source14 до позднего witness/удаления мёртвой ветки.
+Это не закрывает native/Walk hidden transport или qualifier lowering ниже.
+[Свидетельство408](steps/witnesses/m14-private-binding-20261116/notes.md).
+
+Следующий перенос409 (OPEN): передавать canonical CHILDREN origin и выбранный private через
+существующую activation binding, отдельно от Value. Заполнять привязку после окончательного
+DATA projection; explicit actual получает признак принимающего поля, hidden/FREE — выбранного
+источника. Согласовать существующие WalkValues capture/resolve и native producers: ready Value
+не перечитывается из companion, deferred RHS не исполняется ради переноса атрибута.
+FE dynamic selector исключает private до ambiguity. При точном совпадении lexical origin
+использовать живое local/full Value, не исходный CODE field и не отдельную копию окружения.
+Общий named-formal binder не запрещает explicit actual в private принимающее поле.
+GC отмечает borrowed origin через существующий activation loop; отдельный registry не нужен.
+Graph runtime lowering композиций const/immutable/independent также OPEN: construction fold
+только private-only chain сохраняет остальные qualifiers и не подтверждает их готовность.
+
 Зависимая граница M11/public primitive profile, найденная при407: FE ret_type_word пока выбирает
 фиксированный native FT для int до чтения active description, а native_type_text применяет table
 spelling только к foreign FT. Поэтому профиль int→C double ещё не готов; новый alias (как ProbeReal)

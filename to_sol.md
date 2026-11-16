@@ -40,6 +40,17 @@ bridge, остальные DATA producers/consumers, private и native variants.
 готового/deferred Value и field private origin ведётся в основном M10/M14, без второго dispatcher.
 [Границы407](steps/witnesses/m10-full-values-20261115/notes.md), [финальные gates](steps/current.md).
 
+408: Graph code gates PASS — canonical private metadata, общий ready/deferred selector,
+copier/image и live lexical reuse. Source16:943, actual G2 target9/0 во всех4 режимах,
+private/local Graph triples PASS. Genuine G1/G2 smoke9/0 и fixedpoint14 — точно Source14;
+поздние differential context witness и удаление мёртвой ветки проверены actual G2 Runtime11.
+Полная M10/M14 OPEN; финальные gates — steps/current.md,
+[точные границы408](steps/witnesses/m14-private-binding-20261116/notes.md).
+Далее409 из основного M14: existing activation binding переносит origin/выбранный private
+для native/Walk hidden inputs, без private в Value и нового registry. Explicit actual берёт
+атрибут принимающего DATA-поля; lexical reuse требует точного совпадения origin.
+Runtime lowering остальных qualifier chains не считать готовым по private-only fold.
+
 Действующее ТЗ — [M14 основного v3](next_core_tasks_v3.md#native-structures), включая
 [группу sys](next_core_tasks_v3.md#graph-tools). Это замена старой модели, а не ещё один слой поверх неё.
 

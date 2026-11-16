@@ -200,7 +200,7 @@ def remote_control_default():
     return os.environ.get('LMX_UDS_REMOTE_CONTROL', '') not in ('', '0', 'false', 'no')
 
 
-def cmd_serve(name, remote_control=False):
+def cmd_serve(name, remote_control=False, append_system_prompt=None):
     """Run the session in THIS window instead of --bg.
 
     A background session forces the fullscreen renderer before it ever looks at
@@ -218,6 +218,8 @@ def cmd_serve(name, remote_control=False):
             '--messaging-socket-path', pipe,
             '--debug-file', str(debug),
             *remote_control_args(name, remote_control)]
+    if append_system_prompt:
+        args.extend(['--append-system-prompt', append_system_prompt])
     # Inherit stdio: the child owns this console, and nothing may be printed
     # over its screen, so this command stays silent unless it fails.
     process = subprocess.Popen(args, cwd=str(ROOT))
@@ -337,7 +339,9 @@ def main():
                              'LMX_UDS_REMOTE_CONTROL=1. serve only.')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('start')
-    sub.add_parser('serve', help='Run in this window (scrollback works); not --bg.')
+    serve = sub.add_parser('serve', help='Run in this window (scrollback works); not --bg.')
+    serve.add_argument('--append-system-prompt',
+                       help='Additional session-role instructions passed to the Claude CLI.')
     sub.add_parser('status')
     sub.add_parser('attach', help='Attach this terminal to the stored session id.')
     send = sub.add_parser('send')
@@ -348,7 +352,7 @@ def main():
     if args.command == 'start':
         return cmd_start(args.name, args.remote_control)
     if args.command == 'serve':
-        return cmd_serve(args.name, args.remote_control)
+        return cmd_serve(args.name, args.remote_control, args.append_system_prompt)
     if args.command == 'status':
         return cmd_status(args.name)
     if args.command == 'attach':

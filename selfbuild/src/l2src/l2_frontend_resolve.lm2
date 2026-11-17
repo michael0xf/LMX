@@ -2261,6 +2261,12 @@ fn: lm_compiler_path_root_select (@: out c.L2Path) int
             out\root_kind := 3
             out\root := i
         i := i + 1
+    # The code of the unit's root, and of a part's root, runs over itself (#data-code-roles: a Structure launched alone is its own data):
+    # its `data` names that Structure, the occurrence the name of a method denotes above.  A name `data` the code declared, received or
+    # named a method was selected first.
+    if: out\root_kind != 3 && len = 4U && c.memcmp(pd + off, "data", 4U) = 0 && cur_mi_cell[0] >= 0 && c.lm_compiler_asgn_root(cur_mi_cell[0]) != 0
+        out\root_kind := 3
+        out\root := cur_mi_cell[0]
     if: out\root_kind = 3
         # The selected execution entry can be the very same original namespace
         # body. Resolve its fields through that body's existing NSF contract,

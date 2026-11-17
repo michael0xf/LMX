@@ -1,8 +1,14 @@
+---
+    Observed:
+        int: result 23
+    end: Observed
+---
+@: shared (data [] 0)
 fn: gate () int (
     int: calls 0
 )
-    :=: calls (calls + 1)
-    return: (calls < 3)
+    :=: (data \ calls) ((data \ calls) + 1)
+    return: ((data \ calls) < 3)
 end: gate
 fn: outer () int (
     int: steps 0
@@ -10,4 +16,8 @@ fn: outer () int (
     while: (gate) ((fn gate () int ((return 0))) (:= steps (steps + 1)) (continue))
     return: ((steps * 10) + ((gate \ data) \ calls))
 end: outer
-int: result 23
+int: result (outer)
+sub: main ()
+    :=: ((shared \ Observed) \ result) result
+end: main
+main:

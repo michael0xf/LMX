@@ -1,10 +1,20 @@
+# HG2-A (VIS): `late` is declared before its use: in delayed() before the branch (the branch-local name is not visible outside, #call-frame-20261115 para 5); in cleanup() as a field of the header data, because `cleanup\data\late` is read below. A write to the bare late is the call's local, and the finally writes it explicitly (rule Б: data\late := late + 1), so after 5 (pin kept). Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: result 0
+        int: held 0
+        int: after 0
+        int: fields 0
+)
+@: shared data[0]
 fn: delayed () int
+    int: late 0
     if: 0 ()
-    else: (int: late 7)
+    else: (late := 7)
     return: late
-fn: cleanup () int
+fn: cleanup () int (int: late 0)
     late := 4
-    finally: (int: late; late := late + 1)
+    finally: (int: late; data\late := late + 1)
     return: late
 sub: inert () ()
     if: 0 ()
@@ -14,3 +24,10 @@ int: held cleanup()
 int: after cleanup\data\late
 inert()
 int: fields length(inert\data)
+
+sub: observe ()
+    shared\Observed\result := result
+    shared\Observed\held := held
+    shared\Observed\after := after
+    shared\Observed\fields := fields
+observe()

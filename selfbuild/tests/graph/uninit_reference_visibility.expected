@@ -1,4 +1,12 @@
-sub: main () (
+---
+    Observed:
+        int: early 1001028
+        int: late 1001028
+        int: seen 7
+    end: Observed
+---
+@: sink (data [] 0)
+sub: build () (
     int: early (typeof (D [] 0))
     D:
         @: p int
@@ -12,10 +20,16 @@ sub: main () (
 )
     :=: (D \ p) (@ (data \ i))
     call: D C
-    :=: late (typeof (D [] 0))
-    :=: seen (\ (D \ p))
+    :=: (data \ late) (typeof (D [] 0))
+    :=: (data \ seen) (\ (D \ p))
+end: build
+build:
+int: early ((build \ data) \ early)
+int: late ((build \ data) \ late)
+int: seen ((build \ data) \ seen)
+sub: main ()
+    :=: ((sink \ Observed) \ early) (node \ early)
+    :=: ((sink \ Observed) \ late) (node \ late)
+    :=: ((sink \ Observed) \ seen) (node \ seen)
 end: main
 main:
-int: early 1001028
-int: late 1001028
-int: seen 7

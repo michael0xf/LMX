@@ -2129,7 +2129,7 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path 
         if: kind = 8
             c.fprintf(f, "(@ %s int)", text)
         if: kind = 9
-            c.fprintf(f, "(@ %s Lmx)", text)
+            c.fprintf(f, "(@ %s)", text)
         return: 0
     if: kind = 3
         text := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
@@ -2227,6 +2227,12 @@ fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c
         return: 0
     if: kind = 8
         c.fprintf(f, "@: %s int", lmx_graph_slot_name(g, args, index))
+        return: 0
+    if: kind = 9
+        c.fprintf(f, "@: %s", lmx_graph_slot_name(g, args, index))
+        return: 0
+    if: kind = 6 && c.lmx_arena_pointer_void_read(formal) = 0
+        c.fprintf(f, "@: %s 0", lmx_graph_slot_name(g, args, index))
         return: 0
     if: kind != 4
         return: lmx_graph_dump_token(g, formal, f, path)
@@ -2509,7 +2515,7 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth; @
             if: kind = 8
                 c.fprintf(f, "@: %s int\n", name)
             if: kind = 9
-                c.fprintf(f, "@: %s Lmx\n", name)
+                c.fprintf(f, "@: %s\n", name)
             i := i + 1U
             continue
         if: kind = 5
@@ -2525,6 +2531,10 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth; @
         # the block of that Structure under the reference's name, the text a prepared Structure has (`args:` ...).
         if: kind = 6
             name := lmx_graph_name_of(g, value)
+            if: name != 0 && c.lmx_arena_pointer_void_read(value) = 0
+                c.fprintf(f, "@: %s 0\n", name)
+                i := i + 1U
+                continue
             head := lmx_graph_name_of(g, lmx_graph_target(g, value))
             if: name = 0
                 return: 1

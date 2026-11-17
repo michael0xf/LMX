@@ -1,8 +1,20 @@
 # One trailer closes more than one open level (the author 2026-11-11, LMX_blog/2026-11-11.md#one-level-needs-no-close):
-# `end: Other` at the level of Other closes Other across the open Point, its target is the head of the Frame it closes
-# (grammar §17), and the construction admits it.
-Other:
-    Point:
-        int: x 4
-end: Other
-int: after 1
+# `end: Other` at the level of Other closes Other across the open Point, and the construction admits it.
+# Plan M11 5v: the named Structures live in the data part of main (ROOT5V); the root holds the places and the call main().
+# Observation: an explicit write through a path in main (#flush-receiver-contract, #call-frame-20261115).
+(
+    Observed:
+        int: after 0
+        int: x 0
+)
+@: shared data[0]
+sub: main () (
+    Other:
+        Point:
+            int: x 4
+    end: Other
+)
+    int: after 1
+    shared\Observed\after := after
+    shared\Observed\x := Other\Point\x
+main()

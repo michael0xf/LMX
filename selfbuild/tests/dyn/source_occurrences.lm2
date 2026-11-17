@@ -182,19 +182,19 @@ end: free_two_heads
 fn: refuses_call (int: which) int
     ---
         if: which = 0
-            call: Writer D
+            call(D Writer)
         ---
         if: which = 1
-            call: Writer Assigned
+            call(Assigned Writer)
         ---
         if: which = 2
-            call: D D
+            call(D D)
         ---
         if: which = 3
-            call: Writer Copied
+            call(Copied Writer)
         ---
         if: which = 4
-            call: hits_writer node
+            call(node hits_writer)
         ---
         catch: call ()
             return: 1
@@ -255,7 +255,7 @@ fn: stored () int
 end: stored
 # A write replaces what stands in the slot; the coordinate of the head stays, and the running code no longer has that operator.
 fn: replaced () int
-    call: D One
+    call(One D)
     if: One\y != 7
         return: 90
     @: quote D D
@@ -266,7 +266,7 @@ fn: replaced () int
     if: read_replaced() != 7 || D\[0]y != 4
         return: 92
     One\y := 0
-    call: D One
+    call(One D)
     if: One\y != 3
         return: 93
     return: 0
@@ -281,10 +281,10 @@ fn: data_role () int
     if: refuses_call(2) != 1
         return: 96
     One\y := 0
-    call: Twice One
+    call(One Twice)
     if: One\y != 7
         return: 97
-    call: Writer Nest
+    call(Nest Writer)
     if: Nest\y != 5 || Nest\T\y != 1
         return: 98
     if: refuses_call(3) != 1

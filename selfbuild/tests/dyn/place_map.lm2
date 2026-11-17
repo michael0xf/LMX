@@ -143,7 +143,7 @@ fn: nested () int
     @: r Req Box\kid
     if: r\y != 6
         return: 104
-    call: Writer Box\kid
+    call(Box\kid Writer)
     if: Other\y != 7 || Box\kid\y != 7
         return: 105
     Box\kid\y := 6
@@ -195,17 +195,17 @@ fn: read_node_t () int
 end: read_node_t
 # A split call publishes its own Structure into its data's slot: nested data, then the unit itself.
 fn: split () int
-    call: S1 D
+    call(D S1)
     if: D\T\v != 1
         return: 92
-    call: S1 node
+    call(node S1)
     if: T\v != 1 || read_root_t() != 1 || read_node_t() != 1
         return: 93
     return: 0
 end: split
 # The data of a split call is itself a rebound root: its place is found in what stands there, and the third layout lands through both maps.
 fn: split_rebound () int
-    call: S1 Holder
+    call(Holder S1)
     if: Holder\T\v != 1
         return: 94
     if: Standing\T\v != 1 || Standing\w != 9

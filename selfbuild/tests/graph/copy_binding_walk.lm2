@@ -1,6 +1,15 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: source_call 0
+        int: held_call 0
+        int: source_count 0
+        int: held_count 0
+)
+@: shared data[0]
 fn: leaf () int (int: count 0)
-    count := count + 1
-    return: count
+    data\count := data\count + 1
+    return: data\count
 @: held leaf
 int: source_call 0
 int: held_call 0
@@ -10,3 +19,10 @@ source_call := leaf()
 held_call := held()
 source_count := leaf\data\count
 held_count := held\data\count
+
+sub: main ()
+    shared\Observed\source_call := source_call
+    shared\Observed\held_call := held_call
+    shared\Observed\source_count := source_count
+    shared\Observed\held_count := held_count
+main()

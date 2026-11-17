@@ -1,3 +1,17 @@
+---
+    Observed:
+        int: arithmetic 33
+        int: negative 28
+        int: boundary 72
+        int: unary -20
+        int: nested 33
+        int: through_path 3
+        int: call_parentheses 36
+        int: call_colon 36
+        int: candidate_inner_len 1
+    end: Observed
+---
+@: shared (data [] 0)
 fn: numeric (int: x; int: y) int
     return: ((x * 10) + y)
 end: numeric
@@ -27,27 +41,39 @@ sub: main () (
     int: nested 0
     int: through_path 0
 )
-    fn: take (Point: p; int: q) int
+    fn: take (@: p Point; int: q) int
         return: ((((p \ Inner) \ y) * 10) + q)
     end: take
-    fn: choose (Point: p) int
+    fn: choose (@: p Point) int
         return: (take p ((1 + 2)))
     end: choose
-    fn: access (Flat: value) int
+    fn: access (@: value Flat) int
         return: (value \ y)
     end: access
-    :=: arithmetic ((take Candidate (1 + 2)))
-    :=: negative ((take Candidate -2))
-    :=: nested ((choose Candidate))
-    :=: through_path ((access (Candidate \ Inner)))
+    :=: (data \ arithmetic) (take Candidate (1 + 2))
+    :=: (data \ negative) (take Candidate -2)
+    :=: (data \ nested) (choose Candidate)
+    :=: (data \ through_path) (access (Candidate \ Inner))
 end: main
 main:
-int: arithmetic 33
-int: negative 28
-int: boundary 72
-int: unary -20
-int: nested 33
-int: through_path 3
-int: call_parentheses 36
-int: call_colon 36
-int: candidate_inner_len 1
+int: arithmetic ((main \ data) \ arithmetic)
+int: negative ((main \ data) \ negative)
+int: boundary (numeric (8 - 2) (3 * 4))
+int: unary ((- (2 + 3)) * 4)
+int: nested ((main \ data) \ nested)
+int: through_path ((main \ data) \ through_path)
+int: call_parentheses (mytest (a 5))
+int: call_colon (mytest (a 5))
+int: candidate_inner_len (length (((main \ data) \ Candidate) \ Inner))
+sub: observe ()
+    :=: ((shared \ Observed) \ arithmetic) arithmetic
+    :=: ((shared \ Observed) \ negative) negative
+    :=: ((shared \ Observed) \ boundary) boundary
+    :=: ((shared \ Observed) \ unary) unary
+    :=: ((shared \ Observed) \ nested) nested
+    :=: ((shared \ Observed) \ through_path) through_path
+    :=: ((shared \ Observed) \ call_parentheses) call_parentheses
+    :=: ((shared \ Observed) \ call_colon) call_colon
+    :=: ((shared \ Observed) \ candidate_inner_len) candidate_inner_len
+end: observe
+observe:

@@ -1,6 +1,15 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: bare1 0
+        int: held1 0
+        int: bare2 0
+        int: held2 0
+)
+@: shared data[0]
 fn: f () int (int: n 0)
-    n := n + 1
-    return: n
+    data\n := data\n + 1
+    return: data\n
 end: f
 @: Hold (@: p f; @: q f)
 int: bare1 0
@@ -11,3 +20,10 @@ bare1 := f()
 held1 := Hold\p()
 bare2 := f()
 held2 := Hold\q()
+
+sub: main ()
+    shared\Observed\bare1 := bare1
+    shared\Observed\held1 := held1
+    shared\Observed\bare2 := bare2
+    shared\Observed\held2 := held2
+main()

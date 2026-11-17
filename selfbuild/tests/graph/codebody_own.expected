@@ -1,19 +1,38 @@
+---
+    Observed:
+        int: result 7
+        int: held 4
+        int: after 5
+        int: fields 0
+    end: Observed
+---
+@: shared (data [] 0)
 fn: delayed () int
+    int: late 0
     if: 0 ()
-    else: ((int late 7))
+    else: ((:= late 7))
     return: late
 end: delayed
-fn: cleanup () int
+fn: cleanup () int (
+    int: late 0
+)
     :=: late 4
-    finally: ((int late) (:= late (late + 1)))
+    finally: ((int late) (:= (data \ late) (late + 1)))
     return: late
 end: cleanup
 sub: inert ()
     if: 0 ()
     else: (((int phantom 7) (missing)))
 end: inert
-int: result 7
-int: held 4
-int: after 5
+int: result (delayed)
+int: held (cleanup)
+int: after ((cleanup \ data) \ late)
 inert:
-int: fields 0
+int: fields (length (inert \ data))
+sub: observe ()
+    :=: ((shared \ Observed) \ result) result
+    :=: ((shared \ Observed) \ held) held
+    :=: ((shared \ Observed) \ after) after
+    :=: ((shared \ Observed) \ fields) fields
+end: observe
+observe:

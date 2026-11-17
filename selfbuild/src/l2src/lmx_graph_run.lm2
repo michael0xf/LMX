@@ -537,6 +537,7 @@ fn: lmx_graph_work_pending (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     @: raw void 0
     @: head char 0
     @: declared char 0
+    int: candidate 0
     size_t: i 0U
     if: state = 0 || lmx_graph_code_within(g, (cast: (@: c.Lmx) frame\body), scope) = 0
         return: 0
@@ -557,6 +558,19 @@ fn: lmx_graph_work_pending (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
         if: scope = frame\body
             break
         scope := lmx_graph_code_parent(g, scope)
+    # The root of the data of a callable holds declarations too: one not yet applied defers the name in the same way.
+    scope := (cast: (@: c.Lmx) frame\data)
+    i := 0U
+    while: frame\data != frame\body && i < c.lmx_graph_count(scope)
+        raw := c.lmx_graph_get_in(g, scope, i)
+        head := c.lmx_graph_name_of(g, raw)
+        candidate := (cast: (int) (c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub) && lmx_graph_binding_method(g, scope, raw) = 0))
+        declared := 0
+        if: candidate != 0
+            declared := lmx_graph_fn_decl_name(g, (cast: (@: c.Lmx) raw))
+        if: candidate != 0 && (declared = 0 || declared = name)
+            return: 1
+        i := i + 1U
     return: 0
 end: lmx_graph_work_pending
 
@@ -685,7 +699,7 @@ fn: lmx_graph_work_data_find_scope (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @
         active := active\parent
     ---
     if: code_role = 0
-        return: lmx_graph_data_find_scope(g, owner, name, 1, 0U, slot, dynamic)
+        return: lmx_graph_data_find_scope(g, owner, name, 1, 0U, slot, dynamic, 0)
     slot[0] := c.lmx_graph_count(owner)
     while: i < c.lmx_graph_count(owner)
         if: dynamic != 0 && lmx_graph_field_private(g, owner, i) != 0
@@ -2163,7 +2177,7 @@ fn: lmx_graph_binding_name (@: g c.LmxGraph; @: owner c.Lmx; @: value void; int:
         return: 0
 return: head
 
-fn: lmx_graph_data_find_scope (@: g c.LmxGraph; @: data c.Lmx; @: name char; int: mode; size_t: n; @: at_out size_t; int: dynamic) size_t
+fn: lmx_graph_data_find_scope (@: g c.LmxGraph; @: data c.Lmx; @: name char; int: mode; size_t: n; @: at_out size_t; int: dynamic; int: fold) size_t
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void 0
     @: head char 0
@@ -2200,15 +2214,19 @@ fn: lmx_graph_data_find_scope (@: g c.LmxGraph; @: data c.Lmx; @: name char; int
         ---
         i := i + 1U
     ---
-    # Beside a place of the name, the named Lmx of that name are statements on it.
-    if: places != 0U
+    # Beside a place of the name, the named Lmx of that name are statements on it -- where the code reads them (fold). The data of a
+    # launch holds declarations only: there the Structure is one more occurrence of the name, and no single record is chosen.
+    if: places != 0U && (fold != 0 || found = 0U)
         at_out[0] := place_at
         return: places
+    if: places != 0U
+        at_out[0] := count
+        return: places + found
     return: found
 end: lmx_graph_data_find_scope
 
 fn: lmx_graph_data_find (@: g c.LmxGraph; @: data c.Lmx; @: name char; int: mode; size_t: n; @: at_out size_t) size_t
-    return: lmx_graph_data_find_scope(g, data, name, mode, n, at_out, 0)
+    return: lmx_graph_data_find_scope(g, data, name, mode, n, at_out, 0, 1)
 
 # The slot of owner the raw path step names: an occurrence pair selects record N of name in owner's registry
 # (lmx_graph_data_find); a bare name -- its only record, two or more being ambiguous (no first record is chosen, the
@@ -2542,6 +2560,17 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
         dynamic := (cast: (int) (activation != g\arena\activation))
         if: activation\frame != 0
             row := lmx_graph_input_row(g, activation, name, dynamic)
+            # A required name nothing bound yet, which the root of the data of this launch may declare by a producer not applied yet: only a
+            # read reaches that declaration (#declaration-visibility); it is applied now, by the one apply, and its name answers.
+            if: row != 0 && row\cell = 0 && row\slot = (cast: (size_t) -1) && prepare != 0 && dynamic = 0
+                active_frame := (cast: (@: c.LmxGraphFrame) activation\frame)
+                while: value = 0 && status[0] = 0 && lmx_graph_data_reach_next(g, active_frame, name, status) != 0
+                    value := lmx_graph_space_binding(g, (cast: (@: c.Lmx) active_frame\data), name, dynamic, binding_private)
+                if: status[0] != 0
+                    return: 0
+                if: value != 0
+                    return: value
+            ---
             if: row != 0
                 selected[0] := row
                 binding_private[0] := (cast: (int) ((row\loaded & 128) != 0))
@@ -8309,6 +8338,34 @@ fn: lmx_graph_fn_apply (@: g c.LmxGraph; @: scope c.Lmx; size_t: index) int
     ---
     return: lmx_graph_space_callable(g, made)
 end: lmx_graph_fn_apply
+
+# The next declaration of fn or sub in the root of the launch's data that is not applied yet and may give name -- its written name is name, or it has none
+# written -- is applied now by lmx_graph_fn_apply (a read reaches it). 1 when one was applied; 0 when none is left or the apply answered otherwise (told in
+# status).
+fn: lmx_graph_data_reach_next (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name char; @: status int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: data c.Lmx (cast: (@: c.Lmx) frame\data)
+    @: raw void 0
+    @: head char 0
+    @: declared char 0
+    int: candidate 0
+    size_t: i 0U
+    if: state = 0 || frame\data = frame\body
+        return: 0
+    while: i < c.lmx_graph_count(data)
+        raw := c.lmx_graph_get_in(g, data, i)
+        head := c.lmx_graph_name_of(g, raw)
+        candidate := (cast: (int) (c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub) && lmx_graph_binding_method(g, data, raw) = 0))
+        declared := 0
+        if: candidate != 0
+            declared := lmx_graph_fn_decl_name(g, (cast: (@: c.Lmx) raw))
+        if: candidate != 0 && (declared = 0 || declared = name)
+            status[0] := lmx_graph_fn_apply(g, data, i)
+            if: status[0] != 0 || lmx_graph_binding_method(g, data, raw) = 0
+                return: 0
+            return: 1
+        i := i + 1U
+    return: 0
 
 # The slot of the place named name of block that a write by a bare name reaches (plan M11 5a): the only record of that
 # name in the registry of block (lmx_graph_data_find), read whole and both ways, when it is a place; the count of the

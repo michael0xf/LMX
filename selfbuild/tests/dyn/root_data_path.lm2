@@ -1,0 +1,13 @@
+# Slice 418 witness: the code of the unit's root runs over itself, so its `data` is the root Structure (docs/LMX_semantics.en.md
+# #data-code-roles: a Structure launched alone is its own data; #ordinary-var: `data\x` is the path to the place x of the data of the current launch).
+# `data\[0]raising := 1` writes the graph field of the root as `node\[0]raising` reads it in a fn (a write to a local of the root changes no graph
+# field, #call-frame-20261115); `data\raising` reads the field by the same path.  Entry 7; 83 names a failing check.
+int: raising 0
+fn: peek () int
+    return: node\[0]raising
+data\[0]raising := 1
+int: answer 83
+if: peek() = 1 && data\raising = 1
+    answer := 7
+send: exit(exit_code: answer; stdout: ""; stderr: "")
+return

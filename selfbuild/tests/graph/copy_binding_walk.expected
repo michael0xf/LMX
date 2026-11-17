@@ -1,15 +1,31 @@
+---
+    Observed:
+        int: source_call 1
+        int: held_call 2
+        int: source_count 1
+        int: held_count 2
+    end: Observed
+---
+@: shared (data [] 0)
 fn: leaf () int (
     int: count 0
 )
-    :=: count (count + 1)
-    return: count
+    :=: (data \ count) ((data \ count) + 1)
+    return: (data \ count)
 end: leaf
 @: held leaf
-int: source_call 1
-int: held_call 3
-int: source_count 1
-int: held_count 3
+int: source_call 0
+int: held_call 0
+int: source_count 0
+int: held_count 0
 :=: source_call (leaf)
 :=: held_call (held)
 :=: source_count ((leaf \ data) \ count)
 :=: held_count ((held \ data) \ count)
+sub: main ()
+    :=: ((shared \ Observed) \ source_call) source_call
+    :=: ((shared \ Observed) \ held_call) held_call
+    :=: ((shared \ Observed) \ source_count) source_count
+    :=: ((shared \ Observed) \ held_count) held_count
+end: main
+main:

@@ -1,9 +1,22 @@
+# A computed body loop, written through data (HG2-A, PUBL; sonnet's probe cbl_observed2, answer 23 = the pin): the count
+# of gate lives in gate's data (`data\calls`) for the write and for the read, so the loop ends at 3 and the result is 23.
+# As written with a bare `calls`, each call of gate() starts from the entry value 0 and the loop never ends
+# (#call-frame-20261115: a local of the call). The result is observed by an explicit write in sub: main (#flush-receiver-contract).
+(
+    Observed:
+        int: result 0
+)
+@: shared data[0]
 fn: gate () int (int: calls 0)
-    calls := calls + 1
-    return: calls < 3
+    data\calls := data\calls + 1
+    return: data\calls < 3
 end: gate
 fn: outer () int (int: steps 0)
     while: gate() (fn: gate () int (return: 0); steps := steps + 1; continue:)
     return: steps * 10 + gate\data\calls
 end: outer
 int: result outer()
+
+sub: main ()
+    shared\Observed\result := result
+main()

@@ -1,3 +1,16 @@
+# HG2-B (group B, values by the norm): a declaration of a visible name in code (`int: x 2`, `int: x 3`, and `int: x 7` in the
+# branch) assigns the existing place, the call's local (#call-frame-20261115: no write-back): D\x stays 10 (pinned 3) and
+# Inline\x stays 1 (pinned 7). seen is written through data\ and keeps its pins 10 and 7. Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: seen 0
+        int: x 0
+        int: pad 0
+        int: inline_seen 0
+        int: inline_x 0
+        int: inline_pad 0
+)
+@: shared data[0]
 # Distinct CODE projects by unique name; inline bodies share the selected DATA.
 sub: main () (
     D:
@@ -5,7 +18,7 @@ sub: main () (
         int: pad 99
         int: x 10
     Code:
-        seen := x
+        data\seen := x
         int: x 2
         int: x 3
     Inline:
@@ -13,7 +26,7 @@ sub: main () (
         int: x 1
         int: seen 0
         if: 1 (int: x 7)
-        seen := x
+        data\seen := x
 )
     call(D Code)
     call(Inline)
@@ -24,3 +37,12 @@ int: pad main\data\D\pad
 int: inline_seen main\data\Inline\seen
 int: inline_x main\data\Inline\x
 int: inline_pad main\data\Inline\pad
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\x := x
+    shared\Observed\pad := pad
+    shared\Observed\inline_seen := inline_seen
+    shared\Observed\inline_x := inline_x
+    shared\Observed\inline_pad := inline_pad
+observe()

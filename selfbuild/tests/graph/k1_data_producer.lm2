@@ -1,0 +1,39 @@
+# K1: a producer declared by a receiver in the root of a launch's data enters the namespace of the call when its name is read, as one declared in the
+# root of code does (#call-frame-20261115, #declaration-visibility: only the read permits the preparation). Nothing is applied at entry.
+# - `fn: prepared` applies the prepared Structure written in the data of main; the function triple it creates is read by the code twice and is one F:
+#   r1 = 5 * 3 + k = 17 (k is the root place, 2), r2 = 2 * 3 + 2 = 8, and its own data counts both calls (calls 2).
+# - `fn: unread merge(prepared; (int: tick bump()))` has a computed part and a written name that the code never reads: it is applied zero times, so
+#   bump() is never evaluated (n 0) and the run answers 0. Applied at entry it would evaluate bump() once and be refused (answer 5, n 1).
+# The expectations come from the norm; the shape of the unread producer was checked in the code of main (the apply evaluates bump() once, answer 5).
+(
+    Observed:
+        int: r1 0
+        int: r2 0
+        int: calls 0
+        int: n 0
+)
+@: shared data[0]
+int: k 2
+fn: bump () int
+    shared\Observed\n := shared\Observed\n + 1
+    return: 1
+sub: main () (
+    prepared:
+        name: triple
+        args:
+            int: a
+        return: int
+        data:
+            int: calls 0
+        code: (data\calls := data\calls + 1; int: last a; return: last * 3 + k)
+    fn: prepared
+    fn: unread merge(prepared; (int: tick bump()))
+    int: r1 0
+    int: r2 0
+)
+    r1 := triple(5)
+    r2 := triple(2)
+    shared\Observed\r1 := r1
+    shared\Observed\r2 := r2
+    shared\Observed\calls := triple\data\calls
+main()

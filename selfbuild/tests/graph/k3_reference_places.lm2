@@ -1,0 +1,30 @@
+# K3: the receiver that declares a reference place constructs it (FABLE-G2-C/D/E). A write by an explicit path reaches the place the declaration
+# made: in `@: name` (a place without a value), in `@: name int` (typed, no candidate) and in `@: name 0` (the explicit null candidate, a value).
+# A written wrapper prints as declared (the pinned uninit_reference_* dumps); the write is observed by reading through the place. The place the
+# program never writes (`untouched`) stays as declared.
+(
+    Observed:
+        @: plain
+        @: typed int
+        @: zero 0
+        @: untouched
+        int: seen_plain 0
+        int: seen_typed 0
+        int: seen_zero 0
+)
+@: sink data[0]
+int: n 5
+sub: build () (
+    Box:
+        int: value 1
+    @: h Box
+) ()
+build()
+sub: main ()
+    sink\Observed\plain := build\data\h
+    sink\Observed\typed := @n
+    sink\Observed\zero := build\data\h
+    sink\Observed\seen_plain := sink\Observed\plain\value
+    sink\Observed\seen_typed := \(sink\Observed\typed)
+    sink\Observed\seen_zero := sink\Observed\zero\value
+main()

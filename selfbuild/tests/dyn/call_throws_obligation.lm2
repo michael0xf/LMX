@@ -1,0 +1,43 @@
+# Slice 418, the road of the signature: the obligation of the throws of a selected code is checked where a `call` is run, in a walked root as in the native one
+# (the book, #exceptions: the caller must provide a `catch` for each name or include it in its own `throws`; a call without either treatment is rejected).
+# bad declares `throws: Bad`; the first call has `catch: implements ()` only, so it is refused before the body (entered stays 0); the second has `catch: Bad ()`
+# and enters; the third receives the payload 5 once arm() has set the graph field `raising` (a write to a local of the root changes no graph field).  Entry 7.
+int: entered 0
+int: raising 0
+fn: bad () int
+    throws: Bad
+    node\entered := node\entered + 1
+    if: node\[0]raising != 0
+        throw: Bad(5)
+    return: 7
+@: target bad
+fn: get_entered () int
+    return: node\entered
+int: refused 0
+---
+    call: target
+    catch: implements ()
+        refused := 1
+---
+int: after_refusal get_entered()
+---
+    call: target
+    catch: Bad ()
+        refused := 2
+---
+int: after_success get_entered()
+fn: arm () int
+    node\[0]raising := 1
+    return: 0
+int: armed arm()
+int: payload 0
+---
+    call: target
+    catch: Bad (int: value)
+        payload := value
+---
+int: answer 81
+if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5
+    answer := 7
+send: exit(exit_code: answer; stdout: ""; stderr: "")
+return

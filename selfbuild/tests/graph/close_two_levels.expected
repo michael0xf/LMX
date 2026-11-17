@@ -1,6 +1,19 @@
-Other:
-    Point:
+---
+    Observed:
+        int: after 1
         int: x 4
-    end: Point
-end: Other
-int: after 1
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main () (
+    Other:
+        Point:
+            int: x 4
+        end: Point
+    end: Other
+)
+    int: after 1
+    :=: ((shared \ Observed) \ after) after
+    :=: ((shared \ Observed) \ x) ((Other \ Point) \ x)
+end: main
+main:

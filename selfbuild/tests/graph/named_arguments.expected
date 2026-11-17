@@ -1,32 +1,53 @@
+---
+    Observed:
+        int: named_literal 35
+        int: named_call 36
+        int: paren_call 62
+        int: colon_call 62
+        int: calls 3
+        int: defaulted 32
+        int: reordered 21
+        int: mixed 61
+        int: no_dynamic_label 38
+        int: written_order 21
+        int: trace 12
+        int: structural 47
+        int: structural_default 42
+        int: procedure 19
+        int: later_default 32
+        int: data_len 1
+    end: Observed
+---
+@: shared (data [] 0)
 fn: a (int: n) int (
     int: calls 0
 )
-    :=: calls (calls + 1)
+    :=: (data \ calls) ((data \ calls) + 1)
     return: (n + 1)
 end: a
 fn: tst (int: c 3; int: a 2) int
     return: ((c * 10) + a)
 end: tst
-int: named_literal 35
-int: named_call 36
-int: paren_call 62
-int: colon_call 62
-int: calls 3
-int: defaulted 32
-int: reordered 21
-int: mixed 61
+int: named_literal (tst (:= a 5))
+int: named_call (tst (:= a (a 5)))
+int: paren_call (tst (a 5))
+int: colon_call (tst (a 5))
+int: calls ((a \ data) \ calls)
+int: defaulted (tst)
+int: reordered (tst (:= a 1) (:= c 2))
+int: mixed (tst 6 (:= a 1))
 fn: inside () int
     return: (tst (:= a 8))
 end: inside
-int: no_dynamic_label 38
+int: no_dynamic_label (inside)
 fn: tick (int: n) int (
     int: trace 0
 )
-    :=: trace ((trace * 10) + n)
+    :=: (data \ trace) (((data \ trace) * 10) + n)
     return: n
 end: tick
-int: written_order 21
-int: trace 12
+int: written_order (tst (:= a (tick 1)) (:= c (tick 2)))
+int: trace ((tick \ data) \ trace)
 sub: main () (
     Point:
         int: y 0
@@ -38,21 +59,40 @@ sub: main () (
     int: structural 0
     int: structural_default 0
 )
-    fn: take (Point: p; int: q 2) int
+    fn: take (@: p Point; int: q 2) int
         return: (((p \ y) * 10) + q)
     end: take
-    :=: structural ((take (:= q 7) (:= p Data)))
-    :=: structural_default ((take (:= p Data)))
+    :=: (data \ structural) (take (:= q 7) (:= p Data))
+    :=: (data \ structural_default) (take (:= p Data))
 end: main
 main:
-int: structural 47
-int: structural_default 42
+int: structural ((main \ data) \ structural)
+int: structural_default ((main \ data) \ structural_default)
 sub: set (int: x 1; int: y 2) (
     int: value 0
 )
-    :=: value ((x * 10) + y)
+    :=: (data \ value) ((x * 10) + y)
 end: set
 set: (:= y 9)
-int: procedure 19
-int: later_default 32
-int: data_len 1
+int: procedure ((set \ data) \ value)
+int: later_default (tst)
+int: data_len (length ((main \ data) \ Data))
+sub: observe ()
+    :=: ((shared \ Observed) \ named_literal) named_literal
+    :=: ((shared \ Observed) \ named_call) named_call
+    :=: ((shared \ Observed) \ paren_call) paren_call
+    :=: ((shared \ Observed) \ colon_call) colon_call
+    :=: ((shared \ Observed) \ calls) calls
+    :=: ((shared \ Observed) \ defaulted) defaulted
+    :=: ((shared \ Observed) \ reordered) reordered
+    :=: ((shared \ Observed) \ mixed) mixed
+    :=: ((shared \ Observed) \ no_dynamic_label) no_dynamic_label
+    :=: ((shared \ Observed) \ written_order) written_order
+    :=: ((shared \ Observed) \ trace) trace
+    :=: ((shared \ Observed) \ structural) structural
+    :=: ((shared \ Observed) \ structural_default) structural_default
+    :=: ((shared \ Observed) \ procedure) procedure
+    :=: ((shared \ Observed) \ later_default) later_default
+    :=: ((shared \ Observed) \ data_len) data_len
+end: observe
+observe:

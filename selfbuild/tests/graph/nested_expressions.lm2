@@ -1,4 +1,19 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# HG2-A: the short headers `Point: p` and `Flat: value` are pointer formals `@: p Point`, `@: value Flat` (haiku's rule, groups ARGS). Observation: the pinned values are written explicitly in sub: observe (#flush-receiver-contract; the book's #call-frame-20261115).
+(
+    Observed:
+        int: arithmetic 0
+        int: negative 0
+        int: boundary 0
+        int: unary 0
+        int: nested 0
+        int: through_path 0
+        int: call_parentheses 0
+        int: call_colon 0
+        int: candidate_inner_len 0
+)
+@: shared data[0]
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: numeric (int: x; int: y) int
     return: x * 10 + y
 fn: a (int: x) int
@@ -17,16 +32,16 @@ sub: main () (
     int: nested 0
     int: through_path 0
 )
-    fn: take (Point: p; int: q) int
+    fn: take (@: p Point; int: q) int
         return: p\Inner\y * 10 + q
-    fn: choose (Point: p) int
+    fn: choose (@: p Point) int
         return: take(p, (1 + 2))
-    fn: access (Flat: value) int
+    fn: access (@: value Flat) int
         return: value\y
-    arithmetic := take(Candidate, 1 + 2)
-    negative := take(Candidate, -2)
-    nested := choose(Candidate)
-    through_path := access(Candidate\Inner)
+    data\arithmetic := take(Candidate, 1 + 2)
+    data\negative := take(Candidate, -2)
+    data\nested := choose(Candidate)
+    data\through_path := access(Candidate\Inner)
 main()
 int: arithmetic main\data\arithmetic
 int: negative main\data\negative
@@ -37,3 +52,15 @@ int: through_path main\data\through_path
 int: call_parentheses mytest(a(5))
 int: call_colon mytest(a: 5)
 int: candidate_inner_len length(main\data\Candidate\Inner)
+
+sub: observe ()
+    shared\Observed\arithmetic := arithmetic
+    shared\Observed\negative := negative
+    shared\Observed\boundary := boundary
+    shared\Observed\unary := unary
+    shared\Observed\nested := nested
+    shared\Observed\through_path := through_path
+    shared\Observed\call_parentheses := call_parentheses
+    shared\Observed\call_colon := call_colon
+    shared\Observed\candidate_inner_len := candidate_inner_len
+observe()

@@ -10,7 +10,7 @@ Other:
 end: Other
 A:
     int: x
-    call: B inner_data
+    call(inner_data B)
     x := x + 2
 end: A
 D:
@@ -18,13 +18,13 @@ D:
     int: x 5
 end: D
 fn: through_original (Other: inner_data) int
-    call: A D
+    call(D A)
     return: 0
 end: through_original
 int: first through_original(Other)
 Copy: merge: A
 fn: through_copy (Other: inner_data) int
-    call: Copy D
+    call(D Copy)
     return: 0
 end: through_copy
 int: second through_copy(Other)

@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: seen 21
+        int: twice 2
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Code:
         Step: Inner
@@ -8,15 +15,20 @@ sub: main () (
         Inner:
             int: x 1
         end: Inner
-        Step: (:= x (x + 10))
+        Step: (:= (data \ x) ((data \ x) + 10))
         Twice:
             int: k 0
-            :=: k (k + 2)
+            :=: (data \ k) ((data \ k) + 2)
         end: Twice
     end: D
 )
     call: D Code
 end: main
 main:
-int: seen 21
-int: twice 2
+int: seen ((((main \ data) \ D) \ Inner) \ x)
+int: twice ((((main \ data) \ D) \ Twice) \ k)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ twice) twice
+end: observe
+observe:

@@ -2863,6 +2863,10 @@ fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
         return: (cast: (int) (0))
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
         return: (cast: (int) (0))
+    # The reserved name `data` in the code of a root (the unit's, a part's) is that root itself, as `node` is above (lm_compiler_path_root_select):
+    # never a free input.  The code of any other method receives it as its activation input (lm_compiler_default_data_name).
+    if: c.lm_compiler_text_eq(t, "data") && c.lm_compiler_asgn_root(mi) != 0
+        return: (cast: (int) (0))
     # K03 (the author, 2026-10-06): a word of the language the site does not bind -- `merge`, `table`, `catch` -- is its
     # own application, consumed by its contract (l2_head_resolve); it is never a free input of the method.
     if: c.lm_compiler_head_word(t) != 0 && c.lm_compiler_head_resolve(mi, t, 0, 0) = 1

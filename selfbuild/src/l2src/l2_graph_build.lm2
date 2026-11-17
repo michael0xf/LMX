@@ -255,7 +255,7 @@ fn: lm_graph_build_occurrence (@: g c.LmxGraph; @: item c.LmP0Field; @@: cursor 
     return: 0
 end: lm_graph_build_occurrence
 
-fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: least; @: boundary int; @@: out void) int
+fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: least; @: boundary int; int: described; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: item c.LmP0Field cursor[0]
     @: nd c.LmP0Node 0
@@ -282,7 +282,7 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
     if: word != 0 && (word = state\w_plus || word = state\w_minus || word = state\w_deref || word = state\w_at || word = state\w_not)
         if: boundary[0] != 0
             return: 2
-        status := lm_graph_build_expression(g, cursor, 7, boundary, @ right)
+        status := lm_graph_build_expression(g, cursor, 7, boundary, described, @ right)
         if: status != 0
             return: status
         expression := c.lmx_graph_lmx(g, 0, 2U)
@@ -291,7 +291,7 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
             return: 1
         left := (cast: (@: void) expression)
     else:
-        status := lm_graph_build_node(g, 0, nd, @ left)
+        status := lm_graph_build_node(g, 0, nd, described, @ left)
         if: status != 0
             return: status
         ---
@@ -312,7 +312,7 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
             if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
                 return: 2
             cursor[0] := lm_graph_next_active(lm_graph_p0_next(item))
-            status := lm_graph_build_expression(g, cursor, 1, boundary, @ right)
+            status := lm_graph_build_expression(g, cursor, 1, boundary, described, @ right)
             if: status != 0
                 return: status
             item := cursor[0]
@@ -352,7 +352,7 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
         if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
             return: 2
         cursor[0] := lm_graph_next_active(lm_graph_p0_next(item))
-        status := lm_graph_build_expression(g, cursor, power + 1, boundary, @ right)
+        status := lm_graph_build_expression(g, cursor, power + 1, boundary, described, @ right)
         if: status != 0
             return: status
         expression := c.lmx_graph_lmx(g, 0, 3U)
@@ -379,7 +379,7 @@ fn: lm_graph_build_post (@: g c.LmxGraph; @: parent c.Lmx; @: body c.Lmx; @: tai
     @: condition void 0
     @: loop c.Lmx 0
     int: boundary 0
-    int: status lm_graph_build_expression(g, @ cursor, 1, @ boundary, @ condition)
+    int: status lm_graph_build_expression(g, @ cursor, 1, @ boundary, 0, @ condition)
     if: status != 0 || cursor != 0
         return: 2
     # The Frame of the receiver until (§3.3): an Lmx named until with its arguments, the condition and the body.
@@ -396,7 +396,7 @@ end: lm_graph_build_post
 # named structure of its receiver -- fn is its name -- with its arguments; §3.3); an anonymous Structure (head 0) has
 # no name. An operation written as a Frame (`-(2 + 3)`) has no name: lead is its operator word, field 0 as in every
 # expression. The role of the head is the consumers' resolution.
-fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; @: head char; @: lead void; @: tail c.LmP0Trailer; @@: out void) int
+fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; @: head char; @: lead void; @: tail c.LmP0Trailer; int: described; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: capacity (cast: (size_t) (lm_graph_count_active(source) + 1U))
     @@: items void (cast: (@@: void) c.calloc(capacity, sizeof(@: void)))
@@ -406,6 +406,7 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     @: result c.Lmx 0
     int: boundary 0
     int: status 0
+    int: here 0
     if: items = 0
         return: 1
     if: lead != 0
@@ -415,7 +416,7 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
         cursor := lm_graph_next_active(lm_graph_p0_first(source))
     # The written name of a declaration is its first argument, not the left operand of its initializer.
     if: cursor != 0 && (head = state\w_int || head = state\w_at)
-        status := lm_graph_build_node(g, 0, lm_graph_p0_value(cursor), @ items[count])
+        status := lm_graph_build_node(g, 0, lm_graph_p0_value(cursor), described, @ items[count])
         if: status = 0
             count := count + 1U
             cursor := lm_graph_next_active(lm_graph_p0_next(cursor))
@@ -423,7 +424,11 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     ---
     while: cursor != 0 && status = 0
         boundary := 0
-        status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, @ items[count])
+        # The first operand of `cast` is the description of a type: it names a type, it declares no place.
+        here := described
+        if: head = c.lmx_graph_intern("cast", 4U) && count = 0U
+            here := 1
+        status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, here, @ items[count])
         if: status = 0
             count := count + 1U
         ---
@@ -453,7 +458,7 @@ fn: lm_graph_build_application (@: g c.LmxGraph; @: parent c.Lmx; @: head void; 
     @: actuals void 0
     @: op void 0
     @: application c.Lmx 0
-    int: status lm_graph_build_sequence(g, 0, source, 0, 0, 0, @ actuals)
+    int: status lm_graph_build_sequence(g, 0, source, 0, 0, 0, 0, @ actuals)
     if: status != 0
         return: status
     application := c.lmx_graph_lmx(g, parent, 3U)
@@ -503,7 +508,7 @@ fn: lm_graph_build_indexed (@: g c.LmxGraph; const: (@: bytes char); size_t: tex
         nd := (cast: (@: c.LmP0Node) c.lm_p0_document_root(doc))
         if: nd != 0 && nd\kind = c.LM_P0_NODE_STRUCTURE
             cursor := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_structure(nd)))
-            status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, @ value)
+            status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, 0, @ value)
             if: status = 0 && cursor != 0
                 status := 2
             ---
@@ -575,7 +580,7 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     status := lm_graph_build_selector(g, bytes, text_size, @ left)
     if: status != 0
         return: status
-    status := lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, 0, (cast: (@: c.LmP0Trailer) frame\trailer), @ rhs)
+    status := lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, 0, (cast: (@: c.LmP0Trailer) frame\trailer), 0, @ rhs)
     if: status != 0
         return: status
     operand := rhs
@@ -622,9 +627,22 @@ fn: lm_graph_build_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     if: lm_graph_int_literal(name, @ v) != 0
         return: 0
     if: head = state\w_at
+        if: (fr\flags & c.LM_P0_FRAME_COLON) != 0U && n = 1U
+            # `@: name`: the place of a reference to a Structure, without a value.
+            cell := c.lmx_graph_uninit_reference(g, 6, 0)
+            value := c.lmx_graph_reference_cell(g, cell)
+            if: value = 0 || c.lmx_graph_name_address(g, value, lm_graph_p0_name_word(name)) != 0
+                return: 0
+            return: cell
         if: (fr\flags & c.LM_P0_FRAME_COLON) = 0U || n != 2U
             return: 0
         f2 := lm_graph_next_active(lm_graph_p0_next(f1))
+        if: f2 != 0 && f2\value\kind = c.LM_P0_NODE_ATOM && lm_graph_int_literal(lm_graph_p0_atom(lm_graph_p0_value(f2)), @ v) != 0 && v = 0
+            # `@: name 0`: the explicit null candidate -- the reference cell itself, holding no target.
+            value := c.lmx_graph_reference_cell(g, c.lmx_graph_uninit_reference(g, 6, 0))
+            if: value = 0 || c.lmx_graph_name_address(g, value, lm_graph_p0_name_word(name)) != 0
+                return: 0
+            return: value
         if: f2 = 0 || f2\value\kind != c.LM_P0_NODE_ATOM || lm_graph_p0_name_word(lm_graph_p0_atom(lm_graph_p0_value(f2))) != state\w_int
             return: 0
         cell := c.lmx_graph_uninit_reference(g, 5, 0)
@@ -762,7 +780,7 @@ fn: lm_graph_frame_admitted (@: fr c.LmP0Frame) int
     return: (cast: (int) (target = head))
 end: lm_graph_frame_admitted
 
-fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@: out void) int
+fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; int: described; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: text c.LmP0Text 0
     @: frame c.LmP0Frame 0
@@ -809,7 +827,7 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         # A primitive declaration constructs its place before the remaining
         # Frame is classified as a named block or an application. End has
         # already been checked; a real postcondition keeps its loop lowering.
-        if: lm_graph_until_tail((cast: (@: c.LmP0Trailer) frame\trailer)) = 0
+        if: described = 0 && lm_graph_until_tail((cast: (@: c.LmP0Trailer) frame\trailer)) = 0
             value := lm_graph_build_place(g, frame)
             if: value != 0
                 out[0] := value
@@ -840,11 +858,11 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
             value := c.lmx_graph_word_of(g, head)
             if: value = 0
                 return: 1
-            return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
-        return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), head, 0, (cast: (@: c.LmP0Trailer) frame\trailer), out)
+            return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), described, out)
+        return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), head, 0, (cast: (@: c.LmP0Trailer) frame\trailer), described, out)
     if: nd\kind = c.LM_P0_NODE_STRUCTURE
         source := lm_graph_p0_structure(nd)
-        return: lm_graph_build_sequence(g, parent, source, 0, 0, (cast: (@: c.LmP0Trailer) source\trailer), out)
+        return: lm_graph_build_sequence(g, parent, source, 0, 0, (cast: (@: c.LmP0Trailer) source\trailer), described, out)
     return: 2
 end: lm_graph_build_node
 
@@ -946,7 +964,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         if: declarations != 0
             status := lm_graph_build_field(g, result, i, lm_graph_p0_value(item))
         else:
-            status := lm_graph_build_node(g, result, lm_graph_p0_value(item), @ value)
+            status := lm_graph_build_node(g, result, lm_graph_p0_value(item), 0, @ value)
             if: status = 0
                 status := c.lmx_graph_put_in(g, result, i, value)
             if: status = 0
@@ -1013,7 +1031,7 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
     int: r 0
     if: g = 0 || root = 0 || nd = 0
         return: 2
-    r := lm_graph_build_node(g, root, nd, @ value)
+    r := lm_graph_build_node(g, root, nd, 0, @ value)
     if: r != 0
         return: r
     r := c.lmx_graph_put_in(g, root, slot, value)

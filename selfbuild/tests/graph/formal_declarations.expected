@@ -1,3 +1,17 @@
+---
+    Observed:
+        int: default_calls 0
+        int: profile_arity 34
+        int: qualified_arity 3
+        int: chain_arity 1
+        int: rectangular_arity 1
+        int: deep_arity 1
+        int: deferred_arity 1
+        int: model_arity 1
+        int: deferred_data 1
+    end: Observed
+---
+@: shared (data [] 0)
 int: default_calls 0
 fn: seed () int
     :=: (node \ default_calls) ((node \ default_calls) + 1)
@@ -10,11 +24,23 @@ fn: rectangular ([][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
 fn: deep (@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@: link) int
 fn: deferred (int: value) int
 fn: model (@: value ((ordinary nested))) int
-int: profile_arity 34
-int: qualified_arity 3
-int: chain_arity 1
-int: rectangular_arity 1
-int: deep_arity 1
-int: deferred_arity 1
-int: model_arity 1
-int: deferred_data 0
+int: profile_arity (length (profile \ data))
+int: qualified_arity (length (qualified \ data))
+int: chain_arity (length (chain \ data))
+int: rectangular_arity (length (rectangular \ data))
+int: deep_arity (length (deep \ data))
+int: deferred_arity (length (deferred \ data))
+int: model_arity (length (model \ data))
+int: deferred_data (length (deferred \ data))
+sub: observe ()
+    :=: ((shared \ Observed) \ default_calls) default_calls
+    :=: ((shared \ Observed) \ profile_arity) profile_arity
+    :=: ((shared \ Observed) \ qualified_arity) qualified_arity
+    :=: ((shared \ Observed) \ chain_arity) chain_arity
+    :=: ((shared \ Observed) \ rectangular_arity) rectangular_arity
+    :=: ((shared \ Observed) \ deep_arity) deep_arity
+    :=: ((shared \ Observed) \ deferred_arity) deferred_arity
+    :=: ((shared \ Observed) \ model_arity) model_arity
+    :=: ((shared \ Observed) \ deferred_data) deferred_data
+end: observe
+observe:

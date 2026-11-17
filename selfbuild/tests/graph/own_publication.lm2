@@ -1,3 +1,11 @@
+# HG2-A (group B; values by the norm): `x := 2` is the local of the call (#call-frame-20261115: no write-back), so work\data\x stays 1 after each call: published 1 (pinned 2), and the second call pairs 2 with 1: second 21 (pinned 22). first stays 21. Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: first 0
+        int: published 0
+        int: second 0
+)
+@: shared data[0]
 # Evaluate both arguments before publishing x. Bare x and the explicit graph path differ on the first call.
 fn: pair (int: a; int: b) int
     return: a * 10 + b
@@ -10,3 +18,9 @@ end: work
 int: first work()
 int: published work\data\x
 int: second work()
+
+sub: observe ()
+    shared\Observed\first := first
+    shared\Observed\published := published
+    shared\Observed\second := second
+observe()

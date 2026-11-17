@@ -1,9 +1,24 @@
-# The launch of the data reads what stands in its places when the record runs (plan M11 5b part 2): after `data\n := 9`
-# the data part of f holds 9, and `data(D)` writes 9 into D's n.
+# HG2-B (ROOT5V, data(D)): D is a Structure of the data part of main. `data(D)` is `call(D data)` (#ordinary-var,
+# #data-code-roles). The declaration `int: n 5` of the data record, run over D, assigns the existing place of D's n,
+# which is the call's local (#call-frame-20261115): D\n keeps the value declared in D (1); the explicit write data\n := 9
+# is f's own data. The published value 9 is not kept by the norm: observed seen 1 (values-changed).
+(
+    Observed:
+        int: r 0
+        int: seen 0
+)
+@: shared data[0]
 fn: f () int (int: n 5)
     data\n := 9
     data(D)
     return: 1
-D(int: n 1)
-int: r f()
-int: seen D\n
+sub: main () (
+    D(int: n 1)
+    int: r 0
+    int: seen 0
+)
+    data\r := f()
+    data\seen := D\n
+    shared\Observed\r := data\r
+    shared\Observed\seen := data\seen
+main()

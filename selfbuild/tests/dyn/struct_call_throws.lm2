@@ -26,7 +26,10 @@ int: after_refusal get_entered()
         refused := 2
 ---
 int: after_success get_entered()
-raising := 1
+fn: arm () int
+    node\[0]raising := 1
+    return: 0
+int: armed arm()
 int: payload 0
 ---
     call: target
@@ -38,16 +41,11 @@ fn: needs_input (int: amount) int
     return: amount
 end: needs_input
 @: missing needs_input
-int: missing_refused 0
-# A formal the call forms no input for, with no default, is the arity the call lacks: its implicit `call`, before the body
-# (Codex, 285 norm answers item 3; slice 263 named it `implements`).
----
-    call: missing
-    catch: call ()
-        missing_refused := 1
----
+# A formal the call forms no input for, with no default, is not refused (the author's decision of 2026-11-16): its input
+# holds the type "T without initialization" and the body runs, so entered becomes 90.
+call: missing
 int: answer 81
-if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5 && get_entered() = 2 && missing_refused = 1
+if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5 && get_entered() = 90
     answer := 7
 send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

@@ -1,8 +1,17 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
 # Types is never called. Its implicit wrappers check the supplied places;
 # their unpromised payload must not be read or stored into the filled data.
+(
+    Observed:
+        int: before 0
+        int: after 0
+        int: p_after 0
+        int: s_after 0
+)
+@: sink data[0]
 int: before 0
 int: after 0
-sub: main () (
+sub: build () (
     int: i 3
     A(int: v 7)
     @: p int @i
@@ -14,6 +23,13 @@ sub: main () (
     node\before := 1
     call(data; Types\data)
     node\after := 1
+build()
+int: p_after \(build\data\p)
+int: s_after build\data\s\v
+
+sub: main ()
+    sink\Observed\before := node\before
+    sink\Observed\after := node\after
+    sink\Observed\p_after := node\p_after
+    sink\Observed\s_after := node\s_after
 main()
-int: p_after \(main\data\p)
-int: s_after main\data\s\v

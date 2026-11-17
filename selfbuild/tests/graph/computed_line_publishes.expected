@@ -1,15 +1,27 @@
+---
+    Observed:
+        int: seen 6
+        int: published 5
+    end: Observed
+---
+@: sink (data [] 0)
 fn: five () int
     return: 5
 end: five
-sub: main () (
+sub: build () (
     Computed:
         int: x (five)
         int: y
-        :=: y (x + 1)
+        :=: (data \ y) (x + 1)
     end: Computed
 )
     call: Computed
+end: build
+build:
+int: seen (((build \ data) \ Computed) \ y)
+int: published (((build \ data) \ Computed) \ x)
+sub: main ()
+    :=: ((sink \ Observed) \ seen) (node \ seen)
+    :=: ((sink \ Observed) \ published) (node \ published)
 end: main
 main:
-int: seen 6
-int: published 5

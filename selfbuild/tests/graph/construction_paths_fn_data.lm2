@@ -1,6 +1,20 @@
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: initial 0
+        int: args_deferred 0
+        int: code_deferred 0
+        int: first 0
+        int: after_first 0
+        int: changed 0
+        int: second 0
+        int: after_second 0
+        int: current 0
+)
+@: shared data[0]
 fn: f () int (int: value 7)
-    value := value + 1
-    return: value
+    data\value := data\value + 1
+    return: data\value
 @: D (@: data_snapshot f\data; @: args_snapshot f\args; @: code_snapshot f\code)
 int: initial 0
 initial := D\data_snapshot\value
@@ -21,3 +35,15 @@ int: after_second 0
 after_second := D\data_snapshot\value
 int: current 0
 current := f\data\value
+
+sub: main ()
+    shared\Observed\initial := initial
+    shared\Observed\args_deferred := args_deferred
+    shared\Observed\code_deferred := code_deferred
+    shared\Observed\first := first
+    shared\Observed\after_first := after_first
+    shared\Observed\changed := changed
+    shared\Observed\second := second
+    shared\Observed\after_second := after_second
+    shared\Observed\current := current
+main()

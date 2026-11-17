@@ -1,9 +1,22 @@
-# In the code of a callable the record `data(D)` launches the data of the live launch over D (the book, #ordinary-var;
-# the author's decision 2026-11-11 through fable2, plan M11 5b part 2): the data part of f, `int: n 5`, run as code over
-# D writes 5 into D's n.
+# HG2-B (ROOT5V, data(D)): D is a Structure of the data part of main. `data(D)` runs f's data record (int: n 5) over D;
+# the declaration assigns D's n as the call's local (#call-frame-20261115: no write-back), so D\n stays 1 and the
+# observed seen is 1 (values-changed; the pin 5 was the published value).
+(
+    Observed:
+        int: r 0
+        int: seen 0
+)
+@: shared data[0]
 fn: f () int (int: n 5)
     data(D)
     return: 1
-D(int: n 1)
-int: r f()
-int: seen D\n
+sub: main () (
+    D(int: n 1)
+    int: r 0
+    int: seen 0
+)
+    data\r := f()
+    data\seen := D\n
+    shared\Observed\r := data\r
+    shared\Observed\seen := data\seen
+main()

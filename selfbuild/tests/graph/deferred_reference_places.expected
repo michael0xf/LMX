@@ -1,3 +1,14 @@
+---
+    Observed:
+        int: self_seen 41
+        int: given_seen 13
+        int: structure_seen 30
+        int: callable_seen 23
+        int: calls 0
+        int: ignored_initializers 0
+    end: Observed
+---
+@: shared (data [] 0)
 int: calls 0
 fn: touch () int
     :=: (node \ calls) ((node \ calls) + 1)
@@ -8,15 +19,15 @@ sub: Writer () (
     int: seen 0
 )
     @: p int (data [] 1)
-    :=: seen (\ p)
+    :=: (data \ seen) (\ p)
 end: Writer
 Self:
     int: x 40
     int: y 41
-    @: p int @y
+    @: p int (data [] 0)
     :=: p (data [] 1)
     int: seen 41
-    :=: seen (\ p)
+    :=: (data \ seen) (\ p)
 end: Self
 D:
     int: x 11
@@ -24,28 +35,37 @@ D:
     Target:
         int: n 30
     end: Target
-    @: p int @y
-    @: s Target
+    @: p int (data [] (touch))
+    @: s Missing
     int: seen 13
     int: sseen 30
 end: D
 Code:
     @: p int (data [] 1)
     @: s Target
-    :=: seen (\ p)
-    :=: sseen (s \ n)
+    :=: (data \ seen) (\ p)
+    :=: (data \ sseen) (s \ n)
 end: Code
 D2:
     int: x 21
     int: y 23
-    @: p int @y
+    @: p int (data [] (touch))
     int: seen 23
 end: D2
 call: Self
 call: D Code
-call: D2 Writer
-int: self_seen 41
-int: given_seen 13
-int: structure_seen 30
-int: callable_seen 23
-int: ignored_initializers 0
+call: D2 (Writer \ code)
+int: self_seen (Self \ seen)
+int: given_seen (D \ seen)
+int: structure_seen (D \ sseen)
+int: callable_seen (D2 \ seen)
+int: ignored_initializers (data \ calls)
+sub: observe ()
+    :=: ((shared \ Observed) \ self_seen) self_seen
+    :=: ((shared \ Observed) \ given_seen) given_seen
+    :=: ((shared \ Observed) \ structure_seen) structure_seen
+    :=: ((shared \ Observed) \ callable_seen) callable_seen
+    :=: ((shared \ Observed) \ calls) calls
+    :=: ((shared \ Observed) \ ignored_initializers) ignored_initializers
+end: observe
+observe:

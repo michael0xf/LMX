@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: short_result 6
+        int: parts_result 16
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     From:
         int: x 6
@@ -18,9 +25,14 @@ sub: main () (
 )
     call: From Change
     call: (:= args ()) (:= data FromParts) (:= code Change)
-    :=: short_result (From \ x)
-    :=: parts_result (FromParts \ x)
+    :=: (data \ short_result) (From \ x)
+    :=: (data \ parts_result) (FromParts \ x)
 end: main
 main:
-int: short_result 7
-int: parts_result 17
+int: short_result ((main \ data) \ short_result)
+int: parts_result ((main \ data) \ parts_result)
+sub: observe ()
+    :=: ((shared \ Observed) \ short_result) short_result
+    :=: ((shared \ Observed) \ parts_result) parts_result
+end: observe
+observe:

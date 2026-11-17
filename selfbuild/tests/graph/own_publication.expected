@@ -1,3 +1,11 @@
+---
+    Observed:
+        int: first 21
+        int: published 1
+        int: second 21
+    end: Observed
+---
+@: shared (data [] 0)
 fn: pair (int: a; int: b) int
     return: ((a * 10) + b)
 end: pair
@@ -9,6 +17,12 @@ fn: work () int (
     :=: seen (pair x ((work \ data) \ x))
     return: seen
 end: work
-int: first 21
-int: published 2
-int: second 22
+int: first (work)
+int: published ((work \ data) \ x)
+int: second (work)
+sub: observe ()
+    :=: ((shared \ Observed) \ first) first
+    :=: ((shared \ Observed) \ published) published
+    :=: ((shared \ Observed) \ second) second
+end: observe
+observe:

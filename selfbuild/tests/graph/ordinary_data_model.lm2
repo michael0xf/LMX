@@ -1,3 +1,12 @@
+# HG2-B (data(D), item 3): in Change `x := x + 1` is the call's local, and `data(To)` runs From's data over To (a declaration
+# of a visible name: the local). From\x stays 6 (short_result 6, pinned 7); FromParts\x stays 16 (parts_result 16, pinned 17).
+# Results written through data\ (rule Б). Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: short_result 0
+        int: parts_result 0
+)
+@: shared data[0]
 # M11 5v: a child's spelling does not supply an ordinary code's data model.
 # The same C runs over different D through both existing launch forms.
 sub: main () (
@@ -14,8 +23,13 @@ sub: main () (
 )
     call(From Change)
     call(args := (); data := FromParts; code := Change)
-    short_result := From\x
-    parts_result := FromParts\x
+    data\short_result := From\x
+    data\parts_result := FromParts\x
 main()
 int: short_result main\data\short_result
 int: parts_result main\data\parts_result
+
+sub: observe ()
+    shared\Observed\short_result := short_result
+    shared\Observed\parts_result := parts_result
+observe()

@@ -1,3 +1,10 @@
+# HG2-A (group B): the launch is `call(D; Code)` (data first, #call-receivers); the writes into the given data are explicit (rule Б): `data\x := data\x + 10`, `data\k := data\k + 2`. Pins kept: seen 21, twice 2. Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: seen 0
+        int: twice 0
+)
+@: shared data[0]
 # Code launched over data it was given is separated from that data too (R22, item 1; plan M11 5b): a record there whose
 # head is an ordinary Structure of the data launches it -- `Step(Inner)` and `Step(data := Inner)` run Step over Inner,
 # `Twice()` runs Twice over itself.
@@ -11,10 +18,15 @@ sub: main () (
         Twice()
     D:
         Inner(int: x 1)
-        Step(x := x + 10)
-        Twice(int: k 0; k := k + 2)
+        Step(data\x := data\x + 10)
+        Twice(int: k 0; data\k := data\k + 2)
 )
-    call: D Code
+    call(D; Code)
 main()
 int: seen main\data\D\Inner\x
 int: twice main\data\D\Twice\k
+
+sub: observe ()
+    shared\Observed\seen := seen
+    shared\Observed\twice := twice
+observe()

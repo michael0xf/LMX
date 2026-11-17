@@ -1,3 +1,12 @@
+# HG2-B (data(D), item 3): `data(To)` is `call(To data)`, and `data()` runs the launch data over itself. A declaration of a
+# visible name assigns the existing place, the call's local (no write-back): To\x stays 0 (copied 0, pinned 7) and Self\x
+# stays 1 (own 1, pinned 2). The results are written through data\ (rule Б). Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: copied 0
+        int: own 0
+)
+@: shared data[0]
 # M11 5v: data is the current launch's ordinary Structure, not a model child.
 sub: main () (
     From(int: x 7)
@@ -13,8 +22,13 @@ sub: main () (
 )
     call(From Copy)
     call(Self Apply)
-    copied := To\x
-    own := Self\x
+    data\copied := To\x
+    data\own := Self\x
 main()
 int: copied main\data\copied
 int: own main\data\own
+
+sub: observe ()
+    shared\Observed\copied := copied
+    shared\Observed\own := own
+observe()

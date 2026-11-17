@@ -1,3 +1,10 @@
+---
+    Observed:
+        int: copied 0
+        int: own 1
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     From:
         int: x 7
@@ -16,9 +23,14 @@ sub: main () (
 )
     call: From Copy
     call: Self Apply
-    :=: copied (To \ x)
-    :=: own (Self \ x)
+    :=: (data \ copied) (To \ x)
+    :=: (data \ own) (Self \ x)
 end: main
 main:
-int: copied 7
-int: own 2
+int: copied ((main \ data) \ copied)
+int: own ((main \ data) \ own)
+sub: observe ()
+    :=: ((shared \ Observed) \ copied) copied
+    :=: ((shared \ Observed) \ own) own
+end: observe
+observe:

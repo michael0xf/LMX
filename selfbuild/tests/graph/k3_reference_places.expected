@@ -1,0 +1,30 @@
+---
+    Observed:
+        @: plain
+        @: typed int
+        @: zero Box
+        @: untouched
+        int: seen_plain 1
+        int: seen_typed 5
+        int: seen_zero 1
+    end: Observed
+---
+@: sink (data [] 0)
+int: n 5
+sub: build () (
+    Box:
+        int: value 1
+    end: Box
+    @: h Box
+)
+end: build
+build:
+sub: main ()
+    :=: ((sink \ Observed) \ plain) ((build \ data) \ h)
+    :=: ((sink \ Observed) \ typed) (@ n)
+    :=: ((sink \ Observed) \ zero) ((build \ data) \ h)
+    :=: ((sink \ Observed) \ seen_plain) (((sink \ Observed) \ plain) \ value)
+    :=: ((sink \ Observed) \ seen_typed) (\ ((sink \ Observed) \ typed))
+    :=: ((sink \ Observed) \ seen_zero) (((sink \ Observed) \ zero) \ value)
+end: main
+main:

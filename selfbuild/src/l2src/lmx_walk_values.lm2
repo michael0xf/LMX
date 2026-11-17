@@ -8102,6 +8102,16 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     # a kernel error stays its code.  A missing contract is diagnosed separately: INVALID, as before.
     if: status != c.LMX_WALK_OK
         return: status
+    # A `call` takes its code at run time, so the obligation of that code's written throws -- declared by the caller or handled on
+    # the block chain of this call, the book #exceptions -- is checked before anything of the call runs, as the native launch
+    # checks it (lmx_call_launch).  An implicit `implements` throw with no payload; the callee is not entered.  Not the machine's own
+    # receivers (a conversion, a receiving): their callee's throw is the caller's implicit `convert` (below), never a missing treatment.
+    if: split_call != 0 && lmx_walk_source_of(f, code) != c.LMX_WALK_SOURCE_CONVERSION && lmx_walk_source_of(f, code) != c.LMX_WALK_SOURCE_RECEIVING
+        status := lmx_call_obligation((cast: (@: c.LmxArena) f\arena), callee, (cast: (@: c.Lmx) f\code), code)
+    if: status != c.LMX_WALK_OK
+        f\payload := 0
+        f\landing := 0
+        return: status
     callee_pool := c.lmx_range_cell_pool((cast: (@: c.LmxArena) f\arena), (cast: (@: void) callee))
     c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ callee_roots, 0, 0U, 0, 0U, (cast: (@: void) callee), 0)
     c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ data_roots, 0, 0U, 0, 0U, (cast: (@: void) data), 0)

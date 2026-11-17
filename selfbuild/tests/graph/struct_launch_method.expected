@@ -1,9 +1,17 @@
+---
+    Observed:
+        int: seen 72
+        int: own_n 7
+        int: counter_n 2
+    end: Observed
+---
+@: shared (data [] 0)
 sub: main () (
     Own:
         int: n 5
-        :=: n (n + 1)
+        :=: (data \ n) ((data \ n) + 1)
     end: Own
-    Bump: (:= n (n + 1))
+    Bump: (:= (data \ n) ((data \ n) + 1))
     Counter:
         int: n 0
     end: Counter
@@ -16,9 +24,15 @@ sub: main () (
         Bump: (:= data Counter)
         return: (((Own \ n) * 10) + (Counter \ n))
     end: f
-    :=: seen ((f))
+    :=: (data \ seen) (f)
 end: main
 main:
-int: seen 72
-int: own_n 7
-int: counter_n 2
+int: seen ((main \ data) \ seen)
+int: own_n (((main \ data) \ Own) \ n)
+int: counter_n (((main \ data) \ Counter) \ n)
+sub: observe ()
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ own_n) own_n
+    :=: ((shared \ Observed) \ counter_n) counter_n
+end: observe
+observe:

@@ -1,6 +1,15 @@
+---
+    Observed:
+        int: before 1
+        int: after 1
+        int: p_after 3
+        int: s_after 7
+    end: Observed
+---
+@: sink (data [] 0)
 int: before 1
 int: after 1
-sub: main () (
+sub: build () (
     int: i 3
     A:
         int: v 7
@@ -15,7 +24,14 @@ sub: main () (
     :=: (node \ before) 1
     call: data (Types \ data)
     :=: (node \ after) 1
+end: build
+build:
+int: p_after (\ ((build \ data) \ p))
+int: s_after (((build \ data) \ s) \ v)
+sub: main ()
+    :=: ((sink \ Observed) \ before) (node \ before)
+    :=: ((sink \ Observed) \ after) (node \ after)
+    :=: ((sink \ Observed) \ p_after) (node \ p_after)
+    :=: ((sink \ Observed) \ s_after) (node \ s_after)
 end: main
 main:
-int: p_after 3
-int: s_after 7

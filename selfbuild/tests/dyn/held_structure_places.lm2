@@ -16,7 +16,7 @@ end: Good
 @: chosen S
 fn: run () int
     int: r 82
-    call: chosen D
+    call(D chosen)
     catch: call ()
         r := 83
         if: D\x = 10
@@ -24,7 +24,7 @@ fn: run () int
     ---
 return: r
 int: got run()
-call: chosen Good
+call(Good chosen)
 if: Good\x != 1 || Good\y != 33 || Good\padding != 27
     got := 84
 Node:
@@ -45,14 +45,14 @@ end: NumberData
 @: held_link LinkCode
 fn: incompatible_link () int
     int: result 85
-    call: held_link NumberData
+    call(NumberData held_link)
     catch: call ()
         if: NumberData\marker = 31
             result := 7
     ---
     return: result
 end: incompatible_link
-call: held_link LinkData
+call(LinkData held_link)
 int: rejected incompatible_link()
 if: LinkData\marker != 13 || rejected != 7
     got := 86

@@ -1,0 +1,45 @@
+# Slice 418, the road of the launch: the obligation of the throws of a selected code is checked also where a `call` names its data, call(D C), in a walked root as
+# in the native one (the native launch asks it before anything else).  The fn is that of call_throws_obligation, the call is a launch over D: the first call has
+# `catch: implements ()` only, so it is refused before the body (entered stays 0); the second has `catch: Bad ()` and enters; the third receives the payload 5
+# once arm() has set `raising`.  Entry 7.
+int: entered 0
+int: raising 0
+D:
+    int: seed 3
+fn: bad () int
+    throws: Bad
+    node\entered := node\entered + 1
+    if: node\[0]raising != 0
+        throw: Bad(5)
+    return: 7
+@: target bad
+fn: get_entered () int
+    return: node\entered
+int: refused 0
+---
+    call(D target)
+    catch: implements ()
+        refused := 1
+---
+int: after_refusal get_entered()
+---
+    call(D target)
+    catch: Bad ()
+        refused := 2
+---
+int: after_success get_entered()
+fn: arm () int
+    node\[0]raising := 1
+    return: 0
+int: armed arm()
+int: payload 0
+---
+    call(D target)
+    catch: Bad (int: value)
+        payload := value
+---
+int: answer 81
+if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5
+    answer := 7
+send: exit(exit_code: answer; stdout: ""; stderr: "")
+return

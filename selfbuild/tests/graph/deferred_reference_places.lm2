@@ -1,5 +1,18 @@
-# A supplied data Structure never executes its computed reference initializers.
-# Self reaches its own receiver; a distinct Code writes the required data places.
+# A supplied data Structure never executes its computed reference initializers (HG2-A, CALLFORM Р36 п.2 and rule Б).
+# Self reaches its own receiver; a distinct Code writes the required data places. The launch of Writer over D2 is
+# `call(D2; Writer\code)` (the body over the data), and every write into the given data is explicit (`data\seen`,
+# `data\sseen`), so the values reach the data (#call-frame-20261115: no write-back of a local).
+# Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract).
+(
+    Observed:
+        int: self_seen 0
+        int: given_seen 0
+        int: structure_seen 0
+        int: callable_seen 0
+        int: calls 0
+        int: ignored_initializers 0
+)
+@: shared data[0]
 int: calls 0
 fn: touch () int
     node\calls := node\calls + 1
@@ -9,14 +22,14 @@ sub: Writer () (
     int: seen 0
 )
     @: p int data[1]
-    seen := \p
+    data\seen := \p
 @: Self (
     int: x 40
     int: y 41
     @: p int data[0]
     p := data[1]
     int: seen 0
-    seen := \p
+    data\seen := \p
 )
 @: D (
     int: x 11
@@ -30,8 +43,8 @@ sub: Writer () (
 @: Code (
     @: p int data[1]
     @: s Target
-    seen := \p
-    sseen := s\n
+    data\seen := \p
+    data\sseen := s\n
 )
 @: D2 (
     int: x 21
@@ -41,9 +54,18 @@ sub: Writer () (
 )
 call(Self)
 call(D; Code)
-call(D2; Writer)
+call(D2; Writer\code)
 int: self_seen Self\seen
 int: given_seen D\seen
 int: structure_seen D\sseen
 int: callable_seen D2\seen
 int: ignored_initializers data\calls
+
+sub: observe ()
+    shared\Observed\self_seen := self_seen
+    shared\Observed\given_seen := given_seen
+    shared\Observed\structure_seen := structure_seen
+    shared\Observed\callable_seen := callable_seen
+    shared\Observed\calls := calls
+    shared\Observed\ignored_initializers := ignored_initializers
+observe()

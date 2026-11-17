@@ -1,15 +1,33 @@
+# HG2-B (group B, rule Б): the states of the Structures are written through data\ (their fields persist across launches):
+# out, count and n. Pins kept: first 1, second 2, leaf_count 2, sub_count 2, from_data 32, from_data_again 34,
+# data_count 12, code_count 22 -- the accumulations of the explicit writes. Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
+(
+    Observed:
+        int: first 0
+        int: second 0
+        int: leaf_count 0
+        int: sub_count 0
+        int: bumped 0
+        int: touch_calls 0
+        int: from_data 0
+        int: from_data_again 0
+        int: data_count 0
+        int: code_count 0
+        int: ignored_initializer 0
+)
+@: shared data[0]
 # Written methods are visible before their source line. Re-entry of ordinary
 # code in one traversal keeps each constructed method and its own data.
 @: State (
     int: out 0
     int: bumps 0
-    out := leaf()
+    data\out := leaf()
     bump()
     fn: leaf () int (int: count 0)
-        count := count + 1
-        return: count
+        data\count := data\count + 1
+        return: data\count
     sub: bump () (int: n 0)
-        n := n + 1
+        data\n := data\n + 1
         node\bumps := node\bumps + 1
 )
 call(State)
@@ -27,14 +45,14 @@ fn: touch () int
     int: out 0
     int: cold touch()
     fn: leaf () int (int: count 10)
-        count := count + 1
-        return: count
+        data\count := data\count + 1
+        return: data\count
 )
 @: C (
-    out := leaf() + code_leaf()
+    data\out := leaf() + code_leaf()
     fn: code_leaf () int (int: count 20)
-        count := count + 1
-        return: count
+        data\count := data\count + 1
+        return: data\count
 )
 call(D; C)
 int: from_data D\out
@@ -43,3 +61,17 @@ int: from_data_again D\out
 int: data_count D\leaf\data\count
 int: code_count C\code_leaf\data\count
 int: ignored_initializer data\touch_calls
+
+sub: observe ()
+    shared\Observed\first := first
+    shared\Observed\second := second
+    shared\Observed\leaf_count := leaf_count
+    shared\Observed\sub_count := sub_count
+    shared\Observed\bumped := bumped
+    shared\Observed\touch_calls := touch_calls
+    shared\Observed\from_data := from_data
+    shared\Observed\from_data_again := from_data_again
+    shared\Observed\data_count := data_count
+    shared\Observed\code_count := code_count
+    shared\Observed\ignored_initializer := ignored_initializer
+observe()

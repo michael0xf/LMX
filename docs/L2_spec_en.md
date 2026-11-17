@@ -135,9 +135,9 @@ slot's content answers `uninit:int` and `sys\typeof(@x)` answers `int`, as befor
 Internal storage does not make `x` a language pointer: its language type remains `int`.
 
 `uninit:T` describes a declaration without an initializer, not a “never written yet” flag.
-The absence of a value is written `nil: T`, and simply `nil` where possible; there is no number `nil` to compare with
-(the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#typed-nil)). The present representation cannot tell
-whether a value has been written into a place declared without one -- an open item of the [plan](../next_core_tasks_v3.md#typed-nil-plan).
+The absence of a value is written `nil: T`, and simply `nil` where possible; a variable can be compared with `nil`
+(the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#typed-nil)). What such a comparison answers after an assignment
+into a place declared without a value is an [open question](../LMX_blog/q/current/nil-after-assignment-20261117.md).
 The earlier explanation about redirecting the field on its first write was superseded by the
 [author's later clarification of 2026-11-08](../LMX_blog/2026-11-08.md#uninit-pointer-preserved).
 See [kernel specification §3.2](kernel-implementation.en.md#primitive-storage) for the representation.

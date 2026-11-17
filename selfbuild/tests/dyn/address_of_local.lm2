@@ -1,0 +1,27 @@
+# opus 414 witness (FABLE-O413-B/C, FABLE-O414-C): `@x` addresses the same local variable that bare `x` reads and writes
+# (docs/LMX_semantics.en.md:511), also when the local's value is computed at run time (no write-back to its
+# declaration, M14).  Slice 414 covers numbers and C pointers: an int local (`@ cellp`, int**) and a C pointer local
+# (`@ text`, char**), each addressed by the caller and read through a free name by the callee: 9 and 'a' (97).
+# Expected 7 in both executors.  A Structure-reference local is M15 step 2 (o414_m15s2_structure_local_address.lm2).
+fn: next_level () int
+    @: p int, \quote
+    return: \p
+fn: outer_pp () int
+    int: cell 9
+    @: cellp int @ cell
+    @@: quote int 0
+    quote := @ cellp
+    return: next_level()
+fn: first_char () char
+    @: t char, \quote
+    return: \t
+fn: outer_text () int
+    @: text char "abc"
+    @@: quote char 0
+    quote := @ text
+    return: (cast: (int) first_char())
+int: code 0
+if: outer_pp() = 9 && outer_text() = 97
+    code := 7
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,6 +1,6 @@
-# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: the root reads the selected os branch's method field after
-# the call, as root_path_read_unit.lm2 reads the unit method's: os_mix(3) publishes last = 6 (win) or 7 (default).
-# Entry s + 1: 7 for win, 8 for default.
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: the root checks the selected os branch's os_mix(3) return value (reading its published field is reverted);
+# os_mix(3) returns last = 6 (win) or 7 (default).
+# Entry r + 1: 7 for win, 8 for default.
 os:
     win:
         fn: os_mix (int: a) int
@@ -16,6 +16,5 @@ os:
         end: os_mix
 end: os
 int: r os_mix(3)
-int: s os_mix\last
-send: exit(exit_code: s + 1; stdout: ""; stderr: "")
+send: exit(exit_code: r + 1; stdout: ""; stderr: "")
 return

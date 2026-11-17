@@ -1,0 +1,14 @@
+# opus 414 probe (FABLE-O413-A item 2): the same formal on the static path -- take() with no argument.  Expected by
+# the norm: 7.  9 = an implicit `implements` refusal.
+Point:
+    int: y 2
+fn: take (Point: p) int
+    return: 7
+int: code 0
+---
+    code := take()
+    catch: implements ()
+        code := 9
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

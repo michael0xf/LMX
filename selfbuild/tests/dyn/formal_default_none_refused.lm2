@@ -1,7 +1,8 @@
-# Slice 293 (FORMAL-DEFAULT; docs/LMX_semantics.ru.md :467 "Нет ни аргумента, ни допустимого дефолта — обычный отказ
-# вызова"): a call that names the formal with a default and omits the one without is refused at translation.
+# Migrated from the refusal of slice 293 (docs/LMX_semantics.ru.md :467, "Нет ни аргумента, ни допустимого дефолта — обычный отказ вызова").
+# The author's decision of 2026-11-16 cancels it: x has no value in its declaration and no argument; the call runs, x holds
+# «T без инициализации», and the body reads only y.  Entry 7; 81 names the failing check.
 fn: e (int: x; int: y 7) int
-    return: x * 10 + y
+    return: y
 end: e
 int: code 7
 if: e(y := 3) != 3

@@ -4,9 +4,9 @@
 # for other storage (lmx_walk_value_deref_actual, lmx_walk_place_address; the walker's DEREF/ADDRESS without a witness and the
 # native code run the same operations).  read_int / read_size read through a pointer binding into an int / a size_t result
 # (the other pointee is the implicit `convert`, caught by the caller); bump (a sub: its free input is resolved as a fn's is)
-# writes through the free pointer into the caller's declaration cell -- observed through the pointer (read_int: 6), while the
-# caller's bare working `cell` keeps 5 until its own next write (the book: no automatic reload; docs/LMX_semantics.en.md:487-491,
-# :500, :538); depth takes the address of a pointer binding (int**) and reads back through typed locals;
+# writes through the free pointer into the caller's local `cell` -- observed through the pointer (read_int: 6) and by the caller's
+# bare `cell`, the same local variable (docs/LMX_semantics.en.md:511: `@x` addresses the variable that bare `x` reads and
+# writes; no write-back to a declaration cell, M14); depth takes the address of a pointer binding (int**) and reads back through typed locals;
 # mixed keeps a C-door call so that its body stays native under --walk-methods while its callers are walked; next_level
 # dereferences a free name bound to an int** into a typed int* local.  A hidden input is a LOCAL of the activation (the
 # author: «переменные становятся локальными и мы их передаем скрытыми аргументами ... это локальный адрес; не локальный
@@ -71,7 +71,7 @@ fn: outer_int () int
     bump()
     if: read_int() != 6
         return: 82
-    if: cell != 5
+    if: cell != 6
         return: 98
     if: depth() != 6
         return: 83
@@ -96,7 +96,7 @@ fn: outer_size () int
     bump()
     if: read_size() != 8U
         return: 87
-    if: cell != 7U
+    if: cell != 8U
         return: 99
     ---
         got := read_int()

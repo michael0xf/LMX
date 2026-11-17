@@ -6948,7 +6948,6 @@ end: lmx_call_bind_finish
 # selected value with no signature of its own (a merge result, a Structure run as the call) has no formals for the
 # whole: `call`.  data is the callable's own when 0 (lmx_call_unary_data), as the dispatch hands it.
 fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size_t: count; @: whole c.LmxWalkValue; @: values c.LmxWalkValue; size_t: route_count; @: route_formals size_t; @: route_types int; @@: route_codes void) int
-    c.LmxWalkValue: current
     @: args c.Lmx 0
     @: returns c.Lmx 0
     @: given c.Lmx 0
@@ -7025,17 +7024,8 @@ fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size
             field_of[found] := i
         position := position + 1U
         i := i + 1U
-    # The presence of every formal no field supplies: its current default, read, not evaluated (slice 293 at the form).
-    j := 0U
-    while: status = c.LMX_WALK_OK && j < count
-        if: field_of[j] = (cast: (size_t) -1)
-            status := lmx_walk_current_default(arena, args, j, @ current)
-            if: status = c.LMX_WALK_OK && current\present = 0
-                status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-        ---
-        j := j + 1U
-    ---
-    # The receptions, in the selected callable's own order.
+    # The receptions, in the selected callable's own order.  A formal no field supplies takes its default or stays
+    # absent (lmx_call_formal_default; slice 414: every declared input is optional).
     j := 0U
     while: status = c.LMX_WALK_OK && j < count
         item := values + j
@@ -7067,12 +7057,12 @@ return: status
 # the names and the form of a written call come before its actuals, slice 305): the static field names of the actual's
 # shape -- the translation knows them, the formals of the declared callee the fields name -- against the callable the
 # call selects now: every name a formal of it (a name no formal bears, a name only a hidden input bears, two names of
-# one formal: the implicit `call`), every formal no name supplies holding its current default (read, not evaluated;
-# none: `call`); count is the formal count the call site expects.  The producer of the Structure runs after this check;
-# lmx_call_bind_whole then binds the value's own named cells.  Both executors call it: the native call before the
-# actual's evaluation, the walker before the payload of the WHOLE operand (lmx_walk_whole_values).
+# one formal: the implicit `call`); count is the formal count the call site expects.  A formal no name supplies is not
+# checked here: it takes its default or stays absent when the call binds (slice 414: every declared input is optional,
+# the author 2026-11-16).  The producer of the Structure runs after this check; lmx_call_bind_whole then binds the
+# value's own named cells.  Both executors call it: the native call before the actual's evaluation, the walker before
+# the payload of the WHOLE operand (lmx_walk_whole_values).
 fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count; @: names size_t; size_t: nnames) int
-    c.LmxWalkValue: current
     @: args c.Lmx 0
     @: returns c.Lmx 0
     @: taken int 0
@@ -7115,14 +7105,6 @@ fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count;
         if: status = c.LMX_WALK_OK
             taken[found] := 1
         i := i + 1U
-    j := 0U
-    while: status = c.LMX_WALK_OK && j < count
-        if: taken[j] = 0
-            status := lmx_walk_current_default(arena, args, j, @ current)
-            if: status = c.LMX_WALK_OK && current\present = 0
-                status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-        ---
-        j := j + 1U
     c.free((cast: (@: void) taken))
 return: status
 
@@ -7207,11 +7189,15 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
             received\kind := c.LMX_WALK_VALUE_FREE
             i := i + 1U
             continue
-        # The present scalar/reference transport cannot encode absence as
-        # zero/null. This is unavailable execution storage, never a semantic
-        # NO about the interface or permission to evaluate formal SOURCE.
+        # Slice 414: an occupied formal whose value is absent -- a written operand handed absent, a field of the whole
+        # argument holding nothing, a formal the whole supplies no field for and that has no default
+        # (lmx_call_bind_whole) -- travels absent with no storage (ref 0), as a defaulted formal without a default does
+        # above; it never selects a default here and never becomes a zero/null.  Every declared input is optional (the
+        # author 2026-11-16).
         if: received\present = 0
-            return: c.LMX_WALK_UNSUPPORTED
+            refs[i] := 0
+            i := i + 1U
+            continue
         # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :485): a written number was received by the selected formal's
         # own type above, in the written order (slice 301) -- a NAMED actual binds the formal of its name, which may stand
         # where the signature the call was written against has a formal of another type.
@@ -8683,6 +8669,11 @@ fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxW
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
+        # An input the call gave no value stays absent: reception and admission go by the given values only, there
+        # is nothing to write (every declared input is optional, the author 2026-11-16).
+        if: value_p\present = 0
+            lmx_walk_value_clear(out)
+            return: c.LMX_WALK_OK
         return: lmx_walk_arg_write_witness(f, index, a, (cast: (@: void) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U)), @ value, out)
     if: op = c.LMX_WALK_OP_SELF
         return: lmx_walk_projection(f, operand, 0, out)
@@ -8712,6 +8703,29 @@ fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxW
     if: op = c.LMX_WALK_OP_NODE
         return: lmx_walk_projection(f, operand, 0, out)
     if: op = c.LMX_WALK_OP_ADDRESS
+        # Slice 414 (the book: `@x` addresses the same local variable that bare `x` reads and writes; a local's write
+        # changes only the activation's place, no write-back -- M14): a local this activation keeps in a working row
+        # is addressed in that row's Value, the place its bare name reads; its declaration's graph cell is not it.
+        # The native twin addresses its C local (the emitter, FE-NOTES A).  A local the row holds no value of yet keeps
+        # the declaration's place below.
+        leaf := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)
+        if: lmx_walk_node(f, leaf) = c.LMX_WALK_OP_OWN && lmx_walk_work_cell(f, leaf, 0, @ wholder, @ index, @ slot) = c.LMX_WALK_OK
+            work := lmx_walk_work_find(f, slot)
+            if: work != 0
+                outer := @ work\value
+                if: outer\present != 0 && lmx_walk_value_storage(outer) != 0
+                    want := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)
+                    if: want != 0
+                        a := lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), want)
+                    else:
+                        a := lmx_type_pointer_to(outer\type)
+                    if: a = c.LMX_TYPE_NONE
+                        return: c.LMX_WALK_UNSUPPORTED
+                    status := lmx_walk_value_ref(out, a, lmx_walk_value_storage(outer))
+                    out\referent := outer
+                    return: status
+                outer := 0
+        ---
         status := lmx_walk_place(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), 0, @ place)
         if: status != c.LMX_WALK_OK
             return: status

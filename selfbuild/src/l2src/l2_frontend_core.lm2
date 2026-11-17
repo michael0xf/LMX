@@ -4163,6 +4163,15 @@ fn: lm_compiler_emit_work_binding (int: k; const: (@: ind char)) int
     @: value_text char (cast: (@: char) value_storage\buffer)
     c.L2Tx: value_tx
     @: value c.L2Tx c.lm_compiler_tx_local(@ value_tx, value_text, 64U)
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    c.L2FrontendScratchChar160: held_storage
+    @: held_text char (cast: (@: char) held_storage\buffer)
+    c.L2FrontendScratchChar96: type_storage
+    @: type_text char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar96: arg_storage
+    @: arg_text char (cast: (@: char) arg_storage\buffer)
+    const: (@: row_field char 0)
+    const: (@: row_target char 0)
     @: deep char 0
     int: local c.lm_compiler_own_code_local(cur_mi_cell[0], k)
     int: t tn_cell[0]
@@ -4171,13 +4180,28 @@ fn: lm_compiler_emit_work_binding (int: k; const: (@: ind char)) int
     tn_cell[0] := t + 1
     if: name = 0 || value = 0 || c.lm_compiler_tx_own_cname(name, "l2_q", k, "") != 0 || c.lm_compiler_tx_own_cname(value, "l2_wv", k, "") != 0
         return: 1
+    # The binding offers the local to the free names of the activations below.  A number or a C pointer of the kernel's pointer
+    # table, in CODE, is offered by its storage and type code (lm_compiler_own_storage_local): the lookup loads the live local
+    # (lmx_walk_value_load), so what a write through `@x` stores is what the name reads (the book: `@x` addresses the same
+    # local variable that bare `x` reads and writes).  Any other local and a data place are offered by their working Value,
+    # with its model, references and origin cell.
+    row_field := "value"
+    row_target := value\data
+    if: c.snprintf(held_text, 160U, "0") < 0 || c.snprintf(type_text, 96U, "c.LMX_TYPE_NONE") < 0 || c.snprintf(arg_text, 96U, "@ %s", value\data) < 0
+        return: 1
+    if: c.lm_compiler_own_storage_local(cur_mi_cell[0], k) != 0
+        row_field := "storage"
+        row_target := name\data
+        if: c.lm_compiler_emit_input_value_type(c.lm_compiler_value_ft_of_own(own_ty_cell[0][k]), 0, type_text) != 0 || c.snprintf(held_text, 160U, "(cast: (@: void) (@ %s))", name\data) < 0 || c.snprintf(arg_text, 96U, "0") < 0
+            return: 1
+    ---
     deep := (cast: (@: char) ind)
     if: local != 0
-        if: c.lm_compiler_bump_ind(ind, @ deep) != 0 || c.fprintf(output[0], "%s@: LmxActivation l2_bind_act%d (cast: (@: LmxActivation) l2_call_arena\\activation)\n%sint: l2_bind_need%d 1\n%sif: l2_bind_act%d != 0 && %s_bound != 0U && %s_bound <= l2_bind_act%d\\nbind\n%s    @: LmxActivationBinding l2_bind_row%d l2_bind_act%d\\bindings + %s_bound - 1U\n%s    if: l2_bind_row%d\\value = (cast: (@: void) (@ %s)) && l2_bind_row%d\\origin = (cast: (@: void) %s_from)\n%s        l2_bind_need%d: 0\n%s    ---\n%s---\n%sif: l2_bind_need%d != 0\n", ind, t, ind, t, ind, t, name\data, name\data, t, ind, t, t, name\data, ind, t, value\data, t, name\data, ind, t, ind, ind, ind, t) < 0
+        if: c.lm_compiler_bump_ind(ind, @ deep) != 0 || c.fprintf(output[0], "%s@: LmxActivation l2_bind_act%d (cast: (@: LmxActivation) l2_call_arena\\activation)\n%sint: l2_bind_need%d 1\n%sif: l2_bind_act%d != 0 && %s_bound != 0U && %s_bound <= l2_bind_act%d\\nbind\n%s    @: LmxActivationBinding l2_bind_row%d l2_bind_act%d\\bindings + %s_bound - 1U\n%s    if: l2_bind_row%d\\%s = (cast: (@: void) (@ %s)) && l2_bind_row%d\\origin = (cast: (@: void) %s_from)\n%s        l2_bind_need%d: 0\n%s    ---\n%s---\n%sif: l2_bind_need%d != 0\n", ind, t, ind, t, ind, t, name\data, name\data, t, ind, t, t, name\data, ind, t, row_field, row_target, t, name\data, ind, t, ind, ind, ind, t) < 0
             return: 1
         ---
     ---
-    if: c.fputs(deep, output[0]) < 0 || c.fputs("if: lmx_activation_bind_origin(l2_program_arena, ", output[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(output[0], ", 0, c.LMX_TYPE_NONE, @ %s, (cast: (@: void) %s_from)) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n%s    return: 0\n%s---\n", value\data, name\data, deep, deep, deep) < 0
+    if: c.fputs(deep, output[0]) < 0 || c.fputs("if: lmx_activation_bind_origin(l2_program_arena, ", output[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(output[0], ", %s, %s, %s, (cast: (@: void) %s_from)) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n%s    return: 0\n%s---\n", held_text, type_text, arg_text, name\data, deep, deep, deep) < 0
         return: 1
     if: local != 0 && c.fprintf(output[0], "%s%s_bound: l2_bind_act%d\\nbind\n%s---\n", deep, name\data, t, ind) < 0
         return: 1

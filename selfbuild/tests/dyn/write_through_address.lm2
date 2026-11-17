@@ -1,0 +1,16 @@
+# opus 414 probe (FABLE-O414-A, form A): a write through `@x` is a write of x itself (docs/LMX_semantics.en.md:511:
+# `@x` addresses the same local variable that bare `x` reads and writes), so a callee entered afterwards takes x's
+# current value for its free name (:764, the caller's nearest current local binding first).  Expected 7 = 5 + 2 in
+# both executors; 11 = the callee read a stale published copy (9 + 2); 2 = the lexical root cell.
+int: cell 0
+fn: reader () int
+    return: cell + 2
+fn: outer () int
+    int: cell 9
+    @: p int @ cell
+    \p := 5
+    if: cell != 5
+        return: 3
+    return: reader()
+send: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

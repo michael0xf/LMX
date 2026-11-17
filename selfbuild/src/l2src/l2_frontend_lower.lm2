@@ -947,9 +947,10 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
 end: lm_compiler_bind_value_actuals_into
 
 # Slice 293 (FORMAL-DEFAULT; the book :467): a formal the call gives no argument for takes its written default -- a
-# literal of its type the callee's args entry holds (lm_compiler_formal_default_kind); with none it is the ordinary
-# refusal of the call.  A default written in another form is not built: such a call must give the argument.  names
-# gives the formals' names; 0 reads them from the method mi (the deferred check of a whole candidate, slice 307).
+# literal of its type the callee's args entry holds (lm_compiler_formal_default_kind); with none it stays absent, as at a
+# launch: every declared input is optional and only `required` checks it (the author, 2026-11-16).  A default written
+# in another form is not built: such a call must give the argument.  names gives the formals' names; 0 reads them from
+# the method mi (the deferred check of a whole candidate, slice 307).
 fn: lm_compiler_bind_defaults_check (@: out c.L2ApplicationActuals; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node)) int
     @: slot c.L2ApplicationActual
     @: name c.LmP0Text
@@ -971,8 +972,6 @@ fn: lm_compiler_bind_defaults_check (@: out c.L2ApplicationActuals; int: nf; @@:
                 return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (name\data)), (cast: (size_t) (name\length)), ": its written default is no value of its type", 0, 0U, "")))
             if: default_kind = 2
                 return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (name\data)), (cast: (size_t) (name\length)), ": its written default is not a literal value and is not built", 0, 0U, "")))
-            if: default_kind != 1
-                return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (name\data)), (cast: (size_t) (name\length)), "", 0, 0U, "")))
             ---
         k := k + 1
     ---
@@ -2592,6 +2591,53 @@ fn: lm_compiler_own_addr (int: k0; @: dest c.L2Tx) int
         return: (cast: (int) (c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) (txt\data)), ") ", (cast: (const: @: char) (cq_name\data)), "_from[0])")))
     return: (cast: (int) (1))
 end: lm_compiler_own_addr
+
+# A CODE local whose storage is the C local l2_qK its bare name reads and writes, and whose address and binding are that
+# storage: a number, or a pointer of the kernel's own pointer-code table (lmx_type_pointee: 11 int*, 12 char*, 3 const
+# char*, 9 size_t*, 25 unsigned*, 38 ulong*, 16 void*, 19 int**, 17 char**, 20 size_t**, 24 unsigned**, 39 ulong**, 18
+# void**).  A graph reference, a foreign C type and an exact C scalar are read by their working Value (their pointee
+# is typed by its owning record, not by a code the kernel knows).
+fn: lm_compiler_own_storage_local (int: mi; int: k) int
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    int: ty own_ty_cell[0][k]
+    int: ft 0
+    if: c.lm_compiler_own_code_local(mi, k) = 0
+        return: 0
+    if: c.lm_compiler_own_num_ctype(ty) != 0
+        return: 1
+    if: c.lm_compiler_own_is_pointer(ty) = 0
+        return: 0
+    ft := c.lm_compiler_oc_ft(ty)
+    return: (cast: (int) (ft = 3 || ft = 9 || ft = 11 || ft = 12 || ft = 16 || ft = 17 || ft = 18 || ft = 19 || ft = 20 || ft = 24 || ft = 25 || ft = 38 || ft = 39))
+
+# `@x` of a CODE local this activation keeps in a working place (the C local l2_qK) is the address of that place -- the
+# storage its bare name reads and writes (the book: `@x` addresses the same local variable that bare `x` reads and
+# writes; an assignment to a local changes only the activation's place, M14), never the graph cell of its declaration,
+# which no write of the activation reaches.  The walker addresses the working row's Value the same way.  0: the address in
+# dest; 2: the field has no working place of this kind -- a data place, a graph slot, an array, a machine function's
+# field, a graph reference or a foreign pointer -- and lm_compiler_own_addr names its cell.
+fn: lm_compiler_own_work_addr (int: mi; int: k0; @: dest c.L2Tx) int
+    @: work_mi_cell int (cast: (@: int) (@ c.l2_work_mi))
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    int: k c.lm_compiler_split_rep(k0)
+    int: ty own_ty_cell[0][k]
+    c.L2FrontendScratchChar256: txt_own_storage
+    @: txt_own char (cast: (@: char) txt_own_storage\buffer)
+    c.L2Tx: txt_tx
+    @: txt c.L2Tx c.lm_compiler_tx_local(@ txt_tx, txt_own, 256U)
+    c.L2FrontendScratchChar64: cq_name_own_storage
+    @: cq_name_own char (cast: (@: char) cq_name_own_storage\buffer)
+    c.L2Tx: cq_name_tx
+    @: cq_name c.L2Tx c.lm_compiler_tx_local(@ cq_name_tx, cq_name_own, 64U)
+    if: mi != work_mi_cell[0] || c.lm_compiler_m_machine(mi) != 0 || lm_compiler_own_storage_local(mi, k) = 0 || c.lm_compiler_own_cached(mi, k) = 0 || c.lm_compiler_own_is_slot(k) != 0
+        return: 2
+    if: txt = 0 || c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0
+        return: 1
+    if: c.lm_compiler_own_num_ctype(ty) != 0
+        return: (cast: (int) (c.lm_compiler_tx_join(dest, "(@ ", (cast: (const: @: char) (cq_name\data)), ")", 0, 0)))
+    if: c.lm_compiler_own_is_pointer(ty) != 0 && c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(ty), 1, 0, txt) = 0
+        return: (cast: (int) (c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) (txt\data)), ") (@ ", (cast: (const: @: char) (cq_name\data)), "))")))
+    return: (cast: (int) (1))
 
 # Original: l2src/l2trans.lm1:9700
 fn: lm_compiler_own_store (int: mi; int: k0; const: (@: ind char); const: (@: val char)) int
@@ -10405,6 +10451,9 @@ fn: lm_compiler_emit_address_context_raw (int: mi; const: (@: address c.L2Addres
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_tx_set(dest, name)))
     if: address\kind = 1
+        status := lm_compiler_own_work_addr(mi, (cast: (int) (address\index)), dest)
+        if: status != 2
+            return: status
         return: (cast: (int) (lm_compiler_own_addr((cast: (int) (address\index)), dest)))
     if: address\kind = 2
         if: c.lm_compiler_tx_set(dest, "@ ") != 0
@@ -21307,8 +21356,8 @@ return: result
 # Slice 307: the fields of the one actual bound to the formals of the selected callable -- the whole form (the book
 # #whole-arguments, the author's decision of 2026-11-07): every field of the actual's static shape names a formal, a number
 # field a number formal and a Structure field a Structure formal (a callable, a pointer or an array formal is not bound by a
-# field here: the ordinary positional reading stands), and every formal no field supplies has a built default
-# (lm_compiler_formal_default_kind 1, as the binder requires of an omitted formal).  out_kind[k] takes the kind of the field
+# field here: the ordinary positional reading stands); a formal no field supplies takes its default or stays absent, as
+# an omitted formal does (every declared input is optional, the author 2026-11-16).  out_kind[k] takes the kind of the field
 # bound to formal k (-2 for none), out_model[k] the model of a Structure field (-1 for none).  1: the whole form; 0: not
 # (the actual keeps its ordinary positional reading, with the binder's check of the omitted formals); -1: an error said.
 fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int: mi; const: (@: path char); const: (@: at c.LmP0Node); @: out_kind int; @: out_model int; @@@: source_names c.LmP0Text; @: source_count int) int
@@ -21325,7 +21374,6 @@ fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int
     int: hit
     int: number
     int: result 1
-    size_t: bits 0U
     if: source_names != 0
         source_names[0] := 0
     if: source_count != 0
@@ -21383,12 +21431,6 @@ fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int
             out_kind[hit] := kinds[i]
             out_model[hit] := models[i]
         i := i + 1
-    # Every formal no field supplies holds a built default.
-    k := 0
-    while: result = 1 && k < nf
-        if: out_kind[k] = 0 - 2 && lm_compiler_formal_default_kind(idx, k, @ bits) != 1
-            result := 0
-        k := k + 1
     if: result = 1 && source_names != 0 && source_count != 0
         source_names[0] := names
         source_count[0] := count

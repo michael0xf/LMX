@@ -1,0 +1,17 @@
+# opus 414 witness (FABLE-O414-B: kernel change 3 + sonnet C2): a call with one Structure argument whose fields name
+# formals binds each named formal by its field (the book #whole-arguments); a formal no field supplies takes its
+# default or, with none, stays absent -- every declared input is optional (the author 2026-11-16), no `call` refusal
+# (lmx_call_bind_whole_form / lmx_call_bind_whole, lm_compiler_whole_fields).  pick(Only): a <- 6, b absent and not
+# read: 7.  9 = the cancelled `call` refusal.
+Only:
+    int: a 6
+fn: pick (int: a; int: b) int
+    return: a + 1
+int: code 0
+---
+    code := pick(Only)
+    catch: call ()
+        code := 9
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

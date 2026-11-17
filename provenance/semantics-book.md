@@ -1342,6 +1342,8 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 Правило одинаково для обычного вызова, запуска Structure и всех форм `call`/`fncall`, в интерпретаторе и native. Оно применяется при выборе связи существующим общим механизмом; отдельные таблицы запретов по именам, защищённый тип значения и проверки каждого прямого чтения не требуются.
 
+Запись ресивера `private:` лежит в чистом графе, как записи остальных ресиверов; признаков мест и иных скрытых данных граф не хранит: обходчик исполняет ресивер из графа, транслятор по тому же графу решает, какие скрытые аргументы вставлять (решение автора 2026-11-17, [журнал](../LMX_blog/2026-11-17.md#no-place-signs)).
+
 [Слова автора](../LMX_blog/2026-11-15.md#private-binding).
 
 <a id="private-examples"></a>
@@ -1521,6 +1523,8 @@ Receiver `private:` excludes the marked field from the sources of dynamic bindin
 The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding.
 
 The rule is identical for ordinary calls, Structure launches and all `call`/`fncall` forms, in the interpreter and native execution. The existing common binding mechanism applies it when selecting a binding; it requires no separate name-denial tables, protected value type, or checks on every direct read.
+
+The record of the receiver `private:` lies in the clean graph like the records of the other receivers; the graph holds no signs of places and no other hidden data: the walker executes the receiver from the graph, and the translator decides from the same graph which hidden arguments to insert (the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#no-place-signs)).
 
 [Author's words](../LMX_blog/2026-11-15.md#private-binding).
 

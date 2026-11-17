@@ -5,6 +5,13 @@
 Ниже старые PASS/OPEN сохранены как история. Пункты про load-dirty, публикацию локалов, общий кеш,
 flush() и frozen требования слотов при S[n] заменены [M14](next_core_tasks_v3.md#native-structures).
 
+- [ ] **Первый приоритет — приказ автора 2026-11-17 ([журнал](LMX_blog/2026-11-17.md#no-place-signs)).** Убрать из
+  чистого графа все признаки мест и прочие скрытые данные: чистый граф — это ячейки с типом, Structure и таблица
+  «адрес → имя». `private:` — запись ресивера в графе (сегодня признак binding_private у места, срез408);
+  обходчик исполняет ресивер из графа, транслятор берёт скрытые аргументы из того же графа. Признаки удаляются
+  как класс вместе с обслуживанием, без замещающих проверок; затем то же в рабочем runtime (LmxSourceName слотов
+  активаций). Описи: sonnet — чистый граф, opus — frontend, обходчик, runtime
+  ([план](next_core_tasks_v3.md#private-binding-plan)).
 - [ ] Решения автора 2026-11-16 ([журнал](LMX_blog/2026-11-16.md#answers-20261116)): callable — просто Structure;
   `call(D s)` исполняет саму `s`, тело `s` над другими данными — `call(D s\code)`, обычный вызов остаётся
   `call(A s\data s\code)`. Снять выбор части поданной Structure в рабочем frontend, Walk, чистом графе и native;
@@ -50,6 +57,7 @@ flush() и frozen требования слотов при S[n] заменены
   [Свидетельство](steps/witnesses/m10-pending-actuals-20261115/notes.md); общий DATA binder остаётся OPEN.
 - [ ] Ресивер private: исключает поле из динамических источников; прямой и лексический доступ сохраняются.
   Общий binder/hidden args для native и обходчика, без отдельной системы доступа — [M14](next_core_tasks_v3.md#private-binding-plan).
+  Хранение признаком у места отменено приказом автора 2026-11-17: запись ресивера лежит в графе.
 - [x] Ограниченные Graph code gates408: canonical private/copy/merge/image, общий ready/deferred selector,
   live lexical reuse и frame0/FREE полный контекст. Actual G2 target9/0 nf/root0/root1,
   private/local Graph triples PASS; whole/fixedpoint14 точно Source14, final Source16:943.

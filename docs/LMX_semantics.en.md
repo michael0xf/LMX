@@ -776,6 +776,8 @@ The field remains directly visible from anywhere: explicit paths such as `S\fiel
 
 The rule is identical for ordinary calls, Structure launches and all `call`/`fncall` forms, in the interpreter and native execution. The existing common binding mechanism applies it when selecting a binding; it requires no separate name-denial tables, protected value type, or checks on every direct read.
 
+The record of the receiver `private:` lies in the clean graph like the records of the other receivers; the graph holds no signs of places and no other hidden data: the walker executes the receiver from the graph, and the translator decides from the same graph which hidden arguments to insert (the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#no-place-signs)).
+
 [Author's words](../LMX_blog/2026-11-15.md#private-binding).
 
 <a id="private-examples"></a>

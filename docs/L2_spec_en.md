@@ -264,16 +264,16 @@ Names of Structures and callables retain bidirectional visibility; a function-po
 A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
 admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
 fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
-order of a bare name. Earlier reading through a path does not suppress the RHS when its code statement is reached.
+order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
 Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
 even before the first read: the selected value or computed description is retained.
 The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
 referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
 For computed input `int: x next()`, @x obtains the value and the local cell's address.
-With `@(data\field)` and source `int: field getValue()`, the addressed value is getValue()'s result;
-the examined native path already has l2_tN, so &l2_tN requires no additional allocation.
-A ready place is addressed directly; reading the result does not replace the source declaration.
+With `@(data\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
+getValue()'s result: an explicit path executes nothing (the author's decision of 2026-11-17; the former rule is withdrawn).
+A ready place is addressed directly.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
 A mandatory executable-code snapshot at entry is cancelled. Edit-application timing before endturn
@@ -378,7 +378,7 @@ M3 orders flat declarations as name followed by requirement/value. A place is de
 
 In `@: ptr method`, the `@` receiver comes first, while `ptr` and `method` are bare atoms: an atom is not a call. The form therefore assigns a reference to `ptr` under the `@` contract even when `ptr` already contains a callable; `ptr(args)` invokes it. Unary `@ptr` separately takes the reference cell's address. The detailed rules of the special name `data` and of these forms are in [L3](LMX_semantics.en.md#ordinary-var) and [method-reference assignment](LMX_semantics.en.md#method-reference-assignment).
 
-For a namespace variable, unary `@x` addresses the current call's real local cell. For computed input `int: x next()`, `@x` obtains its value and the address of its ordinary local int cell. When `data\x` selects a ready source-graph place, `@(data\x)` retains that place's own address. When data retains computed declaration `int: field getValue()`, `@(data\field)` addresses the result of getValue(); that result does not replace the source declaration. Writing through the result's address changes the result, while explicit `data\field := ...` changes the source field. No automatic transfer connects the local place and the graph. [Common rule](LMX_semantics.en.md#computed-field-address).
+For a namespace variable, unary `@x` addresses the current call's real local cell. For computed input `int: x next()`, `@x` obtains its value and the address of its ordinary local int cell. When `data\x` selects a ready source-graph place, `@(data\x)` retains that place's own address. When data retains computed declaration `int: field getValue()`, `@(data\field)` addresses the record of the declaration and getValue() is not executed: an explicit path executes nothing (the author's decision of 2026-11-17). Explicit `data\field := ...` changes the source field. No automatic transfer connects the local place and the graph. [Common rule](LMX_semantics.en.md#computed-field-address).
 
 In the existing native path, `emit_call_result_value` declares typed `l2_tN`, and `emit_dyn_tail_value` passes `&l2_tN` as the result destination. Reuse this place when taking the address, without another call, a second cell, or a special allocation for `@`. The walker uses the ordinary addressable result cell. The existing place's ordinary lifetime rules apply.
 

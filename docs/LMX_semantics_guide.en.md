@@ -195,16 +195,16 @@ Names of Structures and callables retain bidirectional visibility; a function-po
 A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
 admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
 fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
-order of a bare name. Earlier reading through a path does not suppress the RHS when its code statement is reached.
+order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
 Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
 even before the first read: the selected value or computed description is retained.
 The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
 referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
 For computed input `int: x next()`, @x obtains the value and the local cell's address.
-With `@(data\field)` and source `int: field getValue()`, the addressed value is getValue()'s result;
-the examined native path already has l2_tN, so &l2_tN requires no additional allocation.
-A ready place is addressed directly; reading the result does not replace the source declaration.
+With `@(data\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
+getValue()'s result: an explicit path executes nothing (the author's decision of 2026-11-17; the former rule is withdrawn).
+A ready place is addressed directly.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
 Mandatory copying of executable code at entry is withdrawn, including the former copy of only

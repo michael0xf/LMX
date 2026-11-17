@@ -12,7 +12,7 @@ An old passing run does not prove a newer rule.
 
 The norm uses unified input data, independent local values/descriptions, no entry-time initializer
 execution or write-back, sequential visibility for variables/const, and bidirectional visibility for
-Structure/callable names. A computed field's address is its ordinary result address, not a separate heap.
+Structure/callable names. An explicit path executes nothing: a path and an address by a path to a computed field give the record of the declaration (decision of 2026-11-17).
 Remove load-dirty, cache/flush, frozen former-field requirements on raw writes, and their supporting infrastructure.
 
 The latest decision cancels mandatory code snapshots and automatic native clearing on writes.

@@ -449,8 +449,6 @@ fn: lm_compiler_own_source_visible (int: row; int: mi; const: (@: at c.LmP0Node)
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
     const: (@: source c.LmP0Node c.lm_compiler_head_source_node(own_decl_cell[0][row]))
-    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
-    @: binding c.L2DataBinding bindings[0]
     # An activation owns all its CODE storage, but only reached declarations
     # in the current lexical chain answer a name. A missing source position
     # is not permission to select a future or sibling CODE declaration.
@@ -463,11 +461,6 @@ fn: lm_compiler_own_source_visible (int: row; int: mi; const: (@: at c.LmP0Node)
         if: at = 0 || at\span = 0 || source = 0 || source\span = 0
             return: (cast: (int) (source != 0 && source = at))
         return: (cast: (int) (source\span\offset <= at\span\offset))
-    ---
-    while: binding != 0
-        if: binding\binding = row
-            return: 1
-        binding := binding\allocated_next
     ---
     if: c.lm_compiler_source_definition_method(row) >= 0
         return: (cast: (int) (1))
@@ -792,7 +785,7 @@ end: lm_compiler_own_direct
 fn: lm_compiler_default_data_name (int: mi; const: (@: name c.LmP0Text)) int
     if: mi < 0 || c.lm_compiler_asgn_root(mi) != 0 || c.lm_compiler_m_machine(mi) != 0
         return: 0
-    return: c.lm_compiler_text_eq(name, "var")
+    return: c.lm_compiler_text_eq(name, "data")
 end: lm_compiler_default_data_name
 
 fn: lm_compiler_default_data_input (int: mi; int: pk) int

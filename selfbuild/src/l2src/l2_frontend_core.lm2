@@ -412,7 +412,6 @@ fn: lm_compiler_release () int
     @: nsty_n_cell int (cast: (@: int) (@ c.l2_nsty_n))
     @: ebr_n_cell int (cast: (@: int) (@ c.l2_ebr_n))
     @: mres_n_cell int (cast: (@: int) (@ c.l2_mres_n))
-    @: addr_own_n_cell int (cast: (@: int) (@ c.l2_addr_own_n))
     @: call_body_sites_n_cell int (cast: (@: int) (@ c.l2_call_body_sites_n))
     @: mrs_n_cell int (cast: (@: int) (@ c.l2_mrs_n))
     @: msrc_n_cell int (cast: (@: int) (@ c.l2_msrc_n))
@@ -694,7 +693,6 @@ fn: lm_compiler_release () int
     nsty_n_cell[0] := 0
     ebr_n_cell[0] := 0
     mres_n_cell[0] := 0
-    addr_own_n_cell[0] := 0
     call_body_sites_n_cell[0] := 0
     mrs_n_cell[0] := 0
     msrc_n_cell[0] := 0
@@ -753,12 +751,6 @@ end: lm_compiler_e_free
 
 # Original: l2src/l2trans.lm1:2334
 fn: lm_compiler_own_free () int
-    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
-    while: bindings[0] != 0
-        @: row c.L2DataBinding bindings[0]
-        bindings[0] := row\allocated_next
-        c.lm_compiler_xfree((cast: (@: void) row))
-    ---
     @: own_gen_cell int (cast: (@: int) (@ c.l2_own_gen))
     @@: own_reuses_cell c.L2OwnReuse (cast: (@@: c.L2OwnReuse) (@ c.l2_own_reuses))
     @@: rw_bseq_cell int (cast: (@@: int) (@ c.l2_rw_bseq))
@@ -4796,9 +4788,6 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
     @: vis_on_cell int (cast: (@: int) (@ c.l2_vis_on))
     @: uses_methods_cell int (cast: (@: int) (@ c.l2_uses_methods))
-    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
-    @@: binding_owners int (cast: (@@: int) (@ c.l2_own_mi))
-    @: binding c.L2DataBinding
     int: d0 0
     int: i 0
     int: k
@@ -4879,16 +4868,6 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
                     c.lm_compiler_xfree((cast: (@: void) seen))
                 return: (cast: (int) (c.lm_compiler_said_or(path, m_node_cell[0][i], d0, "unsupported body")))
             oi := oi + 1
-        # Explicit ordinary data bindings are available at entry. Scanning
-        # the body must not also demand a free input for the same local name.
-        # This marks binding only; no initializer is evaluated or scanned here.
-        binding := bindings[0]
-        while: binding != 0
-            oi := binding\binding
-            if: binding_owners[0][oi] = i
-                seen[oi] := 1
-            binding := binding\allocated_next
-        ---
         if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && c.lm_compiler_scan_body((cast: (const: @: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, seen) != 0
             if: heap != 0
                 c.lm_compiler_xfree((cast: (@: void) seen))
@@ -7381,9 +7360,6 @@ end: lm_compiler_for_add
 
 # Original: l2src/l2trans.lm1:11891
 fn: lm_compiler_own_mslot (int: oi) int
-    int: source c.lm_compiler_data_binding_source(oi)
-    if: source != oi
-        return: lm_compiler_own_mslot(source)
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
     @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
@@ -9039,9 +9015,8 @@ fn: lm_compiler_ns_written_repeat (const: (@: fld c.LmP0Node); int: me) int
 end: lm_compiler_ns_written_repeat
 
 # Named and anonymous children use the same original source constructor.
-# Reserve the parent's field before recursion; a precollected child (data)
-# is linked here without constructing a second occurrence.
-fn: lm_compiler_ns_child (const: (@: source c.LmP0Node); int: owner; const: (@: name c.LmP0Text); const: (@: body c.LmP0Structure); int: child; const: (@: path char)) int
+# Reserve the parent's field before recursion.
+fn: lm_compiler_ns_child (const: (@: source c.LmP0Node); int: owner; const: (@: name c.LmP0Text); const: (@: body c.LmP0Structure); const: (@: path char)) int
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
     @@: nsf_ref_cell int (cast: (@@: int) (@ c.l2_nsf_ref))
     @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
@@ -9052,11 +9027,9 @@ fn: lm_compiler_ns_child (const: (@: source c.LmP0Node); int: owner; const: (@: 
     if: name != 0 && c.lm_compiler_bind_admit(name, c.lm_compiler_bind_at(source, name), path) != 0
         return: -1
     nsf_fname_cell[0][row] := (cast: (@: c.LmP0Text) name)
-    if: child < 0
-        child := ns_n_cell[0]
-        if: lm_compiler_take_ns_body(name, owner, body, source, source, path) != 0
-            return: -1
-        ---
+    int: child ns_n_cell[0]
+    if: lm_compiler_take_ns_body(name, owner, body, source, source, path) != 0
+        return: -1
     nsf_ref_cell[0][row] := child
 return: row
 
@@ -9093,10 +9066,6 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
     size_t: bits 0U
     int: st 0
     int: span 0
-    int: data_index -1
-    @: data_source c.LmP0Node 0
-    @: scan c.LmP0Field
-    int: data_count 0
     if: body = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "a named Structure needs at least one field")))
     me := lm_compiler_ns_push(name, parent, at)
@@ -9112,24 +9081,6 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
     if: f = 0
         ns_count_cell[0][me] := 0
         return: (cast: (int) (0))
-    # Written data declarations are visible to the whole enclosing body.
-    # Collect that child with the SAME namespace collector before classifying
-    # the body heads. Its parent field is still placed at its source position.
-    scan := f
-    while: scan != 0
-        if: c.lm_compiler_frame_head(scan\value, "var") != 0
-            data_source := scan\value
-            data_count := data_count + 1
-        scan := c.lm_compiler_next_active(scan\next)
-    ---
-    if: data_count = 1 && data_source != 0 && data_source\as != 0 && data_source\as\frame != 0 && lm_compiler_ns_nested_def(data_source, me) != 0
-        data_index := ns_n_cell[0]
-        if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) (data_source\as\frame\head)), me, (cast: (const: @: c.LmP0Structure) (data_source\as\frame\body)), data_source, data_source, path) != 0
-            return: 1
-        ---
-    else:
-        data_source := 0
-    ---
     while: f != 0 || unit_resume != 0
         if: unit_body != 0
             f := c.lm_compiler_unit_cursor_field(f, @ unit_resume)
@@ -9166,7 +9117,7 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
             continue
         if: fld != 0 && fld\kind = c.LM_P0_NODE_STRUCTURE && fld\as != 0 && fld\as\structure != 0 && lm_compiler_body_expression((cast: (const: @: c.LmP0Structure) fld\as\structure)) = 0
-            if: lm_compiler_ns_child(fld, me, 0, (cast: (const: @: c.LmP0Structure) fld\as\structure), -1, path) < 0
+            if: lm_compiler_ns_child(fld, me, 0, (cast: (const: @: c.LmP0Structure) fld\as\structure), path) < 0
                 return: 1
             count := count + 1
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
@@ -9259,10 +9210,7 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
         if: lm_compiler_ns_nested_def(fld, me) != 0
             if: c.lm_compiler_fn_close((cast: (const: @: c.LmP0Frame) (fld\as\frame)), (cast: (const: @: c.LmP0Text) (fld\as\frame\head)), 0) != 0
                 return: (cast: (int) (c.lm_compiler_error(path, at, "end target does not match close target")))
-            ref_ix := data_index
-            if: fld != data_source
-                ref_ix := -1
-            if: lm_compiler_ns_child(fld, me, (cast: (const: @: c.LmP0Text) fld\as\frame\head), (cast: (const: @: c.LmP0Structure) fld\as\frame\body), ref_ix, path) < 0
+            if: lm_compiler_ns_child(fld, me, (cast: (const: @: c.LmP0Text) fld\as\frame\head), (cast: (const: @: c.LmP0Structure) fld\as\frame\body), path) < 0
                 return: 1
             count := count + 1
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))

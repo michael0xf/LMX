@@ -2873,10 +2873,6 @@ fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
         if: oi < 0 && c.lm_compiler_define_name(t) = 0 && c.lm_compiler_text_same(t, hr_name_cell[0]) != 0
             hr_hit_cell[0] := 1
         return: (cast: (int) (0))
-    # A declared-data name is visible at entry, but becomes a required place
-    # only when this body consumes it. Use the same mark as other own places.
-    if: oi >= 0 && own_mi_cell[0][oi] = mi && c.lm_compiler_data_binding_source(oi) != oi
-        return: lm_compiler_scan_bound(mi, oi, seen)
     # Q52 (the author: «нет видимого поля "y" у структуры "s" ... поля такого нет (потому что объявление не там)»;
     # «0 — меняется лишь скрытый вход s»): a field of the unit that a method sees is not the method's -- its name is a
     # hidden input of the method, the caller's current value handed over at the call (book :1182); a bare write changes
@@ -3662,8 +3658,6 @@ fn: lm_compiler_scan_body (const: (@: body c.LmP0Structure); int: mi; @: seen in
             if: oi < 0 && c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
                 oi := c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))
             ---
-            if: oi >= 0 && own_mi_cell[0][oi] = mi && c.lm_compiler_data_binding_source(oi) != oi && lm_compiler_scan_bound(mi, oi, seen) != 0
-                return: 1
             if: hr_on_cell[0] = 0 && oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0
                 if: c.lm_compiler_own_off(mi, oi) = (cast: (size_t) -1)
                     return: (cast: (int) (1))

@@ -1692,9 +1692,9 @@ fn: lm_compiler_method_part_seg (int: mi; const: (@: pd char); size_t: off; size
         \out_part := 0
     if: len = 6U && c.memcmp(pd + off, "return", 6U) = 0
         \out_part := 1
-    if: (len = 3U && c.memcmp(pd + off, "var", 3U) = 0) || (len = 4U && c.memcmp(pd + off, "data", 4U) = 0)
+    if: len = 4U && c.memcmp(pd + off, "data", 4U) = 0
         \out_part := 2
-    if: len = 4U && (c.memcmp(pd + off, "body", 4U) = 0 || c.memcmp(pd + off, "code", 4U) = 0)
+    if: len = 4U && c.memcmp(pd + off, "code", 4U) = 0
         \out_part := 3
     # A part the method does not have is no part: a `sub` returns no value, so `s\return` is read as any other name, and refused as one.
     if: lm_compiler_part_slot(mi, \out_part) < 0

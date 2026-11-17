@@ -651,7 +651,6 @@ fn: lm_compiler_source_field_owner (int: own; @@: owner c.L2SourceContainer) @: 
 end: lm_compiler_source_field_owner
 
 fn: lm_compiler_graph_field (int: oi) @: c.L2GraphField
-    oi := c.lm_compiler_data_binding_source(oi)
     @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_places_cell c.L2GraphField (cast: (@@: c.L2GraphField) (@ c.l2_own_places))
@@ -886,9 +885,6 @@ fn: lm_compiler_split_data_row (int: oi) int
     if: names[0][oi] = 0 || c.lm_compiler_own_written(oi) != 0
         return: 0
     if: c.lm_compiler_source_definition_ns(oi) >= 0 && c.lm_compiler_default_data_input(own_mi_cell[0][oi], c.lm_compiler_param_find(own_mi_cell[0][oi], names[0][oi])) != 0
-        return: 0
-    @@: uses int (cast: (@@: int) (@ c.l2_m_uses))
-    if: c.lm_compiler_data_binding_source(oi) != oi && uses[0][lm_compiler_own_off(own_mi_cell[0][oi], oi)] = 0
         return: 0
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0
         typed_reference := 1

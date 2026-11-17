@@ -2027,28 +2027,11 @@ fn: lm_compiler_ns_site_known (const: (@: t c.LmP0Text); int: me) int
     int: x me
     int: top me
     int: j
-    @: namespace_count int (cast: (@: int) (@ c.l2_ns_n))
-    int: data
     const: (@: stop c.LmP0Node)
     @: first c.LmP0Field
     if: t = 0 || me < 0
         return: (cast: (int) (0))
     while: x >= 0
-        # A precollected written var contributes its declared root names
-        # before and after its source position. This uses its actual field
-        # rows, including reference and method declarations, not type guesses.
-        data := 0
-        while: data < namespace_count[0]
-            if: ns_parent_cell[0][data] = x && c.lm_compiler_text_eq(ns_name_cell[0][data], "var") != 0
-                j := ns_first_cell[0][data]
-                while: j < nsf_n_cell[0]
-                    if: nsf_owner_cell[0][j] = data && nsf_fname_cell[0][j] != 0 && c.lm_compiler_text_same(nsf_fname_cell[0][j], t) != 0
-                        return: 1
-                    j := j + 1
-                ---
-            ---
-            data := data + 1
-        ---
         if: ns_name_cell[0][x] != 0 && c.lm_compiler_text_same(ns_name_cell[0][x], t) != 0
             return: (cast: (int) (1))
         j := ns_first_cell[0][x]
@@ -3922,26 +3905,6 @@ fn: lm_compiler_unit_defines_struct (const: (@: t c.LmP0Text); const: (@: stop c
     return: (cast: (int) (0))
 end: lm_compiler_unit_defines_struct
 
-# Original: l2src/l2trans.lm1:28334
-fn: lm_compiler_own_addr_note (int: own) int
-    @: addr_own_n_cell int (cast: (@: int) (@ c.l2_addr_own_n))
-    @@: addr_own_cell int (cast: (@@: int) (@ c.l2_addr_own))
-    @: grown int
-    int: i 0
-    while: i < addr_own_n_cell[0]
-        if: addr_own_cell[0][i] = own
-            return: (cast: (int) (0))
-        i := i + 1
-    ---
-    grown := (cast: (@: int) c.realloc((cast: (@: void) addr_own_cell[0]), (cast: (size_t) ((cast: (size_t) (addr_own_n_cell[0] + 1)) * c.sizeof(c.int)))))
-    if: grown = 0
-        return: (cast: (int) (1))
-    addr_own_cell[0] := grown
-    addr_own_cell[0][addr_own_n_cell[0]] := own
-    addr_own_n_cell[0] := addr_own_n_cell[0] + 1
-    return: (cast: (int) (0))
-end: lm_compiler_own_addr_note
-
 # Original: l2src/l2trans.lm1:31348
 fn: lm_compiler_header_source (int: mi; int: input) @: c.LmP0Node
     @@@: nodes c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
@@ -4180,8 +4143,6 @@ fn: lm_compiler_address_root (const: (@: path c.L2Path); int: mi; @: out c.L2Add
         ---
         if: mres_addressed_cell[0] != 0 && c.lm_compiler_mres_of_own(own) >= 0
             mres_addressed_cell[0][c.lm_compiler_mres_of_own(own)] := 1
-        if: c.lm_compiler_mres_of_own(own) < 0 && lm_compiler_own_addr_note(own) != 0
-            return: (cast: (int) (2))
         ---
     else:
         if: i >= 0

@@ -1,0 +1,35 @@
+# Slice 415 witness (FABLE-S415-A/C/E, the mutant in reverse): `var` is an ordinary name since 2026-11-11 (docs/LMX_semantics.en.md#ordinary-var;
+# the reserved name of the data of a launch is `data`).  Only explicit paths and the two-operand call in the old order (code first) are used,
+# so the witness does not depend on the read of a free name from the root of the launch's data (open item M10 / slice 417).
+#   probe declares an ordinary local `var` and returns it (`var` is not the reference to the data of the call);
+#   S, launched over D, reaches the data of the launch by `data` (`data\x` is D's x), and the assignment `data := E\var` rebinds that local
+#   reference to the child block of E (the book: `data := ptr`), so that `data\x` is then the child's x;
+#   E is a Structure whose child block `var:` is one more field of E: a written path reaches it, and a write by that path changes only it.
+# Entry 7; 82 and 84 name the failing checks of S, 83 the failing check of the root.
+fn: probe () int
+    int: var 5
+    return: var
+D:
+    int: x 10
+E:
+    int: x 10
+    var:
+        int: x 0
+---
+S:
+    if: data\x != 10
+        send: exit(exit_code: 82; stdout: ""; stderr: "")
+        return
+    data := E\var
+    if: data\x != 0
+        send: exit(exit_code: 84; stdout: ""; stderr: "")
+        return
+---
+@: held S
+call: held D
+E\var\x := 6
+int: answer 83
+if: probe() = 5 && D\x = 10 && E\x = 10 && E\var\x = 6
+    answer := 7
+send: exit(exit_code: answer; stdout: ""; stderr: "")
+return

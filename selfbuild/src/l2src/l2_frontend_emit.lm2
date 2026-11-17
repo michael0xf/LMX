@@ -380,54 +380,6 @@ fn: lm_compiler_make_entry (const: (@: path char)) int
     return: (cast: (int) (0))
 end: lm_compiler_make_entry
 
-# Collect logical data bindings from the already registered child procedure.
-# Named own rows supply activation bindings; L2DataBinding keeps their physical origin.
-fn: lm_compiler_collect_data_bindings (int: ns; int: mi; const: (@: path char)) int
-    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
-    @@: procedures int (cast: (@@: int) (@ c.l2_ns_proc))
-    @: owns int (cast: (@: int) (@ c.l2_own_n))
-    @@: owners int (cast: (@@: int) (@ c.l2_own_mi))
-    @@: types int (cast: (@@: int) (@ c.l2_own_ty))
-    @@@: hosts c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
-    @@@: decls c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
-    @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
-    @@@: counts c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_count))
-    int: data c.lm_compiler_ns_data_source(ns)
-    if: data < 0 || data = ns || c.lm_compiler_ns_original_body(data) = 0
-        return: 0
-    if: procedures[0][data] < 0 && lm_compiler_ns_proc_add(data, path) != 0
-        return: 1
-    int: owner procedures[0][data]
-    int: limit owns[0]
-    int: k 0
-    while: k < limit
-        if: owners[0][k] = owner && names[0][k] != 0 && hosts[0][k] = 0 && c.lm_compiler_data_binding_source(k) = k
-            int: alias c.lm_compiler_own_add(mi, names[0][k], types[0][k], path, decls[0][k])
-            if: alias < 0
-                return: 1
-            @: row c.L2DataBinding (cast: (@: c.L2DataBinding) c.lm_compiler_xmalloc(c.sizeof(c.L2DataBinding)))
-            if: row = 0
-                return: c.lm_compiler_alloc_or(path, decls[0][k], "data binding could not be allocated")
-            row\binding := alias
-            row\source := alias
-            row\allocated_next := bindings[0]
-            bindings[0] := row
-            # A written declaration in this body keeps its own source cell.
-            # Only an added logical binding borrows the child's coordinates.
-            if: alias >= limit
-                row\source := k
-                if: c.lm_compiler_own_nsty_set(alias, c.lm_compiler_own_nsty_get(k)) != 0
-                    return: 1
-                counts[0][alias] := counts[0][k]
-            ---
-            # Visibility alone does not require this field from selected data.
-            # The existing body scan records each actual read/write/address use.
-        ---
-        k := k + 1
-    ---
-    return: 0
-end: lm_compiler_collect_data_bindings
-
 # Original: l2src/l2trans.lm1:3479
 fn: lm_compiler_ns_proc_add (int: ni; const: (@: path char)) int
     @@@: ns_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_at))
@@ -502,7 +454,7 @@ fn: lm_compiler_ns_proc_add (int: ni; const: (@: path char)) int
     ns_proc_cell[0][ni] := me
     # Publish the complete method row before collecting its declarations.
     m_n_cell[0] := m_n_cell[0] + 1
-    if: lm_compiler_collect_decls(body, me, path, 0, @ sn) != 0 || lm_compiler_collect_data_bindings(ni, me, path) != 0
+    if: lm_compiler_collect_decls(body, me, path, 0, @ sn) != 0
         return: (cast: (int) (1))
     m_sn_cell[0][me] := sn
     # Every own row of the procedure is the Structure's data, one of its fields, or a computed output, which no field
@@ -599,7 +551,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     @: nsty_n_cell int (cast: (@: int) (@ c.l2_nsty_n))
     @: ebr_n_cell int (cast: (@: int) (@ c.l2_ebr_n))
     @: mres_n_cell int (cast: (@: int) (@ c.l2_mres_n))
-    @: addr_own_n_cell int (cast: (@: int) (@ c.l2_addr_own_n))
     @: call_body_sites_n_cell int (cast: (@: int) (@ c.l2_call_body_sites_n))
     @: mrs_n_cell int (cast: (@: int) (@ c.l2_mrs_n))
     @: msrc_n_cell int (cast: (@: int) (@ c.l2_msrc_n))
@@ -659,7 +610,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     nsty_n_cell[0] := 0
     ebr_n_cell[0] := 0
     mres_n_cell[0] := 0
-    addr_own_n_cell[0] := 0
     call_body_sites_n_cell[0] := 0
     mrs_n_cell[0] := 0
     msrc_n_cell[0] := 0
@@ -6443,9 +6393,9 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         # steps/free-names.md, the rule the one head resolution and the book): that is no place known here, so
         # l2_param_find is not asked.  A `:=` Frame shaped as a nested typed declaration, `zz := int: 5`, is no
         # assignment for l2_is_asgn (l2_own_decl_ty answers for it) and is asked here all the same: `:=` declares nothing.
-        # The reserved reference to the data of the current call, `var`, is a place every such activation knows (the
+        # The reserved reference to the data of the current call, `data`, is a place every such activation knows (the
         # book, ordinary-var: the name admits an assignment by `:=`): the collection made it the activation's input
-        # (lm_compiler_default_data_name in lm_compiler_collect_asgn_body), and `var := D\var` writes that input.
+        # (lm_compiler_default_data_name in lm_compiler_collect_asgn_body), and `data := ptr` writes that input.
         if: (c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0) && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_default_data_name(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, ":= writes a place already known: its left side is not one here")))
         # Known ordinary Structure heads receive an assignment candidate;
@@ -17159,7 +17109,7 @@ fn: lm_compiler_emit_parts (int: i) int
         return: (cast: (int) (lm_compiler_emit_native_word(i)))
     if: c.lm_compiler_fn_parts_on(i) != 0
         # Each part is named at its slot; a `sub` has no result part (lm_compiler_part_slot).
-        if: c.lm_compiler_emit_method_part_name(0, "args") != 0 || (c.lm_compiler_part_slot(i, 1) >= 0 && c.lm_compiler_emit_method_part_name(1, "return") != 0) || c.lm_compiler_emit_method_part_name(c.lm_compiler_part_slot(i, 2), "var") != 0 || c.lm_compiler_emit_method_part_name(c.lm_compiler_part_slot(i, 3), "body") != 0
+        if: c.lm_compiler_emit_method_part_name(0, "args") != 0 || (c.lm_compiler_part_slot(i, 1) >= 0 && c.lm_compiler_emit_method_part_name(1, "return") != 0) || c.lm_compiler_emit_method_part_name(c.lm_compiler_part_slot(i, 2), "data") != 0 || c.lm_compiler_emit_method_part_name(c.lm_compiler_part_slot(i, 3), "body") != 0
             return: (cast: (int) (1))
         ---
     else:

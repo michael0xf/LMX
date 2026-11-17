@@ -4845,18 +4845,6 @@ fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: requirem
     return: c.LMX_IMPLEMENTS_YES
 end: lmx_implements_named_places
 
-fn: lmx_implements_repeated_var (@: arena c.LmxArena; @: code c.Lmx) int
-    @: fields c.VoidArray @ code\array
-    size_t: heads 0U
-    size_t: j 0U
-    while: j < fields\size
-        if: lmx_implements_same_name(lmx_implements_head_name(arena, code, j), (cast: (size_t) c.LMX_ID_VAR)) != 0
-            heads := heads + 1U
-        j := j + 1U
-    ---
-    return: (cast: (int) (heads > 1U))
-end: lmx_implements_repeated_var
-
 # The selected call's admission of what stands in a callable's place, a call with no data of its own (the book, #method-parts: the places the code requires of its data, before its body; a missing place is a
 # refusal of the call).  Its data is the code's var part.  A fn and a sub have no such interface: they are not compiled over data.
 fn: lmx_implements_unary_admission (@: arena c.LmxArena; @: code c.Lmx) int
@@ -4879,9 +4867,6 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
     c.memset((cast: (@: void) scope), 0, c.sizeof(c.LmxCallPlaces))
     out_answer[0] := c.LMX_IMPLEMENTS_NO
     if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || (data != 0 && c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0)
-        return: c.LMX_WALK_OK
-    # A short call reads the code's var by its name, and at two or more root heads only an index selects one (the plan, U3): no data here is no first head taken.
-    if: data = 0 && lmx_implements_repeated_var(arena, code) != 0
         return: c.LMX_WALK_OK
     # Receiver-produced methods describe their data in the actual var part.
     # The outer args/return/var/body slots are code structure, not data fields.

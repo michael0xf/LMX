@@ -1,3 +1,4 @@
+# Slice 415 (haiku, FABLE-H-415-B): the reserved data reference is `data`; the child block `var` of D and of TD is an ordinary name; T's block moved to TD, the data T runs over; values unchanged.
 # Two written cells stay distinct even though their names agree.
 D:
     int: x 10
@@ -7,26 +8,27 @@ D:
 end: D
 # The reserved reference is local; ordinary assignment changes that cell.
 S:
-    if: var != D
+    if: data != D
         send: exit(exit_code: 84; stdout: ""; stderr: "")
         return
     ---
-    var := D\var
-    if: var != D\var
+    data := D\var
+    if: data != D\var
         send: exit(exit_code: 85; stdout: ""; stderr: "")
         return
     ---
     return
 end: S
+TD:
+    var:
+        int: x 17
+---
 T:
-    if: var != D
+    if: data != TD
         send: exit(exit_code: 86; stdout: ""; stderr: "")
         return
     ---
-    var:
-        int: x 17
-    end: var
-    if: var != T\var
+    if: var != TD\var
         send: exit(exit_code: 87; stdout: ""; stderr: "")
         return
     ---
@@ -34,9 +36,9 @@ T:
 end: T
 @: held S
 call: held D
-call: T D
+call: T TD
 int: answer 83
-if: D\x = 10 && D\var\x = 2 && T\var\x = 17
+if: D\x = 10 && D\var\x = 2 && TD\var\x = 17
     answer := 7
 send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

@@ -1262,7 +1262,7 @@ end: decl_source_names
 # service record LmxIds, the codes of the language's words in their seeding order, and the prototypes of the module's
 # four exports. 0, or 1 when a write fails.
 fn: decl_ids (@: f c.FILE) int
-    if: c.fputs("include: \"<stddef.h>\"\n\n# Every identifier is the code of its spelling: one spelling has one code anywhere in the process, a new\n# spelling the next number (no hash). The two tables of LmxIds -- code -> name and name -> code -- are the only\n# places that hold spellings; both are informational (a unit's input boundary, toLmx, fromLmx, diagnostics).\n# An executor compares codes. Code 0 is no identifier. The words below get their codes first, in this order:\n# the implicit throws as the walker numbers them (LMX_WALK_NAME_MERGE .. LMX_WALK_NAME_CALL), then the\n# receiving and type words of a declaration and var.\ndefine: LMX_ID_NONE 0\ndefine: LMX_ID_MERGE 1\ndefine: LMX_ID_IMPLEMENTS 2\ndefine: LMX_ID_CONVERT 3\ndefine: LMX_ID_INTERPRETER 4\ndefine: LMX_ID_ADOPT 5\ndefine: LMX_ID_INDEPENDENT 6\ndefine: LMX_ID_CALL 7\ndefine: LMX_ID_CONST 8\ndefine: LMX_ID_IMMUTABLE 9\ndefine: LMX_ID_INT 10\ndefine: LMX_ID_CHAR 11\ndefine: LMX_ID_SIZE_T 12\ndefine: LMX_ID_UNSIGNED 13\ndefine: LMX_ID_ULONG 14\ndefine: LMX_ID_VOID 15\ndefine: LMX_ID_ARRAY 16\ndefine: LMX_ID_FN 17\ndefine: LMX_ID_FM 18\ndefine: LMX_ID_SUB 19\ndefine: LMX_ID_VAR 20\ndefine: LMX_ID_WORDS 20\n\n", f) < 0
+    if: c.fputs("include: \"<stddef.h>\"\n\n# Every identifier is the code of its spelling: one spelling has one code anywhere in the process, a new\n# spelling the next number (no hash). The two tables of LmxIds -- code -> name and name -> code -- are the only\n# places that hold spellings; both are informational (a unit's input boundary, toLmx, fromLmx, diagnostics).\n# An executor compares codes. Code 0 is no identifier. The words below get their codes first, in this order:\n# the implicit throws as the walker numbers them (LMX_WALK_NAME_MERGE .. LMX_WALK_NAME_CALL), then the\n# receiving and type words of a declaration and data.\ndefine: LMX_ID_NONE 0\ndefine: LMX_ID_MERGE 1\ndefine: LMX_ID_IMPLEMENTS 2\ndefine: LMX_ID_CONVERT 3\ndefine: LMX_ID_INTERPRETER 4\ndefine: LMX_ID_ADOPT 5\ndefine: LMX_ID_INDEPENDENT 6\ndefine: LMX_ID_CALL 7\ndefine: LMX_ID_CONST 8\ndefine: LMX_ID_IMMUTABLE 9\ndefine: LMX_ID_INT 10\ndefine: LMX_ID_CHAR 11\ndefine: LMX_ID_SIZE_T 12\ndefine: LMX_ID_UNSIGNED 13\ndefine: LMX_ID_ULONG 14\ndefine: LMX_ID_VOID 15\ndefine: LMX_ID_ARRAY 16\ndefine: LMX_ID_FN 17\ndefine: LMX_ID_FM 18\ndefine: LMX_ID_SUB 19\ndefine: LMX_ID_DATA 20\ndefine: LMX_ID_WORDS 20\n\n", f) < 0
         return: 1
     if: c.fputs("# The process's tables (one instance, lmx_ids_anchor): by code, the spelling's bytes, its length and whether\n# it is a reference head of any depth (marks); the codes in the order of their spellings; cap entries each.\nstruct: LmxIds\n    size_t: count\n    size_t: cap\n    @@: char text\n    @: size_t size\n    @: size_t order\n    @: char marks\nend: LmxIds\n\nprototype:\n    # name -> code: a new spelling is numbered next; 0 for no spelling or without memory.\n    fn: lmx_ids_code (const: @(char text); size_t: length) size_t\n    # code -> name: the spelling of code (never moved or freed); 0, or 1 for no such code.\n    fn: lmx_ids_name (size_t: code; @@: char text; @: size_t length) int\n    fn: lmx_ids_count () size_t\n    # 1 when the spelling of code is a reference head of any depth, fixed when the code was given.\n    fn: lmx_ids_reference (size_t: code) int\n    # A unit's table of codes (its cell l2_ids): 1 once published, 0 before.\n    fn: lmx_ids_unit_loaded (@@: size_t cell) int\n    # Publish a unit's table of count codes in its cell once: 0, or 1 when a code is 0 (the table is freed). A table\n    # published by another load first wins; this one is freed.\n    fn: lmx_ids_unit_publish (@@: size_t cell; @: size_t table; size_t: count) int\nend: prototype\n", f) < 0
         return: 1
@@ -3994,7 +3994,7 @@ end: decl_l2_consumer_uses
 # Compiler-owned declarations, printed as ordinary L1 text by L3.
 # No source file is copied or read by the generator at execution time.
 fn: decl_l2_application (@: f c.FILE) int
-    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\n# Translation-owned contracts. These records are not runtime graph objects.\n# A constructor has one ordinary operand contract; no Array rank/depth table.\nstruct: L2TypeContract\n    int: kind\n    int: depth\n    @: LmP0Text word\n    @: L2TypeContract operand\n    @: L2TypeContract allocated_next\nend: L2TypeContract\n\n# A receiver may derive this contract from an application. Name visibility is\n# resolved at the source position, never cached from allocated storage.\nstruct: L2Declaration\n    @: LmP0Node source\n    @: L2TypeContract contract\n    @: LmP0Text name\n    @: LmP0Field candidate\n    int: candidate_count\n    # An explicit type/value receiver nested in a repeated reference write\n    # validates its value before the original place contract does.\n    @: L2TypeContract asserted_contract\n    @: LmP0Text extent\n    # Translator-only atom view of the receiving name. Candidate-free carry\n    # reads the prior binding by name, independent of receiver spelling.\n    LmP0NodeAs: carry_as\n    LmP0Node: carry_node\n    LmP0Field: carry_field\n    @: L2Declaration allocated_next\nend: L2Declaration\n\n# A later source operation may write an already declared field. This is a\n# translator-only association: the runtime graph retains the source operation,\n# while the field still has exactly one physical cell.\nstruct: L2OwnReuse\n    @: LmP0Node source\n    int: method\n    int: own\n    @: L2OwnReuse allocated_next\nend: L2OwnReuse\n\n# One activation binding may use an existing child data declaration.\n# This translation-only relation allocates no runtime graph storage.\nstruct: L2DataBinding\n    int: binding\n    int: source\n    @: L2DataBinding allocated_next\nend: L2DataBinding\n\n# A field projected from either existing named or composed compiler metadata.\n# This record has no runtime representation and contains no binding identity.\nstruct: L2SchemaField\n    @: LmP0Text name\n    @: LmP0Text type_word\n    int: kind\n    int: model\n", f) < 0
+    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\n# Translation-owned contracts. These records are not runtime graph objects.\n# A constructor has one ordinary operand contract; no Array rank/depth table.\nstruct: L2TypeContract\n    int: kind\n    int: depth\n    @: LmP0Text word\n    @: L2TypeContract operand\n    @: L2TypeContract allocated_next\nend: L2TypeContract\n\n# A receiver may derive this contract from an application. Name visibility is\n# resolved at the source position, never cached from allocated storage.\nstruct: L2Declaration\n    @: LmP0Node source\n    @: L2TypeContract contract\n    @: LmP0Text name\n    @: LmP0Field candidate\n    int: candidate_count\n    # An explicit type/value receiver nested in a repeated reference write\n    # validates its value before the original place contract does.\n    @: L2TypeContract asserted_contract\n    @: LmP0Text extent\n    # Translator-only atom view of the receiving name. Candidate-free carry\n    # reads the prior binding by name, independent of receiver spelling.\n    LmP0NodeAs: carry_as\n    LmP0Node: carry_node\n    LmP0Field: carry_field\n    @: L2Declaration allocated_next\nend: L2Declaration\n\n# A later source operation may write an already declared field. This is a\n# translator-only association: the runtime graph retains the source operation,\n# while the field still has exactly one physical cell.\nstruct: L2OwnReuse\n    @: LmP0Node source\n    int: method\n    int: own\n    @: L2OwnReuse allocated_next\nend: L2OwnReuse\n\n# A field projected from either existing named or composed compiler metadata.\n# This record has no runtime representation and contains no binding identity.\nstruct: L2SchemaField\n    @: LmP0Text name\n    @: LmP0Text type_word\n    int: kind\n    int: model\n", f) < 0
         return: 1
     if: c.fputs("    # A reference's declared structural pointee, independent of model's\n    # machine pointer ABI and of the current/null cell value. Source-owned\n    # declaration metadata resolves this once; sealed consumers only read it.\n    int: pointee\nend: L2SchemaField\n\n# Translation-only resolved correspondence. The physical field and its two\n# contracts survive the source planning fixed point. No runtime permission\n# or guessed constructor is represented by one of these records.\nstruct: L2D105Step\n    L2SchemaField: requirement\n    L2SchemaField: actual\n    int: selector\n    int: physical\n    int: slot\n    int: status\n    int: child_pair\nend: L2D105Step\n\nstruct: L2D105StepDynamicArray\n    size_t: size\n    size_t: capacity\n    @: L2D105Step data\nend: L2D105StepDynamicArray\n\nstruct: L2D105Plan\n    int: candidate\n    int: requirement\n    int: width\n    int: physical_width\n    int: source_width\n    int: ready\n    L2D105StepDynamicArray: steps\n    @: L2D105Plan next\nend: L2D105Plan\n\n# One operation's reachable PAIRS, not another source/value graph. Rows\n# borrow the already resolved typed plans. Both backend representations\n# consume this same closure; no backend selects child models by name.\nstruct: L2D105CatalogRow\n    @: L2D105Plan plan\n    @: L2D105CatalogRow next\nend: L2D105CatalogRow\n\nstruct: L2D105Catalog\n    size_t: count\n    size_t: extent\n    int: ready\n    @: L2D105CatalogRow first\n    @: L2D105CatalogRow last\n    # Declared requirement closure also includes equal-layout references.\n    # These rows borrow identity plans, not candidate-layout evidence.\n    @: L2D105CatalogRow required_first\n    @: L2D105CatalogRow required_last\n    size_t: reference_count\nend: L2D105Catalog\n\n", f) < 0
         return: 1
@@ -4050,7 +4050,7 @@ end: decl_l2_application
 fn: decl_l2_frontend_state (@: f c.FILE) int
     if: c.fputs("predef: \"l1src/p0.h.lm1\"\npredef: \"l2src/l2_application.h.lm1\"\ninclude: \"<stdio.h>\"\n\n", f) < 0
         return: 1
-    if: c.fputs("int: l2_library_mode 0\nint: l2_want_fnptr 0\nunsigned: l2_module_hash_a 2166136261U\nunsigned: l2_module_hash_b 5381U\nunsigned: l2_sigv 0U\nunsigned: l2_intern_n 0U\nunsigned: l2_intern_cap 0U\nunsigned: l2_intern_again 0U\nunsigned: l2_intern_swap 0U\nunsigned: l2_intern_probe 0U\nint: l2_m_n 0\nint: l2_m_cap 0\nint: l2_slot_cap 0\nint: l2_own_n 0\nint: l2_own_cap 0\n@: int l2_pointer_store_types 0\nint: l2_pointer_store_count 0\n@: L2Declaration l2_declarations 0\n@: L2OwnReuse l2_own_reuses 0\n@: L2DataBinding l2_data_bindings 0\n@: L2TypeContract l2_contracts 0\n@: L2HeadExpression l2_head_expressions 0\n@: L2ApplicationSite l2_application_sites 0\n@@: L2ApplicationSite l2_application_site_index 0\nsize_t: l2_application_site_capacity 0U\nsize_t: l2_application_site_count 0U\nint: l2_own_excl -1\nint: l2_hr_on 0\nint: l2_hr_hit 0\nint: l2_hr_done 0\n@: LmP0Text l2_hr_name 0\n@: LmP0Node l2_hr_stop 0\n@@: LmP0Node l2_hr_at 0\n", f) < 0
+    if: c.fputs("int: l2_library_mode 0\nint: l2_want_fnptr 0\nunsigned: l2_module_hash_a 2166136261U\nunsigned: l2_module_hash_b 5381U\nunsigned: l2_sigv 0U\nunsigned: l2_intern_n 0U\nunsigned: l2_intern_cap 0U\nunsigned: l2_intern_again 0U\nunsigned: l2_intern_swap 0U\nunsigned: l2_intern_probe 0U\nint: l2_m_n 0\nint: l2_m_cap 0\nint: l2_slot_cap 0\nint: l2_own_n 0\nint: l2_own_cap 0\n@: int l2_pointer_store_types 0\nint: l2_pointer_store_count 0\n@: L2Declaration l2_declarations 0\n@: L2OwnReuse l2_own_reuses 0\n@: L2TypeContract l2_contracts 0\n@: L2HeadExpression l2_head_expressions 0\n@: L2ApplicationSite l2_application_sites 0\n@@: L2ApplicationSite l2_application_site_index 0\nsize_t: l2_application_site_capacity 0U\nsize_t: l2_application_site_count 0U\nint: l2_own_excl -1\nint: l2_hr_on 0\nint: l2_hr_hit 0\nint: l2_hr_done 0\n@: LmP0Text l2_hr_name 0\n@: LmP0Node l2_hr_stop 0\n@@: LmP0Node l2_hr_at 0\n", f) < 0
         return: 1
     if: c.fputs("@: int l2_hr_mi 0\n@: int l2_hr_val 0\nint: l2_hr_n 0\nint: l2_hr_cap 0\n@@: LmP0Node l2_rb_at 0\n@@: LmP0Text l2_rb_model 0\n@: int l2_rb_meth 0\n@: int l2_rb_own 0\nint: l2_rb_n 0\nint: l2_rb_cap 0\n@@: LmP0Node l2_ab_at 0\n@@: L2TypeContract l2_ab_contract 0\nint: l2_ab_n 0\nint: l2_ab_cap 0\n@@: LmP0Node l2_urm_at 0\n@: int l2_urm_val 0\nint: l2_urm_n 0\nint: l2_urm_cap 0\nint: l2_tn 0\nint: l2_pw_n 0\nint: l2_loop_depth 0\nint: l2_scope_n 0\nint: l2_scope_cap 0\n@@: LmP0Node l2_scope_at 0\nint: l2_wait_n 0\nint: l2_wait_cap 0\nint: l2_wait_on 0\n@: L2SourceSite l2_wait 0\nint: l2_indent_n 0\nint: l2_indent_cap 0\n@@: char l2_indent_at 0\n@: char l2_pub_tmp 0\n", f) < 0
         return: 1
@@ -4074,7 +4074,7 @@ fn: decl_l2_frontend_state (@: f c.FILE) int
         return: 1
     if: c.fputs("int: l2_sig_first 0\nint: l2_vis_on 0\nsize_t: l2_vis_at 0U\nint: l2_ebr_n 0\nint: l2_merge_max 0\nint: l2_qmerge_n 0\nint: l2_merge_build 0\nint: l2_ns_payload_pass 0\nint: l2_use_n 0\n@: int l2_mu_opns 0\nint: l2_mu_cap 0\n@: int l2_mur_sel 0\n@: int l2_mur_off 0\n@: int l2_mur_len 0\n@: int l2_mur_role 0\nint: l2_mur_n 0\nint: l2_mur_cap 0\n@: int l2_mur_sbuf 0\nint: l2_mur_slots 0\nint: l2_mur_scap 0\n@: int l2_mu_rbuf 0\nint: l2_mu_rcap 0\n@: int l2_muh 0\n@: int l2_muh_sel 0\nint: l2_muh_n 0\nint: l2_muh_cap 0\n@: int l2_mus 0\nint: l2_mus_n 0\nint: l2_mus_cap 0\nint: l2_use_cap 0\n@: int l2_use_home 0\n@: int l2_use_base 0\n", f) < 0
         return: 1
-    if: c.fputs("@: int l2_use_off 0\n@: int l2_use_len 0\n@: int l2_use_role 0\nint: l2_copy_use_revision 0\nint: l2_use_sn 0\nint: l2_use_scap 0\n@: int l2_use_slots 0\n@: int l2_use_tags 0\n@@: char l2_use_text 0\n@: size_t l2_use_tlen 0\nint: l2_mres_n 0\n@: int l2_mres_own 0\n@: int l2_mres_width 0\n@: int l2_mres_code_k 0\n@: int l2_mres_code_schema 0\n@: L2ReferenceSource l2_mres_source 0\n@: int l2_mres_addressed 0\n@@: LmP0Node l2_mres_called 0\n@: int l2_mres_called_mi 0\n@: int l2_mres_from 0\n@: int l2_mres_body_ns 0\n@: int l2_addr_own 0\nint: l2_addr_own_n 0\n@: L2CallBodySite l2_call_body_sites 0\nint: l2_call_body_sites_n 0\n", f) < 0
+    if: c.fputs("@: int l2_use_off 0\n@: int l2_use_len 0\n@: int l2_use_role 0\nint: l2_copy_use_revision 0\nint: l2_use_sn 0\nint: l2_use_scap 0\n@: int l2_use_slots 0\n@: int l2_use_tags 0\n@@: char l2_use_text 0\n@: size_t l2_use_tlen 0\nint: l2_mres_n 0\n@: int l2_mres_own 0\n@: int l2_mres_width 0\n@: int l2_mres_code_k 0\n@: int l2_mres_code_schema 0\n@: L2ReferenceSource l2_mres_source 0\n@: int l2_mres_addressed 0\n@@: LmP0Node l2_mres_called 0\n@: int l2_mres_called_mi 0\n@: int l2_mres_from 0\n@: int l2_mres_body_ns 0\n@: L2CallBodySite l2_call_body_sites 0\nint: l2_call_body_sites_n 0\n", f) < 0
         return: 1
     if: c.fputs("int: l2_mrs_rebuild 0\nint: l2_ns_n 0\n@: L2PathFact l2_path_facts 0\n@: L2PathFact l2_path_facts_tail 0\nsize_t: l2_source_revision 0U\nint: l2_uses_method -1\nint: l2_uses_input -1\nint: l2_uses_ready 0\nint: l2_uses_methods 0\nint: l2_uses_len 0\nint: l2_uses_oom 0\nint: l2_use_roles_check 0\nint: l2_check_unevaluated 0\n@@: LmP0Text l2_ns_name 0\n@: int l2_ns_first 0\n@: int l2_ns_count 0\nint: l2_ns_base 0\nint: l2_nsf_n 0\n@: size_t l2_nsf_val 0\n", f) < 0
         return: 1
@@ -4196,16 +4196,16 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: frontend_names char c.calloc(263U, sizeof(@: char))
     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
     @@: frontend_value_names char c.calloc(184U, sizeof(@: char))
-    @@: frontend_view_names char c.calloc(85U, sizeof(@: char))
+    @@: frontend_view_names char c.calloc(83U, sizeof(@: char))
     @@: frontend_context_names char c.calloc(113U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
     @@: frontend_coord_names char c.calloc(113U, sizeof(@: char))
-    @@: frontend_resolve_names char c.calloc(125U, sizeof(@: char))
+    @@: frontend_resolve_names char c.calloc(124U, sizeof(@: char))
     @@: frontend_intern_names char c.calloc(19U, sizeof(@: char))
     @@: frontend_useplan_names char c.calloc(149U, sizeof(@: char))
     @@: frontend_lower_names char c.calloc(427U, sizeof(@: char))
     @@: frontend_core_names char c.calloc(445U, sizeof(@: char))
-    @@: frontend_emit_names char c.calloc(309U, sizeof(@: char))
+    @@: frontend_emit_names char c.calloc(308U, sizeof(@: char))
     @@: generated char c.calloc(87U, sizeof(@: char))
     int: k 0
     if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || frontend_coord_names = 0 || frontend_resolve_names = 0 || frontend_intern_names = 0 || frontend_useplan_names = 0 || frontend_lower_names = 0 || frontend_core_names = 0 || frontend_emit_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
@@ -4842,8 +4842,6 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_view_names[80] := "lm_compiler_schema_method"
     frontend_view_names[81] := "lm_compiler_mres_of_own"
     frontend_view_names[82] := "lm_compiler_mres_decl"
-    frontend_view_names[83] := "lm_compiler_data_binding_source"
-    frontend_view_names[84] := "lm_compiler_ns_data_source"
     frontend_context_names[0] := "lm_compiler_node_file"
     frontend_context_names[1] := "lm_compiler_vis_ok"
     frontend_context_names[2] := "lm_compiler_vis_from"
@@ -5202,50 +5200,49 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_resolve_names[78] := "lm_compiler_path_contract"
     frontend_resolve_names[79] := "lm_compiler_path_resolve_contract"
     frontend_resolve_names[80] := "lm_compiler_unit_defines_struct"
-    frontend_resolve_names[81] := "lm_compiler_own_addr_note"
-    frontend_resolve_names[82] := "lm_compiler_input_is_descriptor"
-    frontend_resolve_names[83] := "lm_compiler_address_target"
-    frontend_resolve_names[84] := "lm_compiler_address_span"
-    frontend_resolve_names[85] := "lm_compiler_address_target_record"
-    frontend_resolve_names[86] := "lm_compiler_address_record"
-    frontend_resolve_names[87] := "lm_compiler_address_root"
-    frontend_resolve_names[88] := "lm_compiler_address_node"
-    frontend_resolve_names[89] := "lm_compiler_head_expression"
-    frontend_resolve_names[90] := "lm_compiler_address_operand"
-    frontend_resolve_names[91] := "lm_compiler_address_value_span"
-    frontend_resolve_names[92] := "lm_compiler_rw_path_run"
-    frontend_resolve_names[93] := "lm_compiler_rw_path_run_mode"
-    frontend_resolve_names[94] := "lm_compiler_operand_run"
-    frontend_resolve_names[95] := "lm_compiler_operand_occurrence"
-    frontend_resolve_names[96] := "lm_compiler_value_expression_prepare"
-    frontend_resolve_names[97] := "lm_compiler_primary_prepare"
-    frontend_resolve_names[98] := "lm_compiler_value_source_children"
-    frontend_resolve_names[99] := "lm_compiler_primary_role"
-    frontend_resolve_names[100] := "lm_compiler_node_role"
-    frontend_resolve_names[101] := "lm_compiler_primary_cast_value"
-    frontend_resolve_names[102] := "lm_compiler_primary_value_type"
-    frontend_resolve_names[103] := "lm_compiler_value_span_prepare"
-    frontend_resolve_names[104] := "lm_compiler_value_span_path"
-    frontend_resolve_names[105] := "lm_compiler_value_fields"
-    frontend_resolve_names[106] := "lm_compiler_value_spans"
-    frontend_resolve_names[107] := "lm_compiler_value_span_type"
-    frontend_resolve_names[108] := "lm_compiler_value_children_type"
-    frontend_resolve_names[109] := "lm_compiler_d105_sub"
-    frontend_resolve_names[110] := "lm_compiler_external_head"
-    frontend_resolve_names[111] := "lm_compiler_mad_sig"
-    frontend_resolve_names[112] := "lm_compiler_call_head_held"
-    frontend_resolve_names[113] := "lm_compiler_mad_held_header"
-    frontend_resolve_names[114] := "lm_compiler_mad_held_value_ty"
-    frontend_resolve_names[115] := "lm_compiler_qual_value_app"
-    frontend_resolve_names[116] := "lm_compiler_construction_actuals"
-    frontend_resolve_names[117] := "lm_compiler_merge_frame_in"
-    frontend_resolve_names[118] := "lm_compiler_merge_typed_decl"
-    frontend_resolve_names[119] := "lm_compiler_value_body"
-    frontend_resolve_names[120] := "lm_compiler_primary_numeric_receiver"
-    frontend_resolve_names[121] := "lm_compiler_root_head_text"
-    frontend_resolve_names[122] := "lm_compiler_schema_two_heads"
-    frontend_resolve_names[123] := "lm_compiler_index_l3_path"
-    frontend_resolve_names[124] := "lm_compiler_header_source"
+    frontend_resolve_names[81] := "lm_compiler_input_is_descriptor"
+    frontend_resolve_names[82] := "lm_compiler_address_target"
+    frontend_resolve_names[83] := "lm_compiler_address_span"
+    frontend_resolve_names[84] := "lm_compiler_address_target_record"
+    frontend_resolve_names[85] := "lm_compiler_address_record"
+    frontend_resolve_names[86] := "lm_compiler_address_root"
+    frontend_resolve_names[87] := "lm_compiler_address_node"
+    frontend_resolve_names[88] := "lm_compiler_head_expression"
+    frontend_resolve_names[89] := "lm_compiler_address_operand"
+    frontend_resolve_names[90] := "lm_compiler_address_value_span"
+    frontend_resolve_names[91] := "lm_compiler_rw_path_run"
+    frontend_resolve_names[92] := "lm_compiler_rw_path_run_mode"
+    frontend_resolve_names[93] := "lm_compiler_operand_run"
+    frontend_resolve_names[94] := "lm_compiler_operand_occurrence"
+    frontend_resolve_names[95] := "lm_compiler_value_expression_prepare"
+    frontend_resolve_names[96] := "lm_compiler_primary_prepare"
+    frontend_resolve_names[97] := "lm_compiler_value_source_children"
+    frontend_resolve_names[98] := "lm_compiler_primary_role"
+    frontend_resolve_names[99] := "lm_compiler_node_role"
+    frontend_resolve_names[100] := "lm_compiler_primary_cast_value"
+    frontend_resolve_names[101] := "lm_compiler_primary_value_type"
+    frontend_resolve_names[102] := "lm_compiler_value_span_prepare"
+    frontend_resolve_names[103] := "lm_compiler_value_span_path"
+    frontend_resolve_names[104] := "lm_compiler_value_fields"
+    frontend_resolve_names[105] := "lm_compiler_value_spans"
+    frontend_resolve_names[106] := "lm_compiler_value_span_type"
+    frontend_resolve_names[107] := "lm_compiler_value_children_type"
+    frontend_resolve_names[108] := "lm_compiler_d105_sub"
+    frontend_resolve_names[109] := "lm_compiler_external_head"
+    frontend_resolve_names[110] := "lm_compiler_mad_sig"
+    frontend_resolve_names[111] := "lm_compiler_call_head_held"
+    frontend_resolve_names[112] := "lm_compiler_mad_held_header"
+    frontend_resolve_names[113] := "lm_compiler_mad_held_value_ty"
+    frontend_resolve_names[114] := "lm_compiler_qual_value_app"
+    frontend_resolve_names[115] := "lm_compiler_construction_actuals"
+    frontend_resolve_names[116] := "lm_compiler_merge_frame_in"
+    frontend_resolve_names[117] := "lm_compiler_merge_typed_decl"
+    frontend_resolve_names[118] := "lm_compiler_value_body"
+    frontend_resolve_names[119] := "lm_compiler_primary_numeric_receiver"
+    frontend_resolve_names[120] := "lm_compiler_root_head_text"
+    frontend_resolve_names[121] := "lm_compiler_schema_two_heads"
+    frontend_resolve_names[122] := "lm_compiler_index_l3_path"
+    frontend_resolve_names[123] := "lm_compiler_header_source"
     frontend_intern_names[0] := "lm_compiler_intern_reserve"
     frontend_intern_names[1] := "lm_compiler_intern_match"
     frontend_intern_names[2] := "lm_compiler_intern_store"
@@ -6594,7 +6591,6 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_emit_names[305] := "lm_compiler_emit_unit"
     frontend_emit_names[306] := "lm_compiler_translate_program"
     frontend_emit_names[307] := "lm_compiler_cli_main"
-    frontend_emit_names[308] := "lm_compiler_collect_data_bindings"
     generated[0] := "src/l1src/p0.h.lm1"
     generated[1] := "src/l1src/p0_own_state.lm1"
     generated[2] := "src/l1src/own.h.lm1"
@@ -6790,7 +6786,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_views") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_views", frontend_view_names, 85, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_views", frontend_view_names, 83, 1) != 0
             return: 1
         ---
     ---
@@ -6810,7 +6806,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_resolve") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 125, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 124, 1) != 0
             return: 1
         ---
     ---
@@ -6845,7 +6841,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_emit") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_emit", frontend_emit_names, 309, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_emit", frontend_emit_names, 308, 1) != 0
             return: 1
         ---
     ---

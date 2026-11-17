@@ -157,7 +157,7 @@ end: lmx_ids_seed_word
 
 # The words the kernel compares against, given their codes first, in the order of the LMX_ID_* constants: the implicit
 # throws in the order of the walker's names (LMX_WALK_NAME_MERGE .. LMX_WALK_NAME_CALL), so an implicit throw's key is
-# its name's code, then the receiving and type words of a declaration and `var`. 0, or 1 when a code differs from its
+# its name's code, then the receiving and type words of a declaration and `data`. 0, or 1 when a code differs from its
 # constant (the header and this list disagree) or without memory.
 fn: lmx_ids_seed (@: ids c.LmxIds) int
     int: bad 0
@@ -180,7 +180,7 @@ fn: lmx_ids_seed (@: ids c.LmxIds) int
     bad := bad + lmx_ids_seed_word(ids, "fn", 2U, c.LMX_ID_FN)
     bad := bad + lmx_ids_seed_word(ids, "fm", 2U, c.LMX_ID_FM)
     bad := bad + lmx_ids_seed_word(ids, "sub", 3U, c.LMX_ID_SUB)
-    bad := bad + lmx_ids_seed_word(ids, "var", 3U, c.LMX_ID_VAR)
+    bad := bad + lmx_ids_seed_word(ids, "data", 4U, c.LMX_ID_DATA)
     return: (cast: (int) (bad != 0 || ids\count != (cast: (size_t) c.LMX_ID_WORDS)))
 end: lmx_ids_seed
 

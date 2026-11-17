@@ -5903,14 +5903,14 @@ fn: lmx_walk_actuals (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t:
     return: lmx_walk_actuals_values(f, code, first, n, contract, receiver, order, refs_out, 0)
 end: lmx_walk_actuals
 
-fn: lmx_walk_exec_data (@: f c.LmxWalkFrame; @: callee c.Lmx; @: operand void; @@: out c.Lmx; @@: tokens char; @@: place_map size_t) int
+fn: lmx_walk_exec_data (@: f c.LmxWalkFrame; @: operand void; @@: out c.Lmx; @@: tokens char; @@: place_map size_t) int
     c.LmxWalkValue: value
     @: value_p c.LmxWalkValue @ value
     int: status
     \out := 0
     \tokens := 0
     \place_map := 0
-    if: f = 0 || callee = 0 || operand = 0
+    if: f = 0 || operand = 0
         return: c.LMX_WALK_INVALID
     ---
     if: lmx_walk_kind(f, operand) = c.LMX_KIND_STRUCT && lmx_walk_op(f, operand) = c.LMX_WALK_OP_CALL_DATA && lmx_walk_bare(f, operand) = 0
@@ -5922,11 +5922,9 @@ fn: lmx_walk_exec_data (@: f c.LmxWalkFrame; @: callee c.Lmx; @: operand void; @
             return: c.LMX_WALK_INVALID
         ---
     ---
-    if: lmx_walk_kind(f, operand) = c.LMX_KIND_STRUCT && lmx_walk_op(f, operand) = c.LMX_WALK_OP_ADMIT_AS && lmx_walk_bare(f, operand) = 0 && lmx_walk_source_of(f, (cast: (@: c.Lmx) operand)) = c.LMX_WALK_SOURCE_RECEIVING
-        status := lmx_walk_admit_in(f, callee, (cast: (@: c.Lmx) operand), @ value)
-    else:
-        status := c.lmx_walk_eval(f, operand, @ value)
-    ---
+    # Slice 416: the data of `call(D C)` is evaluated before its code is selected, as an ordinary operand -- not a
+    # reception into the callee.
+    status := c.lmx_walk_eval(f, operand, @ value)
     if: status != c.LMX_WALK_OK
         return: status
     ---
@@ -6363,10 +6361,12 @@ fn: lmx_walk_select_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t
     @: eval_operand void 0
     @: callee_fields c.VoidArray 0
     @: context c.LmxWalkContext 0
+    @: given c.Lmx 0
     int: split_call 0
     int: status c.LMX_WALK_OK
     c.LmxExecutionRoots: selected_roots
     c.LmxExecutionRoots: contract_roots
+    c.LmxExecutionRoots: given_roots
     if: out_callee = 0 || out_data = 0 || out_contract = 0 || out_tokens = 0 || out_place_map = 0
         return: c.LMX_WALK_INVALID
     out_callee[0] := 0
@@ -6399,6 +6399,13 @@ fn: lmx_walk_select_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t
         eval_operand := raw_data
         if: split_call != 0
             eval_operand := raw_selector
+        # Slice 416: `call(data code)` evaluates its operands in the written order -- the data at slot 1 first, held
+        # while the code at slot 2 is selected.
+        if: split_call != 0 && raw_data != 0
+            status := lmx_walk_exec_data(f, raw_data, @ given, @ tokens, @ place_map)
+            if: status != c.LMX_WALK_OK
+                return: status
+            c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ given_roots, 0, 0U, 0, 0U, (cast: (@: void) given), 0)
         if: eval_operand != 0
             status := c.lmx_walk_eval(f, eval_operand, @ selected)
             if: status = c.LMX_WALK_OK
@@ -6423,10 +6430,9 @@ fn: lmx_walk_select_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t
                         status := c.LMX_WALK_INVALID
                     ---
                 ---
-                # N4: `call: code data` passes its data at slot 1, evaluated after the code; an empty slot 1 keeps the
-                # code itself as its data (`call: code` today).
+                # The data at slot 1 was evaluated above, before the code.
                 if: status = c.LMX_WALK_OK && split_call != 0 && c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U) != 0
-                    status := lmx_walk_exec_data(f, callee, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ data, @ tokens, @ place_map)
+                    data := given
                 ---
                 # An empty EXEC data slot is the unary form: the callee's own
                 # var part is its data, not the callee itself.
@@ -10106,6 +10112,7 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     @: item c.LmxWalkValue 0
     @: origin void 0
     int: binding_private 0
+    int: found 0
     int: status c.LMX_WALK_OK
     if: arena = 0
         return: 0
@@ -10141,8 +10148,13 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     if: lmx_activation_input_formal(arena, code, k) = 0 && lmx_activation_name_is(name, (cast: (size_t) c.LMX_ID_DATA)) != 0
         lmx_walk_value_ref(item, c.LMX_TYPE_LMX, (cast: (@: void) data))
     else:
+        # Slice 417 (the book, call-frame-20261115 ¶1-2; docs :615): a name the root of this call's own data declares is
+        # that place -- its cell's value -- before the callers' chain is asked; two such roots make it ambiguous, with no
+        # source, as data\x is.  The one road of slice 412 (lmx_activation_data_root_find), for every entry: `data` is
+        # what the call was given (native: the trampoline's data, the method's `self`; walker: the frame's data).
+        found := lmx_activation_data_root_find(arena, data, name, item, @ origin, @ binding_private, 1)
         parent := record\parent
-        if: lmx_activation_resolve_origin(arena, parent, name, item, @ origin, @ binding_private, 1) = 0
+        if: found < 0 || (found = 0 && lmx_activation_resolve_origin(arena, parent, name, item, @ origin, @ binding_private, 1) = 0)
             lmx_walk_value_free_mark(item)
             return: 0
         ---

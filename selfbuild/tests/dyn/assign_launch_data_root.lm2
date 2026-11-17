@@ -1,0 +1,21 @@
+# Slice 417, W3 (place_write_form :180; the book, call-frame-20261115 and #assign-known): in the code of an ordinary
+# Structure, `:=` to a name its text does not declare writes the call's place of that name -- here the root `got` of
+# the launch data -- and nothing is written back.  Needs the reserved `data` of slice 415.  Entry 7; 81.. name the
+# failing check.
+int: seen 0
+Data:
+    int: i 5
+    int: got 0
+Set:
+    got := data\i
+    node\seen := got
+fn: run () int
+    call(Data Set)
+    return: node\seen
+int: code 7
+if: run() != 5
+    code := 81
+if: code = 7 && Data\got != 0
+    code := 82
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

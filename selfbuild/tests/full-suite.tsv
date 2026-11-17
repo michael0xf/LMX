@@ -212,7 +212,7 @@ refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_af
 # The := slice (MERGE-OPERAND-FORMS), rewritten by plan M9: a merge operand that is a typed field is written by its receiver,
 # `(int: a 5)` and the bare `int: a 5`: it writes the model slot of its name.
 runs	dyn/merge_named_field_operand.lm2	7	nf
-refuses	dyn/assign_in_structure_refused.lm2	assign_in_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
+runs	dyn/assign_in_structure_refused.lm2	7	nf
 refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:14:5: writing a hidden input that has no activation value is not supported yet	nf
 # Codex's review of 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01): an exact identifier before := is the same operator (item 1);
 # := declares nothing -- `zz := int: 5` with no place zz is refused in a method, at the root, in a Structure and as a merge operand,
@@ -315,3 +315,9 @@ runs	dyn/address_of_local.lm2	7	nf
 runs	dyn/write_through_address.lm2	7	nf
 runs	dyn/whole_unsupplied_formal.lm2	7	nf
 runs	dyn/var_ordinary_child.lm2	7	nf
+# Slice 416: of the two operands of call the first is the data and the second the code, evaluated in the written order (the author, 2026-11-11).
+runs	dyn/call_data_first.lm2	7	nf
+# Slice 417: a name the root of the launch data declares is a place of the call -- read from it first, written by := in the code of an ordinary Structure (R38).
+runs	dyn/place_struct_root_input.lm2	7	nf
+runs	dyn/launch_data_root_free.lm2	7	nf
+runs	dyn/assign_launch_data_root.lm2	7	nf

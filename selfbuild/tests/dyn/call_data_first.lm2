@@ -1,0 +1,41 @@
+# Slice 416 (the author, 2026-11-11, answer 6, LMX_blog/q/colon-declares-answered-20261111.md; docs/LMX_semantics.en.md
+# :642-643, :681): of the two operands of `call` the first is the data and the second the code, in `call(D C)` and
+# `call: D C` alike, and the operands are evaluated in the written order.  Every code and every operand writes its own
+# digit into the root's `log` by an explicit path, so the value names which Structure ran as the code and in which
+# order the operands were evaluated.  Entry 7; 81.. name the failing check.
+int: log 0
+A:
+    node\log := node\log * 10 + 1
+B:
+    node\log := node\log * 10 + 2
+Data1:
+    int: v 1
+Code1:
+    node\log := node\log * 10 + 3
+fn: first () Data1
+    node\log := node\log * 10 + 1
+    return: Data1
+fn: second () Code1
+    node\log := node\log * 10 + 2
+    return: Code1
+# 81: `call(A B)` runs B over A.
+fn: roles () int
+    call(A B)
+    return: node\log
+# 82: the colon form, `call: B A` runs A over B.
+fn: roles_colon () int
+    call: B A
+    return: node\log
+# 83: the data first() is evaluated before the code second(); then Code1 runs.
+fn: order () int
+    call(first() second())
+    return: node\log
+int: code 7
+if: roles() != 2
+    code := 81
+if: code = 7 && roles_colon() != 21
+    code := 82
+if: code = 7 && order() != 21123
+    code := 83
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

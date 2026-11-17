@@ -7749,12 +7749,15 @@ fn: lm_compiler_struct_call_operands (const: (@: source_node c.LmP0Node); @: cod
     c.lm_compiler_value_span_ref(code, first, r1)
     if: r1 = n
         return: (cast: (int) (0))
+    # Slice 416 (the author's П6, 2026-11-11: data before code): of two operands the first is the data and the second
+    # the code, in `call(D C)` and `call: D C` alike.
     second := c.lm_compiler_skip_span(first, r1)
     r2 := c.lm_compiler_operand_run(second, n - r1)
     if: r2 < 1
         \extra := second
         return: (cast: (int) (5))
-    c.lm_compiler_value_span_ref(data, second, r2)
+    c.lm_compiler_value_span_ref(data, first, r1)
+    c.lm_compiler_value_span_ref(code, second, r2)
     if: r1 + r2 = n
         return: (cast: (int) (1))
     \extra := c.lm_compiler_skip_span(second, r2)
@@ -18533,38 +18536,24 @@ fn: lm_compiler_emit_current_structure (int: mi; const: (@: source_node c.LmP0No
         return: 1
     return: lm_compiler_emit_poll(mi, ind)
 
-fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); const: (@: at char)) int
-    @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))
+fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); const: (@: at char); int: k) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    int: k nso_n_cell[0]
     @: site c.L2CallBodySite lm_compiler_call_body_site(source_node, mi)
-    c.L2FrontendScratchChar320: dat_text_own_storage
-    @: dat_text_own char (cast: (@: char) dat_text_own_storage\buffer)
-    c.L2Tx: dat_text_tx
-    @: dat_text c.L2Tx c.lm_compiler_tx_local(@ dat_text_tx, dat_text_own, 320U)
     c.L2FrontendScratchChar32: dname_storage
     @: dname char (cast: (@: char) dname_storage\buffer)
-    nso_n_cell[0] := nso_n_cell[0] + 1
     if: site = 0
         return: 1
-    # The code is held before any effect of evaluating the second operand.
+    # The code is held as it is selected.  A split call's data, written first, is already held under the same k
+    # (lm_compiler_emit_empty_struct_call); a one-operand call is its unary form.
     if: c.fprintf(out_cell[0], "%s@: Lmx l2_ens%d (cast: (@: Lmx) %s)\n", ind, k, at) < 0
         return: 1
     if: c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_ens", k) != 0
         return: 1
-    if: site\split != 0
-        if: lm_compiler_split_data_at(mi, site, ind, dat_text) != 0 || c.fprintf(out_cell[0], "%s@: Lmx l2_end%d (cast: (@: Lmx) %s)\n", ind, k, dat_text\data) < 0
-            return: 1
-        ---
-    else:
-        if: c.fprintf(out_cell[0], "%s@: Lmx l2_end%d lmx_call_unary_data(l2_call_arena, l2_ens%d)\n", ind, k, k) < 0
-            return: 1
-        ---
-    ---
-    if: c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_end", k) != 0 || c.snprintf(dname, 32U, "l2_end%d", k) < 0
+    if: site\split = 0 && (c.fprintf(out_cell[0], "%s@: Lmx l2_end%d lmx_call_unary_data(l2_call_arena, l2_ens%d)\n", ind, k, k) < 0 || c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_end", k) != 0)
+        return: 1
+    if: c.snprintf(dname, 32U, "l2_end%d", k) < 0
         return: 1
     return: lm_compiler_emit_current_structure(mi, source_node, ind, k, dname)
-end: lm_compiler_emit_empty_struct_at
 
 # Original: l2src/l2trans.lm1:48239
 fn: lm_compiler_emit_empty_struct_call (const: (@: source_node c.LmP0Node); @: plan c.L2StructCallPlan; int: mi; const: (@: ind char)) int
@@ -18583,15 +18572,30 @@ fn: lm_compiler_emit_empty_struct_call (const: (@: source_node c.LmP0Node); @: p
     int: oi plan\oi
     c.L2FrontendScratchChar32: unit_slot_storage
     @: unit_slot char (cast: (@: char) unit_slot_storage\buffer)
+    @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: k nso_n_cell[0]
+    @: site c.L2CallBodySite lm_compiler_call_body_site(source_node, mi)
+    c.L2FrontendScratchChar320: dat_text_own_storage
+    @: dat_text_own char (cast: (@: char) dat_text_own_storage\buffer)
+    c.L2Tx: dat_text_tx
+    @: dat_text c.L2Tx c.lm_compiler_tx_local(@ dat_text_tx, dat_text_own, 320U)
+    nso_n_cell[0] := nso_n_cell[0] + 1
+    if: site = 0
+        return: 1
+    # Slice 416: the operands are evaluated in the written order.  The data of `call(D C)`, written first, is evaluated
+    # and held before any effect of evaluating the code.
+    if: site\split != 0 && (lm_compiler_split_data_at(mi, site, ind, dat_text) != 0 || c.fprintf(out_cell[0], "%s@: Lmx l2_end%d (cast: (@: Lmx) %s)\n", ind, k, dat_text\data) < 0 || c.lm_compiler_emit_roots_held(mi, ind, "l2_call_arena", "l2_end", k) != 0)
+        return: 1
     if: oi < 0 && plan\target_ns < 0
         @: operand c.L2ValueSpan (cast: (@: c.L2ValueSpan) (@ plan\operand))
         if: at_text = 0 || lm_compiler_emit_received_span((cast: (@: c.LmP0Field) operand\first), (cast: (int) operand\count), c.lm_compiler_graph_ft(), -1, source_node, mi, ind, at_text) != 0
             return: 1
-        return: lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) at_text\data))
+        return: lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) at_text\data), k)
     if: oi < 0
         if: plan\target_ns < 0 || c.snprintf(unit_slot, 32U, ", %uU)", (cast: (unsigned) (c.lm_compiler_ns_unit_slot((cast: (int) (plan\target_ns)))))) < 0 || c.lm_compiler_tx_join(at_text, "lmx_walk_slot_struct(l2_program_arena, ", unit_ref_cell[0], unit_slot, 0, 0) != 0
             return: (cast: (int) (1))
-        return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)))))
+        return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)), k)))
     ---
     if: at_text = 0
         return: (cast: (int) (1))
@@ -18600,11 +18604,11 @@ fn: lm_compiler_emit_empty_struct_call (const: (@: source_node c.LmP0Node); @: p
     if: (mi != work_mi_cell[0] || c.lm_compiler_own_cached(mi, oi) = 0) && c.lm_compiler_own_is_slot(oi) = 0
         if: lm_compiler_emit_path_load(mi, oi, ind, load) != 0 || c.lm_compiler_tx_join(at_text, "(cast: (@: Lmx) ", (cast: (const: @: char) (load\data)), ")", 0, 0) != 0
             return: (cast: (int) (1))
-        return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)))))
+        return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)), k)))
     ---
     if: (mi != work_mi_cell[0] || c.lm_compiler_own_cached(mi, oi) = 0) && (c.lm_compiler_own_slot_at(oi, slot) != 0 || c.lm_compiler_tx_join(at_text, "(cast: (@: Lmx) lmx_walk_graph_value_ref(l2_program_arena, lmx_graph_value_in(l2_program_arena, ", slot, ")))" , 0, 0) != 0)
         return: (cast: (int) (1))
-    return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)))))
+    return: (cast: (int) (lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) (at_text\data)), k)))
 end: lm_compiler_emit_empty_struct_call
 
 # Original: l2src/l2trans.lm1:48267

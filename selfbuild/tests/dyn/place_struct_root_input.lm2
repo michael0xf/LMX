@@ -1,0 +1,22 @@
+# Slice 417, W1 (callable_place_fields check 35, reduced): a Structure written into a callable place and called through it, over
+# itself (S() = call(S S)); its root `int: i 5` is an input of its data with the ready value 5.  Expected: 7.
+int: var_seen 0
+OverVar:
+    int: i 5
+    node\var_seen := i
+Places4:
+    fn: f () int
+        return: 1
+---
+fn: write_free4 () int
+    @: Places4\f Hv
+    Places4\f()
+    return: node\var_seen
+fn: over_var () int
+    @: Hv OverVar OverVar
+    return: write_free4()
+int: code 81
+if: over_var() = 5
+    code := 7
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

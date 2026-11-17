@@ -67,10 +67,11 @@ fn: machines_run () int
     machined_sub()
     return: machined()
 end: machines_run
-# A split call publishes a named Structure into its data's slot: data.
+# A split call runs the code S1 over the data D: the form `T:` in S1 is a call of its head in code and writes nothing
+# into D (the book, colon-declares; slice 416), so D\T\v stays 0.
 fn: data_call () int
-    call: S1 D
-    if: D\T\v != 1 || machines_run() != 7
+    call(D S1)
+    if: D\T\v != 0 || machines_run() != 7
         return: 81
     return: 0
 end: data_call
@@ -81,8 +82,8 @@ fn: part_rebound () int
     put_part()
     if: S1\T\v != 2
         return: 88
-    call: S1 D
-    if: D\T\v != 2 || machines_run() != 7
+    call(D S1)
+    if: D\T\v != 0 || machines_run() != 7
         return: 89
     return: 0
 end: part_rebound

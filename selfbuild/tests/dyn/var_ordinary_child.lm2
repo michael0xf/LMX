@@ -1,5 +1,5 @@
 # Slice 415 witness (FABLE-S415-A/C/E, the mutant in reverse): `var` is an ordinary name since 2026-11-11 (docs/LMX_semantics.en.md#ordinary-var;
-# the reserved name of the data of a launch is `data`).  Only explicit paths and the two-operand call in the old order (code first) are used,
+# the reserved name of the data of a launch is `data`).  Only explicit paths and the two-operand call (data first, slice 416) are used,
 # so the witness does not depend on the read of a free name from the root of the launch's data (open item M10 / slice 417).
 #   probe declares an ordinary local `var` and returns it (`var` is not the reference to the data of the call);
 #   S, launched over D, reaches the data of the launch by `data` (`data\x` is D's x), and the assignment `data := E\var` rebinds that local
@@ -26,7 +26,7 @@ S:
         return
 ---
 @: held S
-call: held D
+call(D held)
 E\var\x := 6
 int: answer 83
 if: probe() = 5 && D\x = 10 && E\x = 10 && E\var\x = 6

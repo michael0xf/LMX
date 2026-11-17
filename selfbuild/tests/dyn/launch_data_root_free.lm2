@@ -1,0 +1,16 @@
+# Slice 417, W2 (control): a launch `call(D C)` whose code reads a name only the root of D declares -- free in C's
+# code.  The launch record of slice 412 already resolves it; slice 417 resolves it first from the call's own data.
+# Expected 7 before and after K1 (and under the K1 mutant).
+int: seen 0
+D:
+    int: v 4
+C:
+    node\seen := v
+fn: run () int
+    call(D C)
+    return: node\seen
+int: code 81
+if: run() = 4
+    code := 7
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

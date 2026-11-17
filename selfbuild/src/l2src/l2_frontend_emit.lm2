@@ -5745,11 +5745,11 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
         # N4 (LMX_semantics.ru.md #method-parts): a code and at most one data Structure, each refused where it stands.
         if: c.lm_compiler_struct_call_plan(stmt, mi, @ call_plan) != 0
             if: call_plan\shape = 3
-                return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) ((call_plan\extra\value))), "call takes a code and one data operand: a third operand")))
+                return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) ((call_plan\extra\value))), "call takes a data and a code operand: a third operand")))
             if: call_plan\shape = 4
                 return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported trailer")))
             if: call_plan\shape = 5
-                return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) ((call_plan\extra\value))), "call takes a code and one data operand: the data operand is incomplete")))
+                return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) ((call_plan\extra\value))), "call takes a data and a code operand: the code operand is incomplete")))
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "call needs a code Structure")))
         if: c.lm_compiler_check_struct_call(stmt, @ call_plan, mi, path) != 0
             return: (cast: (int) (1))
@@ -6388,15 +6388,18 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         # site knows no place for -- a method's name, a name nothing declared -- is the refusal, never a definition, so the
         # form moved where no place is known declares no field.  The places asked: the declared formals, a visible own
         # field (a unit field a method sees is its hidden input, Q52), a slot, a method-level local, the host's activation
-        # of a nested method.  Not the dynamic input the collection made of a free name (the target of `x: v` is read
-        # as any name is, so a name nothing binds is a hidden argument of the callers -- the mechanism's history is
-        # steps/free-names.md, the rule the one head resolution and the book): that is no place known here, so
-        # l2_param_find is not asked.  A `:=` Frame shaped as a nested typed declaration, `zz := int: 5`, is no
+        # of a nested method.  The dynamic input the scan made of a free target (steps/free-names.md §7: the target is read
+        # as any name is, so a name nothing binds is a hidden argument of the callers) is a place known only in the code
+        # of an ordinary Structure (slice 417; the book, call-frame-20261115: its data is given by the launch, and a hidden
+        # input is the activation's own local cell, :511): the entry resolves it from the root of the launch data, then
+        # the callers' bindings, and refuses it without either -- the unknown left side is the error at execution
+        # (#assign-known).  A fn, sub, catch or the unit root has its own data: there l2_param_find is not asked and
+        # such a target stays the refusal here.  A `:=` Frame shaped as a nested typed declaration, `zz := int: 5`, is no
         # assignment for l2_is_asgn (l2_own_decl_ty answers for it) and is asked here all the same: `:=` declares nothing.
         # The reserved reference to the data of the current call, `data`, is a place every such activation knows (the
         # book, ordinary-var: the name admits an assignment by `:=`): the collection made it the activation's input
         # (lm_compiler_default_data_name in lm_compiler_collect_asgn_body), and `data := ptr` writes that input.
-        if: (c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0) && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_default_data_name(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
+        if: (c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0) && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_default_data_name(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && (c.lm_compiler_m_nsof(mi) < 0 || c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0)
             return: (cast: (int) (c.lm_compiler_error(path, stmt, ":= writes a place already known: its left side is not one here")))
         # Known ordinary Structure heads receive an assignment candidate;
         # they do not acquire callable formals from the Frame syntax.

@@ -1,6 +1,8 @@
 # The receiving contract is the prepared data field, not the value most
 # recently stored there. An extra field of the first admitted candidate must
 # not become a requirement for the second candidate.
+# Neither call writes D: the form `T:` in the code of S1 and S2 is a call of its head (the book, colon-declares;
+# slice 416), so D\T\v stays 0.
 S1:
     T:
         int: v 1
@@ -16,7 +18,7 @@ D:
 end: D
 int: caught1 0
 ---
-    call: S1 D
+    call(D S1)
     catch: implements ()
         caught1 := 1
 ---
@@ -24,18 +26,18 @@ int: seen1 0
 seen1 := D\T\v
 int: caught2 0
 ---
-    call: S2 D
+    call(D S2)
     catch: implements ()
         caught2 := 1
 ---
 int: code 7
 if: caught1 != 0
     code := 94
-if: code = 7 && seen1 != 1
+if: code = 7 && seen1 != 0
     code := 97
 if: code = 7 && caught2 != 0
     code := 95
-if: code = 7 && D\T\v != 2
+if: code = 7 && D\T\v != 0
     code := 96
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

@@ -126,20 +126,18 @@ For every primitive type T there is a distinct type “T without initialization�
 | `int: x 0` | Field → record `int` of `x`, initially 0 |
 
 Here a Structure field is an address-holding cell, called a “slot” in the kernel specification.
-Assignment changes only the value in the existing cell of T. Even on the first write, neither the field nor
-the codes change; the cell's address and physical type remain unchanged too.
-For `int: x`, the path is the same before and after `x := 5`, and a previously taken `@x` addresses
-that same cell: `@x` and the name of `x` refer to the inner record of T, which starts a constant four bytes
-after the outer one, with no stored pointer between them and no second allocation. `sys\typeof` of the
-slot's content answers `uninit:int` and `sys\typeof(@x)` answers `int`, as before.
-Internal storage does not make `x` a language pointer: its language type remains `int`.
-
-`uninit:T` describes a declaration without an initializer, not a “never written yet” flag.
+A value record is a type and a value. An assignment into a place of the graph (`data\x := 5`) writes the value, and if
+the type of the record is another one -- “T without initialization” -- changes it too: after that the place holds an
+ordinary T (the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#assignment-changes-type)). The rule of 2026-11-08
+that the type of the place does not change on the first assignment is withdrawn. The address of the value stays the
+same: a previously taken `@x` addresses that same cell. `sys\typeof` of the place answers `uninit:int` before the write
+and `int` after it; the language type of `x` is `int` in both cases.
+An assignment to a local of the call (`a := 5` for a formal that received no value) writes into the place of the call:
+the graph does not change and the data are not published.
 The absence of a value is written `nil: T`, and simply `nil` where possible; a variable can be compared with `nil`
-(the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#typed-nil)). What such a comparison answers after an assignment
-into a place declared without a value is an [open question](../LMX_blog/q/current/nil-after-assignment-20261117.md).
-The earlier explanation about redirecting the field on its first write was superseded by the
-[author's later clarification of 2026-11-08](../LMX_blog/2026-11-08.md#uninit-pointer-preserved).
+(the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#typed-nil)).
+Today's code still leaves the `uninit:T` record after an assignment; a separate slice brings it to the norm
+([plan](../next_core_tasks_v3.md#typed-nil-plan)).
 See [kernel specification §3.2](kernel-implementation.en.md#primitive-storage) for the representation.
 
 <a id="pool"></a>

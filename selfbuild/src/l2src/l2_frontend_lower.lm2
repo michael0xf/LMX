@@ -751,7 +751,10 @@ fn: lm_compiler_is_asgn (const: (@: stmt c.LmP0Node); int: mi) int
     int: fi 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: (cast: (int) (0))
-    if: lm_compiler_own_decl_ty(stmt) != 0
+    # Slice 420 (R38; the book, #assign-known: `:=` declares nothing): a typed write `zz := int: 5` of a name this method
+    # declares nowhere -- no own row, no formal -- is the operator's write of that name, read, checked and lowered as
+    # `zz := 5` is, its typed value the right side.  With a known name it stays the repeated typed write of that place.
+    if: lm_compiler_own_decl_ty(stmt) != 0 && ((stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U || mi < 0 || lm_compiler_own_decl_name(stmt) = 0 || c.lm_compiler_own_find_decl(mi, (cast: (const: @: c.LmP0Text) (lm_compiler_own_decl_name(stmt))), stmt) >= 0 || c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (lm_compiler_own_decl_name(stmt)))) >= 0 || c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (lm_compiler_own_decl_name(stmt)))) >= 0)
         return: (cast: (int) (0))
     h := stmt\as\frame\head
     if: h = 0 || c.lm_compiler_ident(h) = 0
@@ -18711,7 +18714,7 @@ fn: lm_compiler_emit_split_source_definition (int: mi; int: oi; const: (@: ind c
         int: place_row c.lm_compiler_split_name_ix(oi)
         if: place_row < 0 || c.lm_compiler_bump_ind(ind, @ inner) != 0
             return: 1
-        if: c.fprintf(out_cell[0], "%sint: l2_sfield%d lmx_implements_receive_data_field(l2_program_arena, self, l2_cpl[%dU], l2_cp%d)\n%sif: l2_sfield%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, value, place_row, value, ind, value) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+        if: c.fprintf(out_cell[0], "%sint: l2_sfield%d lmx_implements_receive_data_field(l2_program_arena, l2_cph[%dU], l2_cpl[%dU], l2_cp%d)\n%sif: l2_sfield%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, value, place_row, place_row, value, ind, value) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
             return: 1
         if: c.fprintf(out_cell[0], "%s---\n%sif: l2_sfield%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_sfield%d)\n%s---\n", ind, ind, value, ind, value, ind) < 0
             return: 1
@@ -20019,6 +20022,15 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         # where it is reached (lm_compiler_emit_single_repeat_check); a compatible one emits nothing.
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && own_decl_cell[0][oi] != stmt && lm_compiler_emit_single_repeat_check(stmt, oi, mi, ind) != 0
             return: (cast: (int) (1))
+        # Slice 420 (R38; the book, #assign-known: `:=` declares nothing): the typed write `zz := int: 5` of a name this method
+        # declares nowhere (lm_compiler_is_asgn) took no typed row above; it is the write of the activation's input zz,
+        # received by the input's place as `zz := 5` is below -- the declaration's candidate is the right side.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) != 0 && oi < 0 && declaration != 0 && declaration\candidate_count > 0 && c.lm_compiler_m_machine(mi) = 0 && lm_compiler_is_asgn(stmt, mi) != 0 && c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (lm_compiler_own_decl_name(stmt)))) >= 0
+            fi := c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (lm_compiler_own_decl_name(stmt))))
+            if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, fi)) = 0 || store_full = 0 || c.lm_compiler_tx_clear(store_full) != 0 || lm_compiler_eval_dyn_fields((cast: (@: c.LmP0Field) (declaration\candidate)), declaration\candidate_count, mi, ind, store_full) != 0 || lm_compiler_emit_native_input_store(mi, fi, (cast: (int) c.lm_compiler_input_ft(mi, fi)), ind, (cast: (const: @: char) store_full\data), 0) != 0
+                return: (cast: (int) (1))
+            field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            continue
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt)
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && (stmt = 0 || stmt\as = 0 || stmt\as\frame = 0)

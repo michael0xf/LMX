@@ -1,13 +1,34 @@
-# The := slice, Codex's review of 303, item 2: `zz := int: 5` in the body of a named Structure with no place zz known
-# declares no field (the typed field zz is declared by its receiver, `int: zz 5`): the refusal of a write of no known
-# place, as `zz := 5` there is (assign_in_structure_refused).
+# FABLE-H417-A: the typed write of an unknown place, `zz := int: 5`, is the entry refusal, not a translation refusal
+# (fable's Р38, LMX_blog/q/fable-self-answers-20261110.md; the book, #call-frame-20261115 and #assign-known).
+# The typed write is a write of no known place in Holder's text: zz is a hidden input of the Structure, and at entry its
+# place is looked up in the roots of the call's own data first, then in the callers' bindings.
+# Holder declares only k, and the root declares no zz, so the launch of Holder over itself has no place for zz and is
+# refused at entry (implements). The refusal is caught and the exit is 7. Outcome 81: the launch passed without a refusal.
+# Outcome 82: another refusal was caught.
+# Control in this file: Watcher writes the same typed zz and is launched over Given, whose root declares `int: zz 0`.
+# The call passes, and the value is observed by an explicit write into the data (rule Б: data\seen := zz) and a read
+# from outside (5). Outcome 83: the control did not observe 5.
 Holder:
     int: k 1
     zz := int: 5
 end: Holder
+Watcher:
+    zz := int: 5
+    data\seen := zz
+Given:
+    int: zz 0
+    int: seen 0
 int: code 7
-if: Holder\k != 1
-    code := 81
 ---
+    call: Holder
+    code := 81
+    catch: implements ()
+        code := 7
+    catch: call ()
+        code := 82
+---
+call(Given Watcher)
+if: Given\seen != 5
+    code := 83
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

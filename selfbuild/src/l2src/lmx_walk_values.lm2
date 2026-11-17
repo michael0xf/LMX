@@ -3294,10 +3294,31 @@ fn: lmx_walk_slot_place (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; int:
     # activation resolved at its entry (lmx_walk_place_slot), and the holder the activation's data.  No projection
     # and no replay applies to it.
     if: holder != 0 && lmx_walk_kind(f, holder) = c.LMX_KIND_STRUCT && lmx_walk_head(f, (cast: (@: c.Lmx) holder)) = c.LMX_WALK_OP_PLACE
-        status := lmx_walk_place_slot(f, (cast: (@: c.Lmx) holder), index, @ index)
+        status := lmx_walk_place_slot(f, (cast: (@: c.Lmx) holder), index, @ resolved)
         if: status != c.LMX_WALK_OK
             return: status
-        holder := (cast: (@: void) f\node)
+        if: resolved = (cast: (size_t) -1)
+            # Slice 420 (the book, call-frame-20261115 ¶2): a name of the code its data does not hold in one place is
+            # the call's own place -- the code's root place of that name (the place table's code at this ordinal),
+            # never a slot of the data.  The place is the code's own declaration of the name: the registry of heads does
+            # not take it out of use here (two heads make only the data's bare name ambiguous).
+            @: tokens char 0
+            @: place_map size_t 0
+            @: own_code c.Lmx (cast: (@: c.Lmx) f\source)
+            if: own_code = 0 || lmx_walk_table_cells(f, (cast: (@: c.Lmx) holder), 1U, @ tokens, @ place_map) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            @: own_fields c.VoidArray @ own_code\array
+            size_t: j 0U
+            while: j < own_fields\size && resolved = (cast: (size_t) -1)
+                if: c.lmx_implements_place_name((cast: (@: c.LmxArena) f\arena), own_code, j) = place_map[2U + 2U * index]
+                    resolved := j
+                j := j + 1U
+            if: resolved = (cast: (size_t) -1)
+                return: c.LMX_WALK_INVALID
+            holder := (cast: (@: void) own_code)
+        else:
+            holder := (cast: (@: void) f\node)
+        index := resolved
     else:
         # An OWN coordinate belongs to the code occurrence. If an admitted value
         # supplies that occurrence's data, its existing implements correspondence

@@ -1,0 +1,40 @@
+# Slice 420, step 1 (the book, call-frame-20261115 par. 2: own places of the code that the input data does not have
+# belong to the current call and are not added to the source data; LMX_semantics.en.md:612, no requirement for the data
+# to hold every code local).  S declares v with no value and assigns it; the data D and E do not hold v; S runs over
+# them -- through a callable place and directly -- and writes what its own v holds into the data by an explicit path.
+# The same with the ordinary name `var` (sonnet's probe p1 of slice 415).  A declaration with a value (`int: v 5`, the
+# constructor's row) is the next step's (code_place_absent_local).  Entry 7; 81.. name the failing check.
+D:
+    int: x 10
+    int: seen 0
+E:
+    int: seen 0
+S:
+    int: v
+    v := 5
+    data\seen := v
+T:
+    int: var
+    var := 6
+    data\seen := var
+fn: through_place () int
+    @: held S
+    call(D held)
+    return: D\seen
+fn: direct () int
+    call(E S)
+    return: E\seen
+fn: ordinary_var () int
+    call(E T)
+    return: E\seen
+int: code 7
+if: through_place() != 5
+    code := 81
+if: code = 7 && direct() != 5
+    code := 82
+if: code = 7 && ordinary_var() != 6
+    code := 83
+if: code = 7 && D\x != 10
+    code := 84
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

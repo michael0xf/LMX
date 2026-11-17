@@ -4834,10 +4834,13 @@ fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: requirem
     size_t: i 0U
     while: i < requirements[0]
         @: spec size_t (requirements + 2U + 2U * i)
-        size_t: slot 0U
-        int: answer lmx_implements_call_field(arena, data, spec[0], (cast: (int) spec[1]), @ slot)
-        if: answer != c.LMX_IMPLEMENTS_YES
-            return: answer
+        size_t: slot (cast: (size_t) -1)
+        # Slice 420 (the book, call-frame-20261115 ¶2: «Собственные места code, которых нет во входных данных,
+        # принадлежат текущему вызову»; LMX_semantics.en.md:612, not a requirement for D to contain all code locals): a
+        # name the data does not hold in one place -- none, or two -- gives no slot (SIZE_MAX): the code's place of
+        # that name is the call's own.  Only a held place of another type is NO, the admission of a supplied input.
+        if: lmx_implements_call_field(arena, data, spec[0], c.LMX_TYPE_NONE, @ slot) = c.LMX_IMPLEMENTS_YES && lmx_implements_call_field(arena, data, spec[0], (cast: (int) spec[1]), @ slot) != c.LMX_IMPLEMENTS_YES
+            return: c.LMX_IMPLEMENTS_NO
         if: out != 0
             out[i] := slot
         i := i + 1U

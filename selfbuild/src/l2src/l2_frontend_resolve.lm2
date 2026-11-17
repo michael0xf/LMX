@@ -3056,6 +3056,11 @@ fn: lm_compiler_root_head_text (int: mi; const: (@: value c.LmP0Node)) @: c.LmP0
         return: (cast: (@: c.LmP0Text) (nsf_fname_cell[0][row]))
     if: value\kind != c.LM_P0_NODE_FRAME || value\as\frame = 0
         return: (cast: (@: c.LmP0Text) (0))
+    # Slice 420 (the book, #assign-known: `:=` writes a place already known and declares nothing; fable FABLE-O420-F): an
+    # assignment, typed or not, is no head -- after `int: x 2` the root statement `x := 4` leaves x one head, so the data
+    # holds x in one place and neither a bare x nor data\x is ambiguous.
+    if: (value\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: (cast: (@: c.LmP0Text) (0))
     head := value\as\frame\head
     # What the written words make of it decides: a repeated `@: y v` is a head of y; `if: x > 0` has a record with no place of its own, and
     # heads itself.

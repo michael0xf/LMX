@@ -13283,6 +13283,20 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: declaration = 0 || declaration\name = 0
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this declaration")))
         oi := c.lm_compiler_own_find_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Text) (declaration\name)), stmt)
+        # Slice 420 (R38; the book, #assign-known: `:=` declares nothing): the typed write `zz := int: 5` of a name this
+        # method declares nowhere is the write of the activation's input zz (lm_compiler_is_asgn), lowered as `zz := 5` is
+        # below -- the declaration's candidate is the right side.
+        if: oi < 0 && rw_mi_cell[0] != e_cell[0] && declaration\candidate_count > 0 && c.lm_compiler_is_asgn(stmt, rw_mi_cell[0]) != 0 && c.lm_compiler_param_find(rw_mi_cell[0], (cast: (const: @: c.LmP0Text) (declaration\name))) >= 0
+            idx := c.lm_compiler_param_find(rw_mi_cell[0], (cast: (const: @: c.LmP0Text) (declaration\name)))
+            f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (declaration\candidate)))
+            if: lm_compiler_rw_input_write(into, idx, @ port_local_node) != 0
+                return: 1
+            if: lm_compiler_rw_reference_receive(f, declaration\candidate_count, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_param_ty(rw_mi_cell[0], (cast: (const: @: c.LmP0Text) (declaration\name)))))), (cast: (int) (c.lm_compiler_nsty_get(rw_mi_cell[0], idx))), port_local_node, @ t) != 0 || c.lm_compiler_rw_put(port_local_node, 2, t) != 0
+                return: (cast: (int) (1))
+            \made := 1
+            if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+                return: (cast: (int) (1))
+            return: (cast: (int) (0))
         if: oi < 0
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this declaration")))
         if: (own_host_cell[0][oi] != 0 || own_fid_cell[0][oi] >= 0) && c.lm_compiler_rw_is_hosted(oi) = 0 && c.lm_compiler_rw_place_row(oi) = 0
@@ -17476,6 +17490,9 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     int: i 0
     int: k
+    int: split_rows 0
+    int: row_ix 0
+    @: row_field c.L2GraphField 0
     int: qn 0
     int: on 0
     int: oi
@@ -17920,14 +17937,28 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         ---
-        # N4 (plan D4, SF12): a code that maps its names to places of its data selects the same static row its call
-        # site admitted, by the data's own layout token; anything but YES is the translator's broken promise.
-        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, 0, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", c.lm_compiler_split_m(i), i) < 0
+        # A code that names places of its data finds each name's slot in the data once, at its entry; its call site
+        # admitted the data, so anything but YES -- a held place of another type -- is the translator's broken promise.
+        # Slice 420 (the book, call-frame-20261115 ¶2): a name the data does not hold (slot SIZE_MAX) is the call's own
+        # place: the code's root place of that name (l2_cph holds each row's holder, the data or the code).
+        split_rows := c.lm_compiler_split_m(i)
+        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    []: @(Lmx) l2_cph %d\n    if: lmx_implements_places(l2_program_arena, self, 0, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", split_rows, split_rows, i) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: c.lm_compiler_m_is_place(i) != 0 && c.lm_compiler_emit_invariant("    ", "a split-called code reached data without its place row") != 0
+        if: c.lm_compiler_m_is_place(i) != 0 && c.lm_compiler_emit_invariant("    ", "a split-called code reached a place of its data of another type") != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
+        k := 0
+        while: c.lm_compiler_m_is_place(i) != 0 && k < own_n_cell[0]
+            row_ix := c.lm_compiler_split_name_ix(k)
+            row_field := c.lm_compiler_graph_field(k)
+            if: own_mi_cell[0][k] = i && c.lm_compiler_split_data_row(k) != 0 && c.lm_compiler_split_rep(k) = k && c.fprintf(out_cell[0], "    l2_cph[%dU]: self\n", row_ix) < 0
+                c.fclose(out_cell[0])
+                return: (cast: (int) (1))
+            if: own_mi_cell[0][k] = i && c.lm_compiler_split_data_row(k) != 0 && c.lm_compiler_split_rep(k) = k && row_field != 0 && c.fprintf(out_cell[0], "    if: l2_cpl[%dU] = (cast: (size_t) -1)\n        l2_cph[%dU]: l2_call_code\n        l2_cpl[%dU]: lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU)\n    ---\n", row_ix, row_ix, row_ix, row_field\child) < 0
+                c.fclose(out_cell[0])
+                return: (cast: (int) (1))
+            k := k + 1
         k := 0
         while: k < own_n_cell[0]
             # Both cached cells and descriptor bindings use their selected graph slot.

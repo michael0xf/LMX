@@ -1,4 +1,4 @@
-# A unary ordinary Structure has no implicit alias to its source.
+# A unary call runs S over itself (call: held is call(S S)): the bare x of the run is the call's local, data\x writes S.
 # Caller working cells retain their snapshots after explicit external writes.
 int: quote 7
 int: signal 0
@@ -12,6 +12,7 @@ end: FreeOnly
 S:
     int: x 2
     x := 4
+    data\x := x
 end: S
 X:
     int: x 0
@@ -21,8 +22,10 @@ fn: try_call () int
     int: answer 81
     call: held
     catch: call ()
-        answer := 7
+        answer := 81
     ---
+    if: S\x = 4
+        answer := 7
     return: answer
 end: try_call
 fn: read_signal () int
@@ -39,7 +42,7 @@ end: try_null
 int: answer try_call()
 if: try_null() != 7
     answer := 86
-if: S\[0]x != 2
+if: S\[0]x != 4
     answer := 82
 @: empty NoData
 call: empty
@@ -49,14 +52,14 @@ if: read_signal() != 7 || signal != 0
 call: local
 if: read_signal() != 9 || quote != 7 || signal != 0
     answer := 84
-# Two root heads of x: as data S answers to no bare x and the selected call refuses; as code its two writes land in the one place of X.
+# call(S held) runs S over S, as call: held does above: the bare x is the call's local, data\x writes S, nothing refuses.
 int: refused 0
 ---
     call(S held)
     catch: call ()
         refused := 1
 ---
-if: refused != 1 || S\[0]x != 2
+if: refused != 0 || S\[0]x != 4
     answer := 85
 call(X held)
 if: X\x != 4

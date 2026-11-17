@@ -1,0 +1,24 @@
+# Slice 420, step 1 (LMX_semantics.en.md:614: the root declarations of the data provide the inputs, the code's root
+# declarations the remaining locals; :208, `int: x` with no value only checks its contract and writes nothing): a root
+# place of the code that its data declares holds the data's value from the entry, in both executors; the write into the
+# data is explicit (`data\x`).  Over a named Structure and over a formal (split_formal_data).  Entry 7; 81.. name the
+# failing check.
+D:
+    int: x 1
+S:
+    int: x
+    data\x := x + 1
+fn: over_formal (@: d D) int
+    call(d S)
+    return: 0
+fn: over_named () int
+    call(D S)
+    return: D\x
+int: code 7
+if: over_named() != 2
+    code := 81
+int: dropped over_formal(D)
+if: code = 7 && D\x != 3
+    code := 82
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -429,10 +429,12 @@ fn: lm_compiler_own_from_expr (int: oi; @: dest c.L2Tx) int
     @: field c.L2GraphField c.lm_compiler_graph_field(oi)
     c.L2FrontendScratchChar160: nm_storage
     @: nm char (cast: (@: char) nm_storage\buffer)
+    int: ix 0
     # N4 (plan D3, D10): in a procedure that a split call runs, a place of the data is the data's slot of its name, read
     # from the place row its prologue selected (l2_cpl); every other own place of the code is the code's.
     if: dest != 0 && oi >= 0 && oi < own_n_cell[0] && own_mi_cell[0][oi] = cur_mi_cell[0] && c.lm_compiler_split_data_row(oi) != 0
-        if: c.lm_compiler_m_is_place(cur_mi_cell[0]) = 0 || c.snprintf(nm, 160U, "lmx_arena_ref_cell(self, l2_cpl[%dU])", c.lm_compiler_split_name_ix(oi)) < 0
+        ix := c.lm_compiler_split_name_ix(oi)
+        if: c.lm_compiler_m_is_place(cur_mi_cell[0]) = 0 || c.snprintf(nm, 160U, "lmx_arena_ref_cell(l2_cph[%dU], l2_cpl[%dU])", ix, ix) < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], own_decl_cell[0][oi], "internal: a place of the data has no place row")))
         return: (cast: (int) (c.lm_compiler_tx_set(dest, nm)))
     if: field = 0 || dest = 0

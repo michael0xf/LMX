@@ -772,7 +772,7 @@ Lexical lookup follows real Structure links to a zero parent and selects the sol
 
 Receiver `private:` excludes the marked field from the sources of dynamic binding for calls. This is a property of that particular field and its corresponding binding, not a ban on the name's spelling. Dynamic-input lookup skips that field; further selection follows the ordinary source order.
 
-The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding.
+The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding. Neither is a code's reading of a field of its own launch data: in `call(D C)` with `D: private: (int: x 5)` the code `C` reads `x` as its own input place and gets 5, while what `C` calls does not get its free `x` from that field -- `private` forbids only dynamic binding (the author's clarification of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#private-only-dynamic)).
 
 The rule is identical for ordinary calls, Structure launches and all `call`/`fncall` forms, in the interpreter and native execution. The existing common binding mechanism applies it when selecting a binding; it requires no separate name-denial tables, protected value type, or checks on every direct read.
 

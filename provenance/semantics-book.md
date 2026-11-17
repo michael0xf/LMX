@@ -1338,7 +1338,7 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 Ресивер `private:` исключает помеченное поле из источников динамического связывания вызовов. Это свойство конкретного поля и соответствующей ему привязки, а не запрет на написание имени. При подборе динамического входа такое поле пропускается; дальнейший выбор следует обычному порядку источников.
 
-Прямой видимости откуда угодно поле не лишается: явные пути, например `S\field`, и обычный лексический поиск сохраняются. Ресивер не вводит границу доступа, не меняет правила последовательной видимости и не запрещает явно передать значение аргументом. Если поле разрешилось обычным лексическим поиском, это не динамическое связывание.
+Прямой видимости откуда угодно поле не лишается: явные пути, например `S\field`, и обычный лексический поиск сохраняются. Ресивер не вводит границу доступа, не меняет правила последовательной видимости и не запрещает явно передать значение аргументом. Если поле разрешилось обычным лексическим поиском, это не динамическое связывание. Не является им и чтение кодом поля собственных данных запуска: в `call(D C)` при `D: private: (int: x 5)` код `C` читает `x` как своё входное место и получает 5, а вызываемое из `C` своё свободное `x` из этого поля не получает — `private` запрещает только динамическое связывание (уточнение автора 2026-11-17, [журнал](../LMX_blog/2026-11-17.md#private-only-dynamic)).
 
 Правило одинаково для обычного вызова, запуска Structure и всех форм `call`/`fncall`, в интерпретаторе и native. Оно применяется при выборе связи существующим общим механизмом; отдельные таблицы запретов по именам, защищённый тип значения и проверки каждого прямого чтения не требуются.
 
@@ -1520,7 +1520,7 @@ Lexical lookup follows real Structure links to a zero parent and selects the sol
 
 Receiver `private:` excludes the marked field from the sources of dynamic binding for calls. This is a property of that particular field and its corresponding binding, not a ban on the name's spelling. Dynamic-input lookup skips that field; further selection follows the ordinary source order.
 
-The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding.
+The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding. Neither is a code's reading of a field of its own launch data: in `call(D C)` with `D: private: (int: x 5)` the code `C` reads `x` as its own input place and gets 5, while what `C` calls does not get its free `x` from that field -- `private` forbids only dynamic binding (the author's clarification of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#private-only-dynamic)).
 
 The rule is identical for ordinary calls, Structure launches and all `call`/`fncall` forms, in the interpreter and native execution. The existing common binding mechanism applies it when selecting a binding; it requires no separate name-denial tables, protected value type, or checks on every direct read.
 

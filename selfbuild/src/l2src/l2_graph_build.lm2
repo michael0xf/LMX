@@ -931,17 +931,6 @@ fn: lm_graph_own_field (@: g c.LmxGraph; @: result c.Lmx; size_t: index; @: nd c
     return: 0
 end: lm_graph_own_field
 
-# Rehoming a written field creates a different CHILDREN cell. Copy its field
-# attribute explicitly; sharing the same current value does not share a flag.
-fn: lm_graph_private_copy (@: g c.LmxGraph; @: source c.Lmx; size_t: from; @: target c.Lmx; size_t: to) int
-    @: cell void c.lmx_graph_cell_in(g\arena, source, from)
-    @: row c.LmxSourceName c.lmx_source_places(g\arena, cell)
-    if: row = 0 || row\binding_private = 0
-        return: 0
-    cell := c.lmx_graph_cell_in(g\arena, target, to)
-    return: c.lmx_source_place_private_set(g\arena, cell, 1)
-end: lm_graph_private_copy
-
 # Build data/signature fields through the same constructor. A body retains its written statements and effects.
 fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; int: declarations; @: tail c.LmP0Trailer; @@: out c.Lmx) int
     @: result c.Lmx 0
@@ -951,7 +940,6 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
     size_t: j 0U
     @: item c.LmP0Field 0
     @: value void 0
-    @: folded void 0
     size_t: i 0U
     int: status 0
     if: source = 0 || out = 0
@@ -967,14 +955,6 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
             status := lm_graph_build_node(g, result, lm_graph_p0_value(item), 0, @ value)
             if: status = 0
                 status := c.lmx_graph_put_in(g, result, i, value)
-            if: status = 0
-                status := c.lmx_graph_field_prepare(g, result, i, @ folded)
-            if: status = 0
-                folded := c.lmx_graph_binding_leaf(g, value)
-                if: folded != value
-                    status := lm_graph_build_put(g, result, i, folded)
-                ---
-            ---
         ---
         i := i + 1U
         item := lm_graph_next_active(lm_graph_p0_next(item))
@@ -999,8 +979,6 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         while: i < c.lmx_graph_count(result) && item != 0 && status = 0
             if: lm_graph_own_field(g, result, i, lm_graph_p0_value(item)) != 0
                 status := lm_graph_build_put(g, outer, j, c.lmx_graph_get_in(g, result, i))
-                if: status = 0
-                    status := lm_graph_private_copy(g, result, i, outer, j)
                 j := j + 1U
             i := i + 1U
             item := lm_graph_next_active(lm_graph_p0_next(item))
@@ -1027,7 +1005,6 @@ end: lm_graph_data_head
 # head, a bare atom, a block). 0, 1 without memory, 2 for a nd of no known kind.
 fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.LmP0Node) int
     @: value void 0
-    @: folded void 0
     int: r 0
     if: g = 0 || root = 0 || nd = 0
         return: 2
@@ -1035,14 +1012,6 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
     if: r != 0
         return: r
     r := c.lmx_graph_put_in(g, root, slot, value)
-    if: r = 0
-        r := c.lmx_graph_field_prepare(g, root, slot, @ folded)
-    if: r = 0
-        folded := c.lmx_graph_binding_leaf(g, value)
-        if: folded != value
-            r := lm_graph_build_put(g, root, slot, folded)
-        ---
-    ---
     return: r
 end: lm_graph_build_field
 

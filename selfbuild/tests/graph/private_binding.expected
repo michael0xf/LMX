@@ -1,6 +1,6 @@
 ---
     Library:
-        int: x 10
+        private: ((int x 10))
         fn: read () int
             return: x
         end: read
@@ -14,7 +14,7 @@
 ---
 @: shared (data [] 0)
 fn: CodePrivate () int
-    int: x 20
+    private: ((int x 20))
     :=: x 21
     return: ((x * 100) + shared\Library\read())
 end: CodePrivate
@@ -23,7 +23,7 @@ fn: CodePublic () int
     :=: x 21
     return: ((x * 100) + shared\Library\read())
 end: CodePublic
-fn: DataPrivate (int: x 20) int
+fn: DataPrivate ((private ((int x 20)))) int
     return: ((x * 100) + shared\Library\read())
 end: DataPrivate
 sub: main ()

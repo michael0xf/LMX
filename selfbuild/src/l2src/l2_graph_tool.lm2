@@ -66,18 +66,6 @@ fn: lm_graph_emit_name_row (@: g c.LmxGraph; @: f c.FILE; @: address void; @: lo
     return: 0
 end: lm_graph_emit_name_row
 
-# A shared value can occupy both public and private fields. Image metadata
-# follows the source owning CHILDREN cell to the corresponding emitted cell.
-fn: lm_graph_emit_field_private (@: g c.LmxGraph; @: f c.FILE; @: source c.Lmx; size_t: index; @: holder char) int
-    @: cell void c.lmx_graph_cell_in(g\arena, source, index)
-    @: row c.LmxSourceName c.lmx_source_places(g\arena, cell)
-    if: row = 0 || row\binding_private = 0
-        return: 0
-    if: c.fprintf(f, "        if: lmx_source_place_private_set(arena, lmx_graph_cell_in(arena, (cast: (@: Lmx) %s), %zuU), 1) != 0\n            return: 1\n", holder, index) < 0
-        return: 1
-    return: 0
-end: lm_graph_emit_field_private
-
 # One temporary source-address map covers the emitted graph, primitives and uninitialized referents. Each live
 # address is allocated once; subsequent edges use that generated local. The map is destroyed by this translation.
 fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.LmxCopyMap; @: next size_t; @: out size_t) int
@@ -160,7 +148,6 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
             status := lm_graph_emit_node(g, f, c.lmx_graph_get_in(g, inner, j), map, next, @ target)
             if: status = 0 && target != 0U
                 c.fprintf(f, "        if: lmx_graph_put_in(l2_g, (cast: (@: Lmx) l2_gv%zu), %zuU, l2_gv%zu) != 0\n            return: 1\n", id, j, target)
-                status := lm_graph_emit_field_private(g, f, inner, j, local)
             else:
                 status := 1
             ---
@@ -181,7 +168,6 @@ fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: source c.Lmx; @: value
         return: 1
     if: status = 0
         c.fprintf(f, "        if: lmx_graph_put_in(l2_g, %s, %zuU, l2_gv%zu) != 0\n            return: 1\n", holder, k, id)
-        status := lm_graph_emit_field_private(g, f, source, k, holder)
     return: status
 end: lm_graph_emit_value
 
@@ -1232,7 +1218,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             status := lm_graph_emit_scope(g, f, code, body, 0, temps)
         if: status != 0
             return: status
-        raw := c.lmx_graph_get_in(g, body, i)
+        raw := c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, body, i))
         kind := c.lmx_graph_kind(g, raw)
         # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
         # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
@@ -1249,10 +1235,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
                 c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
                 if: kind = 1
-                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_get_in(l2_g, ", number)
+                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_binding_leaf(l2_g, lmx_graph_get_in(l2_g, ", number)
                     if: lm_graph_emit_address(g, f, code, body) != 0
                         return: 3
-                    c.fprintf(f, ", %zuU), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
+                    c.fprintf(f, ", %zuU)), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
                     c.fprintf(f, "        if: lmx_graph_place_store_int(l2_g, lmx_call_code, l2_s%d, l2_t%d) != 0\n            %s\n", number, number, leave_failure)
                 ---
                 c.fprintf(f, "        l2_site_done%d:\n", number)

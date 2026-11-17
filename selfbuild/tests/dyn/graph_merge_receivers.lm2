@@ -1,0 +1,107 @@
+# `merge` over fields written under a receiver record (the book, merge: the compatible field of a later operand replaces the value of the slot of the model;
+# a new field is added). The field of an operand is read by the leaf of its receiver chain: the name and the kind of the field are those of the place inside
+# the records, the value of a later operand is written INTO that place, and the record of the first provider stays around it.
+#   merge(const-provider, plain)   = const: (int: v 2)       merge(plain, const-provider)   = int: v 1
+#   merge(private-provider, plain) = private: (int: v 2)     merge(plain, private-provider) = int: v 1
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: gmr_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+# The value of the int place inside the records of the field 0 of owner: the leaf of its receiver chain (const:, private:, or none).
+fn: gmr_value (@: g c.LmxGraph; @: owner c.Lmx) int
+    @: leaf void 0
+    int: flag 0
+    int: number -1000
+    if: c.lmx_graph_receiving_view(g, c.lmx_graph_get_in(g, owner, 0U), @ leaf, @ flag) != 0
+        return: -1000
+    if: c.lmx_graph_value_int(g, leaf, @ number) != 0
+        return: -1000
+    return: number
+
+# The name of the field 0 of owner: the head of a record (const, private), or 0 for the plain place.
+fn: gmr_head (@: g c.LmxGraph; @: owner c.Lmx) @: char
+    @: field void c.lmx_graph_get_in(g, owner, 0U)
+    return: c.lmx_graph_name_of(g, field)
+
+fn: gmr_merge (@: g c.LmxGraph; @: first c.Lmx; @: second c.Lmx; @@: out void) int
+    @@: operands void c.calloc(2U, sizeof(@: void))
+    int: status 0
+    if: operands = 0
+        return: 4
+    operands[0] := first
+    operands[1] := second
+    status := c.lmx_graph_merge_values(g, operands, 2U, out)
+    c.free((cast: (@: void) operands))
+    return: status
+
+fn: gmr_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: file c.FILE 0
+    @: const_source c.Lmx 0
+    @: private_source c.Lmx 0
+    @: public_source c.Lmx 0
+    @: merged void 0
+    @: head char 0
+    @: word_const char 0
+    @: word_private char 0
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_merge_receivers_code.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 101
+    if: c.fputs("MergeConst:\n    const: (int: v 1)\nend: MergeConst\n\nMergePrivate:\n    private: (int: v 1)\nend: MergePrivate\n\nMergePublic:\n    int: v 2\nend: MergePublic\n", file) < 0 || c.fclose(file) != 0
+        return: 102
+    status := c.lm_graph_build_file(g, "graph_merge_receivers_code.lm2", @ root)
+    c.remove("graph_merge_receivers_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 103
+    const_source := gmr_named(g, root, "MergeConst")
+    private_source := gmr_named(g, root, "MergePrivate")
+    public_source := gmr_named(g, root, "MergePublic")
+    if: const_source = 0 || private_source = 0 || public_source = 0
+        return: 104
+    word_const := c.lmx_graph_intern("const", 5U)
+    word_private := c.lmx_graph_intern("private", 7U)
+    # a later plain value goes into the place of the const provider; the const record stays
+    status := gmr_merge(g, const_source, public_source, @ merged)
+    c.fprintf(c.stderr, "GMR const+plain status=%d\n", status)
+    if: status != 0 || merged = 0
+        return: 131
+    head := gmr_head(g, (cast: (@: c.Lmx) merged))
+    if: head != word_const || gmr_value(g, (cast: (@: c.Lmx) merged)) != 2
+        return: 132
+    # a plain provider first: the const field of the later operand brings its value, not its record
+    status := gmr_merge(g, public_source, const_source, @ merged)
+    c.fprintf(c.stderr, "GMR plain+const status=%d\n", status)
+    if: status != 0 || merged = 0
+        return: 133
+    if: gmr_head(g, (cast: (@: c.Lmx) merged)) = word_const || gmr_value(g, (cast: (@: c.Lmx) merged)) != 1
+        return: 134
+    status := gmr_merge(g, private_source, public_source, @ merged)
+    c.fprintf(c.stderr, "GMR private+plain status=%d\n", status)
+    if: status != 0 || merged = 0
+        return: 135
+    if: gmr_head(g, (cast: (@: c.Lmx) merged)) != word_private || gmr_value(g, (cast: (@: c.Lmx) merged)) != 2
+        return: 136
+    status := gmr_merge(g, public_source, private_source, @ merged)
+    c.fprintf(c.stderr, "GMR plain+private status=%d\n", status)
+    if: status != 0 || merged = 0
+        return: 137
+    if: gmr_head(g, (cast: (@: c.Lmx) merged)) = word_private || gmr_value(g, (cast: (@: c.Lmx) merged)) != 1
+        return: 138
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

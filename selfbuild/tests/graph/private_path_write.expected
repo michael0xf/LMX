@@ -1,0 +1,36 @@
+---
+    Library:
+        private: ((int x 33))
+        fn: read () int
+            return: x
+        end: read
+    end: Library
+    Observed:
+        int: private_result 2133
+        int: public_result 2121
+        int: library_source 33
+        int: header_result 2033
+    end: Observed
+---
+@: shared (data [] 0)
+fn: CodePrivate () int
+    private: ((int x 20))
+    :=: x 21
+    return: ((x * 100) + shared\Library\read())
+end: CodePrivate
+fn: CodePublic () int
+    int: x 20
+    :=: x 21
+    return: ((x * 100) + shared\Library\read())
+end: CodePublic
+fn: DataPrivate ((private ((int x 20)))) int
+    return: ((x * 100) + shared\Library\read())
+end: DataPrivate
+sub: main ()
+    :=: ((shared \ Library) \ x) 33
+    :=: ((shared \ Observed) \ private_result) (CodePrivate)
+    :=: ((shared \ Observed) \ public_result) (CodePublic)
+    :=: ((shared \ Observed) \ library_source) ((shared \ Library) \ x)
+    :=: ((shared \ Observed) \ header_result) (DataPrivate)
+end: main
+main:

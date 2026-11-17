@@ -458,6 +458,7 @@ fn: lmx_gc_graph_frames (@: arena c.LmxArena; @: frame c.LmxGraphFrame; unsigned
             row := rows + i
             status := lmx_gc_mark_value(arena, (cast: (@: void) row\cell), gen, 0)
             status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) row\scope), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) row\declared), gen, 0))
             status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ row\value)), gen, 0))
             i := i + 1U
         frame := (cast: (@: c.LmxGraphFrame) frame\prior)

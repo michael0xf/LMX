@@ -1254,25 +1254,6 @@ fn: lmx_graph_receiving_view (@: g c.LmxGraph; @: raw void; @@: leaf void; @: bi
     return: 0
 end: lmx_graph_receiving_view
 
-# The attribute belongs to the actual canonical CHILDREN cell. The original
-# source remains in that field; consumers use its borrowed receiving view.
-fn: lmx_graph_field_prepare (@: g c.LmxGraph; @: owner c.Lmx; size_t: index; @@: leaf void) int
-    @: raw void 0
-    @: slot void 0
-    int: binding_private 0
-    int: status 0
-    if: g = 0 || owner = 0 || leaf = 0 || index >= lmx_graph_count(owner)
-        return: 2
-    raw := lmx_graph_get_in(g, owner, index)
-    status := lmx_graph_receiving_view(g, raw, leaf, @ binding_private)
-    if: status != 0 || binding_private = 0
-        return: status
-    slot := c.lmx_graph_cell_in(g\arena, owner, index)
-    if: slot = 0
-        return: 2
-    return: c.lmx_source_place_private_set(g\arena, slot, 1)
-end: lmx_graph_field_prepare
-
 # Existing qualified receiving contracts stay whole until their physical
 # lowering is available. Private alone changes binding, never value admission.
 fn: lmx_graph_binding_leaf (@: g c.LmxGraph; @: raw void) @: void
@@ -1548,7 +1529,7 @@ end: lmx_graph_deref_int
 # Every write uses the same int cell. Neither the slot nor its optional pointer primitive is rebound or retyped.
 # 0, or 1 when the slot holds no int place. This operation never changes the signature/default declaration shape.
 fn: lmx_graph_assign_int (@: g c.LmxGraph; @: scope c.Lmx; @: lmx c.Lmx; size_t: index; int: value) int
-    @: held void lmx_graph_get_in(g, lmx, index)
+    @: held void lmx_graph_binding_leaf(g, lmx_graph_get_in(g, lmx, index))
     @: cell void 0
     int: kind lmx_graph_kind(g, held)
     if: kind != 1 && kind != 3
@@ -1867,19 +1848,43 @@ fn: lmx_graph_write_slot (@: g c.LmxGraph; @: scope c.Lmx; @: holder c.Lmx; size
         c.free((cast: (@: void) affected))
 return: status
 
+# The innermost place of the receiver chain of the field index of owner: the field (the qualifier record, or its single anonymous group, and 0) that holds the
+# declaration under the known qualifiers const/immutable/independent/private; the field itself when no qualifier stands in it. The walk of lmx_graph_receiving_view,
+# keeping where the leaf stands. 0, or 2 for a qualifier that does not hold one operand.
+fn: lmx_graph_receiving_place (@: g c.LmxGraph; @: owner c.Lmx; size_t: index; @@: inner c.Lmx; @: at size_t) int
+    @: current void lmx_graph_get_in(g, owner, index)
+    @: holder c.Lmx owner
+    @: child void 0
+    size_t: place index
+    while: lmx_graph_kind(g, current) = 4 && lmx_graph_declaration_receiver(lmx_graph_name_of(g, current)) = 3
+        if: lmx_graph_count((cast: (@: c.Lmx) current)) != 1U
+            return: 2
+        holder := (cast: (@: c.Lmx) current)
+        place := 0U
+        child := lmx_graph_get_in(g, holder, 0U)
+        if: lmx_graph_kind(g, child) = 4 && lmx_graph_name_of(g, child) = 0 && lmx_graph_count((cast: (@: c.Lmx) child)) = 1U
+            holder := (cast: (@: c.Lmx) child)
+            child := lmx_graph_get_in(g, holder, 0U)
+        current := child
+    inner[0] := holder
+    at[0] := place
+    return: 0
+
 # Publish a computed declaration through the same runtime write, naming it with the canonical word in that declaration:
 # the declaration Frame `int: name expression` (an Lmx named int, §3.3) has the name as its first argument. The new
 # place stands in the slot of the declaration, where the registry of the block reads it (plan M11 5a), and answers the
 # name in the namespace of the live traversal too.
 fn: lmx_graph_publish (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
-    @: statement void lmx_graph_get_in(g, root, index)
+    @: statement void lmx_graph_binding_leaf(g, lmx_graph_get_in(g, root, index))
     @: name char 0
+    @: inner c.Lmx 0
+    size_t: at 0U
     if: lmx_graph_statement(g, statement) = 0
         return: 1
     name := lmx_graph_declaration_place_name(g, statement)
     if: name = 0 || lmx_graph_name_address(g, value, name) != 0
         return: 1
-    if: lmx_graph_write_slot(g, root, root, index, value) != 0
+    if: lmx_graph_receiving_place(g, root, index, @ inner, @ at) != 0 || lmx_graph_write_slot(g, root, inner, at, value) != 0
         return: 1
     return: lmx_graph_space_put(root, name, value)
 end: lmx_graph_publish

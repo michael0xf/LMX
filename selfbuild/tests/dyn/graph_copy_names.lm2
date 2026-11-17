@@ -1,0 +1,64 @@
+# A copy of a Structure carries the names of the addresses it copies (the book, the names of the graph: "Graph copying transfers names for
+# copied addresses"). The head of a copied Frame is its name in the table address -> name; a copy that leaves it out turns the Frame into a group.
+# The Structure holds a nested named Structure, a receiver record and an int place; each copied field answers the name of its source.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: gcn_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+# The name of field index of owner: the field itself, and the record inside a receiver record (const), where the head stands.
+fn: gcn_head (@: g c.LmxGraph; @: owner c.Lmx; size_t: index) @: char
+    @: field void c.lmx_graph_get_in(g, owner, index)
+    return: c.lmx_graph_name_of(g, field)
+
+fn: gcn_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: source c.Lmx 0
+    @: copied c.Lmx 0
+    @: copied_value void 0
+    @: file c.FILE 0
+    int: opened 0
+    @: want char 0
+    @: got char 0
+    size_t: i 0U
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_copy_names_code.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 101
+    if: c.fputs("Source:\n    A:\n        int: n 1\n    end: A\n    const: (int: c 3)\n    int: m 2\nend: Source\n", file) < 0 || c.fclose(file) != 0
+        return: 102
+    status := c.lm_graph_build_file(g, "graph_copy_names_code.lm2", @ root)
+    c.remove("graph_copy_names_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 103
+    source := gcn_named(g, root, "Source")
+    if: source = 0 || c.lmx_graph_count(source) != 3U
+        return: 104
+    status := c.lmx_graph_copy_value(g, (cast: (@: void) source), @ copied_value)
+    copied := (cast: (@: c.Lmx) copied_value)
+    if: status != 0 || copied = 0 || copied = source || c.lmx_graph_count(copied) != 3U
+        return: 105
+    # Each field of the copy answers the name its source field answers; the sources answer A, const and m.
+    while: i < 3U
+        want := gcn_head(g, source, i)
+        got := gcn_head(g, copied, i)
+        if: want = 0
+            return: 106
+        if: got != want
+            return: 110 + (cast: (int) i)
+        i := i + 1U
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

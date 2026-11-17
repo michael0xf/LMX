@@ -40,14 +40,13 @@ fn: gp_call (@: g c.LmxGraph; @: root c.Lmx; @: name char; int: expected; int: c
 end: gp_call
 
 fn: gp_metadata_flag (@: g c.LmxGraph; @: owner c.Lmx; size_t: index) int
-    @: cell void c.lmx_graph_ref_cell_in(g\arena, owner, index)
-    @: metadata c.LmxSourceName 0
-    if: cell = 0
+    @: leaf void 0
+    int: flag 0
+    if: index >= c.lmx_graph_count(owner)
         return: -1
-    metadata := c.lmx_source_places(g\arena, cell)
-    if: metadata = 0
+    if: c.lmx_graph_receiving_view(g, c.lmx_graph_get_in(g, owner, index), @ leaf, @ flag) != 0
         return: 0
-    return: metadata\binding_private
+    return: flag
 end: gp_metadata_flag
 
 # Inspect the real receiving places after construction, including both
@@ -62,6 +61,7 @@ fn: gp_metadata_check (@: g c.LmxGraph; @: root c.Lmx) int
     @: public_source c.Lmx gp_named(g, root, "MetadataPublic")
     @: target c.Lmx gp_named(g, root, "MetadataTarget")
     @: copied c.Lmx 0
+    @: copied_value void 0
     @: merged void 0
     @: left void 0
     @: right void 0
@@ -77,15 +77,16 @@ fn: gp_metadata_check (@: g c.LmxGraph; @: root c.Lmx) int
     # attached to its copied slot 1, rather than the source's ordinal 0.
     if: c.lmx_graph_count(offset) != 2U || gp_metadata_flag(g, offset, 0U) != 0 || gp_metadata_flag(g, offset, 1U) != 1 || gp_number(g, offset, "a") != 1 || gp_number(g, offset, "x") != 2
         return: 133
-    left := c.lmx_graph_target(g, c.lmx_graph_get_in(g, shared, 0U))
-    right := c.lmx_graph_target(g, c.lmx_graph_get_in(g, shared, 1U))
+    left := c.lmx_graph_target(g, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, shared, 0U)))
+    right := c.lmx_graph_target(g, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, shared, 1U)))
     if: left != target || right != target || gp_metadata_flag(g, shared, 0U) != 1 || gp_metadata_flag(g, shared, 1U) != 0
         return: 134
-    status := c.lmx_graph_copy_owned(shared, g\arena, g\arena, @ copied)
+    status := c.lmx_graph_copy_value(g, (cast: (@: void) shared), @ copied_value)
+    copied := (cast: (@: c.Lmx) copied_value)
     if: status != 0 || copied = 0 || copied = shared || gp_metadata_flag(g, copied, 0U) != 1 || gp_metadata_flag(g, copied, 1U) != 0
         return: 135
-    left := c.lmx_graph_target(g, c.lmx_graph_get_in(g, copied, 0U))
-    right := c.lmx_graph_target(g, c.lmx_graph_get_in(g, copied, 1U))
+    left := c.lmx_graph_target(g, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, copied, 0U)))
+    right := c.lmx_graph_target(g, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, copied, 1U)))
     if: left = 0 || left = target || left != right
         return: 136
     # Merge takes the attribute from the canonical receiving provider;

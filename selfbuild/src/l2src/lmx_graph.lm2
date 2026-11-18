@@ -42,6 +42,8 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<string.h>"
 include: "<stdio.h>"
+include: "<limits.h>"
+include: "<float.h>"
 
 # ---- The process state: the interned spellings and the graph records ---------------------------------------------
 
@@ -983,6 +985,345 @@ fn: lmx_graph_scalar_binding (@: word char; @@: description void) const: @: c.Lm
         ---
         i := i + 1U
     return: (cast: (const: @: c.LmxScalarABI) 0)
+
+# ---- Typed numbers (G2.1; the grammar :77 «Формы целых и вещественных литералов следуют ANSI C/C99»; M15 value record) --
+
+# The catalog row whose ABI record is abi -- every row has its own record (lmx_primitive_profile_scalar) --, or the
+# row count.
+fn: lmx_graph_scalar_row (const: (@: abi c.LmxScalarABI)) size_t
+    size_t: i 0U
+    while: abi != 0 && i < c.lmx_primitive_profile_count
+        if: c.lmx_primitive_profile_scalar(i) = abi
+            return: i
+        i := i + 1U
+    return: c.lmx_primitive_profile_count
+
+# The literal kind of a catalog row: 2 unsigned, 3 long, 4 ulong, 5 llong, 6 ullong, 7 float, 8 double, 9 flong -- the
+# C99 types a number constant other than an int has --, 0 for any other row.  By the row's name, read from the catalog.
+fn: lmx_graph_number_kind (size_t: row) int
+    const: (@: names char c.lmx_primitive_profile_names)
+    size_t: at 0U
+    size_t: i 0U
+    if: row >= c.lmx_primitive_profile_count
+        return: 0
+    while: i < row
+        at := at + c.strlen(names + at) + 1U
+        i := i + 1U
+    if: c.strcmp(names + at, "unsigned") = 0
+        return: 2
+    if: c.strcmp(names + at, "long") = 0
+        return: 3
+    if: c.strcmp(names + at, "ulong") = 0
+        return: 4
+    if: c.strcmp(names + at, "llong") = 0
+        return: 5
+    if: c.strcmp(names + at, "ullong") = 0
+        return: 6
+    if: c.strcmp(names + at, "float") = 0
+        return: 7
+    if: c.strcmp(names + at, "double") = 0
+        return: 8
+    if: c.strcmp(names + at, "flong") = 0
+        return: 9
+    return: 0
+
+# A value cell of the catalog's row for the type word (§3.2; the value record of M15): a cell of a LMX_TYPE_FOREIGN pool
+# with that row's scalar ABI, holding the abi\size bytes at bytes, its source the row's description -- the cell
+# lmx_graph_scalar_pool proves and the interpreter reads.  The cell, or 0 for a word the catalog has no row of, or
+# without memory.
+fn: lmx_graph_scalar_cell (@: g c.LmxGraph; const: (@: type char); @: bytes void) @: void
+    @: source void 0
+    const: (@: abi c.LmxScalarABI 0)
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    if: g = 0 || type = 0 || bytes = 0
+        return: 0
+    abi := lmx_graph_scalar_binding(lmx_graph_intern(type, c.strlen(type)), @ source)
+    if: abi = 0
+        return: 0
+    c.lmx_walk_value_clear(@ context)
+    c.lmx_walk_value_clear(@ value)
+    context\source_type := source
+    if: c.lmx_walk_value_foreign_capture(g\arena, bytes, c.LMX_TYPE_FOREIGN, abi, 0, @ context, @ value) != c.LMX_WALK_OK
+        return: 0
+    return: value\ref
+
+# Is the byte b a digit of base (8, 10 or 16)?  Its value, or -1.
+fn: lmx_graph_number_digit (int: b; int: base) int
+    int: d 0 - 1
+    if: b >= 48 && b <= 57
+        d := b - 48
+    if: b >= 97 && b <= 102
+        d := b - 87
+    if: b >= 65 && b <= 70
+        d := b - 55
+    if: d >= base
+        return: 0 - 1
+    return: d
+
+# A C99 number spelling (the grammar :77): an integer constant -- decimal, octal `0...`, hex `0x...`, with a suffix of
+# u/U and l/L or ll/LL in either order -- or a floating constant (digits with `.` and/or an exponent e/E, a hex
+# mantissa with p/P; one suffix f/F or l/L), after one leading minus as the builder's int literal takes it.  Its C99
+# type: unsuffixed decimal int, long, llong; unsuffixed octal/hex int, unsigned, long, ulong, llong, ullong; U unsigned,
+# ulong, ullong; L long, llong (decimal) or long, ulong, llong, ullong; UL ulong, ullong; LL llong (decimal) or llong,
+# ullong; ULL ullong -- the first that holds the magnitude; floating double, F float, L flong.  The minus negates the
+# value in that type.  The one reader of number spellings: the builder (l2_graph_build) and the image of an emitted
+# program (l2_graph_tool) call it, so what lmx_graph_scalar_text writes reads back to the same type and value.
+# 0 when the bytes are no such spelling; 1 and the value in as_int when its type is int; 2 and the value cell
+# (lmx_graph_scalar_cell) in out; 3 without memory, or for a constant no type of its list holds.
+fn: lmx_graph_number (@: g c.LmxGraph; const: (@: bytes char); size_t: n; @@: out void; @: as_int int) int
+    @: buf char 0
+    @: rest char 0
+    @: cell void 0
+    size_t: i 0U
+    size_t: body 0U
+    size_t: stop 0U
+    int: neg 0
+    int: base 10
+    int: dots 0
+    int: exponent 0
+    int: digits 0
+    int: d 0
+    int: u 0
+    int: l 0
+    int: fs 0
+    int: kind 0
+    ullong: v (cast: (ullong) 0)
+    unsigned: uv 0U
+    long: lv (cast: (long) 0)
+    ulong: ulv (cast: (ulong) 0)
+    llong: llv (cast: (llong) 0)
+    float: fv (cast: (float) 0)
+    double: dv (cast: (double) 0)
+    flong: ev (cast: (flong) 0)
+    if: g = 0 || bytes = 0 || out = 0 || as_int = 0 || n = 0U
+        return: 0
+    out[0] := 0
+    if: bytes[0] = 45
+        neg := 1
+        i := 1U
+    body := i
+    if: i + 1U < n && bytes[i] = 48 && (bytes[i + 1U] = 120 || bytes[i + 1U] = 88)
+        base := 16
+        i := i + 2U
+    while: i < n && (lmx_graph_number_digit((cast: (int) bytes[i]), base) >= 0 || bytes[i] = 46)
+        dots := dots + (cast: (int) (bytes[i] = 46))
+        digits := digits + (cast: (int) (bytes[i] != 46))
+        i := i + 1U
+    if: digits = 0 || dots > 1
+        return: 0
+    if: i < n && ((base = 10 && (bytes[i] = 101 || bytes[i] = 69)) || (base = 16 && (bytes[i] = 112 || bytes[i] = 80)))
+        exponent := 1
+        i := i + 1U
+        if: i < n && (bytes[i] = 43 || bytes[i] = 45)
+            i := i + 1U
+        if: i >= n || bytes[i] < 48 || bytes[i] > 57
+            return: 0
+        while: i < n && bytes[i] >= 48 && bytes[i] <= 57
+            i := i + 1U
+    ---
+    if: base = 16 && dots != 0 && exponent = 0
+        return: 0
+    stop := i
+    if: dots != 0 || exponent != 0
+        if: i < n && (bytes[i] = 102 || bytes[i] = 70)
+            fs := 1
+            i := i + 1U
+        if: fs = 0 && i < n && (bytes[i] = 108 || bytes[i] = 76)
+            l := 1
+            i := i + 1U
+    ---
+    while: dots = 0 && exponent = 0 && i < n
+        if: (bytes[i] = 117 || bytes[i] = 85) && u = 0
+            u := 1
+            i := i + 1U
+            continue
+        if: (bytes[i] = 108 || bytes[i] = 76) && l = 0
+            l := 1
+            if: i + 1U < n && bytes[i + 1U] = bytes[i]
+                l := 2
+                i := i + 1U
+            i := i + 1U
+            continue
+        return: 0
+    if: i != n
+        return: 0
+    # A decimal int the builder's int literal takes never reaches here with base 10, no suffix and a fitting value; an
+    # octal spelling is a decimal-looking one with a leading 0 and more digits.
+    if: dots = 0 && exponent = 0 && base = 10 && stop - body > 1U && bytes[body] = 48
+        base := 8
+    if: dots = 0 && exponent = 0
+        i := body
+        if: base = 16
+            i := body + 2U
+        while: i < stop
+            d := lmx_graph_number_digit((cast: (int) bytes[i]), base)
+            if: d < 0 || v > ((cast: (ullong) c.ULLONG_MAX) - (cast: (ullong) d)) / (cast: (ullong) base)
+                return: 3
+            v := v * (cast: (ullong) base) + (cast: (ullong) d)
+            i := i + 1U
+        if: u = 0 && l = 0 && v <= (cast: (ullong) c.INT_MAX)
+            as_int[0] := (cast: (int) v)
+            if: neg != 0
+                as_int[0] := 0 - as_int[0]
+            return: 1
+        if: u = 0 && l = 0 && base != 10 && v <= (cast: (ullong) c.UINT_MAX)
+            kind := 2
+        if: kind = 0 && u != 0 && l = 0 && v <= (cast: (ullong) c.UINT_MAX)
+            kind := 2
+        if: kind = 0 && u = 0 && l <= 1 && v <= (cast: (ullong) c.LONG_MAX)
+            kind := 3
+        if: kind = 0 && (u != 0 || base != 10) && l <= 1 && v <= (cast: (ullong) c.ULONG_MAX)
+            kind := 4
+        if: kind = 0 && u = 0 && v <= (cast: (ullong) c.LLONG_MAX)
+            kind := 5
+        if: kind = 0 && (u != 0 || base != 10)
+            kind := 6
+        if: kind = 0
+            return: 3
+        if: kind = 2
+            uv := (cast: (unsigned) v)
+            if: neg != 0
+                uv := 0U - uv
+            cell := lmx_graph_scalar_cell(g, "unsigned", (cast: (@: void) (@ uv)))
+        if: kind = 3
+            lv := (cast: (long) v)
+            if: neg != 0
+                lv := (cast: (long) 0) - lv
+            cell := lmx_graph_scalar_cell(g, "long", (cast: (@: void) (@ lv)))
+        if: kind = 4
+            ulv := (cast: (ulong) v)
+            if: neg != 0
+                ulv := (cast: (ulong) 0) - ulv
+            cell := lmx_graph_scalar_cell(g, "ulong", (cast: (@: void) (@ ulv)))
+        if: kind = 5
+            llv := (cast: (llong) v)
+            if: neg != 0
+                llv := (cast: (llong) 0) - llv
+            cell := lmx_graph_scalar_cell(g, "llong", (cast: (@: void) (@ llv)))
+        if: kind = 6
+            if: neg != 0
+                v := (cast: (ullong) 0) - v
+            cell := lmx_graph_scalar_cell(g, "ullong", (cast: (@: void) (@ v)))
+        if: cell = 0
+            return: 3
+        out[0] := cell
+        return: 2
+    buf := (cast: (@: char) c.calloc(stop - body + 1U, 1U))
+    if: buf = 0
+        return: 3
+    c.memcpy((cast: (@: void) buf), (cast: (const: @: void) (bytes + body)), stop - body)
+    if: fs != 0
+        fv := c.strtof(buf, @ rest)
+        if: neg != 0
+            fv := (cast: (float) 0) - fv
+        if: rest = buf + (stop - body) && fv <= (cast: (float) c.FLT_MAX) && fv >= (cast: (float) 0) - (cast: (float) c.FLT_MAX)
+            cell := lmx_graph_scalar_cell(g, "float", (cast: (@: void) (@ fv)))
+        ---
+    if: fs = 0 && l != 0
+        ev := c.strtold(buf, @ rest)
+        if: neg != 0
+            ev := (cast: (flong) 0) - ev
+        if: rest = buf + (stop - body) && ev <= (cast: (flong) c.LDBL_MAX) && ev >= (cast: (flong) 0) - (cast: (flong) c.LDBL_MAX)
+            cell := lmx_graph_scalar_cell(g, "flong", (cast: (@: void) (@ ev)))
+        ---
+    if: fs = 0 && l = 0
+        dv := c.strtod(buf, @ rest)
+        if: neg != 0
+            dv := (cast: (double) 0) - dv
+        if: rest = buf + (stop - body) && dv <= (cast: (double) c.DBL_MAX) && dv >= (cast: (double) 0) - (cast: (double) c.DBL_MAX)
+            cell := lmx_graph_scalar_cell(g, "double", (cast: (@: void) (@ dv)))
+        ---
+    c.free((cast: (@: void) buf))
+    if: cell = 0
+        return: 3
+    out[0] := cell
+    return: 2
+
+# The text of a value cell of a literal row (lmx_graph_number_kind) in the canonical C99 form lmx_graph_number reads
+# back to the same type and value (the author: «Примитив мы можем точно восстановить только по самому значению»):
+# unsigned NU, long NL, ulong NUL, llong NLL, ullong NULL; double the shortest %.*g that strtod reads back to the same
+# value, with `.0` when the text has no `.`, `e`, `n` or `i`; float the same with strtof and an f; flong with strtold and
+# an L.  0 and the NUL-ended text in out (cap bytes); 1 for a cell that is no value cell of these rows, or no room.
+fn: lmx_graph_scalar_text (@: g c.LmxGraph; @: cell void; @: out char; size_t: cap) int
+    @: context c.LmxWalkValue 0
+    @: rest char 0
+    const: (@: abi c.LmxScalarABI 0)
+    size_t: i 0U
+    int: kind 0
+    int: digits 1
+    int: written 0 - 1
+    unsigned: uv 0U
+    long: lv (cast: (long) 0)
+    ulong: ulv (cast: (ulong) 0)
+    llong: llv (cast: (llong) 0)
+    ullong: v (cast: (ullong) 0)
+    float: fv (cast: (float) 0)
+    double: dv (cast: (double) 0)
+    flong: ev (cast: (flong) 0)
+    float: fcheck (cast: (float) 0)
+    double: dcheck (cast: (double) 0)
+    flong: echeck (cast: (flong) 0)
+    if: g = 0 || cell = 0 || out = 0 || cap < 8U
+        return: 1
+    context := c.lmx_value_cell_context(g\arena, cell)
+    if: context = 0 || context\present = 0 || context\ref != cell || context\scalar_abi = 0
+        return: 1
+    abi := (cast: (const: @: c.LmxScalarABI) context\scalar_abi)
+    kind := lmx_graph_number_kind(lmx_graph_scalar_row(abi))
+    if: kind = 2
+        c.memcpy((cast: (@: void) (@ uv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%uU", uv)
+    if: kind = 3
+        c.memcpy((cast: (@: void) (@ lv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%ldL", lv)
+    if: kind = 4
+        c.memcpy((cast: (@: void) (@ ulv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%luUL", ulv)
+    if: kind = 5
+        c.memcpy((cast: (@: void) (@ llv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%lldLL", llv)
+    if: kind = 6
+        c.memcpy((cast: (@: void) (@ v)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%lluULL", v)
+    if: kind = 7
+        c.memcpy((cast: (@: void) (@ fv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%.*g", digits, (cast: (double) fv))
+        fcheck := c.strtof(out, @ rest)
+        while: digits < 9 && fcheck != fv
+            digits := digits + 1
+            written := c.snprintf(out, cap, "%.*g", digits, (cast: (double) fv))
+            fcheck := c.strtof(out, @ rest)
+    ---
+    if: kind = 8
+        c.memcpy((cast: (@: void) (@ dv)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%.*g", digits, dv)
+        dcheck := c.strtod(out, @ rest)
+        while: digits < 17 && dcheck != dv
+            digits := digits + 1
+            written := c.snprintf(out, cap, "%.*g", digits, dv)
+            dcheck := c.strtod(out, @ rest)
+    ---
+    if: kind = 9
+        c.memcpy((cast: (@: void) (@ ev)), (cast: (const: @: void) cell), abi\size)
+        written := c.snprintf(out, cap, "%.*Lg", digits, ev)
+        echeck := c.strtold(out, @ rest)
+        while: digits < 21 && echeck != ev
+            digits := digits + 1
+            written := c.snprintf(out, cap, "%.*Lg", digits, ev)
+            echeck := c.strtold(out, @ rest)
+    ---
+    if: written < 0 || (cast: (size_t) written) + 3U >= cap
+        return: 1
+    while: out[i] != 0 && out[i] != 46 && out[i] != 101 && out[i] != 110 && out[i] != 105
+        i := i + 1U
+    if: kind >= 7 && out[i] = 0
+        c.strcat(out, ".0")
+    if: kind = 7
+        c.strcat(out, "f")
+    if: kind = 9
+        c.strcat(out, "L")
+    return: 0
 
 # Counted descriptions share the existing immutable TEXT interner. Prove an
 # exact stored start and length before reading a retained description.
@@ -2159,6 +2500,17 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path 
             c.fprintf(f, "(@ %s %s)", name, text)
         ---
         return: 0
+    # A typed number (G2.1): a value cell of a literal row, written back as its canonical C99 spelling
+    # (lmx_graph_scalar_text) -- reading that text again gives the same type and value.
+    if: kind = 0
+        text := (cast: (@: char) c.calloc(64U, 1U))
+        status := 1
+        if: text != 0
+            status := lmx_graph_scalar_text(g, value, text, 64U)
+        if: status = 0
+            c.fputs(text, f)
+        c.free((cast: (@: void) text))
+        return: status
     if: kind != 4
         return: 1
     if: lmx_graph_dump_on_path(path, value) != 0

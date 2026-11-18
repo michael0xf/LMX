@@ -75,6 +75,8 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
     @: pointer_type char 0
     c.LmxGraphEmitScratch: name_storage
     @: local char (cast: (@: char) name_storage\failure)
+    @: spelled char (cast: (@: char) name_storage\returned)
+    int: scalar 0
     size_t: id (cast: (size_t) c.lmx_copy_map_get(map, value))
     size_t: target 0U
     size_t: n 0U
@@ -102,6 +104,13 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
         c.fprintf(f, "        l2_gv%zu: lmx_graph_word(l2_g, ", id)
         lm_graph_emit_quoted(f, text)
         c.fprintf(f, ", %zuU)\n", (cast: (size_t) c.strlen(text)))
+    # G2.1: a typed number (a value cell of a literal row) is made again from its canonical spelling by the one reader
+    # of number spellings, lmx_graph_number -- the same type and value.
+    if: kind = 0 && c.lmx_graph_scalar_text(g, value, spelled, 64U) = 0
+        c.fprintf(f, "        int: l2_gi%zu 0\n        if: lmx_graph_number(l2_g, ", id)
+        lm_graph_emit_quoted(f, spelled)
+        c.fprintf(f, ", %zuU, @ l2_gv%zu, @ l2_gi%zu) != 2\n            return: 1\n", (cast: (size_t) c.strlen(spelled)), id, id)
+        scalar := 1
     if: kind = 4
         inner := (cast: (@: c.Lmx) value)
         n := c.lmx_graph_count(inner)
@@ -125,7 +134,7 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
     if: pointer_type != 0
         c.fprintf(f, "        l2_gv%zu: lmx_arena_pointer_cells_profiled(arena, %s, 0, sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, 1U)\n", id, pointer_type)
     else:
-        if: kind != 1 && kind != 2 && kind != 4
+        if: kind != 1 && kind != 2 && kind != 4 && scalar = 0
             return: 1
     ---
     c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)

@@ -119,6 +119,9 @@ fn: lm_graph_int_literal (@: text c.LmP0Text; @: out int) int
     while: i < text\length
         if: text\data[i] < 48 || text\data[i] > 57
             return: 0
+        # G2.1: an int constant holds no more than INT_MAX; a longer decimal is a long or long long (lmx_graph_number).
+        if: v > (c.INT_MAX - ((cast: (int) text\data[i]) - 48)) / 10
+            return: 0
         v := v * 10 + ((cast: (int) text\data[i]) - 48)
         i := i + 1U
     ---
@@ -871,7 +874,16 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; int
         if: lm_graph_int_literal(text, @ number) != 0
             value := c.lmx_graph_int(g, number)
         else:
-            value := c.lmx_graph_word_of(g, lm_graph_p0_name_word(text))
+            # G2.1: any other C99 number spelling -- decided on the raw text, so `1U` is a number and `` `1U` `` a name --
+            # is the int primitive when its type is int, else the value cell of its type's catalog row
+            # (lmx_graph_number); a constant no type of its list holds is refused where it stands.
+            status := c.lmx_graph_number(g, lm_graph_p0_data(text), lm_graph_p0_length(text), @ value, @ number)
+            if: status = 1
+                value := c.lmx_graph_int(g, number)
+            if: status = 3
+                return: 2
+            if: status = 0
+                value := c.lmx_graph_word_of(g, lm_graph_p0_name_word(text))
         ---
         if: value = 0
             return: 1

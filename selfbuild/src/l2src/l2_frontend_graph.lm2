@@ -822,6 +822,18 @@ fn: lm_compiler_graph_callee (@: g c.LmxGraph; @: root c.Lmx; @: value void) int
     return: 2
 end: lm_compiler_graph_callee
 
+# A typed number of the graph (G2.1: a value cell of a literal row) written as its canonical C99 spelling
+# (lmx_graph_scalar_text), which C reads as the same constant.  0 written; 1 for a value that is no typed number.
+fn: lm_compiler_graph_number_out (@: g c.LmxGraph; @: f c.FILE; @: value void) int
+    @: spelled char (cast: (@: char) c.calloc(64U, 1U))
+    int: status 1
+    if: spelled != 0
+        status := c.lmx_graph_scalar_text(g, value, spelled, 64U)
+    if: status = 0
+        c.fputs(spelled, f)
+    c.free((cast: (@: void) spelled))
+    return: status
+
 # The L1 of an expression of a machine function, read from the graph (§3.3) of function mi with formals args and own
 # places names[0..n) (the first numbered k0): a formal or a place by its C name -- resolved here, by the address of its
 # spelling --, a door name `c.X` and a number written with a suffix (a word such as `0U`) as written, an int primitive
@@ -868,6 +880,9 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
             c.fputs(text, f)
             return: 0
         return: lm_compiler_graph_refuse_word(src, fname, at, text, "is no formal or place of the machine function, no door name c.X, no number and no string: a machine function has no unit")
+    # G2.1: a typed number (a value cell of a literal row) as its canonical C99 spelling, the same constant in C.
+    if: kind = 0 && lm_compiler_graph_number_out(g, f, value) = 0
+        return: 0
     if: kind != 4
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates names, numbers, operations, paths, casts and calls: no other expression yet")
     expression := (cast: (@: c.Lmx) value)

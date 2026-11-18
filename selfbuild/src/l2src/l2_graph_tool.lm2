@@ -490,6 +490,11 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             if: c.lmx_graph_kind(g, c.lmx_graph_get_in(g, expression, 1U)) = 2
                 value := temps[0]
                 temps[0] := temps[0] + 1
+                c.fputs("        if: lmx_graph_input_take(l2_g, ", f)
+                status := lm_graph_emit_word(g, f, scope, expression, 1U)
+                if: status != 0
+                    return: status
+                c.fprintf(f, ") != 0\n            %s\n", leave_failure)
                 c.fprintf(f, "        @: void l2_v%d lmx_graph_resolve(l2_g, lmx_call_code, ", value)
                 status := lm_graph_emit_word(g, f, scope, expression, 1U)
                 c.fputs(")\n", f)
@@ -1193,6 +1198,87 @@ fn: lm_graph_emit_scope (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     return: 0
 end: lm_graph_emit_scope
 
+# One declaration of a body, the field index of holder, as the interpreter reaches it (lmx_graph_block_declaration): the place is selected, checked, and
+# written with what stands in the slot when the line runs. declared_holder, when not 0, is the body that holds the record of modifiers the place was declared
+# by, declared_index its field: the row keeps that record (lmx_graph_place_declared), so that const and private are read from it.
+fn: lm_graph_emit_declaration (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: holder c.Lmx; size_t: index; @: declared_holder c.Lmx; size_t: declared_index; int: mode; @: temps int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    @: raw void c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, holder, index))
+    @: name char 0
+    int: kind c.lmx_graph_kind(g, raw)
+    int: number 0
+    int: contract 0
+    int: result 0
+    int: status 0
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: kind = 1 || kind = 3
+        name := c.lmx_graph_slot_name(g, holder, index)
+        if: name != 0 && mode = 0
+            number := temps[0]
+            temps[0] := temps[0] + 1
+            status := lm_graph_emit_site(g, f, code, holder, index, number, temps)
+            if: status != 0
+                return: status
+            c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
+            if: declared_holder != 0
+                c.fprintf(f, "        lmx_graph_place_declared(l2_g, lmx_call_code, l2_s%d, lmx_graph_get_in(l2_g, ", number)
+                status := lm_graph_emit_address(g, f, code, declared_holder)
+                if: status != 0
+                    return: status
+                c.fprintf(f, ", %zuU))\n", declared_index)
+            c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
+            if: kind = 1
+                c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_binding_leaf(l2_g, lmx_graph_get_in(l2_g, ", number)
+                if: lm_graph_emit_address(g, f, code, holder) != 0
+                    return: 3
+                c.fprintf(f, ", %zuU)), @ l2_t%d) != 0\n            %s\n", index, number, leave_failure)
+                c.fprintf(f, "        if: lmx_graph_place_store_int(l2_g, lmx_call_code, l2_s%d, l2_t%d) != 0\n            %s\n", number, number, leave_failure)
+            ---
+            c.fprintf(f, "        l2_site_done%d:\n", number)
+        ---
+        if: name != 0 && mode = 2 && kind = 1
+            c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
+            lm_graph_emit_quoted_word(f, name)
+            c.fprintf(f, "), %d) != 0\n            %s\n", c.lmx_int_value_known(raw), leave_failure)
+        ---
+        return: status
+    if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+        name := c.lmx_graph_slot_name(g, holder, index)
+        if: name != 0
+            contract := kind
+            if: kind = 8 || kind = 9
+                contract := kind - 3
+            number := temps[0]
+            temps[0] := temps[0] + 1
+            if: mode = 0
+                status := lm_graph_emit_site(g, f, code, holder, index, number, temps)
+            else:
+                c.fprintf(f, "        int: l2_k%d 0\n        if: lmx_graph_known_place(l2_g, lmx_call_code, ", number)
+                lm_graph_emit_quoted_word(f, name)
+                c.fprintf(f, ", %d, @ l2_k%d) != 0\n            %s\n", mode, number, leave_failure)
+            if: status != 0
+                return: status
+            c.fprintf(f, "        if: l2_k%d != %d\n            %s\n", number, contract, leave_failure)
+            if: mode = 0
+                c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
+            if: kind = 5 || kind = 6
+                status := lm_graph_emit_operand(g, f, code, holder, index, temps, 0, 0, 0U, @ result)
+                if: status != 0
+                    return: status
+                if: mode = 0
+                    c.fprintf(f, "        if: lmx_graph_place_store_reference(l2_g, lmx_call_code, l2_s%d, l2_v%d) != 0\n            %s\n", number, result, leave_failure)
+                else:
+                    c.fputs("        if: lmx_graph_store_reference(l2_g, lmx_call_code, ", f)
+                    lm_graph_emit_quoted_word(f, name)
+                    c.fprintf(f, ", %d, l2_v%d) != 0\n            %s\n", mode, result, leave_failure)
+            ---
+            if: mode = 0
+                c.fprintf(f, "        l2_site_done%d:\n", number)
+        ---
+        return: status
+    return: 0
+
 fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; int: exit_label; int: again_label; int: step_label; @: temps int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -1205,6 +1291,9 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     size_t: n 0U
     size_t: code_from 0U
     size_t: code_to 0U
+    size_t: marked 0U
+    size_t: member 0U
+    size_t: member_at 0U
     @: leave_return char (cast: (@: char) leave_storage\returned)
     lm_graph_emit_leave_text(leave_return, temps[2], 0)
     int: result 0
@@ -1227,71 +1316,28 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             status := lm_graph_emit_scope(g, f, code, body, 0, temps)
         if: status != 0
             return: status
+        # A reached record of the modifiers executes the declarations given to them as arguments, each as a reached declaration of this body
+        # (the author 2026-11-18, #marking-receivers-execute), as the interpreter does (lmx_graph_block_marked).
+        marked := c.lmx_graph_marked_count(g, body, i)
+        if: marked != 0U
+            member := 0U
+            while: member < marked && status = 0
+                status := c.lmx_graph_declared_at(g, body, i, member, @ nested, @ member_at)
+                if: status = 0
+                    status := lm_graph_emit_declaration(g, f, code, nested, member_at, body, i, mode, temps)
+                member := member + 1U
+            i := i + 1U
+            continue
         raw := c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, body, i))
         kind := c.lmx_graph_kind(g, raw)
         # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
         # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
         # slot when the line runs -- read from the graph then, not the value the translation saw --, a place without a
         # value is checked; in an inline body of the root the root's place is written.
-        if: kind = 1 || kind = 3
-            name := c.lmx_graph_slot_name(g, body, i)
-            if: name != 0 && mode = 0
-                number := temps[0]
-                temps[0] := temps[0] + 1
-                status := lm_graph_emit_site(g, f, code, body, i, number, temps)
-                if: status != 0
-                    return: status
-                c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
-                c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
-                if: kind = 1
-                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_binding_leaf(l2_g, lmx_graph_get_in(l2_g, ", number)
-                    if: lm_graph_emit_address(g, f, code, body) != 0
-                        return: 3
-                    c.fprintf(f, ", %zuU)), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
-                    c.fprintf(f, "        if: lmx_graph_place_store_int(l2_g, lmx_call_code, l2_s%d, l2_t%d) != 0\n            %s\n", number, number, leave_failure)
-                ---
-                c.fprintf(f, "        l2_site_done%d:\n", number)
-            ---
-            if: name != 0 && mode = 2 && kind = 1
-                c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
-                lm_graph_emit_quoted_word(f, name)
-                c.fprintf(f, "), %d) != 0\n            %s\n", c.lmx_int_value_known(raw), leave_failure)
-            ---
-            i := i + 1U
-            continue
-        if: kind = 5 || kind = 6 || kind = 8 || kind = 9
-            name := c.lmx_graph_slot_name(g, body, i)
-            if: name != 0
-                contract := kind
-                if: kind = 8 || kind = 9
-                    contract := kind - 3
-                number := temps[0]
-                temps[0] := temps[0] + 1
-                if: mode = 0
-                    status := lm_graph_emit_site(g, f, code, body, i, number, temps)
-                else:
-                    c.fprintf(f, "        int: l2_k%d 0\n        if: lmx_graph_known_place(l2_g, lmx_call_code, ", number)
-                    lm_graph_emit_quoted_word(f, name)
-                    c.fprintf(f, ", %d, @ l2_k%d) != 0\n            %s\n", mode, number, leave_failure)
-                if: status != 0
-                    return: status
-                c.fprintf(f, "        if: l2_k%d != %d\n            %s\n", number, contract, leave_failure)
-                if: mode = 0
-                    c.fprintf(f, "        if: l2_supplied%d != 0\n            goto: l2_site_done%d\n", number, number)
-                if: kind = 5 || kind = 6
-                    status := lm_graph_emit_operand(g, f, code, body, i, temps, 0, 0, 0U, @ result)
-                    if: status != 0
-                        return: status
-                    if: mode = 0
-                        c.fprintf(f, "        if: lmx_graph_place_store_reference(l2_g, lmx_call_code, l2_s%d, l2_v%d) != 0\n            %s\n", number, result, leave_failure)
-                    else:
-                        c.fputs("        if: lmx_graph_store_reference(l2_g, lmx_call_code, ", f)
-                        lm_graph_emit_quoted_word(f, name)
-                        c.fprintf(f, ", %d, l2_v%d) != 0\n            %s\n", mode, result, leave_failure)
-                ---
-                if: mode = 0
-                    c.fprintf(f, "        l2_site_done%d:\n", number)
-            ---
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
+            status := lm_graph_emit_declaration(g, f, code, body, i, 0, 0U, mode, temps)
+            if: status != 0
+                return: status
             i := i + 1U
             continue
         if: kind = 4 && c.lmx_graph_fn_result(g, raw) != 0

@@ -1,0 +1,15 @@
+# A variable is visible from its line on (sequential visibility): the read of `later` stands above `int: later 7`, which is not reached yet, and
+# nothing outside gives the name -- the refusal 3 comes at the read, after the effect above it (seen 5, after 0).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
+sub: main ()
+    shared\Observed\seen := 5
+    int: a later
+    int: later 7
+    shared\Observed\after := a
+main()

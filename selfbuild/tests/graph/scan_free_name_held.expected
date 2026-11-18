@@ -1,0 +1,21 @@
+---
+    Observed:
+        int: r 10010
+    end: Observed
+---
+@: shared (data [] 0)
+int: x 99
+sub: poke ()
+    :=: (node \ x) 99
+end: poke
+fn: probe () int
+    int: first x
+    poke:
+    int: second x
+    return: ((first * 1000) + second)
+end: probe
+int: r (probe)
+sub: main ()
+    :=: ((shared \ Observed) \ r) r
+end: main
+main:

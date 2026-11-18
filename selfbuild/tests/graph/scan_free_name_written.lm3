@@ -1,0 +1,20 @@
+# A free name that is only WRITTEN is a local of the call too (the first use is the capture): w assigns x, answers 5, and the root's x stays 10 (bare
+# assignment changes only the value of the activation, node_write). Observed: r is the answer of w, rx the root's x after the call.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+        int: rx 0
+)
+@: shared data[0]
+int: x 10
+fn: w () int
+    x := 5
+    return: x
+int: r w()
+int: rx x
+
+sub: main ()
+    shared\Observed\r := r
+    shared\Observed\rx := rx
+main()

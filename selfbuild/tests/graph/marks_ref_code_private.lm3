@@ -1,0 +1,18 @@
+# Witness: a REFERENCE declaration given to private in the code of a method hides the name from a callee: peek reads \p and gets no p. The same without private: marks_ref_code_public (seen 7).
+# Norm: the hidden name answers the callee exactly as a name declared nowhere (the author 2026-11-18 #marking-receivers-execute; the book #private-binding). EXPECTED 3, as for
+# an undeclared name under \ (marks_ref_code_undeclared_read, run on the base: 3). The tool answers 4 -- RED BY DESIGN: a defect of the slice's tool (a hidden name is told
+# from an undeclared one), recorded in RESULT.txt, not repaired here.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+int: x 7
+fn: peek () int
+    return: \p
+sub: main () (
+    int: k 0
+)
+    private: @: p int @x
+    shared\Observed\seen := peek()
+main()

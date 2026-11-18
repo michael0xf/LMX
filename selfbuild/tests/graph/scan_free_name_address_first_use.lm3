@@ -1,0 +1,21 @@
+# `@x` as the FIRST use of a free name (the author 2026-11-18, answer Q3): the binding is chosen at that moment and the address is that of the place of the
+# activation -- the local copy. p points at it: after the local write `x := 7`, `\p` reads 7, while the root's x stays 10 (rx).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+        int: rx 0
+)
+@: shared data[0]
+int: x 10
+fn: w () int
+    @: p int @x
+    x := 7
+    return: \p
+int: r w()
+int: rx x
+
+sub: main ()
+    shared\Observed\r := r
+    shared\Observed\rx := rx
+main()

@@ -1,0 +1,15 @@
+# The declaration of a Structure is visible in both directions too: `length(Pt)` stands above the declaration of Pt in the data part of the same body.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
+sub: main () (
+    Pt: a b c
+)
+    shared\Observed\seen := 5
+    int: n length(Pt)
+    shared\Observed\after := n
+main()

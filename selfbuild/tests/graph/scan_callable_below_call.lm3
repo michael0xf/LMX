@@ -1,0 +1,16 @@
+# A callable is visible in both directions (the author 2026-11-18): the call stands above the line of `fn: later` of the same body and finds it.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
+sub: main ()
+    shared\Observed\seen := 5
+    int: a later()
+    shared\Observed\after := a
+    fn: later () int
+        return: 7
+    end: later
+main()

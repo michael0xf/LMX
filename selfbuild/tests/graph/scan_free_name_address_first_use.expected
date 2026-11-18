@@ -1,0 +1,20 @@
+---
+    Observed:
+        int: r 7
+        int: rx 10
+    end: Observed
+---
+@: shared (data [] 0)
+int: x 10
+fn: w () int
+    @: p int (@ x)
+    :=: x 7
+    return: (\ p)
+end: w
+int: r (w)
+int: rx x
+sub: main ()
+    :=: ((shared \ Observed) \ r) r
+    :=: ((shared \ Observed) \ rx) rx
+end: main
+main:

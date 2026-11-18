@@ -1,0 +1,14 @@
+# A name with no source is refused at its read, after the effects that stand before it: the refusal is 3 and the dump shows seen 5, after 0.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
+sub: main ()
+    int: t 0
+    shared\Observed\seen := 5
+    t := nosuch(1)
+    shared\Observed\after := 6
+main()

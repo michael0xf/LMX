@@ -1,0 +1,16 @@
+# The author 2026-11-18 (journal section 19): the interpreter does not scan the body of a call at its entry. A free name is resolved at its first
+# read, so a name with no source in a branch that is not taken refuses nothing: seen is 5 and after is 6.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+        int: after 0
+)
+@: shared data[0]
+sub: main ()
+    int: t 0
+    shared\Observed\seen := 5
+    if: t = 1
+        t := nosuch(1)
+    shared\Observed\after := 6
+main()

@@ -1,0 +1,22 @@
+# probe reads x (10), calls poke, which writes the root's x through node, and reads x again: probe answers 10 * 1000 + 10 (the source of x is a row of the
+# caller's frame; node\x writes the cell of the graph, not that row). An ordinary row by the norm (the author 2026-11-18: a free name is resolved at its first read
+# and held): it does NOT witness the hold -- it passes without any take in the readers; the hold gets a witness with an executable lexical source.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+)
+@: shared data[0]
+int: x 10
+sub: poke ()
+    node\x := 99
+fn: probe () int
+    int: first x
+    poke()
+    int: second x
+    return: first * 1000 + second
+int: r probe()
+
+sub: main ()
+    shared\Observed\r := r
+main()

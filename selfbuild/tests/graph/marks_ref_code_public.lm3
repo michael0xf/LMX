@@ -1,0 +1,17 @@
+# Witness: a REFERENCE declaration given to a modifier in the code of a method: a callee reads the reference as a name of its caller (seen 7). The same with private: marks_ref_code_private / without: marks_ref_code_public.
+# Norm: the book #private-binding, #qualification; the author 2026-11-18 #marking-receivers-execute (the declaration branch of a reached record, kinds of references too).
+# Slice S2 (step B2): the native image keeps the record of modifiers for a reference declaration as for an int (lmx_graph_place_declared).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+int: x 7
+fn: peek () int
+    return: \p
+sub: main () (
+    int: k 0
+)
+    @: p int @x
+    shared\Observed\seen := peek()
+main()

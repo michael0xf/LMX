@@ -1,0 +1,23 @@
+# Witness: the declarations given to const, required, immutable and independent as their arguments in code -- two arguments
+# in the short, the compact and the block form, and one -- execute when the record is reached: a callable reads them as names
+# of its caller (seen 1234567).
+# Norm: the book #data-root-declaration-execution, #qualification; the author 2026-11-18 #marking-receivers-execute, #two-kinds-of-receivers.
+# Slice M1 (plan #one-graph-plan): the declarations of a field under its modifiers.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: peek () int
+    return: a * 1000000 + b * 100000 + c * 10000 + d * 1000 + e * 100 + f * 10 + g
+sub: main () (
+    int: k 0
+)
+    const: int: a 1; int: b 2
+    required(int: c 3; int: d 4)
+    immutable:
+        int: e 5
+        int: f 6
+    independent: int: g 7
+    shared\Observed\seen := peek()
+main()

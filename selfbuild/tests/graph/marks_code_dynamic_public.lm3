@@ -1,0 +1,18 @@
+# Witness: the declarations of marks_code_dynamic_private without private: a callable reads them as names of its caller
+# (seen 12).
+# Norm: the book #private-binding; the author 2026-11-18 #marking-receivers-execute.
+# Slice M1 (plan #one-graph-plan): the declarations of a field under its modifiers.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: peek () int
+    return: a * 10 + b
+sub: main () (
+    int: k 0
+)
+    int: a 1
+    int: b 2
+    shared\Observed\seen := peek()
+main()

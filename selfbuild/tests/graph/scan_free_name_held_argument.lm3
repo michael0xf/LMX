@@ -1,0 +1,23 @@
+# The same for a free name read as an ACTUAL: id(x) before and after poke (which writes the root's x through node) answers 10 both times: probe answers
+# 10 * 1000 + 10. An ordinary row by the norm; it does NOT witness the hold -- it passes without any take in the readers (the source is a row of the caller's frame).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: r 0
+)
+@: shared data[0]
+int: x 10
+fn: id (int: v) int
+    return: v
+sub: poke ()
+    node\x := 99
+fn: probe () int
+    int: first id(x)
+    poke()
+    int: second id(x)
+    return: first * 1000 + second
+int: r probe()
+
+sub: main ()
+    shared\Observed\r := r
+main()

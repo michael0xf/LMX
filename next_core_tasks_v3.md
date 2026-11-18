@@ -181,10 +181,11 @@ L2 при этом не другой язык и не другой граф ([ж
    и сегодня; свой аргумент `args` они интерпретируют в роли `code` (решение автора 2026-11-18,
    [журнал](LMX_blog/2026-11-18.md#call-fncall-arguments-as-data)). `length`, `typeof`, `parent`, `return` — аргументы
    как `code`; у атома роли вызова нет, имя Structure в аргументе — ссылка
-   ([журнал](LMX_blog/2026-11-18.md#atom-has-no-call-role)). Что из раскрытия следует для ресиверов, которым
-   по книге подают одну Structure (`parent(S)`, `sys\typeof(S)`, `sys\native(S)`, `sys\storage(S)`,
-   `return: S`), — **OPEN**, программы в
-   [вопросе](LMX_blog/q/current/one-structure-in-arguments-cases-20261118.md) (Р62).
+   ([журнал](LMX_blog/2026-11-18.md#atom-has-no-call-role)). `return` остаётся в роли `code`, противоречия нет
+   ([журнал](LMX_blog/2026-11-18.md#return-stays-code)). Проверка остальных ресиверов (Р63): противоречий нет у
+   объявляющих, управления, `length`, `merge` в коде и вызываемых; ресиверам `parent`, `typeof`, членам `sys\`,
+   `throw` и `send` нужна сама Structure — их группа **OPEN**, программы в
+   [вопросе](LMX_blog/q/current/one-structure-in-arguments-cases-20261118.md).
 5. Путь не проходит сквозь запись модификатора. В графе ресиверы не исполняются, запись `private:` лежит как
    записана, и путь к полю — `Lib\private\x`; шага `int` в пути нет, запись примитива восстанавливается
    по типу и значению (автор 2026-11-18,

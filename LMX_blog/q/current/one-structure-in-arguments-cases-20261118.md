@@ -55,31 +55,29 @@ MR((A))
 
 ## С2. Ресиверы, которым подают одну Structure
 
-`call` и `fncall` — решено автором 2026-11-18 ([журнал](../../2026-11-18.md#call-fncall-arguments-as-data)): они
-принимают аргументы как `data`, единственную Structure не раскрывают, а свой аргумент `args` интерпретируют в роли
-`code`. `call(P)` запускает саму `P`, `call(C2)` запускает `C2` целиком — как сегодня.
+Решено автором 2026-11-18. `call` и `fncall` принимают аргументы как `data`, единственную Structure не раскрывают, а
+свой аргумент `args` интерпретируют в роли `code` ([журнал](../../2026-11-18.md#call-fncall-arguments-as-data)).
+Аргументы `return` остаются в роли `code`: противоречия нет, `return: S` возвращает `S`
+([журнал](../../2026-11-18.md#return-stays-code)).
 
-Открыт тот же класс у остальных. В книге `parent`, `length`, `sys\native`, `sys\storage`, `sys\capacity` описаны
-словами «принимают одну Structure S»; так же пишутся `sys\typeof(S)`, `sys\toLmx(S)` и `return: S`. По слову автора
-`length`, `typeof`, `parent`, `return` принимают аргументы как `code`
-([журнал](../../2026-11-18.md#atom-has-no-call-role)).
+**OPEN** — ресиверы, которым нужна сама Structure. Проверка всех ресиверов —
+[ответы исполнителя](../fable-self-answers-20261110.md), Р63. Противоречий нет у объявляющих ресиверов, ресиверов
+управления, `return`, `length`, `merge` в коде и вызываемых. Противоречие есть у `parent`, `typeof`, `sys\native`,
+`sys\storage`, `sys\capacity`, `sys\descriptor`, `sys\toLmx`, `sys\check`, `sys\checkL3`, `sys\translate`,
+`sys\compile`, `throw`, `send`.
 
 ```lmx
 S: (int: x 5; int: y 6)
 
 parent(S)
-sys\typeof(S)
-return: S
+typeof(S)
+sys\toLmx(S)
 ```
 
-Последняя запись стоит в теле метода.
-
-- аргументы как `code`, единственная Structure раскрывается: `parent(S)` и `sys\typeof(S)` получают два аргумента,
-  5 и 6, вместо одной Structure; `return: S` получает поля `S`; саму Structure подают именованно;
-- аргументы как `data`, как у `call`: `parent(S)` отвечает родителем `S`, `sys\typeof(S)` — типом Structure,
-  `return: S` возвращает `S` — так сегодня.
-
-Для `length(S)` раскрытие ответа не меняет: число полей `S` в обоих прочтениях.
+- аргументы как `code`, единственная Structure раскрывается: каждый из трёх получает два аргумента, 5 и 6, вместо
+  одной Structure; саму Structure подают именованно;
+- аргументы как `data`, как у `call`: `parent(S)` отвечает родителем `S`, `typeof(S)` — типом Structure,
+  `sys\toLmx(S)` — текстом `S`. Так отвечает `typeof` сегодня, так записано в книге для остальных.
 
 ## С3. Модификатор и одна Structure
 
@@ -173,10 +171,9 @@ fn: f () int
 - С1 — решён. У вызываемого единственная Structure раскрывается всегда; целиком её подают `MR(value := A)`.
 - С5 — решён. Раскрытие происходит один раз.
 - С7 — решён. `merge` в `code` принимает аргументы как `code`, в блоке `data` и после двоеточия — как `data`.
-- С2 — `call` и `fncall` решены: аргументы как `data`
-  ([журнал](../../2026-11-18.md#call-fncall-arguments-as-data)). **OPEN** — остальные ресиверы, которым подают
-  одну Structure: `parent`, `sys\typeof`, `sys\native`, `sys\storage`, `return`
-  ([ответы исполнителя](../fable-self-answers-20261110.md), Р62).
+- С2 — `call` и `fncall` решены: аргументы как `data`; `return` решён: аргументы как `code`. **OPEN** —
+  ресиверы, которым нужна сама Structure: `parent`, `typeof`, члены `sys\`, `throw`, `send`
+  ([ответы исполнителя](../fable-self-answers-20261110.md), Р63).
 - С6 — решён ([журнал](../../2026-11-18.md#path-through-modifier-record)): в графе ресиверы не исполняются,
   путь к полю — `Lib\private\x`; у `Lib` поля `x` нет.
 - С8 — исполнитель спора не видит: первый аргумент объявляющего ресивера — имя.

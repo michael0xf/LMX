@@ -114,9 +114,11 @@ after the step «the series is the library» that changes the ABI of the library
   of the library `implements`, the comparison of two primitives, the reader member `convert`, the formal without a
   written model. It changes the ABI of the library and is accepted with a whole bootstrap. Until it, a call that
   the norm calls ambiguous because of such a formal selects the other declaration (the probe above).
-- The launch of a block of data whose fields are calls: `sub: main (C(foo(); bar()))` with `call(C)` calls nothing;
+- (Not a defect, see the correction at the end.)
+  The launch of a block of data whose fields are calls: `sub: main (C(foo(); bar()))` with `call(C)` calls nothing;
   at the root the same block answers 5 after the first call. A block of assignments declared the same way runs.
-- `fncall(int; Self)` answers 4 on the base and on the candidate; the opening of `fncall(F)` has no witness, and in
+- (The rows are pinned wrongly, see the correction at the end.)
+  `fncall(int; Self)` answers 4 on the base and on the candidate; the opening of `fncall(F)` has no witness, and in
   the native image only `call` asks the reading.
 - The native image hands a selected call to the interpreter's selection; it will prepare the call when the call
   tables exist.
@@ -138,3 +140,23 @@ the values of the arguments live for the time of one call.
 Receipts outside the repository: `build2/codex_fix250generationchain01/runs/fable-m10-call-forms-20261116-01`,
 directories `receipts/opus/one-graph/declaration-selection` (`RESULT.txt`, `slice-src.diff`, build records,
 mutants), `receipts/haiku/declaration-selection` and `fable` (`fa-d1-rows01.log`, `accept-d1`).
+
+## Correction, 2026-11-18, after the acceptance
+
+Five of the nine rows that are red on purpose were pinned by a reading of the executor that the norm does not give.
+There is no defect of the launch behind them.
+
+- `declsel_c09`, `declsel_c10`, `declsel_launch_calls` expect that `call(C)` for `C(foo(); bar())` calls `foo` and
+  `bar`. The author decided on 2026-11-11 that a Structure launched over itself has no rules of its own
+  (`LMX_blog/2026-11-11.md#self-launch-no-own-rules`), and that a record `f()` in data is an empty Structure `f`
+  (`#structure-head-call-refuses-in-code`). `call(C)` runs `C` over itself; the record `foo()` declares in the data
+  of `C` an empty Structure `foo`, the call of `foo` finds that Structure, and nothing outside is called. Fable's
+  probes on the accepted Graph tool: `call(C)` and `C()` for `C(foo())` leave the observed value 0; over separate
+  data, `call(D; C)` and `C(D)`, the same block calls `foo` and the value is 1. What these rows witness stays: the
+  attempt to open executes nothing.
+- `declsel_b10` and `declsel_b10direct` expect that `fncall(int; Self)` runs the body of the function. By the book
+  (`docs/LMX_semantics.ru.md#call-receivers`) a launch receiver executes the Structure it is given, not its body;
+  the body is launched by the forms with the parts, such as `fncall(Self\return; Self\code)`.
+
+The five rows are re-pinned by the norm with the next change of the tests. Four rows wait for the step «the series
+is the library», as written above.

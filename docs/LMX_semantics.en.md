@@ -777,7 +777,7 @@ Lexical lookup follows real Structure links to a zero parent and selects the sol
 
 Dynamic binding is when the callee sees the fields of the caller instead of the fields of its own `node`: it concerns that part of the hidden arguments which the caller supplies with its own fields because the callee expected them without listing them in its `data` and without taking them from `node`; lexical binding exists as well, so lexical fields cannot be hidden by anything, and reading a field out of a Structure by a path is no binding at all: everything is always visible there (the author's definition of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#dynamic-binding-definition)). Receiver `private:` excludes the marked field from the sources of dynamic binding for calls. This is a property of that particular field and its corresponding binding, not a ban on the name's spelling. Dynamic-input lookup skips that field; further selection follows the ordinary source order.
 
-The field remains directly visible from anywhere: explicit paths such as `S\field` and ordinary lexical lookup remain available. The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding. Neither is a code's reading of a field of its own launch data: in `call(D C)` with `D: private: int: x 5` the code `C` reads `x` as its own input place and gets 5, while what `C` calls does not get its free `x` from that field -- `private` forbids only dynamic binding (the author's clarification of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#private-only-dynamic)).
+The field remains directly visible from anywhere: an explicit path and ordinary lexical lookup remain available. Receivers are not executed in the graph, and the `private:` record lies there as it is written, so the path to the field goes through it: `S\private\field` (the author's clarification of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#path-through-modifier-record)). The receiver introduces no access boundary, does not change sequential visibility, and does not prohibit explicitly passing the value as an argument. Resolving the field through ordinary lexical lookup is not dynamic binding. Neither is a code's reading of a field of its own launch data: in `call(D C)` with `D: private: int: x 5` the code `C` reads `x` as its own input place and gets 5, while what `C` calls does not get its free `x` from that field -- `private` forbids only dynamic binding (the author's clarification of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#private-only-dynamic)).
 
 The rule is identical for ordinary calls, Structure launches and all `call`/`fncall` forms, in the interpreter and native execution. The existing common binding mechanism applies it when selecting a binding; it requires no separate name-denial tables, protected value type, or checks on every direct read.
 
@@ -798,7 +798,7 @@ Library:
     fn: read () int (return: x)
 ~~~
 
-Field Library\x holds 10. If Library\read() has no other eligible dynamic x, its free name x is found in its lexical parent Library, and the result is 10. Private does not prevent this: the field was selected lexically.
+The field holds 10; the path to it is Library\private\x: receivers are not executed in the graph, the `private:` record lies there as it is written, and the path has no `int` step -- the record of a primitive is recovered unambiguously from its type and value. Library itself has no field x in the graph. If Library\read() has no other eligible dynamic x, its free name x is found in its lexical parent Library, and the result is 10. Private does not prevent this: the field was selected lexically.
 
 In the code role:
 
@@ -809,18 +809,18 @@ fn: run () int
     return: Library\read()
 ~~~
 
-Bare x inside run is available after its declaration; assignment changes its local cell to 21. This value is excluded from the next call's dynamic sources, so, with no other dynamic x, Library\read() uses lexical Library\x and returns 10. Removing private only from the declaration inside run changes the result to 21: the ordinary dynamic source precedes the lexical source. Private on Library\x does not prohibit selecting a different, unmarked dynamic source.
+Bare x inside run is available after its declaration; assignment changes its local cell to 21. This value is excluded from the next call's dynamic sources, so, with no other dynamic x, Library\read() uses lexical x of Library and returns 10. Removing private only from the declaration inside run changes the result to 21: the ordinary dynamic source precedes the lexical source. Private on x in Library does not prohibit selecting a different, unmarked dynamic source.
 
 Direct access in code remains:
 
 ~~~lmx
-Library\x := 30
-int: observed Library\x
+Library\private\x := 30
+int: observed Library\private\x
 ~~~
 
-`observed` receives 30 regardless of same-named dynamic variables. A later run() returns 30 through lexical lookup under the same conditions. Private does not make the field const. The value may also be passed explicitly: f(Library\x) follows f's ordinary contract.
+`observed` receives 30 regardless of same-named dynamic variables. A later run() returns 30 through lexical lookup under the same conditions. Private does not make the field const. The value may also be passed explicitly: f(Library\private\x) follows f's ordinary contract.
 
-In run, bare x and source run\code\x remain distinct places under the [frame rule](#call-frame-20261115): after local x := 21, the source declaration still holds 20. Private introduces neither write-back nor a restriction on direct access.
+In run, bare x and source run\code\private\x remain distinct places under the [frame rule](#call-frame-20261115): after local x := 21, the source declaration still holds 20. Private introduces neither write-back nor a restriction on direct access.
 
 <a id="required-receiver"></a>
 ### Receiver required: checking that a field is initialized

@@ -386,10 +386,12 @@ fixtures and changing the reading is in [plan M9](../next_core_tasks_v3.md#m9) a
 
 The author's decision of 2026-11-18 on the two kinds of receivers
 ([semantics](LMX_semantics.en.md#two-kinds-of-receivers)) is not yet carried out by the implementation in
-three places. The call binder unwraps a sole Structure only after the positional form has failed: `MR(A)`
+four places. The call binder unwraps a sole Structure only after the positional form has failed: `MR(A)`
 with a Structure formal answers 7 instead of unwrapping `A`. Declaration receivers parse their own group:
 `int: (y 7)` is refused. Modifiers unwrap a Structure argument when it has exactly one field:
 `private: (int: x 10)` declares `x`, while by the rule the argument there is a Structure and is not unwrapped.
+A path passes through a modifier's record: with `Lib: private: int: x 10` the path `Lib\x` reads 10, while
+receivers are not executed in the graph and the field is read by the path `Lib\private\x`.
 The slices are in the [plan](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),

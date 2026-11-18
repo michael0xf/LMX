@@ -5,6 +5,14 @@
 автоматически после каждой правки; основания для них и реальные команды перечислены в инструкции.
 `bootstrap quick` всё равно пересобирает поколения и не является короткой компонентной проверкой.
 
+**Поля native в узле Lmx нет, уточнение автора 2026-11-18
+([журнал](../LMX_blog/2026-11-18.md#no-native-field-in-node)).** Из заголовка узла Lmx поле native удалено решением
+2026-11-15: узел — то же, что массив void-указателей, `parent/length/storage`; capacity лежит в таблице арены.
+Указатели на нативные функции лежат в дескрипторе в таблицах `call`. У `fn`, `sub`, `catch` — обыкновенное поле
+Lmx, ссылка на дескриптор, а не указатель на нативную функцию. Код пока держит указатель в заголовке узла. В
+исторических записях ниже слова «native=0», «native word», `callee.native`, `graph.native`, «сброс native»,
+«установка native» описывают эту прежнюю реализацию и помечены.
+
 ## 2026-11-18 — Fable: граф один; `send`, `return`, типизированные литералы, запись `L2` приняты; набор и очередь
 
 **Приказ автора 2026-11-17: граф один ([журнал](../LMX_blog/2026-11-17.md#one-graph),
@@ -673,7 +681,7 @@ unavailableedges/void/SOURCE-witness), execution_gc_roots (real PRIM pending arg
 callable_place_signature, sub_parts. Actual G2 frontend unchanged; no parallel producer, all terminal.
 Нужные следующие зависимости404 подтверждены: selected place_spec из модуля в existing CallPlaces,
 без live fallback при выбранном native; audit internal ordinal compiled bindings отдельно от явных
-live code/data paths. Common native lookup не должен наследовать регистрацию лишь из copied native field.
+live code/data paths. Common native lookup не должен наследовать регистрацию лишь из copied native field (прежняя реализация: указатель native в заголовке узла; по норме его нет).
 Canonical Source02 verified935/0; следующий шаг — final docs/code index
 и фиксация этого reader prerequisite, затем общий call binder и producer/calltable/selected pair.
 
@@ -930,7 +938,7 @@ Code-only index19 прошёл fresh G2 docs-index03:35/14/27/44/615, LF28297, e
 Index base выбирается существующим node_in/physical pointer decoder; actual cell — graph_cell_in,
 reader/writer — existing value_cell_access. Structure/Array<@> используют общий ValueOwned store с context0;
 numeric Array не переинтерпретируется как void*. Graph.kind глобально не расширялся.
-Graph.invalidate разделён на прежний collect и finish: allocation/scan до store, сброс native только
+Graph.invalidate разделён на прежний collect и finish: allocation/scan до store, сброс native (прежняя реализация) только
 после успешного exact store, без второго rebind prepare и нового ValueOwned API/registry.
 Добавлены private проверки в прежнем graph_fn_data_typed: FOREIGN epsilon/opaque/null, Array<@> и pointer-base,
 очистка старого context, immutable refusal сохраняет cell/native, mutable code write сбрасывает native,
@@ -2305,7 +2313,7 @@ Manifest: 50e3ae38295323d94174451797c40b789ef46c221cd25988a10dbd9d95c2c520.
 Далее commit/push, затем ссылки/merge M11.5в по шагу 3 to_sol, после них root/self шага 4.
 [Приёмка и границы](witnesses/m11-data-roles-20261113/notes.md).
 Корневые/self вызовы, ссылки @ в данных и вычисляемые fn/sub в данных ещё OPEN.
-Копия метода данных сохраняет native=0; native-переиспользование и обычный C-native — M14.
+Копия метода данных сохраняет native=0 (прежняя реализация: указатель native в заголовке узла; по норме его нет); native-переиспользование и обычный C-native — M14.
 
 ## 2026-11-13 — M11.5в: срез 367 принят, продолжать роли данных и кода
 
@@ -3945,7 +3953,7 @@ mutation11/11 и method-mutation8/8. [Точный результат](witnesses
 они видны с первой строки. Инициализаторы тела исполняются на своих местах. Динамические int-входы получают отдельные
 места текущей активации до исполнения var, читают ближайшие рабочие значения цепочки и не пишут обратно источнику.
 Вложенные методы не добавляют транзитивных требований вызывающему. Сбор методов транслятором — один обход готового
-графа, отдельный от построителя; его список адресов используется для генерации и установки native, затем удаляется.
+графа, отдельный от построителя; его список адресов используется для генерации и установки native (прежняя реализация), затем удаляется.
 30/30 исполнений и19 проверок изменения графа PASS. [Свидетельства](witnesses/body-inputs-20261108/notes.md).
 Текущий graph21/tool15/rt20 переносит явный call:code data для int-мест обычных Structure и fn в общий кадр: выбранные данные
 сопоставляются по адресам имён, dirty-поля публикуются в их физические слоты. Сокращение выбирает var, её отсутствие
@@ -4051,7 +4059,7 @@ walker; OPEN-статусы (NAMED-BINDING-BY-HEAD, ASSIGN-KNOWN-OPERATOR, MERGE
 нового поля).
 Более ранние назначения ниже — история.
 
-Поручение автора 2026-11-08 17:12Z (через Codex, CODEX-FABLE-AUTHOR-KERNEL-REBUILD-20261108T171209823Z-01; слова автора дословно — [журнал](../LMX_blog/2026-11-08.md)): прежнее направление — довести числовые коды идентификаторов (срезы 302, 308, план 309/310) — остановлено. Сначала отдельная спецификация реализации ядра в `docs/` ([RU](../docs/kernel-implementation.ru.md), [EN](../docs/kernel-implementation.en.md)) и согласованный с Codex план перехода, затем переделка единственным pipeline: Lmx-граф всех языковых сущностей (выражения, методы, Array) без параллельных скрытых структур; единственная не-структура — примитив (в передачах до 18:20Z — «атом»): типизированная ячейка арены, по адресу которой известны тип (участок арены), имя (namespace) и значение (сама ячейка) — уточнение автора 17:22Z, CODEX-FABLE-AUTHOR-ATOM-ADDRESS-20261108T172249908Z-01, никаких «вхождений»; имя примитива или структуры — из таблицы адрес → name, а «namespace» транслятора и интерпретатора — служебные таблицы обхода, устройство которых автор оставляет исполнителям (уточнение 17:25Z, CODEX-FABLE-AUTHOR-NAMESPACE-TRAVERSAL-20261108T172512156Z-01); единые переиспользуемые строки идентификаторов со стабильными адресами, сравнение указателей (ни сравнения строк в исполнителе, ни отдельного числового кода идентичностью); присоединяемые типизированные участки арены без перемещения адресуемых ячеек, выделение и интернирование при вводе/построении; единый контракт (уточнение 17:29Z, CODEX-FABLE-AUTHOR-CLEAN-GRAPH-FRESH-TRAVERSAL-20261108T172943665Z-01): исходник → чистый граф Lmx (ничего кроме Lmx и примитивов) → его потребляют и транслятор, и интерпретатор; служебные таблицы и данные обхода нигде не хранятся вне обхода — каждый обход начинает с чистых; непонятное — вопрос Codex/автору, не своё толкование. Черновик спецификации написан (RU/EN) и передан Codex на проверку (FABLE-KERNEL-SPEC-DRAFT-20261108T1745Z-01); ревью Codex 17:51Z (CODEX-FABLE-KERNEL-SPEC-REVIEW-20261108T175116933Z-01: ответы на семь вопросов, обязательные правки A–G) внесено, из прежних вопросов автору не осталось ни одного. Дальнейшие решения автора 2026-11-08 (все дословно в [журнале](../LMX_blog/2026-11-08.md), копии передач в `P/pins/CODEX-AUTHOR-KERNEL-REBUILD-DIRECTIVES-20261108.txt`): 18:00Z — единый механизм неинициализированных примитивов во всех структурах и в сигнатуре: для каждого примитива T отдельный тип «T без инициализации», различимый по участку адреса ячейки; `int: i` — поле `void *` на такую ячейку, `int: i 0` — на обычную ячейку `int`; обязательный формал против умолчания 0 — тот же тип адресованной ячейки, прежний ответ «в коде произвольное значение» заменён; 18:10Z — замена указателя **только при первом присваивании**, дальнейшие записи в ту же ячейку, адреса неподвижны; 19:02Z — «int без инициализации» есть указатель на ту самую ячейку (массив указателей в арене), первое присваивание пишет в неё же и тип ячейки не меняется, `@i` до и после адресует одну ячейку; 18:02Z — все проверки по адресам в арене, имя сравнивается по адресу своей строки, адреса не меняются; 18:18Z — служебные операторы и ресиверы без отдельных кодов (`for`, `=`, `**` — те же адреса строк); 18:20Z — термин «примитив» вместо «атом» («атом» — понятие парсера). Спецификация RU/EN переписана по ревью и этим решениям (виды участков с `uninit:T` и `lmx:code`, слоты, первое присваивание, план перехода с вертикальным срезом первым и приёмкой по изменённой программе и двум живым аренам, четыре вопроса Codex с минимальными случаями: адрес и имя места при первом присваивании, чтение места без значения, требование без значения у Structure и ссылки, элементы Array); книга (абзацы о кодах — заменены; :432 — тип без инициализации), L2 §3 и §14, READ.ME обновлены. Второе ревью Codex 18:57Z (CODEX-FABLE-KERNEL-SPEC-REVIEW2-20261108T185727823Z-01): общая пауза снята, §11 п. 0 разрешён (один существующий pipeline, минимальный построитель → чистый граф → оба потребителя, расширение по риску), три вопроса решены (имя — по адресу самого примитива/Lmx; чтение без значения — общий допуск; `Point: p` — обычная Lmx объявления, `@: p` — `uninit:ref`; Array — Lmx со слотами), четвёртый закрыт автором 19:02Z; обязательные правки A–F внесены (сброс `native` по принадлежности слота коду, условный сбор, имена в графе — слова, состояние строк отдельно от таблиц обхода, книга :22/:24/:693 и EN, виды участков без opcode — `lmx:fn/fm/sub` и `lmx:code` сняты). Документ целиком Codex принятым не объявлял; вертикальный срез §11 п. 0 начат. Срез 308 остановлен на кандидате a15 (не установлен в selfbuild; WIP сохранён: патч `steps/witnesses/fix308-20261108/records/wip308-a15.patch`, стейдж `cold-tp140` = a15 по манифесту `pins/source-tp171-a15.sha256`, receipts в pins и в записи); абзац ниже и план «Дальше» описывают остановленную работу и заменены этим поручением. Согласованные `:=`, `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY и прочая функциональность сохраняются и перепроверяются на новой архитектуре; пауза REPEATED-DECL-OTHER-KINDS остаётся.
+Поручение автора 2026-11-08 17:12Z (через Codex, CODEX-FABLE-AUTHOR-KERNEL-REBUILD-20261108T171209823Z-01; слова автора дословно — [журнал](../LMX_blog/2026-11-08.md)): прежнее направление — довести числовые коды идентификаторов (срезы 302, 308, план 309/310) — остановлено. Сначала отдельная спецификация реализации ядра в `docs/` ([RU](../docs/kernel-implementation.ru.md), [EN](../docs/kernel-implementation.en.md)) и согласованный с Codex план перехода, затем переделка единственным pipeline: Lmx-граф всех языковых сущностей (выражения, методы, Array) без параллельных скрытых структур; единственная не-структура — примитив (в передачах до 18:20Z — «атом»): типизированная ячейка арены, по адресу которой известны тип (участок арены), имя (namespace) и значение (сама ячейка) — уточнение автора 17:22Z, CODEX-FABLE-AUTHOR-ATOM-ADDRESS-20261108T172249908Z-01, никаких «вхождений»; имя примитива или структуры — из таблицы адрес → name, а «namespace» транслятора и интерпретатора — служебные таблицы обхода, устройство которых автор оставляет исполнителям (уточнение 17:25Z, CODEX-FABLE-AUTHOR-NAMESPACE-TRAVERSAL-20261108T172512156Z-01); единые переиспользуемые строки идентификаторов со стабильными адресами, сравнение указателей (ни сравнения строк в исполнителе, ни отдельного числового кода идентичностью); присоединяемые типизированные участки арены без перемещения адресуемых ячеек, выделение и интернирование при вводе/построении; единый контракт (уточнение 17:29Z, CODEX-FABLE-AUTHOR-CLEAN-GRAPH-FRESH-TRAVERSAL-20261108T172943665Z-01): исходник → чистый граф Lmx (ничего кроме Lmx и примитивов) → его потребляют и транслятор, и интерпретатор; служебные таблицы и данные обхода нигде не хранятся вне обхода — каждый обход начинает с чистых; непонятное — вопрос Codex/автору, не своё толкование. Черновик спецификации написан (RU/EN) и передан Codex на проверку (FABLE-KERNEL-SPEC-DRAFT-20261108T1745Z-01); ревью Codex 17:51Z (CODEX-FABLE-KERNEL-SPEC-REVIEW-20261108T175116933Z-01: ответы на семь вопросов, обязательные правки A–G) внесено, из прежних вопросов автору не осталось ни одного. Дальнейшие решения автора 2026-11-08 (все дословно в [журнале](../LMX_blog/2026-11-08.md), копии передач в `P/pins/CODEX-AUTHOR-KERNEL-REBUILD-DIRECTIVES-20261108.txt`): 18:00Z — единый механизм неинициализированных примитивов во всех структурах и в сигнатуре: для каждого примитива T отдельный тип «T без инициализации», различимый по участку адреса ячейки; `int: i` — поле `void *` на такую ячейку, `int: i 0` — на обычную ячейку `int`; обязательный формал против умолчания 0 — тот же тип адресованной ячейки, прежний ответ «в коде произвольное значение» заменён; 18:10Z — замена указателя **только при первом присваивании**, дальнейшие записи в ту же ячейку, адреса неподвижны; 19:02Z — «int без инициализации» есть указатель на ту самую ячейку (массив указателей в арене), первое присваивание пишет в неё же и тип ячейки не меняется, `@i` до и после адресует одну ячейку; 18:02Z — все проверки по адресам в арене, имя сравнивается по адресу своей строки, адреса не меняются; 18:18Z — служебные операторы и ресиверы без отдельных кодов (`for`, `=`, `**` — те же адреса строк); 18:20Z — термин «примитив» вместо «атом» («атом» — понятие парсера). Спецификация RU/EN переписана по ревью и этим решениям (виды участков с `uninit:T` и `lmx:code`, слоты, первое присваивание, план перехода с вертикальным срезом первым и приёмкой по изменённой программе и двум живым аренам, четыре вопроса Codex с минимальными случаями: адрес и имя места при первом присваивании, чтение места без значения, требование без значения у Structure и ссылки, элементы Array); книга (абзацы о кодах — заменены; :432 — тип без инициализации), L2 §3 и §14, READ.ME обновлены. Второе ревью Codex 18:57Z (CODEX-FABLE-KERNEL-SPEC-REVIEW2-20261108T185727823Z-01): общая пауза снята, §11 п. 0 разрешён (один существующий pipeline, минимальный построитель → чистый граф → оба потребителя, расширение по риску), три вопроса решены (имя — по адресу самого примитива/Lmx; чтение без значения — общий допуск; `Point: p` — обычная Lmx объявления, `@: p` — `uninit:ref`; Array — Lmx со слотами), четвёртый закрыт автором 19:02Z; обязательные правки A–F внесены (сброс `native` — прежняя реализация — по принадлежности слота коду, условный сбор, имена в графе — слова, состояние строк отдельно от таблиц обхода, книга :22/:24/:693 и EN, виды участков без opcode — `lmx:fn/fm/sub` и `lmx:code` сняты). Документ целиком Codex принятым не объявлял; вертикальный срез §11 п. 0 начат. Срез 308 остановлен на кандидате a15 (не установлен в selfbuild; WIP сохранён: патч `steps/witnesses/fix308-20261108/records/wip308-a15.patch`, стейдж `cold-tp140` = a15 по манифесту `pins/source-tp171-a15.sha256`, receipts в pins и в записи); абзац ниже и план «Дальше» описывают остановленную работу и заменены этим поручением. Согласованные `:=`, `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY и прочая функциональность сохраняются и перепроверяются на новой архитектуре; пауза REPEATED-DECL-OTHER-KINDS остаётся.
 
 Срез 308 (коды идентификаторов во внутренних сравнениях транслятора — часть IDENTIFIER-CODES; промежуточный результат; fable_pc; ответы Codex на вопросы проекта CODEX-FABLE-307-PUBLISHED-REVIEW-308-ANSWERS-20261108T145024Z-01) — ОСТАНОВЛЕН поручением автора 2026-11-08 17:12Z на кандидате a15, в selfbuild не установлен (описание ниже — состояние WIP). Сервис `lmx_ids` — часть сборки l2trans и l1trans (свой экземпляр таблиц на процесс транслятора; коды транслятора в выпуск не попадают). `LmP0Text` несёт код написания; единственная граница байты → код — `lm_p0_text_code`: P0 даёт код всякому атому и голове, кроме числа, строки и пустого текста, точному идентификатору в обратных кавычках — код его значения (грамматика: обе записи обозначают одно имя); frontend даёт код каждому тексту, который строит сам, копия текста несёт код источника (`lm_compiler_text_clone`, `cnt_keep`, `exact_ident`). `lm_compiler_text_same` — равенство кодов, кодируемое написание без кода на сравнении — инвариант транслятора («l2trans: invariant: …», exit 3, без байтового запасного пути); ~900 сравнений с литералами — через таблицу слов `l2_words` (`LM_W_*`, 129 слов, первые 20 — слова ядра, заполняется один раз при старте), неявные броски — номерами обходчика; сегменты текста пути читаются как тексты со своим кодом в точке разреза (`lm_compiler_seg_text`/`seg_same`/`seg_word`); коды примитивов сравниваются как коды (`lm_compiler_prim_same`, `prim_code`, `own_ty_code`); таблицы `primitive.description`/`primitive.convert` — по кодам ячеек-атомов (`lm_compiler_tbx_code`, имя таблицы и столбцов — слова); интерн сигнатур хранит коды имён формалов и скрытых входов (`l2_it_nc`, `l2_it_hc`; массивы байтов имён убраны); `lm_compiler_throw_key` и CLI-машины — по кодам. Причина отказов первых кандидатов (найдена gdb на отладочном двойнике; debug heap Windows скрывал её под gdb): `lm_compiler_text_clone` вычислял код по буферу до копирования байтов — код NUL-байтов 0 на свежей куче, код мусора на повторно использованной (молчаливое несовпадение интерна чужих типов). Остаются текстом по роли: CLI, пути и суффиксы файлов, снимки эмиттера, правило префикса `l2_`/`lmx_`, внутренние теги эмиттера не из входа, числовая ячейка `1`, порядок имён; остаток к решению — lower 8867 (C-тексты типов чужих указателей) и шаги пути с переносимыми кодами (вопросы Codex FABLE-308-IDS-TRANSLATOR-PASS2-QUESTIONS-20261108T1630Z-01). Остаток IDENTIFIER-CODES — транслятор L1 (срез 309) и тесты RESULT (срез 310); RESULT не заявлен. [Запись](witnesses/fix308-20261108/notes.md).
 
@@ -4424,7 +4432,7 @@ preflight walker-а, общий runtime-код. Opus ждёт; writer/build у F
 боковое хранилище записи индекса арены (`LmxRange`: `links` по ординалам ячеек, `holder` интервала CHILDREN,
 `slot_owner` ячеек общего REF-пула, `side_cells`/`side_stride`/`kind` с момента вставки); запись в слот — код по (1)–(4)
 (holder с головой-операцией; уходящий/приходящий узел кода — операция или именованное вхождение; callable и слот 0–3;
-часть callable или именованное вхождение без головы — только при уходе/приходе узла), иначе данные; сброс `native`
+часть callable или именованное вхождение без головы — только при уходе/приходе узла), иначе данные; сброс `native` (прежняя реализация)
 holder'а и всех holder'ов выше **только по рёбрам кода** (не по `parent`: boot115c показал, что таблицы использований
 вызовов и экземпляры S8.1 строятся под владельцем после установки его слова); три физических пути перепривязки
 (`lmx_graph_ref_fill_in`, `lmx_arena_ref_store(arena, …)` — arena теперь передают все вызывающие и эмиттеры,
@@ -7009,7 +7017,7 @@ Source, commands and records: [packet201](witnesses/fix201-20261024/notes.md).
 
 Stage `build2/codex_fix200`, from frozen199, base `4ef67c95`. Fifteen L2 functions (7fn/8sub),13 public C entries;
 four mutable call globals and seven obsolete hook/status functions removed, not relocated to an L2 unit or graph.
-Nonzero native calls the normal explicit arena/code/data/storage ABI; zero uses the statically linked walker.
+Nonzero native (former implementation: the native pointer in the node header; the norm has none) calls the normal explicit arena/code/data/storage ABI; zero uses the statically linked walker.
 Host/nullary call returns status and writes activation int through a separate output; it is not language unary-call
 data selection. Thread owns its completed body status as service metadata, not a source/Message field; Root copies
 that result to its caller before teardown. The walker and existing driver use the explicit channel.
@@ -7841,8 +7849,8 @@ the lists change in the repository; the witness is `tests/l2/lib/`.
   declares no field is refused at its place, as an implementation state. `l2_library_open`, the wrappers and every
   `l2_library_*` and module arena or unit cell are gone.
 - `--construct NAME`: an export with the uniform adapter ABI. It builds the unit in the arena of its call, calls E once
-  through the unit's native word as R0's turn does, and returns the unit.
-- `--provider NAME`: a bodyless root method of that name takes the export as its native word. A path call that follows
+  through the unit's native word (former implementation: the native pointer in the node header; the norm has none) as R0's turn does, and returns the unit.
+- `--provider NAME`: a bodyless root method of that name takes the export as its native word (former implementation). A path call that follows
   a value reaches the admitted candidate's own occurrence.
 - `lmx_implements_resolved_view`: where no evidence relates a value to a requirement, the correspondence is built by the
   names of the places (`lmx_implements_named_view`). The ordinary walk checks the used fields' contracts against it.
@@ -8047,11 +8055,11 @@ collector and method census, checks the block (branches, items, a counterpart pe
 across passes (result, declared throw exits, formals in order, hidden inputs), and wraps; the literal-only
 checker/emitter is deleted. No os opcode, emitter or interpreter exists; a body is walked under
 --walk-methods by the same completed-lowering predicate as every body, decided at translation, so a walked
-method has no native word to fall back to. The census missed the branch at first
+method has no native word (former implementation) to fall back to. The census missed the branch at first
 (OS-METHODS-MISSING-FROM-SOURCE-CENSUS: two refusals and a SILENT named-Structure declaration with exit 4);
-fixed and pinned by 11 os/unit twins (same exits; per method the same native word and the same walked
+fixed and pinned by 11 os/unit twins (same exits; per method the same native word (former implementation) and the same walked
 count). `os_walk_values` really walks os_mix and os_twice (parameters, locals, a call of the other, a field
-written and read back; the observed runtime counts each body twice; the forced L1 binds no native word to
+written and read back; the observed runtime counts each body twice; the forced L1 binds no native word (former implementation) to
 them); controls that must fail and do: the constant twin, the native-substitute frontend (one line), each
 forward twins row under the census-less frontend.
 
@@ -8065,7 +8073,7 @@ inputs, the frontends, runtime-04, the tool, `bin/l1trans.exe`, `tools/l2`, `tes
 .ps1/.py/.sh/.bat/.cmd) printed `GATE 0 failures` -- the self-test, the suite (31 rows: 6 runs, 14 refuses,
 11 twins; 427 checks), the os walk witness (os_mix and os_twice walked twice each at root and with
 walkroot 1; natively none), and the controls that must fail, each for its reason (the constant twin by its
-exits, the native-substitute frontend by its native words, the 4 census rows under frontend-05 by "unknown
+exits, the native-substitute frontend by its native words (former implementation), the 4 census rows under frontend-05 by "unknown
 head", exit 4 twice and "duplicate definition", a wrong expected exit, a repository without l1trans: not
 started); `deps` over its records: only the stage's frontends, the repository's l1trans, gcc and the built
 programs, no script host. Corpus replay (tool-10): 3,733 of 3,735 rows SAME, the 2 DIFF this slice's
@@ -12667,7 +12675,7 @@ G1-регистрацию и попадала в прямой C99 `/` (нуле�
 физического graph-events дампа, не из P0. Мутант walker зарегистрирован в
 harness и прошёл **4/4**
 (`build/codex_g1_reorder_calls_oracle_20261015_01/summary.txt`). Фокусная
-сборка пяти обычных фикстур после переноса выбора `callee.native` на точку
+сборка пяти обычных фикстур после переноса выбора `callee.native` (прежняя реализация: указатель native в заголовке узла; по норме его нет) на точку
 после actuals/publish прошла **8/8**
 (`build/codex_g1_dispatch_late_20261015_02/summary.txt`). Целевой kernel
 selftest подтверждает, что фактический аргумент может заменить native-вход
@@ -12678,7 +12686,7 @@ selftest подтверждает, что фактический аргумен�
 доказывать через карту полного копирования; при отсутствии доказательства
 нельзя запускать native и нельзя повторять исполнение после эффектов.
 Выбранный `lmx_call0` маршрут теперь передаётся Thread отдельным результатом,
-а не угадывается по `graph.native` после тела: native может изменить это слово.
+а не угадывается по `graph.native` (прежняя реализация) после тела: native может изменить это слово.
 Kernel selftest проверил native, walk, отказ без маршрута и самозануление
 native-телом (**52/52**;
 `build/codex_call_route_selftest_20261015_01`). Общий графовый/G1-фокус на
@@ -13790,7 +13798,7 @@ self-проекция места ограждена `l2_fn_parts_on(mi) = 0`; с
 лексические цепи (`struct(чужой unit, 0)` — мусорный callee размера 1).
 Вместо этого правило перенесено на сторону ядра-обходчика в
 `lmx_walk_call_prim_dispatch` (хук, куда `lmx_call_prim` попадает при
-`native = 0`): `if: data = code → data: lmx_call_unary_data(arena, code)`.
+`native = 0`, прежняя реализация): `if: data = code → data: lmx_call_unary_data(arena, code)`.
 Первая попытка правила в `lmx_call.lm1:lmx_call_prim` роняла kernel gate
 57/305: юнит call по построению линкует только заголовки (без walk/scratch,
 чтобы selftest-ы не сталкивались двойными символами) — прямой вызов walk-фн
@@ -15402,7 +15410,7 @@ callable, собственный путь `M\hits`, M обойдён) зелён
 строки харнесса; механизм правильности формы `AT` для копии не прослежен, утверждается только измеренное. Свидетель:
 `unit_address_path_actual_span` (native; адрес пути `@ check\p` равен ячейке указателя `@p`, запись через `clear(@p, 23)`, соседи):
 OK (выход 7; в `fable_u7d4c_full_03` — FAIL, выход 3); `unit_self_path_copy` / `unit_walk_self_path_copy` — OK; обойдённого двойника нет — под `--walk-methods` транслятор оставляет `check` native (обходчик отказывает телу на счётном
-проходе; пробная строка `_walk` харнесс отверг: «tested method l2_m5 still has its native word» — снята). Сторона обходчика у
+проходе; пробная строка `_walk` харнесс отверг: «tested method l2_m5 still has its native word» — снята; «native word» — прежняя реализация). Сторона обходчика у
 четырёхчастного корня измерена replay (21 строка, класс «code root NODE(0) for AT») и гейтами: мутант `fnroot` (корень снова только
 split) — 21 строк меняют класс (L1=21) — `u7/cmp_d4e_variant_mut_fnroot.txt`: меняется только L1, вердикт ни одной строки корпуса не меняется — у Structure `fn` нет записи исполнения,
 обе формы читают одну ячейку; изменение — одно происхождение координаты с native, не исправление ответа. Остаток
@@ -15715,7 +15723,7 @@ host и неизменённый orphan, **744/0** при `-O2 -fstrict-aliasing
 идентичности Array используют явно нетипизированный `void`, не устаревший
 raw C `VoidArray`; это не доказательство структурного допуска implements.
 Фокус06 подтвердил новый чистый языковой witness в четырёх режимах,
-включая реальное отсутствие native у метода. В нём сохраняются значения53,
+включая реальное отсутствие native у метода (прежняя реализация: указатель native в заголовке узла; по норме его нет). В нём сохраняются значения53,
 сосед43, запись через int** элемент и второй уровень int***. Метод с
 C-наблюдателем пока остаётся native; его положительные forced-method строки
 не объявлены пройденными. В свежем частном прогоне текущего frontend

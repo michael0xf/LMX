@@ -20,6 +20,7 @@
 # bld_kernel_l2 (tools/build.lm2).
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_checks.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -5581,8 +5582,10 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         status := lmx_graph_eval_value(g, scope, c.lmx_graph_get_in(g, expression, 1U), @ value)
         if: status != 0
             return: status
-        if: c.lmx_graph_kind(g, value) != 5
-            return: 2
+        # A read through a pointer to data: the value read through is checked by the module of checks.
+        status := c.lmx_check_data_read(c.lmx_graph_kind(g, value))
+        if: status != 0
+            return: status
         return: c.lmx_graph_value_int(g, c.lmx_arena_pointer_void_read(value), out)
     if: count = 1U
         return: lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, expression, 0U), out)

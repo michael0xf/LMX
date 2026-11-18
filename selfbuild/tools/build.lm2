@@ -2261,6 +2261,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(193U, sizeof(@: char))
+    @@: checks_names char c.calloc(4U, sizeof(@: char))
     @@: graph_names char c.calloc(88U, sizeof(@: char))
     @@: graph_run_names char c.calloc(73U, sizeof(@: char))
     @: src char txt_path(stage, "src")
@@ -2276,7 +2277,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: running_names = 0 || lane_names = 0
         return: 1
-    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0 || graph_names = 0 || graph_run_names = 0
+    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0 || checks_names = 0 || graph_names = 0 || graph_run_names = 0
         return: 1
     if: decls_write_all(rec, stage) != 0
         return: 1
@@ -2372,6 +2373,12 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[85] := "lmx_graph_number"
     graph_names[86] := "lmx_graph_scalar_text"
     graph_names[87] := "lmx_graph_file_code"
+    # The module of checks and the types of L3 (plan #one-graph-plan, P1), below lmx_graph: the graph's operations and the
+    # interpreter call it.
+    checks_names[0] := "lmx_l3_type"
+    checks_names[1] := "lmx_check_index"
+    checks_names[2] := "lmx_check_reference"
+    checks_names[3] := "lmx_check_data_read"
     graph_run_names[0] := "lmx_graph_eval"
     graph_run_names[1] := "lmx_graph_run"
     graph_run_names[2] := "lmx_graph_call"
@@ -3261,6 +3268,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 63, 1) != 0
         return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_checks", checks_names, 4, 1) != 0
+        return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 88, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 73, 1) != 0
@@ -3322,7 +3331,7 @@ end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
 fn: decl_driver_carrier (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_graph.lm1\"\npredef: \"l2src/lmx_graph_run.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
+    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_checks.lm1\"\npredef: \"l2src/lmx_graph.lm1\"\npredef: \"l2src/lmx_graph_run.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
         return: 1
     return: 0
 end: decl_driver_carrier

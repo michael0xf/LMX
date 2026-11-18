@@ -1,0 +1,77 @@
+# The module of checks and the types of L3 (the author 2026-11-18, LMX_blog/2026-11-18.md#interpreter-runs-l2: «сделайте
+# модуль проверок и типы L3»; the book #scope: «Доступ к элементу массива проверяется по текущей длине; указатели на
+# Structure и на методы не меняют своё числовое значение произвольно — они присваиваются только друг другу и обнуляются;
+# указатели на данные — обёртки»; plan #one-graph-plan, step P1).
+#
+# The types of L3 are the type codes of the pools of the arena: the type of a value is the code of the pool whose region
+# holds its address (lmx_l3_type), never a tag of the value. The checks decide over those types and over the length of a
+# Structure; the kernel's operations read the cells and call them (lmx_graph_index, lmx_graph_index_write,
+# lmx_graph_reference_payload), and so does the interpreter -- for code of L3 and of L2 alike (R49 1) --, and native code
+# of L3 through the same operations. Native code of L2 calls none of them (the author's item 4; R49 3).
+#
+# A machine module of the runtime (L2 section 20), below lmx_graph: each function has a direct C-compatible entry; it
+# reads only the arena's index of its regions (lmx_range_*, prototyped in lmx_arena.h.lm1) and the records of the kernel's
+# header lmx.h.lm1. The build writes its header, lmx_checks.h.lm1, with its exports.
+predef: "l2src/lmx_arena.h.lm1"
+
+# The type of L3 of an address of the arena -- what the value at that address is (the spec, section 2.2: the type is the
+# region of the address): 0 nothing of the graph, 1 an int, 2 a word, 3 the pointer of a place without a value, 4 an Lmx
+# (a Structure or a callable), 5 a pointer to an int, 6 a pointer to a Structure or a method, 7 an untyped reference
+# (the value the index of a Structure reads), 8 and 9 a pointer to an int and to an Lmx declared without an address.
+fn: lmx_l3_type (@: arena c.LmxArena; @: address void) int
+    int: kind 0
+    int: type 0
+    if: arena = 0 || address = 0
+        return: 0
+    kind := c.lmx_range_classify(arena, address)
+    type := c.lmx_range_type_of(arena, address)
+    if: kind = c.LMX_KIND_STRUCT
+        return: 4
+    if: kind != c.LMX_KIND_PRIMITIVE
+        return: 0
+    if: type = c.LMX_TYPE_INT
+        return: 1
+    if: type = c.LMX_TYPE_WORD
+        return: 2
+    if: type = c.LMX_TYPE_UNINIT_INT
+        return: 3
+    if: type = c.LMX_TYPE_GRAPH_INT_REF
+        return: 5
+    if: type = c.LMX_TYPE_GRAPH_LMX_REF
+        return: 6
+    if: type = c.LMX_TYPE_GRAPH_REF
+        return: 7
+    if: type = c.LMX_TYPE_UNINIT_GRAPH_INT_REF
+        return: 8
+    if: type = c.LMX_TYPE_UNINIT_GRAPH_LMX_REF
+        return: 9
+    return: 0
+
+# The access to an element of a Structure (the book #structure-index: an element is checked against the current
+# length): 0 when index selects one of the elements of lmx, 7 otherwise -- a negative index converts to a size beyond
+# every length. 4 when there is no lmx.
+fn: lmx_check_index (@: lmx c.Lmx; int: index) int
+    @: va c.VoidArray 0
+    if: lmx = 0
+        return: 4
+    va := @ lmx\array
+    if: (cast: (size_t) index) >= (cast: (size_t) va\size)
+        return: 7
+    return: 0
+
+# A pointer place of type kind takes a value whose referent is of type target (the book #scope: pointers to Structures
+# and methods are assigned only to one another; a pointer to data is a wrapper of one cell): a pointer to an int (5)
+# takes the address of an int cell, a pointer to a Structure or a method (6) the address of an Lmx. 0, or 4.
+fn: lmx_check_reference (int: kind; int: target) int
+    if: kind = 5 && target = 1
+        return: 0
+    if: kind = 6 && target = 4
+        return: 0
+    return: 4
+
+# A read through a pointer to data `\p` (the book #scope: a pointer to data is a wrapper): the value read through must be
+# a pointer to an int. 0, or 2.
+fn: lmx_check_data_read (int: given) int
+    if: given != 5
+        return: 2
+    return: 0

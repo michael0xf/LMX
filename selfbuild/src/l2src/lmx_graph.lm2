@@ -33,6 +33,7 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_checks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -499,36 +500,11 @@ end: lmx_graph_put_in
 # What an address is in this arena: 0 nothing of the graph, 1 an int primitive, 2 a word primitive, 3 the pointer
 # primitive of a place without a value, 4 an Lmx, 5 an int reference, 6 a reference to an Lmx -- a Structure or a
 # callable --, 7 an untyped reference, the value the index of a Structure reads (§2.2: the type is the region of the
-# address).
+# address). The types are those of L3, kept by the module of checks (lmx_l3_type).
 fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
-    int: kind 0
-    int: type 0
-    if: g = 0 || address = 0
+    if: g = 0
         return: 0
-    kind := c.lmx_range_classify(g\arena, address)
-    type := c.lmx_range_type_of(g\arena, address)
-    if: kind = c.LMX_KIND_STRUCT
-        return: 4
-    if: kind != c.LMX_KIND_PRIMITIVE
-        return: 0
-    if: type = c.LMX_TYPE_INT
-        return: 1
-    if: type = c.LMX_TYPE_WORD
-        return: 2
-    if: type = c.LMX_TYPE_UNINIT_INT
-        return: 3
-    if: type = c.LMX_TYPE_GRAPH_INT_REF
-        return: 5
-    if: type = c.LMX_TYPE_GRAPH_LMX_REF
-        return: 6
-    if: type = c.LMX_TYPE_GRAPH_REF
-        return: 7
-    if: type = c.LMX_TYPE_UNINIT_GRAPH_INT_REF
-        return: 8
-    if: type = c.LMX_TYPE_UNINIT_GRAPH_LMX_REF
-        return: 9
-    return: 0
-end: lmx_graph_kind
+    return: c.lmx_l3_type(g\arena, address)
 
 # ---- The index of the address -> name rows (§5.1) -----------------------------------------------------------------
 # Every Frame of a graph is named by its head (the author 2026-11-09: a declaration is a named structure of its
@@ -1935,26 +1911,26 @@ return: wrapper
 fn: lmx_graph_reference_payload (@: g c.LmxGraph; int: kind; @: value void; @@: out void) int
     @: target void 0
     int: given lmx_graph_kind(g, value)
+    int: status 0
     if: given = 8 || given = 9
         value := lmx_graph_reference_cell(g, value)
         given := lmx_graph_kind(g, value)
     if: out = 0
         return: 4
+    # The referent -- the int cell a pointer cell holds, or the Lmx the value stands for -- and its type checked by the
+    # module of checks (lmx_check_reference).
     if: kind = 5 && (given = 5 || given = 7)
         target := c.lmx_arena_pointer_void_read(value)
         if: given = 7 && lmx_graph_kind(g, target) = 3
             target := c.lmx_arena_pointer_void_read(target)
-        if: lmx_graph_kind(g, target) != 1
-            return: 4
-        out[0] := target
-        return: 0
+        ---
     if: kind = 6
         target := lmx_graph_target(g, value)
-        if: lmx_graph_kind(g, target) != 4
-            return: 4
-        out[0] := target
-        return: 0
-return: 4
+    status := c.lmx_check_reference(kind, lmx_graph_kind(g, target))
+    if: status != 0
+        return: status
+    out[0] := target
+    return: 0
 
 # Publish into the existing physical reference cell; a declaration slot and
 # its service pointer are never rebound by a reference assignment.
@@ -3227,10 +3203,13 @@ fn: lmx_graph_index (@: g c.LmxGraph; @: value void; int: index; @@: out void) i
     @: cell void 0
     c.LmxPointerCellRead: read 0
     c.LmxPointerCellWrite: write 0
+    int: status 0
     if: out = 0 || inner = 0
         return: 4
-    if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
-        return: 7
+    # The access to the element is checked against the current length (lmx_check_index).
+    status := c.lmx_check_index(inner, index)
+    if: status != 0
+        return: status
     cell := c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), inner, (cast: (size_t) index))
     if: cell = 0 || c.lmx_value_cell_access((cast: (@: c.LmxArena) g\arena), cell, @ read, @ write) != 0 || read = 0
         return: 4
@@ -3245,10 +3224,13 @@ end: lmx_graph_index
 fn: lmx_graph_index_write (@: g c.LmxGraph; @: scope c.Lmx; @: value void; int: index; @: source void) int
     @: inner c.Lmx lmx_graph_index_node(g, value)
     @: address void 0
+    int: status 0
     if: inner = 0
         return: 4
-    if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
-        return: 7
+    # The write into the array is checked against the current length (lmx_check_index); the former content imposes nothing.
+    status := c.lmx_check_index(inner, index)
+    if: status != 0
+        return: status
     if: lmx_graph_address_of(g, source, @ address) != 0
         return: 4
     if: lmx_graph_write_slot(g, scope, inner, (cast: (size_t) index), address) != 0

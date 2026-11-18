@@ -1,0 +1,15 @@
+# Witness: an index write of an int address into a Structure slot takes any arena address without checking the former element (seen 1).
+# Norm: the book #structure-index.
+# Slice C1 (plan #one-graph-plan, P1): the check lives in src/l2src/lmx_checks.lm2.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: main () (
+    A(int: v 1)
+    int: x 5
+)
+    A[0] := @x
+    shared\Observed\seen := 1
+main()

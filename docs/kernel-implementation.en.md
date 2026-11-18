@@ -1052,11 +1052,12 @@ of this document and in §6.1. The working frontend reads the former names and o
 2. **Every verification goes by addresses in the arena; addresses do not change** (the author, 18:02Z: "все верификации
    производим по адресам в арене, и имя тоже сравниваем по адрресу его в арене. Адреса не меняются"). Every check -- of
    a type, a kind, a name, a correspondence, an admission -- rests on the address of a primitive, an Lmx or a string in
-   the typed arena: the address tells the object (§2.1, §5.1). A name is compared by the address of the single reused
+   the arena: the address tells the object, and its type is read from the code of the record at that address
+   (§2.0, §5.1). A name is compared by the address of the single reused
    string of its spelling (§4) -- not by bytes, not by a hash, not by an incremental code. The addresses of existing cells
-   and strings never move; growth and attaching of regions keep them (§2.3).
+   and strings never move; growth and attaching of chunks keep them (§2.3).
 3. **The only non-Structure is the primitive** (the author, 17:22Z; the term -- 18:20Z: "Это надо называть не атом а
-   примитив. Атом это понятие парсера"). `int: i 5` is put as a primitive: a typed arena cell holding 5. Its address
+   примитив. Атом это понятие парсера"). `int: i 5` is put as a primitive: an arena record "type `int`, value 5". Its address
    tells everything: the **type** -- from the code in the record at that address (the author's decision of 2026-11-16, §2.0; before it, from
    the typed region in which the address lay); the **name**
    -- from the address → name table; the **value** -- by reading the cell itself. No wrappers, leaves, "occurrences" or
@@ -1203,6 +1204,10 @@ Why: on the accepted G2 of slice 410 one read of a graph slot through the ordina
 [plan M15](../next_core_tasks_v3.md#typed-value-records).
 
 ### 2.1 Regions (the former scheme and today's code; the norm is §2.0)
+
+This section describes the former scheme and today's code: an arena is a list of regions by type, and a type is
+learned from an address. By the norm of §2.0 an arena has one stream of records "type code, value", and there is
+no typing by address.
 
 The arena of a Message is a list of **regions** (`LmxSegment`). A region is one contiguous block of cells of one C type
 and one stride: `{ base, stride, type, count, used, next, owner }`. The region's type comes from a closed inventory

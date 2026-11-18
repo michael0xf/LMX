@@ -3377,7 +3377,9 @@ Test/converter не исполняются; полного typed storage или 
 с полным интерфейсом, без guessed positional identity, публикации, test или исполнения Model/default.
 
 Source-type bridge сохраняет все35 строк и все15 столбцов `primitive.description`, включая source identity каждой
-записи, отдельно от C ABI binding. `Fact.type` — настоящий полный physical pool type, не номер строки, hash или alias code.
+записи, отдельно от C ABI binding. `Fact.type` — настоящий полный physical pool type,
+не номер строки, hash или alias code (прежняя схема: по норме физический тип — код записи значения,
+[M15](#typed-value-records)).
 Одинаковое spelling само по себе не стирает сведения строк и не доказывает ни равенство, ни различие их семантики.
 Для `c.int8_t` нельзя выбирать первую из строк Boolean/i8/int8; `c_names`392 подтверждает лишь допустимость роли,
 не назначает такой semantic row. Точный C ABI glue, включая multiword/quoted spelling, генерировать существующим

@@ -526,7 +526,8 @@ links/LF28263; финальный индекс — gate перед коммит�
 - [x] Pure Model без Consumer393: require_root → drain → resolve_close, весь интерфейс без guessed positional identity,
   публикации или test/Model/default execution. Raw Model не выдавать за prepared receiving record.
 - [ ] Joint source-type bridge сохраняет35 строк/15 столбцов primitive.description и явную source identity отдельно
-  от C ABI binding. Fact.type остаётся настоящим physical pool type, не row index/hash/alias code.
+  от C ABI binding. Fact.type остаётся настоящим physical pool type, не row index/hash/alias code (прежняя
+  схема: по норме физический тип — код записи значения).
   По одному spelling не объединять сведения строк и не объявлять их семантику обязательно различной.
 - [ ] c.int8_t не выбирает первую Boolean/i8/int8 row; c_names392 — только role proof. Точный multiword/quoted C ABI glue
   вести через существующую генерацию, включая проверяемый вариант L1 type alias, без whitelist/parser/registry.

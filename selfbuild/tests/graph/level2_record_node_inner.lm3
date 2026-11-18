@@ -1,0 +1,21 @@
+# A record `L2:` nested in the code of a call is a body of that call, so the space of `node` passes through it as through the body of an if
+# (the book, node; the row node_inner_read): the method `inner`, declared under the record in the code of `outer`, reads the data of `outer`
+# through node -- seen is 4. The record that is the WHOLE body of a file stops the space (the file is its own space; the rows .lm2 that
+# write node\effects pin that).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: outer () int (int: total 4; int: r 0)
+    L2:
+        fn: inner () int
+            return: node\total
+        r := inner()
+    return: r
+int: seen outer()
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

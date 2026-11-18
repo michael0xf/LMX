@@ -1,0 +1,18 @@
+---
+    Observed:
+        int: seen 4
+    end: Observed
+---
+@: shared (data [] 0)
+fn: outer () int (
+    int: total 4
+    int: r 0
+)
+    L2: (fn inner () int ((return (node \ total)))) (:= r (inner))
+    return: r
+end: outer
+int: seen (outer)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

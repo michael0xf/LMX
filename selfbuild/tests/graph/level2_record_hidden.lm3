@@ -1,0 +1,9 @@
+# A name declared inside an `L2:` record belongs to the lexical branch of the record and is not seen after it (the book, section 3: «Новое
+# локальное имя ветви видно на её уровне и во вложенных ветвях, но не снаружи»). The read of `inner` after the record resolves to nothing:
+# the run answers 3, as for any name that resolves to nothing (the row closed_data_missing pins 3).
+fn: outer () int (int: total 0)
+    L2:
+        int: inner 40
+    total := inner
+    return: total
+int: result outer()

@@ -1,0 +1,21 @@
+# An explicit `L2:` in the body of a method is a nested body of the same call (the book #scope; section 3: «Вложенные управляющие тела того же
+# вызова не создают новую активацию, но новые локальные имена принадлежат своей лексической ветви»): the name `base` of the enclosing
+# code is seen and written inside the record, the name `inner` declared inside it is the record's own. The method reads the written `base`
+# after the record: 42 * 2 = 84.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+)
+@: shared data[0]
+fn: outer () int (int: base 1; int: total 0)
+    L2:
+        int: inner 40
+        base := inner + 2
+    total := base * 2
+    return: total
+int: result outer()
+
+sub: main ()
+    shared\Observed\result := result
+main()

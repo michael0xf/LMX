@@ -527,7 +527,7 @@ fn: lmx_graph_code_parent (@: g c.LmxGraph; @: body c.Lmx) @: c.Lmx
     if: body = 0
         return: 0
     parent := (cast: (@: c.Lmx) body\parent)
-    if: lmx_graph_code_body(g, body, 0U, @ selected, @ selected_from, @ selected_to) = 3 && selected = body
+    if: lmx_graph_role_code(lmx_graph_code_body(g, body, 0U, @ selected, @ selected_from, @ selected_to)) != 0 && selected = body
         return: parent
     if: parent != 0 && lmx_graph_code_argument(g, parent, 0U) = 3
         lmx_graph_code_body(g, parent, 0U, @ selected, @ selected_from, @ selected_to)
@@ -1070,18 +1070,25 @@ fn: lmx_graph_scan_launch (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: lead ch
 end: lmx_graph_scan_launch
 
 # The existing control receivers select inline code explicitly. 1 is a body
-# argument, 2 a for-header, 3 a container whose own fields are code. Other
-# arguments are values/expressions; call and fn open their own activations.
+# argument, 2 a for-header, 3 a container whose own fields are code (else, finally: their one written argument group is selected once, as the code
+# they run), 4 a container whose own fields are code AS WRITTEN (the record L2, the book #two-kinds-of-receivers: its arguments are not opened, a lone
+# written Structure stays one field of it). Other arguments are values/expressions; call and fn open their own activations.
 fn: lmx_graph_code_argument (@: g c.LmxGraph; @: current c.Lmx; size_t: index) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: head char c.lmx_graph_name_of(g, (cast: (@: void) current))
     if: head = state\w_else || head = state\w_finally
         return: 3
+    if: head = state\w_l2
+        return: 4
     if: index = 1U && (head = state\w_if || head = state\w_while || head = state\w_until || head = state\w_for)
         return: 1
     if: index = 0U && head = state\w_for
         return: 2
     return: 0
+
+# Is role (lmx_graph_code_argument, lmx_graph_code_body) the role of a container whose own fields are code: 3 (else, finally) or 4 (the record L2)?
+fn: lmx_graph_role_code (int: role) int
+    return: (cast: (int) (role = 3 || role = 4))
 
 # The middle field of an actual for-header is an expression, not a declaration.
 fn: lmx_graph_code_condition (@: g c.LmxGraph; @: scope c.Lmx; size_t: index) int
@@ -1301,7 +1308,7 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
         # Queue entries are executable fields or consumed expressions. Bodies
         # were normalized by their consumer, so a named field always has a head.
         framed := (cast: (int) (lead != 0))
-        if: context = 0 && lmx_graph_code_argument(g, current, 0U) = 3
+        if: context = 0 && lmx_graph_role_code(lmx_graph_code_argument(g, current, 0U)) != 0
             lmx_graph_code_body(g, current, 0U, @ header, @ code_from, @ code_to)
             status := lmx_graph_work_scan_body(g, frame, header, code_from, code_to, @ queue, @ count, @ cap)
             continue
@@ -2526,6 +2533,16 @@ fn: lmx_graph_node_passes (@: state c.LmxGraphState; @: word char) int
     return: (cast: (int) (word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_until || word = state\w_finally))
 end: lmx_graph_node_passes
 
+# Is the record `L2` at record a body nested in the code of a call, not the body of its file? The record that lmx_graph_file_code gives for the unit
+# root (an .lm2 file, or a file written under an explicit `L2:`) is the file's own body and the space of node stops on it; any other record is nested.
+fn: lmx_graph_record_nested (@: g c.LmxGraph; @: record c.Lmx) int
+    @: holder c.Lmx (cast: (@: c.Lmx) record\parent)
+    if: holder = 0
+        return: 0
+    if: holder\parent = 0 && c.lmx_graph_file_code(g, holder) = record
+        return: 0
+    return: 1
+
 # The space itself (lmx_graph_node_space): a control receiver or its body is passed through, above, by its name or by
 # the name of the Lmx it is a field of (an `if` is [condition, body], its body unnamed).
 fn: lmx_graph_node_space (@: g c.LmxGraph; int: prepare; @: status int) @: void
@@ -2558,6 +2575,10 @@ fn: lmx_graph_node_space (@: g c.LmxGraph; int: prepare; @: status int) @: void
             above := c.lmx_graph_name_of(g, (cast: (@: void) owner))
         ---
         if: lmx_graph_node_passes(state, head) != 0 || lmx_graph_node_passes(state, above) != 0
+            current := owner
+            continue
+        # A record `L2:` nested in the code of a call is a body of that call and is passed through like one (lmx_graph_record_nested).
+        if: (head = state\w_l2 && lmx_graph_record_nested(g, current) != 0) || (above = state\w_l2 && lmx_graph_record_nested(g, owner) != 0)
             current := owner
             continue
         if: owner != 0 && owner\parent != 0 && (above = state\w_fn || above = state\w_sub)
@@ -3403,7 +3424,7 @@ fn: lmx_graph_preflight_scope (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; @:
         if: head = state\w_fn || head = state\w_sub || head = state\w_fm
             continue
         role := lmx_graph_code_body(g, current, 0U, @ selected, @ selected_from, @ selected_to)
-        if: role = 3
+        if: lmx_graph_role_code(role) != 0
             status := lmx_graph_preflight_body(g, selected, selected_from, selected_to, role, @ statements, @ ns, @ cs, @ expressions, @ ne, @ ce)
             continue
         if: head = state\w_if || head = state\w_while || head = state\w_until || head = state\w_for
@@ -4009,7 +4030,7 @@ fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
                 status := lmx_graph_space_declarations(g, current)
             ---
         ---
-        if: role = 3 && lmx_graph_code_body(g, current, 0U, @ selected, @ code_from, @ code_to) = 3
+        if: role = 3 && lmx_graph_role_code(lmx_graph_code_body(g, current, 0U, @ selected, @ code_from, @ code_to)) != 0
             status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, selected)
         head := c.lmx_graph_name_of(g, (cast: (@: void) current))
         if: role = 3 && (head = state\w_fn || head = state\w_sub)
@@ -4629,6 +4650,13 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
                     status := lmx_graph_block(g, code, nested, code_from, code_to, nested_mode, out, flow)
                 i := i + 1U
             ---
+            continue
+        # An explicit `L2:` (the book #scope; the order of the author 2026-11-18): the record is a body of this call, as the body of an else
+        # is. Its statements run here, in this activation; a name it declares belongs to its lexical branch.
+        if: head = state\w_l2
+            lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
+            status := lmx_graph_block(g, code, nested, code_from, code_to, nested_mode, out, flow)
+            i := i + 1U
             continue
         if: head = state\w_else
             return: 2

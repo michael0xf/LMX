@@ -82,10 +82,11 @@ lmx_graph*.lm2 и lmx_gc_graph.lm2 — сборка runtime, l2_frontend_graph.l
 **Рабочий набор.** Stage S = build2/codex_fix250generationchain01/sol-m14-field-values-01. Последний целый
 набор — настоящий G2 среза L0+L1: tool S/boot-fl01-02/lmxtool.exe ec49198b; frontend
 S/boot-fl01-02/g2/frontend/l2trans.exe 7e2e7186; runtime S/boot-fl01-02/g2/runtime (driver.o ff16d5fc,
-driver-observe.o 6c07014e); Graph S/graph-fl01-01/graph_trans-prod.exe 7412d1e2. Поверх него — компоненты
-среза C1, собранные коротким циклом (это не новый G2): tool S/ps-tool-c101/lmxtool-tool.exe 1e7a0a2c; runtime
-S/ps-rt-c102 (driver.o 57f22a3a, driver-observe.o 833948b9); Graph S/ps-graph-c102/graph_trans-prod.exe
-66ca8bba; frontend прежний. Следующий срез собирается этим инструментом и этим frontend.
+driver-observe.o 6c07014e); Graph S/graph-fl01-01/graph_trans-prod.exe 7412d1e2. Поверх него — компоненты,
+собранные коротким циклом (это не новый G2). Срез C1: tool S/ps-tool-c101/lmxtool-tool.exe 1e7a0a2c. Срез
+C5: frontend S/c5-fe-c502/l2trans.exe a299e1a6; runtime S/c5-rt2-c502 (driver.o f15aedb5,
+driver-observe.o 9e58c18f); Graph S/c5-graph2-c502/graph_trans-prod.exe e77f03bc. Следующий срез собирается
+этим инструментом, этим frontend и этим runtime.
 
 **G0 при смене списков.** Списки функций ядра и frontend (`--machine`) живут в инструменте (tools/build.lm2). Срез,
 который меняет список или текст заголовка, собирается инструментом-кандидатом из нового build.lm2, предыдущий
@@ -113,8 +114,10 @@ frontend — кандидат среза; так приняты срезы «п�
 **Очередь (группы перевода — в [плане](../next_core_tasks_v3.md#one-graph-plan)).** (1) Приказ автора
 2026-11-18, шаги П1–П3 срезами C1–C8. C1 принят: модуль `lmx_checks.lm2`, существующие проверки индекса и
 ссылок переехали в него без смены ответов
-([свидетельство](witnesses/one-graph-checks-module-20261118/notes.md)). Жетон у sonnet: C5 — исполнение
-явного `L2:` в любом месте. opus готовит вне дерева C2 и срезы ресиверов объявлений. Каждый срез принимается коротким циклом; целый bootstrap и полные наборы — на границе
+([свидетельство](witnesses/one-graph-checks-module-20261118/notes.md)). C5 принят: явный `L2:` исполняется в
+любом месте кода, его аргументы берутся как записаны
+([свидетельство](witnesses/one-graph-level2-anywhere-20261118/notes.md)). Жетон у opus: C2 — обнуление
+указателя; за ним срез модификаторов и срез связывателя. Каждый срез принимается коротким циклом; целый bootstrap и полные наборы — на границе
 этапа П1 (после C4). Уточнения автора 2026-11-18 о ресиверах `private`, `required`, `const`, `immutable`,
 `independent`: исполняются при проходе по `data`, переменные под ними корневые, у всех несколько аргументов —
 отдельный срез, подготовка вне дерева у opus (план, Р52 и Р53). Решение автора 2026-11-18 о двух видах

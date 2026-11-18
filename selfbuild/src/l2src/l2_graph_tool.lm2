@@ -1360,6 +1360,15 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: status = 0
                 status := lm_graph_emit_scope(g, f, code, body, 0, temps)
             continue
+        # An explicit `L2:` (the book #scope): the statements of the record are emitted here, in the same call, as the interpreter
+        # runs them (lmx_graph_block_body); its names end with it.
+        if: head = state\w_l2
+            c.lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
+            status := lm_graph_emit_block(g, f, code, nested, code_from, code_to, mode, exit_label, again_label, step_label, temps)
+            if: status = 0
+                status := lm_graph_emit_scope(g, f, code, body, 0, temps)
+            i := i + 1U
+            continue
         if: head = state\w_else
             return: 2
         if: head = state\w_while || head = state\w_for || head = state\w_until

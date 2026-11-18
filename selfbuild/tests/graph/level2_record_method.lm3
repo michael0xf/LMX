@@ -1,0 +1,23 @@
+# A method declared under an `L2:` record in the body of a method is a name of the record's lexical branch, as the fn of an `else:` body
+# is (the row codebody_lexical): the call inside the record reaches it (7), the call after the record reaches the method of the enclosing
+# scope (90). The record is code of level 2 and the call after it is code of level 3: the call crosses the border in both ways.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: result 0
+)
+@: shared data[0]
+fn: leaf () int
+    return: 90
+fn: outer () int (int: inside 0; int: outside 0)
+    L2:
+        fn: leaf () int
+            return: 7
+        inside := leaf()
+    outside := leaf()
+    return: inside * 100 + outside
+int: result outer()
+
+sub: main ()
+    shared\Observed\result := result
+main()

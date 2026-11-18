@@ -1,0 +1,20 @@
+# The record does not open a new activation: the space of `node` is one for the whole call (the book, node; the row node_if_body), so
+# `node\hits := 6` inside the `L2:` record writes the field of the root and the method reads 6 through node after the record.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: hits 0
+        int: r 0
+)
+@: shared data[0]
+int: hits 4
+fn: f () int
+    L2:
+        node\hits := 6
+    return: node\hits
+int: r f()
+
+sub: main ()
+    shared\Observed\hits := node\hits
+    shared\Observed\r := r
+main()

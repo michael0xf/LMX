@@ -388,9 +388,10 @@ The author's decisions of 2026-11-18 on the two kinds of receivers and on choosi
 ([semantics](LMX_semantics.en.md#two-kinds-of-receivers),
 [choosing the declaration](LMX_semantics.en.md#declaration-selection)) are not yet carried out by the
 implementation in four places. The clean graph does not choose among declarations of one name: two `fn`
-with one name are refused when the name is resolved. The call binder unwraps a sole Structure not by the
-declarations found but by a failure of the positional form: with one formal `h(One)` unwraps `One` and
-answers 9, with two formals `two(A)` gives `A` to the first one and does not unwrap. Modifiers unwrap a
+with one name are refused when the name is resolved. The call binder does not check both readings of a sole
+Structure: with one formal `h(One)` unwraps `One` and answers 9, and when both readings suit one declaration
+it silently takes the unwrapped one. The native image chooses the callee and admits the arguments at every
+call, and the translator refuses nothing. Modifiers unwrap a
 Structure argument when it has exactly one field: `private: (int: x 10)` declares `x`, while by the rule the
 argument there is a Structure and is not unwrapped. A path passes through a modifier's record: with
 `Lib: private: int: x 10` the path `Lib\x` reads 10, while receivers are not executed in the graph and the

@@ -519,17 +519,21 @@ mutation. Failed admission must not partly write the destination. See
 [L3 semantics](docs/LMX_semantics.en.md#descriptions) and
 [v3 K01–K12](next_core_tasks_v3.md).
 
-An assignment sign is a receiver head that structurally receives the
-whole chain of arguments to the end of the record, but the chain is not
-grouped by invisible parentheses. An expression is evaluated by priority:
-written groups first, then assignment, then the other operators; an
-operation of lower priority is carried out into the parent expression,
-and the clean graph is not rewritten. Inside an expression
-`(1 + v := 2 + 2)` assigns 2. A receiver that itself stands as a record
-of code or as an argument of a call has no parent expression:
-`v := 2 - 3` assigns -1. The rule is general for all operator
-receivers; assignment is no special case. See
-[the book](docs/LMX_semantics.en.md#assignment-inside-expression).
+An assignment sign is a receiver head tied to the name written to its
+left. The priorities and the associativity of operations are those of C
+(the power `**` follows Python); assignment has the lowest priority and
+groups to the right, so its right part is the whole expression to its
+right. Values are evaluated on demand: a receiver that needs the result
+of another receiver has it executed first, whatever its priority, once
+per evaluation, and the clean graph is not rewritten. `1 + v := 2 + 3`
+gives 6 and assigns 5; `v := 2 - 3` assigns -1. An assignment inside the
+expression of an argument writes into the data of the callee and is no
+separate argument; `f(v := 2 + 3; 6)` supplies a named argument.
+`string(identificator)` returns the spelling of an identifier as an
+ordinary Lmx array of characters taken from the table of names. None of
+this is implemented yet; the slices are in the plan. See
+[the book](docs/LMX_semantics.en.md#assignment-inside-expression) and
+[the requirements](docs/new_parts/to_fable_operands_arguments_priorities.md).
 
 ## 5. Message, Thread, and one turn
 

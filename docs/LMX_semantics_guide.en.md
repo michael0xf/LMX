@@ -310,22 +310,30 @@ declare types, create a runtime namespace, or search providers automatically.
 Source precedence, conflict resolution, and a missing-cell marker belong to
 the profile selected by the Table's consumer, not a universal hidden registry.
 
-## The chain of arguments and an explicit group in an expression
+## Priorities, evaluation on demand and an explicit group in an expression
 
-An operator receiver gets the whole written chain of arguments. That is the build of the graph, not an order of
-evaluation: there are no invisible parentheses around the chain. The evaluator of an expression goes by
-priorities: explicit blocks -- written parentheses -- first, then assignment, then the other operators; an
-operation of lower priority is carried out into the parent expression. The clean graph does not change.
+The priorities and the associativity of operations are those of C; assignment has the lowest priority, and its
+right part is the whole expression to its right up to the end of the group. Values are evaluated on demand: if
+a receiver needs the result of another receiver, that one is executed first, whatever its priority, and it is
+executed once. The clean graph does not change.
 
 ```text
-(1 * v := 2 + 2) * (v + 1)
-→ (1 * 2 + 2) * (v + 1)    # v = 2
-→ (2 + 2) * (2 + 1)
-→ 12
+f(1 + v := 2 + 3)
+→ f(1 + (v := 5))    # v = 5
+→ f(6)
+
+f(1 + (v := 2) + 3)
+→ f(1 + 2 + 3)    # v = 2
+→ f(6)
+
+f(v := 2 + 3; 6)
+→ f(v := 5; 6)
 ```
 
-An explicit group changes both the result and the variable: `(1 + v := (2 + 2)) * (v + 1)` gives 25, and `v` is
-4; without it `(1 + v := 2 + 2) * (v + 1)` gives 15, and `v` is 2. In a record of code `v := 2 - 3` the variable
-gets −1: there is nowhere to carry `- 3` out, outside stands the assignment itself, and `2 - 3` stays its
-right part. The rule is general for all operator receivers, not only for assignment: `(+ 2 - 3)` is decomposed
-the same way and gives −1. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).
+The first two records supply one argument 6 and differ in the value of `v` in the data of `f`: parentheses set
+a boundary of evaluation. The third record supplies two arguments: an assignment at an argument position of its
+own is a named argument. An embedded assignment does not become a separate argument, and the caller's variable
+of the same name does not change. Short circuit stays: in `0 && (x := 1)` and `1 || (x := 1)` the variable `x`
+does not change. `while ((c := getchar()) != EOF)` at every check reads one character, writes it into `c` and
+compares. `string(foo)` gives the name of the identifier as the string `"foo"` and does not read the value of
+`foo`. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).

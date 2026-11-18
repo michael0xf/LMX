@@ -1626,6 +1626,10 @@ end: lm_graph_emit_methods
 fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path char); int: forced; int: check_root; int: runs) int
     @: f c.FILE 0
     @: value void 0
+    # The code of the file (lmx_graph_file_code): the content of the record L2 an .lm2 file is wrapped in, else the root.
+    # The image copies the whole graph from the root; the native body, the methods and the entry are the code's.
+    @: code c.Lmx c.lmx_graph_file_code(g, root)
+    size_t: code_id 1U
     size_t: n (cast: (size_t) c.lmx_graph_count(root))
     size_t: i 0U
     c.LmxCopyMap: emitted
@@ -1645,7 +1649,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     if: g = 0 || root = 0 || out_path = 0 || runs < 1
         return: 5
     # The translation is a traversal of the graph: its namespace begins empty and ends with the translation.
-    r := c.lmx_graph_space_open(g, root, @ opened)
+    r := c.lmx_graph_space_open(g, code, @ opened)
     if: r != 0
         return: r
     f := c.fopen(out_path, "wb")
@@ -1661,9 +1665,9 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     # Declare each native temporary where its first value is emitted. The emitter needs no temporary file or second
     # copy of the body; its traversal-local counter only supplies distinct L1 names.
     if: forced = 0
-        r := lm_graph_collect_methods(g, root, @ methods, @ methods_count)
+        r := lm_graph_collect_methods(g, code, @ methods, @ methods_count)
         if: r = 0
-            r := lm_graph_emit_methods(g, f, root, methods, methods_count, 0)
+            r := lm_graph_emit_methods(g, f, code, methods, methods_count, 0)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@: void) methods))
@@ -1676,7 +1680,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     if: check_root = 0
         c.fputs("        if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"BEFORE\") != 0\n            return: 1\n", f)
     if: forced = 0
-        r := lm_graph_emit_block(g, f, root, root, 0U, n, 0, -1, -1, -1, temps)
+        r := lm_graph_emit_block(g, f, code, code, 0U, c.lmx_graph_count(code), 0, -1, -1, -1, temps)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@: void) methods))
@@ -1693,6 +1697,8 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     if: check_root = 0
         c.fputs("        if: l2_status = 0\n            if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"AFTER\") != 0\n                l2_status: 1\n            ---\n        ---\n", f)
     c.fputs("        lmx_graph_space_close(l2_opened)\n        return: l2_status\n    end: lm_graph_body\nend: external\n\n", f)
+    if: code != root && check_root = 0
+        c.fputs("external:\n    fn: lm_graph_file (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n        return: lmx_graph_call(l2_g, lmx_call_code)\n    end: lm_graph_file\nend: external\n\n", f)
     # Only emit-check supplies a test host. The body keeps the language rule: returning 0 is NOT Message success.
     # Like the `run` command's host, this separate adapter completes its own test after a successful body. Ordinary
     # `emit` gets no adapter and still fails R0 when the source supplies neither success nor an exit Message.
@@ -1715,6 +1721,8 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     ---
     if: r = 0
         r := lm_graph_emit_parents(g, f, @ emitted, next)
+    if: code != root
+        code_id := (cast: (size_t) c.lmx_copy_map_get(@ emitted, (cast: (@: void) code)))
     c.lmx_copy_map_dispose(@ emitted)
     if: r != 0
         c.fclose(f)
@@ -1723,8 +1731,11 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
         return: 5
     ---
     if: forced = 0
-        c.fputs("        lmx_call_code: l2_program_unit\n", f)
-        r := lm_graph_emit_methods(g, f, root, methods, methods_count, 1)
+        if: code_id = 1U
+            c.fputs("        lmx_call_code: l2_program_unit\n", f)
+        else:
+            c.fprintf(f, "        lmx_call_code: (cast: (@: Lmx) l2_gv%zu)\n", code_id)
+        r := lm_graph_emit_methods(g, f, code, methods, methods_count, 1)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@: void) methods))
@@ -1732,7 +1743,16 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
             return: r
         ---
     ---
-    c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_body)\n", f)
+    # The entry of the code: the root's, or the record's when the file is wrapped in the record L2; a host that launches
+    # the root of an ordinary program enters it through lm_graph_file, which calls the file (lmx_graph_call passes
+    # through the record to the record's entry).
+    if: code_id = 1U
+        c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_body)\n", f)
+    else:
+        c.fprintf(f, "        lmx_call_code: (cast: (@: Lmx) l2_gv%zu)\n        lmx_call_code\\native: (cast: (LmxEntry) lm_graph_body)\n", code_id)
+        if: check_root = 0
+            c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_file)\n", f)
+    ---
     if: check_root != 0
         c.fputs("        graph\\native: (cast: (LmxEntry) lm_graph_check_root)\n", f)
     c.fputs("        return: 0\n    end: l2_program_build\nend: external\n\n", f)
@@ -2327,6 +2347,7 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     g := c.lmx_graph_open(arena)
     if: g = 0 || lm_graph_build_file(g, path, @ root) != 0
         return: 1
+    root := c.lmx_graph_file_code(g, root)
     # One traversal creates take. Point already answers through the whole
     # data registry, without executing a declaration on the way to r.
     if: c.lmx_graph_space_open(g, root, @ opened) != 0

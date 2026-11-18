@@ -546,7 +546,7 @@ fn: fd_merge_check () int
         return: 131
     @: g c.LmxGraph c.lmx_graph_open(@ arena)
     @: root c.Lmx 0
-    @: file c.FILE c.fopen("graph_merge_typed_code.lm2", "wb")
+    @: file c.FILE c.fopen("graph_merge_typed_code.lm3", "wb")
     @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
     @: n c.Lmx c.lmx_graph_lmx(g, 0, 3U)
     @: bad c.Lmx c.lmx_graph_lmx(g, 0, 1U)
@@ -584,8 +584,8 @@ fn: fd_merge_check () int
         return: 134
     if: c.fputs("int: merge_checks 0\nVerifyMerge:\nend: VerifyMerge\nsub: MergeWork () ()\n    @: merged merge(M; N)\n    call: merged VerifyMerge\n    @: merged merge(M; N; M)\n    call: merged VerifyMerge\nend: MergeWork\nsub: BadMergeWork () ()\n    @: merged merge(M; Bad)\n    call: merged VerifyMerge\nend: BadMergeWork\n", file) < 0 || c.fclose(file) != 0
         return: 135
-    status := c.lm_graph_build_file(g, "graph_merge_typed_code.lm2", @ root)
-    c.remove("graph_merge_typed_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_merge_typed_code.lm3", @ root)
+    c.remove("graph_merge_typed_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("M", 1U), m) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("N", 1U), n) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("Bad", 3U), bad) != 0
         return: 136
     m\parent := root
@@ -630,7 +630,7 @@ fn: fd_mapped_check () int
         return: 80
     @: g c.LmxGraph c.lmx_graph_open(@ arena)
     @: root c.Lmx 0
-    @: file c.FILE c.fopen("graph_fn_data_typed_code.lm2", "wb")
+    @: file c.FILE c.fopen("graph_fn_data_typed_code.lm3", "wb")
     @: source void 0
     @: alias_source void 0
     const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
@@ -670,8 +670,8 @@ fn: fd_mapped_check () int
     c.memset(empty, 165, abi\size)
     if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    data\\count := data\\count + 1\n    return: data\\count\nend: Held\nBefore:\nend: Before\nVerify:\nend: Verify\nTransfer:\n    int: touched 7\n    data\\x := data\\y\n    data\\y := data\\z\n    data\\saved := data\\x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    call: F\\data Before\n    F()\n    fn: Again F\\data\\held\n    Again()\n    call: F\\data Verify\nend: Make\n", file) < 0 || c.fclose(file) != 0
         return: 82
-    status := c.lm_graph_build_file(g, "graph_fn_data_typed_code.lm2", @ root)
-    c.remove("graph_fn_data_typed_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_fn_data_typed_code.lm3", @ root)
+    c.remove("graph_fn_data_typed_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 83
     data\parent := root

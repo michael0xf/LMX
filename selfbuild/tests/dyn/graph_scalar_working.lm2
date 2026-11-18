@@ -242,13 +242,13 @@ fn: gs_pending_actuals () int
     if: c.lmx_arena_open(@ arena) != 0
         return: 124
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_pending_actuals.lm2", "wb")
+    file := c.fopen("graph_pending_actuals.lm3", "wb")
     if: g = 0 || file = 0
         return: 124
     if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer 0\nanswer := Pending(@number; Collect())\nanswer := Pending(@number; Collect())\ndata\\answer := answer\n", file) < 0 || c.fclose(file) != 0
         return: 124
-    status := c.lm_graph_build_file(g, "graph_pending_actuals.lm2", @ root)
-    c.remove("graph_pending_actuals.lm2")
+    status := c.lm_graph_build_file(g, "graph_pending_actuals.lm3", @ root)
+    c.remove("graph_pending_actuals.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         c.fprintf(c.stderr, "pending setup build/space status=%d root=%p opened=%d\n", status, (cast: (@: void) root), opened)
         return: 125
@@ -315,7 +315,7 @@ fn: gs_working_check () int
         return: 80
     @: g c.LmxGraph c.lmx_graph_open(@ arena)
     @: root c.Lmx 0
-    @: file c.FILE c.fopen("graph_scalar_working_code.lm2", "wb")
+    @: file c.FILE c.fopen("graph_scalar_working_code.lm3", "wb")
     @: source void 0
     @: alias_source void 0
     @: float_source void 0
@@ -395,8 +395,8 @@ fn: gs_working_check () int
         return: 82
     if: c.fputs("\nfn: GSHold () double\n    finally:\n        call: data Touch\n    end: finally\n    return: data\\y\nend: GSHold\n\nfn: GSReplace () f64\n    finally:\n        return: data\\z\n    end: finally\n    return: data\\y\nend: GSReplace\n\nfn: GSCInt () int\n    return: data\\number\nend: GSCInt\n\nfn: GSForward () int\n    return: GSCInt()\nend: GSForward\n\nfn: GSForwardHold () double\n    return: GSHold()\nend: GSForwardHold\n", file) < 0 || c.fclose(file) != 0
         return: 82
-    status := c.lm_graph_build_file(g, "graph_scalar_working_code.lm2", @ root)
-    c.remove("graph_scalar_working_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_scalar_working_code.lm3", @ root)
+    c.remove("graph_scalar_working_code.lm3")
     if: status != 0 || root = 0
         return: 83
     if: c.lmx_graph_space_open(g, root, @ opened) != 0

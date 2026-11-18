@@ -40,20 +40,20 @@ fn_prepared и merge_code_descriptions объявляют computed fn в own dat
 корневых @-псевдонимов. Описания args/data записаны вертикально, сохранённые группы code
 отражены в дампе; прежние числа и количества частей сохранены.
 
-[computed_data_reentry](../../../selfbuild/tests/graph/computed_data_reentry.lm2):
+[computed_data_reentry](../../../selfbuild/tests/graph/computed_data_reentry.lm3):
 внешний int triple90, локальные fn/sub из описаний, именованный actual и следующая
 инициализация, повтор outer и пути. Независимые результаты: initial4; first581
 (k5/calls2/r8/bump1), second892 (k8/calls3/r9/bump2), path10/calls4, bumps3.
 Исходные счётчики0/0 и внешний triple90 сохраняются.
 
-[closed_data_missing](../../../selfbuild/tests/graph/closed_data_missing.lm2) отказывает3
-до tick при calls0. [open_data_missing](../../../selfbuild/tests/graph/open_data_missing.lm2)
+[closed_data_missing](../../../selfbuild/tests/graph/closed_data_missing.lm3) отказывает3
+до tick при calls0. [open_data_missing](../../../selfbuild/tests/graph/open_data_missing.lm3)
 заканчивает ordered data при calls1 и отказывает3 до body, который записал бы99.
 Native/forced отвечают1; полный AFTER сравнивается с независимо заданным состоянием.
-[computed_data_named](../../../selfbuild/tests/graph/computed_data_named.lm2) даёт9/6
+[computed_data_named](../../../selfbuild/tests/graph/computed_data_named.lm3) даёт9/6
 и сохраняет имя actual селектором до построения локальной цели.
 
-[grouped_actual_contract](../../../selfbuild/tests/graph/grouped_actual_contract.lm2)
+[grouped_actual_contract](../../../selfbuild/tests/graph/grouped_actual_contract.lm3)
 проверяет closed5/outside8, open55/outside8, data118/calls0/outside8, whole37 и empty34.
 В числовом случае k5 захвачен до change→8; после фактического чтения leaf тоже видит5.
 В data-случае группы local(never) и local(k) не исполняются; leaf получает8.

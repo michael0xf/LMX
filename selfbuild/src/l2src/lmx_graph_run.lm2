@@ -5637,13 +5637,17 @@ end: lmx_graph_run
 
 # Dispatch the current clean graph. Native uses the existing common nullary call boundary; with no entry the clean
 # interpreter gets a fresh activation frame, discarded on return. No previous traversal's bindings are retained.
-fn: lmx_graph_call (@: g c.LmxGraph; @: root c.Lmx) int
+fn: lmx_graph_call (@: g c.LmxGraph; @: file c.Lmx) int
     c.LmxActivation: activation
+    @: root c.Lmx 0
     int: value 0
     int: status 0
     int: opened 0
-    if: g = 0 || c.lmx_graph_kind(g, (cast: (@: void) root)) != 4
+    if: g = 0 || c.lmx_graph_kind(g, (cast: (@: void) file)) != 4
         return: 5
+    # A file wrapped in the record L2 runs as the content of the record (lmx_graph_file_code): its traversal, its native
+    # entry and its activation are the record's.
+    root := c.lmx_graph_file_code(g, file)
     status := lmx_graph_space_open(g, root, @ opened)
     if: status != 0
         return: status

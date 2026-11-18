@@ -120,7 +120,7 @@ fn: gp_private_check () int
     if: actuals = 0 || c.lmx_arena_open(@ arena) != 0
         return: 101
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_private_binding_code.lm2", "wb")
+    file := c.fopen("graph_private_binding_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 101
     # CODE private is readable by the current activation, excluded only
@@ -146,13 +146,13 @@ fn: gp_private_check () int
         return: 102
     if: c.fputs("\nfn: MetadataOffset (int: a 1) int (private: (int: x 2))\n    return: a + x\nend: MetadataOffset\n\nMetadataTarget:\n    int: marker 3\nend: MetadataTarget\n\nMetadataShared:\n    private: (@: hidden MetadataTarget)\n    @: public MetadataTarget\nend: MetadataShared\n\nMetadataPrivate:\n    private: (int: v 1)\nend: MetadataPrivate\n\nMetadataPublic:\n    int: v 2\nend: MetadataPublic\n", file) < 0 || c.fclose(file) != 0
         return: 102
-    file := c.fopen("graph_private_binding_code.lm2", "ab")
+    file := c.fopen("graph_private_binding_code.lm3", "ab")
     if: file = 0
         return: 102
     if: c.fputs("\nfn: Eligible (private: (int: x 20); int: x 30) int\n    return: Library\\read()\nend: Eligible\n", file) < 0 || c.fclose(file) != 0
         return: 102
-    status := c.lm_graph_build_file(g, "graph_private_binding_code.lm2", @ root)
-    c.remove("graph_private_binding_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_private_binding_code.lm3", @ root)
+    c.remove("graph_private_binding_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         c.fprintf(c.stderr, "private binding build: status=%d root=%p\n", status, (cast: (@: void) root))
         return: 103

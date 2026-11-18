@@ -84,28 +84,28 @@ fn: cf_frames_check () int
     if: actuals = 0 || c.lmx_arena_open(@ arena) != 0
         return: 101
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_call_frames_code.lm2", "wb")
+    file := c.fopen("graph_call_frames_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 101
     if: c.fputs("Counter:\n    int: calls 0\nend: Counter\n\nfn: bump () int\n    Counter\\calls := Counter\\calls + 1\n    return: 9\nend: bump\n\nfn: f (int: a bump()) int (int: b 2)\n    int: t a + b\n    t := t + 1\n    return: t\nend: f\n\nfn: ordinary () int\n    return: f(5)\nend: ordinary\n\nfn: once () int\n    return: f(bump())\nend: once\n\nfn: ignore (int: a bump()) int\n    return: 42\nend: ignore\n\nfn: local () int (int: x 10)\n    x := 21\n    return: x\nend: local\n\nfn: snapshot () int (int: x 10)\n    data\\x := 99\n    return: x\nend: snapshot\n\nD:\n    int: a 1\nend: D\n\nAdd:\n    return: a + 1\nend: Add\n\nSelf:\n    int: n 3\n    n := n + 2\n    return: n\nend: Self\n\nStep:\n    int: t 3\n    t := t + 1\n    Counter\\calls := Counter\\calls + 1\nend: Step\n", file) < 0 || c.fclose(file) != 0
         return: 102
-    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    file := c.fopen("graph_call_frames_code.lm3", "ab")
     if: file = 0
         return: 120
     if: c.fputs("\nint: cf_outer_x 7\ncf_seq:\n    int: cf_before cf_outer_x\n    int: cf_outer_x 1\n    return: cf_before\nend: cf_seq\n\ncf_seq_actual:\n    int: cf_actual_value bump()\n    int: cf_actual_after cf_actual_value\n    int: cf_actual_value bump()\n    return: cf_actual_after + cf_actual_value\nend: cf_seq_actual\n", file) < 0 || c.fclose(file) != 0
         return: 120
-    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    file := c.fopen("graph_call_frames_code.lm3", "ab")
     if: file = 0
         return: 122
     if: c.fputs("\nfn: cf_description () int (int: cf_pending bump())\n    int: cf_five 5\n    data[0][1] := @cf_five\n    return: cf_pending\nend: cf_description\n", file) < 0 || c.fclose(file) != 0
         return: 122
-    file := c.fopen("graph_call_frames_code.lm2", "ab")
+    file := c.fopen("graph_call_frames_code.lm3", "ab")
     if: file = 0
         return: 124
     if: c.fputs("\nsub: cf_descriptor (int: cf_uninit_unused)\n    Counter\\calls := Counter\\calls + 1\nend: cf_descriptor\n", file) < 0 || c.fclose(file) != 0
         return: 124
-    status := c.lm_graph_build_file(g, "graph_call_frames_code.lm2", @ root)
-    c.remove("graph_call_frames_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_call_frames_code.lm3", @ root)
+    c.remove("graph_call_frames_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 103
     f := cf_named(g, root, "f")

@@ -42,10 +42,10 @@ AFTER36/mutation24 прошли. Полный bootstrap G1/G2/fixedpoint13 и п
 
 | Окончательная фикстура | Независимые ожидания и измеренный pure результат |
 | --- | --- |
-| [physical_reference_records.lm2](../../../selfbuild/tests/graph/physical_reference_records.lm2) | Ответ0. После подготовки Self и `call(data; Self)` first_i40/first_s1: source содержит int-reference на i40 и Structure-reference на A(v1). Затем `Self\ip := @j`, `Self\p := B` меняют source; следующий запуск даёт second_i41/second_s2. Обе семьи5/6 читают текущий source payload. |
-| [physical_reference_type_only.lm2](../../../selfbuild/tests/graph/physical_reference_type_only.lm2) | Ответ0, before1/after1, p_after3/s_after7. Types не вызывается; его implicit wrappers8/9 как код проверяют уже заполненные места main.data и сохраняют их значения. |
-| [physical_reference_int_refused.lm2](../../../selfbuild/tests/graph/physical_reference_int_refused.lm2) | Ответ4, before1/after0. Первый wrapper8 требует int-reference; Bad.p остаётся int99, raw `@: s Missing` остаётся написанной записью и не вычисляется. |
-| [physical_reference_structure_refused.lm2](../../../selfbuild/tests/graph/physical_reference_structure_refused.lm2) | Ответ4, before1/after0/calls0. Raw `@: p int data[touch()]` проходит только проверку семейства5 без вычисления кандидата. Следующий wrapper9 отвергает int Bad.s99; оба поля Bad остаются неизменными. |
+| [physical_reference_records.lm2](../../../selfbuild/tests/graph/physical_reference_records.lm3) | Ответ0. После подготовки Self и `call(data; Self)` first_i40/first_s1: source содержит int-reference на i40 и Structure-reference на A(v1). Затем `Self\ip := @j`, `Self\p := B` меняют source; следующий запуск даёт second_i41/second_s2. Обе семьи5/6 читают текущий source payload. |
+| [physical_reference_type_only.lm2](../../../selfbuild/tests/graph/physical_reference_type_only.lm3) | Ответ0, before1/after1, p_after3/s_after7. Types не вызывается; его implicit wrappers8/9 как код проверяют уже заполненные места main.data и сохраняют их значения. |
+| [physical_reference_int_refused.lm2](../../../selfbuild/tests/graph/physical_reference_int_refused.lm3) | Ответ4, before1/after0. Первый wrapper8 требует int-reference; Bad.p остаётся int99, raw `@: s Missing` остаётся написанной записью и не вычисляется. |
+| [physical_reference_structure_refused.lm2](../../../selfbuild/tests/graph/physical_reference_structure_refused.lm3) | Ответ4, before1/after0/calls0. Raw `@: p int data[touch()]` проходит только проверку семейства5 без вычисления кандидата. Следующий wrapper9 отвергает int Bad.s99; оба поля Bad остаются неизменными. |
 
 В отрицательных фикстурах Bad связан с написанной анонимной root-group. После
 отказа полный AFTER показывает оба настоящих поля Bad: это независимая проверка

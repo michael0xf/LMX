@@ -58,13 +58,13 @@ fn: gmr_check () int
     if: c.lmx_arena_open(@ arena) != 0
         return: 101
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_merge_receivers_code.lm2", "wb")
+    file := c.fopen("graph_merge_receivers_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 101
     if: c.fputs("MergeConst:\n    const: (int: v 1)\nend: MergeConst\n\nMergePrivate:\n    private: (int: v 1)\nend: MergePrivate\n\nMergePublic:\n    int: v 2\nend: MergePublic\n", file) < 0 || c.fclose(file) != 0
         return: 102
-    status := c.lm_graph_build_file(g, "graph_merge_receivers_code.lm2", @ root)
-    c.remove("graph_merge_receivers_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_merge_receivers_code.lm3", @ root)
+    c.remove("graph_merge_receivers_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 103
     const_source := gmr_named(g, root, "MergeConst")

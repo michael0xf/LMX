@@ -1101,8 +1101,14 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
 end: lm_graph_build_field
 
 # The root of a parsed document as a root Lmx of the arena of g: one slot per active field, built in the written order.
-# 0 and the root in out; 1 without memory; 2 when the document has no root Structure or a nd of no known kind.
-fn: lm_graph_build_root (@: g c.LmxGraph; @: doc c.LmP0Document; @@: out c.Lmx) int
+# An .lm2 file (level2 1) is wrapped in the record L2 (the book #scope: «Файл `.lm2` сам по себе как обёрнут в этот
+# ресивер»): the root holds that record -- an Lmx named by the receiver L2 -- and the record the fields, each built as a
+# field of the root is (lm_graph_build_field).  An explicit `L2:` is a statement of that receiver of the language
+# (lmx_graph_receivers_in) with its written fields.  0 and the root in out; 1 without memory; 2 when the document has no
+# root Structure or a nd of no known kind.
+fn: lm_graph_build_root (@: g c.LmxGraph; @: doc c.LmP0Document; int: level2; @@: out c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: record c.Lmx 0
     @: nd c.LmP0Node (cast: (@: c.LmP0Node) c.lm_p0_document_root(doc))
     @: s c.LmP0Structure 0
     @: f c.LmP0Field 0
@@ -1115,10 +1121,22 @@ fn: lm_graph_build_root (@: g c.LmxGraph; @: doc c.LmP0Document; @@: out c.Lmx) 
     out[0] := 0
     s := lm_graph_p0_structure(nd)
     n := lm_graph_count_active(s)
-    root := c.lmx_graph_lmx(g, 0, n)
+    if: level2 = 0
+        root := c.lmx_graph_lmx(g, 0, n)
+        f := lm_graph_next_active(lm_graph_p0_first(s))
+    else:
+        # The fields of the file go into the record; the one field of the root is the record.
+        root := c.lmx_graph_lmx(g, 0, 1U)
+        if: root = 0
+            return: 1
+        r := lm_graph_build_fields(g, root, s, 1, 0, @ record)
+        if: r != 0
+            return: r
+        if: c.lmx_graph_name_address(g, (cast: (@: void) record), state\w_l2) != 0 || c.lmx_graph_put_in(g, root, 0U, (cast: (@: void) record)) != 0
+            return: 1
+    ---
     if: root = 0
         return: 1
-    f := lm_graph_next_active(lm_graph_p0_first(s))
     while: f != 0
         r := lm_graph_build_field(g, root, i, lm_graph_p0_value(f))
         if: r != 0
@@ -1137,14 +1155,20 @@ fn: lm_graph_build_root (@: g c.LmxGraph; @: doc c.LmP0Document; @@: out c.Lmx) 
     return: 0
 end: lm_graph_build_root
 
-# The clean graph of the source file at path in the arena of g: parsed by P0, built, the parse tree destroyed. 0 and
-# the root in out; 1 without memory; 2 when the file does not parse (the diagnostic printed) or has an unknown nd.
+# The clean graph of the source file at path in the arena of g: parsed by P0, built, the parse tree destroyed; a path
+# ending in .lm2 is the code of L2 (lm_graph_build_root wraps it in the record L2). 0 and the root in out; 1 without
+# memory; 2 when the file does not parse (the diagnostic printed) or has an unknown nd.
 fn: lm_graph_build_file (@: g c.LmxGraph; const: (@: path char); @@: out c.Lmx) int
     @: doc c.LmP0Document 0
     @: diag c.LmP0Diagnostic 0
+    size_t: path_size 0U
+    int: level2 0
     int: r 0
     if: g = 0 || path = 0 || out = 0
         return: 2
+    path_size := c.strlen(path)
+    if: path_size >= 4U && c.strcmp(path + (path_size - 4U), ".lm2") = 0
+        level2 := 1
     out[0] := 0
     if: c.lm_p0_parse_file(path, @ doc) != 0
         if: doc != 0
@@ -1156,7 +1180,7 @@ fn: lm_graph_build_file (@: g c.LmxGraph; const: (@: path char); @@: out c.Lmx) 
             c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", path)
         ---
         return: 2
-    r := lm_graph_build_root(g, doc, out)
+    r := lm_graph_build_root(g, doc, level2, out)
     c.lm_p0_document_destroy(doc)
     return: r
 end: lm_graph_build_file

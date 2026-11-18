@@ -1,36 +1,38 @@
----
-    Observed:
-        int: positional 7
-        int: named 7
-        int: whole 9
-    end: Observed
----
-@: shared (data [] 0)
-int: effects 0
-fn: touch () int
-    :=: (node \ effects) ((node \ effects) + 1)
-    return: 1
-end: touch
-fn: take (int: value; int: other 2) int
-    return: (value + other)
-end: take
-fn: deferred (int: value) int
-    return: value
-end: deferred
-fn: opaque () c.FILE
-    return: 0
-end: opaque
----
-    take: (:= unknown (touch))
----
-if: 0 ((deferred) (opaque))
-int: positional (take 5)
-int: named (take (:= other 4) (:= value 3))
-int: whole (take ((int value 8) (int other 1)))
-int: done 1
-sub: main ()
-    :=: ((shared \ Observed) \ positional) positional
-    :=: ((shared \ Observed) \ named) named
-    :=: ((shared \ Observed) \ whole) whole
-end: main
-main:
+L2:
+    ---
+        Observed:
+            int: positional 7
+            int: named 7
+            int: whole 9
+        end: Observed
+    ---
+    @: shared (data [] 0)
+    int: effects 0
+    fn: touch () int
+        :=: (node \ effects) ((node \ effects) + 1)
+        return: 1
+    end: touch
+    fn: take (int: value; int: other 2) int
+        return: (value + other)
+    end: take
+    fn: deferred (int: value) int
+        return: value
+    end: deferred
+    fn: opaque () c.FILE
+        return: 0
+    end: opaque
+    ---
+        take: (:= unknown (touch))
+    ---
+    if: 0 ((deferred) (opaque))
+    int: positional (take 5)
+    int: named (take (:= other 4) (:= value 3))
+    int: whole (take ((int value 8) (int other 1)))
+    int: done 1
+    sub: main ()
+        :=: ((shared \ Observed) \ positional) positional
+        :=: ((shared \ Observed) \ named) named
+        :=: ((shared \ Observed) \ whole) whole
+    end: main
+    main:
+end: L2

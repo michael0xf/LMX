@@ -66,10 +66,10 @@ runner или второго парсера нет. Native обычной Struct
 
 | Источник | Независимое ожидание |
 | --- | --- |
-| [received_structure_values.lm2](../../../selfbuild/tests/graph/received_structure_values.lm2) | Ответ 0. root_n/direct_n/missing_n/own_n/replaced_n/path_n/given_n/indexed_n = 1; group_type = 13; method_counts = 1301 из длин 1/3/0/1; method_fields = 4; literal_calls = 0. Direct merge: merged_n = 2, merged_p = 7, merge_calls = 1. `@3 int` с вычисляемым индексом и копией typed reference: address_value/reference_value = 41, final_calls = 2. |
-| [received_assignment_snapshots.lm2](../../../selfbuild/tests/graph/received_assignment_snapshots.lm2) | Ответ 0. prepared = 0, numeric = 5, structural = 8, held_n = 1, outside = 8, changes = 2. |
-| [received_field_read_refused.lm2](../../../selfbuild/tests/graph/received_field_read_refused.lm2) | Ответ 5 при чтении Holder.p, calls = 0, before = 1; последующая запись before = 2 не исполняется. |
-| [received_assignment_preflight_refused.lm2](../../../selfbuild/tests/graph/received_assignment_preflight_refused.lm2) | Ответ 4 на присваивании созданному p; before = 1, внешний p = 7, RHS missing не потребляется. |
+| [received_structure_values.lm2](../../../selfbuild/tests/graph/received_structure_values.lm3) | Ответ 0. root_n/direct_n/missing_n/own_n/replaced_n/path_n/given_n/indexed_n = 1; group_type = 13; method_counts = 1301 из длин 1/3/0/1; method_fields = 4; literal_calls = 0. Direct merge: merged_n = 2, merged_p = 7, merge_calls = 1. `@3 int` с вычисляемым индексом и копией typed reference: address_value/reference_value = 41, final_calls = 2. |
+| [received_assignment_snapshots.lm2](../../../selfbuild/tests/graph/received_assignment_snapshots.lm3) | Ответ 0. prepared = 0, numeric = 5, structural = 8, held_n = 1, outside = 8, changes = 2. |
+| [received_field_read_refused.lm2](../../../selfbuild/tests/graph/received_field_read_refused.lm3) | Ответ 5 при чтении Holder.p, calls = 0, before = 1; последующая запись before = 2 не исполняется. |
+| [received_assignment_preflight_refused.lm2](../../../selfbuild/tests/graph/received_assignment_preflight_refused.lm3) | Ответ 4 на присваивании созданному p; before = 1, внешний p = 7, RHS missing не потребляется. |
 
 У snapshot-фикстуры State — обычный `fn` с own data и `return: 0`. Первый вызов
 подготавливает вложенные методы существующим конструктором. Number и Literal затем

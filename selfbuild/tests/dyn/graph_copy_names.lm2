@@ -33,13 +33,13 @@ fn: gcn_check () int
     if: c.lmx_arena_open(@ arena) != 0
         return: 101
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_copy_names_code.lm2", "wb")
+    file := c.fopen("graph_copy_names_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 101
     if: c.fputs("Source:\n    A:\n        int: n 1\n    end: A\n    const: (int: c 3)\n    int: m 2\nend: Source\n", file) < 0 || c.fclose(file) != 0
         return: 102
-    status := c.lm_graph_build_file(g, "graph_copy_names_code.lm2", @ root)
-    c.remove("graph_copy_names_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_copy_names_code.lm3", @ root)
+    c.remove("graph_copy_names_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 103
     source := gcn_named(g, root, "Source")

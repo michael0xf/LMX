@@ -1378,6 +1378,8 @@ fn: lm_compiler_graph_translate (const: (@: src char); const: (@: out char); @@:
     if: status != 0
         c.fprintf(c.stderr, "l2trans error: %s: the clean graph of the unit is not built (the builder answered %d)\n", src, status)
         return: 1
+    # A machine module is an .lm2 file: its functions are the content of the record L2 the builder wraps it in.
+    root := c.lmx_graph_file_code(g, root)
     status := c.lmx_graph_space_open(g, root, @ opened)
     if: status != 0
         c.fprintf(c.stderr, "l2trans error: %s: the traversal of the unit's root does not open (answer %d)\n", src, status)

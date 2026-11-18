@@ -33,10 +33,10 @@ Native использует тот же preflight, снапшот и writer. П�
 
 ## Частная приёмка
 
-[reference_work](../../../selfbuild/tests/graph/reference_work.lm2),
-[reference_int_work](../../../selfbuild/tests/graph/reference_int_work.lm2),
-[reference_number_refused](../../../selfbuild/tests/graph/reference_number_refused.lm2) и
-[reference_model_refused](../../../selfbuild/tests/graph/reference_model_refused.lm2) проверяют:
+[reference_work](../../../selfbuild/tests/graph/reference_work.lm3),
+[reference_int_work](../../../selfbuild/tests/graph/reference_int_work.lm3),
+[reference_number_refused](../../../selfbuild/tests/graph/reference_number_refused.lm3) и
+[reference_model_refused](../../../selfbuild/tests/graph/reference_model_refused.lm3) проверяют:
 рабочее/опубликованное значение 2/1, публикацию после выхода 2, держатель merge=2,
 чистый внешний снимок после явной записи вложенного вызова (2/1/1), типизированные int-ссылки
 (41/40/41/41/41), числовой отказ до эффектов merge (calls=0), отказ 4 несовместимому виду data-места.

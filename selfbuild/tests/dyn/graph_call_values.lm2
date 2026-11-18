@@ -434,28 +434,28 @@ fn: gv_values_check () int
     if: abi = 0 || alias_abi != abi || alias_source = source || actuals = 0 || before = 0 || pair = 0 || bindings = 0 || pair_bindings = 0 || codes = 0 || c.lmx_arena_open(@ arena) != 0
         return: 140
     g := c.lmx_graph_open(@ arena)
-    file := c.fopen("graph_call_values_code.lm2", "wb")
+    file := c.fopen("graph_call_values_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 140
     if: c.fputs("fn: NativeProbe () double\n    return: immutable\nend: NativeProbe\n\nfn: Echo () double\n    return: first\nend: Echo\n\nfn: FreeEcho () double\n    Collect()\n    return: immutable\nend: FreeEcho\n\nfn: Store () double\n    first := second\n    return: first\nend: Store\n", file) < 0 || c.fclose(file) != 0
         return: 141
-    file := c.fopen("graph_call_values_code.lm2", "ab")
+    file := c.fopen("graph_call_values_code.lm3", "ab")
     if: file = 0
         return: 141
     if: c.fputs("\n@: Model (int: x 0)\n@: A (int: x 7; int: y 8)\n\nfn: ModelRead (@: value Model) int\n    return: value\\x\nend: ModelRead\n\nfn: IntRead (@: p int) int\n    return: \\p\nend: IntRead\n\nfn: ModelCall () int\n    return: ModelRead(A)\nend: ModelCall\n\nfn: IntCall () int\n    return: IntRead(A[1])\nend: IntCall\n", file) < 0 || c.fclose(file) != 0
         return: 141
-    file := c.fopen("graph_call_values_code.lm2", "ab")
+    file := c.fopen("graph_call_values_code.lm3", "ab")
     if: file = 0
         return: 141
     if: c.fputs("\nfn: Produce () double\n    return: first\nend: Produce\n\nfn: Collect () int\n    return: 9\nend: Collect\n\nfn: Use () double\n    data\\used := data\\used + 1\n    return: first\nend: Use\n\nfn: PendingCaller () double\n    return: Use(Produce(); Collect())\nend: PendingCaller\n", file) < 0 || c.fclose(file) != 0
         return: 141
-    file := c.fopen("graph_call_values_code.lm2", "ab")
+    file := c.fopen("graph_call_values_code.lm3", "ab")
     if: file = 0
         return: 141
     if: c.fputs("\nfn: IntStore (int: x 0) int\n    x := 9\n    return: x\nend: IntStore\n", file) < 0 || c.fclose(file) != 0
         return: 141
-    status := c.lm_graph_build_file(g, "graph_call_values_code.lm2", @ root)
-    c.remove("graph_call_values_code.lm2")
+    status := c.lm_graph_build_file(g, "graph_call_values_code.lm3", @ root)
+    c.remove("graph_call_values_code.lm3")
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 141
     status := gv_reference_calls(g, root)

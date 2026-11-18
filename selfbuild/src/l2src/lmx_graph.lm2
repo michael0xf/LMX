@@ -108,7 +108,7 @@ end: lmx_graph_intern_in
 # reading consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end L2"
     const: (@: primitive_names char c.lmx_primitive_profile_names)
     const: (@: c_names char c.lmx_primitive_profile_c_names)
     size_t: primitive_count c.lmx_primitive_profile_count
@@ -256,6 +256,11 @@ fn: lmx_graph_state () @: c.LmxGraphState
     # The receiver of a letter (the book, send): `send: Message(field: value; ...)`, optionally after the Ref of the thread it goes to.
     state\w_send := lmx_graph_intern_in(state, "send", 4U)
     if: state\w_send = 0
+        return: 0
+    # The receiver of the level of code (the book #scope: «Код L2 пишется под ресивером `L2:`»): its record holds code of L2,
+    # and an .lm2 file is wrapped in it (lmx_graph_file_code).
+    state\w_l2 := lmx_graph_intern_in(state, "L2", 2U)
+    if: state\w_l2 = 0
         return: 0
     # The reserved word node (the book, node): the space above the code a launch runs, never a place or a binding
     # (lmx_graph_node_space; plan M11 5b part 2).
@@ -3126,6 +3131,22 @@ fn: lmx_graph_language_receiver (@: word char) int
     ---
     return: 0
 end: lmx_graph_language_receiver
+
+# The code of a file (the book #scope, docs/LMX_semantics :65: «Код L2 пишется под ресивером `L2:`; его запись лежит в графе
+# как записана, и по ней транслятор и интерпретатор узнают уровень кода. Файл `.lm2` сам по себе как обёрнут в этот
+# ресивер»): a Structure whose only field is the record `L2` -- an .lm2 file, which the builder wraps, or a file written
+# under an explicit `L2:` -- runs as the content of that record, and of a record nested alone in it; any other Structure
+# is its own code.  The executors pass through the record (plan #one-graph-plan, L1); the record's native is step L2.
+fn: lmx_graph_file_code (@: g c.LmxGraph; @: file c.Lmx) @: c.Lmx
+    @: state c.LmxGraphState lmx_graph_state()
+    @: code c.Lmx file
+    @: inner void 0
+    while: g != 0 && state != 0 && code != 0 && lmx_graph_count(code) = 1U
+        inner := lmx_graph_get_in(g, code, 0U)
+        if: lmx_graph_kind(g, inner) != 4 || lmx_graph_name_of(g, inner) != state\w_l2
+            return: code
+        code := (cast: (@: c.Lmx) inner)
+    return: code
 
 # The address a value stands for (§2.1): a Structure is the address of its own header; a reference -- to an int cell, to
 # an Lmx, an untyped one -- stands for the address it holds; any other value -- an int, a word -- is no address. 0 and

@@ -49,7 +49,7 @@ CODE declaration. Старое argument-as-own-cache исключение из O
 
 ## Требование и подтверждённый отказ
 
-[root_occurrence_index.lm2](../../selfbuild/tests/graph/root_occurrence_index.lm2):
+[root_occurrence_index.lm2](../../selfbuild/tests/graph/root_occurrence_index.lm3):
 
 ```text
 int: x 2
@@ -60,7 +60,7 @@ int: seen data\[1]x
 Ожидается успешное исполнение и `seen = 3`; оба DATA-вхождения сохраняются.
 Root сообщил runtime3 как на seed387, так и на новом388. Это OPEN реализации,
 а не повод менять ожидаемое значение или оборачивать программу в другой callable.
-[root_repeat_refused.lm2](../../selfbuild/tests/graph/root_repeat_refused.lm2) с голым
+[root_repeat_refused.lm2](../../selfbuild/tests/graph/root_repeat_refused.lm3) с голым
 `seen x` должен по-прежнему отказывать3: имя двух DATA-вхождений неоднозначно.
 
 Норма — [имена и пути](../../docs/LMX_semantics.ru.md#fields),

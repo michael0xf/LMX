@@ -59,6 +59,9 @@ same type and the same value.
 - A typed number in a field of a letter (`exit_code: 7U`) is not taken by `send` -- recorded in the slice of `send`.
 - The rows of the full suite run on the former path, which does not read this builder: no name of the full suite
   changed its verdict.
+- The fixture `literal_typed_spellings` pins the target of the self-build, where `long` has 32 bits: `3000000000` is
+  `llong` there and prints `3000000000LL`. On a target whose `long` has 64 bits the same constant is `long` by the
+  same list and prints `3000000000L`; a port to such a target pins this row for that target.
 - A lesson of the build order: `build-frontend` with `build-frontend-link` does not translate `l2_frontend_graph`
   again; only `build-frontend-host` does. A first hosted frontend of the candidate linked the old translation of that
   module with the new builder, and the runtime built by it failed at route 331 -- the symptom of the mutant mD. The

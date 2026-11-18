@@ -309,3 +309,22 @@ implementation key `plus[decimal][int] → decimal_int_add`. It does not
 declare types, create a runtime namespace, or search providers automatically.
 Source precedence, conflict resolution, and a missing-cell marker belong to
 the profile selected by the Table's consumer, not a universal hidden registry.
+
+## The chain of arguments and an explicit group in an expression
+
+An operator receiver gets the whole written chain of arguments. That is the build of the graph, not an order of
+evaluation: there are no invisible parentheses around the chain. The evaluator of an expression goes by
+priorities: explicit blocks -- written parentheses -- first, then assignment, then the other operators; an
+operation of lower priority is carried out into the parent expression. The clean graph does not change.
+
+```text
+(1 * v := 2 + 2) * (v + 1)
+→ (1 * 2 + 2) * (v + 1)    # v = 2
+→ (2 + 2) * (2 + 1)
+→ 12
+```
+
+An explicit group changes both the result and the variable: `(1 + v := (2 + 2)) * (v + 1)` gives 25, and `v` is
+4; without it `(1 + v := 2 + 2) * (v + 1)` gives 15, and `v` is 2. In a record of code `v := 2 - 3` the variable
+gets −1: there is nowhere to carry `- 3` out, outside stands the assignment itself, and `2 - 3` stays its
+right part. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).

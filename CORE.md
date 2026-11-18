@@ -519,6 +519,16 @@ mutation. Failed admission must not partly write the destination. See
 [L3 semantics](docs/LMX_semantics.en.md#descriptions) and
 [v3 K01–K12](next_core_tasks_v3.md).
 
+An assignment sign is a receiver head that structurally receives the
+whole chain of arguments to the end of the record, but the chain is not
+grouped by invisible parentheses. An expression is evaluated by priority:
+written groups first, then assignment, then the other operators; an
+operation of lower priority is carried out into the parent expression,
+and the clean graph is not rewritten. Inside an expression
+`(1 + v := 2 + 2)` assigns 2. An assignment that is itself a record of
+code has no parent expression: `v := 2 - 3` assigns -1. See
+[the book](docs/LMX_semantics.en.md#assignment-inside-expression).
+
 ## 5. Message, Thread, and one turn
 
 `LmxMsg` is the closed record `{running, success, handoff_ready, graph}`.

@@ -388,8 +388,8 @@ The author's decision of 2026-11-18 on the two kinds of receivers
 ([semantics](LMX_semantics.en.md#two-kinds-of-receivers)) is not yet carried out by the implementation in
 three places. The call binder unwraps a sole Structure only after the positional form has failed: `MR(A)`
 with a Structure formal answers 7 instead of unwrapping `A`. Declaration receivers parse their own group:
-`int: (y 7)` is refused. Modifiers read a group of exactly one field as the declaration itself:
-`private: (int: x 10)` declares `x`, while by the rule it is an anonymous Structure under `private`.
+`int: (y 7)` is refused. Modifiers unwrap a Structure argument when it has exactly one field:
+`private: (int: x 10)` declares `x`, while by the rule the argument there is a Structure and is not unwrapped.
 The slices are in the [plan](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),

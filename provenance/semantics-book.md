@@ -1061,8 +1061,9 @@ Callable — просто Structure: ресивер запуска не выби
 аргументами, и три у `fncall`, с двумя, тремя и четырьмя. `call` и `fncall` — ресиверы с
 аргументами как `code`, и объявление выбирается по вызову, как у `fn` и `sub`
 ([выбор объявления по вызову](#declaration-selection)). Одноаргументная форма `call(code)`
-объявлена, поэтому `call(C)` использует её и запускает саму `C`; `call(P)` при `P`, держащей
-ссылки на данные и код, тоже запускает саму `P`, а не `call(D C)`. У `fncall` одноаргументной
+объявлена, поэтому `call(C)` использует её и запускает саму `C`. Раскрытие при этом проверяется
+тоже: если поля поданной Structure сами разрешают вызов формой `call(data code)` или
+`call(args data code)`, это ошибка неоднозначности. У `fncall` одноаргументной
 формы нет: единственная Structure в его аргументах раскрывается, и её поля выбирают одну из
 трёх форм (решение автора 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#declaration-selection)).
 
@@ -1166,12 +1167,14 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 
 **Объявления одного имени.** У одного имени может быть несколько объявлений `fn` или `sub`, если они не перекрывают друг друга: нет вызова, который подошёл бы двум из них. Число аргументов объявления — число формалов его `data`. Формы ресивера с разным числом аргументов — отдельные объявления: у `call` их три — `call(code)`, `call(data code)` и `call(args data code)`, у `fncall` тоже три — `fncall(return code)`, `fncall(data return code)` и `fncall(args data return code)` ([ресиверы `call` и `fncall`](#call-receivers)).
 
-**Два шага вызова.** Сначала по вызову выбирается объявление: транслятор генерирует сигнатуру вызова по объявлениям имени, интерпретатор ищет её среди них. Только потом аргументы связываются с формалами выбранного объявления — позиционно и по имени, с умолчаниями и допуском, как описано для `args`. Связывание к выбору не возвращается: если аргументы не подошли выбранному объявлению, это ошибка вызова, а не повод пробовать другое объявление. Любая неоднозначность выбора — ошибка.
+**Два шага вызова.** Сначала по вызову выбирается объявление: транслятор генерирует сигнатуру вызова по объявлениям имени, интерпретатор ищет её среди них. Только потом аргументы связываются с формалами выбранного объявления — позиционно и по имени, с умолчаниями и допуском, как описано для `args`. Любая неоднозначность выбора — ошибка.
+
+**Чем проверяется вызов.** Подходит ли вызов объявлению, решает общий `implements`, его первая, интерфейсная часть, которая сверяет поля ([допуск](#admission)); отдельного кода проверки аргументов и сигнатур у вызова нет. Подача аргументов — не один `implements`, а серия: аргументы разбираются и присваиваются формалам, и после этих присваиваний серия `implements` говорит, допускается ли вызов; позиционная и именованная подача по этому алгоритму не различаются. Чего первой части `implements` не хватает, решает автор. Выбор объявления и проверка неоднозначности выполняются только при трансляции и при интерпретации: нативный код получает уже подготовленные вызовы, лишних проверок не делает, и его поведение может отличаться (уточнения автора 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#both-readings-checked)).
 
 **Как выбирается объявление.**
 
 1. Берутся объявления имени, видимые в месте вызова.
-2. Если среди них есть объявление, число аргументов которого равно числу поданных, используется оно. При одном поданном аргументе первым используется одноаргументное объявление, будь этот аргумент Structure или нет.
+2. Если среди них есть объявление, число аргументов которого равно числу поданных, используется оно. При одном поданном аргументе первым проверяется одноаргументное объявление, будь этот аргумент Structure или нет. Если аргумент — Structure, раскрытие проверяется тоже: когда её поля тоже разрешают вызов объявлением с несколькими аргументами, это ошибка неоднозначности (слова автора 2026-11-07, [журнал](../LMX_blog/2026-11-07.md), раздел «Вся структура аргументов», и 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#both-readings-checked)).
 3. Если подан один аргумент, он Structure, одноаргументное объявление не найдено, а объявления с несколькими аргументами найдены, Structure раскрывается: её поля становятся поданными аргументами, и объявление выбирается по ним. Раскрытие происходит один раз, на один уровень, и только при обработке вызова ([вся структура аргументов](#whole-arguments)).
 4. Аргумент, поданный присваиванием формалу, `f(arg0 := Struct)`, не раскрывается; подходят только объявления, у которых такой формал есть.
 5. Если подано меньше аргументов, чем у объявления, недостающие входы остаются без значения или берут умолчание: все входы необязательны. Такое объявление используется, когда оно единственное, которому вызов подходит.
@@ -1188,7 +1191,8 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 | одно, с двумя и более | `f(S)` | одноаргументного нет, многоаргументное есть: `S` раскрывается, её поля связываются с формалами |
 | одно, с двумя и более | `f(v := S)` | оно; `S` целиком подана формалу `v` |
 | одно, с двумя и более | `f(x)` | оно; остальные входы без значения или по умолчанию |
-| с одним и с двумя | `f(S)` | одноаргументное; `S` не раскрывается |
+| с одним и с двумя | `f(S)`, раскрытая `S` двухаргументному не подходит | одноаргументное; `S` не раскрывается |
+| с одним и с двумя | `f(S)`, раскрытая `S` подходит двухаргументному | вызов разрешают оба чтения — ошибка неоднозначности |
 | с одним и с двумя | `f(a b)` | двухаргументное |
 | с двумя и с тремя | `f(S)`, в `S` два поля | `S` раскрывается, по двум полям выбирается двухаргументное |
 | с двумя и с тремя | `f(S)`, в `S` три поля | `S` раскрывается, выбирается трёхаргументное |
@@ -1197,7 +1201,7 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 
 Написанную в скобках Structure на месте аргумента числовой формал читает по своему контракту выражения (абзац выше): `h((5))` при `fn: h (int: x)` подаёт 5. Это не раскрытие.
 
-**Ресиверы.** У ресивера с объявленной одноаргументной формой единственная Structure — его аргумент: `call(C)` использует форму `call(code)` и запускает саму `C`; `return: S` возвращает `S`; `length(S)`, `parent(S)`, `typeof(S)`, члены `sys\`, принимающие одну Structure, `throw` и `send` получают её целиком; у объявляющего ресивера есть форма `int: x`, поэтому `int: (y 7)` не раскрывается. У ресивера без одноаргументной формы единственная Structure раскрывается: `fncall(F)` выбирает одну из трёх форм по числу полей `F`. Ресиверы, принимающие аргументы как `data`, в этом выборе не участвуют: они получают то, что записано ([два вида ресиверов](#two-kinds-of-receivers)).
+**Ресиверы.** У ресивера, у которого форм с несколькими аргументами нет, единственная Structure — его аргумент: `return: S` возвращает `S`; `length(S)`, `parent(S)`, `typeof(S)`, члены `sys\`, принимающие одну Structure, `throw` и `send` получают её целиком. У ресивера, у которого есть и одноаргументная форма, и формы с несколькими аргументами, действует общее правило: `call(C)` использует форму `call(code)` и запускает саму `C`, а если поля `C` сами разрешают вызов формой `call(data code)` или `call(args data code)`, это ошибка неоднозначности. У ресивера без одноаргументной формы единственная Structure раскрывается: `fncall(F)` выбирает одну из трёх форм по числу полей `F`. Ресиверы, принимающие аргументы как `data`, в этом выборе не участвуют: они получают то, что записано ([два вида ресиверов](#two-kinds-of-receivers)).
 
 Реализация: чистый граф пока не выбирает между одноимёнными объявлениями — два `fn` с одним именем отказывают — и решает о раскрытии по неудаче позиционной подачи; срезы — в [плане](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
 
@@ -1292,8 +1296,9 @@ The six forms of the table are six separate declarations: three of `call`, with 
 three arguments, and three of `fncall`, with two, three and four. `call` and `fncall` are
 receivers with arguments as `code`, and the declaration is chosen by the call, as for `fn` and
 `sub` ([choosing the declaration by the call](#declaration-selection)). The one-argument form
-`call(code)` is declared, so `call(C)` uses it and launches `C` itself; `call(P)`, with `P`
-holding references to the data and the code, launches `P` itself too, not `call(D C)`. `fncall`
+`call(code)` is declared, so `call(C)` uses it and launches `C` itself. The unwrapping is
+checked too: if the fields of the given Structure themselves resolve the call by the form
+`call(data code)` or `call(args data code)`, that is an error of ambiguity. `fncall`
 has no one-argument form: a sole Structure among its arguments is unwrapped, and its fields
 choose one of the three forms (the author's decision of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#declaration-selection)).
 
@@ -1397,12 +1402,14 @@ The author's decision of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#declara
 
 **Declarations of one name.** One name may have several declarations `fn` or `sub` if they do not overlap one another: there is no call that would suit two of them. The number of arguments of a declaration is the number of the formals of its `data`. The forms of a receiver with different numbers of arguments are separate declarations: `call` has three -- `call(code)`, `call(data code)` and `call(args data code)`, and `fncall` has three -- `fncall(return code)`, `fncall(data return code)` and `fncall(args data return code)` ([receivers `call` and `fncall`](#call-receivers)).
 
-**Two steps of a call.** First the declaration is chosen by the call: the translator generates the signature of the call from the declarations of the name, the interpreter searches for it among them. Only then are the arguments bound to the formals of the chosen declaration -- by position and by name, with defaults and admission, as described for `args`. Binding does not return to the choice: if the arguments do not suit the chosen declaration, that is an error of the call, not a reason to try another declaration. Any ambiguity of the choice is an error.
+**Two steps of a call.** First the declaration is chosen by the call: the translator generates the signature of the call from the declarations of the name, the interpreter searches for it among them. Only then are the arguments bound to the formals of the chosen declaration -- by position and by name, with defaults and admission, as described for `args`. Any ambiguity of the choice is an error.
+
+**What checks the call.** Whether the call suits a declaration is decided by the common `implements`, its first, interface part, which compares fields ([admission](#admission)); a call has no separate code that checks arguments and signatures. Passing arguments is not one `implements` but a series: the arguments are parsed and assigned to the formals, and after these assignments the series of `implements` says whether the call is admitted; positional and named passing do not differ in this algorithm. What the first part of `implements` lacks is decided by the author. The choice of the declaration and the check of ambiguity are performed only at translation and at interpretation: native code receives calls already prepared, makes no extra checks, and its behaviour may differ (the author's clarifications of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#both-readings-checked)).
 
 **How the declaration is chosen.**
 
 1. The declarations of the name visible at the place of the call are taken.
-2. If one of them has as many arguments as are supplied, it is used. With one supplied argument a one-argument declaration is used first, whether that argument is a Structure or not.
+2. If one of them has as many arguments as are supplied, it is used. With one supplied argument a one-argument declaration is checked first, whether that argument is a Structure or not. If the argument is a Structure, the unwrapping is checked too: when its fields also resolve the call by a declaration with several arguments, that is an error of ambiguity (the author's words of 2026-11-07, [journal](../LMX_blog/2026-11-07.md), the section on the whole argument Structure, and of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#both-readings-checked)).
 3. If one argument is supplied, it is a Structure, no one-argument declaration is found and declarations with several arguments are found, the Structure is unwrapped: its fields become the supplied arguments, and the declaration is chosen by them. The unwrapping happens once, by one level, and only when the call is processed ([whole argument Structure](#whole-arguments)).
 4. An argument supplied by an assignment to a formal, `f(arg0 := Struct)`, is not unwrapped; only declarations that have such a formal suit.
 5. If fewer arguments are supplied than a declaration has, the missing inputs stay without a value or take a default: all inputs are optional. Such a declaration is used when it is the only one the call suits.
@@ -1419,7 +1426,8 @@ Items 1, 3 and 6 and item 2 for one argument are the author's words. Items 4 and
 | one, with two or more | `f(S)` | no one-argument declaration, a declaration with several: `S` is unwrapped, its fields are bound to the formals |
 | one, with two or more | `f(v := S)` | it; `S` is given whole to the formal `v` |
 | one, with two or more | `f(x)` | it; the other inputs stay without a value or take a default |
-| with one and with two | `f(S)` | the one-argument one; `S` is not unwrapped |
+| with one and with two | `f(S)`, the unwrapped `S` does not suit the two-argument one | the one-argument one; `S` is not unwrapped |
+| with one and with two | `f(S)`, the unwrapped `S` suits the two-argument one | both readings resolve the call -- an error of ambiguity |
 | with one and with two | `f(a b)` | the two-argument one |
 | with two and with three | `f(S)`, `S` has two fields | `S` is unwrapped, the two-argument one is chosen by the two fields |
 | with two and with three | `f(S)`, `S` has three fields | `S` is unwrapped, the three-argument one is chosen |
@@ -1428,7 +1436,7 @@ Items 1, 3 and 6 and item 2 for one argument are the author's words. Items 4 and
 
 A Structure written in parentheses in the place of an argument is read by a numeric formal by its contract of an expression (the paragraph above): `h((5))` with `fn: h (int: x)` supplies 5. That is not unwrapping.
 
-**Receivers.** For a receiver with a declared one-argument form a sole Structure is its argument: `call(C)` uses the form `call(code)` and launches `C` itself; `return: S` returns `S`; `length(S)`, `parent(S)`, `typeof(S)`, the members of `sys\` that take one Structure, `throw` and `send` receive it whole; a declaring receiver has the form `int: x`, so `int: (y 7)` is not unwrapped. For a receiver without a one-argument form a sole Structure is unwrapped: `fncall(F)` chooses one of the three forms by the number of the fields of `F`. The receivers that take their arguments as `data` take no part in this choice: they receive what is written ([two kinds of receivers](#two-kinds-of-receivers)).
+**Receivers.** For a receiver that has no forms with several arguments a sole Structure is its argument: `return: S` returns `S`; `length(S)`, `parent(S)`, `typeof(S)`, the members of `sys\` that take one Structure, `throw` and `send` receive it whole. For a receiver that has both a one-argument form and forms with several arguments the common rule holds: `call(C)` uses the form `call(code)` and launches `C` itself, and if the fields of `C` themselves resolve the call by the form `call(data code)` or `call(args data code)`, that is an error of ambiguity. For a receiver without a one-argument form a sole Structure is unwrapped: `fncall(F)` chooses one of the three forms by the number of the fields of `F`. The receivers that take their arguments as `data` take no part in this choice: they receive what is written ([two kinds of receivers](#two-kinds-of-receivers)).
 
 Implementation: the clean graph does not yet choose among declarations of one name -- two `fn` with one name are refused -- and decides on unwrapping by a failure of positional binding; the slices are in the [plan](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
 

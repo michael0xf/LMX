@@ -1475,6 +1475,13 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         if: head = state\w_include || head = state\w_predef
             i := i + 1U
             continue
+        # `send: Message(...)`: the letter is built and posted by the one function the interpreter calls (lmx_graph_send).
+        if: head = state\w_send
+            c.fputs("        if: lmx_graph_send(l2_g, lmx_call_code, ", f)
+            status := lm_graph_emit_address(g, f, code, body)
+            c.fprintf(f, ", %zuU) != 0\n            %s\n", i, leave_failure)
+            i := i + 1U
+            continue
         if: mode != 0
             if: head = state\w_int
                 c.fputs("        if: lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)

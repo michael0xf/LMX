@@ -29,6 +29,11 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_child.h.lm1"
+predef: "l2src/lmx_service.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
@@ -1201,6 +1206,45 @@ fn: lmx_graph_work_assignment_contract (@: g c.LmxGraph; @: frame c.LmxGraphFram
 # Context 0 scans code, 1 a consumed expression, 2 an argument whose receiving
 # contract is not available until data has run. Only the last keeps optional
 # entry snapshots. The existing work rows become inputs when actually read.
+# One operand of the body scan that is read as an expression: a Frame is scanned in the context of the scan, a word that is no word of the
+# language and no quoted text is a free input.
+fn: lmx_graph_work_scan_operand (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: raw void; int: optional) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    int: context 1
+    if: optional != 0
+        context := 2
+    if: c.lmx_graph_kind(g, raw) = 4
+        return: lmx_graph_work_scan_context(g, frame, (cast: (@: c.Lmx) raw), context)
+    word := c.lmx_graph_word_text(g, raw)
+    if: word = 0 || word[0] = 34 || lmx_graph_language_word(state, word) != 0
+        return: 0
+    return: lmx_graph_work_capture_context(g, frame, word, optional)
+
+# For the body scan: the Message of `send` defines its field names, never free inputs of the body; the value of each field and the Ref
+# written before the Message are read.
+fn: lmx_graph_work_scan_send (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: statement c.Lmx; int: optional) int
+    @: message c.Lmx 0
+    @: field c.Lmx 0
+    size_t: n c.lmx_graph_count(statement)
+    size_t: i 0U
+    size_t: j 0U
+    int: status 0
+    if: n < 1U
+        return: 5
+    while: i + 1U < n && status = 0
+        status := lmx_graph_work_scan_operand(g, frame, c.lmx_graph_get_in(g, statement, i), optional)
+        i := i + 1U
+    message := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, n - 1U))
+    if: c.lmx_graph_kind(g, (cast: (@: void) message)) != 4
+        return: 5
+    while: j < c.lmx_graph_count(message) && status = 0
+        field := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, message, j))
+        if: c.lmx_graph_kind(g, (cast: (@: void) field)) = 4 && c.lmx_graph_count(field) = 1U
+            status := lmx_graph_work_scan_operand(g, frame, c.lmx_graph_get_in(g, field, 0U), optional)
+        j := j + 1U
+    return: status
+
 fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lmx; int: context) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: prior_scope c.Lmx frame\lexical_scope
@@ -1262,6 +1306,11 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
             continue
         # The operand of include and predef is text, not a name: it is no free input.
         if: framed != 0 && (lead = state\w_fn || lead = state\w_sub || lead = state\w_fm || lead = state\w_include || lead = state\w_predef)
+            continue
+        # `send: Message(field: value; ...)` (the book, send): the Message defines its field names, never free inputs of the body; the
+        # written values and the written Ref before the Message are read as the operands of any Frame.
+        if: framed != 0 && lead = state\w_send
+            status := lmx_graph_work_scan_send(g, frame, current, optional)
             continue
         # An expression head is consumed first. Its actuals borrow the same
         # call view as a named Frame; the application marker is never an input.
@@ -4694,6 +4743,11 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
         if: head = state\w_include || head = state\w_predef
             i := i + 1U
             continue
+        # `send: Message(...)`: the letter is built from the values of the graph and posted (lmx_graph_send).
+        if: head = state\w_send
+            status := lmx_graph_send(g, code, body, i)
+            i := i + 1U
+            continue
         if: head != state\w_int
             status := lmx_graph_eval_application(g, code, statement, 0, @ number)
             i := i + 1U
@@ -4727,6 +4781,113 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
     ---
     return: status
 end: lmx_graph_block_body
+
+# The bytes of a quoted text are those between the quotes; they become an Array<Char> of the payload at place j. 0, or the failing answer.
+fn: lmx_graph_send_text (@: g c.LmxGraph; @: spelling char; @: payload c.Lmx; size_t: j; @: arena c.LmxArena) int
+    @: text c.LmxArray 0
+    @: text_fields c.VoidArray 0
+    @: bytes char 0
+    size_t: width c.strlen(spelling)
+    size_t: k 0U
+    if: width < 2U || spelling[width - 1U] != 34
+        return: 5
+    width := width - 2U
+    text := c.lmx_array_new_child_profiled(payload, c.LMX_TYPE_ARRAY_OF_CHAR, width, arena, 0)
+    if: text = 0 || c.lmx_arena_ref_store(arena, payload, j, (cast: (@: void) text)) != 0
+        return: 4
+    text_fields := (cast: (@: c.VoidArray) (@ text\array))
+    bytes := (cast: (@: char) (text_fields\data))
+    while: k < width
+        bytes[k] := spelling[k + 1U]
+        k := k + 1U
+    return: 0
+
+# One field of the Message at place j of the payload: a quoted text becomes an Array<Char>, any other expression an int cell.
+fn: lmx_graph_send_field (@: g c.LmxGraph; @: code c.Lmx; @: field c.Lmx; @: payload c.Lmx; size_t: j; @: arena c.LmxArena) int
+    @: operand void 0
+    @: cell void 0
+    @: spelling char 0
+    int: number 0
+    int: status 0
+    if: c.lmx_graph_kind(g, (cast: (@: void) field)) != 4 || c.lmx_graph_count(field) != 1U
+        return: 5
+    operand := c.lmx_graph_get_in(g, field, 0U)
+    if: c.lmx_graph_kind(g, operand) = 2
+        spelling := c.lmx_graph_word_text(g, operand)
+    if: spelling != 0 && spelling[0] = 34
+        return: lmx_graph_send_text(g, spelling, payload, j, arena)
+    status := lmx_graph_eval(g, code, field, 0U, 1U, @ number)
+    if: status != 0
+        return: status
+    cell := c.lmx_int_new_owned(arena)
+    if: cell = 0 || c.lmx_int_store_known(cell, number) != 0 || c.lmx_arena_ref_store(arena, payload, j, cell) != 0
+        return: 4
+    return: 0
+
+# The letter of `send: Message(field: value; ...)` (the book, send), built from the values of the graph with the kernel's calls, as the
+# former path's per-site send function builds it: a Message record whose graph is [sender; payload] -- the sender a pointer cell
+# holding the Message of the current thread, the payload a Structure whose fields stand in the written order, an int cell for
+# an int expression and an Array<Char> for a quoted text --, in an arena of its own that the service takes over when it posts.
+# 0, or the failing answer; the arena is released when the letter is not posted.
+fn: lmx_graph_send_fill (@: g c.LmxGraph; @: code c.Lmx; @: message c.Lmx; size_t: count; @: arena c.LmxArena; @: thread c.LmxThread; @@: out c.LmxMsg) int
+    @: letter c.LmxMsg 0
+    @: graph c.Lmx 0
+    @: payload c.Lmx 0
+    @: cell void 0
+    size_t: j 0U
+    int: status 0
+    letter := (cast: (@: c.LmxMsg) c.lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph := c.lmx_node_new_owned(arena)
+    payload := c.lmx_node_new_owned(arena)
+    if: letter = 0 || graph = 0 || payload = 0 || c.lmx_arena_refs_open_owned(arena, graph, 2U) != 0 || c.lmx_arena_refs_open_owned(arena, payload, count) != 0
+        return: 4
+    while: j < count
+        status := lmx_graph_send_field(g, code, (cast: (@: c.Lmx) c.lmx_graph_get_in(g, message, j)), payload, j, arena)
+        if: status != 0
+            return: status
+        j := j + 1U
+    # The sender is a pointer CELL holding the current Message (the author's Q26.2: a reference to a reference).
+    cell := c.lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, arena)
+    if: cell = 0 || c.lmx_pointer_store_known(cell, (cast: (@: void) c.lmx_thread_message(thread))) != 0 || c.lmx_arena_ref_store(arena, graph, 0U, cell) != 0 || c.lmx_arena_ref_store(arena, graph, 1U, (cast: (@: void) payload)) != 0
+        return: 4
+    letter\running := 1
+    letter\success := 0
+    letter\handoff_ready := 0
+    letter\graph := graph
+    out[0] := letter
+    return: 0
+
+# The statement `send` at body[at]: its one field is the Message; the letter goes to the parent of the current thread. A Ref written before the
+# Message would name another thread, but no value of the graph is the address of a Message yet (create and receive bring it): that form is refused.
+fn: lmx_graph_send (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: at) int
+    @: statement c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(g, body, at))
+    @: message c.Lmx 0
+    @: thread c.LmxThread c.lmx_thread_current()
+    @: arena c.LmxArena 0
+    @: letter c.LmxMsg 0
+    @: recipient void 0
+    size_t: count 0U
+    int: status 0
+    if: thread = 0 || c.lmx_graph_count(statement) != 1U
+        return: 5
+    message := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 0U))
+    if: c.lmx_graph_kind(g, (cast: (@: void) message)) != 4
+        return: 5
+    count := c.lmx_graph_count(message)
+    recipient := (cast: (@: void) c.lmx_thread_parent(thread))
+    arena := (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    if: arena = 0
+        return: 4
+    if: c.lmx_arena_open(arena) != 0
+        c.free((cast: (@: void) arena))
+        return: 4
+    status := lmx_graph_send_fill(g, code, message, count, arena, thread, @ letter)
+    if: status = 0 && c.lmx_service_post(c.lmx_child_service(thread), recipient, letter, arena) != c.LMX_SERVICE_OK
+        status := 4
+    if: status != 0
+        c.lmx_arena_release(arena)
+        c.free((cast: (@: void) arena))
+    return: status
 
 # Does the launch that runs code return a result? The parts of the live launch answer (its work frame,
 # lmx_graph_work_open_parts); code asked outside its own launch -- a root, a Structure running without a frame -- answers

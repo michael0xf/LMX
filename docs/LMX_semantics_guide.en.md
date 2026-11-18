@@ -327,4 +327,5 @@ operation of lower priority is carried out into the parent expression. The clean
 An explicit group changes both the result and the variable: `(1 + v := (2 + 2)) * (v + 1)` gives 25, and `v` is
 4; without it `(1 + v := 2 + 2) * (v + 1)` gives 15, and `v` is 2. In a record of code `v := 2 - 3` the variable
 gets −1: there is nowhere to carry `- 3` out, outside stands the assignment itself, and `2 - 3` stays its
-right part. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).
+right part. The rule is general for all operator receivers, not only for assignment: `(+ 2 - 3)` is decomposed
+the same way and gives −1. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).

@@ -352,23 +352,27 @@ The one source graph retains declarations, values, operators, and nesting.
 Execution changes declared values but does not replace the program with
 a second data graph or AST.
 
-Physical kind comes from arena ranges; model suitability comes from
-`implements`. Ordinary and immutable Structures use distinct pools.
+Physical kind comes from the type code of the value's record; model
+suitability comes from `implements`. Ordinary and immutable Structures
+differ by that code.
 An already-created ordinary Structure cannot become immutable in place.
 Primitive cells, reference cells, graph-object headers, and typed backing
 each have their physical access contract. Raw typed arena storage is not a
 second kind of language-level graph Array. Models do not
 create per-model C types or per-cell runtime tags.
 
-### 2.1 Address ranges and typed service arrays
+### 2.1 Value records: one stream per arena
 
-The arena indexes stable half-open ranges with a pool supplying exact type,
-stride, storage policy, and owner. Pools add chunks without moving cells.
-Classification is not `implements`. `mark/revert` supports all-or-nothing
-construction; `attach` transfers ownership without changing addresses.
-A Message owns an arena. Another arena may explicitly import a retained
-range but may not silently extend a reference's lifetime.
-See [L2 §§3–6](docs/L2_spec_en.md#type-by-range).
+Every arena holds one stream of records: a type code immediately followed
+by the value. The type is read from the record; nothing learns a type from
+an address, a range or a chunk. Chunks are added without moving records;
+the interval index tells ownership only. The type code is not `implements`.
+`mark/revert` supports all-or-nothing construction; `attach` transfers
+ownership without changing addresses. A Message owns an arena. Another
+arena may not silently extend a reference's lifetime. Today's code still
+keeps pools of cells of one type and classifies addresses by range: that
+is the former scheme, removed by plan M15.
+See [L2 §§3–6](docs/L2_spec_en.md#value-record).
 
 ### 2.2 The base Array and the separate List
 

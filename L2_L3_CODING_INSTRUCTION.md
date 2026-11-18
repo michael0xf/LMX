@@ -28,7 +28,7 @@ dispatcher; изменить существующие launch/invoke/walk. Изв
 ## Цель и владение
 
 Срез393: чистый Source interface использует необязательный reader имени/fact прежнего implements resolver.
-`Fact.type` остаётся physical pool type; borrowed declared descriptions/receiving chains не являются C ABI binding
+`Fact.type` остаётся physical pool type (прежняя схема: по норме физический тип — код записи значения); borrowed declared descriptions/receiving chains не являются C ABI binding
 или user Model в pool.profile. Unknown name не равно unnamed0/known absence. Все поля интерфейса без Consumer
 проверяет прежний require_root/drain/close(published0), без test/default execution и mutable ref payload.
 Полный runtime/current Value/typed storage bridge остаётся задачей основного M11/M13; [свидетельство393](steps/witnesses/m11-declared-facts-20261114/notes.md).

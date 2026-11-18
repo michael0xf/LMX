@@ -1189,9 +1189,10 @@ decision and the code as it stands, and is not a task to continue that mechanism
   the element type is told by the code of the Array's record. Typed native locals and temporaries are not packed into
   records.
 - **Chunks.** The interval index tells only which arena and which chunk own an address: transfer, collection, the
-  home of a name. The division of the arena into chunks is the allocator's policy. By the author's order the
-  transition has two stages: first a cell of a present pool becomes a record with the pool's step; then the chunks
-  by type are removed and the records of an arena go in one stream. On attach the donor's chunks become
+  home of a name. Every arena has one stream of records "type code, value"; there are no chunks by type
+  ([journal](../LMX_blog/2026-11-18.md#one-stream-per-arena)). The code reaches this in two stages: first a
+  cell of a present pool becomes a record with the pool's step; then the chunks by type are removed. The first
+  stage is a transitional state of the code, not the norm. On attach the donor's chunks become
   chunks of the receiver: records keep their addresses and codes, and nothing is registered anew for typing. One
   arena is never accessed from several threads.
 
@@ -1201,7 +1202,7 @@ Why: on the accepted G2 of slice 410 one read of a graph slot through the ordina
 ([research record](../steps/witnesses/typed-value-research-20261116/notes.md)). Implementation is OPEN:
 [plan M15](../next_core_tasks_v3.md#typed-value-records).
 
-### 2.1 Regions (decision)
+### 2.1 Regions (the former scheme and today's code; the norm is §2.0)
 
 The arena of a Message is a list of **regions** (`LmxSegment`). A region is one contiguous block of cells of one C type
 and one stride: `{ base, stride, type, count, used, next, owner }`. The region's type comes from a closed inventory
@@ -1211,7 +1212,7 @@ ordered by address and lives outside the graph as arena state (not a traversal t
 from an address, §1 item 2). Today's `LmxPool`/`LmxChunk`/`LmxRange` are the same idea (a pool of chunks of one stride,
 intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `holder`, `side_cells`) that §9 removes.
 Since the decision of 2026-11-16 (§2.0) an interval tells ownership only: the type is read from the record, and a
-region of cells of one type is the allocator's present policy, not the means of typing.
+region of cells of one type is a transitional state of the code: by the norm an arena has one stream of records and there is no typing by address.
 
 A program gets the same answer from the receiver `sys\typeof(arg)` — the code of the type of the value at the address, read from
 its record since the decision of 2026-11-16 (the present code asks the region) — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
@@ -1454,7 +1455,7 @@ implementation decision: a physical word cell with a pointer to the canonical st
 entity), field 2 → the number primitive `1` (an `int` cell belonging to this expression). No typed operation record
 (`LmxOp`), no frame with numeric selectors and no special kind of memory for code: the interpreter recognizes the
 operation by comparing the word's pointer with the interned strings of the operators (§6.2), and the operand types by
-the regions of their cells after the names are resolved. A written Frame `head: a b c` is an Lmx named by its head (the
+the codes of their records after the names are resolved (§2.0). A written Frame `head: a b c` is an Lmx named by its head (the
 address → name row for this Lmx's address is the string `head`) whose fields are the arguments `a`, `b`, `c` (the author
 2026-11-09: «объявление fn в дереве это именованная структура (fn ее название) с аргументами»,
 [journal](../LMX_blog/2026-11-09.md)); what a form is, is decided by the consumer during its traversal, not by the

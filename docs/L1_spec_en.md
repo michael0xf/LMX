@@ -42,14 +42,14 @@ Use common Structure/Array<@> addressing without an additional index table.
 <a id="type-by-range"></a>
 ## 4. Type by range
 
-`LmxRange` and the arena index classify physical addresses rather than reading in-band cell tags. User models do not create one C type per Structure. Ordinary and `immutable` Structures have separate pools while retaining a compatible physical record. See [L2 §3](L2_spec_en.md#type-by-range).
+The norm (the author's decision of 2026-11-16, [L2 §3](L2_spec_en.md#value-record)): the physical type of a value is the code in its record, standing immediately before the value; an arena has one stream of records, and no type is learned from an address. User models do not create one C type per Structure. An ordinary and an `immutable` Structure differ by the code of the record while retaining a compatible physical record. Today's code still classifies addresses through `LmxRange` and the arena index and keeps separate pools; that is the former scheme, removed by [plan M15](../next_core_tasks_v3.md#typed-value-records).
 
 <a id="pool"></a>
 ## 5. Pool
 
-`LmxPool` and `LmxChunk` allocate fixed cells. Growth adds a chunk instead of moving live cells through `realloc`. Pool and range belong to the arena. See [L2 §4](L2_spec_en.md#pool).
+Records are issued one after another from the chunks of the arena. Growth adds a chunk instead of moving live records through `realloc`. Chunks belong to the arena. Today's `LmxPool` and `LmxChunk`, which allocate cells of one type, are the former scheme. See [L2 §4](L2_spec_en.md#pool).
 
-During incremental self-build, the translator emits C99 access to a graph Array's `void *storage` through a pointer `T *` of the actual element type selected by the L2 pool type. That pool allocates and accesses cells of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
+During incremental self-build, the translator emits C99 access to a graph Array's `void *storage` through a pointer `T *` of the actual element type selected by the code of the Array's record. The storage is allocated for elements of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
 
 <a id="method-array"></a>
 ## 6. Native entry and Array

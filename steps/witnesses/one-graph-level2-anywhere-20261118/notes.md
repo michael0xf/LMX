@@ -72,6 +72,20 @@ bootstrap, no fixedpoint, no full suite and no whole graph list were run. They a
 - Closers: the source diff adds none. The two `---` lines in `level2_record_structure_argument_block.lm3` are the
   anonymous Structure itself.
 
+## Correction, written the same day
+
+The two fixtures with one Structure argument pin a gap of the implementation, not the norm. By the author's
+decision of 2026-11-16 (`LMX_blog/2026-11-16.md#unnamed-structure-executes`) an unnamed Structure in code is
+not a call of a head with arguments, but its records are executed in place. A record `L2` receives its
+argument as written, so the sole Structure is one field of it; the fields of the record are code, and the
+unnamed Structure among them executes its records: the observed fields become 5 and 6. The clean graph still
+leaves an unnamed Structure in code inert -- an open item of the plan -- and the fixtures were accepted with
+0 and 0. Fable gave sonnet that expectation from a probe of the tool without reading the rule; the answer
+of the first delivery, 5 and 6, agreed with the norm, though it came from selecting the sole group as the
+body. The code of the accepted delivery is right and stays. The expectations of the two fixtures are
+corrected to 5 and 6 right after slice C2; the rows then stay red until the clean graph executes an unnamed
+Structure in place. The mutant «the role code returned to 3» is therefore not a witness of the norm.
+
 ## Recorded and not changed here
 
 - The list of receiver words of the builder knows `L2`, the interpreter's list of language words does not. No

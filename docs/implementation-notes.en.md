@@ -384,15 +384,17 @@ accept; under the norm it is written `(int: a 5)`. The same holds for the name t
 ([book](LMX_semantics.en.md#data-code-roles)) they are declared `@: pack merge(...)` and `@: q Q`. Migrating the
 fixtures and changing the reading is in [plan M9](../next_core_tasks_v3.md#m9) and [M11](../next_core_tasks_v3.md#m11).
 
-The author's decision of 2026-11-18 on the two kinds of receivers
-([semantics](LMX_semantics.en.md#two-kinds-of-receivers)) is not yet carried out by the implementation in
-four places. The call binder unwraps a sole Structure not by the number of the callee's arguments but by a
-failure of the positional form: with one formal `h(One)` unwraps `One` and answers 9, with two formals
-`two(A)` gives `A` to the first one and does not unwrap. Declaration receivers parse their own group:
-`int: (y 7)` is refused. Modifiers unwrap a Structure argument when it has exactly one field:
-`private: (int: x 10)` declares `x`, while by the rule the argument there is a Structure and is not unwrapped.
-A path passes through a modifier's record: with `Lib: private: int: x 10` the path `Lib\x` reads 10, while
-receivers are not executed in the graph and the field is read by the path `Lib\private\x`.
+The author's decisions of 2026-11-18 on the two kinds of receivers and on choosing the declaration by the call
+([semantics](LMX_semantics.en.md#two-kinds-of-receivers),
+[choosing the declaration](LMX_semantics.en.md#declaration-selection)) are not yet carried out by the
+implementation in four places. The clean graph does not choose among declarations of one name: two `fn`
+with one name are refused when the name is resolved. The call binder unwraps a sole Structure not by the
+declarations found but by a failure of the positional form: with one formal `h(One)` unwraps `One` and
+answers 9, with two formals `two(A)` gives `A` to the first one and does not unwrap. Modifiers unwrap a
+Structure argument when it has exactly one field: `private: (int: x 10)` declares `x`, while by the rule the
+argument there is a Structure and is not unwrapped. A path passes through a modifier's record: with
+`Lib: private: int: x 10` the path `Lib\x` reads 10, while receivers are not executed in the graph and the
+field is read by the path `Lib\private\x`.
 The slices are in the [plan](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),

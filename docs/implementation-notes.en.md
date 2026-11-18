@@ -386,8 +386,9 @@ fixtures and changing the reading is in [plan M9](../next_core_tasks_v3.md#m9) a
 
 The author's decision of 2026-11-18 on the two kinds of receivers
 ([semantics](LMX_semantics.en.md#two-kinds-of-receivers)) is not yet carried out by the implementation in
-four places. The call binder unwraps a sole Structure only after the positional form has failed: `MR(A)`
-with a Structure formal answers 7 instead of unwrapping `A`. Declaration receivers parse their own group:
+four places. The call binder unwraps a sole Structure not by the number of the callee's arguments but by a
+failure of the positional form: with one formal `h(One)` unwraps `One` and answers 9, with two formals
+`two(A)` gives `A` to the first one and does not unwrap. Declaration receivers parse their own group:
 `int: (y 7)` is refused. Modifiers unwrap a Structure argument when it has exactly one field:
 `private: (int: x 10)` declares `x`, while by the rule the argument there is a Structure and is not unwrapped.
 A path passes through a modifier's record: with `Lib: private: int: x 10` the path `Lib\x` reads 10, while

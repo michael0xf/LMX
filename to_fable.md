@@ -195,7 +195,7 @@ runs/fable-m10-call-forms-20261116-01/fable/g2-full01-red-names.txt. Резул�
 ## Прочитать сначала
 
 1. [AGENTS.md](AGENTS.md), [READ.ME](READ.ME).
-2. Начало [steps/current.md](steps/current.md).
+2. Начало [steps/current.md](steps/current.md) и обязательно [to_fable2_fast_build.md](to_fable2_fast_build.md).
 3. Начало [to_sol.md](to_sol.md), M10/M13/M14 [основного v3](next_core_tasks_v3.md).
 4. [Чек-лист](next_core_tasks_v3_checklist.md).
 5. [Свидетельство409](steps/witnesses/m14-native-private-20261116/notes.md).
@@ -366,7 +366,12 @@ G1 tool не построен, **G2 не начинался**, fixedpoint отс
 Последний git diff --check прошёл. Документы семантики/грамматики Sol этим
 срезом не менял; авторская генерация17e8af6f сохранена.
 
-## Ближайший порядок продолжения409
+<a id="ближайший-порядок-продолжения409"></a>
+## История: порядок продолжения409 на момент передачи 2026-11-16
+
+Это сохранённая очередь конкретного среза409, не текущая инструкция приёмки каждого шага.
+Актуальная очередь — в начале файла и [steps/current.md](steps/current.md); объём новых сборок и проверок —
+по [to_fable2_fast_build.md](to_fable2_fast_build.md).
 
 1. Сверить git status, эти hashes и актуальный Source16 с R/selfbuild и S.
 2. На FE10/Runtime13 выполнить прежний O/targeted01.tsv, используя новый

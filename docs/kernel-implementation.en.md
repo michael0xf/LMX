@@ -2044,13 +2044,17 @@ selects the current named place and checks its requirement during clean-graph co
 <a id="transition"></a>
 ## 11. The transition plan (agreed with Codex in the second review)
 
-The transition runs as the one existing L2/L3 pipeline (one writer/build), in slices, each recorded and checked by Codex;
-code is written only in the agreed part. Checks go by the risk of a slice's change: the affected fixtures on native and the
-interpreter, the short cycle of the whole chain ([READ.ME](../READ.ME)); the full checks -- the whole regression registry
-(139 rows of `selfbuild/tests/full-suite.tsv`, native and forced, both roots), bootstrap quick and full, docs check -- at
-the end of a stage and before every publication, not on every small slice. Earlier decisions and receipts remain history;
-the earlier PASS results of the stopped slices prove nothing about the new implementation; the stopped mutants, bootstrap
-and publication of 308 are not run; the task is closed neither by a document nor by one quick.
+The transition uses the one existing L2/L3 pipeline (one writer/build), in slices with actual results recorded;
+code is written only in the agreed part. Under the author's 2026-11-18 clarification, an ordinary slice is accepted and
+published after rebuilding affected components and necessary dependents, with targeted checks of the relevant
+native/interp/forced paths ([guide](../to_fable2_fast_build.md)). Whole G1/G2/fixedpoint is needed for changes to the build
+chain, shared ABI, exports/declarations, graph/image format, evidence of inconsistent components, or an explicitly chosen
+stage boundary establishing a new common bundle. The full regression registry is needed for broad impact, a general
+regression, or acceptance of the corresponding stage; it does not run automatically with bootstrap. After related changes
+stabilize, run the required broad check once. `bootstrap quick` also builds whole G1/G2 generations.
+Check documents using the [READ.ME cycle](../READ.ME#docs-cycle). Earlier decisions and receipts remain history;
+earlier PASS results of stopped slices do not prove the new implementation; the stopped mutants, bootstrap and publication
+of 308 are not run. Component acceptance does not prove completion of the whole transition.
 
 0. **The vertical slice -- first** (allowed by Codex, review 2; without another ACK). A minimal builder → one clean graph →
    both consumers, in this order: (a) a graph with an already initialized `int`, arithmetic and a repeated write
@@ -2127,8 +2131,9 @@ and publication of 308 are not run; the task is closed neither by a document nor
    graph).
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
-5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render
-   and check; item 6 in full.
+5. **Final verification of the completed transition:** the applicable registry on both executors, genuine G1/G2 and
+   fixedpoint, checks, landing, and verification of affected documents; item 6 in full. Choose the required bootstrap mode
+   using the [guide](../to_fable2_fast_build.md), without mandating quick followed by full.
 6. **Acceptance of the transition.** (a) No comparison of identifier strings in any executing chain or any translator pass
    (an audit by grep for `memcmp/strcmp/strncmp` with a classification of the remainders by role), no `LmxSourceName`, place
    tables, `LmxOp`, numeric codes, persistent traversal maps, initialization marks outside regions, name-resolution results

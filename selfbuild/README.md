@@ -1,5 +1,11 @@
 # Maintained L3/L2 source package
 
+**Mandatory build policy, 2026-11-18:** read [to_fable2_fast_build.md](../to_fable2_fast_build.md).
+The normal development and acceptance cycle rebuilds affected components and necessary dependents, reuses
+compatible artifacts and runs targeted checks. Whole G1/G2/fixedpoint and the full suite have separate triggers
+in that guide; neither is required merely for another edit, slice or commit. `bootstrap quick` still builds
+whole generations. Dated receipts below record past runs, not a mandatory checklist for every new change.
+
 **2026-11-15 target change:** [M13](../next_core_tasks_v3.md#flat-lmx-descriptor) and
 [M14](../next_core_tasks_v3.md#explicit-compilation-plan) require unified data, independent locals without
 write-back, variable arrays, parent/length/storage and arena tables for capacity/call-native descriptors.

@@ -768,6 +768,7 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     int: data -1
     int: args -1
     int: value 0
+    int: reading -1
     int: status 0
     if: state = 0
         return: 5
@@ -776,6 +777,16 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
         return: 4
     head := state\w_call
     status := c.lmx_graph_launch_formals(g, head, expression, formals)
+    # One actual: the reading of the general algorithm decides first (R87-R93); the record as written goes on below.
+    if: count = 1U && status = 0
+        reading := temps[0]
+        temps[0] := temps[0] + 1
+        c.fprintf(f, "        @: Lmx l2_ro%d 0\n        int: l2_rr%d lmx_graph_receiver_reading(l2_g, lmx_call_code, ", reading, reading)
+        status := lm_graph_emit_head(g, f, scope, expression)
+        c.fputs(", (cast: (@: Lmx) ", f)
+        if: status = 0
+            status := lm_graph_emit_address(g, f, scope, expression)
+        c.fprintf(f, "), 1, @ l2_ro%d)\n        if: l2_rr%d = 3 || (l2_rr%d = 1 && lmx_graph_eval_explicit_call(l2_g, lmx_call_code, l2_ro%d) != 0)\n            %s\n        if: l2_rr%d != 0\n            goto: l2_label%d\n", reading, reading, reading, reading, leave_failure, reading, reading)
     if: status = 5
         c.free((cast: (@: void) formals))
         c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
@@ -804,6 +815,8 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
         return: 0
     # [code]: the code alone; it selects its data (lmx_graph_call_data, shorthand).
     c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", code, leave_failure)
+    if: reading >= 0
+        c.fprintf(f, "        l2_label%d:\n", reading)
     return: 0
 end: lm_graph_emit_explicit_call
 
@@ -2575,6 +2588,28 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
     return: status
 end: lm_graph_emit_merge
 
+# The emitted selection of a call (lmx_graph_eval_selected): its record value in l2_cv, then the projection the consumer
+# asks for -- an int (want_result 1, l2_t), a cell (2, l2_v), the record itself (3, l2_cv), nothing (0).
+fn: lm_graph_emit_selected_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: application c.Lmx; @: actuals c.Lmx; @: temps int; int: want_result; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    int: call_id temps[0]
+    int: status 0
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    temps[0] := temps[0] + 1
+    c.fprintf(f, "        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n        if: lmx_graph_eval_selected(l2_g, lmx_call_code, ", call_id, call_id)
+    status := lm_graph_emit_head(g, f, scope, application)
+    c.fputs(", (cast: (@: Lmx) ", f)
+    if: status = 0
+        status := lm_graph_emit_address(g, f, scope, actuals)
+    c.fprintf(f, "), %d, @ l2_cv%d) != 0\n            %s\n", (cast: (int) (want_result != 0)), call_id, leave_failure)
+    if: want_result = 1
+        c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_result_int(l2_g, @ l2_cv%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, call_id, leave_failure)
+    if: want_result = 2
+        c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_result_cell(l2_g, @ l2_cv%d, @ l2_v%d) != 0\n            %s\n", call_id, call_id, call_id, leave_failure)
+    temp[0] := call_id
+    return: status
+
 # Named and expression-headed Frames select one live target before actuals.
 # The same target then uses the common callable binder or ordinary launch.
 fn: lm_graph_emit_application (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: application c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; int: want_result; @: temp int) int
@@ -2595,6 +2630,10 @@ fn: lm_graph_emit_application (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: 
     if: c.lmx_graph_application_parts(g, (cast: (@: void) application), @ name, @ head, @ actuals) = 0
         return: 2
     count := c.lmx_graph_count(actuals)
+    # A call chosen among declarations (the book #declaration-selection) is handed to the selection of the interpreter:
+    # the image does not prepare it yet (fable's answer Q6 (b); the call tables are OPEN).
+    if: name != 0 && c.lmx_graph_call_selects(g, scope, name, actuals) != 0
+        return: lm_graph_emit_selected_call(g, f, scope, application, actuals, temps, want_result, temp)
     temps[0] := temps[0] + 3
     c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_application_head(l2_g, lmx_call_code, ", structure)
     if: name != 0

@@ -1,0 +1,18 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет: блок из двух вызовов sub (объявленного результата нет) — попытка отклонена без исполнения, блок исполняется (Р93).
+# Witness: a call of a sub has no declared result, so the field is not admitted by the attempt; call(C) runs C: seen 11.
+# Norm: the book #declaration-selection item 2, «Receivers»; R92, R93.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: foo ()
+    shared\Observed\seen := shared\Observed\seen + 1
+sub: bar ()
+    shared\Observed\seen := shared\Observed\seen + 10
+
+sub: main (C(foo(); bar()))
+    call(C)
+main()

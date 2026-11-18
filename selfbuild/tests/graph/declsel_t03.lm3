@@ -1,0 +1,17 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет t03: поля S подходят формалам, S целиком — нет (норма 34)
+# Witness: one declaration with two formals; the Structure argument is passed whole and does not fit the first formal, while its fields do
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (S(int: a 3; int: b 4))
+    fn: f (int: a; int: b) int
+        return: a * 10 + b
+    shared\Observed\seen := f(S)
+main()

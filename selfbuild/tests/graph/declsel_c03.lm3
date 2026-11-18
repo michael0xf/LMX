@@ -1,0 +1,13 @@
+# Witness: call(code := P): a named argument is not a single Structure, it is not opened; P itself runs, and the call writes seen after it (fable, R80)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (D(int: x 5); C(shared\Observed\seen := x); P(@: data D; @: code C))
+    call(code := P)
+    shared\Observed\seen := 9
+main()

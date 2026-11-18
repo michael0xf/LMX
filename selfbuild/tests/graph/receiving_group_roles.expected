@@ -30,14 +30,22 @@ L2:
         const: ((@ field Any))
     end: Carrier
     int: indexed (frame_value (Carrier [] 0))
-    Env:
-        Written: (const ((@ field Any)))
+    Fielded:
+        int: field 0
+    end: Fielded
+    fn: frame_whole (@: value Fielded; int: other 12) int
+        return: (other + ((value \ field) * 0))
+    end: frame_whole
+    Whole:
+        Holder:
+            int: field 5
+        end: Holder
         Pass:
-            @: value const
+            @: value Holder
             int: other 13
         end: Pass
-    end: Env
-    int: via_whole (frame_value (Env \ Pass))
+    end: Whole
+    int: via_whole (frame_whole (Whole \ Pass))
     fn: qualified ((const ((int value)))) int
         return: 1
     end: qualified

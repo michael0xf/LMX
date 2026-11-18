@@ -22,8 +22,15 @@ int: called add((produce()))
 fn: frame_value (@: value Any; int: other 12) int (return: other)
 @: Carrier (const: (@: field Any))
 int: indexed frame_value(Carrier[0])
-@: Env (Written(const: (@: field Any)); Pass(@: value Written[0]; int: other 13))
-int: via_whole frame_value(Env\Pass)
+# via_whole: the whole-arguments reading (the book #declaration-selection, R89): Pass as written is refused by the model
+# Fielded of value (the body reads value\field, Pass has no field), its opened fields resolve the call: 13. The former form
+# -- model Any, which Pass itself satisfies, so both readings suit -- is an ambiguity by the norm and lives in
+# declsel_both_readings (1 1 3); its old pin held on the silent win of the opened reading (fable, R94).
+@: Fielded (int: field 0)
+fn: frame_whole (@: value Fielded; int: other 12) int
+    return: other + value\field * 0
+@: Whole (Holder(int: field 5); Pass(@: value Holder; int: other 13))
+int: via_whole frame_whole(Whole\Pass)
 fn: qualified (const: (int: value)) int (return: 1)
 fn: deep (@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@: value c.FILE) int (return: 1)
 fn: array (char([]([](value)))) int (return: 1)

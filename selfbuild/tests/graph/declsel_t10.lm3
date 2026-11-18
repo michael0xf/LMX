@@ -1,0 +1,16 @@
+# Witness: two declarations, f(a) and f(a; required b); a call with two values goes to the second (R82)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (M(int: x 0); S(int: x 7))
+    fn: f (@: v M) int
+        return: v\x
+    fn: f (int: a; required: int: b) int
+        return: a * 10 + b
+    shared\Observed\seen := f(3; 4)
+main()

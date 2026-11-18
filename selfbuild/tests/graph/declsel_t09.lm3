@@ -1,0 +1,19 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет t09: обе трактовки S подходят: неоднозначность
+# Witness: two declarations, f(a) and f(a; required b), and a Structure argument that suits both readings: ambiguity (R82)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (M(int: a 0); S(int: a 3; int: b 4))
+    fn: f (@: v M) int
+        return: v\a
+    fn: f (int: a; required: int: b) int
+        return: a * 10 + b
+    shared\Observed\seen := f(S)
+main()

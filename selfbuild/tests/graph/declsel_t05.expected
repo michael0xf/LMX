@@ -1,0 +1,13 @@
+---
+    Observed:
+        int: seen 0
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main ((M1 (int b 0)); (Inner (int b 7)); (Pair (@ a Inner) (int b 4)))
+    fn: f (@: a M1; int: b 5) int
+        return: (((a \ b) * 10) + b)
+    end: f
+    :=: ((shared \ Observed) \ seen) (f Pair)
+end: main
+main:

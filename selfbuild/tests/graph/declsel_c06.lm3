@@ -1,0 +1,15 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет c06: блок из одного оператора: выполняется (норма 1)
+# Witness: a block of one unnamed assignment called with one argument: it runs, since the opened reading meets no form (следствие общего алгоритма, журнал 2026-11-18 #call-one-argument-declaration)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (C(shared\Observed\seen := shared\Observed\seen + 1))
+    call(C)
+main()

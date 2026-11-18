@@ -1,0 +1,17 @@
+# Witness: a named argument not on its own position, followed by a positional one: no formal is left for the positional value
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+fn: g (int: a; int: b) int
+    return: a * 10 + b
+
+sub: main () (
+    int: k 0
+)
+    shared\Observed\seen := g(b := 2; 5)
+main()

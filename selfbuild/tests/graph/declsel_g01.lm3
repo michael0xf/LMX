@@ -1,0 +1,17 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет G01: void-формал: S принимается как есть, length = 1 (норма 1)
+# Witness: one unnamed Structure field in S; g(S) with g(@: a) takes S as it is, length is 1 (R89)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (S((int: p 1; int: q 2)))
+    fn: g (@: a) int
+        return: length(a)
+    shared\Observed\seen := g(S)
+main()

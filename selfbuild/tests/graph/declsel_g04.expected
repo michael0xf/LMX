@@ -1,0 +1,13 @@
+---
+    Observed:
+        int: seen 1
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main ((M); (Inner (int x 1) (int y 2)); (S (@ v Inner)))
+    fn: f (@: v M) int
+        return: (length v)
+    end: f
+    :=: ((shared \ Observed) \ seen) (f S)
+end: main
+main:

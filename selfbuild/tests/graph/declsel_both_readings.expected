@@ -1,0 +1,24 @@
+L2:
+    ---
+        Observed:
+            int: via_whole 0
+        end: Observed
+    ---
+    @: shared (data [] 0)
+    Any:
+    end: Any
+    fn: frame_value (@: value Any; int: other 12) int
+        return: other
+    end: frame_value
+    Env:
+        Written: (const ((@ field Any)))
+        Pass:
+            @: value const
+            int: other 13
+        end: Pass
+    end: Env
+    sub: main ()
+        :=: ((shared \ Observed) \ via_whole) (frame_value (Env \ Pass))
+    end: main
+    main:
+end: L2

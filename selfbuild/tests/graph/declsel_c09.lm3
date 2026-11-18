@@ -1,0 +1,21 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет: блок из двух вызовов с результатом int — попытка отклонена без исполнения, блок исполняется (Р93).
+# Witness: the fields of the opened C are read as written arguments (R92): a call supplies its callee's declared result,
+# int, which the Structure formals of call do not take; nothing runs during the attempt (R93). call(C) runs C: seen 11.
+# Norm: the book #declaration-selection item 2, «Receivers»; R92, R93.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: foo () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 1
+fn: bar () int
+    shared\Observed\seen := shared\Observed\seen + 10
+    return: 2
+
+sub: main (C(foo(); bar()))
+    call(C)
+main()

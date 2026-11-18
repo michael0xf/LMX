@@ -1742,6 +1742,8 @@ fn: lmx_graph_formal_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
             return: lmx_graph_name_of(g, value)
         if: lmx_graph_name_of(g, value) = 0
             return: 0
+        if: lmx_graph_declaration_receiver(lmx_graph_name_of(g, value)) = 0
+            return: lmx_graph_name_of(g, value)
         name := lmx_graph_word_text(g, lmx_graph_get_in(g, inner, 0U))
         if: name != 0
             return: name
@@ -2367,6 +2369,39 @@ fn: lmx_graph_space_find (@: scope c.Lmx; @: name char) @: void
     ---
     return: 0
 end: lmx_graph_space_find
+
+# The rows of name in the lexical block scope of the live traversal, in the order they were put: how many, and the k-th.
+# Each declaration of fn or sub of one name in one block is a row (lmx_graph_space_declare), and every one of them is a
+# candidate of a call of that name (the book #declaration-selection); lmx_graph_space_find answers only the latest.
+fn: lmx_graph_space_count (@: scope c.Lmx; @: name char) size_t
+    @: space c.LmxGraphSpace lmx_graph_space()
+    @: row c.LmxGraphSpaceRow 0
+    size_t: i 0U
+    size_t: n 0U
+    if: space = 0 || scope = 0 || name = 0
+        return: 0U
+    while: i < space\count
+        row := space\rows + i
+        if: row\scope = scope && row\name = name
+            n := n + 1U
+        i := i + 1U
+    return: n
+
+fn: lmx_graph_space_nth (@: scope c.Lmx; @: name char; size_t: k) @: void
+    @: space c.LmxGraphSpace lmx_graph_space()
+    @: row c.LmxGraphSpaceRow 0
+    size_t: i 0U
+    size_t: n 0U
+    if: space = 0 || scope = 0 || name = 0
+        return: 0
+    while: i < space\count
+        row := space\rows + i
+        if: row\scope = scope && row\name = name
+            if: n = k
+                return: row\value
+            n := n + 1U
+        i := i + 1U
+    return: 0
 
 # A row of the live traversal: from now on name answers value in the block scope. 0 (also outside every traversal,
 # where nothing is recorded), 1 without memory.

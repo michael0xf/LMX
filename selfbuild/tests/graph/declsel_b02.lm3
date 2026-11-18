@@ -1,0 +1,17 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет b02: формал без модели принимает любую Structure (норма 1)
+# Witness: a formal with no written model admits any Structure argument
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (A(int: x 7))
+    fn: f (@: v) int
+        return: 1
+    shared\Observed\seen := f(A)
+main()

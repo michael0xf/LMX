@@ -1,0 +1,18 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# «Раскрытие тоже надо проверить и вот если оно по аргументам тоже разрешает вызов -- давать ошибку» (автор, 2026-11-18,
+# журнал #both-readings-checked).
+# Проверяет: прежняя форма via_whole из receiving_group_roles -- Pass как записана подходит value (модель Any пуста), её
+# поля подходят value и other (другая сигнатура, аргументов больше): неоднозначность 3 (fable, R94).
+# Witness: the book #declaration-selection, table «one, f(a b); f(S), both readings suit -> ambiguity»; R89, R94.
+(
+    Observed:
+        int: via_whole 0
+)
+@: shared data[0]
+@: Any ()
+fn: frame_value (@: value Any; int: other 12) int (return: other)
+@: Env (Written(const: (@: field Any)); Pass(@: value Written[0]; int: other 13))
+sub: main ()
+    shared\Observed\via_whole := frame_value(Env\Pass)
+main()

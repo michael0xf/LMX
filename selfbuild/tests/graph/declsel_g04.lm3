@@ -1,0 +1,18 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет G04: f(@: v M) с пустой моделью M принимает S как есть; единственное поле S (v) легло бы в тот же формал v --
+# та же сигнатура, ничего не раскрывается: v = сама S, length(v) = 1 (раскрытое дало бы v = Inner, length 2, и
+# неоднозначность 3). Свидетель правила той же сигнатуры без формала без модели (шаг C не нужен).
+# Witness: the same-signature rule of R89 with a model formal; opus 2026-11-18.
+# Norm: the book #declaration-selection item 2 and the table; R89 (#opening-tries-other-signatures).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (M(); Inner(int: x 1; int: y 2); S(@: v Inner))
+    fn: f (@: v M) int
+        return: length(v)
+    shared\Observed\seen := f(S)
+main()

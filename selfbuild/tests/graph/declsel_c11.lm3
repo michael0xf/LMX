@@ -1,0 +1,17 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет c11: C держит одно поле — имя Structure (Inner); call(C) запускает C как есть, ничего не раскрывается; чтение имени ничего не запускает: seen 0, r 1
+# Witness: call(C) of a block with ONE field that is the bare name of a Structure (Inner): the record stays as written, the one-formal signature selects the call, nothing is opened; the bare name read runs nothing
+# Norm: the book #declaration-selection («Receivers»), the journal 2026-11-18 #opening-tries-other-signatures; R87-R89.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+
+sub: main (Inner(shared\Observed\seen := 5); C(Inner))
+    call(C)
+    shared\Observed\r := 1
+main()

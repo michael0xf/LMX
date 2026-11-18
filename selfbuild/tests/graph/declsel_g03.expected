@@ -1,0 +1,16 @@
+---
+    Observed:
+        int: seen 3
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main ((S ((int p 1)) ((int q 2)) ((int r 3))))
+    fn: g (@: a) int
+        return: (length a)
+    end: g
+    fn: g (@: a; (required (@ b))) int
+        return: 100
+    end: g
+    :=: ((shared \ Observed) \ seen) (g S)
+end: main
+main:

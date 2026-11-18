@@ -1,0 +1,16 @@
+# Мера (fable, 2026-11-18): Structure C, объявленная в данных main и запущенная call(C), исполняется как код -- её запись
+# foo() в роли code -- вызов (книга #data-code-roles: роль задаёт запуск). Сегодня запуск такого блока foo не вызывает:
+# кандидат exit 0, seen 0; база build 5. Дефект запуска, вне среза выбора объявления; держит declsel_c09/c10 красными.
+# Witness: the launch of a data block whose field is a call; norm seen 1 (ОТКРЫТО of the slice).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: foo () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 1
+
+sub: main (C(foo()))
+    call(C)
+main()

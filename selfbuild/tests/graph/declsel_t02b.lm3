@@ -1,0 +1,17 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет t02b: раскрытый One подходит формалу int x; поле x называет формал (норма 9)
+# Witness: the same case with an int formal; a Structure given to an int formal must be refused
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (One(int: x 9))
+    fn: h (int: x) int
+        return: x
+    shared\Observed\seen := h(One)
+main()

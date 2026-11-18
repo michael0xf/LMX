@@ -1,0 +1,16 @@
+---
+    Observed:
+        int: seen 11
+    end: Observed
+---
+@: shared (data [] 0)
+sub: foo ()
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+end: foo
+sub: bar ()
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 10)
+end: bar
+sub: main ((C (foo) (bar)))
+    call: C
+end: main
+main:

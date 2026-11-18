@@ -1,0 +1,19 @@
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет t12: раскрытие выбирает сигнатуру с тремя полями (норма 123)
+# Witness: the same declarations; a Structure with three fields selects the second (R82)
+# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
+# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+
+sub: main (S(int: a 1; int: b 2; int: c 3))
+    fn: f (int: a; required: int: b) int
+        return: a * 10 + b
+    fn: f (int: a; required: int: b; required: int: c) int
+        return: a * 100 + b * 10 + c
+    shared\Observed\seen := f(S)
+main()

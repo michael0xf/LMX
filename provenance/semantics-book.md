@@ -1179,7 +1179,7 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 
 Решение автора 2026-11-18 ([журнал](../LMX_blog/2026-11-18.md#declaration-selection)). Ресивер языка, принимающий аргументы как `code`, повторяет поведение `fn` и `sub`, поэтому правила этого раздела общие для вызываемых и для таких ресиверов.
 
-**Объявления одного имени.** У одного имени может быть несколько объявлений `fn` или `sub`, если они не перекрывают друг друга: нет вызова, который подошёл бы двум из них. Число аргументов объявления — число формалов его `data`. Формы ресивера с разным числом аргументов — отдельные объявления: у `call` их три — `call(code)`, `call(data code)` и `call(args data code)`, у `fncall` тоже три — `fncall(return code)`, `fncall(data return code)` и `fncall(args data return code)` ([ресиверы `call` и `fncall`](#call-receivers)).
+**Объявления одного имени.** У одного имени может быть несколько объявлений `fn` или `sub`, если они не перекрывают друг друга: нет вызова, который подошёл бы двум из них. Число аргументов объявления — число формалов его `data`. Формы ресивера с разным числом аргументов — отдельные объявления: у `call` их три — `call(code)`, `call(data code)` и `call(args data code)`, у `fncall` тоже три — `fncall(return code)`, `fncall(data return code)` и `fncall(args data return code)` ([ресиверы `call` и `fncall`](#call-receivers)). Формы объявляются как обычные `sub` — `sub: call (@: code)`, `sub: call (@: data; @: code)` — и проверяются общим алгоритмом (слова автора 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#no-count-preference)). Формалы форм обязательны, `required`: иначе `call(P)` как записан подходил бы и форме с двумя аргументами — `P` в `data`, `code` без значения (чтение исполнителя, Р82).
 
 **Два шага вызова.** Сначала по вызову выбирается объявление: транслятор генерирует сигнатуру вызова по объявлениям имени, интерпретатор ищет её среди них. Только потом аргументы связываются с формалами выбранного объявления — позиционно и по имени, с умолчаниями и допуском, как описано для `args`. Любая неоднозначность выбора — ошибка.
 
@@ -1189,33 +1189,34 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 
 **Как выбирается объявление.**
 
-1. Берутся объявления имени, видимые в месте вызова.
-2. Если среди них есть объявление, число аргументов которого равно числу поданных, используется оно. Если единственный поданный аргумент — Structure, проверяются оба чтения — как один аргумент и раскрытое: когда вызов разрешают оба, это ошибка неоднозначности (слова автора 2026-11-07, [журнал](../LMX_blog/2026-11-07.md), раздел «Вся структура аргументов», и 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#both-readings-checked)).
-3. Если подан один аргумент, он Structure, одноаргументное объявление не найдено, а объявления с несколькими аргументами найдены, Structure раскрывается: её поля становятся поданными аргументами, и объявление выбирается по ним. Раскрытие происходит один раз, на один уровень, и только при обработке вызова ([вся структура аргументов](#whole-arguments)).
-4. Аргумент, поданный присваиванием формалу, `f(arg0 := Struct)`, не раскрывается; подходят только объявления, у которых такой формал есть.
-5. Если подано меньше аргументов, чем у объявления, недостающие входы остаются без значения или берут умолчание: все входы необязательны. Такое объявление используется, когда оно единственное, которому вызов подходит.
-6. Если вызов подходит двум объявлениям или не подходит ни одному, это ошибка.
+1. Берутся все объявления имени, видимые в месте вызова.
+2. Аргументы читаются двумя способами: как записаны и — если подан один аргумент и он Structure — раскрытыми: её поля становятся поданными аргументами, именованные по имени, безымянные по позиции. Раскрытое чтение проверяется только против объявлений с несколькими аргументами. Раскрытие происходит один раз, на один уровень, и только при обработке вызова ([вся структура аргументов](#whole-arguments)). Аргумент, поданный присваиванием формалу, `f(arg0 := Struct)`, не раскрывается.
+3. Для каждой пары «объявление — чтение» аргументы присваиваются формалам. Пара не складывается, если аргументов больше, чем формалов, если у объявления нет названного формала или формал получает значение дважды. Формал, которому ничего не подано, берёт умолчание или остаётся без значения: все входы необязательны; если он объявлен `required`, пара не складывается.
+4. Сложившуюся пару проверяет серия `implements`.
+5. Ровно одна допущенная пара даёт вызов; ни одной или больше одной — ошибка. Предпочтения по числу аргументов нет: объявления `fn: f (int: a)` и `fn: f (int: a; int: b)` перекрываются, потому что `f(5)` подходит обоим — второму с необязательным `b`, — и это ошибка неоднозначности. Их разводит `required`: при `fn: f (int: a; required: int: b)` вызов `f(5)` выбирает первое объявление, а `f(5; 6)` — второе (решение автора 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#no-count-preference)).
 
-Пункты 1, 3 и 6 и пункт 2 для одного аргумента — слова автора. Пункты 4 и 5 и распространение пункта 2 на любое число аргументов — чтение исполнителя по тем же словам и по действующим правилам подачи аргументов ([ответы исполнителя](../LMX_blog/q/fable-self-answers-20261110.md), Р65, Р67, Р68). Строки таблицы ниже — следствия общего алгоритма; при расхождении действует алгоритм.
+Пункты 1, 2 и 5 — слова автора. Пункты 3 и 4 — чтение исполнителя по тем же словам и по действующим правилам подачи аргументов ([ответы исполнителя](../LMX_blog/q/fable-self-answers-20261110.md), Р65, Р67, Р68, Р82). Строки таблицы ниже — следствия общего алгоритма; при расхождении действует алгоритм.
 
-**Связки объявлений и вызовов.** `S` — Structure, `x` — не Structure.
+**Связки объявлений и вызовов.** `S` — Structure, `x` и `y` — не Structure; `f(a, required b)` — объявление, у которого формал `b` объявлен `required`.
 
 | объявления имени `f` | вызов | что происходит |
 |---|---|---|
-| одно, с одним аргументом | `f(x)` | оно; `x` — его аргумент |
-| одно, с одним аргументом | `f(S)` | оно; `S` — его аргумент и не раскрывается; подходит ли она формалу, решает допуск |
-| одно, с двумя и более | `f(S)`, поля `S` подходят формалам, сама `S` первому формалу не подходит | `S` раскрывается, её поля связываются с формалами |
-| одно, с двумя и более | `f(S)`, сама `S` подходит первому формалу, её поля формалам не подходят | `S` — первый аргумент; остальные входы без значения или по умолчанию |
-| одно, с двумя и более | `f(S)`, подходят оба чтения | ошибка неоднозначности; целиком `S` подаёт `f(v := S)` |
-| одно, с двумя и более | `f(v := S)` | оно; `S` целиком подана формалу `v` |
-| одно, с двумя и более | `f(x)` | оно; остальные входы без значения или по умолчанию |
-| с одним и с двумя | `f(S)`, раскрытая `S` двухаргументному не подходит | одноаргументное; `S` не раскрывается |
-| с одним и с двумя | `f(S)`, раскрытая `S` подходит двухаргументному | вызов разрешают оба чтения — ошибка неоднозначности |
-| с одним и с двумя | `f(a b)` | двухаргументное |
-| с двумя и с тремя | `f(S)`, в `S` два поля | `S` раскрывается, по двум полям выбирается двухаргументное |
-| с двумя и с тремя | `f(S)`, в `S` три поля | `S` раскрывается, выбирается трёхаргументное |
-| с двумя и с тремя | `f(x)` | вызов подходит обоим — ошибка неоднозначности |
-| два с одним числом аргументов | вызов, подходящий обоим | объявления перекрываются — ошибка |
+| одно, `f(a)` | `f(x)` | оно; `x` — его аргумент |
+| одно, `f(a)` | `f(S)` | оно; `S` — его аргумент и не раскрывается; подходит ли она формалу, решает допуск |
+| одно, `f(a b)` | `f(S)`, поля `S` подходят формалам, сама `S` формалу `a` не подходит | `S` раскрывается, её поля связываются с формалами |
+| одно, `f(a b)` | `f(S)`, сама `S` подходит формалу `a`, её поля формалам не подходят | `S` — аргумент `a`; `b` без значения или по умолчанию |
+| одно, `f(a b)` | `f(S)`, подходят оба чтения | ошибка неоднозначности; целиком `S` подаёт `f(a := S)` |
+| одно, `f(a b)` | `f(a := S)` | оно; `S` целиком подана формалу `a` |
+| одно, `f(a b)` | `f(x)` | оно; `b` без значения или по умолчанию |
+| одно, `f(a, required b)` | `f(x)` | ошибка: обязательному `b` ничего не подано |
+| `f(a)` и `f(a b)` | `f(x)` | вызов подходит обоим — ошибка неоднозначности |
+| `f(a)` и `f(a, required b)` | `f(x)` | `f(a)` |
+| `f(a)` и `f(a, required b)` | `f(x y)` | `f(a, required b)` |
+| `f(a)` и `f(a, required b)` | `f(S)`, раскрытая `S` формалам второго не подходит | `f(a)`; `S` не раскрывается |
+| `f(a)` и `f(a, required b)` | `f(S)`, сама `S` подходит `f(a)`, раскрытая — формалам второго | вызов разрешают оба чтения — ошибка неоднозначности |
+| `f(a, required b)` и `f(a, required b, required c)` | `f(S)`, в `S` два поля | `S` раскрывается, выбирается первое |
+| `f(a, required b)` и `f(a, required b, required c)` | `f(S)`, в `S` три поля | `S` раскрывается, выбирается второе |
+| два с одинаковыми формалами | вызов, подходящий обоим | объявления перекрываются — ошибка |
 
 Написанную в скобках Structure на месте аргумента числовой формал читает по своему контракту выражения (абзац выше): `h((5))` при `fn: h (int: x)` подаёт 5. Это не раскрытие.
 
@@ -1418,7 +1419,7 @@ In an executable body, a directly written expression is evaluated by the general
 
 The author's decision of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#declaration-selection)). A receiver of the language that takes its arguments as `code` repeats the behaviour of `fn` and `sub`, so the rules of this section are common to callables and to such receivers.
 
-**Declarations of one name.** One name may have several declarations `fn` or `sub` if they do not overlap one another: there is no call that would suit two of them. The number of arguments of a declaration is the number of the formals of its `data`. The forms of a receiver with different numbers of arguments are separate declarations: `call` has three -- `call(code)`, `call(data code)` and `call(args data code)`, and `fncall` has three -- `fncall(return code)`, `fncall(data return code)` and `fncall(args data return code)` ([receivers `call` and `fncall`](#call-receivers)).
+**Declarations of one name.** One name may have several declarations `fn` or `sub` if they do not overlap one another: there is no call that would suit two of them. The number of arguments of a declaration is the number of the formals of its `data`. The forms of a receiver with different numbers of arguments are separate declarations: `call` has three -- `call(code)`, `call(data code)` and `call(args data code)`, and `fncall` has three -- `fncall(return code)`, `fncall(data return code)` and `fncall(args data return code)` ([receivers `call` and `fncall`](#call-receivers)). The forms are declared as ordinary `sub`s -- `sub: call (@: code)`, `sub: call (@: data; @: code)` -- and are checked by the general algorithm (the author's words of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#no-count-preference)). The formals of the forms are `required`: otherwise `call(P)` as written would also suit the form with two arguments -- `P` as `data`, `code` without a value (the executor's reading, R82).
 
 **Two steps of a call.** First the declaration is chosen by the call: the translator generates the signature of the call from the declarations of the name, the interpreter searches for it among them. Only then are the arguments bound to the formals of the chosen declaration -- by position and by name, with defaults and admission, as described for `args`. Any ambiguity of the choice is an error.
 
@@ -1428,33 +1429,34 @@ The author's decision of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#declara
 
 **How the declaration is chosen.**
 
-1. The declarations of the name visible at the place of the call are taken.
-2. If one of them has as many arguments as are supplied, it is used. If the sole supplied argument is a Structure, both readings are checked -- as one argument and unwrapped: when both resolve the call, that is an error of ambiguity (the author's words of 2026-11-07, [journal](../LMX_blog/2026-11-07.md), the section on the whole argument Structure, and of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#both-readings-checked)).
-3. If one argument is supplied, it is a Structure, no one-argument declaration is found and declarations with several arguments are found, the Structure is unwrapped: its fields become the supplied arguments, and the declaration is chosen by them. The unwrapping happens once, by one level, and only when the call is processed ([whole argument Structure](#whole-arguments)).
-4. An argument supplied by an assignment to a formal, `f(arg0 := Struct)`, is not unwrapped; only declarations that have such a formal suit.
-5. If fewer arguments are supplied than a declaration has, the missing inputs stay without a value or take a default: all inputs are optional. Such a declaration is used when it is the only one the call suits.
-6. If the call suits two declarations or none, that is an error.
+1. All declarations of the name visible at the place of the call are taken.
+2. The arguments are read in two ways: as written and -- if one argument is supplied and it is a Structure -- unwrapped: its fields become the supplied arguments, the named ones by name, the unnamed ones by position. The unwrapped reading is checked only against declarations with several arguments. The unwrapping happens once, one level deep, and only while the call is processed ([the whole structure of arguments](#whole-arguments)). An argument supplied by an assignment to a formal, `f(arg0 := Struct)`, is not unwrapped.
+3. For each pair «declaration -- reading» the arguments are assigned to the formals. The pair fails if there are more arguments than formals, if the declaration has no formal of the given name, or if a formal gets a value twice. A formal that is given nothing takes its default or stays without a value: all inputs are optional; if it is declared `required`, the pair fails.
+4. A pair that did not fail is checked by the series of `implements`.
+5. Exactly one admitted pair gives the call; none or more than one is an error. There is no preference by the number of arguments: the declarations `fn: f (int: a)` and `fn: f (int: a; int: b)` overlap, because `f(5)` suits both -- the second with the optional `b` --, and that is an error of ambiguity. `required` separates them: with `fn: f (int: a; required: int: b)` the call `f(5)` chooses the first declaration and `f(5; 6)` the second (the author's decision of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#no-count-preference)).
 
-Items 1, 3 and 6 and item 2 for one argument are the author's words. Items 4 and 5 and the extension of item 2 to any number of arguments are the executor's reading of the same words and of the existing rules of argument passing ([executor's answers](../LMX_blog/q/fable-self-answers-20261110.md), R65, R67, R68). The rows of the table below are consequences of the general algorithm; where they differ, the algorithm holds.
+Items 1, 2 and 5 are the author's words. Items 3 and 4 are the executor's reading of the same words and of the rules of supplying arguments in force ([executor's answers](../LMX_blog/q/fable-self-answers-20261110.md), R65, R67, R68, R82). The rows of the table below are consequences of the general algorithm; where they differ, the algorithm holds.
 
-**Combinations of declarations and calls.** `S` is a Structure, `x` is not a Structure.
+**Combinations of declarations and calls.** `S` is a Structure, `x` and `y` are not Structures; `f(a, required b)` is a declaration whose formal `b` is declared `required`.
 
 | declarations of the name `f` | call | what happens |
 |---|---|---|
-| one, with one argument | `f(x)` | it; `x` is its argument |
-| one, with one argument | `f(S)` | it; `S` is its argument and is not unwrapped; whether it suits the formal is decided by admission |
-| one, with two or more | `f(S)`, the fields of `S` suit the formals, `S` itself does not suit the first formal | `S` is unwrapped, its fields are bound to the formals |
-| one, with two or more | `f(S)`, `S` itself suits the first formal, its fields do not suit the formals | `S` is the first argument; the other inputs stay without a value or take a default |
-| one, with two or more | `f(S)`, both readings suit | an error of ambiguity; `f(v := S)` gives `S` whole |
-| one, with two or more | `f(v := S)` | it; `S` is given whole to the formal `v` |
-| one, with two or more | `f(x)` | it; the other inputs stay without a value or take a default |
-| with one and with two | `f(S)`, the unwrapped `S` does not suit the two-argument one | the one-argument one; `S` is not unwrapped |
-| with one and with two | `f(S)`, the unwrapped `S` suits the two-argument one | both readings resolve the call -- an error of ambiguity |
-| with one and with two | `f(a b)` | the two-argument one |
-| with two and with three | `f(S)`, `S` has two fields | `S` is unwrapped, the two-argument one is chosen by the two fields |
-| with two and with three | `f(S)`, `S` has three fields | `S` is unwrapped, the three-argument one is chosen |
-| with two and with three | `f(x)` | the call suits both -- an error of ambiguity |
-| two with the same number of arguments | a call that suits both | the declarations overlap -- an error |
+| one, `f(a)` | `f(x)` | it; `x` is its argument |
+| one, `f(a)` | `f(S)` | it; `S` is its argument and is not unwrapped; whether it suits the formal is decided by admission |
+| one, `f(a b)` | `f(S)`, the fields of `S` suit the formals, `S` itself does not suit the formal `a` | `S` is unwrapped, its fields are bound to the formals |
+| one, `f(a b)` | `f(S)`, `S` itself suits the formal `a`, its fields do not suit the formals | `S` is the argument `a`; `b` stays without a value or takes its default |
+| one, `f(a b)` | `f(S)`, both readings suit | an error of ambiguity; `f(a := S)` gives `S` whole |
+| one, `f(a b)` | `f(a := S)` | it; `S` is given whole to the formal `a` |
+| one, `f(a b)` | `f(x)` | it; `b` stays without a value or takes its default |
+| one, `f(a, required b)` | `f(x)` | an error: the required `b` is given nothing |
+| `f(a)` and `f(a b)` | `f(x)` | the call suits both -- an error of ambiguity |
+| `f(a)` and `f(a, required b)` | `f(x)` | `f(a)` |
+| `f(a)` and `f(a, required b)` | `f(x y)` | `f(a, required b)` |
+| `f(a)` and `f(a, required b)` | `f(S)`, the unwrapped `S` does not suit the formals of the second | `f(a)`; `S` is not unwrapped |
+| `f(a)` and `f(a, required b)` | `f(S)`, `S` itself suits `f(a)`, the unwrapped one suits the formals of the second | both readings resolve the call -- an error of ambiguity |
+| `f(a, required b)` and `f(a, required b, required c)` | `f(S)`, `S` has two fields | `S` is unwrapped, the first is chosen |
+| `f(a, required b)` and `f(a, required b, required c)` | `f(S)`, `S` has three fields | `S` is unwrapped, the second is chosen |
+| two with the same formals | a call that suits both | the declarations overlap -- an error |
 
 A Structure written in parentheses in the place of an argument is read by a numeric formal by its contract of an expression (the paragraph above): `h((5))` with `fn: h (int: x)` supplies 5. That is not unwrapping.
 

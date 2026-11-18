@@ -69,9 +69,18 @@ fn: lmx_check_reference (int: kind; int: target) int
         return: 0
     return: 4
 
+# A pointer is nulled by zero (the book #scope: pointers to Structures and methods «присваиваются только друг другу и
+# обнуляются»; the null address is written as zero, `@: ptr 0`; R51 Q3): a pointer to an int (5) or to a Structure or a method
+# (6) takes the null address. 0, or 4.
+fn: lmx_check_nulled (int: kind) int
+    if: kind = 5 || kind = 6
+        return: 0
+    return: 4
+
 # A read through a pointer to data `\p` (the book #scope: a pointer to data is a wrapper): the value read through must be
-# a pointer to an int. 0, or 2.
-fn: lmx_check_data_read (int: given) int
-    if: given != 5
+# a pointer to an int whose referent is an int cell -- a null pointer has none (R51 Q3: the answer of an unsuitable operand).
+# 0, or 2.
+fn: lmx_check_data_read (int: given; int: target) int
+    if: given != 5 || target != 1
         return: 2
     return: 0

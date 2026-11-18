@@ -85,8 +85,10 @@ S/boot-fl01-02/g2/frontend/l2trans.exe 7e2e7186; runtime S/boot-fl01-02/g2/runti
 driver-observe.o 6c07014e); Graph S/graph-fl01-01/graph_trans-prod.exe 7412d1e2. Поверх него — компоненты,
 собранные коротким циклом (это не новый G2). Срез C1: tool S/ps-tool-c101/lmxtool-tool.exe 1e7a0a2c. Срез
 C5: frontend S/c5-fe-c502/l2trans.exe a299e1a6; runtime S/c5-rt2-c502 (driver.o f15aedb5,
-driver-observe.o 9e58c18f); Graph S/c5-graph2-c502/graph_trans-prod.exe e77f03bc. Следующий срез собирается
-этим инструментом, этим frontend и этим runtime.
+driver-observe.o 9e58c18f); Graph S/c5-graph2-c502/graph_trans-prod.exe e77f03bc. Срез C2 — действующий набор:
+tool S/ps-tool-c201/lmxtool-tool.exe f6c40721; frontend S/ps-feh-c201/l2trans.exe f14c5d04; runtime
+S/ps-rt-c202 (driver.o 9575d524, driver-observe.o cce40874); Graph S/ps-graph-c202/graph_trans-prod.exe
+3e57cced. Следующий срез собирается этим инструментом, этим frontend и этим runtime.
 
 **G0 при смене списков.** Списки функций ядра и frontend (`--machine`) живут в инструменте (tools/build.lm2). Срез,
 который меняет список или текст заголовка, собирается инструментом-кандидатом из нового build.lm2, предыдущий
@@ -116,8 +118,10 @@ frontend — кандидат среза; так приняты срезы «п�
 ссылок переехали в него без смены ответов
 ([свидетельство](witnesses/one-graph-checks-module-20261118/notes.md)). C5 принят: явный `L2:` исполняется в
 любом месте кода, его аргументы берутся как записаны
-([свидетельство](witnesses/one-graph-level2-anywhere-20261118/notes.md)). Жетон у opus: C2 — обнуление
-указателя; за ним срез модификаторов и срез связывателя. Каждый срез принимается коротким циклом; целый bootstrap и полные наборы — на границе
+([свидетельство](witnesses/one-graph-level2-anywhere-20261118/notes.md)). C2 принят: указатель обнуляется
+нулём ([свидетельство](witnesses/one-graph-pointer-null-20261118/notes.md)). Дальше: поправка ожиданий двух
+фикстур C5 (Р66), срез модификаторов, срез выбора объявления по вызову.
+Каждый срез принимается коротким циклом; целый bootstrap и полные наборы — на границе
 этапа П1 (после C4). Уточнения автора 2026-11-18 о ресиверах `private`, `required`, `const`, `immutable`,
 `independent`: исполняются при проходе по `data`, переменные под ними корневые, у всех несколько аргументов —
 отдельный срез, подготовка вне дерева у opus (план, Р52 и Р53). Решение автора 2026-11-18 о двух видах

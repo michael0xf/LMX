@@ -1,0 +1,17 @@
+# Witness: pointers written through an explicit path are nulled by zero; a nulled pointer to a Structure prints `@: p 0` (seen 1).
+# Norm: the book #scope («присваиваются только друг другу и обнуляются»), journal 2026-11-17 #l3-own-types; R51 Q3.
+# Slice C2 (plan #one-graph-plan, P1): the check lives in src/l2src/lmx_checks.lm2.
+(
+    Observed:
+        int: seen 0
+        @: p 0
+        @: q int
+)
+@: shared data[0]
+sub: main () (A(int: v 1); int: x 5)
+    shared\Observed\p := A
+    shared\Observed\p := 0
+    shared\Observed\q := @x
+    shared\Observed\q := 0
+    shared\Observed\seen := 1
+main()

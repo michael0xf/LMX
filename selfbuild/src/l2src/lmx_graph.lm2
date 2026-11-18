@@ -1917,6 +1917,13 @@ fn: lmx_graph_reference_payload (@: g c.LmxGraph; int: kind; @: value void; @@: 
         given := lmx_graph_kind(g, value)
     if: out = 0
         return: 4
+    # The number zero is the null address (`@: ptr 0`): the pointer is nulled (lmx_check_nulled).
+    if: given = 1 && c.lmx_int_value_known(value) = 0
+        status := c.lmx_check_nulled(kind)
+        if: status != 0
+            return: status
+        out[0] := 0
+        return: 0
     # The referent -- the int cell a pointer cell holds, or the Lmx the value stands for -- and its type checked by the
     # module of checks (lmx_check_reference).
     if: kind = 5 && (given = 5 || given = 7)

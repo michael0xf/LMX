@@ -1877,6 +1877,17 @@ fn: lmx_graph_place_store_int (@: g c.LmxGraph; @: code c.Lmx; size_t: token; in
     return: 0
 end: lmx_graph_place_store_int
 
+# A pointer of kind 5 or 6 that holds no address: a new pointer cell of its type (the null address is zero, R51 Q3).
+fn: lmx_graph_null_reference (@: g c.LmxGraph; int: kind) @: void
+    @: cell void 0
+    int: type c.LMX_TYPE_GRAPH_INT_REF
+    if: kind = 6
+        type := c.LMX_TYPE_GRAPH_LMX_REF
+    cell := c.lmx_arena_pointer_cells_profiled(g\arena, type, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: cell = 0 || c.lmx_arena_pointer_void_write(cell, 0) != 0
+        return: 0
+    return: cell
+
 fn: lmx_graph_place_store_reference (@: g c.LmxGraph; @: code c.Lmx; size_t: token; @: value void) int
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: frame c.LmxGraphFrame 0
@@ -1911,6 +1922,8 @@ fn: lmx_graph_place_store_reference (@: g c.LmxGraph; @: code c.Lmx; size_t: tok
             cell := c.lmx_graph_ref_int(g, target)
         else:
             cell := c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
+        if: target = 0
+            cell := lmx_graph_null_reference(g, kind)
         if: cell = 0
             return: 4
         row\cell := cell
@@ -5510,6 +5523,7 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
     int: left 0
     int: right 0
     int: status 0
+    int: referent 0
     if: kind = 2
         return: lmx_graph_named_int(g, scope, c.lmx_graph_word_text(g, raw), out)
     if: kind != 4
@@ -5610,8 +5624,10 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         status := lmx_graph_eval_value(g, scope, c.lmx_graph_get_in(g, expression, 1U), @ value)
         if: status != 0
             return: status
-        # A read through a pointer to data: the value read through is checked by the module of checks.
-        status := c.lmx_check_data_read(c.lmx_graph_kind(g, value))
+        # A read through a pointer to data: the value read through and its referent are checked by the module of checks.
+        if: c.lmx_graph_kind(g, value) = 5
+            referent := c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value))
+        status := c.lmx_check_data_read(c.lmx_graph_kind(g, value), referent)
         if: status != 0
             return: status
         return: c.lmx_graph_value_int(g, c.lmx_arena_pointer_void_read(value), out)

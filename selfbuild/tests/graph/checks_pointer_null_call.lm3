@@ -1,0 +1,18 @@
+# Witness: a call through a nulled pointer to a method answers as through a pointer declared null (3).
+# Norm: the book #scope («присваиваются только друг другу и обнуляются»), journal 2026-11-17 #l3-own-types; R51 Q3.
+# Slice C2 (plan #one-graph-plan, P1): the check lives in src/l2src/lmx_checks.lm2.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: two () int
+    return: 2
+sub: main () (
+    @: m two
+    int: k 0
+)
+    m := 0
+    k := m()
+    shared\Observed\seen := 1
+main()

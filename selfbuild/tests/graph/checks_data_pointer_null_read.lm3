@@ -1,0 +1,17 @@
+# Witness: a read through a nulled pointer to an int is refused as a read through what is no pointer to data (2).
+# Norm: the book #scope («присваиваются только друг другу и обнуляются»), journal 2026-11-17 #l3-own-types; R51 Q3.
+# Slice C2 (plan #one-graph-plan, P1): the check lives in src/l2src/lmx_checks.lm2.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: main () (
+    int: x 5
+    @: q int @x
+    int: k 0
+)
+    q := 0
+    k := \q
+    shared\Observed\seen := 1
+main()

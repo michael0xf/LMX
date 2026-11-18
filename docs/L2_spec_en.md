@@ -10,7 +10,7 @@ nor alias unification. Full M11/M13/M14 remain OPEN. [Contract and checks392](ke
 <a id="scope"></a>
 ## 1. Scope
 
-The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored L3 graph; L2 operations require native lowering.
+The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored graph: L2 code with the same checks as L3 code, and an address operation that L3 does not have at all with checks of its own. Native L2 code is compiled without these checks ([semantics, §1](LMX_semantics.en.md#scope)).
 
 <a id="lmx"></a>
 ## 2. The `Lmx` structure
@@ -385,7 +385,7 @@ In the existing native path, `emit_call_result_value` declares typed `l2_tN`, an
 
 A reference field retains its exact pointer type; a primitive uses its typed cell. An ordinary graph slot physically holds void*; an alias through Lmx** does not replace that representation. Pointer depth is unrestricted; an evaluation temporary's address does not replace a ready place's own address.
 
-Prefix `\p` follows a reference; `p\field` accesses either a graph field or an explicitly imported machine ABI according to `p`'s category. `@array[i]` addresses the actual backing element. L2 adds no automatic bounds check; checked access belongs to L3. Address operations neither bypass `const`/`immutable` nor extend target lifetime.
+Prefix `\p` follows a reference; `p\field` accesses either a graph field or an explicitly imported machine ABI according to `p`'s category. `@array[i]` addresses the actual backing element. Native L2 code adds no automatic bounds check; checked access belongs to L3, and the interpreter executes L2 code with the same checks. Address operations neither bypass `const`/`immutable` nor extend target lifetime.
 
 L2 indexing `[]`, `[][]`, `[][][]` of arbitrary finite rank, including `array[-1]`, computes an offset
 without length, sign, arena, or former-field checks. Reads, writes, and address-taking share one path.

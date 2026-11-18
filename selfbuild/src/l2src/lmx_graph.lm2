@@ -1524,7 +1524,7 @@ fn: lmx_graph_declaration_receiver (@: head char) int
     size_t: i 0U
     if: head = 0 || head[0] = 0
         return: 0
-    if: head = lmx_graph_intern("const", 5U) || head = lmx_graph_intern("immutable", 9U) || head = lmx_graph_intern("independent", 11U) || head = lmx_graph_intern("private", 7U)
+    if: head = lmx_graph_intern("const", 5U) || head = lmx_graph_intern("immutable", 9U) || head = lmx_graph_intern("independent", 11U) || head = lmx_graph_intern("private", 7U) || head = lmx_graph_intern("required", 8U)
         return: 3
     if: head[0] = 64
         while: head[i] = 64
@@ -2202,6 +2202,88 @@ fn: lmx_graph_receiving_place (@: g c.LmxGraph; @: owner c.Lmx; size_t: index; @
     inner[0] := holder
     at[0] := place
     return: 0
+
+# ---- The declarations under the modifiers (the author 2026-11-18: #marking-receivers-execute, #two-kinds-of-receivers,
+# #arguments-by-number-and-form; the book #data-root-declaration-execution, #qualification) -------------------------
+# The modifiers private, required, const, immutable and independent take their arguments as data: the arguments of a
+# modifier are its written fields, whatever form its record was written in (short, compact, block); an argument that is
+# itself a Structure stays a Structure. These read the record as written each time and store nothing about it.
+
+# The declarations under the field index of holder, depth first in written order: a field that is no modifier is one
+# declaration, itself; a modifier gives the declarations under each of its arguments, its written fields. At the
+# declaration of ordinal want (counted in seen) the Lmx that holds it and its position go to inner and at. path holds the
+# modifiers entered. 0; 2 for a modifier without an argument or one met again on its own path.
+fn: lmx_graph_declared_walk (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; size_t: want; @: seen size_t; @@: inner c.Lmx; @: at size_t; @@: path void) int
+    @: current void lmx_graph_get_in(g, holder, index)
+    @@: link void 0
+    size_t: n 0U
+    size_t: k 0U
+    int: status 0
+    if: lmx_graph_kind(g, current) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, current)) != 3
+        if: seen[0] = want
+            inner[0] := holder
+            at[0] := index
+        seen[0] := seen[0] + 1U
+        return: 0
+    n := lmx_graph_count((cast: (@: c.Lmx) current))
+    if: n = 0U || lmx_graph_dump_on_path(path, current) != 0
+        return: 2
+    link := lmx_graph_dump_enter(path, current)
+    if: link = 0
+        return: 2
+    while: k < n && status = 0
+        status := lmx_graph_declared_walk(g, (cast: (@: c.Lmx) current), k, want, seen, inner, at, link)
+        k := k + 1U
+    c.free((cast: (@: void) link))
+    return: status
+
+# The number of declarations the field index of holder gives to its modifiers: 1 for a field that is no modifier; 0 for a
+# modifier without an argument.
+fn: lmx_graph_declared_count (@: g c.LmxGraph; @: holder c.Lmx; size_t: index) size_t
+    @: inner c.Lmx 0
+    size_t: at 0U
+    size_t: seen 0U
+    if: lmx_graph_declared_walk(g, holder, index, (cast: (size_t) -1), @ seen, @ inner, @ at, 0) != 0
+        return: 0U
+    return: seen
+
+# Where the j-th declaration of the field index of holder stands, in written order: the Lmx that holds it and its position
+# there (the declaration is lmx_graph_get_in(g, inner, at)). 0; 2 for no j-th.
+fn: lmx_graph_declared_at (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; size_t: j; @@: inner c.Lmx; @: at size_t) int
+    size_t: seen 0U
+    inner[0] := 0
+    if: lmx_graph_declared_walk(g, holder, index, j, @ seen, inner, at, 0) != 0 || inner[0] = 0
+        return: 2
+    return: 0
+
+# Does a modifier named mark stand above the declaration of name in the record raw, a field as written? above says whether
+# one stood above raw already; path holds the modifiers entered. 1 or 0; 0 for a record that declares no name, or a modifier
+# met again on its own path.
+fn: lmx_graph_record_mark_at (@: g c.LmxGraph; @: raw void; @: name char; @: mark char; int: above; @@: path void) int
+    @@: link void 0
+    size_t: k 0U
+    int: found 0
+    if: lmx_graph_kind(g, raw) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, raw)) != 3
+        if: name != 0 && (lmx_graph_name_of(g, raw) = name || lmx_graph_declaration_place_name(g, raw) = name)
+            return: above
+        return: 0
+    if: lmx_graph_dump_on_path(path, raw) != 0
+        return: 0
+    link := lmx_graph_dump_enter(path, raw)
+    if: link = 0
+        return: 0
+    if: lmx_graph_name_of(g, raw) = mark
+        above := 1
+    while: k < lmx_graph_count((cast: (@: c.Lmx) raw)) && found = 0
+        found := lmx_graph_record_mark_at(g, lmx_graph_get_in(g, (cast: (@: c.Lmx) raw), k), name, mark, above, link)
+        k := k + 1U
+    c.free((cast: (@: void) link))
+    return: found
+
+fn: lmx_graph_record_mark (@: g c.LmxGraph; @: raw void; @: name char; @: mark char) int
+    if: g = 0 || raw = 0 || mark = 0
+        return: 0
+    return: lmx_graph_record_mark_at(g, raw, name, mark, 0, 0)
 
 # Publish a computed declaration through the same runtime write, naming it with the canonical word in that declaration:
 # the declaration Frame `int: name expression` (an Lmx named int, §3.3) has the name as its first argument. The new

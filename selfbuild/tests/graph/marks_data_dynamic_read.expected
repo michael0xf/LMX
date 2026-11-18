@@ -1,0 +1,29 @@
+---
+    Observed:
+        int: seen 1234567
+    end: Observed
+---
+@: shared (data [] 0)
+fn: peek () int
+    return: (((((((a * 1000000) + (b * 100000)) + (c * 10000)) + (d * 1000)) + (e * 100)) + (f * 10)) + g)
+end: peek
+sub: main () (
+    const:
+        int: a 1
+        int: b 2
+    end: const
+    required:
+        int: c 3
+        int: d 4
+    end: required
+    immutable:
+        int: e 5
+        int: f 6
+    end: immutable
+    independent:
+        int: g 7
+    end: independent
+)
+    :=: ((shared \ Observed) \ seen) (peek)
+end: main
+main:

@@ -77,6 +77,14 @@ fn: lmx_check_nulled (int: kind) int
         return: 0
     return: 4
 
+# A place declared under const keeps its binding (the book #qualification: `const` protects the binding -- it cannot be
+# assigned, rebound or replaced; the value behind it may stay mutable): an assignment reaches no such place. constant is
+# whether a modifier const stands above the place's declaration (lmx_graph_record_mark). 0, or 4.
+fn: lmx_check_place_writable (int: constant) int
+    if: constant != 0
+        return: 4
+    return: 0
+
 # A read through a pointer to data `\p` (the book #scope: a pointer to data is a wrapper): the value read through must be
 # a pointer to an int whose referent is an int cell -- a null pointer has none (R51 Q3: the answer of an unsuitable operand).
 # 0, or 2.

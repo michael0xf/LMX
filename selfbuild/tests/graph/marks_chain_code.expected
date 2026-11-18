@@ -1,0 +1,29 @@
+---
+    Observed:
+        int: seen 123
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main () (
+    int: k 0
+)
+    private:
+        const:
+            int: a 1
+        end: const
+    end: private
+    const:
+        private:
+            int: b 2
+        end: private
+    end: const
+    independent:
+        const:
+            immutable:
+                int: c 3
+            end: immutable
+        end: const
+    end: independent
+    :=: ((shared \ Observed) \ seen) (((a * 100) + (b * 10)) + c)
+end: main
+main:

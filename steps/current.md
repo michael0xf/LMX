@@ -96,7 +96,10 @@ C5: frontend S/c5-fe-c502/l2trans.exe a299e1a6; runtime S/c5-rt2-c502 (driver.o 
 driver-observe.o 9e58c18f); Graph S/c5-graph2-c502/graph_trans-prod.exe e77f03bc. Срез C2 — действующий набор:
 tool S/ps-tool-c201/lmxtool-tool.exe f6c40721; frontend S/ps-feh-c201/l2trans.exe f14c5d04; runtime
 S/ps-rt-c202 (driver.o 9575d524, driver-observe.o cce40874); Graph S/ps-graph-c202/graph_trans-prod.exe
-3e57cced. Следующий срез собирается этим инструментом, этим frontend и этим runtime.
+3e57cced. Срез модификаторов, первая часть — действующий набор: tool S/ps-tool-m101/lmxtool-tool.exe
+6c5a3dbd; frontend S/ps-feh-m101/l2trans.exe 68ea2d39; runtime S/ps-rt-m102 (driver.o e1830125,
+driver-observe.o cf94abea); Graph S/ps-graph-m102/graph_trans-prod.exe 447ff3eb; манифест 1111 файлов,
+500428f1. Следующий срез собирается этим инструментом, этим frontend и этим runtime.
 
 **G0 при смене списков.** Списки функций ядра и frontend (`--machine`) живут в инструменте (tools/build.lm2). Срез,
 который меняет список или текст заголовка, собирается инструментом-кандидатом из нового build.lm2, предыдущий
@@ -129,8 +132,11 @@ frontend — кандидат среза; так приняты срезы «п�
 ([свидетельство](witnesses/one-graph-level2-anywhere-20261118/notes.md)). C2 принят: указатель обнуляется
 нулём ([свидетельство](witnesses/one-graph-pointer-null-20261118/notes.md)). Ожидания двух фикстур C5
 исправлены на 5 и 6 (Р66): строки `level2_record_structure_argument` и
-`level2_record_structure_argument_block` красные до реализации исполнения безымянной Structure в коде. Жетон
-у opus: срез модификаторов; за ним срез выбора объявления по вызову.
+`level2_record_structure_argument_block` красные до реализации исполнения безымянной Structure в коде.
+Первая часть среза модификаторов принята: данные вызова
+([свидетельство](witnesses/one-graph-modifiers-data-20261118/notes.md)); семь фикстур `marks_*_code` красные
+намеренно до среза, снимающего скан на входе вызова. Жетон у sonnet: срез «скан тела на входе вызова снят»;
+за ним срез выбора объявления по вызову, затем общий шаг исполнения выражения (один разбор).
 Каждый срез принимается коротким циклом; целый bootstrap и полные наборы — на границе
 этапа П1 (после C4). Уточнения автора 2026-11-18 о ресиверах `private`, `required`, `const`, `immutable`,
 `independent`: исполняются при проходе по `data`, переменные под ними корневые, у всех несколько аргументов —

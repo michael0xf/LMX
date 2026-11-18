@@ -186,7 +186,10 @@ fn: lmx_graph_field_private (@: g c.LmxGraph; @: owner c.Lmx; size_t: index) int
 # Is the binding of this working row declared by the receiver private? The record it was made from says so.
 fn: lmx_graph_row_private (@: g c.LmxGraph; @: row c.LmxGraphWork) int
     @: declared void row\declared
-    return: lmx_graph_record_private(g, declared)
+    @: mark char c.lmx_graph_intern("private", 7U)
+    if: lmx_graph_record_private(g, declared) != 0
+        return: 1
+    return: c.lmx_graph_record_mark(g, declared, row\name, mark)
 
 # Namespace callables retain their exact written declaration as parent.
 # Use that origin only; a same-spelled, unrelated field owns no attribute here.
@@ -1538,20 +1541,103 @@ fn: lmx_graph_work_finish (@: g c.LmxGraph; @: frame c.LmxGraphFrame; int: statu
     return: status
 end: lmx_graph_work_finish
 
+# The number of declarations the field index of holder gives to its modifiers (private, required, const, immutable,
+# independent) as their arguments, when every argument down its chain is a declaration as written: the modifiers execute
+# where that field is reached, each declaration a root variable (the author 2026-11-18, #marking-receivers-execute). 0 for
+# any other field, and for a chain with an argument that is a Structure: that keeps its present reading until the slice
+# that migrates such records (R57).
+fn: lmx_graph_marked_count (@: g c.LmxGraph; @: holder c.Lmx; size_t: index) size_t
+    @: field void c.lmx_graph_get_in(g, holder, index)
+    @: inner c.Lmx 0
+    size_t: at 0U
+    size_t: n 0U
+    size_t: j 0U
+    if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_declaration_receiver(c.lmx_graph_name_of(g, field)) != 3
+        return: 0U
+    n := c.lmx_graph_declared_count(g, holder, index)
+    while: j < n
+        if: c.lmx_graph_declared_at(g, holder, index, j, @ inner, @ at) != 0 || lmx_graph_written_group(g, c.lmx_graph_get_in(g, inner, at)) != 0
+            return: 0U
+        j := j + 1U
+    return: n
+
+# One working row of the data of a call: raw is the declaration the field index of data stands for -- the field read through
+# lmx_graph_binding_leaf, or one of the declarations given to its modifiers. The row keeps the field as written as the record
+# it was declared by. supply says whether an actual supplied at index stands for it. 0; 4 without memory; the answer of the
+# snapshot.
+fn: lmx_graph_work_open_row (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: data c.Lmx; @: body c.Lmx; size_t: index; @: raw void; int: supply) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: active c.LmxActivation frame\activation
+    @: head char c.lmx_graph_name_of(g, raw)
+    @: rows c.LmxGraphWork 0
+    @: row c.LmxGraphWork 0
+    @: supplied c.LmxWalkValue 0
+    @: name char 0
+    size_t: capacity 0U
+    int: place 0
+    int: expected 0
+    int: status 0
+    if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
+        return: 0
+    name := lmx_graph_binding_name(g, data, raw, 1, @ place)
+    if: name = 0
+        return: 0
+    if: frame\count = frame\capacity
+        capacity := (cast: (size_t) frame\capacity) * 2U + 8U
+        rows := (cast: (@: c.LmxGraphWork) c.realloc((cast: (@: void) frame\rows), capacity * c.sizeof(c.LmxGraphWork)))
+        if: rows = 0
+            return: 4
+        frame\rows := rows
+        frame\capacity := capacity
+    row := frame\rows + frame\count
+    c.memset((cast: (@: void) row), 0, c.sizeof(c.LmxGraphWork))
+    row\name := name
+    row\slot := index
+    row\declared := c.lmx_graph_get_in(g, data, index)
+    if: data = body && place != 0
+        row\scope := body
+    expected := lmx_graph_own_kind(g, raw)
+    # refs describe supplied actuals, never formal declarations. A null
+    # entry selects the original value/description without evaluating it.
+    if: supply != 0 && active\values != 0 && index < active\width
+        supplied := (cast: (@: c.LmxWalkValue) active\values) + index
+        if: supplied\kind = 0
+            supplied := 0
+        ---
+    if: supplied != 0
+        row\loaded := row\loaded | 32
+        status := lmx_graph_work_snapshot_value(g, row, supplied)
+    else:
+        if: supply != 0 && active\refs != 0 && index < active\width && active\refs[index] != 0
+            raw := active\refs[index]
+            row\loaded := row\loaded | 32
+        status := lmx_graph_work_snapshot(g, row, raw)
+    row\expected_kind := expected
+    frame\count := frame\count + 1U
+    return: status
+
+# The modifiers of the field index of data execute where the data of the call is prepared: each of the n declarations given
+# to them as arguments gets its working row. They take no actual supplied at index: a call that gives an actual to a formal
+# under a modifier is refused when it is bound (5), before this.
+fn: lmx_graph_work_open_marked (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: data c.Lmx; @: body c.Lmx; size_t: index; size_t: n) int
+    @: inner c.Lmx 0
+    size_t: at 0U
+    size_t: j 0U
+    int: status 0
+    while: j < n && status = 0
+        status := c.lmx_graph_declared_at(g, data, index, j, @ inner, @ at)
+        if: status = 0
+            status := lmx_graph_work_open_row(g, frame, data, body, index, c.lmx_graph_get_in(g, inner, at), 0)
+        j := j + 1U
+    return: status
+
 # One invocation owns its namespace. Only DATA root fields are installed at
 # entry; CODE declarations create their local rows when reached. No default
 # expression or initializer runs here, and no local is published to the graph.
 fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: body c.Lmx; @: result char; @: frame c.LmxGraphFrame) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
-    @: raw void 0
-    @: head char 0
-    @: row c.LmxGraphWork 0
-    @: supplied c.LmxWalkValue 0
-    @: name char 0
     size_t: i 0U
-    int: place 0
-    int: expected 0
+    size_t: marked 0U
     int: status 0
     if: frame = 0 || active = 0 || active\code != code || data = 0 || body = 0
         return: 5
@@ -1572,42 +1658,11 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @:
     if: status = 0 && body != data
         status := lmx_graph_space_declarations(g, body)
     while: i < c.lmx_graph_count(data) && status = 0
-        raw := c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, i))
-        head := c.lmx_graph_name_of(g, raw)
-        if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
-            i := i + 1U
-            continue
-        name := lmx_graph_binding_name(g, data, raw, 1, @ place)
-        if: name = 0
-            i := i + 1U
-            continue
-        row := frame\rows + frame\count
-        row\name := name
-        row\slot := i
-        row\declared := c.lmx_graph_get_in(g, data, i)
-        if: data = body && place != 0
-            row\scope := body
-        expected := lmx_graph_own_kind(g, raw)
-        # refs describe supplied actuals, never formal declarations. A null
-        # entry selects the original value/description without evaluating it.
-        supplied := 0
-        if: active\values != 0 && i < active\width
-            supplied := (cast: (@: c.LmxWalkValue) active\values) + i
-            if: supplied\kind = 0
-                supplied := 0
-            ---
-        ---
-        if: supplied != 0
-            row\loaded := row\loaded | 32
-            status := lmx_graph_work_snapshot_value(g, row, supplied)
+        marked := lmx_graph_marked_count(g, data, i)
+        if: marked != 0U
+            status := lmx_graph_work_open_marked(g, frame, data, body, i, marked)
         else:
-            if: active\refs != 0 && i < active\width && active\refs[i] != 0
-                raw := active\refs[i]
-                row\loaded := row\loaded | 32
-            status := lmx_graph_work_snapshot(g, row, raw)
-        ---
-        row\expected_kind := expected
-        frame\count := frame\count + 1U
+            status := lmx_graph_work_open_row(g, frame, data, body, i, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, i)), 1)
         i := i + 1U
     ---
     if: status = 0
@@ -1738,8 +1793,10 @@ fn: lmx_graph_place_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; @: token
     @: value void 0
     size_t: slot 0U
     size_t: at 0U
+    @: mark char 0
     size_t: selected 0U
     int: actual 0
+    int: status 0
     if: name = 0 || token = 0 || kind = 0
         return: 3
     if: active = 0 || active\code != code || active\frame = 0
@@ -1771,6 +1828,11 @@ fn: lmx_graph_place_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; @: token
     # Explicit graph destinations use their physical protection checks.
     if: row != 0 && row\expected_kind != 0 && actual != row\expected_kind
         return: 4
+    # A place declared under const keeps its binding (lmx_check_place_writable).
+    mark := c.lmx_graph_intern("const", 5U)
+    status := c.lmx_check_place_writable(c.lmx_graph_record_mark(g, row\declared, name, mark))
+    if: status != 0
+        return: status
     token[0] := selected
     kind[0] := actual
     return: 0

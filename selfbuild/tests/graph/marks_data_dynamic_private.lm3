@@ -1,0 +1,17 @@
+# Witness: private hides each declaration given to it as an argument in the data of a method: a callable does not find a or
+# b among the names of its caller, so its input a is unknown (3), and seen is not written. The same without private:
+# marks_data_dynamic_public.
+# Norm: the book #data-root-declaration-execution, #private-binding, #qualification; the author 2026-11-18 #marking-receivers-execute.
+# Slice M1 (plan #one-graph-plan): the declarations of a field under its modifiers.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: peek () int
+    return: a * 10 + b
+sub: main () (
+    private: int: a 1; int: b 2
+)
+    shared\Observed\seen := peek()
+main()

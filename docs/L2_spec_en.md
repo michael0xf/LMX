@@ -35,7 +35,7 @@ during translation if absent. Other Structures receive no automatic field.
 The clean graph retains written declarations, operators, values, and nested bodies; C emission does
 not rearrange them. A primitive cell needs no extra leaf wrapper. Names reside in the common canonical
 string-address table, not in Lmx. A launch supplies the data/code roles.
-A direct data pass executes only root-level declaration receivers under their general rules.
+A direct data pass executes only root-level declaration receivers under their general rules; a declaration under a receiver that marks it, such as `private:` or `required:`, remains root-level ([semantics](LMX_semantics.en.md#data-root-declaration-execution)).
 
 Ordinary operations can construct and change a graph. Writes are not tracked for native, do not check
 future executability, and do not start compilation. The builder and explicitly invoked sys tools check

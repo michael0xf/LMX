@@ -86,6 +86,11 @@ body. The code of the accepted delivery is right and stays. The expectations of 
 corrected to 5 and 6 right after slice C2; the rows then stay red until the clean graph executes an unnamed
 Structure in place. The mutant «the role code returned to 3» is therefore not a witness of the norm.
 
+Done the same day, after slice C2, with the files prepared by sonnet. On the working set of slice C2 both
+rows are red in the three modes: the tool answers 0 and 0 where the fixtures expect 5 and 6. The rows
+`level2_record_root` and `level2_record_body`, run beside them, pass. Source manifest: 1063 inputs, SHA
+9dd75586…, canonical in the repository and the stage.
+
 ## Recorded and not changed here
 
 - The list of receiver words of the builder knows `L2`, the interpreter's list of language words does not. No

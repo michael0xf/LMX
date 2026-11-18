@@ -587,8 +587,8 @@ emission and explicit throws/catch obligations. Interface checking through
 `implements` is performed once per candidate: at construction when known,
 otherwise on actual reception. Construction does not execute `test`; actual
 run-time admission performs this second step and stops on the first `0`.
-A direct data pass executes only root-level declaration receivers (a declaration
-under a marking receiver such as `private:` or `required:` remains root-level); these may
+A direct data pass executes only root-level declaration receivers (`private`, `required`,
+`const`, `immutable` and `independent` execute in it, the variables under them are root-level); these may
 reach code supplied to them through ordinary execution. The translators
 still repeat admission when the call or assignment is reached
 ([plan](next_core_tasks_v3.md#m11), step 7). The shared collector and

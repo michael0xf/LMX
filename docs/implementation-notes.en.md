@@ -361,8 +361,8 @@ The candidate's suitability for the checker's own accesses is established before
 A check completes admission already in progress; it does not restart that same admission.
 Successful admission requires every check to succeed; the first `0` stops the list.
 
-A direct pass over `data` executes only root-level declaration receivers; a declaration under a
-receiver that marks it (`private:`, `required:`) remains root-level. An executing receiver may
+A direct pass over `data` executes only root-level declaration receivers; `private`, `required`,
+`const`, `immutable` and `independent` execute in it, the variables under them are root-level. An executing receiver may
 reach code supplied to it, including `test`. A `test:` form does not run merely because it is present
 among the data; no separate recursive pass is needed to run tests.
 This is [general receiver behavior](LMX_semantics.en.md#data-root-declaration-execution).

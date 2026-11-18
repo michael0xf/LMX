@@ -35,7 +35,7 @@ during translation if absent. Other Structures receive no automatic field.
 The clean graph retains written declarations, operators, values, and nested bodies; C emission does
 not rearrange them. A primitive cell needs no extra leaf wrapper. Names reside in the common canonical
 string-address table, not in Lmx. A launch supplies the data/code roles.
-A direct data pass executes only root-level declaration receivers under their general rules; a declaration under a receiver that marks it, such as `private:` or `required:`, remains root-level ([semantics](LMX_semantics.en.md#data-root-declaration-execution)).
+A direct data pass executes only root-level declaration receivers under their general rules; the receivers `private`, `required`, `const`, `immutable` and `independent` execute in it, and the variables passed to them count as root-level ones ([semantics](LMX_semantics.en.md#data-root-declaration-execution)).
 
 Ordinary operations can construct and change a graph. Writes are not tracked for native, do not check
 future executability, and do not start compilation. The builder and explicitly invoked sys tools check
@@ -400,7 +400,7 @@ A `c.*` token is an explicit C door. A language Array remains an `Lmx`-based gra
 <a id="lowlevel-abi"></a>
 ## 20. External types and ABI
 
-`cast: (T) value` is a machine cast, not a checked L3 conversion or proof of range, alignment, or lifetime. `c.name` selects a foreign C symbol; its adapter defines arguments, result, and ownership. `c.sizeof` means C `sizeof`, not Array length or Structure field count. `include` and `os` select explicit dependencies and a platform branch, not runtime module discovery.
+`cast: (T) value` is a machine cast, not a checked L3 conversion or proof of range, alignment, or lifetime. `c.name` selects a foreign C symbol; its adapter defines arguments, result, and ownership. `c.sizeof` means C `sizeof`, not Array length or Structure field count. `include` and `os` select explicit dependencies and a platform branch, not runtime module discovery. The action of `include:` and `predef:` needs one argument, the name of a dependency, so several arguments may be written and each is taken in turn, in the written order, as with the receivers of [qualification](LMX_semantics.en.md#qualification).
 
 `os` selects a target-platform branch but introduces no separate comparison of branches for equal method sets, signatures, or serialized contracts. Differences between branches are not errors in themselves. Selected declarations and bodies use the ordinary L2 mechanisms; wherever a receiving site requires compatibility, the ordinary `implements` admission and its address map apply, as outside `os`. Selecting a branch creates neither an additional common interface nor a private `os` admission mechanism. [Author clarification, 2026-10-23](../LMX_blog/2026-10-23.md).
 

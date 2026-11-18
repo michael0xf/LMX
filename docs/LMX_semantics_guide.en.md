@@ -335,5 +335,8 @@ a boundary of evaluation. The third record supplies two arguments: an assignment
 own is a named argument. An embedded assignment does not become a separate argument, and the caller's variable
 of the same name does not change. Short circuit stays: in `0 && (x := 1)` and `1 || (x := 1)` the variable `x`
 does not change. `while ((c := getchar()) != EOF)` at every check reads one character, writes it into `c` and
-compares. `string(foo)` gives the name of the identifier as the string `"foo"` and does not read the value of
-`foo`. The norm is [the book](LMX_semantics.en.md#assignment-inside-expression).
+compares. `sys\name(foo)` gives the name of the identifier as the string `"foo"` and does not read the
+value of `foo`. A user operand is registered with a function of implementation and a priority: after
+`sys\operand: foo new_op p` the record `(foo 1 2 3 4)` calls `new_op` with one array of four
+references to the values; `sys\priority("+")` gives the priority of an existing operand. The norm
+is [the book](LMX_semantics.en.md#assignment-inside-expression).

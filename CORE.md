@@ -529,8 +529,12 @@ per evaluation, and the clean graph is not rewritten. `1 + v := 2 + 3`
 gives 6 and assigns 5; `v := 2 - 3` assigns -1. An assignment inside the
 expression of an argument writes into the data of the callee and is no
 separate argument; `f(v := 2 + 3; 6)` supplies a named argument.
-`string(identificator)` returns the spelling of an identifier as an
-ordinary Lmx array of characters taken from the table of names. None of
+`sys\name(identificator)` returns the spelling of an identifier as an
+ordinary Lmx array of characters taken from the table of names;
+`sys\operand` registers a user operand with a function
+`fn: new_op ([]: @ args) @` and a mandatory priority, and
+`sys\priority` gives a priority by the name of an operand.
+There is no general unwrapping of an Array into arguments. None of
 this is implemented yet; the slices are in the plan. See
 [the book](docs/LMX_semantics.en.md#assignment-inside-expression) and
 [the requirements](docs/new_parts/to_fable_operands_arguments_priorities.md).

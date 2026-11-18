@@ -1,0 +1,15 @@
+# A bare return at the level that opens a sub closes it (the grammar, section 17). The sub written with no body is a callable, the return is the last
+# statement of its body; the sub written with a body gets the return at the end of that body (the receiver form sub [name args code]).
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: with_body 0
+)
+@: shared data[0]
+sub: bump_empty ()
+return
+sub: bump_body ()
+    shared\Observed\with_body := 5
+return
+bump_empty()
+bump_body()

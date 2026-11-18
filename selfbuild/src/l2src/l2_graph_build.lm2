@@ -390,6 +390,56 @@ fn: lm_graph_build_post (@: g c.LmxGraph; @: parent c.Lmx; @: body c.Lmx; @: tai
     return: 0
 end: lm_graph_build_post
 
+# The terminal `return` of the level that opens a named executable Structure (grammar section 17): P0 attaches it as the trailer of the Frame it
+# closes -- `return: value` to an fn, a bare `return` to a sub, an fm or a named Structure with a vertical body. It adds a return to the end of the
+# body, the ordinary return statement. 1 for such a trailer, else 0.
+fn: lm_graph_return_tail (@: tail c.LmP0Trailer) size_t
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    if: tail = 0 || tail\spelling = 0
+        return: 0U
+    return: (cast: (size_t) (c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = state\w_return))
+
+# The return statement the trailer stands for, built as the statement is built where it is written: the bare word, or the Lmx named return with the
+# written fields.
+fn: lm_graph_build_return (@: g c.LmxGraph; @: tail c.LmP0Trailer; int: described; @@: out void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: body c.LmP0Structure (cast: (@: c.LmP0Structure) tail\body)
+    @: value void 0
+    @: spelling char 0
+    spelling := state\w_return
+    if: lm_graph_count_active(body) = 0U
+        value := c.lmx_graph_word_of(g, spelling)
+        out[0] := value
+        return: (cast: (int) (value = 0))
+    return: lm_graph_build_sequence(g, 0, body, spelling, 0, 0, described, out)
+
+# The trailer return as the field of result at slot, after the written fields; status stands when it is not 0.
+fn: lm_graph_put_return (@: g c.LmxGraph; @: result c.Lmx; size_t: slot; @: tail c.LmP0Trailer; int: described; int: status) int
+    @: closing void 0
+    int: built status
+    if: built != 0 || lm_graph_return_tail(tail) = 0U
+        return: built
+    built := lm_graph_build_return(g, tail, described, @ closing)
+    if: built != 0
+        return: built
+    return: lm_graph_build_put(g, result, slot, closing)
+
+# Is the field the last written field of its Structure and itself a Structure -- the body of a callable?
+fn: lm_graph_last_structure (@: field c.LmP0Field) int
+    @: inner c.LmP0Node 0
+    if: field = 0 || lm_graph_next_active(lm_graph_p0_next(field)) != 0
+        return: 0
+    inner := lm_graph_p0_value(field)
+    return: (cast: (int) (inner != 0 && inner\kind = c.LM_P0_NODE_STRUCTURE))
+
+# The body a callable written with no body gets from its terminal return: an anonymous Structure with that one statement.
+fn: lm_graph_build_return_body (@: g c.LmxGraph; @: tail c.LmP0Trailer; int: described; @@: out void) int
+    @: body c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    if: body = 0
+        return: 1
+    out[0] := (cast: (@: void) body)
+    return: lm_graph_put_return(g, body, 0U, tail, described, 0)
+
 # Collect one normalized expression per argument/field. The scratch pointer array is discarded; the resulting Lmx
 # has its exact fixed size. P0 separators stop an operand, so a unary operator after a comma starts the next argument.
 # A Frame `head: arguments` is the Lmx of its arguments named by its head (the author 2026-11-09: a declaration is the
@@ -407,6 +457,18 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     int: boundary 0
     int: status 0
     int: here 0
+    # A callable (fn, sub) takes its terminal return into its body -- the code part of the receiver form its written fields give --, else into a body
+    # of its own; any other Frame takes it as one more field after the written ones. The forms are those of lmx_graph_receivers_open (lmx_graph_run.lm2):
+    # fn [name args return data code] 5 fields, [name args return code] 4, [name args return] 3; sub [name args data code] 4, [name args code] 3,
+    # [name parts] 2. They exist only in the namespace of a traversal; the builder runs before any, and is shared with the hosted frontend, so it states
+    # the field count from which each form has a code part -- 4 for fn, 3 for sub -- and the fixtures trailer_return_fn_body, _fn_data, _fn_structure_type
+    # and _sub keep the two in agreement.
+    int: callable (cast: (int) (head = state\w_fn || head = state\w_sub))
+    int: body_part (cast: (int) ((head = state\w_fn && lm_graph_count_active(source) >= 4U) || (head = state\w_sub && lm_graph_count_active(source) >= 3U)))
+    size_t: own lm_graph_return_tail(tail)
+    int: absorbed 0
+    if: callable != 0
+        own := 0U
     if: items = 0
         return: 1
     if: lead != 0
@@ -428,13 +490,21 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
         here := described
         if: head = c.lmx_graph_intern("cast", 4U) && count = 0U
             here := 1
-        status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, here, @ items[count])
+        if: body_part != 0 && lm_graph_return_tail(tail) != 0U && lm_graph_last_structure(cursor) != 0
+            absorbed := 1
+            status := lm_graph_build_sequence(g, 0, lm_graph_p0_structure(lm_graph_p0_value(cursor)), 0, 0, tail, described, @ items[count])
+            cursor := lm_graph_next_active(lm_graph_p0_next(cursor))
+        else:
+            status := lm_graph_build_expression(g, @ cursor, 1, @ boundary, here, @ items[count])
         if: status = 0
             count := count + 1U
         ---
     ---
+    if: status = 0 && callable != 0 && absorbed = 0 && lm_graph_return_tail(tail) != 0U
+        status := lm_graph_build_return_body(g, tail, described, @ items[count])
+        count := count + 1U
     if: status = 0
-        result := c.lmx_graph_lmx(g, parent, count)
+        result := c.lmx_graph_lmx(g, parent, count + own)
         if: result = 0
             status := 1
         if: status = 0 && head != 0 && c.lmx_graph_name_address(g, (cast: (@: void) result), head) != 0
@@ -443,6 +513,8 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
             status := lm_graph_build_put(g, result, i, items[i])
             i := i + 1U
         ---
+        if: own != 0U
+            status := lm_graph_put_return(g, result, count, tail, described, status)
     ---
     c.free((cast: (@: void) items))
     out[0] := (cast: (@: void) result)
@@ -944,7 +1016,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
     int: status 0
     if: source = 0 || out = 0
         return: 2
-    result := c.lmx_graph_lmx(g, parent, lm_graph_count_active(source))
+    result := c.lmx_graph_lmx(g, parent, lm_graph_count_active(source) + lm_graph_return_tail(tail))
     if: result = 0
         return: 1
     item := lm_graph_next_active(lm_graph_p0_first(source))
@@ -959,6 +1031,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         i := i + 1U
         item := lm_graph_next_active(lm_graph_p0_next(item))
     ---
+    status := lm_graph_put_return(g, result, i, tail, 0, status)
     if: status = 0 && lm_graph_until_tail(tail) != 0
         # A named Structure retains its ordinary data fields -- places, data, named blocks; a statement is no data field
         # though it is named by its head. Its executable field is the loop; the loop body shares those data fields, so

@@ -1,0 +1,20 @@
+# A terminal return at the level that opens an fn (the grammar, section 17) adds the return to the end of its body and closes its Frame: the fn
+# written with no body is a callable, and the same fn written with the return indented under it is the same callable.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: terminal 0
+        int: indented 0
+)
+@: shared data[0]
+fn: add_terminal (int: a; int: b) int
+return: (a + b)
+fn: add_indented (int: a; int: b) int
+    return: (a + b)
+int: terminal add_terminal(2 3)
+int: indented add_indented(2 3)
+
+sub: main ()
+    shared\Observed\terminal := terminal
+    shared\Observed\indented := indented
+main()

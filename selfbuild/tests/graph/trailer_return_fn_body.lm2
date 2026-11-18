@@ -1,0 +1,15 @@
+# The terminal return of an fn written with a body goes to the end of that body: the local of the body is read by it.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: add_local (int: a; int: b) int
+    int: s a + b
+return: s
+int: seen add_local(4 5)
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

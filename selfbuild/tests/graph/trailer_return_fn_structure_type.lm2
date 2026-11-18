@@ -1,0 +1,15 @@
+# The return type written as a Structure is the third field of fn, not its body: the terminal return of the grammar's own example (section 17,
+# `fn: square (int(x)) (int)` and `return: x * x`) is added as the body of that fn.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: square (int(x)) (int)
+return: x * x
+int: seen square(6)
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

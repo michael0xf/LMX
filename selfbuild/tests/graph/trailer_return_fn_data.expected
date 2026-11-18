@@ -1,0 +1,17 @@
+---
+    Observed:
+        int: seen 8
+    end: Observed
+---
+@: shared (data [] 0)
+fn: counter () int (
+    int: value 7
+)
+    :=: (data \ value) ((data \ value) + 1)
+    return: (data \ value)
+end: counter
+int: seen (counter)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

@@ -1,0 +1,16 @@
+# The terminal return of an fn written with a data part and a body goes to the end of the body, not into the data: the receiver form of fn is
+# [name args return data code] (the grammar, section 17). The data value is read through data\ and counts the call.
+# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: counter () int (int: value 7)
+    data\value := data\value + 1
+return: data\value
+int: seen counter()
+
+sub: main ()
+    shared\Observed\seen := seen
+main()

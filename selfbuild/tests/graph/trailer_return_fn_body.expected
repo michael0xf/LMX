@@ -1,0 +1,15 @@
+---
+    Observed:
+        int: seen 9
+    end: Observed
+---
+@: shared (data [] 0)
+fn: add_local (int: a; int: b) int
+    int: s (a + b)
+    return: s
+end: add_local
+int: seen (add_local 4 5)
+sub: main ()
+    :=: ((shared \ Observed) \ seen) seen
+end: main
+main:

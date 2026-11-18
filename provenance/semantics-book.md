@@ -1244,9 +1244,9 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 **Как выбирается объявление.**
 
 1. Берутся все объявления имени, видимые в месте вызова.
-2. Аргументы читаются двумя способами: как записаны и — если подан один аргумент и он Structure — раскрытыми: её поля становятся поданными аргументами, именованные по имени, безымянные по позиции. Раскрытое чтение проверяется только против объявлений с несколькими аргументами. Раскрытие происходит один раз, на один уровень, и только при обработке вызова ([вся структура аргументов](#whole-arguments)). Аргумент, поданный присваиванием формалу, `f(arg0 := Struct)`, не раскрывается.
+2. Аргументы читаются двумя способами: как записаны и — если подан один аргумент и он Structure — раскрытыми: её поля становятся поданными аргументами. Поле-объявление всегда именованное: стоя на позиции одноимённого формала, оно идёт позиционным аргументом, и его имя сверяется с именем формала; стоя не на своей позиции, оно идёт по имени; безымянное поле идёт по позиции. Оба чтения проверяются против каждого объявления, и с одним формалом тоже: `h(Arg)` при `fn: h (int: x)` и `Arg: (int: x 9)` в данных вызывающего раскрывает `Arg` в объявление `int: x 9` и отвечает 9 (автор 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#unwrapped-into-declaration)). Аргумент `Arg` здесь — не объявление и не анонимная Structure, а ссылка на Structure `(int: x 9)`; раскрывается то, на что она ссылается (автор, [журнал](../LMX_blog/2026-11-18.md#argument-is-a-reference)). Раскрытие происходит один раз, на один уровень, и только при обработке вызова ([вся структура аргументов](#whole-arguments)). Аргумент, поданный присваиванием формалу, `f(arg0 := Struct)`, не раскрывается.
 3. Для каждой пары «объявление — чтение» аргументы присваиваются формалам. Пара не складывается, если аргументов больше, чем формалов, если у объявления нет названного формала или формал получает значение дважды. Формал, которому ничего не подано, берёт умолчание или остаётся без значения: все входы необязательны; если он объявлен `required`, пара не складывается.
-4. Сложившуюся пару проверяет серия `implements`.
+4. Сложившуюся пару проверяет серия `implements`: каждый формал сверяется со своим аргументом. Сверяются и два примитива — формал `int: x`, место типа «`int` без инициализации», с аргументом `int: x 9`, типизированным примитивом: имя и тип; тип без инициализации сравнивается с типизированным примитивом, остальные пары типов — по таблице преобразований; место `int` Structure не принимает (автор, [журнал](../LMX_blog/2026-11-18.md#unwrapped-into-declaration)). В первой части только Structure и примитивы по таблице преобразований; диапазоны значений она не сверяет — они во второй части, записываются в `test`; транслятор диапазоны не смотрит, их проверяет интерпретатор, когда прогоняет `test` (автор, [журнал](../LMX_blog/2026-11-18.md#first-part-unfinished)).
 5. Ровно одна допущенная пара даёт вызов; ни одной или больше одной — ошибка. Предпочтения по числу аргументов нет: объявления `fn: f (int: a)` и `fn: f (int: a; int: b)` перекрываются, потому что `f(5)` подходит обоим — второму с необязательным `b`, — и это ошибка неоднозначности. Их разводит `required`: при `fn: f (int: a; required: int: b)` вызов `f(5)` выбирает первое объявление, а `f(5; 6)` — второе (решение автора 2026-11-18, [журнал](../LMX_blog/2026-11-18.md#no-count-preference)).
 
 Пункты 1, 2 и 5 — слова автора; что объявления разводит `required`, автор подтвердил ([журнал](../LMX_blog/2026-11-18.md#required-confirmed)). Остальное в пунктах 3 и 4 — чтение исполнителя по тем же словам и по действующим правилам подачи аргументов ([ответы исполнителя](../LMX_blog/q/fable-self-answers-20261110.md), Р65, Р67, Р68, Р82). Строки таблицы ниже — следствия общего алгоритма; при расхождении действует алгоритм.
@@ -1256,7 +1256,9 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 | объявления имени `f` | вызов | что происходит |
 |---|---|---|
 | одно, `f(a)` | `f(x)` | оно; `x` — его аргумент |
-| одно, `f(a)` | `f(S)` | оно; `S` — его аргумент и не раскрывается; подходит ли она формалу, решает допуск |
+| одно, `f(a)` | `f(S)`, единственное поле `S` подходит формалу `a`, сама `S` — нет | `S` раскрывается, её поле — аргумент `a` |
+| одно, `f(a)` | `f(S)`, сама `S` подходит формалу `a`, её поле — нет | оно; `S` — его аргумент и не раскрывается |
+| одно, `f(a)` | `f(S)`, подходят оба чтения | ошибка неоднозначности; целиком `S` подаёт `f(a := S)` |
 | одно, `f(a b)` | `f(S)`, поля `S` подходят формалам, сама `S` формалу `a` не подходит | `S` раскрывается, её поля связываются с формалами |
 | одно, `f(a b)` | `f(S)`, сама `S` подходит формалу `a`, её поля формалам не подходят | `S` — аргумент `a`; `b` без значения или по умолчанию |
 | одно, `f(a b)` | `f(S)`, подходят оба чтения | ошибка неоднозначности; целиком `S` подаёт `f(a := S)` |
@@ -1266,7 +1268,7 @@ int: r mytest(merge(mytest\data; (int: a 5)))
 | `f(a)` и `f(a b)` | `f(x)` | вызов подходит обоим — ошибка неоднозначности |
 | `f(a)` и `f(a, required b)` | `f(x)` | `f(a)` |
 | `f(a)` и `f(a, required b)` | `f(x y)` | `f(a, required b)` |
-| `f(a)` и `f(a, required b)` | `f(S)`, раскрытая `S` формалам второго не подходит | `f(a)`; `S` не раскрывается |
+| `f(a)` и `f(a, required b)` | `f(S)`, сама `S` подходит `f(a)`, раскрытая `S` не подходит ни одному | `f(a)`; `S` не раскрывается |
 | `f(a)` и `f(a, required b)` | `f(S)`, сама `S` подходит `f(a)`, раскрытая — формалам второго | вызов разрешают оба чтения — ошибка неоднозначности |
 | `f(a, required b)` и `f(a, required b, required c)` | `f(S)`, в `S` два поля | `S` раскрывается, выбирается первое |
 | `f(a, required b)` и `f(a, required b, required c)` | `f(S)`, в `S` три поля | `S` раскрывается, выбирается второе |
@@ -1484,9 +1486,9 @@ The author's decision of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#declara
 **How the declaration is chosen.**
 
 1. All declarations of the name visible at the place of the call are taken.
-2. The arguments are read in two ways: as written and -- if one argument is supplied and it is a Structure -- unwrapped: its fields become the supplied arguments, the named ones by name, the unnamed ones by position. The unwrapped reading is checked only against declarations with several arguments. The unwrapping happens once, one level deep, and only while the call is processed ([the whole structure of arguments](#whole-arguments)). An argument supplied by an assignment to a formal, `f(arg0 := Struct)`, is not unwrapped.
+2. The arguments are read in two ways: as written and -- if one argument is supplied and it is a Structure -- unwrapped: its fields become the supplied arguments. A field that is a declaration is always named: standing at the position of the formal of the same name it goes as a positional argument, and its name is checked against the name of the formal; standing not at its own position it goes by name; an unnamed field goes by position. Both readings are checked against every declaration, one with a single formal included: `h(Arg)` with `fn: h (int: x)` and `Arg: (int: x 9)` in the caller's data unwraps `Arg` into the declaration `int: x 9` and answers 9 (the author, 2026-11-18, [journal](../LMX_blog/2026-11-18.md#unwrapped-into-declaration)). The argument `Arg` here is neither a declaration nor an anonymous Structure but a reference to the Structure `(int: x 9)`; what it refers to is what is unwrapped (the author, [journal](../LMX_blog/2026-11-18.md#argument-is-a-reference)). The unwrapping happens once, one level deep, and only while the call is processed ([the whole structure of arguments](#whole-arguments)). An argument supplied by an assignment to a formal, `f(arg0 := Struct)`, is not unwrapped.
 3. For each pair «declaration -- reading» the arguments are assigned to the formals. The pair fails if there are more arguments than formals, if the declaration has no formal of the given name, or if a formal gets a value twice. A formal that is given nothing takes its default or stays without a value: all inputs are optional; if it is declared `required`, the pair fails.
-4. A pair that did not fail is checked by the series of `implements`.
+4. A pair that did not fail is checked by the series of `implements`: every formal is compared with its argument. Two primitives are compared too -- the formal `int: x`, a place of the type «`int` without initialization», with the argument `int: x 9`, a typed primitive: the name and the type; the type without initialization is compared with the typed primitive, the other pairs of types go by the table of conversions; a place `int` does not take a Structure (the author, [journal](../LMX_blog/2026-11-18.md#unwrapped-into-declaration)). The first part holds only Structures and primitives by the table of conversions; it does not compare ranges of values -- they belong to the second part and are written in `test`; the translator does not look at ranges, the interpreter checks them when it runs `test` (the author, [journal](../LMX_blog/2026-11-18.md#first-part-unfinished)).
 5. Exactly one admitted pair gives the call; none or more than one is an error. There is no preference by the number of arguments: the declarations `fn: f (int: a)` and `fn: f (int: a; int: b)` overlap, because `f(5)` suits both -- the second with the optional `b` --, and that is an error of ambiguity. `required` separates them: with `fn: f (int: a; required: int: b)` the call `f(5)` chooses the first declaration and `f(5; 6)` the second (the author's decision of 2026-11-18, [journal](../LMX_blog/2026-11-18.md#no-count-preference)).
 
 Items 1, 2 and 5 are the author's words; that `required` separates the declarations is confirmed by the author ([journal](../LMX_blog/2026-11-18.md#required-confirmed)). The rest of items 3 and 4 is the executor's reading of the same words and of the rules of supplying arguments in force ([executor's answers](../LMX_blog/q/fable-self-answers-20261110.md), R65, R67, R68, R82). The rows of the table below are consequences of the general algorithm; where they differ, the algorithm holds.
@@ -1496,7 +1498,9 @@ Items 1, 2 and 5 are the author's words; that `required` separates the declarati
 | declarations of the name `f` | call | what happens |
 |---|---|---|
 | one, `f(a)` | `f(x)` | it; `x` is its argument |
-| one, `f(a)` | `f(S)` | it; `S` is its argument and is not unwrapped; whether it suits the formal is decided by admission |
+| one, `f(a)` | `f(S)`, the only field of `S` suits the formal `a`, `S` itself does not | `S` is unwrapped, its field is the argument `a` |
+| one, `f(a)` | `f(S)`, `S` itself suits the formal `a`, its field does not | it; `S` is its argument and is not unwrapped |
+| one, `f(a)` | `f(S)`, both readings suit | an error of ambiguity; `f(a := S)` gives `S` whole |
 | one, `f(a b)` | `f(S)`, the fields of `S` suit the formals, `S` itself does not suit the formal `a` | `S` is unwrapped, its fields are bound to the formals |
 | one, `f(a b)` | `f(S)`, `S` itself suits the formal `a`, its fields do not suit the formals | `S` is the argument `a`; `b` stays without a value or takes its default |
 | one, `f(a b)` | `f(S)`, both readings suit | an error of ambiguity; `f(a := S)` gives `S` whole |
@@ -1506,7 +1510,7 @@ Items 1, 2 and 5 are the author's words; that `required` separates the declarati
 | `f(a)` and `f(a b)` | `f(x)` | the call suits both -- an error of ambiguity |
 | `f(a)` and `f(a, required b)` | `f(x)` | `f(a)` |
 | `f(a)` and `f(a, required b)` | `f(x y)` | `f(a, required b)` |
-| `f(a)` and `f(a, required b)` | `f(S)`, the unwrapped `S` does not suit the formals of the second | `f(a)`; `S` is not unwrapped |
+| `f(a)` and `f(a, required b)` | `f(S)`, `S` itself suits `f(a)`, the unwrapped `S` suits neither | `f(a)`; `S` is not unwrapped |
 | `f(a)` and `f(a, required b)` | `f(S)`, `S` itself suits `f(a)`, the unwrapped one suits the formals of the second | both readings resolve the call -- an error of ambiguity |
 | `f(a, required b)` and `f(a, required b, required c)` | `f(S)`, `S` has two fields | `S` is unwrapped, the first is chosen |
 | `f(a, required b)` and `f(a, required b, required c)` | `f(S)`, `S` has three fields | `S` is unwrapped, the second is chosen |

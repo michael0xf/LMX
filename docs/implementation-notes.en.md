@@ -384,6 +384,14 @@ accept; under the norm it is written `(int: a 5)`. The same holds for the name t
 ([book](LMX_semantics.en.md#data-code-roles)) they are declared `@: pack merge(...)` and `@: q Q`. Migrating the
 fixtures and changing the reading is in [plan M9](../next_core_tasks_v3.md#m9) and [M11](../next_core_tasks_v3.md#m11).
 
+The author's decision of 2026-11-18 on the two kinds of receivers
+([semantics](LMX_semantics.en.md#two-kinds-of-receivers)) is not yet carried out by the implementation in
+three places. The call binder unwraps a sole Structure only after the positional form has failed: `MR(A)`
+with a Structure formal answers 7 instead of unwrapping `A`. Declaration receivers parse their own group:
+`int: (y 7)` is refused. Modifiers read a group of exactly one field as the declaration itself:
+`private: (int: x 10)` declares `x`, while by the rule it is an anonymous Structure under `private`.
+The slices are in the [plan](../next_core_tasks_v3.md#two-kinds-of-receivers-plan).
+
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
 [the whole argument Structure](LMX_semantics.en.md#whole-arguments)

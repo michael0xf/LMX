@@ -1,0 +1,21 @@
+# Witness expr_d13b -- D13b (code position): 1 || v := tick(): no tick, v untouched
+# Norm: ТЗ 10.3. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+# Note: green today because the skipped branch is never reached; a regression pin for the by-demand step
+(
+    Observed:
+        int: seen 0
+        int: v 0
+        int: ticks 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: shared\Observed\ticks
+sub: main () (
+    int: v 100
+    int: seen 5
+)
+    seen := 1 || v := tick()
+    shared\Observed\seen := seen
+    shared\Observed\v := v
+main()

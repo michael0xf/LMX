@@ -3401,3 +3401,430 @@ fn: lmx_graph_lmx_ref_of (@: g c.LmxGraph; @: value void) @: void
         return: 0
     return: lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
 end: lmx_graph_lmx_ref_of
+
+# ---- The common analysis of an expression (plan #two-kinds-of-receivers-plan item 7, slices a and e; the expression-step PLAN.txt, sections 1-4) ----
+# One analysis of the chain of fields of an expression, used by the interpreter (lmx_graph_eval_chain) and by the translator (lm_graph_emit_chain): it reads the written fields of a
+# chain Lmx and makes a temporary tree of operations by the priorities of ONE table; the graph is not changed and nothing of the tree is kept. The builtin layer of the table is
+# lmx_expr_row (the layer of the operands registered by sys\operand joins it behind the same function).
+# The fields it reads are a FIELD LIST fl (size_t words): fl[0] = n, then for each field p its holder (an Lmx address) at fl[1 + 2p] and its index in that holder at fl[2 + 2p]; a chain is
+# gathered as its own fields (lmx_expr_gather), so the list can name the fields of several Lmx (step b).
+# A tree node is a block of size_t words: [0] kind (0 a field, 1 an operation); a field: [1] its index, [3] its holder (an Lmx address); an operation: [1] the word of its operator (an
+# address), [2] the number of arguments, [3] the mode (0 fold from the left, 1 unary, 2 lazy: && and ||), [4 + i] the argument i (a node).
+
+# The builtin row of word: its priority (the scale of the PLAN, R2: multiples of 10), the roles infix, unary and lazy, and the priority of the
+# argument of its unary form. 1 for an operator word; 0 for any other word (the out values are then 0).
+fn: lmx_expr_row (@: word char; @: priority int; @: infix int; @: unary int; @: lazy int; @: argument int) int
+    @: state c.LmxGraphState lmx_graph_state()
+    priority[0] := 0
+    infix[0] := 0
+    unary[0] := 0
+    lazy[0] := 0
+    argument[0] := 0
+    if: state = 0 || word = 0
+        return: 0
+    if: word = state\w_or
+        priority[0] := 20
+        infix[0] := 1
+        lazy[0] := 1
+        return: 1
+    if: word = state\w_and
+        priority[0] := 30
+        infix[0] := 1
+        lazy[0] := 1
+        return: 1
+    if: word = state\w_eq || word = state\w_ne
+        priority[0] := 70
+        infix[0] := 1
+        return: 1
+    if: word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge
+        priority[0] := 80
+        infix[0] := 1
+        return: 1
+    if: word = state\w_plus || word = state\w_minus
+        priority[0] := 100
+        infix[0] := 1
+        unary[0] := 1
+        argument[0] := 130
+        return: 1
+    if: word = state\w_star || word = state\w_slash || word = state\w_percent
+        priority[0] := 110
+        infix[0] := 1
+        return: 1
+    if: word = state\w_not
+        priority[0] := 120
+        unary[0] := 1
+        argument[0] := 140
+        return: 1
+    return: 0
+
+# 1 when word is an infix operator word of the table, 0 for any other word (an operand, a name, a unary-only word) and for 0.
+fn: lmx_expr_infix_word (@: word char) int
+    int: priority 0
+    int: infix 0
+    int: unary 0
+    int: lazy 0
+    int: argument 0
+    if: lmx_expr_row(word, @ priority, @ infix, @ unary, @ lazy, @ argument) = 0
+        return: 0
+    return: infix
+
+# The field p of the field list fl: the cell its holder holds at its index.
+fn: lmx_expr_get (@: g c.LmxGraph; @: fl size_t; size_t: p) @: void
+    return: lmx_graph_get_in(g, (cast: (@: c.Lmx) fl[1U + 2U * p]), fl[2U + 2U * p])
+
+# The word of the field p, or 0 when it is no word.
+fn: lmx_expr_word_at (@: g c.LmxGraph; @: fl size_t; size_t: p) @: char
+    return: lmx_graph_word_text(g, lmx_expr_get(g, fl, p))
+
+# 1 when field p of the list is an infix operator word, 0 for anything else.
+fn: lmx_expr_infix_at (@: g c.LmxGraph; @: fl size_t; size_t: p) int
+    return: lmx_expr_infix_word(lmx_expr_word_at(g, fl, p))
+
+# 1 when raw is an unnamed Lmx that the interpreter and the translator read as an operation, on the shapes they read today (step a1; the chains and the short forms of the book join with
+# the builder of step a2): [op x] for a word with a unary role (+ - !), [x op y] for an infix word.
+fn: lmx_expr_is_chain (@: g c.LmxGraph; @: raw void) int
+    @: chain c.Lmx (cast: (@: c.Lmx) raw)
+    int: priority 0
+    int: infix 0
+    int: unary 0
+    int: lazy 0
+    int: argument 0
+    if: g = 0 || lmx_graph_kind(g, raw) != 4 || lmx_graph_name_of(g, raw) != 0
+        return: 0
+    if: lmx_graph_count(chain) = 2U && lmx_expr_row(lmx_graph_word_text(g, lmx_graph_get_in(g, chain, 0U)), @ priority, @ infix, @ unary, @ lazy, @ argument) != 0
+        return: unary
+    if: lmx_graph_count(chain) = 3U
+        return: lmx_expr_infix_word(lmx_graph_word_text(g, lmx_graph_get_in(g, chain, 1U)))
+    return: 0
+
+# Release a tree of lmx_expr_tree (and the part of it that was made when a later step failed).
+fn: lmx_expr_free (@: tn size_t) int
+    size_t: i 0U
+    if: tn = 0
+        return: 0
+    while: tn[0] = 1U && i < tn[2]
+        lmx_expr_free((cast: (@: size_t) tn[4U + i]))
+        i := i + 1U
+    c.free((cast: (@: void) tn))
+    return: 0
+
+# A node: a field (kind 0, index a, holder in mode) or an operation with the arguments args[0 .. count) (kind 1, the word a, the mode as in the header). The arguments pass to the node;
+# 0 without memory.
+fn: lmx_expr_node (size_t: kind; size_t: a; size_t: mode; @: args size_t; size_t: count) @: size_t
+    @: tn size_t (cast: (@: size_t) c.calloc(4U + count, sizeof(size_t)))
+    size_t: i 0U
+    if: tn = 0
+        return: 0
+    tn[0] := kind
+    tn[1] := a
+    tn[2] := count
+    tn[3] := mode
+    while: i < count
+        tn[4U + i] := args[i]
+        i := i + 1U
+    return: tn
+
+# Free the arguments args[0 .. count) of an operation that was not made, and the array.
+sub: lmx_expr_drop (@: args size_t; size_t: count)
+    size_t: i 0U
+    while: i < count
+        lmx_expr_free((cast: (@: size_t) args[i]))
+        i := i + 1U
+    c.free((cast: (@: void) args))
+    return
+
+# Operands that follow without an operator between them are more arguments of the same receiver: (1 + 2 3 4) is (1 + 2 + 3 + 4). Read them at the priority minp into args after count.
+fn: lmx_expr_more (@: g c.LmxGraph; @: fl size_t; @: pos size_t; int: minp; @: args size_t; @: count size_t) int
+    @: child size_t 0
+    int: status 0
+    while: pos[0] < fl[0] && lmx_expr_infix_at(g, fl, pos[0]) = 0
+        status := lmx_expr_climb(g, fl, pos, minp, @ child)
+        if: status != 0
+            return: status
+        args[count[0]] := (cast: (size_t) child)
+        count[0] := count[0] + 1U
+    return: 0
+
+# The unary form of an operator word (its word is already passed): one argument of the priority argument; a + or - whose argument is followed by an operand is a receiver with many
+# arguments instead: (+ 1 2 3 4). args, count and mode are the caller's.
+fn: lmx_expr_unary_form (@: g c.LmxGraph; @: fl size_t; @: pos size_t; int: infix; int: minp; int: argument; @: args size_t; @: count size_t; @: mode size_t) int
+    @: child size_t 0
+    int: status lmx_expr_climb(g, fl, pos, argument, @ child)
+    if: status != 0
+        return: status
+    args[0] := (cast: (size_t) child)
+    count[0] := 1U
+    mode[0] := 1U
+    if: infix != 0 && pos[0] < fl[0] && lmx_expr_infix_at(g, fl, pos[0]) = 0
+        mode[0] := 0U
+        return: lmx_expr_more(g, fl, pos, minp, args, count)
+    return: 0
+
+# The head of a receiver with arguments, (* 2 2): the arguments follow the word, at least two.
+fn: lmx_expr_head_form (@: g c.LmxGraph; @: fl size_t; @: pos size_t; int: minp; @: args size_t; @: count size_t) int
+    @: child size_t 0
+    int: status lmx_expr_climb(g, fl, pos, minp, @ child)
+    if: status != 0
+        return: status
+    args[0] := (cast: (size_t) child)
+    count[0] := 1U
+    status := lmx_expr_more(g, fl, pos, minp, args, count)
+    if: status = 0 && count[0] < 2U
+        return: 2
+    return: status
+
+# An operand: a field that is no operator word, or an operator word in the operand position (the unary form, or the head of a receiver with arguments). The tree in out; pos moves past what
+# was read. 0, 2 (the fields do not read as an expression), 4 (no memory).
+fn: lmx_expr_operand (@: g c.LmxGraph; @: fl size_t; @: pos size_t; @@: out size_t) int
+    @: word char lmx_expr_word_at(g, fl, pos[0])
+    @: args size_t 0
+    @: tn size_t 0
+    size_t: at pos[0]
+    size_t: count 0U
+    size_t: mode 0U
+    int: priority 0
+    int: infix 0
+    int: unary 0
+    int: lazy 0
+    int: argument 0
+    int: minp 0
+    int: status 0
+    out[0] := 0
+    if: lmx_expr_row(word, @ priority, @ infix, @ unary, @ lazy, @ argument) = 0
+        tn := lmx_expr_node(0U, fl[2U + 2U * at], fl[1U + 2U * at], 0, 0U)
+        if: tn = 0
+            return: 4
+        pos[0] := at + 1U
+        out[0] := tn
+        return: 0
+    if: at + 1U >= fl[0] || (unary = 0 && infix = 0)
+        return: 2
+    args := (cast: (@: size_t) c.calloc(fl[0] + 1U, sizeof(size_t)))
+    if: args = 0
+        return: 4
+    minp := priority + 1
+    pos[0] := at + 1U
+    if: unary != 0
+        status := lmx_expr_unary_form(g, fl, pos, infix, minp, argument, args, @ count, @ mode)
+    if: unary = 0
+        status := lmx_expr_head_form(g, fl, pos, minp, args, @ count)
+    if: status != 0
+        lmx_expr_drop(args, count)
+        return: status
+    tn := lmx_expr_node(1U, (cast: (size_t) word), mode, args, count)
+    if: tn = 0
+        lmx_expr_drop(args, count)
+        return: 4
+    c.free((cast: (@: void) args))
+    out[0] := tn
+    return: 0
+
+# The infix operator word just passed, with the tree left on its left: the right operand (read above the priority of the operator) and the operands that
+# follow it without an operator. left passes to the node (it is freed when the node is not made). The node in out. 0, 2, 4.
+fn: lmx_expr_infix (@: g c.LmxGraph; @: fl size_t; @: pos size_t; @: left size_t; @: word char; int: lazy; int: upper; @@: out size_t) int
+    @: right size_t 0
+    @: args size_t (cast: (@: size_t) c.calloc(fl[0] + 1U, sizeof(size_t)))
+    @: tn size_t 0
+    size_t: count 1U
+    size_t: mode 0U
+    int: status 0
+    out[0] := 0
+    if: args = 0
+        lmx_expr_free(left)
+        return: 4
+    args[0] := (cast: (size_t) left)
+    if: pos[0] >= fl[0]
+        lmx_expr_drop(args, count)
+        return: 2
+    status := lmx_expr_climb(g, fl, pos, upper, @ right)
+    if: status = 0
+        args[1] := (cast: (size_t) right)
+        count := 2U
+        status := lmx_expr_more(g, fl, pos, upper, args, @ count)
+    if: status != 0
+        lmx_expr_drop(args, count)
+        return: status
+    if: lazy != 0
+        mode := 2U
+    tn := lmx_expr_node(1U, (cast: (size_t) word), mode, args, count)
+    if: tn = 0
+        lmx_expr_drop(args, count)
+        return: 4
+    c.free((cast: (@: void) args))
+    out[0] := tn
+    return: 0
+
+# Precedence climbing over the fields of chain from pos: an operand, then infix operators of the priority minp and above, each with its arguments (lmx_expr_infix). The tree in out. 0, 2, 4.
+fn: lmx_expr_climb (@: g c.LmxGraph; @: fl size_t; @: pos size_t; int: minp; @@: out size_t) int
+    @: left size_t 0
+    @: word char 0
+    int: priority 0
+    int: infix 0
+    int: unary 0
+    int: lazy 0
+    int: argument 0
+    int: upper 0
+    int: status lmx_expr_operand(g, fl, pos, @ left)
+    if: status != 0
+        return: status
+    while: pos[0] < fl[0]
+        word := lmx_expr_word_at(g, fl, pos[0])
+        if: lmx_expr_row(word, @ priority, @ infix, @ unary, @ lazy, @ argument) = 0 || infix = 0 || priority < minp
+            break
+        pos[0] := pos[0] + 1U
+        upper := priority + 1
+        status := lmx_expr_infix(g, fl, pos, left, word, lazy, upper, @ left)
+        if: status != 0
+            return: status
+    ---
+    out[0] := left
+    return: 0
+
+# The field list of a chain: its own fields. 0, or 4 without memory.
+fn: lmx_expr_gather (@: g c.LmxGraph; @: chain c.Lmx; @@: out size_t) int
+    size_t: n lmx_graph_count(chain)
+    size_t: p 0U
+    @: fl size_t (cast: (@: size_t) c.calloc(1U + 2U * n, sizeof(size_t)))
+    out[0] := 0
+    if: fl = 0
+        return: 4
+    fl[0] := n
+    while: p < n
+        fl[1U + 2U * p] := (cast: (size_t) chain)
+        fl[2U + 2U * p] := p
+        p := p + 1U
+    out[0] := fl
+    return: 0
+
+# The tree of the expression the fields of the list fl are, or 2 when they do not read as one (operands without an operator between them, an operator without its operand).
+fn: lmx_expr_tree_of (@: g c.LmxGraph; @: fl size_t; @@: out size_t) int
+    @: tree size_t 0
+    size_t: pos 0U
+    int: status 0
+    out[0] := 0
+    if: g = 0 || fl = 0 || fl[0] = 0U
+        return: 2
+    status := lmx_expr_climb(g, fl, @ pos, 0, @ tree)
+    if: status != 0
+        return: status
+    if: pos != fl[0]
+        lmx_expr_free(tree)
+        return: 2
+    out[0] := tree
+    return: 0
+
+# The tree of the expression the fields of chain are. The tree names its fields by holder and index, so the list is released with it done.
+fn: lmx_expr_tree (@: g c.LmxGraph; @: chain c.Lmx; @@: out size_t) int
+    @: fl size_t 0
+    int: status 0
+    out[0] := 0
+    if: g = 0 || chain = 0
+        return: 2
+    status := lmx_expr_gather(g, chain, @ fl)
+    if: status != 0
+        return: status
+    status := lmx_expr_tree_of(g, fl, out)
+    c.free((cast: (@: void) fl))
+    return: status
+
+# The int a value stands for: a number of type int (or a contextual literal, which takes the type of the operation). 0 and the int in out; 4 for any other value -- the answer the interpreter
+# gives to an operand that is no int today.
+fn: lmx_expr_int_of (@: value c.LmxWalkValue; @: out int) int
+    size_t: number 0U
+    int: ty 0
+    if: c.lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+        return: 4
+    if: c.lmx_type_base(ty) != c.LMX_TYPE_INT
+        return: 4
+    out[0] := (cast: (int) number)
+    return: 0
+
+# The value of type int with the number number: the typed value of the common analysis (a number with its type; no cell of the arena).
+fn: lmx_expr_make_int (int: number; @: out c.LmxWalkValue) int
+    if: c.lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) number)) != c.LMX_WALK_OK
+        return: 4
+    return: 0
+
+# 1 in out when a value is not zero, 0 when it is; the answers of lmx_expr_int_of.
+fn: lmx_expr_truth (@: value c.LmxWalkValue; @: out int) int
+    int: number 0
+    int: status lmx_expr_int_of(value, @ number)
+    if: status != 0
+        return: status
+    out[0] := (cast: (int) (number != 0))
+    return: 0
+
+# The operation on two ints, the semantics of the interpreter before the common step: the machine int of C; a division or a remainder by zero answers 6.
+fn: lmx_expr_apply_int (@: word char; int: left; int: right; @: out int) int
+    @: state c.LmxGraphState lmx_graph_state()
+    out[0] := 0
+    if: state = 0
+        return: 2
+    if: word = state\w_plus
+        out[0] := left + right
+    if: word = state\w_minus
+        out[0] := left - right
+    if: word = state\w_star
+        out[0] := left * right
+    if: word = state\w_slash || word = state\w_percent
+        if: right = 0
+            return: 6
+        if: word = state\w_slash
+            out[0] := left / right
+        if: word = state\w_percent
+            out[0] := left % right
+    ---
+    if: word = state\w_eq
+        out[0] := (cast: (int) (left = right))
+    if: word = state\w_ne
+        out[0] := (cast: (int) (left != right))
+    if: word = state\w_lt
+        out[0] := (cast: (int) (left < right))
+    if: word = state\w_le
+        out[0] := (cast: (int) (left <= right))
+    if: word = state\w_gt
+        out[0] := (cast: (int) (left > right))
+    if: word = state\w_ge
+        out[0] := (cast: (int) (left >= right))
+    return: 0
+
+# The operation on two typed values: today the one branch int by int; any other pair answers 4, as the interpreter answers a non-int operand today. Types join as rows of this function
+# (step e3), the walk of the tree does not change. out may be left or right.
+fn: lmx_expr_apply (@: word char; @: left c.LmxWalkValue; @: right c.LmxWalkValue; @: out c.LmxWalkValue) int
+    int: a 0
+    int: b 0
+    int: r 0
+    int: status lmx_expr_int_of(left, @ a)
+    if: status != 0
+        return: status
+    status := lmx_expr_int_of(right, @ b)
+    if: status != 0
+        return: status
+    status := lmx_expr_apply_int(word, a, b, @ r)
+    if: status != 0
+        return: status
+    return: lmx_expr_make_int(r, out)
+
+# The unary operation on an int: + keeps it, - negates it, ! is 1 for zero.
+fn: lmx_expr_apply_unary_int (@: word char; int: value; @: out int) int
+    @: state c.LmxGraphState lmx_graph_state()
+    out[0] := value
+    if: state = 0
+        return: 2
+    if: word = state\w_minus
+        out[0] := 0 - value
+    if: word = state\w_not
+        out[0] := (cast: (int) (value = 0))
+    return: 0
+
+# The unary operation on a typed value (the same branch as lmx_expr_apply). out may be value.
+fn: lmx_expr_apply_unary (@: word char; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    int: a 0
+    int: r 0
+    int: status lmx_expr_int_of(value, @ a)
+    if: status != 0
+        return: status
+    status := lmx_expr_apply_unary_int(word, a, @ r)
+    if: status != 0
+        return: status
+    return: lmx_expr_make_int(r, out)

@@ -5313,6 +5313,77 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
     return: 0
 end: lmx_graph_eval_value
 
+# One node of the tree of lmx_expr_tree, evaluated to a typed value: a field of the chain is the value of that field (today the int that lmx_graph_eval_number reads: the places of the
+# other primitives join with step e3), an operation takes its arguments by its mode -- in the order of the fields, each at most once: a unary operation applies to its argument; a lazy
+# one (&& and ||) asks the next argument only while the result is not decided; a fold applies the operator from the left. The application of the operator
+# to values is lmx_expr_apply: the walk knows no type. 0 or the answer of the first failing step.
+fn: lmx_graph_eval_tree (@: g c.LmxGraph; @: scope c.Lmx; @: tn size_t; @: out c.LmxWalkValue) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    c.LmxWalkValue: acc
+    c.LmxWalkValue: next
+    size_t: i 1U
+    int: number 0
+    int: truth 0
+    int: status 0
+    if: state = 0 || tn = 0
+        return: 2
+    if: tn[0] = 0U
+        status := lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) tn[3]), tn[1]), @ number)
+        if: status != 0
+            return: status
+        return: c.lmx_expr_make_int(number, out)
+    word := (cast: (@: char) tn[1])
+    status := lmx_graph_eval_tree(g, scope, (cast: (@: size_t) tn[4U]), @ acc)
+    if: status != 0
+        return: status
+    if: tn[3] = 1U
+        return: c.lmx_expr_apply_unary(word, @ acc, out)
+    if: tn[3] = 2U
+        status := c.lmx_expr_truth(@ acc, @ truth)
+        if: status != 0
+            return: status
+        while: i < tn[2]
+            if: (word = state\w_and && truth = 0) || (word = state\w_or && truth != 0)
+                break
+            status := lmx_graph_eval_tree(g, scope, (cast: (@: size_t) tn[4U + i]), @ next)
+            if: status != 0
+                return: status
+            status := c.lmx_expr_truth(@ next, @ truth)
+            if: status != 0
+                return: status
+            i := i + 1U
+        return: c.lmx_expr_make_int(truth, out)
+    while: i < tn[2]
+        status := lmx_graph_eval_tree(g, scope, (cast: (@: size_t) tn[4U + i]), @ next)
+        if: status != 0
+            return: status
+        status := c.lmx_expr_apply(word, @ acc, @ next, @ acc)
+        if: status != 0
+            return: status
+        i := i + 1U
+    c.memcpy((cast: (@: void) out), (cast: (@: void) (@ acc)), c.sizeof(c.LmxWalkValue))
+    return: 0
+
+# An expression the fields of chain are, evaluated to a typed value: the tree of the common analysis (lmx_expr_tree), walked by lmx_graph_eval_tree and released. 0 or the answer of the
+# first failing step; 2 when the fields do not read as an expression.
+fn: lmx_graph_eval_chain_value (@: g c.LmxGraph; @: scope c.Lmx; @: chain c.Lmx; @: out c.LmxWalkValue) int
+    @: tree size_t 0
+    int: status c.lmx_expr_tree(g, chain, @ tree)
+    if: status != 0
+        return: status
+    status := lmx_graph_eval_tree(g, scope, tree, out)
+    c.lmx_expr_free(tree)
+    return: status
+
+# The int projection of that value, for the consumers of an int (a condition, an index, the right side of an int place): what lmx_graph_eval_number answers for an expression.
+fn: lmx_graph_eval_chain (@: g c.LmxGraph; @: scope c.Lmx; @: chain c.Lmx; @: out int) int
+    c.LmxWalkValue: value
+    int: status lmx_graph_eval_chain_value(g, scope, chain, @ value)
+    if: status != 0
+        return: status
+    return: c.lmx_expr_int_of(@ value, out)
+
 # Consume the nested expression itself. No precedence parser or saved expression plan exists in either consumer.
 fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -5370,57 +5441,10 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         if: status != 0
             return: status
         return: c.lmx_graph_value_int(g, value, out)
-    if: count = 3U && (word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or)
-        status := lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, expression, 0U), @ left)
-        if: status != 0
-            return: status
-        if: (word = state\w_and && left = 0) || (word = state\w_or && left != 0)
-            out[0] := (cast: (int) (left != 0))
-            return: 0
-        status := lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, expression, 2U), @ right)
-        if: status != 0
-            return: status
-        if: word = state\w_plus
-            left := left + right
-        if: word = state\w_minus
-            left := left - right
-        if: word = state\w_star
-            left := left * right
-        if: word = state\w_slash || word = state\w_percent
-            if: right = 0
-                return: 6
-            if: word = state\w_slash
-                left := left / right
-            else:
-                left := left % right
-            ---
-        ---
-        if: word = state\w_eq
-            left := (cast: (int) (left = right))
-        if: word = state\w_ne
-            left := (cast: (int) (left != right))
-        if: word = state\w_lt
-            left := (cast: (int) (left < right))
-        if: word = state\w_le
-            left := (cast: (int) (left <= right))
-        if: word = state\w_gt
-            left := (cast: (int) (left > right))
-        if: word = state\w_ge
-            left := (cast: (int) (left >= right))
-        if: word = state\w_and
-            left := (cast: (int) (left && right))
-        if: word = state\w_or
-            left := (cast: (int) (left || right))
-        out[0] := left
-        return: 0
+    # An expression the fields of the node read as: the common analysis (lmx_expr_tree) and its walk.
+    if: c.lmx_expr_is_chain(g, raw) != 0
+        return: lmx_graph_eval_chain(g, scope, expression, out)
     word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 0U))
-    if: count = 2U && (word = state\w_plus || word = state\w_minus || word = state\w_not)
-        status := lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, expression, 1U), out)
-        if: status = 0 && word = state\w_minus
-            out[0] := 0 - out[0]
-        if: status = 0 && word = state\w_not
-            out[0] := (cast: (int) (out[0] = 0))
-        return: status
     if: count = 2U && word = state\w_deref
         status := lmx_graph_eval_value(g, scope, c.lmx_graph_get_in(g, expression, 1U), @ value)
         if: status != 0

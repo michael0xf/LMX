@@ -1,8 +1,10 @@
+# «просто следуйте общим правилам и генерируйте ошибки в случае неопределенностей, никаких своих правил для call(code code) нет, что получится то и получится, нет смысла обсуждать все конфликты» (LMX_blog/2026-11-11.md, #self-launch-no-own-rules)
+# «но не в data где это просто пустая структура f» (LMX_blog/2026-11-11.md, #structure-head-call-refuses-in-code)
 # раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
 # как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
-# Проверяет: блок из двух вызовов sub (объявленного результата нет) — попытка отклонена без исполнения, блок исполняется (Р93).
-# Witness: a call of a sub has no declared result, so the field is not admitted by the attempt; call(C) runs C: seen 11.
-# Norm: the book #declaration-selection item 2, «Receivers»; R92, R93.
+# Проверяет c10: то же для sub -- C в данных, записи foo и bar -- sub; call(C) запускает C над собой, ничего не вызывается: seen 0; попытка раскрытия отклонена без исполнения
+# Witness: call(C) over the data of main, where C holds two subs foo and bar: C runs over itself, its records find their own places, nothing is called, so seen stays 0; the attempt to open C is refused without running anything
+# Norm: the book #data-code-roles, #declaration-selection item 2; the journal 2026-11-11 #self-launch-no-own-rules, #structure-head-call-refuses-in-code; R92, R93; fable R101 (the earlier norm seen 11, R93 item 2, withdrawn).
 (
     Observed:
         int: seen 0

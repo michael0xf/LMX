@@ -1,0 +1,19 @@
+# Witness expr_p15 -- P15: c := (read() != EOF), read() answers EOF: one read, c is false
+# Norm: ТЗ 10.4. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+# Note: green today: the group is a plain expression with a call; the row pins the by-demand step against a regression
+(
+    Observed:
+        int: c 0
+        int: reads 0
+)
+@: shared data[0]
+int: EOF -1
+fn: read () int
+    shared\Observed\reads := shared\Observed\reads + 1
+    return: 0 - 1
+sub: main () (
+    int: c 3
+)
+    c := (read() != EOF)
+    shared\Observed\c := c
+main()

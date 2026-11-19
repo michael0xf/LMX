@@ -1,0 +1,14 @@
+# Witness expr_c01 -- C01: seen := ! 0 * 5
+# Norm: C99 N1256 6.5; haiku row B01. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+# Note: унарный ! сильнее умножения (иначе !(0*5) = 1)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: main () (
+    int: seen 0
+)
+    seen := ! 0 * 5
+    shared\Observed\seen := seen
+main()

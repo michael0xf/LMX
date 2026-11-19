@@ -1,0 +1,14 @@
+# Witness expr_c03 -- C03: seen := 2 + 3 * 4
+# Norm: C99 N1256 6.5; haiku row B03. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+# Note: умножение сильнее сложения (иначе 20)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: main () (
+    int: seen 0
+)
+    seen := 2 + 3 * 4
+    shared\Observed\seen := seen
+main()

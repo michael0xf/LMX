@@ -1,0 +1,25 @@
+---
+    Observed:
+        int: x 1
+        int: v 0
+        int: y 99
+        int: ticks 0
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f (int: x; int: y 99) int (
+    int: v 0
+)
+    :=: ((shared \ Observed) \ x) x
+    :=: ((shared \ Observed) \ v) v
+    :=: ((shared \ Observed) \ y) y
+    return: x
+end: f
+fn: tick () int
+    :=: ((shared \ Observed) \ ticks) (((shared \ Observed) \ ticks) + 1)
+    return: ((shared \ Observed) \ ticks)
+end: tick
+sub: main ()
+    f: (1 || (:= v (tick)))
+end: main
+main:

@@ -1,0 +1,13 @@
+# Witness expr_p13 -- P13: v := v + 1, v = 100 before
+# Norm: ТЗ 10.4. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+(
+    Observed:
+        int: v 0
+)
+@: shared data[0]
+sub: main () (
+    int: v 100
+)
+    v := v + 1
+    shared\Observed\v := v
+main()

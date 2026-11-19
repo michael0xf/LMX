@@ -657,41 +657,9 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             return: lm_graph_emit_application(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, 1, temp)
         count := c.lmx_graph_count(expression)
         word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U))
-        if: count = 3U && (word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or)
-            status := lm_graph_emit_number(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ left)
-            if: status != 0
-                return: status
-            if: word = state\w_and || word = state\w_or
-                finish := temps[0]
-                temps[0] := temps[0] + 1
-                c.fprintf(f, "        l2_t%d: (l2_t%d != 0)\n", left, left)
-                if: word = state\w_and
-                    c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n", left, finish)
-                else:
-                    c.fprintf(f, "        if: l2_t%d != 0\n            goto: l2_label%d\n", left, finish)
-                ---
-            ---
-            status := lm_graph_emit_number(g, f, scope, expression, 2U, temps, decl_names, decl_slots, decl_n, @ right)
-            if: status != 0
-                return: status
-            if: word = state\w_slash || word = state\w_percent
-                c.fprintf(f, "        if: l2_t%d = 0\n            %s\n", right, leave_failure)
-            c.fprintf(f, "        l2_t%d: l2_t%d %s l2_t%d\n", left, left, word, right)
-            if: word = state\w_and || word = state\w_or
-                c.fprintf(f, "        l2_label%d:\n", finish)
-            temp[0] := left
-            return: 0
+        if: c.lmx_expr_is_chain(g, raw) != 0
+            return: lm_graph_emit_chain(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
         word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 0U))
-        if: count = 2U && (word = state\w_plus || word = state\w_minus || word = state\w_not)
-            status := lm_graph_emit_number(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ left)
-            if: status != 0
-                return: status
-            if: word = state\w_minus
-                c.fprintf(f, "        l2_t%d: 0 - l2_t%d\n", left, left)
-            if: word = state\w_not
-                c.fprintf(f, "        l2_t%d: (l2_t%d = 0)\n", left, left)
-            temp[0] := left
-            return: 0
         if: count = 2U && word = state\w_deref
             status := lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
@@ -718,6 +686,77 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
     temp[0] := left
     return: 0
 end: lm_graph_emit_number
+
+# The test of a lazy operation (&& or ||) before its next argument: the value so far becomes 0 or 1, and a decided result jumps to the end label (the text the interpreter's
+# lmx_graph_eval_tree decides at run time).
+sub: lm_graph_emit_lazy_step (@: f c.FILE; @: word char; int: left; int: finish)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    c.fprintf(f, "        l2_t%d: (l2_t%d != 0)\n", left, left)
+    if: word = state\w_and
+        c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n", left, finish)
+    if: word = state\w_or
+        c.fprintf(f, "        if: l2_t%d != 0\n            goto: l2_label%d\n", left, finish)
+    return
+
+# One node of the tree of the common analysis (lmx_expr_tree), emitted in the order the interpreter walks it (lmx_graph_eval_tree): a field of the chain is compiled by
+# lm_graph_emit_number; an operation emits its first argument, then for each next argument the argument and one line of C that applies the operator to the temporaries (a lazy operation
+# first tests the value so far). For a node of two arguments the text is the text of the former nested node. The temporary of the value in temp.
+fn: lm_graph_emit_tree (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: tn size_t; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    size_t: i 1U
+    int: left 0
+    int: right 0
+    int: finish 0
+    int: status 0
+    if: state = 0 || tn = 0
+        return: 2
+    if: tn[0] = 0U
+        return: lm_graph_emit_number(g, f, scope, (cast: (@: c.Lmx) tn[3]), tn[1], temps, decl_names, decl_slots, decl_n, temp)
+    word := (cast: (@: char) tn[1])
+    status := lm_graph_emit_tree(g, f, scope, (cast: (@: size_t) tn[4U]), temps, decl_names, decl_slots, decl_n, @ left)
+    if: status != 0
+        return: status
+    if: tn[3] = 1U
+        if: word = state\w_minus
+            c.fprintf(f, "        l2_t%d: 0 - l2_t%d\n", left, left)
+        if: word = state\w_not
+            c.fprintf(f, "        l2_t%d: (l2_t%d = 0)\n", left, left)
+        temp[0] := left
+        return: 0
+    if: tn[3] = 2U
+        finish := temps[0]
+        temps[0] := temps[0] + 1
+    while: i < tn[2]
+        if: tn[3] = 2U
+            lm_graph_emit_lazy_step(f, word, left, finish)
+        status := lm_graph_emit_tree(g, f, scope, (cast: (@: size_t) tn[4U + i]), temps, decl_names, decl_slots, decl_n, @ right)
+        if: status != 0
+            return: status
+        if: word = state\w_slash || word = state\w_percent
+            c.fprintf(f, "        if: l2_t%d = 0\n            %s\n", right, leave_failure)
+        c.fprintf(f, "        l2_t%d: l2_t%d %s l2_t%d\n", left, left, word, right)
+        i := i + 1U
+    if: tn[3] = 2U
+        c.fprintf(f, "        l2_label%d:\n", finish)
+    temp[0] := left
+    return: 0
+
+# An expression the fields of chain are, compiled: the tree of the common analysis, emitted by lm_graph_emit_tree and released. Fields that do not read as an expression are compiled
+# as a refusal that the code gives when it runs, as for any shape without a numeric reading.
+fn: lm_graph_emit_chain (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: chain c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    @: tree size_t 0
+    int: status c.lmx_expr_tree(g, chain, @ tree)
+    if: status = 2
+        return: lm_graph_emit_number_refused(f, temps, temp)
+    if: status != 0
+        return: status
+    status := lm_graph_emit_tree(g, f, scope, tree, temps, decl_names, decl_slots, decl_n, temp)
+    c.lmx_expr_free(tree)
+    return: status
 
 fn: lm_graph_emit_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: expr c.Lmx; size_t: from; size_t: to; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
     if: to != from + 1U

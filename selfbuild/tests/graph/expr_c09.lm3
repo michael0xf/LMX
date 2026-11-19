@@ -1,0 +1,14 @@
+# Witness expr_c09 -- C09: seen := 1 < 2 = 1
+# Norm: C99 N1256 6.5; haiku row B09. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+# Note: отношение < сильнее равенства (иначе 0)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+sub: main () (
+    int: seen 0
+)
+    seen := 1 < 2 = 1
+    shared\Observed\seen := seen
+main()

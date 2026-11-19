@@ -1,0 +1,14 @@
+# Мера: что отвечает fncall(int; Self) -- по общим правилам (журнал 2026-11-11 #self-launch-no-own-rules), автору не задаётся; fncall запускает саму Structure Self, не её тело
+# «просто следуйте общим правилам и генерируйте ошибки в случае неопределенностей, никаких своих правил для call(code code) нет, что получится то и получится, нет смысла обсуждать все конфликты» (LMX_blog/2026-11-11.md, #self-launch-no-own-rules)
+# Witness: fncall(int; Self) with fn Self () int, return 7: the field return of the function's Structure holds the word int, which is no place when Self runs over itself; pinned as today's answer 1 1 4
+# Norm: today's answer on d111 (the measure, not a norm of the author); the journal 2026-11-11 #self-launch-no-own-rules; R92, R93; fable R101.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: Self () int
+    return: 7
+sub: main ()
+    shared\Observed\seen := fncall(int; Self)
+main()

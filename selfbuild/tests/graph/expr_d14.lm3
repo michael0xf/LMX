@@ -1,0 +1,18 @@
+# Witness expr_d14 -- D14: v := 100; x := v; v := 5 : the plain read starts nothing
+# Norm: ТЗ 10.3. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+(
+    Observed:
+        int: x 0
+        int: v 0
+)
+@: shared data[0]
+sub: main () (
+    int: v 1
+    int: x 0
+)
+    v := 100
+    x := v
+    v := 5
+    shared\Observed\x := x
+    shared\Observed\v := v
+main()

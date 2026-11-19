@@ -1,0 +1,16 @@
+---
+    Observed:
+        int: seen 1
+        int: x 7
+    end: Observed
+---
+@: shared (data [] 0)
+sub: main () (
+    int: seen 5
+    int: x 7
+)
+    :=: seen (1 || ((:= x 1)))
+    :=: ((shared \ Observed) \ seen) seen
+    :=: ((shared \ Observed) \ x) x
+end: main
+main:

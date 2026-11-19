@@ -1,7 +1,10 @@
-# Мера (fable, 2026-11-18): Structure C, объявленная в данных main и запущенная call(C), исполняется как код -- её запись
-# foo() в роли code -- вызов (книга #data-code-roles: роль задаёт запуск). Сегодня запуск такого блока foo не вызывает:
-# кандидат exit 0, seen 0; база build 5. Дефект запуска, вне среза выбора объявления; держит declsel_c09/c10 красными.
-# Witness: the launch of a data block whose field is a call; norm seen 1 (ОТКРЫТО of the slice).
+# «просто следуйте общим правилам и генерируйте ошибки в случае неопределенностей, никаких своих правил для call(code code) нет, что получится то и получится, нет смысла обсуждать все конфликты» (LMX_blog/2026-11-11.md, #self-launch-no-own-rules)
+# «но не в data где это просто пустая структура f» (LMX_blog/2026-11-11.md, #structure-head-call-refuses-in-code)
+# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
+# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
+# Проверяет launch_calls: C(foo()) в данных main, call(C): C исполняется над собой, запись foo() не вызывает функцию: seen 0
+# Witness: a data block whose single record is the call foo(); call(C) runs C over itself, the record does not call foo, so seen stays 0 (the earlier measure, now pinned by the norm)
+# Norm: the book #data-code-roles, #declaration-selection item 2; the journal 2026-11-11 #self-launch-no-own-rules, #structure-head-call-refuses-in-code; R92, R93; fable R101 (the earlier norm seen 11, R93 item 2, withdrawn).
 (
     Observed:
         int: seen 0

@@ -1,0 +1,18 @@
+---
+    Observed:
+        int: seen 11
+    end: Observed
+---
+@: shared (data [] 0)
+fn: foo () int
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+    return: 1
+end: foo
+fn: bar () int
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 10)
+    return: 2
+end: bar
+sub: main ((D); (C (foo) (bar)))
+    C: D
+end: main
+main:

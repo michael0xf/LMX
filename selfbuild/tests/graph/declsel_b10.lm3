@@ -1,18 +1,16 @@
 # раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
 # как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
-# Проверяет b10: fncall(F) раскрывает F по позициям (норма 7)
-# Witness: fncall(F) opens F and passes its fields by position; the first field, the word int as written, takes the formal return (ответил fable, Q3, R81)
-# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
-# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+# «"callable" это просто структура, чем она в данном случае отличается от другой структуры?» (LMX_blog/2026-11-16.md, #callable-is-structure; вопрос автора до ответа)
+# Проверяет b10: fncall(F) раскрывает F в fncall(Self\return; Self\code) -- 7.
+# Witness: fncall(F) opens F, and its two fields go to the formals return and code by position: F holds Self\return and Self\code, so the value is 7.
+# Norm: the book #call-receivers, #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76; fable R101.
 (
     Observed:
         int: seen 0
 )
 @: shared data[0]
-
 fn: Self () int
     return: 7
-
-sub: main (F(int; Self))
+sub: main (F(Self\return; Self\code))
     shared\Observed\seen := fncall(F)
 main()

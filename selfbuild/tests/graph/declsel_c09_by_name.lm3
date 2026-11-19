@@ -1,0 +1,20 @@
+# «просто следуйте общим правилам и генерируйте ошибки в случае неопределенностей, никаких своих правил для call(code code) нет, что получится то и получится, нет смысла обсуждать все конфликты» (LMX_blog/2026-11-11.md, #self-launch-no-own-rules)
+# «но не в data где это просто пустая структура f» (LMX_blog/2026-11-11.md, #structure-head-call-refuses-in-code)
+# Проверяет c09_by_name: запуск по имени C(D) над теми же данными D -- записи блока вызывают функции foo и bar: seen 11.
+# Witness: the same block C(foo(); bar()) launched by its name over the data D: C(D) is call(D, C) in the book, the records call foo (+1) and bar (+10), so seen is 11.
+# Norm: the book #data-code-roles, #declaration-selection item 2; the journal 2026-11-11 #self-launch-no-own-rules, #structure-head-call-refuses-in-code; R92, R93; fable R101.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: foo () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 1
+fn: bar () int
+    shared\Observed\seen := shared\Observed\seen + 10
+    return: 2
+
+sub: main (D(); C(foo(); bar()))
+    C(D)
+main()

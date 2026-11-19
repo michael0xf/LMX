@@ -1,0 +1,16 @@
+# Witness expr_d07 -- D07: 1 || (x := 1) leaves x
+# Norm: ТЗ 10.3. Step: a. The expected file holds the values BY THE NORM; the code echo is the builder's echo re-written by the flatten rule of step (a).
+(
+    Observed:
+        int: seen 0
+        int: x 0
+)
+@: shared data[0]
+sub: main () (
+    int: seen 5
+    int: x 7
+)
+    seen := 1 || (x := 1)
+    shared\Observed\seen := seen
+    shared\Observed\x := x
+main()

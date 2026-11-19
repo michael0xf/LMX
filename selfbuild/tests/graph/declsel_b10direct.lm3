@@ -1,9 +1,8 @@
-# раскрытие это попытка найти другие сигнатуры с большим числом аргументов; если попытка отклоняется, то передаётся
-# как есть; при выбранном вызове по сигнатуре, в которой один аргумент, ничего не раскрывается
-# Проверяет b10direct: прямая запись fncall(int; Self) — мера: сегодня отказывает 4 уже на базе s219, срез её не трогает (b10 держится красной по той же причине)
-# Witness: прямая запись fncall(int; Self) — мера: сегодня отказывает 4 уже на базе s219, срез её не трогает (b10 держится красной по той же причине)
-# Norm: the book #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76.
-# Slice «selection of the declaration by the call» (plan #two-kinds-of-receivers-plan).
+# «"callable" это просто структура, чем она в данном случае отличается от другой структуры?» (LMX_blog/2026-11-16.md, #callable-is-structure; вопрос автора до ответа)
+# «для функции — `fncall(A s\data s\return s\code)`» (docs/LMX_semantics.ru.md, #call-receivers)
+# Проверяет b10direct: функция вызывается своими частями, fncall(Self\return; Self\code) -- 7.
+# Witness: fncall(Self\return; Self\code) calls the function Self through its own parts, its return and its code: the value is 7.
+# Norm: the book #call-receivers, #declaration-selection (its table), #admission; the plan #two-kinds-of-receivers-plan item 1; R65-R68, R71, R76; fable R101.
 (
     Observed:
         int: seen 0
@@ -12,5 +11,5 @@
 fn: Self () int
     return: 7
 sub: main ()
-    shared\Observed\seen := fncall(int; Self)
+    shared\Observed\seen := fncall(Self\return; Self\code)
 main()

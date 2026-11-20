@@ -4898,12 +4898,12 @@ Gate включает generated-source checks, [цикл документаци�
    `binding-autofill`, `binding-caller-place`, `binding-fallback`,
    `binding-chain`, `shadowing-levels`, `inline-declaration-control`,
    `binding-executors`, `catch-common-model`.
-3. Вопрос автору о ролях записей корня единицы
-   (`LMX_blog/q/current/unit-root-roles-20261119.md`) и чтения исполнителя
-   Р106 и Р107 в `LMX_blog/q/fable-self-answers-20261110.md`: документы на них
-   уже ссылаются, а самих записей ещё нет.
-4. Абзацы `READ.ME` о ролях `data`/`code`, шести формах `call`/`fncall` и о
+3. Абзацы `READ.ME` о ролях `data`/`code`, шести формах `call`/`fncall` и о
    том, что у запуска нет результата, ещё излагают прежнюю норму.
+
+Записаны: [вопрос автору](LMX_blog/q/current/unit-root-roles-20261119.md) о
+корне единицы и чтения исполнителя Р106 и Р107 в
+[ответах исполнителя](LMX_blog/q/fable-self-answers-20261110.md).
 
 ### Шаги реализации (ТЗ §13)
 
@@ -4962,8 +4962,10 @@ Gate включает generated-source checks, [цикл документаци�
 ### Открытое
 
 - Вопрос автору: в какой роли читаются записи корня единицы, когда у R0 нет
-  данных, `sub` снят, а `fn` только описывает сигнатуру
-  (`LMX_blog/q/current/unit-root-roles-20261119.md`).
+  данных, `sub` снят, а `fn` только описывает сигнатуру, и где программа
+  объявляет Structure
+  ([вопрос](LMX_blog/q/current/unit-root-roles-20261119.md)). От ответа
+  зависят шаги 5 и 8.
 - Чтения исполнителя, а не решения автора: Р106 — новое `int: x` без правой
   части во вложенной встроенной области остаётся `uninit:int` (ТЗ §7.4);
   Р107 — после перехода на `parent(C)` прежние явные пути `data\x`

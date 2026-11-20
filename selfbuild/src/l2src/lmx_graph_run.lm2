@@ -952,9 +952,12 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
         return: 3
     return: lmx_graph_work_bind_slot(g, frame, slot, name)
 
-# A reached declaration reuses a visible local or DATA place. A new CODE name
-# gets an activation-owned row at its lexical scope, never a field appended to DATA.
-# DATA/code identity keeps each physical occurrence independently addressable.
+# A reached declaration takes its place on the lexical level it stands on (TZ 2026-11-19, R16, §7.2): a visible row of
+# its name on this very level is the place of a repeat, kept with its value; a declaration of DATA binds its physical
+# place; one on the root level of the code takes the DATA place of its name, as before (whether that level is nested in
+# the data is step 5 of the plan); otherwise the row this level gets again on each entry, or a new activation-owned row
+# on this level. A place of an outer level is never taken: the new row shadows it until the level is left. Never a
+# field appended to DATA; each physical DATA occurrence stays independently addressable.
 fn: lmx_graph_work_site (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: holder c.Lmx; size_t: index; @: at size_t) int
     @: raw void c.lmx_graph_get_in(g, holder, index)
     @: name char lmx_graph_own_name(g, raw)
@@ -973,14 +976,11 @@ fn: lmx_graph_work_site (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: holder c.
         return: 5
     rows := frame\rows
     selected := frame\count
-    row := lmx_graph_work_row(g, frame, name)
-    if: row != 0 && (row\scope != 0 || row\slot != (cast: (size_t) -1))
-        while: selected = frame\count && i < frame\count
-            if: frame\rows + i = row
-                selected := i
-            i := i + 1U
-        ---
-    ---
+    while: selected = frame\count && i < frame\count
+        row := frame\rows + i
+        if: row\scope = frame\lexical_scope && row\name = name && (row\loaded & 16) != 0
+            selected := i
+        i := i + 1U
     if: selected = frame\count && holder = frame\data
         status := lmx_graph_work_bind_slot(g, frame, index, name)
         if: status != 0
@@ -989,7 +989,7 @@ fn: lmx_graph_work_site (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: holder c.
         row := frame\rows + selected
         row\loaded := row\loaded | 16
     ---
-    if: selected = frame\count
+    if: selected = frame\count && frame\lexical_scope = frame\body
         matches := lmx_graph_work_data_find(g, frame, (cast: (@: c.Lmx) frame\data), name, @ slot)
         if: matches > 1U
             return: 3

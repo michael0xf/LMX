@@ -1,0 +1,16 @@
+---
+    Observed:
+        int: seen 95
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f () int
+    int: x 5
+    int: inner 0
+    if: 1 ((int x 9) (:= inner x))
+    return: ((inner * 10) + x)
+end: f
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (f)
+end: main
+main:

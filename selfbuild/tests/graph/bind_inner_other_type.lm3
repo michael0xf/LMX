@@ -1,0 +1,16 @@
+# Вложенная ссылка `@: x int @y` при внешнем `int: x 5` — своё место, а не запись во внешнюю ячейку: seen 5.
+# Норма: ТЗ 2026-11-19, R16, §7.2, строка приёмки B24.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: y 7
+    int: x 5
+    if: 1
+        @: x int @y
+    return: x
+sub: main ()
+    shared\Observed\seen := f()
+main()

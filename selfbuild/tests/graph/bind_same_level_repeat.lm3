@@ -1,0 +1,16 @@
+# Повтор объявления на том же уровне — то же место: без правой части 5 сохраняется, с правой частью 7: seen 57.
+# Норма: ТЗ 2026-11-19, §7.2, §7.3, строка приёмки B25.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: x 5
+    int: x
+    int: a x
+    int: x 7
+    return: a * 10 + x
+sub: main ()
+    shared\Observed\seen := f()
+main()

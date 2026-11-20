@@ -1,0 +1,15 @@
+# Вложенное объявление создаёт своё место и затеняет внешнее; после блока снова видно внешнее x: seen 5.
+# Норма: ТЗ 2026-11-19, R16, §7.2, строка приёмки B24 (тот же тип), шаг 4 плана #binding-callables-20261119.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: x 5
+    if: 1
+        int: x 9
+    return: x
+sub: main ()
+    shared\Observed\seen := f()
+main()

@@ -1,0 +1,17 @@
+---
+    Observed:
+        int: seen 205
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f () int
+    int: x 5
+    int: n 0
+    int: sum 0
+    while: (n < 2) ((int x 9) (:= x (x + 1)) (:= sum (sum + x)) (:= n (n + 1)))
+    return: ((sum * 10) + x)
+end: f
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (f)
+end: main
+main:

@@ -1,0 +1,17 @@
+# Внутри блока читается внутреннее x (9), после блока — внешнее (5): seen 95.
+# Норма: ТЗ 2026-11-19, R16, §7.2: новое объявление во вложенной области создаёт своё место и затеняет внешнее.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: x 5
+    int: inner 0
+    if: 1
+        int: x 9
+        inner := x
+    return: inner * 10 + x
+sub: main ()
+    shared\Observed\seen := f()
+main()

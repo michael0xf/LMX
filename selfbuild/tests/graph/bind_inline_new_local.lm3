@@ -1,0 +1,17 @@
+# Контроль §7.4: новое `int: x` без правой части во вложенном блоке — своё место без значения; чтение отказывает
+# ответом 5, seen 0. Норма: ТЗ 2026-11-19, §7.4; чтение исполнителя Р106.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: x 5
+    int: inner 0
+    if: 1
+        int: x
+        inner := x
+    return: inner
+sub: main ()
+    shared\Observed\seen := f()
+main()

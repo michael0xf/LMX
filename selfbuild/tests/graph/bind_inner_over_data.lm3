@@ -1,0 +1,16 @@
+# Вложенное объявление имени формала создаёт своё место; формал x = 5 цел: внутри 9, после блока 5, seen 95.
+# Норма: ТЗ 2026-11-19, R16, §7.2 (владелец места и действующая видимость).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f (int: x) int
+    int: inner 0
+    if: 1
+        int: x 9
+        inner := x
+    return: inner * 10 + x
+sub: main ()
+    shared\Observed\seen := f(5)
+main()

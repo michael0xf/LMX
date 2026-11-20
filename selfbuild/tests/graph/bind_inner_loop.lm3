@@ -1,0 +1,20 @@
+# Тело while проходится дважды; вложенное `int: x 9` присваивает 9 при каждом достижении, запись идёт во
+# внутреннее место, внешнее x = 5 цело: sum 20, seen 205. Норма: ТЗ 2026-11-19, R16, §7.2, §7.3.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f () int
+    int: x 5
+    int: n 0
+    int: sum 0
+    while: n < 2
+        int: x 9
+        x := x + 1
+        sum := sum + x
+        n := n + 1
+    return: sum * 10 + x
+sub: main ()
+    shared\Observed\seen := f()
+main()

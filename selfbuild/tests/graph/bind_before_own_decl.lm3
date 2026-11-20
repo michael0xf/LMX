@@ -1,0 +1,17 @@
+# До своего объявления x читается обычным внешним разрешением (5 вызывающего), после — своё 7: seen 507.
+# Норма: ТЗ 2026-11-19, §7.2, строка приёмки B26.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee () int
+    int: before x
+    int: x 7
+    return: before * 100 + x
+fn: f () int
+    int: x 5
+    return: callee()
+sub: main ()
+    shared\Observed\seen := f()
+main()

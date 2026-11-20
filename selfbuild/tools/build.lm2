@@ -3736,11 +3736,13 @@ end: bld_graph_section_same
 # The check of one source of the new path (slice 309): the interpreter in the graph tool's process (`graph_trans run`),
 # the program emitted natively and the program emitted for the kernel's interpreter, each built from the emitted L1 by
 # l1trans and gcc, linked with rt/driver.o and run through the driver with entry 0; every route prints the graph after
-# execution between GRAPH-AFTER markers, which must equal the expected file byte for byte. One GRAPH-CHECK line per
-# route; 0 when all three agree with the expected text, else 1. The expected exit of a row (its field 11) is 0 for that
-# success, 1 for a refusal -- the interpreter answers interp_exit, the native and forced programs do not succeed -- and
-# 2 for a refusal of the construction of the graph itself (plan M11 5b part 2): every route answers interp_exit with
-# the tool's line `graph: build answered N` -- the interpreter's `run` and emit-check alike --, and no program is
+# execution between GRAPH-AFTER markers -- after a refusal of the run as after its success --, which must equal the
+# expected file byte for byte: what ran before a refusal is part of what the row observes (fable 2026-11-18). One
+# GRAPH-CHECK line per route; 0 when all three agree with the expected text, else 1. The expected exit of a row (its
+# field 11) is 0 for that success, 1 for a refusal -- the interpreter answers interp_exit, the native and forced programs
+# do not succeed, and the dump of every route is compared as for a success -- and 2 for a refusal of the construction of
+# the graph itself (plan M11 5b part 2): every route answers interp_exit with the tool's line `graph: build answered N`
+# -- the interpreter's `run` and emit-check alike --, no graph is built, so no dump is printed, and no program is
 # emitted, translated, compiled, linked or run.
 fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char; @: interp_exit char) int
     @@: a char c.calloc(70U, sizeof(@: char))
@@ -3783,7 +3785,7 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
     a[3] := interp_exit
     log := txt_path(out, "interp.log")
     ok := (cast: (int) (bld_step(rec, a, 8, out, log, res) = 0))
-    if: ok != 0 && expected_exit = 0
+    if: ok != 0 && expected_exit != 2
         ok := bld_graph_section_same(log, expected, "AFTER")
     # A row marked 2 is a refusal of the construction of the graph (plan M11 5b part 2): the answer N of the tool is the
     # builder's -- its log has the line `graph: build answered N` --, not an answer of the run with the same number.
@@ -3855,7 +3857,7 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
         ---
         if: ok != 0 && expected_exit != 2
             ok := (cast: (int) (bld_run(exe, expected_exit, 0, dir, log, rec) = 0))
-        if: ok != 0 && expected_exit = 0
+        if: ok != 0 && expected_exit != 2
             ok := bld_graph_section_same(log, expected, "AFTER")
         if: ok != 0
             c.printf("GRAPH-CHECK %s %s PASS\n", mode, source)

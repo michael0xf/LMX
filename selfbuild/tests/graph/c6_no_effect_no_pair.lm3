@@ -1,0 +1,20 @@
+# Witness c6_no_effect_no_pair -- f(tick()) with f(@: s) and f(@: s; @: t): no signature admits the call:
+# refusal 4, seen 0
+# Norm: fable R102 (выбор ничего не исполняет; автор 2026-11-07 «Имена и форму вызова проверять до вычисления
+# аргументов»; книга #named-actuals «Вызываемое выбирается один раз, до аргументов»)
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (@: s) int
+    return: 1
+fn: f (@: s; @: t) int
+    return: 2
+sub: main ()
+    f(tick())
+main()

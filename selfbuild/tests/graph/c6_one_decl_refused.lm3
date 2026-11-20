@@ -1,0 +1,17 @@
+# Witness c6_one_decl_refused -- f(tick()) with the one declaration f(@: s): refusal 4, seen 0
+# Norm: fable R102/R103 — вызов с одним объявлением есть частный случай выбора: пара судится по описанию до
+# вычисления
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (@: s) int
+    return: 1
+sub: main ()
+    f(tick())
+main()

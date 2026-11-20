@@ -1,0 +1,27 @@
+---
+    Observed:
+        int: seen 11079
+    end: Observed
+---
+@: shared (data [] 0)
+fn: relay () int
+    int: x 11
+    int: r (inner)
+    return: ((x * 1000) + r)
+end: relay
+fn: f () int
+    private:
+        int: x 7
+    end: private
+    fn: inner () int
+        int: before x
+        :=: x (before + 2)
+        return: ((before * 10) + x)
+    end: inner
+    int: got (relay)
+    return: got
+end: f
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (f)
+end: main
+main:

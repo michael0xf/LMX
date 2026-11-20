@@ -1,0 +1,25 @@
+---
+    Outer:
+        private:
+            int: x 7
+        end: private
+        Inner:
+            int: x 5
+            fn: read () int
+                return: x
+            end: read
+        end: Inner
+    end: Outer
+    Observed:
+        int: seen 11
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f () int
+    int: x 11
+    return: shared\Outer\Inner\read()
+end: f
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (f)
+end: main
+main:

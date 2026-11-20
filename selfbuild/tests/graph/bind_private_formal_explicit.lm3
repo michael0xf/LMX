@@ -1,0 +1,14 @@
+# Private-формал явно получает 20 — явный фактический действует по обычному контракту: seen 20.
+# Норма: ТЗ 2026-11-19, §5.2, строка приёмки B14.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (private: int: x) int
+    return: x
+fn: f () int
+    return: callee(20)
+sub: main ()
+    shared\Observed\seen := f()
+main()

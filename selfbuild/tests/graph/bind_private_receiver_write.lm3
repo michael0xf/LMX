@@ -1,0 +1,22 @@
+# inner лексически видит private x = 7 функции outer; relay с публичным x = 11 его не заменяет: before 7, запись
+# x := before + 2 даёт 9, x relay цело: seen 11*1000 + 79 = 11079. Норма: ТЗ 2026-11-19, R05, §5.1 п. 2, B11.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: relay () int
+    int: x 11
+    int: r inner()
+    return: x * 1000 + r
+fn: f () int
+    private: int: x 7
+    fn: inner () int
+        int: before x
+        x := before + 2
+        return: before * 10 + x
+    int: got relay()
+    return: got
+sub: main ()
+    shared\Observed\seen := f()
+main()

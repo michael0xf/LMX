@@ -1,0 +1,18 @@
+# Ближний источник x вызывающего b — private и пропускается; поиск идёт дальше и находит x = 1 у a: seen 1.
+# Норма: ТЗ 2026-11-19, §5.3, строка приёмки B17.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c () int
+    return: x
+fn: b () int
+    private: int: x 2
+    return: c()
+fn: f () int
+    int: x 1
+    return: b()
+sub: main ()
+    shared\Observed\seen := f()
+main()

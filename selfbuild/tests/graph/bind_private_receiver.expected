@@ -1,0 +1,22 @@
+---
+    Lib:
+        private:
+            int: x 7
+        end: private
+        fn: read () int
+            return: x
+        end: read
+    end: Lib
+    Observed:
+        int: seen 7
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f () int
+    int: x 11
+    return: shared\Lib\read()
+end: f
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (f)
+end: main
+main:

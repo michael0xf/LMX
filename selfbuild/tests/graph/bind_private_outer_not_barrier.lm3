@@ -1,0 +1,23 @@
+# private x во внешней Outer не закрывает имя: read видит публичное x = 5 вложенной Inner, и динамический
+# источник побеждает как прежде — x = 11 вызывающего: seen 11. Норма: ТЗ 2026-11-19, §5.3, §6.2, §6.3.
+(
+    Outer:
+        private: int: x 7
+        Inner:
+            int: x 5
+            fn: read () int
+                return: x
+            end: read
+        end: Inner
+    end: Outer
+    Observed:
+        int: seen 0
+    end: Observed
+)
+@: shared data[0]
+fn: f () int
+    int: x 11
+    return: shared\Outer\Inner\read()
+sub: main ()
+    shared\Observed\seen := f()
+main()

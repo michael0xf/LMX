@@ -1,0 +1,15 @@
+# Значение private-места передано явным фактическим аргументом — передача разрешена: seen 5.
+# Норма: ТЗ 2026-11-19, §5.2, строка приёмки B13.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (int: v) int
+    return: v
+fn: f () int
+    private: int: x 5
+    return: callee(x)
+sub: main ()
+    shared\Observed\seen := f()
+main()

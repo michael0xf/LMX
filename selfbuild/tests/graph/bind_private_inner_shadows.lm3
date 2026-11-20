@@ -1,0 +1,20 @@
+# Своё x = 3 метода read затеняет внешний private x = 10 его Lib обычным лексическим способом: seen 3.
+# Норма: ТЗ 2026-11-19, §5.2, строка приёмки B16.
+(
+    Lib:
+        private: int: x 10
+        fn: read () int
+            int: x 3
+            return: x
+        end: read
+    end: Lib
+    Observed:
+        int: seen 0
+    end: Observed
+)
+@: shared data[0]
+fn: f () int
+    return: shared\Lib\read()
+sub: main ()
+    shared\Observed\seen := f()
+main()

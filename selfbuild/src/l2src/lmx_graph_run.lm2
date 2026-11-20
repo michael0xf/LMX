@@ -183,13 +183,19 @@ fn: lmx_graph_record_private (@: g c.LmxGraph; @: declared void) int
 fn: lmx_graph_field_private (@: g c.LmxGraph; @: owner c.Lmx; size_t: index) int
     return: lmx_graph_record_private(g, c.lmx_graph_get_in(g, owner, index))
 
-# Is the binding of this working row declared by the receiver private? The record it was made from says so.
-fn: lmx_graph_row_private (@: g c.LmxGraph; @: row c.LmxGraphWork) int
-    @: declared void row\declared
+# Is name declared private by the record declared: the record itself (`private: (int: x 1)`) or the modifier private
+# above the declaration of name in it (`private: int: a 1; int: b 2`)? 1 or 0; no record is not private.
+fn: lmx_graph_declared_private (@: g c.LmxGraph; @: declared void; @: name char) int
     @: mark char c.lmx_graph_intern("private", 7U)
     if: lmx_graph_record_private(g, declared) != 0
         return: 1
-    return: c.lmx_graph_record_mark(g, declared, row\name, mark)
+    return: c.lmx_graph_record_mark(g, declared, name, mark)
+
+# Is the binding of this working row declared by the receiver private? The record it was made from says so.
+fn: lmx_graph_row_private (@: g c.LmxGraph; @: row c.LmxGraphWork) int
+    @: declared void row\declared
+    @: name char row\name
+    return: lmx_graph_declared_private(g, declared, name)
 
 # Namespace callables retain their exact written declaration as parent.
 # Use that origin only; a same-spelled, unrelated field owns no attribute here.
@@ -2369,15 +2375,14 @@ fn: lmx_graph_binding_unlowered (@: g c.LmxGraph; @: value void; int: prepare; @
 
 # Resolve the current activation's DATA, inherited inputs, then lexical graph fields. Each lookup consumes the
 # current graph and the live activation chain; no binding is saved in the graph or reused by the next traversal.
+# Before the first binding of a calling activation is taken, the declaration scope sees lexically is selected once
+# (lmx_graph_lexical_private): a private one is not replaced by any dynamic source, and the lexical part answers.
 fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork; @@: held c.LmxWalkValue; @@: declared void; int: prepare; @: status int) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: activation c.LmxActivation 0
     @: active_frame c.LmxGraphFrame 0
     @: args c.Lmx 0
     @: row c.LmxGraphWork 0
-    @: current c.Lmx scope
-    @: launched c.Lmx 0
-    @: part c.Lmx 0
     @: value void 0
     @: input c.LmxWalkValue 0
     @: space c.LmxGraphSpace c.lmx_graph_space()
@@ -2386,6 +2391,7 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
     size_t: at 0U
     size_t: found 0U
     int: dynamic 0
+    int: receiver 0
     selected[0] := 0
     held[0] := 0
     declared[0] := 0
@@ -2399,6 +2405,11 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
     activation := (cast: (@: c.LmxActivation) g\arena\activation)
     while: activation != 0
         dynamic := (cast: (int) (activation != g\arena\activation))
+        # receiver: 0 not asked yet, 1 the lexical declaration is public or absent, 2 it is private.
+        if: dynamic != 0 && receiver = 0
+            receiver := 1 + lmx_graph_lexical_private(g, scope, name)
+        if: receiver = 2
+            break
         if: activation\frame != 0
             row := lmx_graph_input_row(g, activation, name, dynamic)
             # A required name nothing bound yet, which the root of the data of this launch may declare by a producer not applied yet: only a
@@ -2475,6 +2486,26 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
     # author 2026-11-11, R6; plan M11 5a): `data\[1]Model` selects an occurrence of the root.
     if: state != 0 && name = state\w_data && space != 0 && space\root = scope
         return: (cast: (@: void) scope)
+    return: lmx_graph_lexical_binding(g, scope, name, selected, held, declared, prepare, status)
+end: lmx_graph_select_binding
+
+# The lexical part of the binding search (lmx_graph_select_binding): the levels around scope, outward. With prepare 0 it
+# only selects -- no namespace is prepared and nothing runs -- and declared[0] names the record of the selected
+# declaration. selected, held, declared and status as there; 0 for none.
+fn: lmx_graph_lexical_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork; @@: held c.LmxWalkValue; @@: declared void; int: prepare; @: status int) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: activation c.LmxActivation 0
+    @: active_frame c.LmxGraphFrame 0
+    @: row c.LmxGraphWork 0
+    @: current c.Lmx scope
+    @: launched c.Lmx 0
+    @: part c.Lmx 0
+    @: value void 0
+    @: input c.LmxWalkValue 0
+    @: head char 0
+    size_t: slot 0U
+    size_t: at 0U
+    size_t: found 0U
     # The code of the live launch of an ordinary Structure over data it was given is code, not data (the roles data and
     # code, the author 2026-11-11): its own records answer no name; the launch finds a name in its data, its inputs, and
     # the levels around its code. A callable's own fields are its DATA, code and return, and they answer in
@@ -2571,7 +2602,17 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
         current := (cast: (@: c.Lmx) current\parent)
     ---
     return: 0
-end: lmx_graph_select_binding
+
+# The receiver's side of private (TZ 2026-11-19, R05, §5.1, §5.3): is the declaration of name that scope sees lexically
+# -- the one the lexical part selects, no other private one further out -- declared private? Selecting prepares nothing
+# and runs nothing. 1 or 0; no lexical declaration is not private.
+fn: lmx_graph_lexical_private (@: g c.LmxGraph; @: scope c.Lmx; @: name char) int
+    @: selected c.LmxGraphWork 0
+    @: held c.LmxWalkValue 0
+    @: declared void 0
+    int: status 0
+    lmx_graph_lexical_binding(g, scope, name, @ selected, @ held, @ declared, 0, @ status)
+    return: lmx_graph_declared_private(g, declared, name)
 
 # Address consumers retain their ordinary interface. Selection itself never
 # evaluates a deferred input or boxes a native activation's authoritative Value.

@@ -21,11 +21,12 @@ Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) retu
 
 Lowering parent/length/sys\storage reads header fields; sys\native obtains the native descriptor from
 call tables and sys\capacity reads the arena capacity table. No argument selects current data.
-None of these queries builds an auxiliary descriptor. Data/code and node retain their roles.
+None of these queries builds an auxiliary descriptor. Data (the parent of the selected Structure), code and node retain their roles.
 sys\resize/sys\reserve use common variable-size Arrays. Lmx contains neither native nor capacity.
 
-`sys\descriptor` likewise accepts an explicit S or defaults to the current data:
-`sys\descriptor() = sys\descriptor(data)`. This choice also applies inside nested control bodies;
+`sys\descriptor` likewise accepts an explicit S or defaults to the current data
+(the parent of the executed Structure); the former spelling `sys\descriptor() = sys\descriptor(data)` through the special name `data`
+is removed ([what is removed](LMX_semantics.en.md#removed-builtins)). This choice also applies inside nested control bodies;
 lowering either variant returns the selected Structure's field addresses under one contract.
 
 <a id="interpretable-tree"></a>
@@ -54,7 +55,7 @@ During incremental self-build, the translator emits C99 access to a graph Array'
 <a id="method-array"></a>
 ## 6. Native entry and Array
 
-Native descriptors are ordinary Structures in call tables in the Thread's arena, with signature variants, binary-module/entry names, and L1/C paths. Translation adds a missing ordinary native reference field to fn/sub/catch, not to other Structures. Arrays use the common Lmx and variable-size typed storage; separate List growth and embedded capacity are removed. See [L2](L2_spec_en.md#method-array).
+Native descriptors are ordinary Structures in call tables in the Thread's arena, with signature variants, binary-module/entry names, and L1/C paths. Translation adds a missing ordinary native reference field to `catch` and to an executable Structure (the former list `fn/sub/catch` is narrowed: executable `fn` and `sub` no longer exist, [L2 §2](L2_spec_en.md#lmx); the executor's reading), not to other Structures. Arrays use the common Lmx and variable-size typed storage; separate List growth and embedded capacity are removed. See [L2](L2_spec_en.md#method-array).
 
 <a id="arena"></a>
 ## 7. Arena
@@ -74,7 +75,7 @@ Native descriptors are ordinary Structures in call tables in the Thread's arena,
 <a id="root-close"></a>
 ### 9.1. R0
 
-R0 and the upper host scaffold use the common Thread mechanism. Launch data belong to the scaffold rather than hidden R0 graph fields. Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
+R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `fn` only describes a signature is not defined: this is an [open question at the author](../LMX_blog/q/current/unit-root-roles-20261119.md). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
 
 <a id="mailbox"></a>
 ## 10. Mailbox
@@ -84,87 +85,177 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 <a id="own"></a>
 ## 11. Local call frame
 
+The norm of 2026-11-19 (binding and callables) was accepted by the author in the [TZ](new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md); the translator, the clean-graph interpreter and the kernel do not execute it yet, and the work is recorded in the [plan](../next_core_tasks_v3.md#binding-callables-20261119). This section states the new norm in the same words as [L2 §11](L2_spec_en.md#call).
+
 <a id="call-receivers"></a>
-### The `call` and `fncall` receivers
+<a id="structural-call"></a>
+### Structural call and the `call` receiver
 
-| Form | Supplied values `args` | Input `data` | Result |
+The selected Structure `C` is executed: it is read in the code role, and its data role is performed by its actual parent `D = parent(C)`. The forms after an unambiguous selection:
+
+| Form | Executed Structure | Actuals | Data |
 |---|---|---|---|
-| `call(args data code)` | `args` | `data` | none |
-| `call(data code)` | not supplied | `data` | none |
-| `call(code)` | not supplied | `code` | none |
-| `fncall(args data return code)` | `args` | `data` | according to `return` |
-| `fncall(data return code)` | not supplied | `data` | according to `return` |
-| `fncall(return code)` | not supplied | `code` | according to `return` |
+| `call(C)` | `C` | not supplied | `parent(C)` |
+| `call(A C)` | `C` | Structure `A` | `parent(C)` |
+| `C()` | `C` | empty tail | `parent(C)` |
+| `C(args)` | `C` | written actuals under the common algorithm | `parent(C)` |
 
-`args` is the Structure of actual supplied values, exactly the argument Structure
-of an ordinary `call`. It is not formal declarations, a signature, or a separate
-callable part. `data` describes input places, requirements, and defaults.
-`return` describes the result; `code` is the executable Structure. `call` returns
-no value; `fncall` returns a result according to `return`.
+The parameters of `call` are named `args` and `code`. `args` is the Structure of actual supplied values, exactly
+the argument Structure of an ordinary call. It is not formal declarations, a signature, or a separate
+callable part. The input places, requirements, and defaults are described by the data `D`.
+`call` executes the selected `C` itself; a child field `code` is not looked up automatically.
+The one-argument form requires `code`, the two-argument form requires `args` and `code`, so `call(code := C)`
+does not suit the two-argument form: this is the ordinary distinction between declarations ([declaration selection](L2_spec_en.md#declaration-selection)),
+without an exception for the built-in `call`. A whole `C` may suit one form of `call` while its fields suit the other:
+then `call(C)` is an ambiguity error, while `call(code := C)` passes `C` explicitly as `code` and excludes
+the expansion of that actual. `C(A)` may take `A` whole or pass its fields;
+declaration selection decides.
 
-Forms without `args` supply no additional actual values. Omitted `data` means `code`
-itself: `call(C)` equals `call(C C)`, and `fncall(R C)` equals `fncall(C R C)`.
-A child `data` field inside `code` is not selected automatically. These are
-abbreviations of one operation, without requiring an empty Structure allocation
-or a new service object for omitted `args`.
+A call itself cannot substitute other data. For another combination the needed structural link is created first
+(a declaration, a copy, `merge` -- under their rules about `parent`), and then the selected occurrence of `C` is called.
+`NewContainer: ExistingCode` holds a reference to `ExistingCode` and does not change its `parent` ([`colon-declares`](LMX_semantics.en.md#colon-declares)).
+The former `call(D C)` and `C(D)` no longer substitute data: the first argument of the two-argument form is now `args`.
+Different occurrences of code may use one native implementation while keeping their own data: neither the address of a shared
+C function nor the path by which a reference was found replaces the `parent` of the selected `C`. The former equality
+`call(C)` = `call(C C)` (“a Structure is its own data”) is removed.
 
-All forms and ordinary method/Structure calls share one interpreter path:
-select parts → bind actuals to data → common admission → fresh namespace → execution and result.
+`node` is kept as a reserved operation with its explicit lexical access for the occurrence actually
+selected; the native context it needs is neither removed nor replaced by a new user channel for passing
+data. The common rules of the lexical source and of `node` apply consistently to the structural form of the
+call. After the move to `parent(C)`, the path `node\x` addresses a field of the call's data (the executor's reading,
+[Р107](../LMX_blog/q/fable-self-answers-20261110.md)): the former explicit paths `data\x` are written `node\x`
+or by an ordinary path from the name of the data Structure (`D\x`).
+
+A structural form and ordinary Structure calls share one interpreter path: resolve the callee name
+and the visible declarations → select the declaration by the explicitly supplied material → bind explicit actuals
+to the data → common admission → fresh namespace and implicit binding → execution and result.
 Receiving actuals neither changes source data nor runs entry initializers.
 Calls from test and converters use the same mechanism. Known native-to-native calls
 may still go directly through C without graph packaging.
 [Full contract and named arguments](LMX_semantics.en.md#call-receivers).
 
-<a id="private-binding"></a>
-### Receiver private:
+The result (`return` in data), the `fn` signature, declaration selection, binding (autofill, the transparent caller
+place, the former binding) and `catch` are defined in L2 §11: [`return` in data](L2_spec_en.md#return-in-data),
+[the `fn` signature](L2_spec_en.md#fn-signature), [declaration selection](L2_spec_en.md#declaration-selection),
+[binding](L2_spec_en.md#binding-places), [`catch`](L2_spec_en.md#catch-common-model).
+L1 repeats only what the C projection needs.
 
-`private:` excludes the marked field and its corresponding binding from a call's dynamic
-sources. Direct visibility from anywhere, explicit paths, and ordinary lexical lookup remain;
-sequential visibility and explicit argument passing do not change.
-Skipping the field follows the common binding order for every call/fncall form, ordinary call,
-interpreter and native execution. This is a field property, not a global name ban or access
-protection. Use the common binder without a separate registry or checks on direct reads.
-[Full contract](LMX_semantics.en.md#private-binding).
+<a id="private-binding"></a>
+### Receiver private: two-way `private`
+
+`private:` marks a specific declaration and the corresponding place and excludes them from all implicit
+dynamic binding in both directions. (Source) A `private` place of the caller is not implicitly offered --
+neither as a value nor as a place. (Receiver) A really visible `private` declaration in the callee's lexical context
+is not overridden by a value or a place from the dynamic context. The rule applies to autofill,
+the transparent caller place and the dynamic part of the former binding, alike for every form of `call`,
+`C(args)`, ordinary calls, the interpreter and native execution. Therefore, before an external dynamic binding is accepted,
+it is determined which lexical declaration is really visible and whether it is protected by `private`; checking
+the source alone is not enough. `private` is a filter of a specific place, not a name barrier and not access protection:
+a `private` source is skipped and the permitted lookup goes on, and a `private x` of an ancestor does not close a new
+inner unmarked `x`. Not forbidden: explicit passing (including one's own `private` value),
+explicitly filling a receiving `private` place with an actual, nested lexical visibility, explicit
+paths and `node`, and shadowing an outer `private` by a new inner declaration. `private` does not replace
+write restrictions (`const`, `immutable`). An explicitly passed value does not carry the `private` history to its copies;
+the graph record `S\private\field` is not flattened into `S\field`. Use the common binder without a separate registry
+or checks on direct reads. [Full contract](LMX_semantics.en.md#private-binding).
 
 <a id="call-frame-20261115"></a>
-Every call creates its own namespace. For fn/sub/catch, unified data describes the inputs;
-args in call/fncall contains actual values. Short headers remain. An actual replaces the corresponding
+### Call frame
+
+Every call creates its own namespace. The inputs are described by the data of the selected Structure (`parent(C)`):
+the input places, their requirements, defaults, modifiers and the field `return`; `args` in `call` contains actual values.
+Short headers remain. An actual replaces the corresponding
 source declaration in the frame, and its initializer does not execute. Preparation collects only
-data/code roots, without visiting branches or graph references or auto-filling source data.
+data/code roots, without visiting branches or graph references or writing autofill into source data.
 
 Entry has no initializer-execution phase. Ready declarations fold during clean-graph construction
 without program calls; uninit:T remains. An unused computed data field is not executed.
-Reading obtains its value through the common mechanism, as with `data\field`: the written RHS
+Reading obtains its value through the common mechanism, as with `D\field`: the written RHS
 executes, not an implicit call on the obtained reference. Given `@: fptr getFuncPtr()`,
 `fptr("hello world")` first obtains the pointer, then calls the resulting function.
 
 Variables and const are visible from their initial declaration onward in their scope and below.
 Names of Structures and callables retain bidirectional visibility; a function-pointer variable does not.
-A new branch name does not escape its branch. Repeated `int: x bump()` retains evaluation,
-admission, and assignment to existing x; only the repeated C declaration is omitted. Physical repeated
+A new branch name does not escape its branch.
+
+<a id="shadowing-levels"></a>
+A declaration at a nested level shadows an outer declaration of the same name: an inner `Text x` shadows an outer `int x`
+without writing `Text` into the outer `int` cell. At the same level there is nothing to shadow, and the already existing
+place is used: a repeated `int: x bump()` retains evaluation, admission, and assignment to the existing x under the receiver contract --
+the new right part is evaluated and assigned, the absence of a right part does not zero the value, and there is no second cell;
+only the repeated C declaration is omitted. After exit from the inner scope the outer declaration is visible again, with its place,
+write mode and `private`. A use before a later own declaration is resolved in the ordinary way
+through the accessible outer context: the future declaration does not block the whole body. Physical repeated
 fields remain and are selected by `S\[n]x`. An explicit path is not restricted by the declaration
 order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
-Bare x and @x refer to the frame place, independently of source-field replacement immediately at entry,
-even before the first read: the selected value or computed description is retained.
-The rule is the same for explicit data, lexical binding, and dynamic binding. It does not deep-copy
-referenced objects. `x := 0` changes the namespace; `data\x := 0` changes the source graph.
+<a id="inline-declaration-control"></a>
+One case remains with the executor's reading ([TZ §7.4](new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+[Р106](../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
+where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
+between the caller's local context and the callee's place at the call, while an inline scope stays within the same
+activation; the value 5 would need a new rule, which the TZ forbids introducing. This is not an author's decision.
+[Control example](LMX_semantics.en.md#inline-declaration-control).
+
+Bare x and @x refer to the selected place. The own place of the frame does not depend on source-field replacement immediately
+at entry, even before the first read: the selected value or computed description is retained; the rule is the same
+for explicit data, lexical binding, and the former dynamic binding, and it does not deep-copy
+referenced objects. The transparent caller place is the caller's place itself ([L2 §11](L2_spec_en.md#binding-caller-place)).
+`x := 0` changes the selected place: the own place of the frame writes neither to the graph nor to the caller, the transparent caller
+place writes to it at once; `D\x := 0` changes the source graph of the data.
 For computed input `int: x next()`, @x obtains the value and the local cell's address.
-With `@(data\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
+With `@(D\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
 getValue()'s result: an explicit path executes nothing (the author's decision of 2026-11-17; the former rule is withdrawn).
 A ready place is addressed directly.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
 Copying code to equalize edit-application timing is cancelled. Native and the walker may apply an edit
-at different times before endturn; namespace independence remains. Bindings use hidden arguments without
+at different times before endturn; namespace independence remains. Bindings use hidden arguments ([executors](#binding-executors)) without
 an environment copy. Graph edits neither clear native nor start checking/compilation.
-Methods and ordinary Structures share compilation without data=code; different actuals yield different
+Methods and ordinary Structures share compilation without data=code: the data of the selected occurrence is its `parent`;
+different actuals and different modes of hidden inputs yield different
 C signatures, and a header without code describes a call.
 
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
 explicit writes are observed through actual aliases in execution order.
 [Agreed norm](LMX_semantics.en.md#call-frame-20261115),
-[single M14 task](../next_core_tasks_v3.md#native-structures).
+[single M14 task](../next_core_tasks_v3.md#native-structures),
+[binding plan](../next_core_tasks_v3.md#binding-callables-20261119).
+
+<a id="binding-executors"></a>
+### Native code, the walker and the bridge
+
+A direct native-to-native call is kept wherever the selected implementation, types and binding are known.
+Autofill is lowered as a parameter of the same `T` as an explicit actual; the transparent caller place,
+as a hidden address of the caller's cell; the former binding (fallback) gives an own place.
+A common C body may be shared between modes through adapters, and an adapter must preserve the owner of the record
+and the behaviour of `@`. With identical explicit actuals the mode of a particular hidden input may differ
+because of the caller's context and `private`: an existing native entry must match the real contract
+or receive a correct description of the place. One code may have several actual signatures, including a single
+explicit contract with different place modes (own copy, caller's place). How to express this in the current ABI
+is determined by the work of the [plan](../next_core_tasks_v3.md#binding-callables-20261119); no new user
+pointer types are introduced. Service C functions, the bridge and the `call` dispatcher do not replace the caller's context with their own
+service locals: the language's sources are determined by the program location of the call.
+
+An ordinary native local has no arena header `[type][value]` ([L2 §3](L2_spec_en.md#value-record)): its type cannot be read
+from the four bytes before its address. The type, the access mode, the initialization state and the applicable restrictions of the place follow
+the common place representation and the call contract. The four combinations -- native to native, native to walker,
+walker to native, walker to walker -- give one observable behaviour: `x` has one logical type `T`, and a permitted
+write changes the same logical place. For a run-time target unknown at translation the existing
+mechanism of access to the permitted local contexts is kept; the raw C stack is not explored as a dictionary of LMX names,
+and there is no static transitive closure of requirements.
+
+Load-dirty, flush, publication of local frames and copy-back on exits are not brought back. A read through an
+alias is not turned into a snapshot without proof that the observable behaviour under nested calls is kept.
+Explicit compilation, the existing native/walker choice and the endturn boundary are kept; the absence of a suitable
+native entry does not start hidden compilation; there are no permanent caches of all environments and no automatic
+graph invalidation. `restrict` is not applied merely because a pointer is passed hidden or because of `private`: such a C contract needs
+a separate proof that no forbidden overlaps exist.
+
+A transparent link does not extend lifetime; the address of a temporary C local does not become a portable structural reference,
+and the rules of Message and arenas do not change. At `yield` the selected binding is not rebound to a same-named local of the new
+caller: resumption uses the state of the saved activation and the ordinary lifetime restrictions.
+[Norm](LMX_semantics.en.md#binding-executors).
 
 <a id="call"></a>
 ## 12. Calls and explicit compilation

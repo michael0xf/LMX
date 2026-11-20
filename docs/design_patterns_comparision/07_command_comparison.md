@@ -1,170 +1,151 @@
-# 07. Command: сравнение исходников LMX и семи других языков
+# 07. Command: LMX и семь других языков
 
-20 ноября 2026 года · Один сценарий, восемь реализаций
+20 ноября 2026 года · Редакция по Python-прототипу
 
-## Задача и границы примера
+## Задача и границы
 
-Сбросить счётчик, передать общему исполнителю действие «прибавить 2», затем действие «удвоить». Исполнитель вызывает переданное действие, не зная его содержания; результат — 4.
+demo создаёт локальный value = 0, invoke сначала исполняет add_two по умолчанию, затем явно выбранный twice. Обе команды изменяют одну локальную переменную; результат 4.
 
-**Ожидаемый результат демонстрации: `4`.**
+**Ожидаемый результат: 4.**
 
-Два действия без явных аргументов и единый исполнитель. Нет очереди, undo, сериализации или истории. Сохраняется действие по умолчанию: прибавить 2. В разных языках отсутствие аргумента выражается default, перегрузкой, отдельной функцией или Option; демонстрация везде выбирает обе команды явно.
+Синхронное исполнение двух команд при доступном локальном контексте. Очередь, undo и сериализация не входят в пример. Обычная ссылка на метод сама по себе не продлевает время жизни локальной переменной.
 
-LMX взят без изменений из [согласованной русской подборки примеров](https://chatgpt.com/library?file_id=libfile_fde3_f-e112f68f2f20819185805436a1f1f225_bbe92b09b62881918d17958175103ded&account_id=personal). Для остальных языков найдены сетевые образцы по названию шаблона; на их основе написаны сопоставимые реализации именно этого сценария. Это оригинальная адаптация, а не дословная копия кода сайта и не измерение длины его полного учебного листинга. Источники приведены в конце.
+## Архитектура LMX
 
-## Как считались символы
+Python demo содержит локальный счётчик, две команды и invoke. В LMX связанные методы находятся в commands, а изменяемая value остаётся локальной в demo. invoke получает это место до вызова выбранной команды.
 
-Главная величина — **число непробельных символов** в показанном блоке исходника: все символы, для которых Python `str.isspace()` возвращает false. Пробелы, табуляции и переводы строк не учитываются. Это счётчик, а не преобразование кода в исполняемый минифицированный вариант; пробельные символы внутри строк также не считаются.
+Структура задаёт общий DATA связанных методов. Метод обращается к нужным ему полям; отдельная оболочка для demo из-за остальных полей не требуется. Обычная ссылка `@: name method` не вызывает method и не требует самостоятельного `fn`. Программа по-прежнему использует типы объявленных полей и правила конкретных вызовов. [Связывание и ссылки][B]
 
-Дополнительно показаны полный размер в символах Unicode и число физических строк. Для полного размера используется LF, без начальных и конечных пустых строк и с одним LF в конце. Здесь все исходники ASCII, поэтому при UTF-8 число байтов совпадает с полным числом символов.
+Пустая строка завершает корневой синтаксический блок. Внутренний `---` сохраняется там, где нужно продолжить внешнюю структуру. `node\` выбирает лексическую связь, а не переход к parent. [Границы блоков][E]
 
-Считаются объявления, импорты, обязательные классы-оболочки или `package`, вспомогательные функции и весь демонстрационный сценарий внутри `demo` / `Demo` / LMX `run`. Внешний запуск, `main`, печать результата, тестовый harness, Markdown и пояснения не входят. Реализация стандартной библиотеки и runtime не входит ни для одного языка. В измеряемом коде нет комментариев.
+## Подсчёт исходников
 
-Обычные функции, замыкания и стандартные типы callable разрешены. Python приведён без необязательных аннотаций типов; это не равенство статических гарантий с LMX или другими типизированными вариантами. Имена и учебная разбивка не нормализованы: числа описывают эти конкретные листинги, а не минимально возможную длину программы на языке.
+Главная метрика — **число непробельных символов**: `sum(not ch.isspace() for ch in code)`. Пробельные символы исключаются только из измерения; исходник сохраняет необходимое форматирование. Также приведены полный размер и число физических строк. Нормализация: LF, без пустых строк по краям, один LF после последней строки.
+
+Считается весь показанный листинг: объявления, импорты, необходимые языковые оболочки, методы и демонстрация. Внешний вызов, main, печать, тестовый harness, Markdown и реализация runtime/стандартной библиотеки не входят. Имена не нормализованы. Python записан без необязательных аннотаций; одинаковые статические гарантии не заявляются. Таблица измеряет эти программы, а не теоретический минимум для каждого языка.
 
 | Язык | Непробельных символов | Всего символов | Строк | К размеру LMX |
 |---|---:|---:|---:|---:|
-| LMX | 387 | 525 | 30 | 1.00× |
-| Python | 226 | 289 | 17 | 0.58× |
-| Java | 318 | 482 | 26 | 0.82× |
-| C++ | 231 | 306 | 22 | 0.60× |
-| C# | 303 | 471 | 28 | 0.78× |
-| TypeScript | 303 | 384 | 22 | 0.78× |
-| Go | 260 | 345 | 28 | 0.67× |
-| Rust | 443 | 529 | 26 | 1.14× |
+| LMX | 152 | 268 | 15 | 1.00× |
+| Python | 185 | 283 | 17 | 1.22× |
+| Java | 317 | 543 | 28 | 2.09× |
+| C++ | 252 | 371 | 18 | 1.66× |
+| C# | 250 | 437 | 20 | 1.64× |
+| TypeScript | 210 | 318 | 15 | 1.38× |
+| Go | 214 | 353 | 20 | 1.41× |
+| Rust | 281 | 361 | 13 | 1.85× |
 
-Отношение больше 1 означает, что этот листинг длиннее показанного LMX по непробельным символам.
+Отношение больше 1 означает более длинный листинг по непробельным символам.
 
 ## 1. LMX
 
 ```lmx
-Counter:
-    int: value 0
-end: Counter
-
-fn: CommandSignature ()
-
-AddTwoCommand:
-    execute:
-        Counter\value += 2
-end: AddTwoCommand
-
-DoubleCommand:
-    execute:
-        Counter\value *= 2
-end: DoubleCommand
-
-Invoker:
-    @: command CommandSignature AddTwoCommand\execute
-    run:
-        command()
-end: Invoker
-
-Demo:
+commands:
+    @: command add_two
     return: int
-    run:
-        Counter\value := 0
-        Invoker\run(command := AddTwoCommand\execute)
-        Invoker\run(command := DoubleCommand\execute)
-        return: Counter\value
-end: Demo
+    add_two:
+        value += 2
+    twice:
+        value *= 2
+    invoke:
+        required: value
+        command()
+    demo:
+        int: value 0
+        invoke()
+        invoke(command := twice)
+        return: value
 ```
 
-Вызов из исполняемого контекста: `Demo\run()`. Сам этот внешний вызов не входит в подсчёт.
+Внешний вызов: `commands\demo()`. Он не входит в подсчёт.
 
-Считаются последние согласованные правила `fn`, структурных требований, связывания и `import` из исходной подборки.
+Структура commands собирает связанные методы ровно как локальные Python-функции внутри demo. Объявление @: command add_two задаёт обычную ссылку со значением по умолчанию; отдельный fn не нужен для конкретного примера. value объявлен в code demo, а не в общей DATA, поэтому в invoke и телах команд это свободное имя. required: value в invoke обращается к месту непосредственного caller до command(), не объявляет собственную копию и устанавливает связь с demo.value. Команда затем получает от invoke уже установленный alias к тому же месту. Первый вызов даёт 2, второй — 4; каждый новый demo создаёт собственную локальную переменную. Общее return:int описывает числовой результат demo; остальные методы вызываются как действия и их результаты не потребляются.
+
+В начале demo value = 0. invoke() использует add_two и меняет её на 2. invoke(command := twice) явно выбирает вторую команду и меняет ту же переменную на 4. Повторный demo создаёт новую локальную value.
 
 ## 2. Python
 
 ```python
-class Counter:
+def demo():
     value = 0
 
-def add_two_command():
-    Counter.value += 2
+    def add_two_command():
+        nonlocal value
+        value += 2
 
-def double_command():
-    Counter.value *= 2
+    def double_command():
+        nonlocal value
+        value *= 2
 
-def invoke(command=add_two_command):
-    command()
+    def invoke(command=add_two_command):
+        command()
 
-def demo():
-    Counter.value = 0
-    invoke(add_two_command)
+    invoke()
     invoke(double_command)
-    return Counter.value
+    return value
 ```
 
-Внешний вызов: `demo()`.
-
-Функции — передаваемые команды, invoke — исполнитель. Тип callable здесь проверяется при выполнении; статический контракт не объявлен.
+Внешний вызов: `demo()`. Он не входит в подсчёт.
 
 ## 3. Java
 
 ```java
 class Example {
-    static int counter = 0;
+    static class Counter {
+        int value = 0;
 
-    static void addTwoCommand() {
-        counter += 2;
-    }
+        void addTwoCommand() {
+            value += 2;
+        }
 
-    static void doubleCommand() {
-        counter *= 2;
-    }
+        void doubleCommand() {
+            value *= 2;
+        }
 
-    static void invoke(Runnable command) {
-        command.run();
-    }
+        void invoke(Runnable command) {
+            command.run();
+        }
 
-    static void invoke() {
-        invoke(Example::addTwoCommand);
+        void invoke() {
+            invoke(this::addTwoCommand);
+        }
     }
 
     public static int demo() {
-        counter = 0;
-        invoke(Example::addTwoCommand);
-        invoke(Example::doubleCommand);
-        return counter;
+        Counter counter = new Counter();
+        counter.invoke();
+        counter.invoke(counter::doubleCommand);
+        return counter.value;
     }
 }
 ```
 
-Внешний вызов: `Example.demo()`.
-
-Runnable задаёт стандартный контракт действия без аргументов и результата. Перегрузка invoke() сохраняет команду по умолчанию.
+Внешний вызов: `Example.demo()`. Он не входит в подсчёт.
 
 ## 4. C++
 
 ```cpp
-int counter = 0;
-
-void addTwoCommand() {
-    counter += 2;
-}
-
-void doubleCommand() {
-    counter *= 2;
-}
-
-using Command = void (*)();
-
-void invoke(Command command = addTwoCommand) {
-    command();
-}
+#include <functional>
 
 int demo() {
-    counter = 0;
-    invoke(addTwoCommand);
+    int value = 0;
+    auto addTwoCommand = [&value] {
+        value += 2;
+    };
+    auto doubleCommand = [&value] {
+        value *= 2;
+    };
+    auto invoke = [&](std::function<void()> command = {}) {
+        if (command) command();
+        else addTwoCommand();
+    };
+    invoke();
     invoke(doubleCommand);
-    return counter;
+    return value;
 }
 ```
 
-Внешний вызов: `demo()`.
-
-Для этих команд достаточно обычного указателя на функцию: дополнительного состояния захвата у них нет. Счётчик хранится отдельно.
+Внешний вызов: `demo()`. Он не входит в подсчёт.
 
 ## 5. C#
 
@@ -172,156 +153,121 @@ int demo() {
 using System;
 
 static class Example {
-    static int counter = 0;
-
-    static void AddTwoCommand() {
-        counter += 2;
-    }
-
-    static void DoubleCommand() {
-        counter *= 2;
-    }
-
-    static void Invoke(Action command) {
-        command();
-    }
-
-    static void Invoke() {
-        Invoke(AddTwoCommand);
-    }
-
     public static int Demo() {
-        counter = 0;
-        Invoke(AddTwoCommand);
+        int value = 0;
+        void AddTwoCommand() {
+            value += 2;
+        }
+        void DoubleCommand() {
+            value *= 2;
+        }
+        void Invoke(Action command = null) {
+            if (command == null) command = AddTwoCommand;
+            command();
+        }
+        Invoke();
         Invoke(DoubleCommand);
-        return counter;
+        return value;
     }
 }
 ```
 
-Внешний вызов: `Example.Demo()`.
-
-Action — стандартный тип команды. Перегрузка без аргументов задаёт тот же default.
+Внешний вызов: `Example.Demo()`. Он не входит в подсчёт.
 
 ## 6. TypeScript
 
 ```typescript
-const counter = {value: 0};
-
-function addTwoCommand(): void {
-    counter.value += 2;
-}
-
-function doubleCommand(): void {
-    counter.value *= 2;
-}
-
-type Command = () => void;
-
-function invoke(command: Command = addTwoCommand): void {
-    command();
-}
-
 function demo(): number {
-    counter.value = 0;
-    invoke(addTwoCommand);
+    let value = 0;
+    const addTwoCommand = () => {
+        value += 2;
+    };
+    const doubleCommand = () => {
+        value *= 2;
+    };
+    function invoke(command: () => void = addTwoCommand): void {
+        command();
+    }
+    invoke();
     invoke(doubleCommand);
-    return counter.value;
+    return value;
 }
 ```
 
-Внешний вызов: `demo()`.
-
-Именованный функциональный тип выполняет роль сигнатуры; default задаётся непосредственно в параметре.
+Внешний вызов: `demo()`. Он не входит в подсчёт.
 
 ## 7. Go
 
 ```go
 package main
 
-var counter = 0
-
-func addTwoCommand() {
-    counter += 2
-}
-
-func doubleCommand() {
-    counter *= 2
-}
-
-type Command func()
-
-func invoke(command Command) {
-    command()
-}
-
-func invokeDefault() {
-    invoke(addTwoCommand)
-}
-
 func demo() int {
-    counter = 0
-    invoke(addTwoCommand)
+    value := 0
+    addTwoCommand := func() {
+        value += 2
+    }
+    doubleCommand := func() {
+        value *= 2
+    }
+    invoke := func(command func()) {
+        if command == nil {
+            command = addTwoCommand
+        }
+        command()
+    }
+    invoke(nil)
     invoke(doubleCommand)
-    return counter
+    return value
 }
 ```
 
-Внешний вызов: `demo()`.
-
-Go не использует default-параметр в этой записи: эквивалентный вызов с выбранной по умолчанию командой вынесен в invokeDefault().
+Внешний вызов: `demo()`. Он не входит в подсчёт.
 
 ## 8. Rust
 
 ```rust
 use std::cell::Cell;
 
-thread_local! {
-    static COUNTER: Cell<i32> = Cell::new(0);
-}
-
-fn add_two_command() {
-    COUNTER.with(|counter| counter.set(counter.get() + 2));
-}
-
-fn double_command() {
-    COUNTER.with(|counter| counter.set(counter.get() * 2));
-}
-
-type Command = fn();
-
-fn invoke(command: Option<Command>) {
-    command.unwrap_or(add_two_command)();
-}
-
 pub fn demo() -> i32 {
-    COUNTER.with(|counter| counter.set(0));
-    invoke(Some(add_two_command));
-    invoke(Some(double_command));
-    COUNTER.with(Cell::get)
+    let value = Cell::new(0);
+    let add_two_command = || value.set(value.get() + 2);
+    let double_command = || value.set(value.get() * 2);
+    let invoke = |command: Option<&dyn Fn()>| {
+        command.unwrap_or(&add_two_command)();
+    };
+    invoke(None);
+    invoke(Some(&double_command));
+    value.get()
 }
 ```
 
-Внешний вызов: `demo()`.
+Внешний вызов: `demo()`. Он не входит в подсчёт.
 
-Cell и thread_local! сохраняют изменяемый счётчик между вызовами без unsafe. Сценарий однопоточный; межпоточное общее состояние здесь не моделируется. None выбирает команду по умолчанию.
+## Что изменилось
 
-## Проверка и воспроизводимость
+LMX: **215 → 152 непробельных символов** относительно предыдущей согласованной редакции. Убрана обвязка, не нужная показанному сценарию: отдельные демонстрационные структуры, повторные описания сигнатур, промежуточные ссылки или перекладывание значений. Это изменение исходников; скорость исполнения не измерялась.
 
-Python, Java, C++ и TypeScript исполнены: два последовательных вызова входа дали `4` и `4`. Java проверена OpenJDK 21; C++ — g++ в режиме C++17; TypeScript — Node.js 24 с удалением типов перед исполнением. Для TypeScript это проверка выполнения, а не отдельный прогон `tsc --strict`. C#, Go и Rust прошли статическое ревью; их компиляторы в среде отсутствуют. LMX проверен по документам, без запуска ядра.
+Семь остальных листингов сохранены из предыдущей редакции: их показанный сценарий не изменился.
 
-Смысловые свойства, сохранённые в демонстрации (кроме запуска входа, проверены чтением кода):
+## Проверка
 
-- demo возвращает 4; повторный demo снова возвращает 4 благодаря явному сбросу.
-- Исполнитель вызывает переданный callable, а не выбирает команду по имени или условию.
-- Вызов default после сброса даёт 2.
+LMX проверен по согласованным правилам: DATA, обычные ссылки на методы, явные аргументы и autofill, места вызывающего, лексический node и синтаксические границы. LMX-ядро здесь не запускалось; результат указан как ожидаемый.
 
-Подсчёт воспроизводится непосредственно по восьми блокам исходников выше: `sum(not ch.isspace() for ch in code)` для основной колонки и `len(code)` для полной. Перед подсчётом применяется описанная нормализация перевода строк.
+Python, Java, C++ и TypeScript совпадают байт в байт с ранее исполненными вариантами; повторно запускать неизменённые программы не требовалось. C#, Go и Rust сохраняют статус статического ревью. Эта редакция не выдаёт переиспользование проверки за новый запуск.
 
-## Найденные сетевые образцы
+Метрики пересчитаны непосредственно из восьми блоков исходника. Тестовая обвязка в них не включена.
 
-1. [Refactoring.Guru — Command](https://refactoring.guru/design-patterns/command). Роли команды, получателя, исполнителя и клиента.
+## Источники правил и примеров
 
-2. [Refactoring.Guru — Command in Python, conceptual example](https://refactoring.guru/design-patterns/command/python/example). Проверен пример отдельного Invoker. Ниже оригинальная адаптация к счётчику; стандартные callable заменяют специальную иерархию команд.
+- [Связывание, структурный вызов и необязательный самостоятельный fn-контракт][B].
+- [Переданные объявления и импорт корневых const-объявлений][D].
+- [Пустая строка как завершение корневого блока][E].
 
-Из сетевых материалов взяты ориентиры по ролям участников и взаимодействию. Имена, арифметика, объём поведения и код адаптированы к общему LMX-сценарию. Сравнение не переносит в маленький пример дополнительные функции исходного учебного проекта.
+Ранее использованные сетевые образцы ролей шаблона сохранены как источники. Показанные программы — адаптации общего сценария, а не дословные копии или измерение длины этих страниц.
+
+- [Refactoring.Guru — Command](https://refactoring.guru/design-patterns/command)
+- [Refactoring.Guru — Command in Python, conceptual example](https://refactoring.guru/design-patterns/command/python/example)
+
+[B]: https://chatgpt.com/library?file_id=libfile_fde3_f-a38201c30fb88191b7207c0e48955c30_bbe92b09b62881918d17958175103ded&account_id=personal
+[D]: https://chatgpt.com/library?file_id=libfile_fde3_f-02443abbc4508191b7c8fd7894e3ac24_bbe92b09b62881918d17958175103ded&account_id=personal
+[E]: https://chatgpt.com/library?file_id=libfile_fde3_f-9d15a59bc5d881918724924fcef45b04_bbe92b09b62881918d17958175103ded&account_id=personal

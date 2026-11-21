@@ -352,6 +352,6 @@ This is a functional Bridge: independently varying abstractions and implementati
 
 The LMX listings are identical to the individual comparison files. They were reviewed against the agreed rules and the author’s clarifications; the LMX kernel was not run here. Actual execution and static-review status for the other languages is recorded in each comparison file. The Excel and PDF figures were calculated from these same listings.
 
-[B]: https://chatgpt.com/library?file_id=libfile_fde3_f-a38201c30fb88191b7207c0e48955c30_bbe92b09b62881918d17958175103ded&account_id=personal
-[D]: https://chatgpt.com/library?file_id=libfile_fde3_f-02443abbc4508191b7c8fd7894e3ac24_bbe92b09b62881918d17958175103ded&account_id=personal
-[E]: https://chatgpt.com/library?file_id=libfile_fde3_f-9d15a59bc5d881918724924fcef45b04_bbe92b09b62881918d17958175103ded&account_id=personal
+[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

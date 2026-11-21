@@ -350,6 +350,6 @@ LMX проверен по согласованным правилам: DATA, о�
 - [Refactoring.Guru — Factory Method in Python](https://refactoring.guru/design-patterns/factory-method/python/example)
 - [Refactoring.Guru — Prototype in Python](https://refactoring.guru/design-patterns/prototype/python/example)
 
-[B]: https://chatgpt.com/library?file_id=libfile_fde3_f-a38201c30fb88191b7207c0e48955c30_bbe92b09b62881918d17958175103ded&account_id=personal
-[D]: https://chatgpt.com/library?file_id=libfile_fde3_f-02443abbc4508191b7c8fd7894e3ac24_bbe92b09b62881918d17958175103ded&account_id=personal
-[E]: https://chatgpt.com/library?file_id=libfile_fde3_f-9d15a59bc5d881918724924fcef45b04_bbe92b09b62881918d17958175103ded&account_id=personal
+[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

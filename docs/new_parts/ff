@@ -1,0 +1,35 @@
+thickness:
+    []: int: thin 2
+    []: int: thick 3 
+    int: kind 
+    return: []: int
+    get:
+        if: kind = 0
+            return: thin
+        else:
+            return: thick   
+flyweight:
+    int: glyph
+    int: position
+    return: int
+    render:
+        return: glyph[0] * 10 + position
+    demo:
+        import: thickness
+        []: int: first get(0)
+        []: int: second get(0)
+        []: int: third get(1)
+        return: render(first, 3) + render(second, 7) + render(third, 1)
+
+
+drawing:
+    @: glyph
+    int: position
+    return: int
+    render:
+        return: glyph\width * 10 + position
+    demo:
+        @: first glyphs\get(0)
+        @: second glyphs\get(0)
+        @: third glyphs\get(1)
+        return: render(first; 3) + render(second; 7) + render(third; 1)

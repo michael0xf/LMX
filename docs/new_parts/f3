@@ -1,0 +1,23 @@
+immutable: thin: int: width 2
+
+immutable: thick: int: width 3
+
+glyphs:
+    int: kind
+    return: @
+    get:
+        if: kind = 0
+            return: thin
+        return: thick
+
+drawing:
+    @: glyph
+    int: position
+    return: int
+    render:
+        return: glyph\width * 10 + position
+    demo:
+        @: first glyphs\get(0)
+        @: second glyphs\get(0)
+        @: third glyphs\get(1)
+        return: render(first; 3) + render(second; 7) + render(third; 1)

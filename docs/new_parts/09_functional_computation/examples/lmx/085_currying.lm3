@@ -1,0 +1,24 @@
+AdderPrototype:
+    int: saved 0
+    inputs:
+        int: x
+        return: int
+        add:
+            return: x + node\saved
+
+AdderFactory:
+    int: increment
+    return: @
+    create:
+        @: instance (copy(AdderPrototype))
+        @: lexicalOwner parent(instance\inputs)
+        lexicalOwner\saved := increment
+        return: instance\inputs\add
+
+Demo:
+    return: int
+    run:
+        @: add5 AdderFactory\create(5)
+        @: add100 AdderFactory\create(100)
+        int: saved 1000
+        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)

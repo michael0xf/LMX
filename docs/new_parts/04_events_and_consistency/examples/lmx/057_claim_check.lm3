@@ -1,0 +1,25 @@
+independent: TicketData:
+    int: key 0
+    int: size 0
+
+SenderMessage:
+    @: blobs
+    @: transport
+    []: char payload
+    send:
+        int: key blobs\put(payload)
+        @: ticket (copy(TicketData))
+        ticket\key := key
+        ticket\size := length(payload)
+        transport\publish(ticket := ticket)
+
+ConsumerMessage:
+    @: blobs
+    @: consume
+    @: ticket
+    receivePayload:
+        throws: Payload
+        @: payload blobs\get(ticket\key)
+        if: length(payload) != ticket\size
+            throw: Payload()
+        consume(payload := payload)

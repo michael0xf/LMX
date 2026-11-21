@@ -1,0 +1,15 @@
+Filters:
+    int: value
+    return: int
+    normalize:
+        if: value < 0
+            return: -value
+        return: value
+    double:
+        return: value * 2
+    offset:
+        return: value + 1
+    pipeline:
+        return: offset(value := double(value := normalize(value := value)))
+    demo:
+        return: pipeline(value := -3)

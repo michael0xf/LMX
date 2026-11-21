@@ -1,0 +1,35 @@
+Box:
+    int: present 0
+    int: value 0
+
+Values:
+    int: x
+    return: @
+    unit:
+        @: result (copy(Box))
+        result\present := 1
+        result\value := x
+        return: result
+    half:
+        @: result (copy(Box))
+        if: x % 2 = 0
+            result\present := 1
+            result\value := x / 2
+        return: result
+
+Bind:
+    @: input Box
+    @: next
+    return: @
+    apply:
+        if: input\present = 0
+            return: input
+        return: next(input\value)
+
+Example:
+    int: x
+    return: @
+    run:
+        @: initial Values\unit(x)
+        @: first Bind\apply(initial; Values\half)
+        return: Bind\apply(first; Values\half)

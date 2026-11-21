@@ -1,0 +1,8 @@
+AmbassadorMessage:
+    @: http
+    return: int
+    catalog:
+        int: status http\post("https://catalog.example"; "/catalog/read")
+        if: status = 503
+            return: http\post("https://catalog.example"; "/catalog/read")
+        return: status

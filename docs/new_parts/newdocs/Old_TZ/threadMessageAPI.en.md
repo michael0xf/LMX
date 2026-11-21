@@ -74,7 +74,7 @@ Locate the current common call and mail mechanisms, connect `post` to them, and 
 | T20 | Timeout from sending; handler logs; result arrives later | `unanswered` sees original data/status. Logging alone neither cancels the call nor suppresses its later result. |
 | T21 | Direct receive and protocol processing | Existing queue/publication/lifetime rules are preserved; the same queued letter is not consumed independently twice. |
 | T22 | A waiting handler has no ordinary arguments/result | It is triggered by its exchange event, not by a scan of nullary API methods or an unrelated turn. |
-| T23 | A final send followed by `success: 1` | Existing successful-turn publication and completion rules are preserved. |
+| T23 | A final send followed by `success := 1` | Existing successful-turn publication and completion rules are preserved. |
 | T24 | Native/interpreted and stepped/dedicated-thread paths supported by the live tree | Same observable call and mail semantics; no new mode or special GUI entry pair. |
 | T25 | Explicit plural transport; compare grouping with elementary sends where grouping exists | The same calls, associations, and destinations; no implicit barrier, target enumeration, or change in timeout origin. Future bulk optimization is not required to pass the elementary grouped-source example. |
 | T26 | An ordinary deliberately no-result callable | No synthetic reply/ACK or spurious missing-result requirement is introduced by the transport. |

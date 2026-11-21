@@ -1,0 +1,21 @@
+Backends:
+    int: route
+    return: int
+    legacy:
+        return: 100 + route
+    modern:
+        return: 200 + route
+
+Router:
+    int: migrated 0
+    int: route
+    return: int
+    handle:
+        if: route = 1 && node\migrated != 0
+            return: Backends\modern(route := route)
+        return: Backends\legacy(route := route)
+    demo:
+        node\migrated := 0
+        int: before handle(route := 1)
+        node\migrated := 1
+        return: before + handle(route := 1) + handle(route := 2)

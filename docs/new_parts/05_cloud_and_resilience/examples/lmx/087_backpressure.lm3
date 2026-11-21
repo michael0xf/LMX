@@ -1,0 +1,16 @@
+ProducerMessage:
+    int: value
+    int: credit 0
+    @: consumer
+    return: int
+    grant:
+        node\credit += 1
+        return: node\credit
+    offer:
+        if: node\credit = 0
+            return: 0
+        node\credit -= 1
+        post:
+            ask:
+                consumer\accept(value := value)
+        return: 1

@@ -1,0 +1,17 @@
+ProjectionMessage:
+    int: total 0
+    int: last 0
+    int: seq
+    int: delta
+    return: int
+    apply:
+        throws: Gap
+        if: seq <= node\last
+            return: node\total
+        if: seq != node\last + 1
+            throw: Gap()
+        node\total += delta
+        node\last := seq
+        return: node\total
+    query:
+        return: node\total

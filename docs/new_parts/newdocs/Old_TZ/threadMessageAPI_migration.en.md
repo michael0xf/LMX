@@ -28,7 +28,7 @@ A deliberate no-result send and equivalent `post` use the same delivery with no 
 
 ## 6. Boundaries to preserve during refactoring
 
-Preserve FIFO, mailbox synchronization, arena ownership, publication, `endturn`, and lifetime. Timeout starts at the original send; logging in `unanswered` does not cancel the recipient, an `answer` route, or a late result. `undelivered`, timeout, and declared failure remain distinct outcomes. A final send before `success: 1` is published under existing turn rules; no OS thread per participant is required.
+Preserve FIFO, mailbox synchronization, arena ownership, publication, `endturn`, and lifetime. Timeout starts at the original send; logging in `unanswered` does not cancel the recipient, an `answer` route, or a late result. `undelivered`, timeout, and declared failure remain distinct outcomes. A final send before `success := 1` is published under existing turn rules; no OS thread per participant is required.
 
 ## 7. Migration and evidence
 

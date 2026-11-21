@@ -1,0 +1,22 @@
+# The author's case B-04, transit: an intermediary that does not consume value; change gets its own copy by the
+# former binding (B19), and a nested read inside transit after change sees 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: change () int
+    value := value + 3
+    return: 0
+fn: probe () int
+    return: value
+fn: transit () int
+    int: r change()
+    return: probe()
+fn: caller () int
+    int: value 5
+    int: inside transit()
+    return: value * 100 + inside
+sub: main ()
+    shared\Observed\seen := caller()
+main()

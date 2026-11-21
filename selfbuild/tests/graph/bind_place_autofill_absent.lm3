@@ -1,0 +1,16 @@
+# Autofill takes only the immediate caller (Р110 item 2): b has no x, so c's x has no value; the read refuses.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c (int: x) int
+    return: x
+fn: b () int
+    return: c()
+fn: a () int
+    int: x 1
+    return: b()
+sub: main ()
+    shared\Observed\seen := a()
+main()

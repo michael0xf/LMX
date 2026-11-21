@@ -1,0 +1,19 @@
+# The former binding stays the lowest source with its own copy (R01, R02, §6.3): the immediate caller relay has
+# no x, so inner copies outer's x; the write changes the copy, outer keeps 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: outer () int
+    int: x 5
+    fn: inner () int
+        x := 9
+        return: x
+    fn: relay () int
+        return: inner()
+    int: r relay()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := outer()
+main()

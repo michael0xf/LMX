@@ -1,0 +1,19 @@
+---
+    Observed:
+        int: seen 0
+    end: Observed
+---
+@: shared (data [] 0)
+fn: work () int
+    int: x
+    return: x
+end: work
+fn: caller () int
+    int: y 7
+    @: x int (@ y)
+    return: (work)
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

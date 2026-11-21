@@ -1,0 +1,22 @@
+---
+    Observed:
+        int: seen 506
+    end: Observed
+---
+@: shared (data [] 0)
+fn: c () int
+    :=: x (x + 1)
+    return: x
+end: c
+fn: b () int
+    return: (c)
+end: b
+fn: a () int
+    int: x 5
+    int: r (b)
+    return: ((x * 100) + r)
+end: a
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (a)
+end: main
+main:

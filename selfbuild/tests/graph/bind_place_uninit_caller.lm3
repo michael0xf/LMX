@@ -1,0 +1,16 @@
+# A write through the transparent place into a caller place without a value initializes it (§6.2).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee () int
+    x := 9
+    return: x
+fn: caller () int
+    int: x
+    int: r callee()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

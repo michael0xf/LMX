@@ -1,0 +1,29 @@
+---
+    Observed:
+        int: seen 20202
+    end: Observed
+---
+@: shared (data [] 0)
+fn: own (int: x) int
+    return: (typeof (@ x))
+end: own
+fn: free () int
+    return: (typeof (@ x))
+end: free
+fn: relay () int
+    return: (free)
+end: relay
+fn: middle () int
+    return: (relay)
+end: middle
+fn: caller () int
+    int: x 5
+    int: a (own)
+    int: b (free)
+    int: c (middle)
+    return: (((a * 10000) + (b * 100)) + c)
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

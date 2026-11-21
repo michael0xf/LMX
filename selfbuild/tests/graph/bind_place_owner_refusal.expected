@@ -1,0 +1,17 @@
+---
+    Observed:
+        int: seen 0
+    end: Observed
+---
+@: shared (data [] 0)
+fn: reader () int
+    int: missing 4
+    return: x
+end: reader
+fn: caller (int: x) int
+    return: (reader)
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

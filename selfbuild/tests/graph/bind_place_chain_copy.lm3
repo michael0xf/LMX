@@ -1,0 +1,20 @@
+# B holds its own copy of x from A (autofill, §6.1); C's transparent place is B.x (§6.4): B.x becomes 9, A.x
+# keeps 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c () int
+    x := 9
+    return: x
+fn: b (int: x) int
+    int: r c()
+    return: x * 100 + r
+fn: a () int
+    int: x 5
+    int: rb b()
+    return: x * 10000 + rb
+sub: main ()
+    shared\Observed\seen := a()
+main()

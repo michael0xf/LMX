@@ -1,0 +1,19 @@
+# The code place filled by autofill stays the callee's own (§6.1, Р114): it reads 5, writes 9 into its own
+# cell; the caller keeps 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x
+    int: got x
+    x := 9
+    return: got * 10 + x
+fn: caller () int
+    int: x 5
+    int: r work()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

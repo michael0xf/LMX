@@ -1,0 +1,31 @@
+---
+    Observed:
+        int: seen 49
+    end: Observed
+    First:
+        int: marker 4
+    end: First
+    Second:
+        int: marker 9
+    end: Second
+---
+@: shared (data [] 0)
+fn: replace () int
+    :=: selected (shared \ Second)
+    return: 0
+end: replace
+fn: keep (@: selected) int
+    :=: selected (shared \ Second)
+    return: 0
+end: keep
+fn: caller () int
+    @: selected (shared \ First)
+    int: k (keep)
+    int: first (selected \ marker)
+    int: r (replace)
+    return: ((first * 10) + (selected \ marker))
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

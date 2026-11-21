@@ -1368,6 +1368,17 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             status := lm_graph_emit_scope(g, f, code, body, 0, temps)
         if: status != 0
             return: status
+        # A reached `required:` over names is the use of each name and its check, at run time, as in the interpreter (lmx_graph_block_required);
+        # it comes before the modifiers over declarations, which count a written name as a declaration.
+        marked := c.lmx_graph_required_names(g, c.lmx_graph_get_in(g, body, i))
+        if: marked != 0U
+            c.fputs("        if: lmx_graph_block_required(l2_g, lmx_call_code, lmx_graph_get_in(l2_g, ", f)
+            status := lm_graph_emit_address(g, f, code, body)
+            if: status != 0
+                return: status
+            c.fprintf(f, ", %zuU), %zuU) != 0\n            %s\n", i, marked, leave_failure)
+            i := i + 1U
+            continue
         # A reached record of the modifiers executes the declarations given to them as arguments, each as a reached declaration of this body
         # (the author 2026-11-18, #marking-receivers-execute), as the interpreter does (lmx_graph_block_marked).
         marked := c.lmx_graph_marked_count(g, body, i)

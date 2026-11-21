@@ -1,0 +1,16 @@
+# No autofill where the receiving contract does not take the value (Р110 item 3): the read of x finds no value
+# and refuses 5, not 4 for a reference in an int place.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (int: x) int
+    return: x
+fn: caller () int
+    int: y 7
+    @: x int @y
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

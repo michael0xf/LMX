@@ -1,0 +1,20 @@
+# Autofill of a nested code place takes the immediate caller of the activation, never an enclosing level of
+# the same activation (§7.4, Р114): the inner x gets 7, the outer x stays 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x 5
+    int: inner 0
+    if: 1
+        int: x
+        inner := x
+    return: inner * 10 + x
+fn: caller () int
+    int: x 7
+    return: work()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

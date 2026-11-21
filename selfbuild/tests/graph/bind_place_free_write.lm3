@@ -1,0 +1,17 @@
+# A used external name with no own declaration denotes the caller's local place (R04, §6.2): the write 9
+# changes the caller's x at once.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee () int
+    x := 9
+    return: x
+fn: caller () int
+    int: x 5
+    int: r callee()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

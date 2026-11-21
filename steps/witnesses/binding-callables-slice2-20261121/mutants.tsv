@@ -1,0 +1,23 @@
+mutant	part	change	verdict	rows that change
+m1	I	no transparent place (lmx_graph_caller_place always 0)	killed (15 rows)	bind_place_free_write bind_place_address_free bind_place_reference bind_place_uninit_caller bind_place_nested_sees bind_place_chain_copy bind_place_chain_alias bind_place_required_connected bind_place_chain_reference_read bind_place_chain_reference_pass scan_free_name_written scan_free_name_address_first_use scan_free_name_address_assigned node_write dynamic_inputs
+m2	I	the transparent place for a row of ANY activation of the chain (the owner of the selected row)	killed (4 rows)	bind_place_fallback_lexical bind_place_address_fallback bind_place_chain_fallback bind_place_required_transit
+m3	I	autofill searches every activation outward	killed (2 rows)	bind_place_autofill_private bind_place_autofill_absent
+m4	I	no receiving-side private check in autofill	killed (2 rows)	bind_place_autofill_receiver_private bind_place_code_autofill_private
+m5	I	no kind check in autofill	killed (2 rows)	bind_place_autofill_kind_read bind_place_code_autofill_kind
+m6	I	the computation of a place in the reader's activation (no representative pushed)	killed (2 rows)	bind_place_owner_refusal bind_place_computed_context
+m7	I	autofill skips a computed source not yet computed	killed (1 row)	bind_place_autofill_entry
+m8	I	the store functions do not follow the link	killed (15 rows)	bind_place_free_write bind_place_address_free bind_place_reference bind_place_uninit_caller bind_place_nested_sees bind_place_chain_copy bind_place_chain_alias bind_place_required_connected bind_place_chain_reference_read bind_place_chain_reference_pass scan_free_name_written scan_free_name_address_first_use scan_free_name_address_assigned node_write dynamic_inputs
+m9	I	autofill as a link instead of an own copy	killed (7 rows)	bind_place_autofill_own bind_place_address_own bind_place_reference bind_place_chain_copy bind_place_code_autofill_read bind_place_code_autofill_own bind_place_code_autofill_nested
+m10	I	autofill of a code place from the enclosing level of the same activation	killed (2 rows)	bind_place_code_autofill_nested bind_place_required_inline
+m11	I	no autofill in lmx_graph_work_site	killed (3 rows)	bind_place_code_autofill_read bind_place_code_autofill_own bind_place_code_autofill_nested
+m12	I	autofill also on a repeat of the same level	killed (1 row)	bind_place_code_autofill_repeat
+m13	I	the capture's later-use check on the link row's own cell	survives	-
+m14	I	revision 2: a bare change of the head of the chain instead of the representative	killed by the self-test (5/5)	-
+m15	I	the representative pushed, the searches of names climbing \parent	killed (1 row)	bind_place_owner_refusal
+m20	I	the fast path on every row of this activation (also a free row not yet admitted, visible or past deferral)	survives	-
+m22	I	the private check of a code place without climbing to the record of modifiers (lmx_graph_written_of)	killed (1 row)	bind_place_code_autofill_private
+m17	II	the line does nothing (today)	killed (4 rows)	bind_place_required_connected bind_place_required_uninit bind_place_required_absent bind_place_required_inline
+m18	II	the line makes the name an own place of the activation, without a value	killed (5 rows)	bind_place_required_connected bind_place_required_uninit bind_place_required_autofilled bind_place_required_inline bind_place_required_computed
+m19	II	the line computes a place with its own initializer	killed (1 row)	bind_place_required_computed
+m21	II	the native image skips the line (no lmx_graph_block_required in the emitter)	killed (4 rows)	bind_place_required_connected bind_place_required_uninit bind_place_required_absent bind_place_required_inline
+m16	III	the load keeps its row pointer (no re-take after the computation)	killed (2 rows)	bind_place_stale_current bind_place_stale_caller

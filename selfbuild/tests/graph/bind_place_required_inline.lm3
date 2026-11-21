@@ -1,0 +1,16 @@
+# The book's control example #inline-declaration-control: the inner x has no source (main has no x, the outer
+# level is no source); the reached `required: x` refuses 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x 5
+    if: x = 5
+        int: x
+        required: x
+    return: x
+sub: main ()
+    shared\Observed\seen := work()
+main()

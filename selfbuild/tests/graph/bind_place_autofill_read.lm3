@@ -1,0 +1,15 @@
+# Autofill (TZ 2026-11-19 R03, §6.1): an own input with no actual and no value takes, at entry, the value of the
+# same-named place of the immediate caller.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (int: x) int
+    return: x
+fn: caller () int
+    int: x 5
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

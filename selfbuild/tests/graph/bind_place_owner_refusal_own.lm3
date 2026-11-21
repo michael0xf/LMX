@@ -1,0 +1,11 @@
+# The same initializer read by the caller itself refuses 3: the answer of a transparent read is the same.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: caller (int: x missing + 1) int
+    return: x
+sub: main ()
+    shared\Observed\seen := caller()
+main()

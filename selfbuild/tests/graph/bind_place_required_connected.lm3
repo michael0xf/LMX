@@ -1,0 +1,23 @@
+# The author's case B-04, connected: `required: value` uses and checks the caller's place and declares none;
+# change writes it through connected (B21); a nested read before connected returns sees 8 (no copy-out).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: change () int
+    value := value + 3
+    return: 0
+fn: probe () int
+    return: value
+fn: connected () int
+    required: value
+    int: r change()
+    return: probe()
+fn: caller () int
+    int: value 5
+    int: inside connected()
+    return: value * 100 + inside
+sub: main ()
+    shared\Observed\seen := caller()
+main()

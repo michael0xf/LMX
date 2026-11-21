@@ -1,0 +1,17 @@
+# No autofill of a code place whose contract does not take the caller's value (Р110 item 3; Р114): x stays
+# without a value, the read refuses 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x
+    return: x
+fn: caller () int
+    int: y 7
+    @: x int @y
+    return: work()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

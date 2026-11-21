@@ -1,0 +1,19 @@
+# A computed default replaced by an actual, or not used, does not run (§6.1, §10.1).
+(
+    Observed:
+        int: ticks 0
+        int: seen 0
+        int: unused 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: 40
+fn: callee (int: x tick()) int
+    return: x
+fn: idle (int: x tick()) int
+    return: 1
+sub: main ()
+    shared\Observed\seen := callee(3)
+    shared\Observed\unused := idle()
+main()

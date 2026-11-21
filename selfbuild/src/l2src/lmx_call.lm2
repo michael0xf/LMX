@@ -365,3 +365,23 @@ end: lmx_call_prim_values_origins
 fn: lmx_call_prim (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void) int
     return: lmx_call_prim_values(arena, code, data, refs, nargs, dest, out, 0, 0)
 end: lmx_call_prim
+
+# A representative (record kind 3; 1 is a walker frame, 2 a native or Graph record): lmx_graph_work_load pushes it
+# over the running chain while a computed place of an earlier activation -- its owner -- is computed, so that the
+# computation runs by the owner's rule (TZ 2026-11-19, Р110 item 4) and the physical chain keeps every activation it
+# passes over: the collector marks them, a push takes its parent from the top, a pop goes back to it. It carries the
+# owner's code, inputs and frame. A search of names reads the owner for it: the owner of the frame it carries.
+fn: lmx_activation_stand (@: record c.LmxActivation) @: c.LmxActivation
+    @: frame c.LmxGraphFrame 0
+    if: record = 0 || record\kind != 3
+        return: record
+    frame := (cast: (@: c.LmxGraphFrame) record\frame)
+    return: frame\activation
+
+# The record a search of names reads after record: the parent of the record it stands for, read in turn for the
+# record that one stands for. The physical chain is record\parent, as before.
+fn: lmx_activation_next (@: record c.LmxActivation) @: c.LmxActivation
+    @: owner c.LmxActivation lmx_activation_stand(record)
+    if: owner = 0
+        return: 0
+    return: lmx_activation_stand((cast: (@: c.LmxActivation) owner\parent))

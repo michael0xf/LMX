@@ -1,0 +1,17 @@
+# A repeat of a declaration of the same level without a value is the same place (§7.2); there is no new place
+# and no autofill (Р114): 3, not the caller's 7.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x 3
+    int: x
+    return: x
+fn: caller () int
+    int: x 7
+    return: work()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

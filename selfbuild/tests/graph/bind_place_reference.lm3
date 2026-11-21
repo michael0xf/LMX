@@ -1,0 +1,26 @@
+# A reference variable through the transparent place is retargeted in the caller (§3, §6.2); an own
+# autofilled input changes only its own copy: 4, then 9.
+(
+    Observed:
+        int: seen 0
+    First:
+        int: marker 4
+    Second:
+        int: marker 9
+)
+@: shared data[0]
+fn: replace () int
+    selected := shared\Second
+    return: 0
+fn: keep (@: selected) int
+    selected := shared\Second
+    return: 0
+fn: caller () int
+    @: selected shared\First
+    int: k keep()
+    int: first selected\marker
+    int: r replace()
+    return: first * 10 + selected\marker
+sub: main ()
+    shared\Observed\seen := caller()
+main()

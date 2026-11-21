@@ -1,0 +1,18 @@
+# @x addresses the selected place (§6.2, B05): for the transparent place it is the caller's cell -- the read
+# through it gives 9 and the caller has 9.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: free () int
+    @: p int @x
+    x := 9
+    return: \p
+fn: caller () int
+    int: x 5
+    int: r free()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

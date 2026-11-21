@@ -1,0 +1,25 @@
+# A computed place of the caller read transparently: it is computed in the caller's activation (Р110 item 4)
+# and grows the caller's rows: a kernel defect fixed here -- the row pointer was kept across that computation.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+int: a0 1
+int: a1 1
+int: a2 1
+int: a3 1
+int: a4 1
+int: a5 1
+int: a6 1
+int: a7 1
+int: a8 1
+int: a9 1
+fn: reader () int
+    return: x
+fn: caller (int: x \(@a0) + \(@a1) + \(@a2) + \(@a3) + \(@a4) + \(@a5) + \(@a6) + \(@a7) + \(@a8) + \(@a9)) int
+    int: r reader()
+    return: r * 100 + x
+sub: main ()
+    shared\Observed\seen := caller()
+main()

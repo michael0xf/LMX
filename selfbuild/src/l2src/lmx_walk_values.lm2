@@ -9670,7 +9670,7 @@ fn: lmx_activation_launch_value (@: arena c.LmxArena; @: record c.LmxActivation;
     int: binding_private 0
     if: arena = 0 || record = 0 || data = 0 || cell = 0 || out = 0
         return: 0
-    launch := (cast: (@: c.LmxActivation) record\parent)
+    launch := c.lmx_activation_stand((cast: (@: c.LmxActivation) record\parent))
     if: launch = 0 || launch\kind != 2 || launch\frame != (cast: (@: void) data)
         return: 0
     return: (cast: (int) (lmx_activation_record_find(arena, launch, 0U, out, @ origin, @ binding_private, 2, (cast: (@: void) cell)) > 0))
@@ -9683,7 +9683,7 @@ fn: lmx_activation_resolve (@: arena c.LmxArena; @: from c.LmxActivation; size_t
 end: lmx_activation_resolve
 
 fn: lmx_activation_resolve_origin (@: arena c.LmxArena; @: from c.LmxActivation; size_t: wanted; @: out c.LmxWalkValue; @@: origin void; @: binding_private int; int: mode) int
-    @: record c.LmxActivation from
+    @: record c.LmxActivation c.lmx_activation_stand(from)
     @: parent c.LmxActivation 0
     @: expected_origin void 0
     int: found 0
@@ -9706,7 +9706,7 @@ fn: lmx_activation_resolve_origin (@: arena c.LmxArena; @: from c.LmxActivation;
             return: 0
         if: mode = 0
             break
-        parent := record\parent
+        parent := c.lmx_activation_next(record)
         record := parent
     ---
     origin[0] := 0

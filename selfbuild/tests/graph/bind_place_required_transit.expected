@@ -1,0 +1,26 @@
+---
+    Observed:
+        int: seen 505
+    end: Observed
+---
+@: shared (data [] 0)
+fn: change () int
+    :=: value (value + 3)
+    return: 0
+end: change
+fn: probe () int
+    return: value
+end: probe
+fn: transit () int
+    int: r (change)
+    return: (probe)
+end: transit
+fn: caller () int
+    int: value 5
+    int: inside (transit)
+    return: ((value * 100) + inside)
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

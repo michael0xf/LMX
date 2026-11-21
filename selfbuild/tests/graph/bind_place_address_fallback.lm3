@@ -1,0 +1,20 @@
+# @x addresses the selected place (§6.2, B05): for the former binding it is the own copy (R01, R02) -- the read
+# through it gives 9, the source keeps 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: free () int
+    @: p int @x
+    x := 9
+    return: \p
+fn: relay () int
+    return: free()
+fn: caller () int
+    int: x 5
+    int: r relay()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

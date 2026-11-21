@@ -1,0 +1,23 @@
+---
+    Observed:
+        int: ticks 0
+        int: seen 3
+        int: unused 1
+    end: Observed
+---
+@: shared (data [] 0)
+fn: tick () int
+    :=: ((shared \ Observed) \ ticks) (((shared \ Observed) \ ticks) + 1)
+    return: 40
+end: tick
+fn: callee (int: x) int
+    return: x
+end: callee
+fn: idle (int: x) int
+    return: 1
+end: idle
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (callee 3)
+    :=: ((shared \ Observed) \ unused) (idle)
+end: main
+main:

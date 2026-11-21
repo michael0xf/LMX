@@ -1,0 +1,23 @@
+# A computed place whose computation grows the rows of its own frame: each `@aN` is a first use and adds a row,
+# and the rows move: a kernel defect fixed here -- the row pointer was kept across a computation that grows them.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+int: a0 1
+int: a1 1
+int: a2 1
+int: a3 1
+int: a4 1
+int: a5 1
+int: a6 1
+int: a7 1
+int: a8 1
+int: a9 1
+fn: callee (int: x \(@a0) + \(@a1) + \(@a2) + \(@a3) + \(@a4) + \(@a5) + \(@a6) + \(@a7) + \(@a8) + \(@a9)) int
+    int: first x
+    return: first * 100 + x
+sub: main ()
+    shared\Observed\seen := callee()
+main()

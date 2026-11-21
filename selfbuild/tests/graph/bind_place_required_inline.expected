@@ -1,0 +1,15 @@
+---
+    Observed:
+        int: seen 0
+    end: Observed
+---
+@: shared (data [] 0)
+fn: work () int
+    int: x 5
+    if: (x = 5) ((int x) (required x))
+    return: x
+end: work
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (work)
+end: main
+main:

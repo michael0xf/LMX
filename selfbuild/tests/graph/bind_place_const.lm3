@@ -1,0 +1,17 @@
+# The write restrictions of the selected place hold through the transparent place (R06, §6.5): the caller's
+# const x refuses the write, 4.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee () int
+    x := 6
+    return: x
+fn: caller () int
+    const: int: x 5
+    int: r callee()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := caller()
+main()

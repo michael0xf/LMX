@@ -1,0 +1,18 @@
+# Autofill happens at entry (Р110 item 5): the caller's computed x is computed once though neither side reads
+# it.
+(
+    Observed:
+        int: ticks 0
+        int: seen 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: 40
+fn: callee (int: x) int
+    return: 1
+fn: caller (int: x tick()) int
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

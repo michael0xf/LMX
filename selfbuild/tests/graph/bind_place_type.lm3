@@ -1,0 +1,24 @@
+# One LMX type T in every binding mode (§3): typeof(@x) is int (2) for autofill, the transparent place and the
+# fallback copy; the transport pointer is not seen. (typeof of an int place refuses: base row typeof_value.)
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: own (int: x) int
+    return: typeof(@x)
+fn: free () int
+    return: typeof(@x)
+fn: relay () int
+    return: free()
+fn: middle () int
+    return: relay()
+fn: caller () int
+    int: x 5
+    int: a own()
+    int: b free()
+    int: c middle()
+    return: a * 10000 + b * 100 + c
+sub: main ()
+    shared\Observed\seen := caller()
+main()

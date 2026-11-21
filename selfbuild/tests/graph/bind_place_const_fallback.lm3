@@ -1,0 +1,18 @@
+# The fallback copy keeps the const of its source (Р110 item 1): the write into it refuses, 4.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c () int
+    x := 6
+    return: x
+fn: b () int
+    return: c()
+fn: a () int
+    const: int: x 5
+    int: r b()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := a()
+main()

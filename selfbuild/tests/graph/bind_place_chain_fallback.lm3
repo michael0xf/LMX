@@ -1,0 +1,19 @@
+# A -> B -> C where B does not consume x (R07, §6.4): C reaches A's x by the former binding with its own copy;
+# A keeps 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c () int
+    x := x + 1
+    return: x
+fn: b () int
+    return: c()
+fn: a () int
+    int: x 5
+    int: r b()
+    return: x * 100 + r
+sub: main ()
+    shared\Observed\seen := a()
+main()

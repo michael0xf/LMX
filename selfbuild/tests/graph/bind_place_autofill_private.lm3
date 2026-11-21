@@ -1,0 +1,18 @@
+# Autofill takes only the immediate caller (Р110 item 2): b's x is private, the search does not go on to a;
+# c's x has no value and its read refuses, 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c (int: x) int
+    return: x
+fn: b () int
+    private: int: x 2
+    return: c()
+fn: a () int
+    int: x 1
+    return: b()
+sub: main ()
+    shared\Observed\seen := a()
+main()

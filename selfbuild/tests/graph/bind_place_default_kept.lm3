@@ -1,0 +1,14 @@
+# An own ready default is not replaced by the caller's local (§6.1); an explicit actual replaces it.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (int: x 7) int
+    return: x
+fn: caller () int
+    int: x 5
+    return: callee() * 100 + callee(3)
+sub: main ()
+    shared\Observed\seen := caller()
+main()

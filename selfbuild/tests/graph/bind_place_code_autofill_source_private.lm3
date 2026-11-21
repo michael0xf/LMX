@@ -1,0 +1,16 @@
+# A private source gives no autofill to a code place (R05, §6.1 item 4; Р114): x has no value, the read
+# refuses 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: work () int
+    int: x
+    return: x
+fn: caller () int
+    private: int: x 7
+    return: work()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

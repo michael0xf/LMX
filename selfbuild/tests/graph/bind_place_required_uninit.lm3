@@ -1,0 +1,16 @@
+# A reached `required: value` checks the place it denotes (TZ 2026-11-19 §9.7): the caller's place has no value,
+# the line refuses 5, as a read of it does.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: connected () int
+    required: value
+    return: 1
+fn: caller () int
+    int: value
+    return: connected()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

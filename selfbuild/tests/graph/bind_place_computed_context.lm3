@@ -1,0 +1,14 @@
+# A transparent read of a computed caller place runs the caller's initializer by the caller's rule (Р110 item
+# 4): y is the caller's 3, not the callee's 100.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (int: y 100) int
+    return: x
+fn: caller (int: y 3; int: x y + 1) int
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

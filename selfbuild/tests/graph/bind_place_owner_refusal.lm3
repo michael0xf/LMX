@@ -1,0 +1,15 @@
+# A failure in the initializer of a caller's place read transparently is the caller's failure (Р110 item 4):
+# missing is not the caller's name -- the reader's own missing is not seen -- the read refuses 3.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: reader () int
+    int: missing 4
+    return: x
+fn: caller (int: x missing + 1) int
+    return: reader()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

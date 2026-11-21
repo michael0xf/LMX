@@ -1,0 +1,15 @@
+# A private receiving place takes no autofill (R05, §6.1 item 4): x stays without a value and its read
+# refuses 5.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: callee (private: int: x) int
+    return: x
+fn: caller () int
+    int: x 11
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

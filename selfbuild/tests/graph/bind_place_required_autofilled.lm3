@@ -1,0 +1,16 @@
+# `required: a` in code checks the place after autofill (the book #required-receiver, G\g()): the input a has
+# no value of its own, autofill gives it the caller's 7, the check passes.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: g (int: a) int
+    required: a
+    return: a
+fn: caller () int
+    int: a 7
+    return: g()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

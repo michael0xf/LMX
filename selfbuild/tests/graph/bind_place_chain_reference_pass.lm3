@@ -1,0 +1,28 @@
+# B uses A's reference variable only as an actual of another call; C retargets it by its bare name: the write
+# reaches A through B's transparent place (§6.4; an actual is taken when the call evaluates its operands).
+(
+    Observed:
+        int: seen 0
+    First:
+        int: marker 4
+    Second:
+        int: marker 9
+)
+@: shared data[0]
+@: Mark (int: marker 0)
+fn: look (@: s Mark) int
+    return: s\marker
+fn: c () int
+    selected := shared\Second
+    return: selected\marker
+fn: b () int
+    int: before look(selected)
+    int: r c()
+    return: before * 100 + r
+fn: a () int
+    @: selected shared\First
+    int: rb b()
+    return: selected\marker * 10000 + rb
+sub: main ()
+    shared\Observed\seen := a()
+main()

@@ -1,0 +1,19 @@
+# A place with its own initializer is initialized by its declaration: `required: x` passes and does not compute
+# it: a computed initializer is not absent only because it has not run yet (TZ 2026-11-19 §6.1).
+(
+    Observed:
+        int: ticks 0
+        int: seen 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: 40
+fn: callee () int
+    required: x
+    return: 1
+fn: caller (int: x tick()) int
+    return: callee()
+sub: main ()
+    shared\Observed\seen := caller()
+main()

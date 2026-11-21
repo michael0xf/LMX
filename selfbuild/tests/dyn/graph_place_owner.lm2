@@ -1,0 +1,118 @@
+# A computed place of the caller read transparently is computed by its owner (TZ 2026-11-19 R04, Р110 item 4) while
+# the physical chain of activations stays whole (step 21.4: a representative record of the owner is pushed over the
+# running chain). Reader reads the caller's computed x; its initializer calls the native Collect, which walks the
+# chain the collector marks -- from the head of the arena's activations by parent, as lmx_gc_mark_execution does -- and
+# answers 9 when the record of Reader is on it, 1 otherwise, and then sweeps the next generation. Caller reads x again
+# after Reader returns (computed once). Pinned: Caller() = Reader() * 10 + x = 99. Under a bare change of the head of
+# the chain to the owner during the computation, Reader is not on the marked chain: x is 1 and Caller() = 11.
+# (A FOREIGN Value held by Reader was not used: an L3 double formal does not receive one today, answer 5.)
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The backup scalar companions lose their semantic edges before the collection, as in the case 156 of graph_call_values.
+sub: go_clear_companions (@: arena c.LmxArena)
+    @: pool c.LmxPool arena\arrays
+    @: chunk c.LmxChunk 0
+    @: contexts c.LmxWalkValue 0
+    @: context c.LmxWalkValue 0
+    size_t: i 0U
+    while: pool != 0
+        if: pool\type = c.LMX_TYPE_FOREIGN
+            chunk := c.lmx_pool_chunk_head(pool)
+            while: chunk != 0
+                contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+                i := 0U
+                while: contexts != 0 && i < c.lmx_chunk_cells(chunk, pool\stride)
+                    context := contexts + i
+                    context\model := 0
+                    context\references := 0
+                    context\referent := 0
+                    context\source_type := 0
+                    i := i + 1U
+                ---
+                chunk := (cast: (@: c.LmxChunk) chunk\next)
+            ---
+        ---
+        pool := pool\next
+    ---
+    return
+
+# Collect answers 9 when the record of Reader is on the chain the collector marks, 1 otherwise; then it strips the
+# companions and sweeps the next generation.
+fn: go_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: reader c.Lmx 0
+    @: record c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
+    c.LmxWalkValue: value
+    unsigned: seen 1U
+    if: nargs != 0U || g = 0
+        return: 212
+    reader := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, code, c.lmx_graph_intern("Reader", 6U)))
+    while: record != 0
+        if: reader != 0 && (cast: (@: void) record\code) = (cast: (@: void) reader)
+            seen := 9U
+        record := (cast: (@: c.LmxActivation) record\parent)
+    go_clear_companions(arena)
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_walk_value_num(@ value, c.LMX_TYPE_INT, seen) != c.LMX_WALK_OK
+        return: 212
+    return: c.lmx_call_result_value(arena, code, @ value, dest, out, result)
+
+fn: go_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: go_owner_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    int: opened 0
+    @: collect c.Lmx 0
+    @: caller c.Lmx 0
+    @: file c.FILE 0
+    @@: codes void c.calloc(2U, sizeof(@: void))
+    c.LmxWalkValue: result
+    c.LmxExecutionRoots: code_roots
+    @: roots_before c.LmxExecutionRoots 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: codes = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 200
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_place_owner_code.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 200
+    if: c.fputs("fn: Collect () int\n    return: 9\nfn: Reader () int\n    int: seen x\n    return: seen\n", file) < 0
+        return: 201
+    if: c.fputs("fn: Caller (int: x Collect()) int\n    return: Reader() * 10 + x\n", file) < 0 || c.fclose(file) != 0
+        return: 201
+    status := c.lm_graph_build_file(g, "graph_place_owner_code.lm3", @ root)
+    c.remove("graph_place_owner_code.lm3")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 202
+    collect := go_named(g, root, "Collect")
+    caller := go_named(g, root, "Caller")
+    if: collect = 0 || caller = 0
+        return: 203
+    collect\native := (cast: (c.LmxEntry) c.go_collect)
+    # The assertion owner retains the callables and the root.
+    codes[0] := (cast: (@: void) collect)
+    codes[1] := (cast: (@: void) caller)
+    roots_before := c.lmx_execution_roots_mark(@ arena)
+    c.lmx_execution_roots_push(@ arena, @ code_roots, 0, 0U, codes, 2U, (cast: (@: void) root), 0)
+    status := c.lmx_graph_invoke_values(g, caller, 0, 0U, 0, @ result)
+    c.lmx_execution_roots_restore(@ arena, roots_before)
+    if: status != 0 || result\present = 0 || result\kind != c.LMX_WALK_VALUE_NUMBER || result\number != 99
+        c.fprintf(c.stderr, "graph place owner status=%d number=%d\n", status, (cast: (int) result\number))
+        return: 204
+    if: arena\activation != 0 || arena\execution_roots != 0
+        return: 205
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    c.free(codes)
+    return: 7

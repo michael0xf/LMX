@@ -1,0 +1,18 @@
+---
+    Observed:
+        int: seen 0
+    end: Observed
+---
+@: shared (data [] 0)
+fn: callee (int: x) int
+    return: x
+end: callee
+fn: caller () int
+    int: y 7
+    @: x int (@ y)
+    return: (callee)
+end: caller
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (caller)
+end: main
+main:

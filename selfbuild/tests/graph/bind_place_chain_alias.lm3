@@ -1,0 +1,20 @@
+# B denotes A.x transparently; C's place through B keeps the address of A.x (§6.4): the write reaches A.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: c () int
+    x := 9
+    return: x
+fn: b () int
+    int: before x + 0
+    int: r c()
+    return: x * 100 + r
+fn: a () int
+    int: x 5
+    int: rb b()
+    return: x * 10000 + rb
+sub: main ()
+    shared\Observed\seen := a()
+main()

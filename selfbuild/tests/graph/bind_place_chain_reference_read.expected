@@ -1,0 +1,30 @@
+---
+    Observed:
+        int: seen 90409
+    end: Observed
+    First:
+        int: marker 4
+    end: First
+    Second:
+        int: marker 9
+    end: Second
+---
+@: shared (data [] 0)
+fn: c () int
+    :=: selected (shared \ Second)
+    return: (selected \ marker)
+end: c
+fn: b () int
+    int: before (selected \ marker)
+    int: r (c)
+    return: ((before * 100) + r)
+end: b
+fn: a () int
+    @: selected (shared \ First)
+    int: rb (b)
+    return: (((selected \ marker) * 10000) + rb)
+end: a
+sub: main ()
+    :=: ((shared \ Observed) \ seen) (a)
+end: main
+main:

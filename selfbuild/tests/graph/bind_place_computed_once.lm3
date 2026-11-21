@@ -1,0 +1,19 @@
+# A transparent read of a computed caller place computes it once in that place, by the caller's rule
+# (Р110 item 4).
+(
+    Observed:
+        int: ticks 0
+        int: seen 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: 40
+fn: callee () int
+    return: x
+fn: caller (int: x tick()) int
+    int: a callee()
+    return: a + x
+sub: main ()
+    shared\Observed\seen := caller()
+main()

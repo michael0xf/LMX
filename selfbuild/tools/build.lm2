@@ -1524,7 +1524,7 @@ fn: decl_call (@: f c.FILE) int
         return: 1
     if: c.fputs("tual selected route even if the called body changes its native word.\nfnptr: LmxCallEntry (@: Lmx node) int\n\ndefine: LMX_CALL_OK 0\ndefine: LMX_CALL_INVALID 1\ndefine: LMX_CALL_NOT_CALLABLE 2\ndefine: LMX_CALL_ROUTE_NATIVE 0\ndefine: LMX_CALL_ROUTE_WALK 1\ndefine: LMX_CALL_ROUTE_REFUSED 2\ndefine: LMX_CALL_WALK_ERR_LO 1\ndefine: LMX_CALL_WALK_ERR_HI 7\ndefine: LMX_CALL_WALK_THROWN 8\n\nprototype:\n    # The arena's domain question only: no separate callable shape.\n    fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int\n    fn: lmx_call_node (@: Lmx callable) @: Lmx\n    # Pure status conversion. Errors1..7 and malformed statuses abort (X1).\n    # An encoded walked throw returns its selected-callee ordinal. Nothing is remembered.\n    fn: lmx_call_note_walk_fail (int: st) int\n    # One executed native edge through the SAME installed numeric map.\n    # data=code selects its own execution projection. No admission or names.\n    fn: lmx_call_index (@: LmxArena arena; @: Lmx data; @: Lmx code; size_t: edge) size_t\n    # Actual graph payload only; raw C ABI storage is separate.\n    fn: lmx_call_cell (@: LmxArena arena; @: void cell) @: void\n    # value is a required int output; a nonzero status promises no activation result.\n    fn: lmx_ca", f) < 0
         return: 1
-    if: c.fputs("ll0_mode (@: LmxArena arena; @: Lmx callable; @: int route; @: int value) int\n    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable; @: int value) int\n    # The ordinary explicit code/data transport. refs[k] is declared-width value storage; null storage means absent.\n    # A pointer's present-null value is not absence. Status and value are separate.\n    # Stop returns status0 with out absent; the caller must unwind on poll_escape before consuming result storage.\n    fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_call_prim_values_origins (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context; @@: void origins; @: int private_flags; size_t: origin_count) int\n    # The activation chain (slice 254, design 4.5): a record is pushed by whoever enters an activation and popped when it\n    # ends; a native frame registers its own working cells (storage and type, or a complete LmxWalkValue record).\n    fn: lmx_activation_push (@: LmxArena arena; @: LmxActivation record; int: kind; @: Lmx code; @@: void refs; @: void values; size_t: width; @: void frame) int\n    fn: lmx_activation_pop (@: LmxArena arena; @: LmxActivation record) void\n    fn: lmx_activation_bind (@: LmxArena arena; size_t: code; @: void storage; int: type; @: void value) int\n    fn: lmx_activation_bind_origin (@: LmxArena arena; size_t: code; @: void storage; int: type; @: void value; @: void origin) int\n    fn: lmx_activation_origins (@: LmxArena arena; @@: void origins; @: int private_flags; size_t: count) int\n    # The two statically linked ordinary walker entries. No installation/reg", f) < 0
+    if: c.fputs("ll0_mode (@: LmxArena arena; @: Lmx callable; @: int route; @: int value) int\n    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable; @: int value) int\n    # The ordinary explicit code/data transport. refs[k] is declared-width value storage; null storage means absent.\n    # A pointer's present-null value is not absence. Status and value are separate.\n    # Stop returns status0 with out absent; the caller must unwind on poll_escape before consuming result storage.\n    fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_call_prim_values_origins (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context; @@: void origins; @: int private_flags; size_t: origin_count) int\n    # The activation chain (slice 254, design 4.5): a record is pushed by whoever enters an activation and popped when it\n    # ends; a native frame registers its own working cells (storage and type, or a complete LmxWalkValue record).\n    fn: lmx_activation_push (@: LmxArena arena; @: LmxActivation record; int: kind; @: Lmx code; @@: void refs; @: void values; size_t: width; @: void frame) int\n    fn: lmx_activation_pop (@: LmxArena arena; @: LmxActivation record) void\n    # A search of names reads the owner for a representative (kind 3, lmx_graph_work_load): the record it reads for a\n    # record, and the next record of the search.\n    fn: lmx_activation_stand (@: LmxActivation record) @: LmxActivation\n    fn: lmx_activation_next (@: LmxActivation record) @: LmxActivation\n    fn: lmx_activation_bind (@: LmxArena arena; size_t: code; @: void storage; int: type; @: void value) int\n    fn: lmx_activation_bind_origin (@: LmxArena arena; size_t: code; @: void storage; int: type; @: void value; @: void origin) int\n    fn: lmx_activation_origins (@: LmxArena arena; @@: void origins; @: int private_flags; size_t: count) int\n    # The two statically linked ordinary walker entries. No installation/reg", f) < 0
         return: 1
     if: c.fputs("istration or callback-identity lookup.\n    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int\n    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_call_prim_dispatch_origins (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context; @@: void origins; @: int private_flags; size_t: origin_count) int\n    # Publish an already-computed dirty value through its admitted physical place.\n    # The write guard rejects a qualified/sealed place; failed stores abort as the caller's broken promise.\n    # No re-evaluation, repeated admission or module-local data graph is performed here.\n", f) < 0
         return: 1
@@ -1807,7 +1807,7 @@ fn: decl_message (@: f c.FILE) int
 end: decl_message
 
 fn: decl_value (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/lmx.h.lm1\"\n\n# One computed activation value,shared by native calls and interpretation.\n# The historic C type name is retained;no name is stored in a program graph.\n# Storage is the declared-width member below,not the enclosing record.\ndefine: LMX_WALK_VALUE_NUMBER 1\ndefine: LMX_WALK_VALUE_REFERENCE 2\n# A foreign by-value ABI object has already been copied into its exact C\n# transport type. This record borrows that object's storage for the call;\n# it is neither a graph reference nor a numeric VM place. No Model is forged.\ndefine: LMX_WALK_VALUE_FOREIGN 3\n# An input the caller did not form: a free name of the callee, to be resolved once at the callee's entry from the\n# chain of activation records (slice 254, design 4.5); present is 0 until then.  Unresolved, it becomes an ordinary\n# absent input (the callee's lexical source).\ndefine: LMX_WALK_VALUE_FREE 4\n# Already resolved at the reached call, awaiting its own lexical default.\ndefine: LMX_WALK_VALUE_MISSING 5\n# LmxWalkValue's shared physical record is declared with arena pool types.\n\nprototype:\n    fn: lmx_value_context_copy (@: LmxWalkValue out; @: LmxWalkValue source) void\n    fn: lmx_walk_value_ref_context (@: LmxWalkValue out; int: ty; @: void ref; @: LmxWalkValue context) int\n", f) < 0
+    if: c.fputs("predef: \"l2src/lmx.h.lm1\"\n\n# One computed activation value,shared by native calls and interpretation.\n# The historic C type name is retained;no name is stored in a program graph.\n# Storage is the declared-width member below,not the enclosing record.\ndefine: LMX_WALK_VALUE_NUMBER 1\ndefine: LMX_WALK_VALUE_REFERENCE 2\n# A foreign by-value ABI object has already been copied into its exact C\n# transport type. This record borrows that object's storage for the call;\n# it is neither a graph reference nor a numeric VM place. No Model is forged.\ndefine: LMX_WALK_VALUE_FOREIGN 3\n# An input the caller did not form: a free name of the callee, to be resolved once at the callee's entry from the\n# chain of activation records (slice 254, design 4.5); present is 0 until then.  Unresolved, it becomes an ordinary\n# absent input (the callee's lexical source).\ndefine: LMX_WALK_VALUE_FREE 4\n# Already resolved at the reached call, awaiting its own lexical default.\ndefine: LMX_WALK_VALUE_MISSING 5\n# A place of another activation (TZ 2026-11-19 R04, section 6.2): a working row of a clean-graph frame that stands for\n# a row of a calling frame -- ref is that LmxGraphFrame, wide the index of the row in it. The row holds no value.\ndefine: LMX_WALK_VALUE_PLACE 6\n# LmxWalkValue's shared physical record is declared with arena pool types.\n\nprototype:\n    fn: lmx_value_context_copy (@: LmxWalkValue out; @: LmxWalkValue source) void\n    fn: lmx_walk_value_ref_context (@: LmxWalkValue out; int: ty; @: void ref; @: LmxWalkValue context) int\n", f) < 0
         return: 1
     return: 0
 end: decl_value
@@ -2243,7 +2243,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: implements_names char c.calloc(78U, sizeof(@: char))
     @@: copy_names char c.calloc(31U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
-    @@: call_names char c.calloc(19U, sizeof(@: char))
+    @@: call_names char c.calloc(21U, sizeof(@: char))
     @@: post_names char c.calloc(23U, sizeof(@: char))
     @@: clock_names char c.calloc(7U, sizeof(@: char))
     @@: deadline_names char c.calloc(3U, sizeof(@: char))
@@ -2263,7 +2263,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: walk_value_names char c.calloc(193U, sizeof(@: char))
     @@: checks_names char c.calloc(6U, sizeof(@: char))
     @@: graph_names char c.calloc(101U, sizeof(@: char))
-    @@: graph_run_names char c.calloc(80U, sizeof(@: char))
+    @@: graph_run_names char c.calloc(82U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2474,6 +2474,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_run_names[77] := "lmx_graph_eval_selected"
     graph_run_names[78] := "lmx_graph_receiver_reading"
     graph_run_names[79] := "lmx_graph_eval_explicit_call"
+    graph_run_names[80] := "lmx_graph_required_names"
+    graph_run_names[81] := "lmx_graph_block_required"
     clock_names[0] := "lmx_clock_now"
     clock_names[1] := "lmx_clock_ticks"
     clock_names[2] := "lmx_clock_since"
@@ -2881,6 +2883,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     call_names[16] := "lmx_activation_bind_origin"
     call_names[17] := "lmx_activation_origins"
     call_names[18] := "lmx_call_prim_values_origins"
+    call_names[19] := "lmx_activation_stand"
+    call_names[20] := "lmx_activation_next"
     merge_names[0] := "lmx_merge_add_width"
     merge_names[1] := "lmx_merge_owned"
     merge_names[2] := "lmx_merge_profiles_owned"
@@ -3294,7 +3298,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 101, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 80, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 82, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
@@ -3308,7 +3312,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 19, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 21, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_post", post_names, 23, 0) != 0
         return: 1

@@ -1,0 +1,15 @@
+probe	base	candidate
+b11_private_receiver	ok x=7 seen=11	ok x=7 seen=7
+b12_private_formal_empty	run 5 seen=0	run 5 seen=0
+b13_private_source_explicit	ok seen=5	ok seen=5
+b14_private_formal_explicit	ok seen=20	ok seen=20
+b15a_direct_nested_call_unsupported	run 5 seen=0	run 5 seen=0
+b15a_nested_lexical_reads_private	ok seen=11	ok seen=7
+b15b_explicit_path_reads_private	ok x=7 seen=7	ok x=7 seen=7
+b16_inner_shadows_private	ok x=10 x=3 seen=3	ok x=10 x=3 seen=3
+b17_skip_private_continue	ok seen=1	ok seen=1
+base_marks_code_dynamic_private	run 3 seen=0	run 3 seen=0
+rw_nested	run 5 seen=0	run 5 seen=0
+rw_nested_outer_after	ok seen=111237	ok seen=110797
+w1_lexical_public_write	ok x=10 seen=11 after=10	ok x=10 seen=11 after=10
+w2_lexical_private_write	ok x=7 seen=9 after=7 caller=11	ok x=7 seen=9 after=7 caller=11

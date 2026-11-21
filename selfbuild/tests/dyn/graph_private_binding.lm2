@@ -136,10 +136,12 @@ fn: gp_private_check () int
     # lexically, so no dynamic field replaces it: read gives the reset 10 (TZ 2026-11-19, R05).
     if: c.fputs("\nfn: explicit_relay (int: x) int\n    Library\\x := 10\n    return: Library\\read()\nend: explicit_relay\n\nfn: Explicit () int\n    private: (int: x 99)\n    Library\\x := 30\n    int: direct Library\\x\n    int: passed explicit_relay(Library\\x)\n    return: direct * 100 + passed\nend: Explicit\n\nfn: LibrarySource () int\n    return: Library\\x\nend: LibrarySource\n", file) < 0
         return: 102
-    # A potentially consumed lexical FREE field is captured as a deferred
-    # description at entry. The false branch must not call private_bump.
-    # A later invocation changes the source RHS before its first read: the
-    # selected description still computes 9, while the next call selects 5.
+    # A free name is resolved when it is first read; the body of a call is not scanned at its entry (the author,
+    # 2026-11-18, LMX_blog/2026-11-18.md#interpreter-builds-nothing, #one-level-scan-for-namespace). This case once
+    # pinned the capture at the entry (the selected description still computes 9 after a later write); that capture is
+    # gone. Pinned now: the false branch of LazyGuard calls nothing; in LazySnapshot the first read of x stands after
+    # the write `LazyLibrary[0][1] := @five`, so the binding made at that read sees the changed description: 5, and
+    # private_bump is not called. The next call gives 5 again.
     if: c.fputs("\nfn: private_bump () int\n    PrivateCounter\\calls := PrivateCounter\\calls + 1\n    return: 9\nend: private_bump\n\nLazyLibrary:\n    int: x private_bump()\n    fn: guard () int\n        if: 0 (return: x)\n        return: 42\n    end: guard\n    fn: snapshot () int\n        int: five 5\n        LazyLibrary[0][1] := @five\n        return: x\n    end: snapshot\nend: LazyLibrary\n\nfn: LazyGuard () int\n    return: LazyLibrary\\guard()\nend: LazyGuard\n\nfn: LazySnapshot () int\n    return: LazyLibrary\\snapshot()\nend: LazySnapshot\n", file) < 0
         return: 102
     if: c.fputs("\nfn: MetadataOffset (int: a 1) int (private: (int: x 2))\n    return: a + x\nend: MetadataOffset\n\nMetadataTarget:\n    int: marker 3\nend: MetadataTarget\n\nMetadataShared:\n    private: (@: hidden MetadataTarget)\n    @: public MetadataTarget\nend: MetadataShared\n\nMetadataPrivate:\n    private: (int: v 1)\nend: MetadataPrivate\n\nMetadataPublic:\n    int: v 2\nend: MetadataPublic\n", file) < 0 || c.fclose(file) != 0
@@ -204,11 +206,11 @@ fn: gp_private_check () int
     status := gp_call(g, root, "LazyGuard", 42, 116)
     if: status != 0 || gp_number(g, counter, "calls") != 0
         return: 116
-    status := gp_call(g, root, "LazySnapshot", 9, 117)
-    if: status != 0 || gp_number(g, counter, "calls") != 1
+    status := gp_call(g, root, "LazySnapshot", 5, 117)
+    if: status != 0 || gp_number(g, counter, "calls") != 0
         return: 117
     status := gp_call(g, root, "LazySnapshot", 5, 118)
-    if: status != 0 || gp_number(g, counter, "calls") != 1 || arena\activation != 0 || arena\execution_roots != 0
+    if: status != 0 || gp_number(g, counter, "calls") != 0 || arena\activation != 0 || arena\execution_roots != 0
         return: 118
     c.free(actuals)
     c.lmx_graph_space_close(opened)

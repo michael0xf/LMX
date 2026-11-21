@@ -153,7 +153,6 @@ fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: ou
     c.LmxExecutionRoots: saved_roots
     @: roots_before c.LmxExecutionRoots 0
     int: collected_before 0
-    int: cleared 0
     int: status 0
     if: active = 0 || active\frame != 0 || active\code != code || g = 0 || owner = (cast: (@: void) code) || owner != (cast: (@: void) c.lmx_graph_method_data(g, code)) || projected = 0 || projected_refs = 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0
         return: 151
@@ -177,16 +176,18 @@ fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: ou
     status := c.lmx_graph_eval_record(g, code, immutable_word, @ direct)
     if: status != 0 || gv_check_metadata(arena, @ direct, 4U) != 0 || c.memcmp((cast: (const: @: void) (@ direct)), (cast: (const: @: void) scalar_input), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_int_value_known(collected) != collected_before
         return: 155
-    # The child receives no actuals. Its first body call temporarily clears
-    # this parent input and physical companions, then collects. A later read
-    # can succeed only from the child's entry FREE snapshot, not frame0 again.
+    # The child receives no actuals. Its body calls Collect (the physical companions lose their edges, then a sweep
+    # runs) and reads the free name immutable for the first time after it. A free name is resolved at its first
+    # read, not when the call is entered (the author, 2026-11-18, LMX_blog/2026-11-18.md#interpreter-builds-nothing).
+    # This case once pinned the capture at the entry: this parent input was cleared during the call, and a later
+    # read could succeed only from the child's entry snapshot. That capture is gone. Pinned now: the first read
+    # after the call and the collection finds this parent's input and returns the same record byte for byte, with
+    # all its metadata alive; the inputs stay intact, Collect ran once, the activation and the roots are restored.
     roots_before := c.lmx_execution_roots_mark(arena)
     c.lmx_execution_roots_push(arena, @ saved_roots, (cast: (@: void) (@ direct)), 1U, 0, 0U, 0, 0)
     status := c.lmx_graph_invoke_values(g, free_echo, 0, 0U, 0, @ captured)
-    cleared := (cast: (int) (scalar_input\kind = 0 && scalar_input\present = 0))
-    c.memcpy((cast: (@: void) scalar_input), (cast: (const: @: void) (@ direct)), c.sizeof(c.LmxWalkValue))
     c.lmx_execution_roots_restore(arena, roots_before)
-    if: status != 0 || cleared = 0 || gv_check_metadata(arena, @ captured, 4U) != 0 || c.memcmp((cast: (const: @: void) (@ captured)), (cast: (const: @: void) (@ direct)), c.sizeof(c.LmxWalkValue)) != 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0 || c.lmx_int_value_known(collected) != collected_before + 1 || arena\activation != (cast: (@: void) active) || active\frame != 0
+    if: status != 0 || gv_check_metadata(arena, @ captured, 4U) != 0 || c.memcmp((cast: (const: @: void) (@ captured)), (cast: (const: @: void) (@ direct)), c.sizeof(c.LmxWalkValue)) != 0 || gv_check_inputs(arena, inputs, refs, nargs) != 0 || c.lmx_int_value_known(collected) != collected_before + 1 || arena\activation != (cast: (@: void) active) || active\frame != 0
         return: 156
     c.free(projected_refs)
     c.free(projected)
@@ -228,25 +229,11 @@ fn: gv_produce (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: o
 
 fn: gv_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: counter void c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
-    @: g c.LmxGraph c.lmx_graph_find(arena)
-    @: active c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
-    @: caller c.LmxActivation 0
     c.LmxWalkValue: value
     if: nargs != 0U || counter = 0 || c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0
         return: 172
-    # In FreeEcho this is the first body operation, after entry capture.
-    # Remove its native parent's selected input so a late fallback cannot
-    # masquerade as a captured FREE Value. gv_native restores it after return.
-    if: active != 0
-        caller := (cast: (@: c.LmxActivation) active\parent)
-    if: g != 0 && caller != 0 && c.lmx_graph_name_of(g, (cast: (@: void) caller\code)) = c.lmx_graph_intern("FreeEcho", 8U)
-        if: caller\frame = 0 || caller\parent = 0
-            return: 175
-        active := (cast: (@: c.LmxActivation) caller\parent)
-        if: active\frame != 0 || active\values = 0 || active\width <= 4U
-            return: 175
-        c.lmx_walk_value_clear((cast: (@: c.LmxWalkValue) active\values) + 4U)
-    ---
+    # In FreeEcho this is the first body operation. The free name immutable is read after it, so its first read
+    # takes the Value from the native parent's input once the companions have lost their edges and the sweep ran.
     # Every backup scalar companion, including the completed Produce result,
     # loses its semantic edges before collection.
     gv_clear_companions(arena)

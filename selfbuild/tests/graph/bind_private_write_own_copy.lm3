@@ -1,0 +1,23 @@
+# Запись голым именем при защищённом лексическом private x ложится в собственную копию вызова: inner видит 7, пишет
+# 9 в копию; x функции outer после relay() остаётся 7: seen = 11079 * 10 + 7 = 110797. Норма: ТЗ 2026-11-19, R05, B11;
+# kernel-implementation §3.4: запись в резервную копию меняет копию, а не источник.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: relay () int
+    int: x 11
+    int: r inner()
+    return: x * 1000 + r
+fn: outer () int
+    private: int: x 7
+    fn: inner () int
+        int: before x
+        x := before + 2
+        return: before * 10 + x
+    int: got relay()
+    return: got * 10 + x
+sub: main ()
+    shared\Observed\seen := outer()
+main()

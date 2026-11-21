@@ -7,8 +7,8 @@
 > `provenance/semantics-book.md` and `provenance/grammar.json` together with their Russian halves, which are
 > translations of the English text (completed on 2026-11-21). The other Russian documents
 > (`L2_spec_ru.md`, `LMX_semantics_guide.ru.md`, `kernel-implementation.ru.md`, `implementation-notes.ru.md`,
-> `source-comparison.ru.md`) are bridges to the English edition until the Russian pass of the
-> [plan](../next_core_tasks_v3.md#docs-20261121). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not
+> `source-comparison.ru.md`) are translations of the English edition as well (completed on 2026-11-21,
+> [plan](../next_core_tasks_v3.md#docs-20261121)). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not
 > part of the packet and is kept as it was.
 
 **Review edition: 2026-11-21.**

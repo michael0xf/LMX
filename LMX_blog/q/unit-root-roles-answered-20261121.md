@@ -1,12 +1,13 @@
 # Корень единицы при R0 без данных: где программа объявляет Structure
 
-Дата: 2026-11-19. Задаёт исполнитель (сессия fable). Статус: **открыт**. Документальный срез нормы 2026-11-19
+Дата: 2026-11-19. Задаёт исполнитель (сессия fable). Статус: **закрыт редакцией документации 2026-11-21**;
+вывод редакции — в конце. Документальный срез нормы 2026-11-19
 от ответа не зависит: в документах R0 описан словами ТЗ. От ответа зависят шаги 5 и 8
-[плана](../../../next_core_tasks_v3.md#binding-callables-20261119): запуск R0 и перенос программ.
+[плана](../../next_core_tasks_v3.md#binding-callables-20261119): запуск R0 и перенос программ.
 
 ## Что записано
 
-[ТЗ 2026-11-19](../../../docs/new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), §4.3:
+[ТЗ 2026-11-19](../../docs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), §4.3:
 
 ~~~text
 R0 запускается как процедура без data и без пользовательских аргументов. Отсутствие data не компенсировать D = C, пустой служебной Structure или искусственным полем data.
@@ -24,13 +25,13 @@ R0 запускается как процедура без data и без пол
 `fn` описывает только сигнатуру, строго по тому же data-шаблону, включая поле return. Наличие return отличает возвращающий значение контракт от процедурного. `sub` удаляется.
 ~~~
 
-Книга, [роли data и code](../../../docs/LMX_semantics.ru.md#data-code-roles): «В роли `code` всякая запись —
+Книга, [роли data и code](../../docs/LMX_semantics.ru.md#data-code-roles): «В роли `code` всякая запись —
 вызов»; «Объявлений Structure в коде нет: код пользуется именами Structure из данных»; правило «форма с
 неизвестной головой объявляет Structure» действует только в данных.
 
 До 2026-11-19 корень единицы запускался как Structure над самой собой. Каждая его запись читалась по обеим
 ролям: в данных объявляла, в коде вызывала свою голову. Автор о таком запуске,
-[журнал](../../2026-11-11.md#self-launch-no-own-rules):
+[журнал](../2026-11-11.md#self-launch-no-own-rules):
 
 ~~~text
 П7. -- просто следуйте общим правилам и генерируйте ошибки в случае неопределенностей, никаких своих правил для call(code code) нет, что получится то и получится, нет смысла обсуждать все конфликты
@@ -75,7 +76,7 @@ int: seen SumContext\sum(a := 2; b := 3)
 
 - Куда переносится часть `data` метода `main`. Сегодня программы тестов объявляют обычные Structure в части
   `data` метода — `sub: main () ( … )`, — а корень держит места и вызов `main()`
-  ([план, подшаг 5в](../../../next_core_tasks_v3.md#m11)). Так записано потому, что запись корня с головой —
+  ([план, подшаг 5в](../../next_core_tasks_v3.md#m11)). Так записано потому, что запись корня с головой —
   Structure читается и запуском. `sub` снят; замена — Structure, данными которой служит её `parent`, — сама
   объявляется записью корня.
 - Место корня `int: seen …`. При чтении 1 это место активации R0, и нужно сказать, что о нём печатает дамп
@@ -86,3 +87,37 @@ int: seen SumContext\sum(a := 2; b := 3)
 
 В `tests/graph` 524 программы. В 483 из них в корне стоит объявление `sub:` или `fn:`; в 359 — `sub: main`.
 В `selfbuild` 355 файлов `.lm2`, в 303 из них в корне стоит `fn:` или `sub:`.
+
+## Вывод редакции 2026-11-21
+
+Отдельного ответа автора в чате нет. Редакция документации от 2026-11-21 выводит случай из действующих правил
+и прямо говорит, что нового решения автора он не требует:
+[заметки о редакции, §5, D2](../../docs/REVIEW_NOTES.md#open-questions).
+
+~~~text
+Binding TZ §4.3 preserves R0's own executable declarations and ordinary references
+while removing DATA and user actuals. A selected R0 entry therefore consumes its
+reached records under the common CODE head contracts. Forms supplied as DATA use
+the receiving DATA contract; import/copy/merge always retain CODE arguments.
+There is no need to restore call(C C), an artificial DATA object, or a new node
+meaning to classify these forms.
+
+A fixture must state the host/source entry profile it uses. A fragment supplying
+a DATA description can be prepared in that role and its explicitly named body
+called through the ordinary call path. This does not invent automatic main
+discovery, universal file-root execution, or a call to every declared Structure.
+The absence of a concrete host launcher in this documentation packet is an
+implementation-fixture boundary, not a contradiction in the language rules.
+~~~
+
+Следствия — чтение исполнителя, [Р112](fable-self-answers-20261110.md):
+
+- Запись, которую исполняет R0, читается как код, по первому чтению вопроса. Structure программа объявляет
+  в описании данных: файл готовится в роли данных, а запуск называет тело, которое вызывается обычным вызовом.
+  Данные этого тела — его `parent`. Автоматического поиска `main` и исполнения всего корня файла нет.
+- Программа вопроса при таком входе: файл — описание данных с `SumContext` и местом `seen`; вызываемое тело
+  называет запуск. Запись `int: seen SumContext\sum(a := 2; b := 3)` в описании данных остаётся записью
+  вычисляемого объявления и сама ничего не исполняет.
+- Запускающим командам инструмента нужен аргумент точки входа: шаг 21.6
+  [плана](../../next_core_tasks_v3.md#docs-20261121). Перенос программ тестов и исходников ядра — шаги 21.7
+  и 21.21.

@@ -1,332 +1,598 @@
-# L2/L3: инструкция разработчику
+# L2/L3 developer instruction
 
-**Обязательный порядок сборки, 2026-11-18:** [to_fable2_fast_build.md](to_fable2_fast_build.md).
-Обычные шаги, включая их приёмку и публикацию, проверяются компонентной сборкой и адресными случаями.
-Полная самосборка и полный набор тестов имеют отдельные основания из этой инструкции; новый срез или коммит
-не требуют их автоматически. `bootstrap quick` тоже строит G1/G2 и не является компонентным циклом.
+> **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
+> documentation packet in `docs/new_parts/newdocs/`; only link targets were adapted to repository paths.
+> The mandatory build order of this repository is [to_fable2_fast_build.md](to_fable2_fast_build.md); the
+> implementation state is recorded in [READ.ME](READ.ME), the [plan](next_core_tasks_v3.md) and the
+> [current pipeline](steps/current.md).
 
-**Норма 2026-11-19: связывание и вызываемые (принята; реализация ещё прежняя).** Автор принял новую норму связывания,
-`private`, структурного вызова, `return` в данных и сигнатур `fn` ([ТЗ](docs/new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-решения R01–R18). Транслятор, интерпретатор чистого графа, ядро, примеры и тесты её ещё не исполняют; работы
-записаны в плане, раздел [binding-callables-20261119](next_core_tasks_v3.md#binding-callables-20261119). Раздел «Единый вызов»,
-пункты 7–11 раздела «Общий алгоритм, а не набор исключений» и раздел «Миграция к норме 2026-11-19» задают рабочий порядок
-под эту норму; абзацы о реализации и решениях, которые норма отменила, оставлены с пометкой «снято нормой 2026-11-19» либо
-«описывает реализацию прежней нормы».
+This instruction accompanies the standalone English documentation packet. It
+applies the [semantics](docs/LMX_semantics.en.md), [grammar](docs/LMX_grammar.en.md),
+[L2 contract](docs/L2_spec_en.md), and [kernel implementation contract](docs/kernel-implementation.en.md).
+The current [requirements](docs/README.md#requirements) and
+[accepted supplements](docs/README.md#accepted-supplements) are part of that model.
 
-`private:` действует в обе стороны для всего неявного динамического связывания: `private`-место вызывающего неявно не
-предлагается ни значением, ни местом, а реально видимое `private`-объявление лексического контекста вызываемого не
-перекрывается динамической подстановкой; явная передача, вложенная лексическая видимость, явные пути и `node`
-сохраняются. Использовать общий binder без системы ограничений доступа:
-[private-binding](docs/LMX_semantics.ru.md#private-binding), [private-examples](docs/LMX_semantics.ru.md#private-examples).
-Прежняя односторонняя формулировка («исключает поле из динамического связывания вызовов») и её
-[задача M14](next_core_tasks_v3.md#private-binding-plan) — прежняя норма, снята нормой 2026-11-19.
+The files in this archive are the review surface. Their relative links and
+examples can be checked without running a repository documentation generator,
+rebuilding a Russian counterpart, or performing a bootstrap. Runtime acceptance
+requires its own measured evidence; this document does not report such a run.
 
-Этот файл задаёт рабочий порядок, а не новую норму языка и не журнал запусков. Текущий маршрут — [план v3](next_core_tasks_v3.md), состояние и владелец работы — [steps/current.md](steps/current.md), обязательные правила проекта — [READ.ME](READ.ME). Подробные зависимости и исторические свидетельства — в [словаре](next_core_tasks_dictionary_v2.md), [карте ядра](CORE.md), тикетах и [дефектах](steps/defects.md); старые планы остаются в истории Git. Не превращать прежний checkpoint в доказательство нынешней рабочей копии.
+## 1. Work from the accepted contract
 
-Нормативные источники: [семантика L3](docs/LMX_semantics.ru.md), [грамматика](docs/LMX_grammar.ru.md), [контракт L2](docs/L2_spec_ru.md) и [контракт L1](docs/L1_spec_ru.md), вместе с их английскими версиями. При расхождении этой инструкции со спецификацией сначала установить точную норму и предъявить конфликт, а не выбирать удобную реализацию.
+Before an implementation change, identify the exact affected source, the current
+contract, the existing shared worker, and the observable result to establish.
+Determine which requirements the current implementation already satisfies.
+An old checkpoint or a statement about a former implementation is not evidence
+about today's working tree.
 
-## Единый вызов
+Use one writer for overlapping runtime paths and coordinate ownership of builds.
+Independent document work and read-only reviews can proceed separately. Keep
+unrelated work outside the change.
 
-Структурный вызов (норма 2026-11-19, [structural-call](docs/LMX_semantics.ru.md#structural-call),
-[call-receivers](docs/LMX_semantics.ru.md#call-receivers)): исполняется выбранная Structure `C` в роли кода; роль данных у неё
-исполняет её фактический родитель `parent(C)`. Формы: `call(C)` — фактических аргументов нет; `call(A C)` — Structure `A` —
-фактические аргументы; `C()` — пустой хвост; `C(args)` — написанные фактические аргументы по общему выбору объявления
-(п. 7 общего алгоритма ниже). Параметры `call` называются `args` и `code`: в одноаргументной форме обязателен `code`, в
-двухаргументной — `args` и `code`, поэтому `call(code := C)` двухаргументной форме не подходит. `call` исполняет саму
-выбранную `C`; дочернее поле `code` автоматически не ищется. Входы и требования описывает data (`parent(C)`), `args` содержит
-фактические значения вызова.
+When two applicable requirements genuinely conflict, record the smallest example,
+the two rules, and the differing outcomes. Continue independent work while that
+specific decision is resolved. Do not hide a new language rule in an implementation
+exception or make a test pass by silently changing its intended observation.
 
-Подставить другие данные самим вызовом нельзя: сначала создаётся структурная связь (объявление, копия, merge — по их правилам
-о `parent`), затем вызывается выбранное вхождение; `NewContainer: ExistingCode` хранит ссылку и `parent` не меняет. Сам `call(C)`
-проходит тот же выбор между двумя формами `call`: если целая `C` подходит одной форме, а её поля другой, возникает
-неоднозначность; `call(code := C)` её исключает. R0 запускается без данных и без пользовательских аргументов
-([root-entry](docs/LMX_semantics.ru.md#root-entry)): нет `D = C`, пустой служебной Structure и искусственного поля `data`. Результат
-описывает поле `return` в данных; и `call`, и обычный вызов Structure могут вернуть значение
-([return-in-data](docs/LMX_semantics.ru.md#return-in-data)). `node` сохранён.
+The two inherited review cases are derived from the common rules in
+[REVIEW_NOTES.md](docs/REVIEW_NOTES.md#open-questions). Implement those consequences;
+do not turn a resolved example or an unspecified host fixture profile into another
+language-approval gate. Ask the author only when applicable current requirements
+actually contradict one another, with both clauses and the distinguishing case.
 
-Обычный вызов, указатель, `catch`, запуск Structure и явные ресиверы идут через один interpreter worker с общими
-binding/admission/namespace/result. Не создавать второй dispatcher; изменить существующие launch/invoke/walk. Известный
-native→native остаётся прямым C-вызовом. [Полная норма](docs/LMX_semantics.ru.md#call-receivers).
+## 2. One source graph and one parser
 
-**Снято нормой 2026-11-19** ([removed-builtins](docs/LMX_semantics.ru.md#removed-builtins)): шесть форм `call`/`fncall` с частью
-`data` (в том числе `call(args data code)` и `call(data code)`); `call(D C)` и `C(D)` как подстановка данных — первый аргумент
-двухаргументной формы теперь `args`; `call(C)` = `call(C C)` и «Structure — сама себе данные»; особое имя `data`, отдельный
-параметр данных у `call`, встроенные `fncall` и `sub`, исполняемая форма `fn`. Слово «data» как название роли и как обычное
-пользовательское имя остаётся. Прежнюю зависимость и приёмку [M10](next_core_tasks_v3.md#m10) читать как прежний план
-шести форм; замена — [план 2026-11-19](next_core_tasks_v3.md#binding-callables-20261119).
+**All receiver records remain in the source graph as written. Computations and
+semantic transformations take place exclusively in namespace. Terminal primitive
+declarations remain in the graph as direct `{type value}` records.**
 
-## Цель и владение
+The graph is the complete literal source, including those primitive leaves at
+the addresses held by Structure cells. All receiver structures—including `for`,
+`if`, `merge`, `copy`, and `import`—remain available as written and can be replaced
+by ordinary explicit graph assignment. Do not introduce an uneditable executable
+representation or a special mutation protocol. Apply the existing explicit
+compile/endturn restart mechanism when an executable change needs recompilation.
 
-Срез393: чистый Source interface использует необязательный reader имени/fact прежнего implements resolver.
-`Fact.type` остаётся physical pool type (прежняя схема: по норме физический тип — код записи значения); borrowed declared descriptions/receiving chains не являются C ABI binding
-или user Model в pool.profile. Unknown name не равно unnamed0/known absence. Все поля интерфейса без Consumer
-проверяет прежний require_root/drain/close(published0), без test/default execution и mutable ref payload.
-Полный runtime/current Value/typed storage bridge остаётся задачей основного M11/M13; [свидетельство393](steps/witnesses/m11-declared-facts-20261114/notes.md).
+The whole program is that complete graph plus a binary containing compiled
+native methods. `parent` and `length` are logically determined from source
+structure; the other contents lie in the Lmx pointer array and its referenced
+records. Keep the ordinary stored-header contracts: this does not require
+reconstructing them from text on every access.
 
-Цель — чистое ядро, затем **две действительные самосборки из L3 со вставками L2**, затем общая почта T01–T26. L1 остаётся только генерируемым промежуточным языком перед C; поддерживаемые исходники ядра, парсера, трансляторов и обычного build/test-цикла не пишутся вручную на L1.
+R0 lowers to an ordinary C method with a local pointer to the R0 graph. The
+interpreter also uses a binary R0. Do not replace that local pointer by a hidden
+global program instance, or add a static DATA replica, materialized namespace
+graph, copied executable body, or expanded program for the walker. Frame values,
+source references, selected binding maps, and temporary compiler analysis serve
+their specific operations; they do not form a second runtime program graph.
 
-Единственный writer/build ядра определяется [текущим состоянием](steps/current.md); прежнее назначение любого агента не действует после подтверждённой автором передачи слота. Помощникам можно поручать чтение, ревью и непересекающиеся документы; параллельной правки ядра или конкурирующей сборки нет. Перед каждым срезом проверить грязное рабочее дерево, владельца путей и точные входные файлы. Несвязанный WIP не исправлять, не включать в коммит и не маскировать.
+P0 builds the written receiver–arguments model, retaining every Frame, boundary,
+and explicit group. It does not execute defaults, import names, expand composition
+results, or delete a sole anonymous group. Semantic role, resolution, precedence,
+and admission are applied after that structural parse.
 
-## Общий алгоритм, а не набор исключений
+Use the same expression mechanism in an actual, initializer, return, field, and
+nested receiver. A consumer's contract determines what it requires; it does not
+supply a second parser for a familiar receiver spelling.
 
-1. Сначала строить полную исходную модель «receiver — arguments»; затем одним алгоритмом разрешать выражение во всех принимающих местах. Контракт места проверяет готовое значение, но не создаёт и не подавляет вызов своей веткой разбора. Обходчик распознаёт голову Frame по существующей таблице «адрес → имя», транслятор видит дерево парсера, готовому `native` имя не нужно. Не вводить отдельные resolver, fallback, opcode или таблицу runtime-связывания переменных для `@`, `merge`, `return`, формала или отдельного ресивера; после распознавания головы действуют адреса графа и карты мест.
-2. Голый атом читает значение/ссылку, но не вызывает. Прямой метод и указатель на метод вызываются явной формой; обычная Structure исполняется структурным вызовом — `call(C)`, `call(A C)` или, в коде, записью `C()` / `C(args)` (раздел «Единый вызов», абзац «Запуск Structure по имени в коде» ниже). В данных `A()` и `A: ()` — объявления, ничего не вызывающие: `A()` объявляет пустую Structure `A`, `A: ()` — `A` с одной пустой безымянной Structure внутри; в коде такая запись — вызов головы `A`: вызываемое она вызывает, а обычную Structure исполняет с данными `parent(A)`: `A()` — с пустым хвостом, `A(D)` и `A: D` — с фактическими аргументами `D` по общему выбору (п. 7), — и ошибочна, когда голова не называет ни вызываемого, ни Structure ([роли `data` и `code`](docs/LMX_semantics.ru.md#data-code-roles), [журнал](LMX_blog/2026-11-11.md#structure-call-by-name)). Снято нормой 2026-11-19: чтение `A()` как `call(A, A)` над самой собой и `A(D)` / `A: D` как `call(D, A)` с подстановкой данных ([structural-call](docs/LMX_semantics.ru.md#structural-call)). Оператор `\` и группировка работают по общей грамматике: не менять их под прежний ошибочный пример `\ptr_f()`. Проверять одно выражение одинаково в аргументе, `return`, инициализаторе, поле и вложенном ресивере.
-3. M3 упорядочивает плоские хвосты L2/L3 как **имя — требование/значение**. Место объявляет только форма ресивера с перечислением его аргументов (решение автора 2026-11-10, [книга](docs/LMX_semantics.ru.md#receiver-args-only)): `int: i 5`, `@: ptr 0`, `@: ptr Model`, `@: ptr Model 0`. Композиция с местом во внешней голове (`i: int: 5`, `ptr: @: Model: 0`), которую поддерживали N1–N6, снята: `ms: int: time` в данных — Structure `ms` с полем `time`; исходные тексты и фикстуры проекта её не пишут, и ни один путь трансляции не читает её как объявление места ([M9](next_core_tasks_v3.md#m9)). Первое поле формы ресивера — атом имени места, оно не вызывается; второе поле вычисляется как обычное выражение. Аргументы ресивера разбираются и читаются как всякие аргументы — как код (решение автора 2026-11-11, [книга](docs/LMX_semantics.ru.md#data-code-roles)): вложенная `Model: Other` в `@: ptr Model: Other` — вызов `Model`, а не требование с кандидатом. Требование и кандидат записываются плоско, тремя полями: `@: ptr Model Other`, нулевой адрес — `@: ptr Model 0`. Запись запуска Structure на месте, где нужно значение (операнд выражения, фактический аргумент вызова, начальное значение, операнд `merge`), прежде считалась ошибочной, потому что у запуска результата нет (чтение исполнителя — [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), Р22, пункт 3; Р25, пункт 4); снято нормой 2026-11-19: результат описывает поле `return` в данных ([return-in-data](docs/LMX_semantics.ru.md#return-in-data)), и безусловного запрета нет. Контракт аргументов остаётся собственным у каждого ресивера (ресиверы группы «роль данных», в которую входит `fn`, читают аргументы в роли данных, [whole-arguments](docs/LMX_semantics.ru.md#whole-arguments)), P0 не разбирает `@` и `int` особо. Повтор объявления читается по роли: в коде повтор объявления ресивером (`int: i 6` при известном `i`) — внеочередная проверка типа с присваиванием, второго поля не возникает; в данных повторное объявление — ещё одно вхождение имени: прежнего оно не заменяет и в него не пишет, после него имя адресуется только с индексом вхождения, а обращение без индекса — ошибка. В данных `Struct1: Struct2` объявляет Structure `Struct1` с одним атомом `Struct2` — указателем на Structure `Struct2`, неизменяемым по имени: упоминание известной Structure не раскрывается, и в дереве под `Struct1` стоит только этот атом ([книга](docs/LMX_semantics.ru.md#colon-declares)); в коде та же запись — вызов `Struct1`. Имена Structure и функций не присваиваются: запись `Struct1 := Struct2`, которую решение 2026-11-10 называло присваиванием, автор снял 2026-11-11; атом справа от двоеточия ничего не присваивает, указатель-переменную объявляет `@: ptr Model`, ей и присваивают. Прежнюю неоднозначную реализацию `node\[N]field` удалить, а [N4-U](next_core_tasks_v3.md#code-data-occurrences) возвращает этот путь как индекс **вхождения** имени на коренном уровне Structure в роли `data`; вхождение — запись данных, объявляющая это имя, будь то объявление ресивером места или структурная запись с такой головой: при единственном вхождении доступен `s\field`, при двух и более требуется `s\[N]field`. Не смешивать его с `arr[i][j]` и массивом ссылок `arr[i]\[j]`.
-4. Результат обычного `merge` — самодостаточная копия используемого графа: одна карта копирования перенаправляет внутренние ссылки, сохраняет sharing и циклы. Не оставлять зависимость от освобождаемой арены. Удерживаемые `independent: immutable` ветви — отдельное утверждённое правило жизни арены, а не повод для произвольного исключения. Число слотов созданного `Lmx` фиксировано; стабильный адрес `@field` не допускает удлинения готового узла.
-5. Native и действительно walked исполнение должны иметь одинаковые наблюдаемые значения, адреса, отказы и side effects. При копировании и слиянии runtime сохраняет слово `native` для сопоставленных физических адресов и ABI. При фактической записи в исполняемый код ядро сбрасывает слово у зависимых исполняемых вхождений. Диспетчер читает его после вычисления операндов и публикации.
-6. Структурные формы — со скобками, короткая и блочная — только объявляют или вызывают; присваивания они не делают (решение автора 2026-11-10, [книга](docs/LMX_semantics.ru.md#forms-declare-or-call)). Что из двух, задаёт роль: в данных форма объявляет, в коде вызывает (решение автора 2026-11-11). Значение в известное место записывать `name := value`, в том числе по пути, индексу и разыменованию; слева от `:=` стоит место примитива или указатель-переменная, имя Structure или функции слева — ошибка. Повторное объявление формой ресивера с перечислением аргументов (`int: i 6`, `@: p q`) остаётся — в коде это внеочередная проверка типа с присваиванием; составная `i: int: 6` снята (пункт 3). Код и тесты писать с `:=`: исходные тексты проекта уже записывают присваивание этим оператором, а трансляторы отказывают форме с двоеточием, которую прежде понижали как запись в известное место ([M7](next_core_tasks_v3.md#m7)).
-7. **Выбор объявления — только по явно поданному материалу** (норма 2026-11-19,
-   [declaration-selection](docs/LMX_semantics.ru.md#declaration-selection),
-   [selection-examples](docs/LMX_semantics.ru.md#selection-examples)). Этапы: разрешить имя вызываемого и набор видимых
-   объявлений; выбрать по явно поданным фактическим аргументам; исполнить выбранный вариант и применить неявное связывание.
-   Единица-кандидат — (видимое объявление, чтение явных фактических, отображение фактический → формал); решить чтение заново
-   при запуске нельзя. Чтений два, и они равноправны: **W «как записано»** и **E «раскрытая единственная Structure»**
-   (рассматривается, когда подан ровно один фактический аргумент, он Structure либо ссылка на неё и не задан присваиванием
-   формалу; её непосредственные поля образуют последовательность фактических — один раз, на один уровень, граф не меняется;
-   `f(arg := S)` чтения E не создаёт). Нет предпочтения целой Structure, арности, первому найденному объявлению; E не пробуется
-   после неудачи W. Нет кандидата — отказ; ровно один — исполняется выбранная карта без повторного раскрытия; больше одного, в
-   том числе два подходящих чтения одного объявления, — ошибка неоднозначности. Выбор ничего не исполняет: ни присваиваний, ни
-   значений по умолчанию, ни `test`; интерфейсную проверку выполняет общий `implements`, отдельного валидатора сигнатур нет. Для
-   `fn` чтения W и E не применяются: его аргументы читаются в роли данных. Неявное связывание (автозаполнение, место
-   вызывающего, прежнее связывание) в выборе не участвует, отклонённого кандидата не спасает и выбор не перезапускает: локальные
-   `b`, `x`, `code`, `args` вызывающего в список фактических не входят, скрытое значение `required` при выборе не удовлетворяет
-   (собственный default — удовлетворяет). Этим заменено правило 2026-11-18 («раскрытие — попытка найти другие сигнатуры;
-   сигнатура с одним аргументом ничего не раскрывает»): при входном контракте `h(int: x)` и `Arg` с полем `int: x 9` чтение W с
-   целой `Arg` не подходит, чтение E с единственным полем подходит, и `h` получает 9. Обязательная таблица примеров — §9.8 ТЗ.
-8. **Связывание — один алгоритм** (норма 2026-11-19, [binding-places](docs/LMX_semantics.ru.md#binding-places),
-   [binding-autofill](docs/LMX_semantics.ru.md#binding-autofill), [binding-caller-place](docs/LMX_semantics.ru.md#binding-caller-place),
-   [binding-fallback](docs/LMX_semantics.ru.md#binding-fallback), [binding-chain](docs/LMX_semantics.ru.md#binding-chain)).
-   Собственное объявленное место вызываемого получает значение в порядке: явный фактический аргумент → собственное готовое
-   значение либо описание инициализатора → **автозаполнение** значением одноимённого локального места вызывающего (собственная
-   ячейка, не псевдоним: при `x = 5` у вызывающего и записи `x := 9` в вызываемом вызывающий сохраняет 5) → обычное
-   неинициализированное состояние и существующие проверки `required`. Готовый инициализатор одноимённой локалью не заменяется;
-   факт подачи определяет сам actual, а не его истинность (`0` не пропуск, `nil` — явная подача). Используемое внешнее имя без
-   собственного действующего объявления: если реально видимый лексический источник `private` — действует лексическая связь,
-   динамической подстановки нет; иначе — **прозрачное место вызывающего** (чтение, `x := v` и `@x` действуют на место
-   вызывающего; запись немедленная, без копии на выходе; тип в языке остаётся `T`, скрытый адрес — деталь нативной реализации;
-   место `uninit:T` меняет и состояние инициализации); иначе — **прежнее связывание** (запасной путь): прежние источники,
-   собственная рабочая копия в кадре, никогда не псевдоним. Две подмены запрещены: прозрачное место не заменяется временной
-   копией с копированием на выходе, копия запасного пути не заменяется адресом источника. Цепочка A → B → C: достижимость
-   сохранена, даже если B имя не использует, статического транзитивного накопления требований нет; при своей копии `x` у B
-   доступ C меняет `x` у B, а не у A, при прозрачной связи B с `x` у A передача `x` у B сохраняет адрес `x` у A. Ветвей «для
-   автозаполнения», «для места вызывающего» и «для прежнего связывания» в трансляторе и интерпретаторе быть не должно: порядок
-   один, различается только выбранный путь.
-9. **Двусторонний `private` — одна общая проверка** ([private-binding](docs/LMX_semantics.ru.md#private-binding),
-   [private-examples](docs/LMX_semantics.ru.md#private-examples)). Один общий механизм, а не три ветки (автозаполнение, место
-   вызывающего, прежнее связывание), проверяет обе стороны для всего неявного динамического связывания. Источник:
-   `private`-место вызывающего неявно не предлагается — ни значением, ни местом. Приёмник: реально видимое `private`-объявление
-   лексического контекста вызываемого не перекрывается значением или местом из динамического контекста; поэтому до принятия
-   внешней динамической привязки сначала устанавливается, какое лексическое объявление действительно видно и защищено ли оно, —
-   проверки одного источника недостаточно. `private` — фильтр конкретного места, а не барьер имени: `private`-источник
-   пропускается, поиск идёт дальше, более дальний допустимый источник остаётся доступен; найти произвольный `private x` в
-   предке и на этом основании закрыть новое внутреннее публичное `x` нельзя. Не запрещены: явная передача (в том числе
-   собственного `private`-значения), явное заполнение принимающего `private`-места фактическим аргументом, вложенная
-   лексическая видимость, явные пути и `node`, затенение внешнего `private` новым внутренним объявлением. Ограничения записи
-   `const` и `immutable` сохраняются; `private` их не заменяет и не становится проверкой доступа на каждом явном пути. Явно
-   переданное значение не несёт историю `private` на свои копии, непомеченное новое место не становится `private`. Запись графа
-   `S\private\field` не сплющивается.
-10. **Области затенения** ([shadowing-levels](docs/LMX_semantics.ru.md#shadowing-levels),
-    [inline-declaration-control](docs/LMX_semantics.ru.md#inline-declaration-control)). Объявление на вложенном уровне затеняет
-    внешнее одноимённое объявление; учитываются владелец места и лексическая область, а не одинаковая строка в теле:
-    внутреннее `Text x` затеняет внешний `int x`, а не пишет `Text` в `int`-ячейку. На том же уровне затенять нечего —
-    используется уже существующее место: повтор работает по контракту ресивера (новая правая часть вычисляется и
-    присваивается, отсутствие правой части значение не обнуляет, второй ячейки нет). Видимость последовательная: употребление
-    до более позднего собственного объявления разрешается обычным внешним путём; будущее объявление не блокирует тело, и
-    предварительного поиска будущих объявлений по всему телу нет. После выхода из внутренней области снова видно внешнее
-    объявление со своим местом, режимом записи и `private`. Контрольный пример §7.4 ТЗ (новое `int: x` без правой части во
-    вложенной встроенной области при внешнем `x = 5` и без нового вызова) — **чтение исполнителя**, не решение автора (Р106):
-    место остаётся `uninit:int`, потому что автозаполнение определено между локальным контекстом вызывающего и местом
-    вызываемого при вызове, а встроенная область остаётся в той же активации; значение 5 потребовало бы нового правила, которое
-    ТЗ вводить запрещает. Один отдельный контрольный fixture добавляется только после установления точного вывода, без
-    произвольного ожидаемого числа.
-11. **Исполнители и граф** ([binding-executors](docs/LMX_semantics.ru.md#binding-executors)). native→native, native→обходчик,
-    обходчик→native и обходчик→обходчик дают одно наблюдаемое поведение: значение, тип и место записи. Автозаполнение понижается
-    параметром `T`, прозрачное место — скрытым адресом ячейки, запасной путь даёт собственное место. У нативного локального места
-    нет заголовка арены `[type][value]`; load-dirty, flush, публикации, copy-back, скрытая компиляция и постоянные кеши
-    окружений не возвращаются. Прозрачная связь не продлевает время жизни ячейки; при `yield` выбранная связь не перевязывается к
-    одноимённому месту нового вызывающего. Граф остаётся графом исходных форм: связывание не переписывает записи модификаторов и
-    ресиверов и не добавляет поля в данные и код; явная компиляция и существующий выбор native/walker сохранены.
+The existing canonical-name/address information identifies a written receiver.
+Prepared native calls use the admitted addresses and machine contracts. Do not
+replace these with an independent opcode graph, a second source AST, or a
+persistent global variable-binding registry.
 
-Если две утверждённые нормы противоречат друг другу или реализация требует ветки по имени, типу, форме записи либо месту в трансляторе, зафиксировать минимальную программу, обе нормы и измеренное поведение. Задать автору **этот** вопрос, не пришивать shim и не закреплять его зелёным тестом. Остановить только зависимый срез; независимую работу продолжить.
+Allocating a computed value or a copied graph result does not authorize rewriting
+the source receiver that produced it. Explicit program writes keep their own
+graph-memory contract. Namespace values and source records must remain
+distinguishable in diagnostics and serialization.
 
-Выражения — тот же общий алгоритм. Приоритеты и ассоциативность операций — как в Си, у присваивания низший
-приоритет: правая часть присваивания — всё выражение справа. Значения вычисляются по требованию: ресивер,
-которому нужен результат другого ресивера, получает его исполнением этого ресивера — один раз за вычисление,
-без повтора эффекта при обходе и без постоянных полей в чистом графе; пропущенная ветвь `&&` и `||` не
-исполняется. Встроенное в выражение аргумента присваивание пишет в место вызываемого, которое выбирает имя
-(объявленное в его роли данных), и отдельным аргументом не становится. При статически известных связях транслятор выстраивает последовательность вычислений заранее
-и не ищет присваивание при каждом чтении переменной. `sys\name(identificator)` берёт написание из служебной
-таблицы имён и ничего не исполняет. Функция реализации операнда имеет одну сигнатуру — `fn([]: @ args; return: @)`
-(прежняя запись `fn: new_op ([]: @ args) @` снята нормой 2026-11-19, [fn-signature](docs/LMX_semantics.ru.md#fn-signature)):
-массив ссылок на типизированные записи хранилища и ссылка на запись результата. Адрес нетегированного
-временного значения такой ссылкой не служит, плотный числовой массив в массив ссылок не переинтерпретируется.
-Приоритет операнда обязателен; запрос приоритета и анализ выражения пользуются одной таблицей. Особых случаев
-по имени ресивера быть не должно
-([книга](docs/LMX_semantics.ru.md#assignment-inside-expression),
-[ТЗ и приёмочные проверки](docs/new_parts/to_fable_operands_arguments_priorities.md)).
+### 2.1 Block boundaries
 
-## Порядок исполнения плана
+A one-level dedent closes the ordinary open level. An explicit permitted marker
+can close the larger boundary described by the grammar.
 
-1. Закрыть оба [critical-дефекта](plan_critical_graph_bug_critical_pointer_to_struct_bug_fix.md) и физическую основу K01/K10 по [плану v3](next_core_tasks_v3.md). Точный исходный граф не включает служебные поля Thread; проверить реальные указательные ячейки и межаренное копирование.
-2. Одной миграцией общего механизма закрыть M1–M3 и N1–N6: выражение, объявление/присваивание, единый порядок аргументов, явные части метода и прежнюю форму `call: data code` (снята нормой 2026-11-19; её замена — структурный вызов, раздел «Единый вызов» и [план](next_core_tasks_v3.md#binding-callables-20261119)). Проверить `implements`, адресные карты, момент инициализации, скрытые входы и native/walker на связанных положительных, отрицательных и mutation-свидетелях. Затем выполнить M4 для генерируемого L1. Старый L1-порядок допустим лишь как временный bootstrap и удаляется после перевода источников и эмиссии.
-3. Закрыть остальные K01–K12 и полный kernel gate. Частичный GREEN не закрывает зависимость.
-4. Только после принятого ядра выполнять [S8.1–S8.6](next_core_tasks_v3.md): библиотечные экземпляры, общий механизм переменных массивов, runtime/toolchain closure, build orchestration и два самозамещения. G0 строит, проверяет и заменяет себя на G1; G1 повторяет это для G2. Сохранить команды, manifest, исходники, toolchain, артефакты и журналы. Один удачный перевод L1 или сравнение бинарников не заменяет это доказательство.
-5. Только после принятого §8 выполнять [S8a.1–S8a.5](next_core_tasks_v3.md) и [матрицу T01–T26](docs/new_parts/threadMessageAPI.ru.md). `post` и старые `send/receive` используют общий механизм доставки, без второй очереди или resolver; считать исходные ответы, доставки, ожидания и исполнения раздельно. После почтового среза повторить self-build и регрессии.
+A physical blank line outside protected literal/comment content completes the
+whole current syntactic block through the root boundary. This is the common
+level-completion mechanism, corresponding to the conceptual `-1` boundary
+where a source `---` cannot itself be written. Several consecutive blank lines
+are harmless.
 
-Действующая [видимость](docs/LMX_semantics.ru.md#declaration-visibility), уточнённая2026-11-15: переменные и const доступны от первоначального объявления в своём блоке и ниже; именованные Structure и callable видны в обе стороны. Переменная с callable-значением остаётся переменной. Root-only сбор namespace не открывает будущие локалы code; порядок задаёт итоговое лексическое дерево, не byte offsets разных файлов. Новое имя ветви наружу не выходит, повторное объявление видимого имени сохраняет RHS, допуск и запись. До своего объявления возможна обычная доступная внешняя связь, без TDZ. Затенение вложенных уровней — п. 10 общего алгоритма.
+Apply the exact [blank-line requirements](docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md)
+and the [grammar](docs/LMX_grammar.en.md), including paired delimiters, Mix documents,
+EOF, and protected text. A blank line does not invent a matching closing bracket
+or silently repair malformed bounded syntax.
 
-[M14](next_core_tasks_v3.md#native-structures) (прежняя норма) объединяет args/data в одну входную data и сохраняет сокращённые заголовки; формулировки «объединяет args/data», сокращённые заголовки `fn`/`sub` и `call(D,C)` как подстановка данных **сняты нормой 2026-11-19**: фактические аргументы подаются по выбору объявления (п. 7 общего алгоритма), данные — `parent(C)` ([structural-call](docs/LMX_semantics.ru.md#structural-call)). Каждый вызов, включая `call(A C)`, получает собственные локальные места без обратной публикации; путь «прозрачное место вызывающего» (п. 8) не публикует копию, а пишет прямо в место вызывающего. Только корни данных (`parent(C)`) и кода участвуют в подготовке namespace. Исходная data не дополняется из code. При входе инициализаторы вообще не исполняются: построитель чистого графа сворачивает готовые объявления без вызовов программы, вычисляемые описания сохраняются. Поданный actual заменяет свой default; неиспользованный вычисляемый вход не вызывается. Входы data доступны code. Для @: fptr getFuncPtr() выражение fptr("hello world") сначала вычисляет написанный RHS, затем вызывает результат; это общий механизм чтения поля, не неявный вызов голого callable.
+Verify an existing implementation before changing it. The requirement is not
+grounds for a separate blank-line parser or a mandatory rewrite of an already
+conforming common scanner.
 
-Значения/описания в собственном месте (явный фактический аргумент, собственное значение, автозаполнение, прежнее связывание) независимы от источника сразу после входа, в том числе до первого чтения; прозрачное место вызывающего — не копия, а само место вызывающего (п. 8). Ссылки внутри значения сохраняют цели. `x := 0` меняет выбранное место `x` (собственное либо прозрачное место вызывающего); запись `data\x := 0` снята нормой 2026-11-19 — исходный граф меняют явным путём `node\x := 0` либо `D\x := 0` от имени Structure данных (чтение исполнителя, Р107). `@x` адресует выбранное место (собственную ячейку либо реальное место вызывающего) и тоже вычисляет вычисляемый вход. Для int: field getValue() в данных вызова форма `@(node\field)` (прежняя запись `@(data\field)`) адресует результат в существующем l2_tN (&l2_tN) либо обычной ячейке обходчика, не переписывая исходное объявление и не создавая отдельное хранилище результатов. Для готового поля адресуется его ячейка. Обычное время жизни сохраняется; @f() не становится отдельной задачей поддержки или запрета.
+In LMX examples, do not insert decorative blank lines inside a vertical block
+that is meant to remain open. A blank line between completed top-level Structures
+is an intentional boundary. Avoid redundant `end:` or `---` markers when a
+normal single-level dedent or a permitted terminal return already expresses the
+intended close.
 
-Равенство «одноаргументный call(code) равен call(code code)» снято нормой 2026-11-19: `call(C)` исполняет `C` с данными
-`parent(C)`. Обязательное копирование code при входе отменено; выбранные собственные места остаются независимыми, а
-связывание передаётся скрытыми аргументами (автозаполнение — параметром `T`, прозрачное место — скрытым адресом ячейки,
-п. 8 и 11). Методы и обычные Structure компилируются общим механизмом без `D = C`; сигнатуры C-функций выводятся из реальных
-вызовов, разные подачи дают разные варианты (такой выбор native entry — реализационная деталь, а не конкурирующие объявления
-языка). Известный native вызывает известный native прямо в C,
-без графового кадра и lookup только ради вызова. Правки графа не обнуляют native.
-sys\compile явно выполняет чистый граф → L1 → C → машинную компиляцию/регистрацию; sys\translate выдаёт L1.
-sys\endturn выходит через зарегистрированные finally к обычной границе такта, без перехвата catch
-и возврата к месту вызова, без остановки Message/Thread. Сам не проверяет/не компилирует/не публикует.
-До границы момент применения правок code не гарантирован; после успешной явной компиляции и endturn
-следующий вход использует обновление. Подробности и удаление отслеживания — [M14](next_core_tasks_v3.md#explicit-compilation-plan).
+## 3. Declarations, calls, and writable places
 
-**Особое имя `data` снято нормой 2026-11-19** ([removed-builtins](docs/LMX_semantics.ru.md#removed-builtins)). Прежнее зарезервированное имя явной ссылки на данные запуска — путь `data\x`, `data\[N]x`, `data\if`, присваивание указателя `data := ptr`, одноимённая дочерняя часть вызываемого и одноаргументный `call: code`, не выбиравший дочерний блок `data` — больше не действует: данные выполняемой Structure `C` — её фактический родитель `parent(C)`, а прежние явные пути записываются `node\x` либо обычным путём от имени Structure данных (`D\x`) (чтение исполнителя, Р107). Слово `data` остаётся названием роли и обычным пользовательским именем: структурная запись с такой головой читается по роли, как всякая другая, — в данных объявляет обычную Structure, в коде вызывает голову (решение 2026-11-11, [журнал](LMX_blog/2026-11-11.md#structure-call-by-name); его чтения `data()` как запуска данных текущего запуска и `data(D)` как подмены данных сняты). Структура не является вызовом, а объявление не исполняет её содержимое. Для присваивания ссылки на метод писать `@: ptr method`: `@` стоит первым, `ptr` и `method` — голые атомы, а **атом не является вызовом**. `ptr(args)` — явный вызов, `@ptr` — адрес ячейки. `@x` адресует выбранное место `x`: собственную ячейку вызываемого (явный actual, автозаполнение, прежнее связывание) либо реальное место вызывающего (прозрачный путь, п. 8 общего алгоритма); прежнее утверждение «`@x` не адресует источник связывания» снято нормой 2026-11-19. [Прежняя норма RU/EN](provenance/semantics-book.md#ordinary-var), [дословные подтверждения и найденная история](LMX_blog/2026-11-03.md).
+A bare atom reads a value/reference and does not invoke it. A method pointer or
+ordinary Structure is invoked by an explicit CODE Frame. Dereferencing a reference
+does not itself execute the referent.
 
-**Роли `data` и `code` (решение автора 2026-11-11, [книга](docs/LMX_semantics.ru.md#data-code-roles), [журнал](LMX_blog/2026-11-11.md#data-code-roles)).** Решение сужает предыдущий и следующий абзацы (кроме смены написаний `var` → `data`, `body` → `code`, порядка `call: data code` (снят нормой 2026-11-19: двухаргументная форма — `call(A C)`, данные — `parent(C)`) и момента допуска `implements`, [журнал](LMX_blog/2026-11-11.md#data-code-roles), [порядок](LMX_blog/2026-11-11.md#data-before-code)). Structure участвует в запуске как данные или как код; роль задаёт запуск, а не сама Structure. Запись читается по роли, и транслятору не нужно выяснять, где вызов, где объявление Structure и где присваивание. Роли называются `data` (блок данных) и `code` (часть с исполняемыми записями); прежние особое имя явной ссылки на данные запуска, отдельная часть данных у вызова и одноимённый аргумент ресиверов `fn`, `sub`, `catch` — `code` сняты нормой 2026-11-19 ([removed-builtins](docs/LMX_semantics.ru.md#removed-builtins)): параметры `call` — `args` и `code`, данные выполняемой `C` — `parent(C)`, результат описывает поле `return` в данных. В данных: структурная запись объявляет Structure, какой бы ни была голова, — запись вызова и ресиверы управления там тоже Structure, названные своей головой; объявления ресиверами мест действуют; присваивания и прочий код не исполняются, присваивание там — просто поле, до которого доходят индексом; одноимённые записи различает индекс вхождения, `D\[N]имя`, к записи ресивера управления ведёт путь `D\if`, к вложенной — `D\if\if` (прежние пути `data\[N]имя`, `data\if`, `data\if\if` сняты нормой 2026-11-19 вместе с особым именем `data`: теперь `node\…` либо путь от имени Structure данных, чтение исполнителя Р107). В коде: всякая запись — вызов; объявление ресивером — проверка типа с присваиванием в место данных; структурная запись — вызов своей головы, и это ошибка, когда голова не называет ни вызываемого, ни Structure; объявлений Structure нет, объявление `catch` остаётся (`fn` — только сигнатура в роли данных, `sub` снят нормой 2026-11-19, [fn-signature](docs/LMX_semantics.ru.md#fn-signature)); вызываемое, объявленное в данных, вызывается прямо по имени и связывает свободные имена по единому алгоритму связывания (п. 8 общего алгоритма; прежний порядок «сначала динамический вход, затем лексический источник» — это прежнее связывание, запасной путь); обычная Structure данных запускается записью с её именем в голове (абзац «Запуск Structure по имени в коде» ниже). Безымянная Structure в коде вызовом не считается: `(a b c) := myFn()` — групповое присваивание ([книга](docs/LMX_semantics.ru.md#data-code-roles), [журнал](LMX_blog/2026-11-11.md#unnamed-structure-not-call)). Присваиваются только значения — примитивы и указатели на Structure и на функции: слева от `:=` место примитива или указатель-переменная (`@: ptr KnownStruct`), имя Structure или функции слева — ошибка; имя Structure или функции на месте значения указателя даёт указатель без записи `@Struct`. Аргументы вызовов и ресиверов разбираются общим алгоритмом и читаются как код — кроме ресиверов группы «роль данных», в которую входит `fn`: их аргументы читаются в роли данных, чтения W и E к ним не применяются ([whole-arguments](docs/LMX_semantics.ru.md#whole-arguments)). `f(arg: v)` — вызов `arg`, именованный аргумент — только `f(arg := v)`; входные места единой `data` объявляют ресиверы (`int: arg default`, `@: arg Template`), а именованные Structure остаются данными. У `catch` отдельной части формальных `args` нет; `args` ресиверов запуска содержит передаваемые значения. Пример `sub: proc (struct1: Template1; struct2: Template2) ()` снят нормой 2026-11-19: `sub` удалён, процедурный контракт — `fn` без `return`. Сокращённые заголовки по общему правилу частей ([книга](docs/LMX_semantics.ru.md#method-parts)) относились к исполняемым `fn`/`sub` и сняты нормой 2026-11-19 вместе с ними; прежняя схема `args/data` отменена. Запись запуска Structure на месте, где нужно значение (операнд выражения, фактический аргумент вызова, начальное значение, операнд `merge`), прежде считалась ошибочной, потому что у запуска результата нет (чтение исполнителя — [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), Р22, пункт 3; Р25, пункт 4); снято нормой 2026-11-19 ([return-in-data](docs/LMX_semantics.ru.md#return-in-data)). Следствия, принятые в книге (чтения исполнителя): письмо выхода пишется `send: exit(exit_code := 7; stdout := ""; stderr := "")`; имя, держащее результат `merge`, объявляет `@: R merge(A; B)`; прежнее следствие «именованные части ресиверов `fn`, `sub` подаются только через `:=` — `fn: name := k1; args := (int: a); return := int; code := (return: a + 1)`» снято нормой 2026-11-19 (`fn` — только сигнатура по шаблону данных, [fn-signature](docs/LMX_semantics.ru.md#fn-signature)). Интерфейсная часть `implements` выполняется один раз для каждого кандидата: при построении графа для известного кандидата, иначе при фактическом приёме; `test` — второй шаг при исполнении, с прекращением при первом `0`. Случаи выбора кандидата при исполнении — в [документе](steps/implements-runtime-cases-20261111.md); присваивание примитивов при исполнении на допустимость не сверяется (правило говорит о допуске `implements`, а не о преобразовании: проверка диапазона при приёме числа другого типа, `u16(256)` в `u8`, остаётся при исполнении). *Описывает реализацию прежней нормы (до 2026-11-19); действующая норма — [structural-call](docs/LMX_semantics.ru.md#structural-call); замена — [план](next_core_tasks_v3.md#binding-callables-20261119).* Из этих правил транслятор исполняет пока лишь часть, и только чистый граф: со среза 354 он читает `data`, `code` и `call: data code` и прежних написаний не принимает (шаг 4 [раздела M11 плана](next_core_tasks_v3.md#m11)); подшаг 5а шага 5 он исполняет со среза 355, первую часть подшага 5б — со среза 356, остальное чтение по ролям — подшаг 5в и остатки подшагов 5б, 5г, 5д и 5е — ещё нет; рабочий frontend, который вместе со своими фикстурами читает прежние `var`, `body` и `call: code data`, этих правил не исполняет (шаг 8); там же — снятие ветвей выбора.
+The same structural form is interpreted by role:
 
-**Ответы автора 2026-11-11 к этому решению** ([журнал](LMX_blog/2026-11-11.md#known-name-not-expanded), [книга](docs/LMX_semantics.ru.md#colon-declares)). Упоминание имени известной Structure не раскрывается — ни парсером, ни при построении чистого графа: в `Model: knownModel` у `Model` один атом `knownModel` — указатель на Structure `knownModel`, неизменяемый по имени. Ссылаться на неё он начинает при интерпретации и трансляции, и путь через него продолжается в её поля — `Model\knownModel\a` есть поле `a` самой `knownModel`, — но поддерева под `Model` не возникает: место Structure в дереве задаёт её `parent`, и у `knownModel` он не меняется. Не строить ни раскрытия, ни копии, ни «перехода» Structure внутрь другой. Элемент атома адресуется индексом, и присваиванием по индексу (`Model[0] := …`, `D[index] := …`; прежняя запись `data[index] := …` с особым именем `data` снята нормой 2026-11-19) в него можно записать что угодно; изменяемую ссылку объявляет ресивер — в `Model: @: ptr knownModel` имя `ptr` есть указатель-переменная внутри `Model`. В `Struct1: (Struct2 a b c)` внутри `Struct1` одна безымянная Structure с четырьмя атомами: `Struct1[0]\Struct2\a` — поле `a` Structure `Struct2`, а `Struct1[0]\a` — собственный атом безымянной Structure. Ссылки по имени могут замкнуться (`A: B` и `B: A`) — это не ошибка; так же, по имени и без раскрытия, называют Structure аргументы вызовов. Дамп чистого графа печатает дерево — атом, а не содержимое указуемого (чтение исполнителя — [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), Р2). Снято нормой 2026-11-19: правило «данные стоят перед кодом в каждой записи: двухаргументный запуск пишется `call: data code` и `call(data code)`» ([журнал](LMX_blog/2026-11-11.md#data-before-code)) — двухаргументная форма теперь `call(args code)`, данные — `parent(C)` ([structural-call](docs/LMX_semantics.ru.md#structural-call)). Снято нормой 2026-11-19: правило «у Structure, запущенной над самой собой, своих правил нет, и пропуска «своих» объявлений нет» ([журнал](LMX_blog/2026-11-11.md#self-launch-no-own-rules)), вытекающие из него чтения исполнителя (те же ответы, часть Р) и фраза «корень единицы запускается как Structure над самой собой»: `call(C)` не равен `call(C C)`, у R0 нет данных ([root-entry](docs/LMX_semantics.ru.md#root-entry)), а роль записей корня единицы — открытый вопрос автору ([unit-root-roles-20261119](LMX_blog/q/current/unit-root-roles-20261119.md)). Объявление Structure среди исполняемых записей по-прежнему, как правило, ошибочно, но по другой причине: запись, которой те же данные объявляют обычную Structure, в коде запускает эту Structure, и её собственный хвост стоит на месте аргумента — два и более поля в хвосте не дают определённого числа аргументов, одно поле — данные запуска и должно давать Structure; не отказывают лишь вырожденные записи — пустой хвост, единственный атом, называющий Structure, единственная безымянная Structure в скобках (чтение исполнителя — [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), Р21, п. 6); обоснование «хвост — данные запуска, два и более поля не дают числа аргументов» снято нормой 2026-11-19: хвост записи — фактические аргументы по общему выбору (п. 7 общего алгоритма), а вывод, что запись в коде — вызов головы, сохранён. Поэтому исполняемая Structure — корень единицы, тело метода, Structure, запускаемая `call` или по имени, — объявлений Structure не содержит: их пишут в данных — в части `data` метода, в Structure, которую запуск получает данными, в написанной Structure на месте значения. Запись вызова в данных — Structure с именем своей головы и адресуется `D\f` (прежняя запись `data\f` снята нормой 2026-11-19); голое имя `f` в коде по-прежнему называет метод.
+| Form | DATA reading | CODE reading |
+| --- | --- | --- |
+| `A()` | Empty Structure declaration | Invoke A with an empty actual tail |
+| `A: ()` | A with one empty anonymous Structure | Invoke A with the written structural actual |
+| `A: B` | A containing a reference to B | Invoke A with actual B |
+| `int: i 5` | A primitive declaration | Declare/update the corresponding execution place |
+| `i := value` | A retained written form unless consumed by its declared contract | Write an already known writable place |
 
-**Запуск Structure по имени в коде (решение автора 2026-11-11, [журнал](LMX_blog/2026-11-11.md#structure-call-by-name); чтение исполнителя — [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), Р21; роль данных и форму записи теперь задаёт норма 2026-11-19, [structural-call](docs/LMX_semantics.ru.md#structural-call)).** В коде запись, голова которой — обычная Structure `C`, исполняет её (до решения 2026-11-11 такая запись в коде отказывала, а обычную Structure исполнял только ресивер `call`): `C()` — с пустым хвостом, `C(args)` — с написанными фактическими аргументами по общему выбору (п. 7 общего алгоритма); так же короткая форма `C: args` и блочная. Роль данных у `C` исполняет её фактический родитель `parent(C)`. Это самостоятельная запись запуска, а не форма ресивера; ресивер `call` остаётся общим механизмом того же структурного вызова (раздел «Единый вызов», [call-receivers](docs/LMX_semantics.ru.md#call-receivers)), а не отдельной частью формальных объявлений callable. Голова — место со ссылкой: вызывается то, на что ссылка указывает, — вызываемое (вызов через указатель) или Structure (запуск по тем же формам); место числа, пустая ссылка и неизвестное имя — ошибка, как и голова, не называющая ни вызываемого, ни Structure. В данных ничего не меняется: `S()` по-прежнему объявляет пустую Structure `S`, а `S(D)` — Structure `S` с атомом `D`; ничего не вызывается (для `S()` подтверждено автором, [журнал](LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code); для `S(D)` — чтение исполнителя, Р21, п. 2). **Снято нормой 2026-11-19:** чтение `S()` как `call(S, S)` и `S(D)` как `call(D, S)`; единственный аргумент записи с именем `data` (`S(data := D)`), требование, чтобы он давал Structure, и отказ при двух и более позиционных аргументах (фактические аргументы теперь подбирает выбор п. 7); «все шесть форм» ресиверов `call` и `fncall`; чтение записи в Structure над самой собой и в корне единицы «по обеим ролям» (`call(C)` не равен `call(C C)`, у R0 нет данных; роль записей корня единицы — открытый вопрос автору, [unit-root-roles-20261119](LMX_blog/q/current/unit-root-roles-20261119.md)). *Описывает реализацию прежней нормы (до 2026-11-19); действующая норма — [structural-call](docs/LMX_semantics.ru.md#structural-call); замена — [план](next_core_tasks_v3.md#binding-callables-20261119):* чистый граф со среза 356 исполняет запись запуска Structure по имени в коде метода и в коде над поданными данными — `S()`, `S(D)`, `S(data := D)` — и запись с головой — местом со ссылкой на обычную Structure везде, включая корень единицы, а также именованную подачу аргументов у `call` и `fncall`; в корне единицы и в Structure над самой собой роль кода у записи с головой — обычной Structure по имени он пока не исполняет (подшаг 5г [плана](next_core_tasks_v3.md#m11)). Рабочий frontend читает прежние имена и порядок и запуска по имени не исполняет (шаг 8).
+A place is declared by its receiver: `int: i 5`, `@: ptr`,
+`@: ptr Model`, or `@: ptr Model candidate`. The first argument identifies the
+place. Nested `Model: Other` remains a Frame; it is not an alternative spelling
+of two flat requirement/candidate arguments.
 
-Объявление ресивером места в code связывает новое локальное место либо сохраняет RHS, допуск и присваивание уже видимому месту namespace; исходную data оно не расширяет и назад не пишет. Новое имя inline-ветви видно в ней и ниже, снаружи не видно. Повтор видимого имени не создаёт другую C-переменную. Физические объявления в данных остаются отдельными вхождениями: при повторе имени требуется S\[N]field, автоматического выбора первого нет. Явное раннее чтение вычисляемого объявления не отменяет исполнения его строки при последующем достижении.
+`i: int: 5` does not declare the primitive i. A structural declaration's name
+does not become assignable merely because an expression appears after its colon.
+Use a declared reference variable when the stored reference must change.
 
-Интерфейсная часть implements выполняется один раз для кандидата: для известного при построении графа, иначе при фактическом приёме. Test — второй шаг при исполнении, с прекращением при первом 0; построитель пользовательские test и прочие программные вызовы не выполняет. Соблюдать общую границу data/code: прямой проход данных обрабатывает корневые объявления, а произвольный код не запускается только из-за присутствия в data. К выполнению переданного кода приводит его обычное потребление ресивером. Готовые объявления сворачиваются при построении чистого графа; отдельного входного прохода инициализаторов нет. Разрешённые места и обычная таблица «адрес → имя» используются общим обходом, без отдельного opcode или специальных путей ресиверов.
+Repeated CODE declarations retain initializer evaluation, admission, and writing
+to the existing same-level place; they do not require another C declaration.
+A repeat without a new RHS preserves the current value. Repeated DATA declarations
+remain separate occurrences under the normal DATA namespace contract.
 
-При реализации структурного вызова (прежнее написание — `call: data code`) удалить load-dirty, обратную публикацию, work_flush, отдельный кеш и flush() вместе с их таблицами, переносами и ветками генератора. Прямой путь пишет исходный граф сразу, с тем же результатом через aliases. S[n] := p — сырая запись void*, идентичная Array<@>, без требований бывшего поля; именованная запись использует контракт поля, по возможности проверенный сборщиком. Нужные физические свойства памяти сохранять; инвалидацию code, её таблицы, переносы и ветви генератора удалить, без замены отслеживанием другого вида. Построение и проверка чистого графа сначала работают в сборщике; переносить общий код в runtime только под конкретную задачу, без универсальных обёрток и состояний «на будущее».
+`S\[N]field` selects a same-name DATA occurrence. `a[i][j]` and `a[i]\[j]`
+have their distinct rectangular-index and reference-following meanings. Do not
+repair one operation by changing the syntax or storage meaning of another.
 
-Явные вспомогательные операции группировать в sys: check/checkL3, translate (L1 + errors, не LMX), compile, endturn, capacity/resize/reserve, indexof и операции заголовка/сериализации из M14. Parent и length остаются общедоступными. Sys\indexof(field parent) требует единственного вхождения той же ссылки; sys\indexof(field index parent) возвращает физический индекс указанного с нуля вхождения. Отсутствие/неоднозначность диагностирует явный indexof, а не обычная запись массива; обратный индекс не создавать. Общие имена коротких операций не резервировать глобально. Проверки соразмерны изменению; применять языковой test по мере переноса самосборки.
+## 4. Structural call, DATA, and return
 
-## Миграция к норме 2026-11-19: связывание и вызываемые
+For a selected executable Structure C, DATA is `parent(C)`:
 
-Состояние: норма принята ([ТЗ](docs/new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), §13–§14), реализация
-(транслятор, интерпретатор чистого графа, ядро, примеры, тесты) её ещё не исполняет; работы записаны в плане, раздел
-[binding-callables-20261119](next_core_tasks_v3.md#binding-callables-20261119). Ниже — порядок, а не новые правила сборки.
+| Form | Actuals |
+| --- | --- |
+| `call(C)` | None |
+| `call(A C)` | A |
+| `C()` | Empty written tail |
+| `C(args)` | Written actuals admitted by the common algorithm |
 
-1. **Порядок записи исходников.** Действующий транслятор принимает только прежние формы, а весь исходный код ядра
-   (`selfbuild/`) написан прежними `fn:` / `sub:` с заголовками. Поэтому до приёмки срезов этого раздела плана, которые учат
-   транслятор новым формам, исходники ядра продолжают писаться прежними формами: иначе самосборка не пройдёт. Перевод ядра на
-   формы 2026-11-19 до приёмки соответствующего среза не начинают и не смешивают с посторонними правками.
-2. **Документы и нормативные примеры.** Новые нормативные примеры в документации пишутся формами 2026-11-19: `call(C)`,
-   `call(A C)`, `C()`, `C(args)`; сигнатуры — `fn(int: a; int: b; return: int)` либо блоком `fn:` с полями данных; без
-   `fncall`, `sub`, особого `data` и `call(D C)` как подстановки данных. Прежняя форма допустима в тексте только с пометкой
-   «прежняя форма» (иллюстрация реализации или снятого решения).
-3. **Срезы миграции.** Перевод ядра, примеров и тестов выполняется отдельными срезами плана; каждый срез проверяется по
-   действующему короткому циклу сборки ([to_fable2_fast_build.md](to_fable2_fast_build.md)): затронутые компоненты, минимальный
-   пример, малый список зависимых. Самосборка (G1/G2) и полный набор тестов выполняются на границе этапа либо при смене цепочки,
-   ABI или формата, а не на каждом срезе; результат фиксируется фактически — команда, число целей, FAIL-ID, фаза, диагностика.
-   Новых правил сборки здесь не вводится.
-4. **`fn` и `sub`.** Исполняемые `fn` и `sub` заменяются: сигнатура — шаблоном по форме данных (`fn(...; return: T)` — контракт
-   значения, без `return` — процедурный), реализация — обычной Structure `C` с её `parent` как данными (пример `SumContext` с
-   вложенной `sum`, ТЗ §8.3; вызов `SumContext\sum(a := 2; b := 3)`). Типизированный указатель — `@: ptr fn(...) candidate`.
-   Точные правила переписывания каждой прежней формы задают срезы плана; в ТЗ их нет, и здесь они не выдумываются.
-5. **`call(D C)` и `C(D)`.** Каждое вхождение переносится содержательно, а не механически: `D` теперь `args`; нужную смену
-   `parent` создаёт объявление, копия или merge до вызова (`NewContainer: ExistingCode` `parent` не меняет).
-6. **`catch`.** При миграции `catch` не превращается в обычную функцию и не теряется вместе с `sub`
-   ([catch-common-model](docs/LMX_semantics.ru.md#catch-common-model)). Он приводится к общей модели входов и вызова: payload —
-   явно поданные значения по общим правилам, связь кода обработчика с данными — через `parent`; скрытое связывание и `private`
-   действуют на остальные допустимые зависимости обработчика. Сохраняются: выбор обработчика по имени failure и области, body не
-   исполняется на первоначальном прямом проходе, вложенные и соседние области различаются, два конкурирующих одноимённых `catch`
-   на одном уровне не добавляются, продолжение после обработчика, повторный вызов, `throws` и cleanup. Удаляется только
-   зависимость от исполняемых `fn`/`sub`, `fncall` и отдельной подстановки данных.
-7. **Что остаётся.** `node`, прежний механизм связывания (как запасной путь, п. 8 общего алгоритма), явная компиляция, существующий
-   выбор native/walker и граница `endturn` сохраняются; удалять их в рамках этой миграции нельзя.
+`call` has parameters `args` and `code`. The one-argument form requires code;
+the two-argument form requires both. `call(code := C)` fixes its single actual
+without an E reading. `call` executes C itself and does not search for a child
+named code.
 
-### Что срез реализации обязан предъявить (ТЗ §14)
+The separate DATA argument, the builtin `data` name, `fncall`, and executable
+`fn`/`sub` definitions are removed. Ordinary user names follow their current
+resolution contract. `node` remains the explicit lexical operation, fixed for
+the current method activation; it is not a synonym for every nested Structure's
+immediate parent.
 
-Каждый срез, исполняющий эту норму, предъявляет **фактически выполненные** проверки, отдельно от ещё не поддерживаемых путей:
+To combine different data and code, establish the structural relationship before
+calling. Merely placing a reference under a new container does not reparent it.
+The call site, native implementation address, or service dispatcher does not
+replace the selected occurrence's lexical context.
 
-- строки таблицы B01–B27: B01–B08 — автозаполнение, прозрачное место, прежнее связывание, тип `T`, `@x`, ссылочная переменная,
-  неинициализированный источник, немедленная видимость записи; B09–B17 — `private` в обе стороны, явная передача и явное
-  заполнение, вложенный лексический и явный доступ, затенение внешнего `private`, фильтр места, а не имени; B18–B21 — `const` и
-  `immutable`, цепочка A → B → C, собственная копия B и псевдоним A.x; B22–B27 — собственный default, вычисляемый default,
-  затенение, повтор на том же уровне, употребление до более позднего объявления, записи `private`/`required` в графе;
-- строки таблицы C01–C19: структурный вызов и прямой вызов с теми же actuals (C01), `call(D C)` после миграции (C02), общая
-  native-реализация и разные `parent` (C03), `NewContainer: ExistingCode` (C04), R0 без аргументов (C05), `fn` с `return` и без
-  (C06), `sumPtr` (C07), все примеры выбора §9.8 (C08), выбранные W и E без повторного раскрытия (C09, C10), отказ формы до
-  эффекта actual и отказ приёма очередного actual (C11, C12), присваивание внутри actual-выражения (C13), `return` в выражении
-  (C14), `catch` (C15), `node` и обычное пользовательское `data` (C16), разные скрытые копии и места (C17), вызов без подходящего
-  native entry (C18), copy/merge и сохранение графа callable (C19);
-- ключевые строки B01–B08, B11–B15, B18–B21, C01 и C17 — **во всех четырёх сочетаниях** native→native, native→обходчик,
-  обходчик→native, обходчик→обходчик, с наблюдением значения, типа и места записи, а не одного возвращённого результата;
-- один отдельный контрольный fixture по §7.4 — после установления точного вывода, без произвольного ожидаемого числа;
-- результат обязательных проверок самосборки для затронутых частей — по короткому циклу (п. 3 выше).
+R0 has no DATA and no user actual arguments. Do not synthesize self-DATA, an empty
+DATA Structure, or an artificial data field. Host/runtime launch parameters are
+not user signature arguments. Its native C method holds the R0 graph pointer
+locally, including when the invoked program operations use the interpreter.
 
-Проверку, которая не запускалась, не объявлять выполненной; ожидаемые эффекты теста не менять ради удобства реализации. Эта
-инструкция не сообщает, что какая-либо из перечисленных проверок уже выполнена.
+`return` in DATA describes a result and assigns nothing. In CODE it is the return
+receiver. Ordinary Structure calls and explicit `call` may return that described
+value. End of code does not synthesize a return.
 
-## Стиль записи: закрытие блоков
+### 4.1 One invocation mechanism
 
-**Оформление по просьбе автора 2026-11-13:** в новом и переписываемом коде один уровень никогда не закрывать
-лишним `end:` или оградой. Использовать уменьшение отступа либо трейлер `return` для исполняемого определения.
-Это правило оформления, не изменение грамматики или парсера ([слова автора](LMX_blog/2026-11-13.md#one-level-formatting)).
+Ordinary calls, reference calls, handlers, and structural execution use shared
+selection, binding, admission, namespace, and result workers. Known native calls
+remain direct C calls when the prepared contract permits them.
 
-**Повтор автора 2026-11-16** ([журнал](LMX_blog/2026-11-16.md#new-types-not-bits)): «при последовательном снижении по одному
-уровеню они не требуются -- как в Python; Функцию лучше закрывать return в роли trailer если return и так идет
-последним оператором». Функция, у которой `return` — последний оператор, им и закрывается: строка `end: имя`
-после него не пишется. Приёмка каждого среза проверяет его diff: добавленная строка `end: имя` или ограда `---`
-допустима только там, где она закрывает больше одного уровня. Старые записи не переписываются ради правила.
+The dispatcher must retain the language caller's context. Its own service locals
+must not become the source of autofill or transparent binding.
 
-## Новое различие — новый тип
+`catch` retains its handler rules: matching by failure name/scope, no execution
+during the initial direct pass, normal payload actuals, cleanup and continuation,
+and the established distinctions between nested and neighboring handlers.
+Moving it to the common call model does not turn it into an ordinary function.
 
-Слова автора 2026-11-16 ([журнал](LMX_blog/2026-11-16.md#new-types-not-bits)): «заводите просто новые типы себе и
-всё»; «зачем тебе снимать и выставлять биты если есть 4 млрд кодов для 4 млрд типов?». Когда ядру или транслятору
-нужно отличить один вид значения от другого, заводится новый код типа в перечне типов. Биты-признаки, маски и
-составные «слова кода» не вводятся. Разные Structure при этом не разные типы: модель пользователя кода типа не
-порождает ([L2 §3](docs/L2_spec_ru.md#value-record)).
+## 5. Named fn and implements
 
-Слова автора 2026-11-11: [один отступ закрытия не требует](LMX_blog/2026-11-11.md#one-level-needs-no-close), [все трейлеры закрывают и более чем один уровень](LMX_blog/2026-11-11.md#trailers-close-many-levels), [внутри скобок то же правило, парсер везде один](LMX_blog/2026-11-11.md#same-parser-inside-brackets), [согласие с правками парсера](LMX_blog/2026-11-11.md#one-parser-everywhere-no-unwrap); правило — [грамматика §14](docs/LMX_grammar.ru.md#bounded), [§15](docs/LMX_grammar.ru.md#levels) и [§17](docs/LMX_grammar.ru.md#close).
+Write a named signature with two DATA-role arguments:
 
-Закрытие блоков. Блок закрывается отступом, как в Python: строка, вернувшаяся на один уровень, закрывает блок, и закрывающего слова не нужно. Отсекатель — видимая форма трейлера: `end: имя`, ограда `---` или терминальная форма (`return`, `until:`) в разрешённой позиции — нужен только там, где уровень следующей строки снижается больше чем на один (перескок); без него такое снижение — ошибка разбора. Один отсекатель, допустимый в своей позиции и профиле, закрывает и несколько уровней сразу. Правило одно во всех блоках: внутри скобок — круглых, квадратных и фигурных — оно то же, что вне скобок, и парсер везде один (слова автора). Отсекатель внутри скобок действует на уровни, открытые внутри тех же скобок, и непарную скобку не закрывает. После блока в один уровень `end: имя` писать не требуется (состояние парсера — абзац ниже).
+~~~lmx
+fn: SumSignature (int: left; int: right; return: int)
+~~~
 
-Один уровень — закрытие не нужно: блок `Point` закрывает строка `int: after 1`, вернувшаяся на один уровень.
+The name is a constant signature declaration. The template uses the ordinary
+DATA notation. A result field makes a value signature; its absence makes a
+procedural signature. It creates no executable method.
 
-```text
-Point:
-    int: x 4
-int: after 1
-```
+An ordinary structural template checks every part of its explicitly required
+tree. If the template contains a method subtree, that subtree is part of the
+requirement. Use a minimal template when only a minimal structural interface
+is intended.
 
-Два уровня — нужен отсекатель: от `int: x 4` к `int: y 2` уровень снижается на два, поэтому стоит `end: Point` (на том же месте годится и ограда `---`, если её допускает профиль и позиция однозначна, [грамматика §16](docs/LMX_grammar.ru.md#markers)); без этой строки перескок — ошибка разбора.
+The fn branch of the same `implements` compares the count and ordered types
+of explicit parameters and the presence/type of result. Parameter names,
+initializer values, and implementation trees are not fn identity keys.
+No separate signature-validator subsystem is introduced.
 
-```text
-D:
-    Point:
-        Inner:
-            int: x 4
-    end: Point
-    int: y 2
-```
+A call through a fn-constrained reference uses the public signature names to
+select argument positions. Those positions map to the candidate's corresponding
+parameters even if its names differ. Evaluation order remains the written order;
+matching does not rename the candidate or reorder effects.
 
-Строки внутри скобок читаются так же, как вне скобок: строка глубже предыдущей открывает вложенную анонимную Structure (в примере у `y` атом `a` и анонимная Structure с `b`), точка после пробелов отступа — обычный атом, не маркер уровня, а закрывающая скобка без открывающей — ошибка разбора ([грамматика §14](docs/LMX_grammar.ru.md#bounded), формы А, Б, В).
+Defaults, requiredness, throws, and hidden binding use the actual candidate's
+contracts and names. A default in a requirement is not copied into the candidate
+merely by checking it. `return` is not an input.
 
-```text
-D: (
-    y: a
-        b
-    z
-)
-```
+## 6. Selection before implicit binding
 
-Состояние парсера. Проверенные сборки P0 и оставшиеся ограничения — в [заметках реализации](docs/implementation-notes.ru.md). Пакет общего разбора блоков, однократной постобработки, потерянных скобок и Mix не закрывает M8: раскрытие единственной Structure пока сохраняется; M8 — следующий шаг [передачи](to_sol.md).
+A candidate consists of a visible declaration, an admitted reading of explicit
+actuals, and their map to formals.
 
-Существующие записи с `end: имя` после блока в один уровень допустимы и не переписываются: именованному Frame не обязательно иметь явный `end:` ([грамматика §17](docs/LMX_grammar.ru.md#close)).
+- W reads the supplied actual whole.
+- E, where admitted, reads the immediate fields of a single Structure argument
+  once, one level deep.
+- `f(arg := S)` supplies an explicit named actual without E.
+- The readings have equal standing. No candidate means refusal, one means a
+  selected call, and more than one means ambiguity.
 
-## Проверка и публикация среза
+There is no preference for one arity, the whole Structure, or the first inspected
+declaration. Two valid readings of the same declaration remain two candidates.
+The selected map is used without repeating expansion during execution.
 
-- По [последнему уточнению автора от 2026-10-22](LMX_blog/2026-10-22.md) **все тесты и скрипты переносить на L2/L3**, не на рукописный L1/C/Python/PowerShell. Предыдущее разрешение на L1-тесты отменено. Это включает source-linked/fault/lifetime probes, test helpers и простые prepare/build/verify/checkpoint/receipt/audit/post runners, генераторы/классификаторы и обработку результатов. Сохранять assertions, внутренние инварианты, negative controls, mutants и реальные native/walker значения, а не заменять их успешной трансляцией. В bounded inventory для каждого maintained input указать L2/L3-замену, языковой запуск, соответствие наблюдений и новые hashes. Не прятать старую логику в строку, другой shell или thin wrapper; после переноса нет активного fallback на старый скрипт. L1/C остаются только генерируемыми артефактами; внешний C compiler/linker и OS допустимы. Недостающую общую операцию реализовать на L2/L3 в языке/библиотеке. Старые receipt не переписывать, неизвестные/чужие файлы не удалять по одному расширению.
-- До правки записать базовый commit/SHA, затронутые пути, зависимость плана и ожидаемые свидетели. Менять один dependency-closed срез, не подкручивать старые golden-файлы ради сокрытия отказа.
-- Выбирать сборку и проверки по [короткому компонентному циклу](to_fable2_fast_build.md): затронутые компоненты и необходимые зависимости, минимальный пример и зависимые случаи. Изменение исполнения проверять на нужных native/interp/forced путях; отрицательные случаи и mutants выбирать по конкретной правке. Полную самосборку и полный набор запускать по их отдельным основаниям, после стабилизации связанного изменения; это не условие каждого среза или коммита. Для каждого результата сохранить команду, число целей, FAIL-ID, фазу и диагностику. Сбой общей проверки назвать точно, а не объявлять gate пройденным.
-- При изменении нормы править её первичный источник и обе языковые версии: [семантика](provenance/semantics-book.md) и [языковой генератор](selfbuild/tools/docs_semantics.lm2), [грамматика](provenance/grammar.json) и [языковой генератор](selfbuild/tools/docs_grammar.lm2), либо соответствующие парные L1/L2-файлы. Справочные объяснения и измеренные ограничения держать вне нормативного текста. Реплики автора архивировать в `LMX_blog/` дословно по [READ.ME](READ.ME), организационные сообщения туда не переносить.
-- При изменении источников генерируемых документов выполнять соответствующие `docs render` / `docs check` текущим проверенным tool по [командам](READ.ME#docs-cycle). Для правок инструкций и плана проверить текст, ссылки и `git diff --check`; неизменённые документы не регенерировать, compiler/runtime и bootstrap не собирать. Python-версии не являются активным fallback. Коммитить только перечисленные проверенные пути и push в `main`; не включать чужой WIP. Непроверенная правка или ACK агента не являются опубликованным завершением; компонентную приёмку не выдавать за полный gate.
+Check candidates without speculative execution of RHS effects, defaults, or
+behavioral tests. Reuse an already computed argument rather than evaluating it
+again for E. Run statically available shape checks before effects as required
+by the ordinary call contract.
+
+Hidden caller values do not become explicit actuals, satisfy a missing required
+input during selection, rescue a rejected candidate, or restart the choice.
+
+A named actual at the next position of its own formal counts as positional.
+An out-of-position named actual disables positional counting; following actuals
+must then be named. The cursor does not restart later.
+
+## 7. Passed declaration receivers
+
+A declaration receiver passed as an actual in CODE is read as DATA. Retain the
+form rather than executing its initializer just to pass a value.
+
+| Situation | Required handling |
+| --- | --- |
+| The declaration's name matches an input in DATA | Replace the selected declaration description in this call's namespace |
+| The inner declared name is absent from DATA | Pass the entire form in its current position as one Structure |
+| An outer `name := ...` names the actual | Use that outer destination; retain the form's own inner name |
+
+The inner name in `int: item numbers\next()` is not automatically an unknown
+named actual when the receiving inputs are iteration and body.
+
+The passed root declaration logically supplements the executing code's root
+namespace. Physical source parents are not rewritten; no fields are inserted
+into source code. Each reached invocation of the retained declaration executes
+it again. The first creates the receiving local, and later executions update
+the same place by the normal repeated-declaration rule.
+
+The associated body uses that receiving place. Entering the body must not
+construct another independent item or evaluate the iterator initializer again.
+Real nested scopes inside the supplied form retain their normal shadowing.
+
+Do not extend this rule to every ordinary call-shaped Frame or every Structure
+reference. `Producer()` in CODE remains a call of Producer. Resolution of the
+head's declaration contract supplies the distinction; no hardcoded list of
+`iterate`, `iteration`, `item`, or primitive receiver names is needed.
+
+The complete examples and named-order cases are in the
+[declaration/import requirements](docs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+
+## 8. Binding places and two-way private
+
+For an own declared place, use the order: explicit actual; its own ready value
+or initializer description; allowed same-name caller autofill; ordinary
+uninitialized state and requiredness.
+
+Autofill gives an own place. Writing that own copy does not write the caller.
+A supplied zero is supplied material, not an omitted argument.
+
+For a used external name without an active own declaration, protect any really
+visible private lexical declaration from dynamic replacement. Otherwise select
+the permitted caller-local place transparently; if it is unavailable, retain
+the former binding as lower-priority fallback with its own working
+value/description.
+
+A transparent place uses the caller's actual cell. Writes are immediate and
+update its initialization state where applicable. It is not copy-in/copy-out.
+The fallback is an own copy and is not changed into an alias.
+
+A hidden native pointer does not change the LMX variable type. Plain reads,
+assignments, and `@x` act on the selected logical place. For a reference variable,
+the native transport address does not add a visible source-level reference depth.
+
+`private` applies in both directions on all implicit dynamic routes. Private
+caller places are not offered; private visible lexical recipients are not
+overridden. Explicit passing, explicit paths, nested lexical access, and node
+remain possible under normal const/immutable restrictions.
+
+Read the existing `private` receiver from the same clean graph. Do not serialize
+a second privacy/initialization-marked graph into the binary or materialize one
+in the namespace. Generated methods reflect the binding decision; ordinary
+temporary facts and frame values do not justify a second program representation.
+
+Filter concrete places, not all uses of a spelling. A skipped private source
+does not hide every other admissible source of that name. New inner declarations
+can shadow outer ones under the ordinary scope rule.
+
+Reachability through A → B → C is preserved without static accumulation of all
+transitive requirements. Forwarding a B-owned copy gives B's place; forwarding
+an existing transparent link retains its original target. A suspended producer
+does not rebind its captured places to a later next-caller.
+
+## 9. Visibility and evaluation timing
+
+Variables and const declarations are visible sequentially; named Structures and
+callables are visible in both directions. Namespace preparation does not expose
+future CODE locals or walk unentered branches.
+
+A nested declaration shadows the outer same-name declaration and may have a
+different type. A same-level repeat uses the existing place. Leaving the nested
+scope restores the earlier visible binding and its write/private properties.
+
+Before an own declaration begins, a use can resolve by the ordinary outer path.
+Do not pre-scan the entire body and suppress that use because a later declaration
+shares its name.
+
+Own frame values/descriptions are independent of their source under the accepted
+activation contract. References retain their referenced targets. Unused computed
+inputs do not run. Once an own input is demanded and initialized, later reads of
+that activation place reuse its current value; removing dirty publication does
+not mean reevaluating its initializer on every read. Reaching a repeated CODE
+declaration still runs its RHS and updates the same place. Separate calls and
+separate dynamic expression evaluations retain their own ordinary state.
+
+For Binding TZ §7.4's no-RHS inline case, the new inner place is `uninit:int`:
+the inline scope is not a new caller, and the stated actual caller has no x.
+The existing outer x = 5 remains unchanged. A reached required reception refuses
+the absent value. This is a consequence of ordinary caller autofill and distinct
+inner declaration identity, not an outer-local copying rule. Retain that explicit
+oracle in the [derived review case](docs/REVIEW_NOTES.md#open-questions).
+
+## 10. Operands, priorities, and effect ordering
+
+A user operand is an ordinary method resolved in the current namespace.
+Its DATA is checked against the structural operand header. Mandatory fields are
+`left`, `right`, `PASS_ARGS_AS_IS`, and `PRIORITY`. Missing properties are not
+filled by merely checking the template.
+
+`left` is one reference input. `right` is an Array of references in source
+occurrence order. A container remains one operand; no general Array spreading
+is introduced. Prefix forms can omit the written left actual under normal
+method admission.
+
+`PASS_ARGS_AS_IS 0` supplies prepared values. `PASS_ARGS_AS_IS 1` supplies
+original occurrences without their effects. The priority is an independent
+constant property. The method returns its ordinary declared type, not a universal
+record pointer that expression automatically dereferences.
+
+`sys\eval(fragment)` evaluates a raw occurrence through the same evaluator and
+its original context. Two explicit calls mean two evaluations. The context
+association survives helper calls for its admitted lifetime but does not make
+a completed activation immortal. Ordinary dereference does not evaluate source.
+
+Use `sys\name(identifier)` for the written spelling without resolving the
+identifier's value. `sys\priority(name)` queries the same operand properties
+used for expression analysis. Separate `sys\operand` registration is removed.
+
+Normal reference passing remains `@: ptr Struct`. Prefix `@Struct` explicitly
+obtains a numeric address. Machine-address operations retain the existing
+memory/profile restrictions; no automatic address-taking is added to pass
+methods or Structures.
+
+Supported arithmetic precedence follows C; `=` is equality and `:=` is
+assignment. `**` keeps the explicitly documented Python-like asymmetric
+binding. Assignment remains low-priority and right-associative.
+
+An operation obtains required values on demand, once per occurrence in a
+particular evaluation. This does not change precedence or shorten an
+assignment's RHS. `f(1 + v := 2 + 3)` obtains 5 from the assignment and passes
+one actual 6; a standalone named actual is a different structural position.
+
+Preserve short-circuiting and repeated loop-condition evaluation. A skipped
+operand has no effects. A new iteration, call, or explicit eval is a new
+evaluation; no permanent cache is written into the clean graph.
+
+When emitting C, sequence effects to implement the LMX contract. Do not rely
+on an unspecified C evaluation order to reproduce the chosen LMX order.
+
+## 11. Import, copy, and merge
+
+| Receiver | Argument role in every placement | Admitted sources |
+| --- | --- | --- |
+| `import` | CODE | One or more |
+| `copy` | CODE | Exactly one |
+| `merge` | CODE | Two or more |
+
+All three receivers use the standard CODE argument algorithm in the translator
+and interpreter, even when their records are written inside DATA. There is no
+separate DATA-argument form or role-dependent source-processing branch.
+
+Bare Structure references and anonymous Structure values are not calls:
+
+~~~lmx
+merge(A B)
+merge((int: x 1) (int: y 2))
+~~~
+
+An explicit `Producer()` source is evaluated once when the receiver consumes it,
+in ordinary order. This rule also applies to a receiver written in DATA; it does
+not execute the record at P0 or replace it in the source graph.
+
+Anonymous Structures can contain explicit calls and computed declarations. Apply
+their normal contracts: the container is not itself an invocation, but grouping
+is not a special quote that suppresses nested calls. Nor does it force every
+initializer to execute eagerly.
+
+Both copy and merge issue a field stream. Import issues eligible declarations
+by reference. A standalone import contributes to the current namespace; a
+nested import supplies its surrounding consumer without an additional hidden
+import into the caller.
+
+The import filter remains root const declarations as defined by ordinary DATA
+reading. User Structure declarations are constant without explicit const.
+A constant name created by fn can qualify; the receiver spelling fn is not the
+imported declaration. Existing variable fields and separately nested descendants
+do not become root imports.
+
+Merge's first explicit source is its model. Overlay and slot preservation apply
+only within that invocation. The receiving DATA context is never added as a
+source or model. Separate operations supply separate streams, received under
+ordinary declaration rules.
+
+`f(copy(A))` supplies a stream. `f((copy(A)))` groups one structural result
+before normal W/E. `struct := (copy(A))` assigns one structural result to an
+admitting reference variable. Do not globally require or remove the extra group:
+the consumer's intended material determines it.
+
+Arity concerns admitted sources, not output fields. All three receivers retain
+ordinary CODE-argument W/E in every placement, so a single written Structure may
+supply several sources through E. The surrounding DATA context does not disable
+that algorithm. Other receivers, such as fn and modifiers, retain their own
+DATA-argument contracts.
+
+One source-to-copy map spans each copy/merge operation. Preserve sharing, cycles,
+references and required lexical chains through that map. Do not copy every
+emitted field independently. Keep the admitted native and independent-immutable
+terminal exceptions. A stream consumer is not a new lexical parent.
+
+Copying nodes is distinct from rewriting the source receiver record. All output
+reception and semantic transformation remains in namespace. The graph retains
+the written import/copy/merge Frames.
+
+## 12. Memory, explicit editing, and native code
+
+Read a value's physical kind from its code, not from its address interval. The
+interval structure is for ownership. A distinct physical kind uses a distinct
+type code under the L2 enumeration; do not introduce ad hoc flag bits or
+per-model type identities.
+
+Structures and reference Arrays share the descriptor and variable-size storage
+contract. Use descriptor/index element references where required for movable
+backing. A numeric Array is not an Array of pointers to tagged values.
+
+Own local assignments do not publish to the source graph. A transparent caller
+place changes the selected caller execution place, and an explicit graph
+assignment replaces the fragment at its selected structural place. These are separate admitted destinations, not stages of a
+load-dirty publication protocol.
+
+Do not restore load-dirty, work-flush tables, copy-back, automatic executable-graph copies,
+edit watchers, automatic native invalidation, or hidden compilation. Keep the
+physical storage and ordinary copy/collection machinery that the current
+contracts still require.
+
+Implement the [author's uninit clarification](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md):
+`uninit:T` is its code only, with zero payload. No T cell or complete inner T
+record is preallocated. `struct\novalue := 5` replaces `{uninit:int}` by `{int 5}`
+at the addressed graph field. Remove tests that require in-place tag changes or
+a stable raw payload address across this replacement. Assignment in the execution
+frame remains independent of the clean source graph. P01 is closed; stable
+Structure descriptors and descriptor/index Array-element references keep their
+separate contracts.
+
+Known native→native calls remain direct C calls. Hidden autofill values can be
+ordinary parameters; transparent places carry the required cell address; the
+retained fallback gives an own place. Native locals do not require artificial
+arena record headers.
+
+`sys\check` and `sys\checkL3` return diagnostics. `sys\translate` returns L1 and
+errors. These operations do not run the application or `test`. `sys\compile`
+performs clean-graph preparation, the required build/test phase, and the selected
+translation/compile/registration operation. Build tests run through the ordinary
+receiving contracts after the clean graph and before C generation; they may call
+checkers/candidates but do not launch the graph's application entry or recursively
+discover all nested DATA tests.
+
+Keep admission stages distinct. Construction establishes known interface facts
+without speculative user/default/test execution. Reached interpreter calls use
+standard `implements`, with admission facts scoped to their operation/reception; prepared native calls have
+no automatic runtime `implements`. Explicit `implements` is executed in either
+path. Required checks at an actual reception and actual-value conversion checks
+remain in force, without a blanket rerun after every write.
+
+`sys\endturn` reaches the normal turn boundary through finally blocks, without
+ordinary catch interception or returning to the call site; it does not compile,
+check, or publish an edit itself.
+
+Keep explicit helper operations in `sys`. `parent` and `length` retain their
+ordinary public contracts. `sys\indexof` uses the common immediate-element
+access for Structure/Array<@>; do not add a permanent reverse-index table just
+to answer it.
+
+## 13. Integration and focused acceptance
+
+Use dependency-closed changes. Establish the physical/address contract needed
+by the semantic change, implement the shared worker, and align interpretation
+and translation before treating individual examples as proof of the whole
+feature. Avoid a temporary compatibility behavior becoming an undocumented norm.
+
+Migration of legacy source forms is semantic:
+
+- An old separate DATA argument is not mechanically renamed to args.
+- An executable fn/sub definition becomes an ordinary Structure arrangement;
+  a fn requirement becomes `fn: name data`.
+- A merge with only one admitted source becomes copy; do not rewrite a single
+  written `merge(S)` before W/E.
+- A result intended as one Structure is explicitly grouped.
+- Multiple DATA merges remain separate operations.
+- Declaration actuals remain executable descriptions, not eager initializer values.
+- Import retains its root-const filter and uses CODE arguments in every placement.
+- Operator implementations adopt left/right and explicit properties.
+
+A minimal acceptance set covers:
+
+| Area | Observations |
+| --- | --- |
+| Parser | Written groups, blank-line/root closure, paired delimiters, preserved source forms |
+| Selection | W/E ambiguity, named cursor, no speculative effects, no hidden-input selection |
+| Binding | Own values, transparent cells, fallback copies, both sides of private, lifetimes |
+| Declaration actuals | Positional unknown inner names, named replacement, repeated step, body sees same local |
+| Signatures | Positional types, public fn names, candidate names/defaults, whole-tree templates |
+| Streams | Input count versus output count, grouping, empty output, no destination model |
+| Graph copying | Aliases, cycles, parents, per-operation maps, admitted retained branches |
+| Expressions | Prepared/raw modes, short-circuiting, demand order, repeated eval, numeric result type |
+| Native/walker | Value, type, selected address and write destination across the applicable four combinations |
+| Thread/mail | One transport, ownership attachment, publication boundary, supervision distinct from lexical parent |
+
+Reuse the detailed acceptance tables in TZ and the accepted Thread/Message
+supplements. Record expected refusal, actual source inputs, reached values,
+effect counts, diagnostics, and relevant addresses; a zero process exit is not
+a substitute for those observations.
+
+Use focused component checks for an isolated change. A full self-build or a full
+suite has its own stage-boundary, ABI, format, or dependency justification; it is
+not automatically required for every documentation edit or commit.
+
+The maintained self-hosting kernel and its tests/build helpers are L2/L3 sources;
+generated L1/C and the external C compiler/linker remain implementation artifacts
+and host tools. Migration preserves assertions and actual native/walker
+observations rather than wrapping an old helper in a new launcher.
+
+For a genuine self-build acceptance, record two actual replacements G0→G1→G2,
+the exact sources, toolchain and resulting artifacts. Do not infer it from one
+successful translation or a binary comparison.
+
+For this documentation packet, acceptance consists of integrated normative text,
+consistent examples, current accepted supplements, and working archive-relative
+links. It neither requires a repository render pipeline nor reports a runtime
+gate as passed.
+
+## 14. Handoff
+
+Describe the concrete changes, their governing requirements, and the evidence
+actually obtained. Keep implementation observations separate from intended
+semantics. Do not alter an expected result solely to make a changed implementation
+green.
+
+The English packet is the current review edition. The accidentally supplied
+Russian grammar is excluded at the author's request; a complete Russian edition
+can follow after the English review. Existing requirements remain under TZ as
+the change record, while Old_TZ is maintained as part of the documentation.

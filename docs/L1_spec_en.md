@@ -75,7 +75,7 @@ Native descriptors are ordinary Structures in call tables in the Thread's arena,
 <a id="root-close"></a>
 ### 9.1. R0
 
-R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `fn` only describes a signature is not defined: this is an [open question at the author](../LMX_blog/q/current/unit-root-roles-20261119.md). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
+R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `fn` only describes a signature is decided by the derivation of the edition of 2026-11-21: the record R0 executes is read as code, and a Structure is declared by a description of data whose body the launch names ([question and derivation](../LMX_blog/q/unit-root-roles-answered-20261121.md)). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
 
 <a id="mailbox"></a>
 ## 10. Mailbox
@@ -85,7 +85,7 @@ R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: 
 <a id="own"></a>
 ## 11. Local call frame
 
-The norm of 2026-11-19 (binding and callables) was accepted by the author in the [TZ](new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md); the translator, the clean-graph interpreter and the kernel do not execute it yet, and the work is recorded in the [plan](../next_core_tasks_v3.md#binding-callables-20261119). This section states the new norm in the same words as [L2 §11](L2_spec_en.md#call).
+The norm of 2026-11-19 (binding and callables) was accepted by the author in the [TZ](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md); the translator, the clean-graph interpreter and the kernel do not execute it yet, and the work is recorded in the [plan](../next_core_tasks_v3.md#binding-callables-20261119). This section states the new norm in the same words as [L2 §11](L2_spec_en.md#call).
 
 <a id="call-receivers"></a>
 <a id="structural-call"></a>
@@ -190,7 +190,7 @@ fields remain and are selected by `S\[n]x`. An explicit path is not restricted b
 order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
 <a id="inline-declaration-control"></a>
-One case remains with the executor's reading ([TZ §7.4](new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+One case remains with the executor's reading ([TZ §7.4](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
 [Р106](../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
 where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
 between the caller's local context and the callee's place at the call, while an inline scope stays within the same

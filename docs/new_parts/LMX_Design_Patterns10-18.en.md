@@ -374,8 +374,8 @@ This is a functional Bridge: independently varying abstractions and implementati
 
 The LMX listings are identical to the individual comparison files. They were reviewed against the agreed rules and the author’s clarifications; the LMX kernel was not run here. Actual execution and static-review status for the other languages is recorded in each comparison file. The Excel and PDF figures were calculated from these same listings.
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[S]: newdocs/LMX_semantics.en.md#merge-two-forms
+[S]: ../LMX_semantics.en.md#merge-two-forms

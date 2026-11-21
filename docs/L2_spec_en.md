@@ -816,8 +816,9 @@ namespace receiving a stream; copied and imported methods retain their correct l
 DATA/parent relationships. Serialization preserves the written receiver, not an implicit
 expanded replacement. [Composition contract](LMX_semantics.en.md#composition).
 
-Field streams also use ordinary group assignment: `(a b) := copy(Pair)` assigns two resulting
-fields positionally. All RHS values are obtained before the first write, and a count mismatch is
+Field streams also use ordinary group assignment through an explicit group:
+`(a b) := (copy(Pair))` assigns two resulting fields positionally; the bare stream
+`(a b) := copy(Pair)` is an error (author's decision, 2026-11-21). All RHS values are obtained before the first write, and a count mismatch is
 reported before that write. RHS field names do not reorder targets; already completed RHS effects
 are not rolled back.
 
@@ -1014,7 +1015,9 @@ references to prepared right values in source order. `(1 foo 2 3 4)` supplies on
 three right values. In prefix `(foo 1 2 3 4)` no left actual is written; all four are on the right,
 and ordinary defaults/requiredness determine whether omission is admissible. No `has_left` marker
 or implicit shift of the first right value is added. An Array or Structure remains one operand
-container; dense numeric Array storage is not reinterpreted as `Array<@>`.
+container; dense numeric Array storage is not reinterpreted as `Array<@>`. One opening is defined:
+the single argument of an operand, when it is an unnamed Structure, is opened exactly as in methods;
+a Structure returned from a function is not opened (author's decision, 2026-11-21).
 
 These references address values in genuine typed records: value at p, four-byte code at p − 4.
 A container reference addresses its typed descriptor. An untagged C temporary is not such a

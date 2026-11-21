@@ -70,7 +70,7 @@ LMX проверен по документации; исполнение ядр�
 runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 ```
 
-- [LMX: declaration arguments](../../newdocs/LMX_semantics.en.md#declaration-arguments).
+- [LMX: declaration arguments](../../../LMX_semantics.en.md#declaration-arguments).
 - [Исходное сравнение Iterator](../../01_iterator_comparison.md).
 - [Haskell 2010: case expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
 - [Haskell 2010: IO sequencing](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html).

@@ -1,7 +1,8 @@
 # L2/L3 developer instruction
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
-> documentation packet in `docs/new_parts/newdocs/`; only link targets were adapted to repository paths.
+> documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
+> order of 2026-11-21); only link targets were adapted to repository paths.
 > The mandatory build order of this repository is [to_fable2_fast_build.md](to_fable2_fast_build.md); the
 > implementation state is recorded in [READ.ME](READ.ME), the [plan](next_core_tasks_v3.md) and the
 > [current pipeline](steps/current.md).
@@ -366,7 +367,9 @@ filled by merely checking the template.
 
 `left` is one reference input. `right` is an Array of references in source
 occurrence order. A container remains one operand; no general Array spreading
-is introduced. Prefix forms can omit the written left actual under normal
+is introduced. One opening is defined: the single argument of an operand, when
+it is an unnamed Structure, is opened exactly as in methods; a Structure
+returned from a function is not opened (author's decision, 2026-11-21). Prefix forms can omit the written left actual under normal
 method admission.
 
 `PASS_ARGS_AS_IS 0` supplies prepared values. `PASS_ARGS_AS_IS 1` supplies

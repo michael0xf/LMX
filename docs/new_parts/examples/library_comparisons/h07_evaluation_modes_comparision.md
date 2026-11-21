@@ -78,6 +78,6 @@ LMX проверен по документации; исполнение ядр�
 runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 ```
 
-- [LMX: raw operands и sys\eval](../../newdocs/LMX_semantics.en.md#raw-operands).
+- [LMX: raw operands и sys\eval](../../../LMX_semantics.en.md#raw-operands).
 - [Haskell 2010: non-strict expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
 - [Haskell 2010: sequential IO actions](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html).

@@ -1,7 +1,8 @@
 # Lingvamyxa — English documentation for Fable review
 
 > **Repository note.** This directory holds the edition of 2026-11-21 in the layout of the author's packet
-> (`new_parts/newdocs/`, kept as delivered). The texts are verbatim; only link targets required by the placement
+> (it lay in `new_parts/newdocs/` and was removed there as a duplicate on the author's order of 2026-11-21).
+> The texts are verbatim; only link targets required by the placement
 > were adapted: [CORE.md](../CORE.md) and the [developer instruction](../L2_L3_CODING_INSTRUCTION.md) stand in
 > the repository root. In this repository the semantics and the grammar are generated from
 > `provenance/semantics-book.md` and `provenance/grammar.json` together with their Russian halves, which are

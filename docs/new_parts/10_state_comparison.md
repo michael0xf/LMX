@@ -1,6 +1,6 @@
 # 10. State: LMX и семь других языков
 
-21 ноября 2026 года · Согласовано с документацией newdocs
+21 ноября 2026 года · Согласовано с документацией docs
 
 ## Задача
 
@@ -267,13 +267,13 @@ pub fn demo() -> i32 {
 
 ## Что изменилось в этой редакции
 
-Сохранены три последовательных вызова и изменяемая ссылка state в локальном контексте demo. Ссылки на правила перенесены в newdocs.
+Сохранены три последовательных вызова и изменяемая ссылка state в локальном контексте demo. Ссылки на правила перенесены в docs.
 
 Семь остальных листингов сохранены без изменений относительно загруженного архива.
 
 ## Проверка
 
-LMX сопоставлен с правилами newdocs: роли DATA/CODE, аргументы, связывание, лексический node и синтаксические границы. Для copy/merge учитываются поток результата и явная группировка. Ожидаемые результаты относятся к этой модели.
+LMX сопоставлен с правилами docs: роли DATA/CODE, аргументы, связывание, лексический node и синтаксические границы. Для copy/merge учитываются поток результата и явная группировка. Ожидаемые результаты относятся к этой модели.
 
 В исходной редакции сообщалось об исполнении Python, Java, C++ и TypeScript и статическом просмотре C#, Go и Rust. Их листинги сохранены без изменений; новых запусков эта редакция не заявляет. LMX-ядро здесь не запускалось.
 
@@ -285,6 +285,6 @@ LMX сопоставлен с правилами newdocs: роли DATA/CODE, а
 
 - [Refactoring.Guru — State in Python, conceptual example](https://refactoring.guru/design-patterns/state/python/example)
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

@@ -815,11 +815,13 @@ sources. If W and E both fit, the result is the usual ambiguity error; import ha
 Receivers that genuinely specify DATA arguments, such as named `fn`, keep their own contract; the receiving DATA context does not turn these three receivers' source arguments into that category.
 
 ~~~lmx
-(a b) := copy(Pair)
+(a b) := (copy(Pair))
 (c b d a) := a b c d
 ~~~
 
-Group assignment is positional. All RHS values are obtained before the first write, and a count mismatch is
+Group assignment is positional. A field stream is written inside an explicit group; the bare stream
+`(a b) := copy(Pair)` is an error, and a Structure returned from a function is not opened (author's decision,
+2026-11-21). All RHS values are obtained before the first write, and a count mismatch is
 reported before any LHS write. With initial a=1, b=2, c=3, d=4, the second line gives c=1, b=2, d=3, a=4.
 This read-before-write rule does not promise rollback of already performed RHS effects.
 

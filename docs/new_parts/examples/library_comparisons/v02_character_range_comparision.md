@@ -114,8 +114,8 @@ Load the helper source before using the LMX client namespace. The Haskell module
 
 ## Основания / sources
 
-- [LMX, пользовательские операнды и готовые значения](../../newdocs/LMX_semantics.en.md#operand-receiver), [профиль стандартного заголовка](../../OPERAND_USAGE_PROFILE.md): исходный DATA, `left/right`, режим 0 и приоритет.
-- [LMX, объявленные выходы](../../newdocs/LMX_semantics.en.md#catch-common-model): обязанность обработать или распространить объявленный выход.
+- [LMX, пользовательские операнды и готовые значения](../../../LMX_semantics.en.md#operand-receiver), [профиль стандартного заголовка](../../OPERAND_USAGE_PROFILE.md): исходный DATA, `left/right`, режим 0 и приоритет.
+- [LMX, объявленные выходы](../../../LMX_semantics.en.md#catch-common-model): обязанность обработать или распространить объявленный выход.
 - [Haskell 2010 Report, глава 6](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html): `Char`, `String`, `Ord`, типы пар.
 - [Haskell 2010 Report, глава 3](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html): применение именованной функции в инфиксной форме, tuple/list patterns и выражения.
 

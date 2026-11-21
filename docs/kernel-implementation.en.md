@@ -418,7 +418,9 @@ Mode 0 prepares the needed values once: left is a reference to the left value, r
 of references to right values in source order. `(1 foo 2 3 4)` has one left and three right values;
 `(foo 1 2 3 4)` omits left and has four right values. The ordinary call contract decides whether
 that omission is allowed. A container is one operand, and a dense numeric Array is never cast to
-Array<@>. Prefix application does not shift the first right value into left or add a has-left flag.
+Array<@>. One opening is defined: the single argument of an operand, when it is an unnamed Structure,
+is opened exactly as in methods; a Structure returned from a function is not opened (author's
+decision, 2026-11-21). Prefix application does not shift the first right value into left or add a has-left flag.
 
 Operand references point to genuine typed values/descriptors, with the tag immediately before
 the value. Untagged native temporaries use the ordinary result/storage bridge when a typed record
@@ -881,7 +883,9 @@ original declaration/owner identity; copy and merge deeply copy the used graph a
 corresponding copied owners through their operation map. Every source import/copy/merge receiver remains
 in place; direct source-path reads and serialization expose that written record, not its result.
 
-For group assignment, `(a b) := copy(Pair)` consumes result fields positionally. Obtain all RHS
+For group assignment, `(a b) := (copy(Pair))` consumes result fields positionally: the stream is
+written inside an explicit group, the bare stream `(a b) := copy(Pair)` is an error, and a Structure
+returned from a function is not opened (author's decision, 2026-11-21). Obtain all RHS
 values before the first target write; detect count mismatch before that write. RHS names do not
 reorder targets, and completed RHS effects are not transactionally rolled back. For initial
 `a=1, b=2, c=3, d=4`, `(c b d a) := a b c d` gives `c=1, b=2, d=3, a=4`.

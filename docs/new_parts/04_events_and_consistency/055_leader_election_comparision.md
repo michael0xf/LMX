@@ -118,7 +118,7 @@ Acquire confirmed leadership and reject stale-owner resource writes.
 - [Microsoft Azure Architecture Center — Leader Election](https://learn.microsoft.com/en-us/azure/architecture/patterns/leader-election) — Определение, механизм и границы гарантий.
 - [etcd Go concurrency package — Election and Session](https://pkg.go.dev/go.etcd.io/etcd/client/v3/concurrency) — Пример реального API координации; fencing ресурса остаётся явным требованием.
 
-**Норма LMX:** [CORE](../newdocs/CORE.md), [семантика](../newdocs/LMX_semantics.en.md), [guide](../newdocs/LMX_semantics_guide.en.md), [уточнение 21 ноября](../newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

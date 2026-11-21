@@ -1,7 +1,8 @@
 # LMX core architecture
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
-> documentation packet in `docs/new_parts/newdocs/`; only link targets were adapted to repository paths.
+> documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
+> order of 2026-11-21); only link targets were adapted to repository paths.
 > The implementation state of this repository is recorded in [READ.ME](READ.ME), the
 > [plan](next_core_tasks_v3.md) and the [current pipeline](steps/current.md), not in this map.
 
@@ -392,7 +393,10 @@ the method returns its ordinary declared result type.
 
 In prepared mode 0, `left` receives a reference to the required left value and
 `right` an Array of references to required right values in occurrence order.
-A container remains one operand. A missing actual differs from an explicitly
+A container remains one operand. One opening is defined: the single argument of
+an operand, when it is an unnamed Structure, is opened exactly as in methods; a
+Structure returned from a function is not opened (author's decision,
+2026-11-21). A missing actual differs from an explicitly
 empty Array and follows ordinary method admission.
 
 In raw mode 1, the same expression analysis determines the boundaries, but the

@@ -205,8 +205,9 @@ one merge; independent streams use ordinary DATA repeated occurrences.
 
 For one copied value use `(copy(A))`, for one merged value `(merge(A B))`; for fields use the
 ungrouped receiver. An explicit named formal suppresses E for that whole structural actual.
-`(a b) := copy(Pair)` uses ordinary positional group assignment: all RHS values and the count
-check precede the first write, without rolling back prior RHS effects.
+`(a b) := (copy(Pair))` uses ordinary positional group assignment: all RHS values and the count
+check precede the first write, without rolling back prior RHS effects; the bare stream
+`(a b) := copy(Pair)` is an error (author's decision, 2026-11-21).
 
 <a id="compound-assign-notes"></a>
 ### 4.3. Expressions and operands

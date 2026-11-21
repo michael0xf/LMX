@@ -135,3 +135,23 @@ Receipts outside the repository, under
 `build2/codex_fix250generationchain01/runs/fable-m10-call-forms-20261116-01/fable/tz-20261121/`: `PROGRESS.md`,
 `sonnet-semantics/` (report, the list of waiting paragraphs, scripts), `haiku-grammar/` (report, renders),
 `opus-map/MAP.md` (the map of the edition against the code, step 21.1 of the plan).
+
+## After the transfer: an author's decision applied to the working documents
+
+2026-11-21, the same day. The author's decision recorded in `LMX_blog/2026-11-21.md#group-assign-decision` (the
+single argument of an operand, when it is an unnamed Structure, is opened exactly as in methods; a Structure
+returned from a function is not opened; a field stream on the right of a group assignment is written inside a
+group) was applied to the working documents: the semantics book and the grammar through their sources, the L2
+specification, the guide, the kernel implementation notes, the implementation notes, `CORE.md`, the developer
+instruction, dated notes in two requirements, the author's example R02 with its manifest hashes. Record of the
+executor: R124 of `LMX_blog/q/fable-self-answers-20261110.md`.
+
+## The packet copy is removed
+
+2026-11-21, on the author's order («удалите дубли в newdocs и поменяйте ссылки в md везде в документах из
+new_part»): the 25 files of `docs/new_parts/newdocs/` were removed as duplicates of the working documents — 20 of
+them equalled the working copies byte for byte before the decision above, five differed only by the link targets
+of the placement, the repository notes and the generator's formatting of the grammar. In 149 documents of
+`docs/new_parts/` 825 references to the packet directory were rewritten to the working documents; the manifest
+`docs/new_parts/MANIFEST.sha256` lost the 25 lines of the removed files and got the new hashes of the rewritten
+ones. Four validation records in JSON keep the packet paths as the history of the author's review.

@@ -106,7 +106,7 @@ An isolated state owner receives complete operations through messages.
 - [Erlang — Concurrent Programming](https://www.erlang.org/doc/system/conc_prog.html) — Владелец изолированного состояния принимает целые операции через сообщения.
 - [Go — Effective Go concurrency](https://go.dev/doc/effective_go) — Владелец изолированного состояния принимает целые операции через сообщения.
 
-**Норма LMX:** [CORE](../newdocs/CORE.md), [семантика](../newdocs/LMX_semantics.en.md), [guide](../newdocs/LMX_semantics_guide.en.md), [уточнение 21 ноября](../newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

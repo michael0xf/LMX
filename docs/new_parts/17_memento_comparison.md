@@ -353,7 +353,7 @@ pub fn demo() -> i32 {
 
 ## Проверка
 
-В этой редакции проверены согласованность LMX-листинга с документами `newdocs`, явная группировка результатов копирования/композиции там, где нужен один объект, и ссылки на правила языка. Ожидаемый результат LMX следует из показанного сценария; запуск ядра не проводился.
+В этой редакции проверены согласованность LMX-листинга с документами `docs`, явная группировка результатов копирования/композиции там, где нужен один объект, и ссылки на правила языка. Ожидаемый результат LMX следует из показанного сценария; запуск ядра не проводился.
 
 Листинги Python, Java, C++, C#, TypeScript, Go и Rust сохранены из исходного сравнения. Сообщения исходной редакции об их выполнении относятся к той проверке; это обновление документации не выдаёт их за новый запуск. Подсчёт размеров выполняется заново по листингам текущего файла.
 
@@ -364,8 +364,8 @@ pub fn demo() -> i32 {
 - [Refactoring.Guru — Memento](https://refactoring.guru/design-patterns/memento)
 - [Refactoring.Guru — Memento in Python](https://refactoring.guru/design-patterns/memento/python/example)
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[S]: newdocs/LMX_semantics.en.md#merge-two-forms
+[S]: ../LMX_semantics.en.md#merge-two-forms

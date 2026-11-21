@@ -55,5 +55,5 @@ LMX проверен по документации; исполнение ядр�
 runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 ```
 
-- [LMX: обычный вызов и DATA](../../newdocs/LMX_semantics.en.md#call-receivers).
+- [LMX: обычный вызов и DATA](../../../LMX_semantics.en.md#call-receivers).
 - [Haskell 2010: application and lambda expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).

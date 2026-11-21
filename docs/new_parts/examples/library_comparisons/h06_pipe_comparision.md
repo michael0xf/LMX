@@ -75,8 +75,8 @@ LMX проверен по документации; исполнение ядр�
 runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 ```
 
-- [LMX: операнды](../../newdocs/LMX_semantics.en.md#operand-receiver).
-- [LMX: копирование графа](../../newdocs/LMX_semantics.en.md#composition).
+- [LMX: операнды](../../../LMX_semantics.en.md#operand-receiver).
+- [LMX: копирование графа](../../../LMX_semantics.en.md#composition).
 - [Haskell 2010: order of IO actions](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html).
 
 - [Haskell 2010: seq и порядок вычисления](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html).

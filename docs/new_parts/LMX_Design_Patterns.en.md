@@ -1,6 +1,6 @@
 # Design Patterns in Lingvamyxa
 
-English edition · Revised 21 November 2026 · Aligned with newdocs
+English edition · Revised 21 November 2026 · Aligned with docs
 
 This edition starts from the Python programs in the companion comparisons and expresses their organization through LMX structures, shared DATA, and ordinary calls. The author's compact Decorator is reproduced exactly. Related methods, including `demo`, belong to a natural group; separate demonstration containers and standalone signatures are introduced only when the program actually needs them.
 
@@ -445,8 +445,8 @@ Foreign-language execution and static-review details are recorded in the individ
 
 The current examples also follow the author's lexical `node` clarification and the instruction to use the Python programs as architectural prototypes. Each section links to its full eight-language comparison. The Russian edition contains the same nine LMX programs, entry calls, expected results, and comparison figures.
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[S]: newdocs/LMX_semantics.en.md#merge-two-forms
+[S]: ../LMX_semantics.en.md#merge-two-forms

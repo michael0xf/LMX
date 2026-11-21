@@ -28,28 +28,28 @@ This corpus updates the earlier discussions of `add5`, defaults and free inputs,
 
 ### Governing sources
 
-The normative model is the supplied `newdocs/` packet, including its five integrated change requirements, the author's subsequent uninitialized-record clarification, and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
+The normative model is the supplied `docs/` packet, including its five integrated change requirements, the author's subsequent uninitialized-record clarification, and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
 
 | Code used below | Document / package path | Role |
 |---|---|---|
-| O / OPERAND | [to_fable_operands_arguments_priorities.md](newdocs/TZ/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
-| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
-| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
-| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
-| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
-| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
+| O / OPERAND | [to_fable_operands_arguments_priorities.md](../TZ/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
+| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
+| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
+| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
+| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
+| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
 | P3 / DP3 | [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | Current examples 19–23, updated 21 November |
-| S / SEM | [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | Current normative semantics with the supplied requirements integrated |
-| G / GRAMMAR | [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | Current common parsing and lexical rules |
-| [GUIDE] | [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | Worked explanations; superseded examples do not override the directives |
-| L2 | [L2_spec_en.md](newdocs/L2_spec_en.md) | Runtime/representation contracts and machine-level boundaries |
-| [CORE] | [CORE.md](newdocs/CORE.md) | Architecture; historical implementation descriptions remain historical |
-| [CODING] | [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | Existing implementation, validation, and source-style workflow |
+| S / SEM | [LMX_semantics.en.md](../LMX_semantics.en.md) | Current normative semantics with the supplied requirements integrated |
+| G / GRAMMAR | [LMX_grammar.en.md](../LMX_grammar.en.md) | Current common parsing and lexical rules |
+| [GUIDE] | [LMX_semantics_guide.en.md](../LMX_semantics_guide.en.md) | Worked explanations; superseded examples do not override the directives |
+| L2 | [L2_spec_en.md](../L2_spec_en.md) | Runtime/representation contracts and machine-level boundaries |
+| [CORE] | [CORE.md](../../CORE.md) | Architecture; historical implementation descriptions remain historical |
+| [CODING] | [L2_L3_CODING_INSTRUCTION.md](../../L2_L3_CODING_INSTRUCTION.md) | Existing implementation, validation, and source-style workflow |
 | README | [README.md](README.md) | Pattern inventory and verification scope |
 
-Document links are relative to this file. Pattern comparisons, pattern guides and README are beside it; the normative documents are under `newdocs/`, their current requirements under `newdocs/TZ/`, and accepted supplements under `newdocs/Old_TZ/`. Section names and anchors identify the current contracts. Obsolete exported-file line numbers have been removed. The final snapshot records the exact normative files bundled with this revision.
+Document links are relative to this file. Pattern comparisons, pattern guides and README are beside it; the normative documents are under `docs/`, their current requirements under `docs/TZ/`, and accepted supplements under `docs/Old_TZ/`. Section names and anchors identify the current contracts. Obsolete exported-file line numbers have been removed. The final snapshot records the exact normative files bundled with this revision.
 
 ### Required handling of contradictions
 
@@ -2840,7 +2840,7 @@ Retain a result reference across an ordinary function return and confirm it stay
 <a id="author-question"></a>
 ## Q01. Current admission and test phases
 
-This retained section ID now records the current phase contract. The older corpus's automatic-scheduling question cited a superseded document snapshot; the supplied `newdocs/` edition separates the stages. See [normative admission](newdocs/LMX_semantics.en.md#admission), [test receiver](newdocs/LMX_semantics.en.md#test-receiver-contract) and [explicit compilation](newdocs/LMX_semantics.en.md#explicit-compilation).
+This retained section ID now records the current phase contract. The older corpus's automatic-scheduling question cited a superseded document snapshot; the supplied `docs/` edition separates the stages. See [normative admission](../LMX_semantics.en.md#admission), [test receiver](../LMX_semantics.en.md#test-receiver-contract) and [explicit compilation](../LMX_semantics.en.md#explicit-compilation).
 
 | Stage or event | Contract to observe |
 |---|---|
@@ -2858,7 +2858,7 @@ V05 instruments these distinct events rather than assigning one global count to 
 
 | Earlier corpus form or claim | Current contract used here |
 |---|---|
-| `reference/` document paths and old exported-file line numbers | Bundled `newdocs/` and `newdocs/TZ/` paths; stable sections/anchors |
+| `reference/` document paths and old exported-file line numbers | Bundled `docs/` and `docs/TZ/` paths; stable sections/anchors |
 | Single-source `merge(Source)` intended to make one object | `(copy(Source))` |
 | Multi-source `merge(Model Values)` intended as one reference or returned Structure | `(merge(Model Values))` |
 | DATA placement gives import/copy/merge DATA arguments | All three consume ordinary CODE sources and use normal W/E in every placement |
@@ -2906,46 +2906,46 @@ These SHA-256 values identify the bundled normative documents used for this revi
 
 | Bundled source document | SHA-256 |
 |---|---|
-| [CORE.md](newdocs/CORE.md) | `a1bd40c16303ddb368335f6dc8ce36b5b97fb80b0db11f413455e94ecc2fdb6c` |
-| [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | `21d848ca8469c1a841380947c8a5ec2f63f66535a1c06d1489fd43585e5d7810` |
-| [L2_spec_en.md](newdocs/L2_spec_en.md) | `fae448565904f3602d999e3e05a5f8b774b123a1ac05ff813fed8874106a93b1` |
-| [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | `a09f46cfbbc9a2135aa5ffba88e61ad489b15a7f5fbf7aaa8241a6210ee9af7d` |
-| [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | `a4cba3b213fd383b274be4e547816bccbd43703cba396428a6f3a0f2dc5a8741` |
-| [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | `d88aa052d208c8d962b49126b803e7b910e2407926ea905ebf89eae44e493459` |
-| [README.md](newdocs/README.md) | `13caa6dbe3ec29afab17cebec3f04a26c6c707d7aeb55fef3a38a3427980dc6e` |
-| [REVIEW_NOTES.md](newdocs/REVIEW_NOTES.md) | `95310dd90b1ef5379359728eb0b3a3450a94c9103f37ab616279a94681279fa3` |
-| [implementation-notes.en.md](newdocs/implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
-| [kernel-implementation.en.md](newdocs/kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
-| [source-comparison.en.md](newdocs/source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
-| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
-| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
-| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
-| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
-| [to_fable_operands_arguments_priorities.md](newdocs/TZ/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
-| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
+| [CORE.md](../../CORE.md) | `a1bd40c16303ddb368335f6dc8ce36b5b97fb80b0db11f413455e94ecc2fdb6c` |
+| [L2_L3_CODING_INSTRUCTION.md](../../L2_L3_CODING_INSTRUCTION.md) | `21d848ca8469c1a841380947c8a5ec2f63f66535a1c06d1489fd43585e5d7810` |
+| [L2_spec_en.md](../L2_spec_en.md) | `fae448565904f3602d999e3e05a5f8b774b123a1ac05ff813fed8874106a93b1` |
+| [LMX_grammar.en.md](../LMX_grammar.en.md) | `a09f46cfbbc9a2135aa5ffba88e61ad489b15a7f5fbf7aaa8241a6210ee9af7d` |
+| [LMX_semantics.en.md](../LMX_semantics.en.md) | `a4cba3b213fd383b274be4e547816bccbd43703cba396428a6f3a0f2dc5a8741` |
+| [LMX_semantics_guide.en.md](../LMX_semantics_guide.en.md) | `d88aa052d208c8d962b49126b803e7b910e2407926ea905ebf89eae44e493459` |
+| [README.md](../README.md) | `13caa6dbe3ec29afab17cebec3f04a26c6c707d7aeb55fef3a38a3427980dc6e` |
+| [REVIEW_NOTES.md](../REVIEW_NOTES.md) | `95310dd90b1ef5379359728eb0b3a3450a94c9103f37ab616279a94681279fa3` |
+| [implementation-notes.en.md](../implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
+| [kernel-implementation.en.md](../kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
+| [source-comparison.en.md](../source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
+| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
+| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
+| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
+| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
+| [to_fable_operands_arguments_priorities.md](../TZ/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
+| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
 
 <!-- Relative source links for the package layout. -->
-[O]: newdocs/TZ/to_fable_operands_arguments_priorities.md
-[OPERAND]: newdocs/TZ/to_fable_operands_arguments_priorities.md
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[BIND]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[DECL]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[O]: ../TZ/to_fable_operands_arguments_priorities.md
+[OPERAND]: ../TZ/to_fable_operands_arguments_priorities.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[BIND]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[DECL]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [P1]: LMX_Design_Patterns.en.md
 [DP1]: LMX_Design_Patterns.en.md
 [P2]: LMX_Design_Patterns10-18.en.md
 [DP2]: LMX_Design_Patterns10-18.en.md
 [P3]: LMX_Design_Patterns19-23.en.md
 [DP3]: LMX_Design_Patterns19-23.en.md
-[S]: newdocs/LMX_semantics.en.md
-[SEM]: newdocs/LMX_semantics.en.md
-[G]: newdocs/LMX_grammar.en.md
-[GRAMMAR]: newdocs/LMX_grammar.en.md
-[L2]: newdocs/L2_spec_en.md
-[GUIDE]: newdocs/LMX_semantics_guide.en.md
-[CORE]: newdocs/CORE.md
-[CODING]: newdocs/L2_L3_CODING_INSTRUCTION.md
-[STREAM]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
-[M]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
-[BLANK]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
-[UNINIT]: newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md
+[S]: ../LMX_semantics.en.md
+[SEM]: ../LMX_semantics.en.md
+[G]: ../LMX_grammar.en.md
+[GRAMMAR]: ../LMX_grammar.en.md
+[L2]: ../L2_spec_en.md
+[GUIDE]: ../LMX_semantics_guide.en.md
+[CORE]: ../../CORE.md
+[CODING]: ../../L2_L3_CODING_INSTRUCTION.md
+[STREAM]: ../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[M]: ../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[BLANK]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[UNINIT]: ../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md

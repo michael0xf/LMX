@@ -260,10 +260,10 @@ sys:
 
 Листинги LMX буквально совпадают с отдельными файлами сравнения. Они согласованы с текущими правилами и уточнениями автора. Статус исполнения и проверки остальных языков указан в каждом сравнительном файле. Числа в Excel и PDF получены из этих же листингов.
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[O]: newdocs/TZ/to_fable_operands_arguments_priorities.md
+[O]: ../TZ/to_fable_operands_arguments_priorities.md
 
-[S]: newdocs/LMX_semantics.en.md#merge-two-forms
+[S]: ../LMX_semantics.en.md#merge-two-forms

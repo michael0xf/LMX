@@ -72,5 +72,5 @@ LMX проверен по документации; исполнение ядр�
 runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 ```
 
-- [LMX: копирование и возвращаемые методы](../../newdocs/LMX_semantics.en.md#composition).
+- [LMX: копирование и возвращаемые методы](../../../LMX_semantics.en.md#composition).
 - [Haskell 2010: lambda and let expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).

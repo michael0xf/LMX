@@ -1,6 +1,6 @@
 # Шаблоны проектирования на Lingvamyxa
 
-Русская версия · 21 ноября 2026 года · Согласовано с newdocs
+Русская версия · 21 ноября 2026 года · Согласовано с docs
 
 В этом руководстве девять знакомых задач записаны через обычные структуры, методы и связывание LMX. Архитектурной отправной точкой служат Python-примеры из сравнительных файлов: связанные функции собираются в естественную группу, общее DATA описывается один раз, demo располагается рядом с используемыми методами. Decorator приведён в точной форме, предложенной автором, с автопередачей value.
 
@@ -473,8 +473,8 @@ Number передаёт через текущий контекст value = 3; Pa
 
 В каждом разделе приведена ссылка на соответствующий файл с полными вариантами на семи других языках, индивидуальными метриками и источниками образцов. Английская версия содержит тот же код и результаты.
 
-[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[S]: newdocs/LMX_semantics.en.md#merge-two-forms
+[S]: ../LMX_semantics.en.md#merge-two-forms

@@ -124,7 +124,7 @@ A request receives its result only after a readiness predicate becomes true.
 - [Java Language Specification — Wait Sets and Notification](https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html) — Запрос получает результат только после выполнения предиката готовности.
 - [Rust — Condvar](https://doc.rust-lang.org/std/sync/struct.Condvar.html) — Запрос получает результат только после выполнения предиката готовности.
 
-**Норма LMX:** [CORE](../newdocs/CORE.md), [семантика](../newdocs/LMX_semantics.en.md), [guide](../newdocs/LMX_semantics_guide.en.md), [уточнение 21 ноября](../newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

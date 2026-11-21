@@ -139,7 +139,7 @@ Receipts outside the repository, under
 ## After the transfer: an author's decision applied to the working documents
 
 2026-11-21, the same day. The author's decision recorded in `LMX_blog/2026-11-21.md#group-assign-decision` (the
-single argument of an operand, when it is an unnamed Structure, is opened exactly as in methods; a Structure
+single `right` argument of an operand, when it is an unnamed Structure, is opened; a Structure
 returned from a function is not opened; a field stream on the right of a group assignment is written inside a
 group) was applied to the working documents: the semantics book and the grammar through their sources, the L2
 specification, the guide, the kernel implementation notes, the implementation notes, `CORE.md`, the developer

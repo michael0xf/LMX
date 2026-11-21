@@ -418,9 +418,9 @@ Mode 0 prepares the needed values once: left is a reference to the left value, r
 of references to right values in source order. `(1 foo 2 3 4)` has one left and three right values;
 `(foo 1 2 3 4)` omits left and has four right values. The ordinary call contract decides whether
 that omission is allowed. A container is one operand, and a dense numeric Array is never cast to
-Array<@>. One opening is defined: the single argument of an operand, when it is an unnamed Structure,
-is opened exactly as in methods; a Structure returned from a function is not opened (author's
-decision, 2026-11-21). Prefix application does not shift the first right value into left or add a has-left flag.
+Array<@>. An operand has one opening of its own: its single `right` argument, when it is an unnamed
+Structure, is opened; a Structure returned from a function is not opened (author's decision,
+2026-11-21). Prefix application does not shift the first right value into left or add a has-left flag.
 
 Operand references point to genuine typed values/descriptors, with the tag immediately before
 the value. Untagged native temporaries use the ordinary result/storage bridge when a typed record

@@ -393,10 +393,9 @@ the method returns its ordinary declared result type.
 
 In prepared mode 0, `left` receives a reference to the required left value and
 `right` an Array of references to required right values in occurrence order.
-A container remains one operand. One opening is defined: the single argument of
-an operand, when it is an unnamed Structure, is opened exactly as in methods; a
-Structure returned from a function is not opened (author's decision,
-2026-11-21). A missing actual differs from an explicitly
+A container remains one operand. An operand has one opening of its own: its
+single `right` argument, when it is an unnamed Structure, is opened; a Structure
+returned from a function is not opened (author's decision, 2026-11-21). A missing actual differs from an explicitly
 empty Array and follows ordinary method admission.
 
 In raw mode 1, the same expression analysis determines the boundaries, but the

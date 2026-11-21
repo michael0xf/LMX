@@ -367,9 +367,9 @@ filled by merely checking the template.
 
 `left` is one reference input. `right` is an Array of references in source
 occurrence order. A container remains one operand; no general Array spreading
-is introduced. One opening is defined: the single argument of an operand, when
-it is an unnamed Structure, is opened exactly as in methods; a Structure
-returned from a function is not opened (author's decision, 2026-11-21). Prefix forms can omit the written left actual under normal
+is introduced. An operand has one opening of its own: its single `right`
+argument, when it is an unnamed Structure, is opened; a Structure returned from
+a function is not opened (author's decision, 2026-11-21). Prefix forms can omit the written left actual under normal
 method admission.
 
 `PASS_ARGS_AS_IS 0` supplies prepared values. `PASS_ARGS_AS_IS 1` supplies

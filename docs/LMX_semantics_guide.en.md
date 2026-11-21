@@ -816,10 +816,11 @@ Receivers that genuinely specify DATA arguments, such as named `fn`, keep their 
 
 ~~~lmx
 (a b) := (copy(Pair))
-(c b d a) := a b c d
+(c b d a) := (a b c d)
 ~~~
 
-Group assignment is positional. A field stream is written inside an explicit group; the bare stream
+Group assignment is positional. Its right side is one unnamed Structure in parentheses, the form `() := ()`:
+several values without the group are an error. A field stream is written inside the group; the bare stream
 `(a b) := copy(Pair)` is an error, and a Structure returned from a function is not opened (author's decision,
 2026-11-21). All RHS values are obtained before the first write, and a count mismatch is
 reported before any LHS write. With initial a=1, b=2, c=3, d=4, the second line gives c=1, b=2, d=3, a=4.

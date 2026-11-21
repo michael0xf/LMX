@@ -883,12 +883,13 @@ original declaration/owner identity; copy and merge deeply copy the used graph a
 corresponding copied owners through their operation map. Every source import/copy/merge receiver remains
 in place; direct source-path reads and serialization expose that written record, not its result.
 
-For group assignment, `(a b) := (copy(Pair))` consumes result fields positionally: the stream is
-written inside an explicit group, the bare stream `(a b) := copy(Pair)` is an error, and a Structure
+For group assignment, `(a b) := (copy(Pair))` consumes result fields positionally: the right side is one
+unnamed Structure in parentheses, the form `() := ()`; several values without the group are an error, the stream is
+written inside the group, the bare stream `(a b) := copy(Pair)` is an error, and a Structure
 returned from a function is not opened (author's decision, 2026-11-21). Obtain all RHS
 values before the first target write; detect count mismatch before that write. RHS names do not
 reorder targets, and completed RHS effects are not transactionally rolled back. For initial
-`a=1, b=2, c=3, d=4`, `(c b d a) := a b c d` gives `c=1, b=2, d=3, a=4`.
+`a=1, b=2, c=3, d=4`, `(c b d a) := (a b c d)` gives `c=1, b=2, d=3, a=4`.
 
 ### 6.5. Explicit compilation and turn boundaries
 

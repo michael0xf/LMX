@@ -4,8 +4,8 @@
 > (`new_parts/newdocs/`, kept as delivered). The texts are verbatim; only link targets required by the placement
 > were adapted: [CORE.md](../CORE.md) and the [developer instruction](../L2_L3_CODING_INSTRUCTION.md) stand in
 > the repository root. In this repository the semantics and the grammar are generated from
-> `provenance/semantics-book.md` and `provenance/grammar.json` together with their Russian halves; the Russian
-> halves of changed paragraphs follow the English text until they are translated. The other Russian documents
+> `provenance/semantics-book.md` and `provenance/grammar.json` together with their Russian halves, which are
+> translations of the English text (completed on 2026-11-21). The other Russian documents
 > (`L2_spec_ru.md`, `LMX_semantics_guide.ru.md`, `kernel-implementation.ru.md`, `implementation-notes.ru.md`,
 > `source-comparison.ru.md`) are bridges to the English edition until the Russian pass of the
 > [plan](../next_core_tasks_v3.md#docs-20261121). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not

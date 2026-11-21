@@ -124,8 +124,9 @@ Two findings of that check in the files the author committed, fixed with this ch
 
 ## Not done
 
-- The Russian edition: the translation of the 327 waiting paragraphs of the book (in work by haiku, chapter by
-  chapter), then of the five documents replaced by bridges.
+- The Russian edition: the five documents replaced by bridges. The 327 waiting paragraphs of the book were
+  translated by haiku on the same day in four portions (78, 68, 87 and 94 paragraphs), each verified by the
+  generator, and the terms of the translated paragraphs were brought to those of the unchanged Russian text.
 - The L1 specification is not compared with the edition.
 - The dated paragraphs of `READ.ME` that describe the former norms are history; a paragraph that states a
   withdrawn form as current is brought to the edition with the step that removes the form from the code.

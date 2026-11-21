@@ -1,25 +1,16 @@
-AdderPrototype:
-    int: saved 0
-    inputs:
-        int: x
-        return: int
-        add:
-            return: x + node\saved
-
-AdderFactory:
-    int: increment
-    return: @
-    create:
-        @: instance (copy(AdderPrototype))
-        @: lexicalOwner parent(instance\inputs)
-        lexicalOwner\saved := increment
-        return: instance\inputs\add
+Addition:
+    int: first
+    int: second
+    return: int
+    add:
+        return: first + second
 
 ClosureProbe:
     return: int
     run:
-        @: add5 AdderFactory\create(5)
-        @: add100 AdderFactory\create(100)
+        import: Curry
+        @: add5 capture(Addition\add; 5)
+        @: add100 capture(Addition\add; 100)
         int: saved 1000
         int: first add5(1)
         int: second add100(1)

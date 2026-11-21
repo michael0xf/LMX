@@ -20,31 +20,86 @@
       "scenario_en": "Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.",
       "expected_ru": "Первое обращение возвращает исходный объект id=9; второе — отсутствие. Сам поиск не создаёт новый экземпляр.",
       "expected_en": "Return the existing account 9, then absence; do not create a second instance.",
-      "lmx_notes_ru": "rows — переданный массив ссылок на доменные структуры; find — обычный метод. Нулевая ссылка обозначает отсутствие. Это in-memory реализация интерфейса Repository.",
-      "lmx_notes_en": "rows contains references to supplied domain Structures. find is an ordinary method; zero is an absent reference. This is an in-memory Repository implementation.",
-      "comparison_ru": "Все три варианта выполняют одинаковый линейный поиск. Доменный интерфейс можно сохранить при замене реализации на SQL; нынешний листинг SQL не моделирует.",
-      "comparison_en": "All versions perform the same linear lookup. A SQL implementation can preserve the domain interface; SQL execution is outside this example.",
-      "limits_ru": "Показан узкий контракт find(id); транзакции и долговременная запись не входят в сценарий.",
-      "limits_en": "Only find(id) is implemented; transaction management and durable writes are out of scope.",
+      "lmx_notes_ru": "Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.",
+      "lmx_notes_en": "Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row.",
+      "comparison_ru": "Во всех трёх клиентах готовый FindById — небольшой прикладной helper для последовательности записей с id, а доменная Account и граница Repository остаются клиентскими. Соседняя реализация раскрывает цикл, ранний возврат и отсутствие во всех языках. Это не сравнение готового LINQ с ручным циклом только в LMX.",
+      "comparison_en": "All clients use a ready, narrow FindById helper over records with id while retaining the domain Account and repository boundary. The companion exposes iteration, early return, and absence in every language. Ready LINQ is not compared against a manual loop only in LMX.",
+      "limits_ru": "In-memory последовательность, совпадение по одному целочисленному id и первая запись при дубликатах. Возвращается исходный объект, не snapshot. Это не общий LINQ engine, не ORM и не индекс БД. Dataclass/record в клиенте описывает поля Account; алгоритм поиска реализован отдельно и полностью.",
+      "limits_en": "This is an in-memory sequence matched by one integer id, returning the first duplicate. The original object is returned, not a snapshot. It is not a LINQ engine, ORM, or database index. Client dataclass/record declarations describe Account fields; the complete search algorithm is separately implemented.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Repository:\n    []: @ rows\n    int: id\n    return: @\n    find:\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            if: row\\id = id\n                return: row\n            i += 1\n        @: missing 0\n        return: missing\n",
-          "notes_ru": "rows — переданный массив ссылок на доменные структуры; find — обычный метод. Нулевая ссылка обозначает отсутствие. Это in-memory реализация интерфейса Repository.",
-          "notes_en": "rows contains references to supplied domain Structures. find is an ordinary method; zero is an absent reference. This is an in-memory Repository implementation."
+          "code": "Repository:\n    []: @ rows\n    int: id\n    return: @\n    find:\n        throws: OperandArity\n        import: FindLibrary\n        return: rows findById id\n",
+          "notes_ru": "Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.",
+          "notes_en": "Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row."
         },
         {
           "language": "Python",
-          "code": "from dataclasses import dataclass\n@dataclass\nclass Account:\n    id: int\n    cents: int\nclass Repository:\n    def __init__(self, rows):\n        self.rows = rows\n    def find(self, id):\n        return next((row for row in self.rows if row.id == id), None)\n",
-          "notes_ru": "Показан узкий контракт find(id); транзакции и долговременная запись не входят в сценарий.",
-          "notes_en": "Only find(id) is implemented; transaction management and durable writes are out of scope."
+          "code": "from dataclasses import dataclass\nfrom lookup import find_by_id\n\n@dataclass\nclass Account:\n    id: int\n    cents: int\n\nclass Repository:\n    def __init__(self, rows): self.rows = rows\n    def find(self, id): return find_by_id(self.rows, id)\n",
+          "notes_ru": "Модуль lookup.py полностью дан в companion; dataclass остаётся декларацией клиентской Account.",
+          "notes_en": "The companion fully supplies lookup.py; dataclass remains the client Account declaration."
         },
         {
           "language": "C#",
-          "code": "using System.Collections.Generic;\nusing System.Linq;\npublic sealed record Account(int Id, int Cents);\npublic sealed class Repository(IReadOnlyList<Account> rows) {\n    public Account? Find(int id) => rows.FirstOrDefault(row => row.Id == id);\n}\n",
-          "notes_ru": "Показан узкий контракт find(id); транзакции и долговременная запись не входят в сценарий.",
-          "notes_en": "Only find(id) is implemented; transaction management and durable writes are out of scope."
+          "code": "using System.Collections.Generic;\nusing ExampleLib;\npublic sealed record Account(int Id, int Cents) : IIdentified;\npublic sealed class Repository(IReadOnlyList<Account> rows) {\n    public Account? Find(int id) => Records.FindById(rows, id);\n}\n",
+          "notes_ru": "ExampleLib.Records и IIdentified полностью даны в companion. Account — клиентский доменный record, реализующий только Id-контракт.",
+          "notes_en": "The companion fully supplies ExampleLib.Records and IIdentified. Account is the client domain record implementing the Id contract."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Repository",
+          "url": "https://martinfowler.com/eaaCatalog/repository.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        94
+      ]
+    },
+    {
+      "id": 94,
+      "name": "FindById — implementation",
+      "slug": "find_by_id_implementation",
+      "kind": "implementation",
+      "paired_with": 16,
+      "usage_ids": [
+        16
+      ],
+      "summary_ru": "Реализовать импортируемый поиск первой записи по целочисленному id.",
+      "summary_en": "Implement imported first-record lookup by integer id.",
+      "scenario_ru": "Просмотреть упорядоченную последовательность записей, вернуть первую с нужным id или отсутствие.",
+      "scenario_en": "Scan an ordered record sequence and return the first matching id or absence.",
+      "expected_ru": "Для id 7 возвращается исходная запись 7; при повторном id возвращается первая; неизвестный id и пустой список дают отсутствие.",
+      "expected_en": "Id 7 returns its original record; duplicate ids return the first; unknown ids and empty sequences return absence.",
+      "lmx_notes_ru": "FindLibrary использует copy: sys\\OPERANDS_TEMPLATE: mode 0 и приоритет + готовы до анализа. Бинарный контракт проверяется length(right)=1. \\left получает reference-value целой последовательности, \\right[0] — int-значение id. Цикл читает каждую запись до первого совпадения, возвращая её исходную ссылку; пустая последовательность и отсутствие дают 0. Никакого captured predicate и сохранённого frame нет.",
+      "lmx_notes_en": "FindLibrary copies sys\\OPERANDS_TEMPLATE, making mode 0 and additive priority ready before analysis. length(right)=1 checks the binary contract. \\left reads the whole sequence reference value, and \\right[0] the integer id. The loop visits rows until the first match and returns that original reference; empty/no-match cases return 0. No captured predicate or retained frame is involved.",
+      "comparison_ru": "Во всех трёх языках написаны собственный цикл, сравнение id, ранний return и ветвь отсутствия. Python next/filter и C# FirstOrDefault не используются для реализации helper. LMX и Python требуют поле id структурно, C# выражает тот же нужный доступ через IIdentified.",
+      "comparison_en": "All implementations explicitly show their own loop, id comparison, early return, and absence branch. Python next/filter and C# FirstOrDefault are not used to implement the helper. LMX/Python require id structurally; C# exposes that required access through IIdentified.",
+      "limits_ru": "Узкий helper одного ключа; без произвольных predicate/context, lazy query planner, SQL или индекса. Последовательность не изменяется и не перечисляется дальше первого совпадения. Lifetime найденной записи остаётся у владельца коллекции/Message; возврат ссылки её не копирует.",
+      "limits_en": "This is a narrow single-key helper without arbitrary predicates/contexts, a lazy query planner, SQL, or an index. It neither mutates the sequence nor enumerates past the first match. The collection/Message owner retains the record lifetime; returning its reference does not copy it.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "FindLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: @\n    findById:\n        throws: OperandArity\n        if: length(right) != 1\n            throw: OperandArity()\n        @: rows \\left\n        int: id \\right[0]\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            if: row\\id = id\n                return: row\n            i += 1\n        @: missing 0\n        return: missing\n",
+          "notes_ru": "FindLibrary использует copy: sys\\OPERANDS_TEMPLATE: mode 0 и приоритет + готовы до анализа. Бинарный контракт проверяется length(right)=1. \\left получает reference-value целой последовательности, \\right[0] — int-значение id. Цикл читает каждую запись до первого совпадения, возвращая её исходную ссылку; пустая последовательность и отсутствие дают 0. Никакого captured predicate и сохранённого frame нет.",
+          "notes_en": "FindLibrary copies sys\\OPERANDS_TEMPLATE, making mode 0 and additive priority ready before analysis. length(right)=1 checks the binary contract. \\left reads the whole sequence reference value, and \\right[0] the integer id. The loop visits rows until the first match and returns that original reference; empty/no-match cases return 0. No captured predicate or retained frame is involved."
+        },
+        {
+          "language": "Python",
+          "code": "def find_by_id(rows, id):\n    for row in rows:\n        if row.id == id:\n            return row\n    return None\n",
+          "notes_ru": "Полный lookup.py; используются только for, чтение поля, сравнение и return.",
+          "notes_en": "Complete lookup.py, using only for, field access, comparison, and return."
+        },
+        {
+          "language": "C#",
+          "code": "#nullable enable\nusing System.Collections.Generic;\nnamespace ExampleLib {\n    public interface IIdentified { int Id { get; } }\n    public static class Records {\n        public static T? FindById<T>(IEnumerable<T> rows, int id) where T : class, IIdentified {\n            foreach (T row in rows) {\n                if (row.Id == id) return row;\n            }\n            return null;\n        }\n    }\n}\n",
+          "notes_ru": "Полный ExampleLib.Records с минимальным Id-контрактом; IEnumerable даёт только базовый обход, поиск написан здесь.",
+          "notes_en": "Complete ExampleLib.Records with the minimal Id contract; IEnumerable supplies basic traversal only, and search is implemented here."
         }
       ],
       "sources": [
@@ -710,31 +765,31 @@
       "scenario_en": "Combine nonnegative and below100 with AND; test -1,50,100.",
       "expected_ru": "Результаты false,true,false. Правый предикат не вызывается, если левый дал false.",
       "expected_en": "Results are false,true,false; the right predicate is skipped when the left is false.",
-      "lmx_notes_ru": "left и right — ссылки на обычные callable; && сохраняет короткое замыкание. Два готовых предиката и общий combinator имеют одинаковый вход int.",
-      "lmx_notes_en": "left/right are ordinary callable references; && short-circuits. All predicates consume int.",
-      "comparison_ru": "LMX использует обычные методы, Python функции, C# Func. Иерархия классов не нужна, когда задача состоит только в композиции предикатов.",
-      "comparison_en": "Ordinary methods, functions and Func are sufficient; a class hierarchy is not required.",
-      "limits_ru": "Не реализованы вывод SQL, доказательство subsumption и сериализация предикатов. Это исполняемая Specification, не структурный implements.",
-      "limits_en": "No SQL generation, subsumption proof or predicate serialization is included. Executable Specification is distinct from structural implements.",
+      "lmx_notes_ru": "Клиент импортирует готовый both из SpecificationLibrary\\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.",
+      "lmx_notes_en": "The client imports ready both from SpecificationLibrary\\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.",
+      "comparison_ru": "Все три клиента определяют конкретные nonnegative/below100 и импортируют готовый combinator для построения reusable-предиката. В LMX запись A both B делает композицию выражением; Python и C# используют вызов фабрики. Соседняя реализация сохраняет проверку значения и короткое замыкание явно во всех трёх языках.",
+      "comparison_en": "Each client defines concrete nonnegative/below100 predicates and imports the combinator that builds a reusable predicate. LMX makes composition an A both B expression; Python and C# call a factory. The companion explicitly implements evaluation and short-circuiting in all three languages.",
+      "limits_ru": "Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не implements. Короткий клиент и полный код combinator измеряются отдельно.",
+      "limits_en": "Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from implements. Client and complete combinator implementation are measured separately.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Predicates:\n    int: value\n    return: int\n    nonnegative:\n        return: value >= 0\n    below100:\n        return: value < 100\n\nAnd:\n    @: left\n    @: right\n    int: value\n    return: int\n    accepts:\n        return: left(value) && right(value)\n",
-          "notes_ru": "left и right — ссылки на обычные callable; && сохраняет короткое замыкание. Два готовых предиката и общий combinator имеют одинаковый вход int.",
-          "notes_en": "left/right are ordinary callable references; && short-circuits. All predicates consume int."
+          "code": "Predicates:\n    int: value\n    return: int\n    nonnegative:\n        return: value >= 0\n    below100:\n        return: value < 100\n\nSpecificationExample:\n    return: @\n    build:\n        throws: OperandArity\n        import: SpecificationLibrary\\Operators\n        return: Predicates\\nonnegative both Predicates\\below100\n",
+          "notes_ru": "Клиент импортирует готовый both из SpecificationLibrary\\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.",
+          "notes_en": "The client imports ready both from SpecificationLibrary\\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator."
         },
         {
           "language": "Python",
-          "code": "def nonnegative(value): return value >= 0\ndef below100(value): return value < 100\ndef both(left, right):\n    return lambda value: left(value) and right(value)\n",
-          "notes_ru": "Не реализованы вывод SQL, доказательство subsumption и сериализация предикатов. Это исполняемая Specification, не структурный implements.",
-          "notes_en": "No SQL generation, subsumption proof or predicate serialization is included. Executable Specification is distinct from structural implements."
+          "code": "from specification import both\n\ndef nonnegative(value): return value >= 0\ndef below100(value): return value < 100\n\ndef build():\n    return both(nonnegative, below100)\n",
+          "notes_ru": "Модуль specification.py полностью показан в companion. build() возвращает callable; внешний driver проверяет три значения.",
+          "notes_en": "The companion fully defines specification.py. build() returns a callable; the external driver checks three values."
         },
         {
           "language": "C#",
-          "code": "using System;\npublic static class Specifications {\n    public static bool Nonnegative(int value) => value>=0;\n    public static bool Below100(int value) => value<100;\n    public static Func<int,bool> Both(Func<int,bool> left,Func<int,bool> right) =>\n        value => left(value) && right(value);\n}\n",
-          "notes_ru": "Не реализованы вывод SQL, доказательство subsumption и сериализация предикатов. Это исполняемая Specification, не структурный implements.",
-          "notes_en": "No SQL generation, subsumption proof or predicate serialization is included. Executable Specification is distinct from structural implements."
+          "code": "using System;\nusing ExampleLib;\npublic static class Specifications {\n    public static bool Nonnegative(int value) => value >= 0;\n    public static bool Below100(int value) => value < 100;\n    public static Func<int,bool> Build() => Specification.Both(Nonnegative, Below100);\n}\n",
+          "notes_ru": "ExampleLib.Specification полностью показан в companion; внешняя точка входа Specifications.Build().",
+          "notes_en": "The companion fully defines ExampleLib.Specification; call Specifications.Build()."
         }
       ],
       "sources": [
@@ -743,6 +798,73 @@
           "url": "https://martinfowler.com/apsupp/spec.pdf",
           "why_ru": "Определение и границы паттерна.",
           "why_en": "Pattern definition and boundaries."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        95
+      ]
+    },
+    {
+      "id": 95,
+      "name": "Specification combinator — implementation",
+      "slug": "specification_combinator_implementation",
+      "kind": "implementation",
+      "paired_with": 31,
+      "usage_ids": [
+        31
+      ],
+      "summary_ru": "Реализовать импортируемую бинарную композицию двух предикатов с коротким замыканием.",
+      "summary_en": "Implement imported binary predicate composition with short-circuiting.",
+      "scenario_ru": "Сохранить две callable-ссылки и вернуть новый int-предикат. При каждом вызове проверить левую часть; правую вызывать только после true.",
+      "scenario_en": "Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.",
+      "expected_ru": "nonnegative both below100 даёт false,true,false для -1,50,100. При false слева счётчик правых вызовов не растёт. Повторный вызов использует сохранённые ссылки.",
+      "expected_en": "nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.",
+      "lmx_notes_ru": "Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent.",
+      "lmx_notes_en": "AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver.",
+      "comparison_ru": "LMX явно строит сохраняемый граф и выбирает владельца; Python closure и C# lambda сохраняют ссылки средствами языка. Все три тела показывают собственный AND через &&/and и не вызывают готовый both. Ни SQL-expression builder, ни скрытый AST evaluator не используется.",
+      "comparison_en": "LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used.",
+      "limits_ru": "Только одна целочисленная аргументная позиция и два предиката. Ссылки должны оставаться допустимыми в одном Message/контексте; raw occurrences и сохранение завершённых активаций не применяются. В LMX лишние правые операнды дают OperandArity; это не автоматический fold.",
+      "limits_en": "There is one integer argument position and two predicates. References must remain valid in one Message/context; raw occurrences and retention of finished activations are not used. Extra right operands cause OperandArity in LMX; there is no automatic fold.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "SpecificationLibrary:\n    independent: AndData:\n        @: first 0\n        @: second 0\n        inputs:\n            int: value\n            return: int\n            accepts:\n                return: node\\first(value) && node\\second(value)\n    Operators:\n        copy: sys\\OPERANDS_TEMPLATE\n        return: @\n        both:\n            throws: OperandArity\n            if: length(right) != 1\n                throw: OperandArity()\n            @: instance (copy(AndData))\n            @: owner parent(instance\\inputs)\n            owner\\first := \\left\n            owner\\second := \\right[0]\n            return: instance\\inputs\\accepts\n",
+          "notes_ru": "Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent.",
+          "notes_en": "AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver."
+        },
+        {
+          "language": "Python",
+          "code": "def both(left, right):\n    def accepts(value):\n        return left(value) and right(value)\n    return accepts\n",
+          "notes_ru": "Полный specification.py; обычная closure сохраняет две ссылки, and реализует короткое замыкание.",
+          "notes_en": "Complete specification.py; an ordinary closure retains two references, and implements short-circuiting."
+        },
+        {
+          "language": "C#",
+          "code": "using System;\nnamespace ExampleLib {\n    public static class Specification {\n        public static Func<int,bool> Both(Func<int,bool> left, Func<int,bool> right) {\n            return value => left(value) && right(value);\n        }\n    }\n}\n",
+          "notes_ru": "Полный компонент ExampleLib.Specification; Func — только тип callable, Both реализован здесь.",
+          "notes_en": "Complete ExampleLib.Specification; Func is only the callable type, and Both is implemented here."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Eric Evans and Martin Fowler — Specifications",
+          "url": "https://martinfowler.com/apsupp/spec.pdf",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        },
+        {
+          "title": "Python — Boolean operations",
+          "url": "https://docs.python.org/3/library/stdtypes.html#boolean-operations-and-or-not",
+          "why_ru": "Правый операнд and вызывается по необходимости.",
+          "why_en": "and evaluates its right operand only when needed."
+        },
+        {
+          "title": "Microsoft — conditional logical operators",
+          "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/boolean-logical-operators",
+          "why_ru": "Короткое замыкание встроенного &&.",
+          "why_en": "Short-circuit behavior of built-in &&."
         }
       ]
     },
@@ -754,33 +876,33 @@
       "summary_en": "Equality follows component values rather than object identity.",
       "scenario_ru": "Сравнить отдельно созданные Money(100,840) и Money(100,840), затем Money(100,978). Currency — числовой код валюты.",
       "scenario_en": "Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.",
-      "expected_ru": "Первые два значения равны, третье отличается, независимо от идентичности объектов.",
-      "expected_en": "The first pair is equal; the different currency is unequal, regardless of addresses.",
-      "lmx_notes_ru": "Деньги представлены immutable-структурой cents/currency; equals сравнивает компоненты явно. Сравнение ссылок само по себе не получает эту семантику.",
-      "lmx_notes_en": "Immutable cents/currency fields form the value; an explicit equals predicate compares them. Reference equality does not gain this meaning automatically.",
-      "comparison_ru": "Python frozen dataclass и C# readonly record struct автоматически дают равенство по компонентам. В LMX показан явный предикат, не выданный за встроенное сравнение @.",
-      "comparison_en": "Python frozen dataclass and C# readonly record struct supply value equality; LMX shows its explicit predicate honestly.",
-      "limits_ru": "Создание неизменяемых значений и равенство — весь scope. Арифметика валют, хеширование и округление не включены.",
-      "limits_en": "Only construction and equality are covered; currency arithmetic, hashing and rounding are excluded.",
+      "expected_ru": "Первые два значения равны, третье отличается. demo кодирует эти две проверки как 10; идентичность объектов для равенства не требуется.",
+      "expected_en": "The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.",
+      "lmx_notes_ru": "Demo\\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\\immutable\\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.",
+      "lmx_notes_en": "Demo\\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\\immutable\\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden.",
+      "comparison_ru": "Все три клиента создают два значения с одинаковыми компонентами и третье с другой currency, затем вызывают готовое равенство. Реализация вынесена симметрично и показана рядом: LMX — явный equals-операнд, Python — tuple-based Money и явный same, C# — readonly struct и явный Same. Ни размер клиента, ни размер реализации не выдаётся за стоимость универсального dataclass/record generator.",
+      "comparison_en": "All clients create two equal component values and a third with another currency, then call ready value equality. Implementation is separated symmetrically and shown alongside: an explicit LMX equals operand, tuple-based Python Money with same, and a C# readonly struct with Same. Neither client nor implementation size represents a universal dataclass/record generator.",
+      "limits_ru": "Сравниваются только cents и currency двух уже допустимых Money-значений. Компоненты неизменяемы; низкоуровневая замена графовых фрагментов не является API компонента. Арифметика валют, хеширование и округление не включены. Клиент и полная реализация учитываются раздельно; типы и правила хранения языков не приравниваются.",
+      "limits_en": "Only cents and currency of already admissible Money values are compared. Components are read-only; low-level graph-fragment replacement is not part of the component API. Currency arithmetic, hashing, and rounding are excluded. Client and full implementation are counted separately; language type and storage guarantees are not equated.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Money:\n    immutable: int: cents 100\n    immutable: int: currency 840\n\nMoneyEqual:\n    @: left\n    @: right\n    return: int\n    equals:\n        return: left\\cents = right\\cents && left\\currency = right\\currency\n",
-          "notes_ru": "Деньги представлены immutable-структурой cents/currency; equals сравнивает компоненты явно. Сравнение ссылок само по себе не получает эту семантику.",
-          "notes_en": "Immutable cents/currency fields form the value; an explicit equals predicate compares them. Reference equality does not gain this meaning automatically."
+          "code": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: first (copy(MoneyLibrary\\immutable\\Money))\n        @: second (copy(MoneyLibrary\\immutable\\Money))\n        @: third (merge(MoneyLibrary\\immutable\\Money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
+          "notes_ru": "Demo\\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\\immutable\\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.",
+          "notes_en": "Demo\\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\\immutable\\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden."
         },
         {
           "language": "Python",
-          "code": "from dataclasses import dataclass\n@dataclass(frozen=True)\nclass Money:\n    cents: int\n    currency: int\n",
-          "notes_ru": "Создание неизменяемых значений и равенство — весь scope. Арифметика валют, хеширование и округление не включены.",
-          "notes_en": "Only construction and equality are covered; currency arithmetic, hashing and rounding are excluded."
+          "code": "from money import Money, same\n\ndef demo():\n    first = Money()\n    second = Money()\n    third = Money(currency=978)\n    return int(same(first, second)) * 10 + int(same(first, third))\n",
+          "notes_ru": "money.py дан целиком в companion. Money() создаёт новый tuple-subclass экземпляр; same сравнивает поля явно.",
+          "notes_en": "The companion supplies complete money.py. Money() constructs a new tuple-subclass instance; same explicitly compares components."
         },
         {
           "language": "C#",
-          "code": "public readonly record struct Money(int Cents,int Currency);\n",
-          "notes_ru": "Создание неизменяемых значений и равенство — весь scope. Арифметика валют, хеширование и округление не включены.",
-          "notes_en": "Only construction and equality are covered; currency arithmetic, hashing and rounding are excluded."
+          "code": "using ExampleLib;\npublic static class Example {\n    public static int Demo() {\n        Money first = Money.Create();\n        Money second = Money.Create();\n        Money third = Money.Create(currency: 978);\n        return (Money.Same(first, second) ? 10 : 0) + (Money.Same(first, third) ? 1 : 0);\n    }\n}\n",
+          "notes_ru": "ExampleLib.Money дан целиком в companion. Create устраняет неоднозначность zero-initialized default struct и задаёт defaults 100/840 явно.",
+          "notes_en": "The companion fully supplies ExampleLib.Money. Create avoids the zero-initialized default-struct case and explicitly supplies defaults 100/840."
         }
       ],
       "sources": [
@@ -789,6 +911,79 @@
           "url": "https://martinfowler.com/eaaCatalog/valueObject.html",
           "why_ru": "Определение и границы паттерна.",
           "why_en": "Pattern definition and boundaries."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        96
+      ]
+    },
+    {
+      "id": 96,
+      "name": "Money value equality — implementation",
+      "slug": "money_value_equality_implementation",
+      "kind": "implementation",
+      "paired_with": 32,
+      "usage_ids": [
+        32
+      ],
+      "summary_ru": "Полностью показать конкретный двухкомпонентный Money и его импортируемое равенство.",
+      "summary_en": "Fully show the concrete two-component Money representation and imported equality.",
+      "scenario_ru": "Хранить read-only cents/currency и сравнить обе компоненты в указанном порядке. Defaults 100/840, альтернативная currency 978.",
+      "scenario_en": "Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.",
+      "expected_ru": "Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.",
+      "expected_en": "Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.",
+      "lmx_notes_ru": "Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\\cents и a\\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.",
+      "lmx_notes_en": "Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\\cents and a\\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.",
+      "comparison_ru": "Python использует базовый immutable tuple, запрещает instance dictionary через __slots__ и предоставляет read-only properties; same написан вручную. C# использует readonly struct/get-only properties и ручной Same. LMX использует готовые immutable primitive records и ручной оператор. Вспомогательная библиотека равенства не импортируется собственной реализацией; dataclass/record equality не подменяют показанный алгоритм.",
+      "comparison_en": "Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm.",
+      "limits_ru": "Это библиотека одного типа с двумя int-компонентами, не реализация Python dataclasses, C# records или универсального schema compiler. Принимаются корректные Money-значения; произвольные неверные типы и метапрограммное изменение классов/графа не сравниваются. В LMX защищены значения полей, как и в исходном примере; отдельная ретроактивная заморозка внешнего контейнера не добавлена.",
+      "limits_en": "This implements one type with two int components, not Python dataclasses, C# records, or a universal schema compiler. Inputs are valid Money values; invalid foreign types and metaprogrammatic class/graph mutation are outside scope. LMX protects field values as in the original example; no retroactive freezing of the outer container is added.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "MoneyLibrary:\n    immutable: Money:\n        int: cents 100\n        int: currency 840\n    Equality:\n        copy: sys\\OPERANDS_TEMPLATE\n        return: int\n        equals:\n            throws: OperandArity\n            if: length(right) != 1\n                throw: OperandArity()\n            @: a \\left\n            @: b \\right[0]\n            return: a\\cents = b\\cents && a\\currency = b\\currency\n",
+          "notes_ru": "Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\\cents и a\\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.",
+          "notes_en": "Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\\cents and a\\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are."
+        },
+        {
+          "language": "Python",
+          "code": "class Money(tuple):\n    __slots__ = ()\n    def __new__(cls, cents=100, currency=840):\n        return tuple.__new__(cls, (cents, currency))\n    @property\n    def cents(self): return self[0]\n    @property\n    def currency(self): return self[1]\n\ndef same(left, right):\n    return left.cents == right.cents and left.currency == right.currency\n",
+          "notes_ru": "Полный money.py; только базовый tuple и собственное сравнение двух полей.",
+          "notes_en": "Complete money.py, using only a basic tuple and its own two-field comparison."
+        },
+        {
+          "language": "C#",
+          "code": "namespace ExampleLib {\n    public readonly struct Money {\n        public int Cents { get; }\n        public int Currency { get; }\n        public Money(int cents, int currency) { Cents = cents; Currency = currency; }\n        public static Money Create(int cents = 100, int currency = 840) => new Money(cents, currency);\n        public static bool Same(Money left, Money right) =>\n            left.Cents == right.Cents && left.Currency == right.Currency;\n    }\n}\n",
+          "notes_ru": "Полный ExampleLib.Money; readonly-компоненты и собственный Same, без record-generated equality.",
+          "notes_en": "Complete ExampleLib.Money, with readonly components and explicit Same, without record-generated equality."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Value Object",
+          "url": "https://martinfowler.com/eaaCatalog/valueObject.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        },
+        {
+          "title": "Python — immutable tuples",
+          "url": "https://docs.python.org/3/library/stdtypes.html#tuples",
+          "why_ru": "Базовое immutable-представление двух компонент.",
+          "why_en": "Basic immutable representation of two components."
+        },
+        {
+          "title": "Python — data model and slots",
+          "url": "https://docs.python.org/3/reference/datamodel.html#slots",
+          "why_ru": "Конструирование tuple subclass и отсутствие instance dictionary.",
+          "why_en": "Tuple-subclass construction and suppression of an instance dictionary."
+        },
+        {
+          "title": "Microsoft — readonly struct",
+          "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct#readonly-struct",
+          "why_ru": "Read-only поля и свойства структуры.",
+          "why_en": "Read-only struct fields and properties."
         }
       ]
     },

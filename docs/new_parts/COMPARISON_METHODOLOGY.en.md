@@ -30,7 +30,7 @@ Serial ownership does not automatically provide transaction rollback, duplicate 
 
 ## Metrics
 
-patterns.json is the authoritative editable source for each added group. Markdown, separate source files, CSV, XLSX and PDF derive from it. Non-whitespace characters count Unicode characters for which Python str.isspace() is false, including comments and excluding whitespace even inside string literals. Nonblank lines count lines with nonempty strip(). The shown declarations, imports and helper functions are included. External fixtures, hosts and implementations of supplied libraries are excluded.
+patterns.json is the authoritative editable source for each added group. Markdown, separate source files, CSV, XLSX and PDF derive from it. Non-whitespace characters count Unicode characters for which Python str.isspace() is false, including comments and excluding whitespace even inside string literals. Nonblank lines count lines with nonempty strip(). The shown declarations, imports and helper functions are included. External fixtures and hosts are excluded. A client excludes the supplied component; its adjacent implementation case includes the complete shown component code.
 
 Excel’s ratio is LMX characters divided by control-listing characters. Greater than one means a longer LMX listing. It does not measure runtime, engineering quality or a full production system. Cross-group language rankings are not aggregated. Run `python tools/recount_patterns.py` to verify IDs, language coverage, listing identity and counts. Published CSV/XLSX/PDF are edition snapshots; Excel totals and ratios recalculate when their numeric inputs change.
 
@@ -39,3 +39,11 @@ Excel’s ratio is LMX characters divided by control-listing characters. Greater
 Primary sources substantiate pattern definitions and language/library contracts. SOURCE_INDEX.md lists them; each case cites its own sources. Examples are authored for the shared scenarios, with the supplied H03 technique identified in currying. Counts concern these listings, not the cited websites.
 
 No LMX runtime was supplied or executed. VALIDATION.md records actual control-language and artifact checks. Expected observations remain acceptance criteria unless a separate execution check states otherwise. Historical receipts in the original GoF collection retain their original scope.
+
+## Library use and implementation
+
+All original 90 pattern IDs remain. Additional IDs above 90 identify implementations of imported components, not new pattern claims. Guides and tables place each implementation beside its primary client; one component may serve several clients.
+
+The same boundary applies in all three languages. A client receives the ready library but retains application data, stages, predicates, settings and observable behavior. The complete library implementation is counted in the adjacent case. A smaller client is not a claim that the client plus library is smaller. Excel keeps main-example and library-implementation totals separate.
+
+LIBRARY_COMPONENTS.md lists the components. OPERAND_LIBRARY_REVIEW.md records decisions for all 90 original cases. OPERAND_USAGE_PROFILE.md documents the supplied header, prepared callable values, priorities and explicit arity/iteration contracts.

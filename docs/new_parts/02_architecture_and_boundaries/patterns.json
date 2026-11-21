@@ -296,31 +296,31 @@
       "scenario_en": "For one item -3, normalize its sign, double it, then add 1.",
       "expected_ru": "7; промежуточные значения 3 и 6.",
       "expected_en": "7; intermediate values are 3 and 6.",
-      "lmx_notes_ru": "Вызов Filters\\demo(). Здесь pipe — передача результата следующей стадии в одном Message. Для параллельных стадий те же фильтры помещаются в разные Message и соединяются доставкой.",
-      "lmx_notes_en": "Call Filters\\demo(). Here a pipe is value handoff inside one Message. Parallel stages use separate Messages connected by delivery.",
-      "comparison_ru": "Одинаковое синхронное ядро отделяет преобразования от политики buffering/scheduling. Не требуется объектная иерархия каждого фильтра.",
-      "comparison_en": "The same synchronous core separates transformations from buffering/scheduling policy. No class hierarchy is needed for each filter.",
-      "limits_ru": "Один целый элемент, без overflow на выбранном входе. Потоковая очередь, backpressure и параллельное исполнение в этот листинг не входят.",
-      "limits_en": "One integer item with no overflow for the fixture. Queues, backpressure, and concurrent execution are outside this listing.",
+      "lmx_notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
+      "lmx_notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.",
+      "comparison_ru": "Все три клиента импортируют готовый Pipe, сохраняя определения нормализации, удвоения, смещения и их порядок. LMX показывает этот порядок слева направо в выражении; Java и Go передают тот же список callable. Соседнее сравнение отдельно учитывает явный цикл реализации во всех трёх языках; небольшой клиент не объявляется полной реализацией конвейера.",
+      "comparison_en": "All three clients import a ready Pipe while retaining normalization, doubling, offset, and their order. LMX writes that order left to right; Java and Go pass the same callable list. The companion separately counts the explicit implementation loop in all three languages; client size is not presented as the full pipeline implementation.",
+      "limits_ru": "Один int-поток в одном последовательном контексте; выбранный вход не переполняется. Стадии имеют один int-вход, int-результат и не объявляют recoverable failures. Очереди, backpressure и планировщик не включены. Тело Pipe не входит в клиентский размер, но полностью показано и измерено отдельно для всех трёх языков.",
+      "limits_en": "One int flow in one sequential context; the fixture does not overflow. Stages have one int input and result and declare no recoverable failures. Queues, backpressure, and scheduling are excluded. Pipe implementation is excluded from client size but shown and measured separately for every language.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        return: offset(value := double(value := normalize(value := value)))\n    demo:\n        return: pipeline(value := -3)\n",
-          "notes_ru": "Вызов Filters\\demo(). Здесь pipe — передача результата следующей стадии в одном Message. Для параллельных стадий те же фильтры помещаются в разные Message и соединяются доставкой.",
-          "notes_en": "Call Filters\\demo(). Here a pipe is value handoff inside one Message. Parallel stages use separate Messages connected by delivery."
+          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
+          "notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
+          "notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery."
         },
         {
           "language": "Java",
-          "code": "class Example {\n    static int normalize(int value) { return Math.abs(value); }\n    static int twice(int value) { return value * 2; }\n    static int offset(int value) { return value + 1; }\n    static int pipeline(int value) { return offset(twice(normalize(value))); }\n    static int demo() { return pipeline(-3); }\n}\n",
-          "notes_ru": "Листинг ядра; внешний вызов Example.demo(), если он определён. Внешние порты описаны в границах сценария.",
-          "notes_en": "Core listing; call Example.demo() when supplied. External ports are described in the scenario boundary."
+          "code": "import examplelib.Pipe;\nclass Example {\n    static int normalize(int value) { return Math.abs(value); }\n    static int twice(int value) { return value * 2; }\n    static int offset(int value) { return value + 1; }\n    static int pipeline(int value) {\n        return Pipe.apply(value, Example::normalize, Example::twice, Example::offset);\n    }\n    static int demo() { return pipeline(-3); }\n}\n",
+          "notes_ru": "Импорт examplelib.Pipe соответствует показанному companion. При сборке его public class находится в examplelib/Pipe.java; внешний вызов Example.demo().",
+          "notes_en": "The examplelib.Pipe import refers to the shown companion; place its public class in examplelib/Pipe.java. Call Example.demo()."
         },
         {
           "language": "Go",
-          "code": "package main\nfunc normalize(value int) int { if value < 0 { return -value }; return value }\nfunc twice(value int) int { return value * 2 }\nfunc offset(value int) int { return value + 1 }\nfunc pipeline(value int) int { return offset(twice(normalize(value))) }\nfunc demo() int { return pipeline(-3) }\n",
-          "notes_ru": "Листинг пакета; внешний вызов demo(), если он определён. main и транспортный host не входят в подсчёт.",
-          "notes_en": "Package listing; call demo() when supplied. main and the transport host are excluded."
+          "code": "package main\nimport \"example/pipe\"\nfunc normalize(value int) int { if value < 0 { return -value }; return value }\nfunc twice(value int) int { return value * 2 }\nfunc offset(value int) int { return value + 1 }\nfunc pipeline(value int) int { return pipe.Apply(value, normalize, twice, offset) }\nfunc demo() int { return pipeline(-3) }\n",
+          "notes_ru": "Импорт example/pipe — локальный модуль example с показанным companion в pipe/pipe.go. Это не внешний пакет, который предлагается скачать. Внешний вызов demo().",
+          "notes_en": "example/pipe is the local example module with the shown companion in pipe/pipe.go, not an external download. Call demo()."
         }
       ],
       "sources": [
@@ -329,6 +329,73 @@
           "url": "https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html",
           "why_ru": "Независимые стадии и соединяющие каналы.",
           "why_en": "Independent stages and connecting channels."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        93
+      ]
+    },
+    {
+      "id": 93,
+      "name": "Pipe — implementation",
+      "slug": "pipe_implementation",
+      "kind": "implementation",
+      "paired_with": 13,
+      "usage_ids": [
+        13
+      ],
+      "summary_ru": "Реализовать импортируемую последовательную передачу значения по списку стадий.",
+      "summary_en": "Implement the imported sequential handoff through a stage list.",
+      "scenario_ru": "Получить начальный int и упорядоченный список callable int→int. Применить каждый один раз; при пустом списке вернуть исходное значение.",
+      "scenario_en": "Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.",
+      "expected_ru": "Для -3 и стадий normalize,double,offset результаты 3,6,7; пустой список сохраняет -3.",
+      "expected_en": "For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.",
+      "lmx_notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
+      "lmx_notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.",
+      "comparison_ru": "В LMX общий исполнитель формирует right, а библиотека явно выполняет обход. Java использует int-specialized functional interface, Go — обычные функции и variadic slice. Ни один вариант не импортирует готовый Pipe или готовый pipeline/fold для реализации самого Pipe.",
+      "comparison_en": "The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe.",
+      "limits_ru": "Показана прикладная библиотека для int, а не асинхронный stream framework. Политика ошибок, отмена и многопоточность не добавлены. Все три реализации используют только базовые вызовы и циклы; native/LMX исполнение здесь не заявлено.",
+      "limits_en": "This is an int application library, not an asynchronous stream framework. Error policy, cancellation, and concurrency are not added. All implementations use basic calls and loops; no native or LMX execution is claimed.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "PipeLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    pipe:\n        int: value \\left\n        int: i 0\n        while: i < length(right)\n            @: stage \\right[i]\n            value := stage(value)\n            i += 1\n        return: value\n",
+          "notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
+          "notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes."
+        },
+        {
+          "language": "Java",
+          "code": "package examplelib;\nimport java.util.function.IntUnaryOperator;\npublic final class Pipe {\n    public static int apply(int value, IntUnaryOperator... stages) {\n        for (IntUnaryOperator stage : stages) value = stage.applyAsInt(value);\n        return value;\n    }\n}\n",
+          "notes_ru": "Полный examplelib/Pipe.java. IntUnaryOperator задаёт только контракт вызова; обход реализован здесь.",
+          "notes_en": "Complete examplelib/Pipe.java. IntUnaryOperator supplies the call contract only; iteration is implemented here."
+        },
+        {
+          "language": "Go",
+          "code": "package pipe\nfunc Apply(value int, stages ...func(int) int) int {\n    for _, stage := range stages { value = stage(value) }\n    return value\n}\n",
+          "notes_ru": "Полный pipe/pipe.go в модуле example; Apply не использует готовую функцию конвейера.",
+          "notes_en": "Complete pipe/pipe.go in module example; Apply uses no ready pipeline function."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Gregor Hohpe and Bobby Woolf — Pipes and Filters",
+          "url": "https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html",
+          "why_ru": "Независимые стадии и соединяющие каналы.",
+          "why_en": "Independent stages and connecting channels."
+        },
+        {
+          "title": "Oracle — IntUnaryOperator",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/IntUnaryOperator.html",
+          "why_ru": "Контракт int→int и прямой applyAsInt.",
+          "why_en": "The int→int contract and direct applyAsInt call."
+        },
+        {
+          "title": "Go specification — variadic parameters",
+          "url": "https://go.dev/ref/spec#Passing_arguments_to_..._parameters",
+          "why_ru": "Передача вариадического списка как slice и его порядок.",
+          "why_en": "Variadic arguments form an ordered slice."
         }
       ]
     },

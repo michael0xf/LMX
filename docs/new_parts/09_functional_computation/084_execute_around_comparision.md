@@ -1,33 +1,68 @@
 # 084. Execute Around
 
-Приобретение и освобождение ресурса окружают переданное пользовательское действие.
+Клиент готового around предоставляет ресурс, действие и журнал; обычный выход и два отказа проверяют освобождение.
+
+**Реализация используемого компонента:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
 
 ## Общий сценарий
 
-Передать три операции: acquire создаёт ресурс, action возвращает 42 либо выбрасывает ошибку, release фиксирует освобождение. Проверить обычный результат, ошибку тела и ошибку acquire.
+Ресурс содержит 42. acquire дописывает 1 в журнал, action — 2, release — 3. Mode 0 успешен, mode 1 бросает ResourceFailure из action, mode 2 — из acquire. Клиент использует одинаковый готовый Around во всех трёх языках и перехватывает ошибку только для наблюдения журнала.
 
-**Ожидаемое наблюдение:** Успех: acquire → action → release, результат 42. Ошибка action: тот же порядок с обязательным release и распространением ошибки. Ошибка acquire: release не вызывается, потому что ресурс не получен.
+**Ожидаемое наблюдение:** run(0) → 42123: результат 42, журнал 123. run(1) → −123: ошибка тела дошла до клиента и release выполнен. run(2) → −1: acquisition отказал, release не выполнен. Ресурс не используется после cleanup.
 
-**Граница сравнения:** Ядро сценария. Предполагается, что release сам не выбрасывает ошибку. Иначе политика при двух ошибках требует отдельного сравнения. Гарантия не распространяется на аварийное уничтожение процесса или аппаратный сбой. Это управление ресурсом внутри одного исполнения, не протокол межпроцессной аренды.
+**Граница сравнения:** Использование библиотеки. Область — синхронные отказы и release, который не бросает. Стандартный Haskell bracket имеет дополнительные гарантии по асинхронным исключениям; самописная библиотека их не обещает, как явно описано в companion. Нет аварийного уничтожения процесса, межпроцессной аренды или общей политики конкурирующих ошибок. Перед каждым прогоном журнал очищается.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
+Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
 
 ## LMX
 
 ```lmx
-Around:
-    @: acquire
-    @: release
-    @: action
+Resource:
+    int: value 42
+
+Trace:
+    int: mode 0
+    int: events 0
+
+Acquire:
+    return: @
+    open:
+        throws:
+            ResourceFailure
+        Trace\events := Trace\events * 10 + 1
+        if: Trace\mode = 2
+            throw: ResourceFailure()
+        return: Resource
+
+Action:
+    @: resource
     return: int
     use:
-        @: resource acquire()
-        finally:
-            release(resource := resource)
-        return: action(resource := resource)
+        throws:
+            ResourceFailure
+        Trace\events := Trace\events * 10 + 2
+        if: Trace\mode = 1
+            throw: ResourceFailure()
+        return: resource\value
+
+Release:
+    @: resource
+    close:
+        Trace\events := Trace\events * 10 + 3
+
+Example:
+    int: mode
+    return: int
+    run:
+        Trace\mode := mode
+        Trace\events := 0
+        int: value Around\use(Acquire\open; Release\close; Action\use)
+        return: value * 1000 + Trace\events
+        catch: ResourceFailure ()
+            return: -Trace\events
 ```
 
-Контракты: acquire() → @ ресурса; release(resource: @) → процедура; action(resource: @) → int или обычный throw. Именованная передача гарантирует передачу целого ресурса и исключает раскрытие W/E. Ресурс не передаётся другому Message. Показан весь around-алгоритм; сценарный журнал предоставляется тестовыми функциями.
+Внешние пробы Example\run(0/1/2). До клиента загрузить LMX-листинг companion Execute Around implementation, определяющий Around. Обычный catch наблюдает отказ; ресурсные callbacks и журнал не являются библиотечными портами, их код показан здесь.
 
 [Отдельный листинг](examples/lmx/084_execute_around.lm3)
 
@@ -35,77 +70,113 @@ Around:
 
 ```haskell
 module ExecuteAroundExample where
+import AroundInt (around)
+import Control.Exception (IOException, try)
+import Data.IORef (newIORef, modifyIORef', readIORef)
 
-import Control.Exception (bracket)
+newtype Resource = Resource Int
 
-around :: IO r -> (r -> IO ()) -> (r -> IO Int) -> IO Int
-around acquire release action = bracket acquire release action
+run :: Int -> IO Int
+run mode = do
+  events <- newIORef 0
+  let note n = modifyIORef' events (\x -> x * 10 + n)
+      failure = ioError (userError "ResourceFailure")
+      acquire = do
+        note 1
+        if mode == 2 then failure else pure (Resource 42)
+      action (Resource value) = do
+        note 2
+        if mode == 1 then failure else pure value
+      release _ = note 3
+  result <- try (around acquire release action) :: IO (Either IOException Int)
+  logValue <- readIORef events
+  pure (either (const (-logValue)) (\value -> value * 1000 + logValue) result)
 ```
 
-Контракты совпадают с LMX; IO-действие acquire передаётся без преждевременного исполнения. Реализация bracket — часть base.
+Haskell2010/base. Компилировать с модулем AroundInt из companion Execute Around implementation. Внешние пробы run 0, run 1, run 2. try находится в клиенте только для наблюдения распространённой ошибки; библиотечный cleanup показан отдельно.
 
 [Отдельный листинг](examples/haskell/084_execute_around.hs)
 
 ## Scala
 
 ```scala
+import AroundInt.around
+
 object ExecuteAroundExample {
-  def around[R](acquire: () => R,
-                release: R => Unit,
-                action: R => Int): Int = {
-    val resource = acquire()
-    try action(resource)
-    finally release(resource)
+  final case class Resource(value: Int)
+  final class ResourceFailure extends RuntimeException
+  def run(mode: Int): Int = {
+    var events = 0
+    def note(n: Int): Unit = { events = events * 10 + n }
+    try {
+      val value = around(
+        () => {
+          note(1)
+          if (mode == 2) throw new ResourceFailure
+          Resource(42)
+        },
+        (_: Resource) => note(3),
+        (resource: Resource) => {
+          note(2)
+          if (mode == 1) throw new ResourceFailure
+          resource.value
+        })
+      value * 1000 + events
+    } catch {
+      case _: ResourceFailure => -events
+    }
   }
 }
 ```
 
-Scala 3. Явный try/finally сохраняет ровно тот же интерфейс трёх supplied функций. Для AutoCloseable существует стандартный Using.resource.
+Scala 3. Компилировать вместе с AroundInt из companion Execute Around implementation. Внешние пробы ExecuteAroundExample.run(0/1/2). Клиентский catch не выполняет cleanup: он лишь переводит наблюдение отказа в число.
 
 [Отдельный листинг](examples/scala/084_execute_around.scala)
 
 ## Разбор LMX
 
-finally регистрируется после успешного acquire и исполняется при выходе из области. Это общий механизм выходов LMX. resource жив до cleanup; в исходный граф кадр не копируется. Все три ссылки передаются явно.
+Around загружается из соседнего Execute Around implementation; это авторский компонент, не новый builtin. Прикладные ресурс, журнал и условия отказа находятся в клиенте. catch перехватывает ResourceFailure после выхода из helper; cleanup принадлежит реализации Around. Все записи журнала адресуют явный граф одного последовательного Message.
 
 ## Сопоставление
 
-LMX использует finally, Haskell — bracket, Scala — try/finally. У Haskell bracket также учитывает асинхронные исключения; наш общий сценарий ограничен обычным выходом и ошибкой тела. Сравниваются одинаковые supplied acquire/release/action, поэтому размер реализации файловой системы не приписывается одному языку.
+Все три клиента используют собственный готовый around с реализацией рядом. Library-код исключён симметрично; импорты, прикладные callbacks и наблюдение трёх исходов включены. Haskell больше не получает бесплатно standard bracket при сравнении с полной LMX-реализацией.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 134 | 10 |
-| Haskell | 158 | 4 |
-| Scala | 156 | 9 |
+| LMX | 563 | 38 |
+| Haskell | 580 | 20 |
+| Scala | 441 | 26 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
-Resource acquisition and release surround a supplied user action.
+A client supplies the resource, action and log to ready around; normal exit and two failures test release.
 
-**Scenario.** Supply acquire, action and release. Action returns 42 or fails; release records cleanup. Check success, body failure and acquisition failure.
+**Implementation of the supplied component:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
 
-**Expected observation.** Success: acquire, action, release, result 42. Action failure still runs release and propagates the error. Acquisition failure does not call release because no resource was acquired.
+**Scenario.** The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. The client uses the same ready Around abstraction in all three languages and catches the failure only to observe the log.
 
-**LMX.** finally is registered after acquisition succeeds and runs on scope exit through the common LMX exit mechanism. resource stays live through cleanup. All three callable references are explicit.
+**Expected observation.** run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure reaches the client after release. run(2) yields −1: acquisition failed and no release ran. The resource is not used after cleanup.
 
-**Comparison.** LMX uses finally, Haskell bracket and Scala try/finally. Haskell bracket additionally handles asynchronous-exception concerns; the shared scenario covers normal exit and body failure. The same supplied acquire/release/action boundaries apply to all three.
+**LMX.** Around is loaded from the adjacent Execute Around implementation; it is an author-supplied component, not a new built-in. The resource, log and failure conditions stay in the client. catch observes ResourceFailure after the helper exits; cleanup belongs to Around. Log writes target the explicit graph of one serial Message.
 
-**Scope and limitations.** release is assumed not to fail; competing cleanup/body errors require a separate policy comparison. Process destruction and hardware failure are excluded. This is local resource management, not a distributed lease.
+**Comparison.** All three clients use a custom ready around whose implementation appears alongside. Library code is excluded symmetrically; imports, application callbacks and observation of all three outcomes are counted. Haskell no longer gets standard bracket free while a complete LMX implementation is charged to its client.
+
+**Scope and limitations.** The scope is synchronous failures and non-failing release. Standard Haskell bracket has additional asynchronous-exception guarantees which the custom companion explicitly does not promise. Process destruction, distributed leases and general competing-error policy are excluded. Each run resets the log.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Contracts: acquire() returns a resource reference; release has one reference input named resource; action has the same input and returns int or throws. Named supply passes the whole resource and suppresses W/E expansion. Test callables provide the observation log.
-- **Haskell:** The contracts match LMX. The acquire IO action is supplied without running it early. bracket is provided by base.
-- **Scala:** Scala 3. Explicit try/finally preserves the exact three-function interface. AutoCloseable also has the standard Using.resource alternative.
+- **LMX:** External probes: Example\run(0/1/2). Load the LMX companion Execute Around implementation defining Around first. Ordinary catch observes failure; callbacks and the log are not hidden library ports, their code is shown here.
+- **Haskell:** Haskell2010/base. Compile with AroundInt from companion Execute Around implementation. External probes: run 0, run 1, run 2. Client try only observes the propagated failure; library cleanup is shown separately.
+- **Scala:** Scala 3. Compile with AroundInt from companion Execute Around implementation. External probes: ExecuteAroundExample.run(0/1/2). Client catch performs no cleanup; it only encodes the failure observation.
 
 ## Источники / Sources
 
-- [GHC base, Control.Exception.bracket](https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html) — Порядок acquire/use/release и границы асинхронного cleanup.
-- [Scala Using API](https://www.scala-lang.org/api/current/scala/util/Using%24.html) — Стандартный resource-management аналог и политика нескольких исключений.
+- [GHC base, Control.Exception](https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html) — catch/throwIO и различие синхронной обработки с маскированием асинхронных исключений у bracket. Готовый bracket в новой паре не используется.
+- [Scala 3 Book, Functional Error Handling](https://docs.scala-lang.org/scala3/book/fp-functional-error-handling.html) — Обычная обработка исключений как контрольный контекст; cleanup реализован собственным try/finally.
 
 **Норма LMX:** [CORE](../newdocs/CORE.md), [семантика](../newdocs/LMX_semantics.en.md), [guide](../newdocs/LMX_semantics_guide.en.md), [уточнение 21 ноября](../newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 

@@ -2,7 +2,7 @@
 
 Java shows nominal interfaces, classes, and explicit object contracts; Python shows dynamic composition and functions. The comparison avoids forcing Java hierarchies on every language and reveals actual nominal/structural differences.
 
-All ten original patterns remain. Examples use one serial owner; LMX shared mutable state belongs to a Message. Marker Interface and Fluent Interface explicitly distinguish equivalent observations from identical nominal typing or chaining syntax.
+All ten original patterns are retained and reviewed for useful operands and separate libraries. Fluent Interface now shows an actual chain through OPERANDS_TEMPLATE; the other cases keep direct named operations where an extra wrapper would only add machinery. Examples use one serial owner; LMX shared mutable state belongs to a Message.
 
 ## Files
 
@@ -14,6 +14,8 @@ All ten original patterns remain. Examples use one serial owner; LMX shared muta
 - [All 90 patterns](../PATTERN_CATALOG_90.en.md)
 - [Validation status](../VALIDATION.md)
 - [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
+- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
+- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -91,11 +93,11 @@ Java and Python check nominal membership. LMX checks an explicit structure that 
 
 API operations return a context so the interaction can continue fluently.
 
-**Scenario:** Set count=3 and price=7 through the returned same context, then obtain their product.
+**Scenario:** Set count=3 and price=7 in one expression using operations that return the same context, then obtain the product.
 
 **Observation:** 21; both setters return the original object.
 
-Java/Python show literal dot chaining; LMX uses the same return-context contract with ordinary method paths. This is an API analogue, not a claim of identical chaining syntax.
+LMX now shows the fluent chain directly in an expression; Java and Python use method chaining. All three mutate and return the same object rather than create independent configuration values. The common operand header is accounted for by the copy line.
 
 ### 080. [Type Object](080_type_object_comparision.md)
 
@@ -119,4 +121,4 @@ A separate object provides the additional interface. This differs from replacing
 
 ## Boundaries
 
-Sizes are computed from each pattern’s three listings. They exclude implementations of supplied libraries, runtime, HTTP hosts and databases. Read each case’s individual limits. IDs retain the original list; 86–90 are explicit additions.
+Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

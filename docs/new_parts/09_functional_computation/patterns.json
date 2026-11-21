@@ -7,58 +7,139 @@
   ],
   "rationale_ru": "Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.",
   "rationale_en": "Haskell is a natural control for Maybe/Monad and currying. Scala combines functional constructs with JVM execution, explicit trampolines and ordinary resource handling. The selection follows mechanisms rather than a universal brevity ranking.",
-  "overview_ru": "Четыре исходных пункта 82–85 сохранены отдельно. Код сравнивает конкретные наблюдения: отсутствие результата, передачу следующего шага, освобождение ресурса и сохранение частично применённого значения. LMX использует обычные структуры и методы; в контрольных языках допускаются их стандартные функциональные библиотеки.",
-  "overview_en": "All four original entries 82–85 remain separate. The cases compare absence propagation, next-step execution, resource release and retained partial application. LMX uses ordinary structures and methods; controls may use their standard functional libraries.",
+  "overview_ru": "Четыре исходных паттерна 82–85 сохранены как клиентские сравнения готовых компонентов. Рядом с каждым находится полная собственная реализация одной и той же библиотеки во всех трёх языках: Maybe/bind, Bounce/runner, synchronous around и capture первого int. Клиентские и implementation-размеры считаются отдельно и могут суммироваться для standalone-примера. Операнд bind использует готовые значения; остальные helpers сохраняют обычные вызовы там, где OPERANDS_TEMPLATE добавил бы только оболочку.",
+  "overview_en": "All four original patterns 82–85 remain as clients of ready components. Each is paired with complete custom implementations of the same library in all three languages: Maybe/bind, Bounce/runner, synchronous around and first-int capture. Client and implementation sizes are counted separately and may be summed for a standalone example. bind uses prepared-value operand notation; the other helpers keep ordinary calls where OPERANDS_TEMPLATE would add only a wrapper.",
   "patterns": [
     {
       "id": 82,
       "name": "Monad",
       "slug": "monad",
       "scope": "core",
-      "summary_ru": "Контекстное связывание вычислений на конкретном примере Maybe: отсутствие результата пропускает следующие шаги.",
-      "summary_en": "Context-preserving composition, illustrated by Maybe: absence skips subsequent steps.",
-      "scenario_ru": "Дважды поделить целое число пополам. Каждый шаг допускает только чётное число. Прогнать 8 и 6; во втором случае второй шаг должен вернуть отсутствие, а продолжение после отсутствия не вызывается.",
-      "scenario_en": "Halve an integer twice, accepting only even inputs at each step. Run 8 and 6; the latter fails at the second step. A continuation following absence must not run.",
-      "expected_ru": "Для 8: present=1, value=2 (Just 2 / Some(2)). Для 6: present=0 (Nothing / None). Bind не читает value отсутствующего результата. Законы unit/bind рассматриваются по наблюдаемому значению, без сравнения адресов контейнеров.",
-      "expected_en": "8 produces present=1, value=2 (Just 2 / Some(2)); 6 produces absence (Nothing / None). Bind does not read an absent payload. Unit/bind laws are observational, not container-address equality.",
-      "lmx_notes_ru": "LMX реализует конкретный Maybe<int> обычными структурами и методом Bind.apply. Поле present — часть демонстрационного типа; это не физический uninit и не новое ключевое слово. Создание результата явно копирует Box и заполняет его собственные слоты. Метод не сохраняет ссылку на завершённый кадр.",
-      "lmx_notes_en": "LMX implements a concrete Maybe<int> with ordinary structures and Bind.apply. The present field belongs to this example type; it is neither physical uninit nor a keyword. Results explicitly copy Box and fill their own slots. No expired activation is captured.",
-      "comparison_ru": "Haskell использует стандартный Maybe и >>=, Scala — Option.flatMap. Их краткость здесь отражает уже существующую библиотечную абстракцию. В LMX показана её реализация для int; универсальный полиморфный интерфейс Monad и доказательство законов для произвольных эффектов этим листингом не создаются.",
-      "comparison_en": "Haskell uses standard Maybe and >>=; Scala uses Option.flatMap. Their brevity includes an existing library abstraction. LMX spells out the int instance. This does not introduce a universal polymorphic Monad interface or prove laws for arbitrary effects.",
-      "limits_ru": "Сравнивается только контекст возможного отсутствия. IO, State, асинхронные эффекты и трансформеры монад сюда не включены. Контейнеры LMX считаются неизменяемыми по договору после передачи клиенту; произвольная внешняя мутация нарушила бы этот договор. Нельзя называть любой объект с методом bind монадой без проверки трёх законов.",
-      "limits_en": "Only optional results are compared, excluding IO, State, asynchronous effects and transformers. LMX clients must not mutate published result containers. An arbitrary object with bind is not automatically a lawful monad.",
+      "summary_ru": "Использование готовой библиотеки Maybe<int> и её bind: отсутствие пропускает продолжение.",
+      "summary_en": "Using a ready Maybe<int> library and its bind: absence skips the continuation.",
+      "scenario_ru": "Клиент определяет прикладной half: чётное число превращается в присутствующую половину, нечётное — в none. Два bind применяют half к 8, 6 и 3. Конструкторы, контейнер и bind предоставлены соседним сравнением реализации.",
+      "scenario_en": "The client defines half: an even number yields a present half and an odd number yields none. Two binds apply half to 8, 6 and 3. Constructors, the container and bind are supplied by the adjacent implementation comparison.",
+      "expected_ru": "8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.",
+      "expected_en": "8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.",
+      "lmx_notes_ru": "Загрузить авторскую библиотеку Maybe/MaybeOps из Maybe container and bind implementation, затем этот клиент. import делает её уже загруженные объявления видимыми; это обычный namespace-import, а не новый файловый загрузчик. unit/none и bind имеют ровно контракт показанной библиотеки. Режим 0 достаточен: half передаётся как ссылка; bind решает, вызывать ли её. Приложение сохраняет условие чётности и цепочку вычисления. import выполняется в теле half/run; в DATA Example остаются только x и return, поэтому импортируемые постоянные свойства операнда не сдвигают позиционный x.",
+      "lmx_notes_en": "Load the author-supplied Maybe/MaybeOps library from Maybe container and bind implementation, then this client. import exposes already loaded declarations through ordinary namespace import; it is not a new file loader. unit/none and bind have exactly that library contract. Mode 0 suffices: half is passed as a reference and bind decides whether to call it. The parity condition and computation chain remain application code. Client imports are placed directly inside half/run, where the library is used. The companion implementation puts sys\\OPERANDS_TEMPLATE first in MaybeOps DATA, preserving left/right as the first input positions.",
+      "comparison_ru": "Все три клиента используют готовую библиотеку с собственными реализациями, приведёнными рядом. Из клиентского размера исключена библиотека у всех трёх; обращения и импорты включены. Haskell здесь импортирует MaybeInt, Scala — MaybeInt, а не готовые Prelude Maybe и Option.",
+      "comparison_en": "All three clients use ready libraries whose custom implementations are shown alongside. Library code is excluded from every client count; calls and imports are included. Haskell imports MaybeInt and Scala imports MaybeInt rather than relying on Prelude Maybe or Option.",
+      "limits_ru": "Сравнивается только клиент конкретного Maybe<int>. Внешняя мутация опубликованных значений запрещена договором библиотеки. Это не универсальный Monad/IO/State и не доказательство законов для эффектных продолжений. Два bind явно сгруппированы слева; значение приоритета шаблона не подменяет закон ассоциативности монады.",
+      "limits_en": "Only the client of concrete Maybe<int> is compared. The library contract forbids external mutation of published values. This is not universal Monad/IO/State or a proof of laws for effectful continuations. The two binds are explicitly grouped to the left; the header priority is not the monad associativity law.",
       "listings": [
         {
           "language": "LMX",
-          "code": "Box:\n    int: present 0\n    int: value 0\n\nValues:\n    int: x\n    return: @\n    unit:\n        @: result (copy(Box))\n        result\\present := 1\n        result\\value := x\n        return: result\n    half:\n        @: result (copy(Box))\n        if: x % 2 = 0\n            result\\present := 1\n            result\\value := x / 2\n        return: result\n\nBind:\n    @: input Box\n    @: next\n    return: @\n    apply:\n        if: input\\present = 0\n            return: input\n        return: next(input\\value)\n\nExample:\n    int: x\n    return: @\n    run:\n        @: initial Values\\unit(x)\n        @: first Bind\\apply(initial; Values\\half)\n        return: Bind\\apply(first; Values\\half)\n",
-          "notes_ru": "Входы: Example\run(8), Example\run(6). Box — только данные без методов, поэтому запись в собравшую copy группу записывает именно возвращаемое значение. Повторный вызов next получает обычный int.",
-          "notes_en": "Call Example\run(8) and Example\run(6). Box has data only; writes into its copied grouping container fill the returned value. The continuation receives an ordinary int."
+          "code": "Example:\n    int: x\n    return: @\n    half:\n        import: Maybe\n        if: x % 2 = 0\n            return: unit(x / 2)\n        return: none()\n    run:\n        import: Maybe MaybeOps\n        return: (unit(x) bind half) bind half\n",
+          "notes_ru": "Входы Example\\run(8), Example\\run(6), Example\\run(3). Зависимость: examples/lmx/091_maybe_container_and_bind_implementation.lm3, загруженный перед этим файлом. Реализация библиотеки считается отдельно.",
+          "notes_en": "Call Example\\run(8), Example\\run(6), Example\\run(3). Dependency: examples/lmx/091_maybe_container_and_bind_implementation.lm3 loaded before this file. The library implementation is counted separately.",
+          "depends_on": [
+            91
+          ]
         },
         {
           "language": "Haskell",
-          "code": "module MonadExample where\n\nhalf :: Int -> Maybe Int\nhalf x = if even x then Just (x `div` 2) else Nothing\n\nrun :: Int -> Maybe Int\nrun x = Just x >>= half >>= half\n\ndemo :: (Maybe Int, Maybe Int)\ndemo = (run 8, run 6)\n",
-          "notes_ru": "Haskell 2010, Prelude. >>= и Just относятся к уже реализованному Maybe, его исходник не включён в измерение.",
-          "notes_en": "Haskell 2010, Prelude. The existing implementation of Maybe is outside the measured listing."
+          "code": "module MonadExample where\nimport MaybeInt (MaybeInt, unit, none, bind)\n\nhalf :: Int -> MaybeInt\nhalf x = if even x then unit (x `div` 2) else none\n\nrun :: Int -> MaybeInt\nrun x = (unit x `bind` half) `bind` half\n",
+          "notes_ru": "Haskell2010. Скомпилировать вместе с examples/haskell/091_maybe_container_and_bind_implementation.hs: этот файл объявляет импортируемый модуль MaybeInt. Самописный bind показан целиком в companion. Внешние пробы run 8, run 6 и run 3 одинаково исключены из клиентского кода.",
+          "notes_en": "Haskell2010. Compile together with examples/haskell/091_maybe_container_and_bind_implementation.hs, which declares the imported MaybeInt module. The companion shows the complete custom bind. External probes run 8, run 6 and run 3 are excluded from the client code equally.",
+          "depends_on": [
+            91
+          ]
         },
         {
           "language": "Scala",
-          "code": "object MonadExample {\n  def half(x: Int): Option[Int] =\n    if (x % 2 == 0) Some(x / 2) else None\n\n  def run(x: Int): Option[Int] =\n    Some(x).flatMap(half).flatMap(half)\n\n  def demo = (run(8), run(6))\n}\n",
-          "notes_ru": "Scala 3, стандартный Option. flatMap здесь имеет тот же договор пропуска шага при None.",
-          "notes_en": "Scala 3 standard Option; flatMap skips the next step on None."
+          "code": "import MaybeInt.*\n\nobject MonadExample {\n  def half(x: Int): Value =\n    if (x % 2 == 0) unit(x / 2) else none()\n  def run(x: Int): Value = unit(x).bind(half).bind(half)\n}\n",
+          "notes_ru": "Scala 3. Компилировать с examples/scala/091_maybe_container_and_bind_implementation.scala. Value и bind принадлежат этой авторской библиотеке; Option не используется. Внешние вызовы MonadExample.run(8), run(6), run(3).",
+          "notes_en": "Scala 3. Compile with examples/scala/091_maybe_container_and_bind_implementation.scala. Value and bind belong to that author-supplied library; Option is not used. External calls: MonadExample.run(8), run(6), run(3).",
+          "depends_on": [
+            91
+          ]
         }
       ],
       "sources": [
         {
           "title": "Haskell 2010 Report, predefined types and Monad",
           "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html",
-          "why_ru": "Определения Maybe и Monad; источник для контекста и законов.",
-          "why_en": "Defines Maybe and Monad and their laws."
+          "why_ru": "Контекст Maybe и три закона bind; готовый Prelude Maybe в листингах этой пары не используется.",
+          "why_en": "The Maybe context and three bind laws; this pair does not use the ready Prelude Maybe implementation."
         },
         {
-          "title": "Scala Option API",
-          "url": "https://www.scala-lang.org/api/current/scala/Option.html",
-          "why_ru": "Контракт flatMap для Option; контрольный язык.",
-          "why_en": "Option.flatMap contract for the control implementation."
+          "title": "Haskell 2010 Report, declarations and bindings",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html",
+          "why_ru": "Собственный алгебраический тип, сопоставление конструкторов и объявления fixity.",
+          "why_en": "User algebraic data types, constructor matching and fixity declarations."
+        },
+        {
+          "title": "Scala 3 Book, Algebraic Data Types",
+          "url": "https://docs.scala-lang.org/scala3/book/types-adts-gadts.html",
+          "why_ru": "Собственный enum для двух вариантов Maybe; готовый Option не используется.",
+          "why_en": "A custom enum for the two Maybe variants; no ready Option is used."
+        }
+      ],
+      "implementation_ids": [
+        91
+      ]
+    },
+    {
+      "id": 91,
+      "name": "Maybe container and bind implementation",
+      "slug": "maybe_container_and_bind_implementation",
+      "kind": "implementation",
+      "paired_with": 82,
+      "usage_ids": [
+        82
+      ],
+      "scope": "core",
+      "summary_ru": "Собственная библиотека Maybe<int>: конструкторы присутствия/отсутствия и бинарный bind во всех трёх языках.",
+      "summary_en": "A custom Maybe<int> library: present/absent constructors and binary bind in all three languages.",
+      "scenario_ru": "Реализовать unit(int), none и bind(Maybe<int>, int→Maybe<int>). Для отсутствия bind возвращает отсутствие без чтения payload и без вызова продолжения; для присутствия вызывает продолжение один раз с числом. Клиент Monad использует именно эти реализации.",
+      "scenario_en": "Implement unit(int), none and bind(Maybe<int>, int→Maybe<int>). For absence, bind returns absence without reading a payload or calling the continuation; for presence it calls the continuation once with the number. The Monad client uses these exact implementations.",
+      "expected_ru": "unit(0) остаётся присутствующим нулём; none отличается от него. bind(none, next) не вызывает next; bind(unit(8), half) даёт присутствующее 4. Для чистых total-продолжений выполняются left identity, right identity и associativity по наблюдаемому значению.",
+      "expected_en": "unit(0) remains a present zero and differs from none. bind(none, next) does not call next; bind(unit(8), half) yields present 4. Pure total continuations satisfy left identity, right identity and associativity by observable value.",
+      "lmx_notes_ru": "MaybeValue содержит только данные. unit создаёт отдельный результат через (copy(MaybeValue)); none возвращает общий отсутствующий прототип. Опубликованные значения не изменяются по договору. MaybeOps копирует общий заголовок ядра; bind читает подготовленный Maybe через \\left и готовую ссылку на продолжение через \\right[0]. Только явный next(input\\value) вызывает продолжение. Логический результат @ остаётся ссылкой.",
+      "lmx_notes_en": "MaybeValue contains data only. unit builds a separate result with (copy(MaybeValue)); none returns the shared absent prototype. Published values are immutable by contract. MaybeOps copies the kernel header; bind reads the prepared Maybe through \\left and a prepared continuation reference through \\right[0]. Only next(input\\value) invokes the continuation. The logical @ result remains a reference.",
+      "comparison_ru": "Во всех трёх листингах показаны собственный тип, конструкторы и вся логика bind. Haskell не использует Maybe/Monad из Prelude, Scala не использует Option/flatMap. Подсчёт включает этот код целиком; реализации примитивов, обычного вызова и структурного шаблона ядра остаются инфраструктурой языка.",
+      "comparison_en": "All three listings show the custom type, constructors and complete bind logic. Haskell does not use Prelude Maybe/Monad; Scala does not use Option/flatMap. The complete shown library is counted; primitive types, ordinary calls and the kernel structural header remain language infrastructure.",
+      "limits_ru": "Это конкретный Maybe<int>, не универсальный Monad, IO или transformer. Контракт bind бинарный: один Maybe слева и одно продолжение справа; некорректные формы вне этой области не сравниваются. Законы не сравнивают адреса контейнеров и предполагают отсутствие внешней мутации, исключений и наблюдаемых эффектов продолжений. Общий none не является физическим uninit.",
+      "limits_en": "This is concrete Maybe<int>, not universal Monad, IO or a transformer. bind is binary: one Maybe on the left and one continuation on the right; malformed forms are outside this comparison. The laws ignore container addresses and assume no external mutation, exceptions or observable continuation effects. Shared none is not physical uninit.",
+      "sources": [
+        {
+          "title": "Haskell 2010 Report, predefined types and Monad",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html",
+          "why_ru": "Контекст Maybe и три закона bind; готовый Prelude Maybe в листингах этой пары не используется.",
+          "why_en": "The Maybe context and three bind laws; this pair does not use the ready Prelude Maybe implementation."
+        },
+        {
+          "title": "Haskell 2010 Report, declarations and bindings",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html",
+          "why_ru": "Собственный алгебраический тип, сопоставление конструкторов и объявления fixity.",
+          "why_en": "User algebraic data types, constructor matching and fixity declarations."
+        },
+        {
+          "title": "Scala 3 Book, Algebraic Data Types",
+          "url": "https://docs.scala-lang.org/scala3/book/types-adts-gadts.html",
+          "why_ru": "Собственный enum для двух вариантов Maybe; готовый Option не используется.",
+          "why_en": "A custom enum for the two Maybe variants; no ready Option is used."
+        }
+      ],
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "MaybeValue:\n    int: present 0\n    int: value 0\n\nMaybe:\n    int: value\n    return: @\n    unit:\n        @: result (copy(MaybeValue))\n        result\\present := 1\n        result\\value := value\n        return: result\n    none:\n        return: MaybeValue\n\nMaybeOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: @\n    bind:\n        @: input MaybeValue \\left\n        @: next \\right[0]\n        if: input\\present = 0\n            return: input\n        return: next(input\\value)\n",
+          "notes_ru": "Авторская библиотека из этого листинга, а не builtin Maybe. Заголовок sys\\OPERANDS_TEMPLATE даёт режим 0 и приоритет сложения; скобки клиента явно задают цепочку. Перед клиентом загрузить этот граф в тот же namespace.",
+          "notes_en": "This listing defines an author-supplied library, not a built-in Maybe. sys\\OPERANDS_TEMPLATE supplies mode 0 and addition priority; client parentheses explicitly group the chain. Load this graph into the same namespace before the client."
+        },
+        {
+          "language": "Haskell",
+          "code": "module MaybeInt (MaybeInt(..), unit, none, bind) where\n\ndata MaybeInt = Absent | Present Int deriving (Eq, Show)\n\nunit :: Int -> MaybeInt\nunit = Present\n\nnone :: MaybeInt\nnone = Absent\n\ninfixl 1 `bind`\nbind :: MaybeInt -> (Int -> MaybeInt) -> MaybeInt\nbind Absent _ = Absent\nbind (Present value) next = next value\n",
+          "notes_ru": "Haskell2010. Собственный тип MaybeInt и функция bind; стандартный экземпляр Monad не используется. Передавать этот файл компилятору вместе с клиентом или размещать модуль как MaybeInt.hs на пути поиска.",
+          "notes_en": "Haskell2010. Custom MaybeInt type and bind function; no standard Monad instance is used. Supply this source together with the client or place it as MaybeInt.hs on the module search path."
+        },
+        {
+          "language": "Scala",
+          "code": "object MaybeInt {\n  enum Value {\n    case Absent\n    case Present(value: Int)\n    def bind(next: Int => Value): Value = this match {\n      case Absent => Absent\n      case Present(value) => next(value)\n    }\n  }\n  def unit(value: Int): Value = Value.Present(value)\n  def none(): Value = Value.Absent\n}\n",
+          "notes_ru": "Scala 3. Собственный enum и метод bind; ни Option, ни готовый flatMap не вызываются. Этот файл и клиент компилируются вместе.",
+          "notes_en": "Scala 3. A custom enum and bind method; neither Option nor a ready flatMap is called. Compile this source and its client together."
         }
       ]
     },
@@ -67,50 +148,143 @@
       "name": "Trampoline",
       "slug": "trampoline",
       "scope": "core",
-      "summary_ru": "Исполнитель последовательно получает следующий шаг вычисления вместо роста цепочки вложенных вызовов.",
-      "summary_en": "An executor repeatedly obtains the next computation step instead of nesting calls.",
-      "scenario_ru": "Взаимные even/odd шаги определяют чётность неотрицательного n. Проверить 0, 1 и 100001. Каждый шаг возвращает управление драйверу; в LMX нет рекурсивного вызова второго шага.",
-      "scenario_en": "Mutual even/odd steps test a nonnegative n. Check 0, 1 and 100001. Each step returns to the driver; the LMX version never calls the other step recursively.",
-      "expected_ru": "0 → true/1, 1 → false/0, 100001 → false/0. Выполняется n+1 шагов с проверкой базы. LMX-драйвер хранит один текущий next, а не историю из n кадров.",
-      "expected_en": "0 yields true/1; 1 and 100001 yield false/0. The base-case check makes n+1 steps. The LMX driver retains one next step instead of n activation records.",
-      "lmx_notes_ru": "Это явный батут: Steps возвращает ссылку на следующий метод. Свободные remaining, finished и answer связываются с местами живого вызова Runner.run; Steps не объявляет их собственными входами. Запись меняет места драйвера немедленно. Нулевая ссылка возвращается только при finished=1 и больше не вызывается.",
-      "lmx_notes_en": "Steps returns the next method reference. Its free remaining, finished and answer names bind transparently to the live Runner.run places. Steps does not declare copies of those inputs. The null result is returned only after finished=1 and is never called.",
-      "comparison_ru": "В Scala использован готовый TailCalls; в Haskell явно показан тип Bounce и хвостовой драйвер. В LMX шаг представлен обычной ссылкой на метод, состояние остаётся в живом драйвере. Это один специализированный алгоритм; универсальная CPS-библиотека и асинхронное планирование не предполагаются.",
-      "comparison_en": "Scala uses the existing TailCalls library; Haskell explicitly defines Bounce and its tail driver. LMX uses ordinary method references and state in the live driver. This is a specialized synchronous algorithm, not a universal CPS library or async scheduler.",
-      "limits_ru": "Допустим n≥0 в пределах машинного Int. Замеры стека и скорости не выполнялись; для Haskell конкретные свойства стека зависят от реализации и строгости. Нельзя вернуть LMX-шаг наружу и затем рассчитывать на закончившийся Runner.run: для этого потребовалось бы явное сохраняемое состояние.",
-      "limits_en": "Inputs are nonnegative and fit machine Int. Stack size and speed were not measured; Haskell implementation and strictness matter. An LMX step cannot outlive Runner.run without explicit retained state.",
+      "summary_ru": "Прикладные взаимные even/odd шаги поверх готового Bounce и runner.",
+      "summary_en": "Application even/odd steps using a ready Bounce and runner.",
+      "scenario_ru": "Для неотрицательного n определить чётность взаимными шагами even/odd. Каждый незавершённый шаг возвращает More со ссылкой на другой шаг и числом n−1; он не вызывает другой шаг. Прогнать 0, 1 и 100001 через библиотечный runner, полностью показанный рядом.",
+      "scenario_en": "Determine parity for nonnegative n using mutual even/odd steps. Every unfinished step returns More with the other step and n−1; it does not invoke that step. Run 0, 1 and 100001 through the library runner fully shown alongside.",
+      "expected_ru": "0 → true, 1 → false, 100001 → false; LMX возвращает 1, 0, 0. Каждый шаг возвращает управление драйверу; вложенная цепочка вызовов even/odd не накапливается.",
+      "expected_en": "0 yields true, 1 false and 100001 false; LMX returns 1, 0, 0. Every step returns control to the driver; no nested even/odd call chain accumulates.",
+      "lmx_notes_ru": "Bounce и BounceRunner предоставлены собственным соседним implementation-листингом. В клиенте остаются условия завершения и выбор следующего шага. n−1 — сохранённое число, even_step/odd_step — обычные ссылки. Режим raw, удержание кадра, динамическая переменная remaining и отдельный scheduler не нужны.",
+      "lmx_notes_en": "Bounce and BounceRunner are supplied by the adjacent custom implementation listing. Termination conditions and next-step selection remain client code. n−1 is a stored number and even_step/odd_step are ordinary references. Raw mode, retained frames, a dynamic remaining place and a separate scheduler are unnecessary.",
+      "comparison_ru": "Во всех трёх языках из размера клиента исключены контейнер и runner одной явно заданной библиотеки. В соседнем блоке они реализованы и посчитаны для каждого языка. Haskell и Scala здесь также импортируют custom BounceBool, не готовый TailCalls.",
+      "comparison_en": "The same explicitly defined container and runner are excluded from every client count. The adjacent block implements and counts them in each language. Haskell and Scala also import custom BounceBool rather than ready TailCalls.",
+      "limits_ru": "Вход n неотрицателен; результат логический. Эта программа показывает tail-call trampoline, а не универсальное преобразование любого рекурсивного алгоритма. Пример не измеряет быстродействие, heap или стек реального LMX-ядра; отсутствие вложенного вызова следующего шага проверяется по коду и должно подтверждаться runtime-приёмкой. В показанной LMX-реализации даже Done создаётся через copy: для входа n выделяется n+1 типизированных Bounce-контейнеров в арене Message. Замена локального current сама по себе не освобождает прежний контейнер; O(1) общего потребления памяти и автоматическая сборка здесь не заявляются. Это новая симметричная граница с явным Bounce; прежний специализированный LMX-драйвер без контейнеров имел другую стоимость. Haskell/Scala используют собственные GC-профили.",
+      "limits_en": "n is nonnegative and the result is Boolean. This demonstrates a tail-call trampoline, not a transformation of arbitrary recursion. It does not measure runtime speed, heap or a real LMX core stack; the code avoids nested next-step calls and runtime acceptance must confirm the behavior. In this LMX implementation even Done is created by copy: input n allocates n+1 typed Bounce containers in the Message arena. Replacing local current does not itself free the previous container; O(1) total memory and automatic collection are not claimed. This is the new symmetric boundary with explicit Bounce; the former specialized container-free LMX driver had a different cost. Haskell/Scala have their own GC profiles.",
       "listings": [
         {
           "language": "LMX",
-          "code": "Steps:\n    return: @\n    even_step:\n        if: remaining = 0\n            finished := 1\n            answer := 1\n            return: 0\n        remaining -= 1\n        return: odd_step\n    odd_step:\n        if: remaining = 0\n            finished := 1\n            answer := 0\n            return: 0\n        remaining -= 1\n        return: even_step\n\nRunner:\n    int: remaining\n    return: int\n    run:\n        int: finished 0\n        int: answer 0\n        @: next Steps\\even_step\n        while: finished = 0\n            next := next()\n        return: answer\n",
-          "notes_ru": "Runner\run(100001). Все шаги исполняются синхронно внутри одной живой активации; потоки и Message-планировщик для этого паттерна не требуются.",
-          "notes_en": "Call Runner\run(100001). Steps execute synchronously within one live activation; this pattern does not require thread or Message scheduling."
+          "code": "Steps:\n    int: n\n    return: @\n    even_step:\n        if: n = 0\n            return: Bounce\\done(value := 1)\n        return: Bounce\\more(next := odd_step; argument := n - 1)\n    odd_step:\n        if: n = 0\n            return: Bounce\\done(value := 0)\n        return: Bounce\\more(next := even_step; argument := n - 1)\n\nExample:\n    int: n\n    return: int\n    run:\n        return: BounceRunner\\run(Steps\\even_step(n))\n",
+          "notes_ru": "Входы Example\\run(0), Example\\run(1), Example\\run(100001). Сначала загрузить examples/lmx/092_trampoline_container_and_runner_implementation.lm3. more получает уже готовое число и ссылку; библиотека не вызывает шаг при конструировании.",
+          "notes_en": "Call Example\\run(0), Example\\run(1), Example\\run(100001). First load examples/lmx/092_trampoline_container_and_runner_implementation.lm3. more receives a prepared number and reference; construction does not invoke the step.",
+          "depends_on": [
+            92
+          ]
         },
         {
           "language": "Haskell",
-          "code": "module TrampolineExample where\n\ndata Bounce a = Done a | More (() -> Bounce a)\n\nrun :: Bounce a -> a\nrun (Done value) = value\nrun (More next) = run (next ())\n\nevenStep, oddStep :: Int -> Bounce Bool\nevenStep 0 = Done True\nevenStep n = More (\\() -> oddStep (n - 1))\noddStep 0 = Done False\noddStep n = More (\\() -> evenStep (n - 1))\n\ndemo :: Bool\ndemo = run (evenStep 100001)\n",
-          "notes_ru": "Haskell 2010. Для исполнения с предсказуемой оптимизацией драйвера целевой профиль — GHC с оптимизацией; отсутствие запуска отмечено отдельно.",
-          "notes_en": "Haskell 2010; an optimized GHC build is the intended execution profile. No runtime result is claimed."
+          "code": "module TrampolineExample where\nimport BounceBool (Bounce, done, more, run)\n\nevenStep, oddStep :: Int -> Bounce\nevenStep 0 = done True\nevenStep n = more oddStep (n - 1)\noddStep 0 = done False\noddStep n = more evenStep (n - 1)\n\nparity :: Int -> Bool\nparity n = run (evenStep n)\n",
+          "notes_ru": "Скомпилировать вместе с examples/haskell/092_trampoline_container_and_runner_implementation.hs, объявляющим модуль BounceBool. В клиенте нет собственного драйвера и нет стандартного trampoline. Внешние пробы parity 0, parity 1 и parity 100001.",
+          "notes_en": "Compile with examples/haskell/092_trampoline_container_and_runner_implementation.hs, which declares BounceBool. The client has neither its own driver nor a standard trampoline implementation. External probes: parity 0, parity 1 and parity 100001.",
+          "depends_on": [
+            92
+          ]
         },
         {
           "language": "Scala",
-          "code": "import scala.util.control.TailCalls.*\n\nobject TrampolineExample {\n  def evenStep(n: Int): TailRec[Boolean] =\n    if (n == 0) done(true) else tailcall(oddStep(n - 1))\n\n  def oddStep(n: Int): TailRec[Boolean] =\n    if (n == 0) done(false) else tailcall(evenStep(n - 1))\n\n  def demo: Boolean = evenStep(100001).result\n}\n",
-          "notes_ru": "Scala 3. Код библиотеки TailCalls не включён в листинг; он обеспечивает цикл исполнения отложенных шагов.",
-          "notes_en": "Scala 3. The TailCalls implementation is an external standard-library dependency."
+          "code": "import BounceBool.*\n\nobject TrampolineExample {\n  def evenStep(n: Int): Bounce =\n    if (n == 0) done(true) else more(oddStep, n - 1)\n  def oddStep(n: Int): Bounce =\n    if (n == 0) done(false) else more(evenStep, n - 1)\n  def parity(n: Int): Boolean = run(evenStep(n))\n}\n",
+          "notes_ru": "Scala 3. Компилировать вместе с examples/scala/092_trampoline_container_and_runner_implementation.scala. Используется ровно его BounceBool, без scala.util.control.TailCalls. Внешние пробы TrampolineExample.parity(0), parity(1), parity(100001).",
+          "notes_en": "Scala 3. Compile with examples/scala/092_trampoline_container_and_runner_implementation.scala. Uses exactly that BounceBool, without scala.util.control.TailCalls. External probes: TrampolineExample.parity(0), parity(1), parity(100001).",
+          "depends_on": [
+            92
+          ]
         }
       ],
       "sources": [
         {
           "title": "Scala TailCalls API",
           "url": "https://www.scala-lang.org/api/current/scala/util/control/TailCalls%24.html",
-          "why_ru": "Договор done, tailcall и result; первичное описание готового батута.",
-          "why_en": "Defines done, tailcall and result."
+          "why_ru": "Первичный пример протокола возвращаемого следующего шага; готовый TailCalls в данной паре не используется.",
+          "why_en": "A primary example of a returned next-step protocol; this pair does not use the ready TailCalls library."
         },
         {
-          "title": "Haskell 2010 Report, expressions",
-          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html",
-          "why_ru": "Функции и отложенные выражения для явного Bounce.",
-          "why_en": "Functions and expressions used by the explicit Bounce example."
+          "title": "Haskell 2010 Report, declarations and bindings",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html",
+          "why_ru": "Собственные варианты Done/More и поля функционального типа.",
+          "why_en": "Custom Done/More variants and function-valued fields."
+        },
+        {
+          "title": "Scala 3 Book, Algebraic Data Types",
+          "url": "https://docs.scala-lang.org/scala3/book/types-adts-gadts.html",
+          "why_ru": "Представление Bounce собственным enum.",
+          "why_en": "Representing Bounce using a custom enum."
+        },
+        {
+          "title": "Scala tailrec annotation",
+          "url": "https://www.scala-lang.org/api/current/scala/annotation/tailrec.html",
+          "why_ru": "Компилятор отвергает @tailrec, если метод не может быть превращён в цикл; это проверка драйвера, не готовая библиотека Bounce.",
+          "why_en": "The compiler rejects @tailrec when the method cannot be compiled into a loop; this checks the driver rather than providing a Bounce library."
+        }
+      ],
+      "implementation_ids": [
+        92
+      ]
+    },
+    {
+      "id": 92,
+      "name": "Trampoline container and runner implementation",
+      "slug": "trampoline_container_and_runner_implementation",
+      "kind": "implementation",
+      "paired_with": 83,
+      "usage_ids": [
+        83
+      ],
+      "scope": "core",
+      "summary_ru": "Собственный Bounce для логического результата и отложенного вызова с одним целочисленным аргументом; полный runner во всех трёх языках.",
+      "summary_en": "A custom Bounce for a Boolean result or a deferred call with one integer argument, with complete runners in all three languages.",
+      "scenario_ru": "Реализовать Done(answer) и More(next, argument). done создаёт завершённое значение; more сохраняет ссылку на шаг и его int-аргумент, ничего не вызывая. run повторно вызывает один сохранённый шаг и получает новый Bounce до Done. Весь контейнер и драйвер показаны; клиент определяет even/odd.",
+      "scenario_en": "Implement Done(answer) and More(next, argument). done creates completion; more stores a step reference and its integer argument without invoking it. run repeatedly invokes one stored step and receives the next Bounce until Done. The complete container and driver are shown; even/odd belong to the client.",
+      "expected_ru": "run(done(true)) сразу возвращает true. Каждый More исполняет сохранённый next ровно один раз с сохранённым argument. Клиент для 0, 1, 100001 получает true, false, false (LMX: 1, 0, 0); глубина вложенных вызовов шагов не растёт с n.",
+      "expected_en": "run(done(true)) returns true immediately. Each More invokes the stored next exactly once with its stored argument. The client for 0, 1, 100001 yields true, false, false (LMX: 1, 0, 0); nested step-call depth does not grow with n.",
+      "lmx_notes_ru": "BounceValue — собственный контейнер, не builtin. done/more копируют его данные и заполняют новый результат; More хранит обычную ссылку и int в графе, не raw-вхождение и не адрес завершённого кадра. BounceRunner меняет только своё current и вызывает шаг из цикла. У done/more общий DATA, поэтому клиент явно именует value либо next/argument.",
+      "lmx_notes_en": "BounceValue is a custom container, not a built-in. done/more copy its data and fill a new result; More stores an ordinary reference and int in the graph, not a raw occurrence or an expired-frame address. BounceRunner changes only its current place and calls a step from the loop. done/more share DATA, so the client explicitly names value or next/argument.",
+      "comparison_ru": "Во всех языках одинаковая модель отложенного вызова: функция Int→Bounce плюс уже сохранённый int. Никакой готовый Trampoline/TailCalls, monadic bind, CPS-преобразователь или scheduler не скрыт за интерфейсом. Haskell использует хвостовой драйвер, Scala — проверяемую @tailrec-функцию, LMX — while.",
+      "comparison_en": "All languages use the same deferred-call model: an Int→Bounce function plus an already stored int. No ready Trampoline/TailCalls, monadic bind, CPS transformer or scheduler is hidden behind the interface. Haskell uses a tail driver, Scala a checked @tailrec function and LMX a while loop.",
+      "limits_ru": "Результат — Bool (LMX int 0/1), аргумент следующего шага — один int. Это минимальный tail-call trampoline, не полный continuation runtime и не бенчмарк. Выделение контейнеров и сборка памяти сохраняют свою стоимость; постоянный размер heap не обещается. Клиентские шаги должны возвращать Bounce, не рекурсивно запускать следующий шаг сами. В показанной LMX-реализации даже Done создаётся через copy: для входа n выделяется n+1 типизированных Bounce-контейнеров в арене Message. Замена локального current сама по себе не освобождает прежний контейнер; O(1) общего потребления памяти и автоматическая сборка здесь не заявляются. Это новая симметричная граница с явным Bounce; прежний специализированный LMX-драйвер без контейнеров имел другую стоимость. Haskell/Scala используют собственные GC-профили.",
+      "limits_en": "The result is Bool (LMX int 0/1), and a next step has one integer argument. This is a minimal tail-call trampoline, not a full continuation runtime or benchmark. Container allocation and collection retain their costs; constant heap size is not promised. Client steps must return Bounce instead of recursively running the next step themselves. In this LMX implementation even Done is created by copy: input n allocates n+1 typed Bounce containers in the Message arena. Replacing local current does not itself free the previous container; O(1) total memory and automatic collection are not claimed. This is the new symmetric boundary with explicit Bounce; the former specialized container-free LMX driver had a different cost. Haskell/Scala have their own GC profiles.",
+      "sources": [
+        {
+          "title": "Scala TailCalls API",
+          "url": "https://www.scala-lang.org/api/current/scala/util/control/TailCalls%24.html",
+          "why_ru": "Первичный пример протокола возвращаемого следующего шага; готовый TailCalls в данной паре не используется.",
+          "why_en": "A primary example of a returned next-step protocol; this pair does not use the ready TailCalls library."
+        },
+        {
+          "title": "Haskell 2010 Report, declarations and bindings",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html",
+          "why_ru": "Собственные варианты Done/More и поля функционального типа.",
+          "why_en": "Custom Done/More variants and function-valued fields."
+        },
+        {
+          "title": "Scala 3 Book, Algebraic Data Types",
+          "url": "https://docs.scala-lang.org/scala3/book/types-adts-gadts.html",
+          "why_ru": "Представление Bounce собственным enum.",
+          "why_en": "Representing Bounce using a custom enum."
+        },
+        {
+          "title": "Scala tailrec annotation",
+          "url": "https://www.scala-lang.org/api/current/scala/annotation/tailrec.html",
+          "why_ru": "Компилятор отвергает @tailrec, если метод не может быть превращён в цикл; это проверка драйвера, не готовая библиотека Bounce.",
+          "why_en": "The compiler rejects @tailrec when the method cannot be compiled into a loop; this checks the driver rather than providing a Bounce library."
+        }
+      ],
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "BounceValue:\n    int: done 0\n    int: answer 0\n    int: argument 0\n    @: next 0\n\nBounce:\n    int: value\n    @: next\n    int: argument\n    return: @\n    done:\n        @: result (copy(BounceValue))\n        result\\done := 1\n        result\\answer := value\n        return: result\n    more:\n        @: result (copy(BounceValue))\n        result\\next := next\n        result\\argument := argument\n        return: result\n\nBounceRunner:\n    @: current BounceValue\n    return: int\n    run:\n        while: current\\done = 0\n            @: step current\\next\n            current := step(current\\argument)\n        return: current\\answer\n",
+          "notes_ru": "Оба поля состояния и сохранённый аргумент находятся в возвращаемом графе. Runner не требует удерживать активацию, создавшую More. Файл загружается перед клиентом Trampoline.",
+          "notes_en": "State and the stored argument reside in the returned graph. The runner does not retain the activation that created More. Load this source before the Trampoline client."
+        },
+        {
+          "language": "Haskell",
+          "code": "module BounceBool (Bounce, done, more, run) where\n\ndata Bounce = Done Bool | More (Int -> Bounce) Int\n\ndone :: Bool -> Bounce\ndone = Done\n\nmore :: (Int -> Bounce) -> Int -> Bounce\nmore = More\n\nrun :: Bounce -> Bool\nrun (Done answer) = answer\nrun (More next argument) = run (next argument)\n",
+          "notes_ru": "Haskell2010. Собственные Bounce и run; готовый trampoline не импортируется. Передавать этот файл компилятору с клиентом или размещать как BounceBool.hs на пути поиска.",
+          "notes_en": "Haskell2010. Custom Bounce and run; no ready trampoline is imported. Supply this source with the client or place it as BounceBool.hs on the module search path."
+        },
+        {
+          "language": "Scala",
+          "code": "object BounceBool {\n  enum Bounce {\n    case Done(answer: Boolean)\n    case More(next: Int => Bounce, argument: Int)\n  }\n  def done(answer: Boolean): Bounce = Bounce.Done(answer)\n  def more(next: Int => Bounce, argument: Int): Bounce =\n    Bounce.More(next, argument)\n  @annotation.tailrec\n  def run(current: Bounce): Boolean = current match {\n    case Bounce.Done(answer) => answer\n    case Bounce.More(next, argument) => run(next(argument))\n  }\n}\n",
+          "notes_ru": "Scala 3. Собственный enum и runner; @tailrec проверяет хвостовой вызов драйвера, но не вызывает готовый TailCalls. Компилировать вместе с клиентом.",
+          "notes_en": "Scala 3. Custom enum and runner; @tailrec checks the driver tail call but does not invoke ready TailCalls. Compile together with the client."
         }
       ]
     },
@@ -119,50 +293,119 @@
       "name": "Execute Around",
       "slug": "execute_around",
       "scope": "core",
-      "summary_ru": "Приобретение и освобождение ресурса окружают переданное пользовательское действие.",
-      "summary_en": "Resource acquisition and release surround a supplied user action.",
-      "scenario_ru": "Передать три операции: acquire создаёт ресурс, action возвращает 42 либо выбрасывает ошибку, release фиксирует освобождение. Проверить обычный результат, ошибку тела и ошибку acquire.",
-      "scenario_en": "Supply acquire, action and release. Action returns 42 or fails; release records cleanup. Check success, body failure and acquisition failure.",
-      "expected_ru": "Успех: acquire → action → release, результат 42. Ошибка action: тот же порядок с обязательным release и распространением ошибки. Ошибка acquire: release не вызывается, потому что ресурс не получен.",
-      "expected_en": "Success: acquire, action, release, result 42. Action failure still runs release and propagates the error. Acquisition failure does not call release because no resource was acquired.",
-      "lmx_notes_ru": "finally регистрируется после успешного acquire и исполняется при выходе из области. Это общий механизм выходов LMX. resource жив до cleanup; в исходный граф кадр не копируется. Все три ссылки передаются явно.",
-      "lmx_notes_en": "finally is registered after acquisition succeeds and runs on scope exit through the common LMX exit mechanism. resource stays live through cleanup. All three callable references are explicit.",
-      "comparison_ru": "LMX использует finally, Haskell — bracket, Scala — try/finally. У Haskell bracket также учитывает асинхронные исключения; наш общий сценарий ограничен обычным выходом и ошибкой тела. Сравниваются одинаковые supplied acquire/release/action, поэтому размер реализации файловой системы не приписывается одному языку.",
-      "comparison_en": "LMX uses finally, Haskell bracket and Scala try/finally. Haskell bracket additionally handles asynchronous-exception concerns; the shared scenario covers normal exit and body failure. The same supplied acquire/release/action boundaries apply to all three.",
-      "limits_ru": "Предполагается, что release сам не выбрасывает ошибку. Иначе политика при двух ошибках требует отдельного сравнения. Гарантия не распространяется на аварийное уничтожение процесса или аппаратный сбой. Это управление ресурсом внутри одного исполнения, не протокол межпроцессной аренды.",
-      "limits_en": "release is assumed not to fail; competing cleanup/body errors require a separate policy comparison. Process destruction and hardware failure are excluded. This is local resource management, not a distributed lease.",
+      "summary_ru": "Клиент готового around предоставляет ресурс, действие и журнал; обычный выход и два отказа проверяют освобождение.",
+      "summary_en": "A client supplies the resource, action and log to ready around; normal exit and two failures test release.",
+      "scenario_ru": "Ресурс содержит 42. acquire дописывает 1 в журнал, action — 2, release — 3. Mode 0 успешен, mode 1 бросает ResourceFailure из action, mode 2 — из acquire. Клиент использует одинаковый готовый Around во всех трёх языках и перехватывает ошибку только для наблюдения журнала.",
+      "scenario_en": "The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. The client uses the same ready Around abstraction in all three languages and catches the failure only to observe the log.",
+      "expected_ru": "run(0) → 42123: результат 42, журнал 123. run(1) → −123: ошибка тела дошла до клиента и release выполнен. run(2) → −1: acquisition отказал, release не выполнен. Ресурс не используется после cleanup.",
+      "expected_en": "run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure reaches the client after release. run(2) yields −1: acquisition failed and no release ran. The resource is not used after cleanup.",
+      "lmx_notes_ru": "Around загружается из соседнего Execute Around implementation; это авторский компонент, не новый builtin. Прикладные ресурс, журнал и условия отказа находятся в клиенте. catch перехватывает ResourceFailure после выхода из helper; cleanup принадлежит реализации Around. Все записи журнала адресуют явный граф одного последовательного Message.",
+      "lmx_notes_en": "Around is loaded from the adjacent Execute Around implementation; it is an author-supplied component, not a new built-in. The resource, log and failure conditions stay in the client. catch observes ResourceFailure after the helper exits; cleanup belongs to Around. Log writes target the explicit graph of one serial Message.",
+      "comparison_ru": "Все три клиента используют собственный готовый around с реализацией рядом. Library-код исключён симметрично; импорты, прикладные callbacks и наблюдение трёх исходов включены. Haskell больше не получает бесплатно standard bracket при сравнении с полной LMX-реализацией.",
+      "comparison_en": "All three clients use a custom ready around whose implementation appears alongside. Library code is excluded symmetrically; imports, application callbacks and observation of all three outcomes are counted. Haskell no longer gets standard bracket free while a complete LMX implementation is charged to its client.",
+      "limits_ru": "Область — синхронные отказы и release, который не бросает. Стандартный Haskell bracket имеет дополнительные гарантии по асинхронным исключениям; самописная библиотека их не обещает, как явно описано в companion. Нет аварийного уничтожения процесса, межпроцессной аренды или общей политики конкурирующих ошибок. Перед каждым прогоном журнал очищается.",
+      "limits_en": "The scope is synchronous failures and non-failing release. Standard Haskell bracket has additional asynchronous-exception guarantees which the custom companion explicitly does not promise. Process destruction, distributed leases and general competing-error policy are excluded. Each run resets the log.",
       "listings": [
         {
           "language": "LMX",
-          "code": "Around:\n    @: acquire\n    @: release\n    @: action\n    return: int\n    use:\n        @: resource acquire()\n        finally:\n            release(resource := resource)\n        return: action(resource := resource)\n",
-          "notes_ru": "Контракты: acquire() → @ ресурса; release(resource: @) → процедура; action(resource: @) → int или обычный throw. Именованная передача гарантирует передачу целого ресурса и исключает раскрытие W/E. Ресурс не передаётся другому Message. Показан весь around-алгоритм; сценарный журнал предоставляется тестовыми функциями.",
-          "notes_en": "Contracts: acquire() returns a resource reference; release has one reference input named resource; action has the same input and returns int or throws. Named supply passes the whole resource and suppresses W/E expansion. Test callables provide the observation log."
+          "code": "Resource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n\nAcquire:\n    return: @\n    open:\n        throws:\n            ResourceFailure\n        Trace\\events := Trace\\events * 10 + 1\n        if: Trace\\mode = 2\n            throw: ResourceFailure()\n        return: Resource\n\nAction:\n    @: resource\n    return: int\n    use:\n        throws:\n            ResourceFailure\n        Trace\\events := Trace\\events * 10 + 2\n        if: Trace\\mode = 1\n            throw: ResourceFailure()\n        return: resource\\value\n\nRelease:\n    @: resource\n    close:\n        Trace\\events := Trace\\events * 10 + 3\n\nExample:\n    int: mode\n    return: int\n    run:\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value Around\\use(Acquire\\open; Release\\close; Action\\use)\n        return: value * 1000 + Trace\\events\n        catch: ResourceFailure ()\n            return: -Trace\\events\n",
+          "notes_ru": "Внешние пробы Example\\run(0/1/2). До клиента загрузить LMX-листинг companion Execute Around implementation, определяющий Around. Обычный catch наблюдает отказ; ресурсные callbacks и журнал не являются библиотечными портами, их код показан здесь.",
+          "notes_en": "External probes: Example\\run(0/1/2). Load the LMX companion Execute Around implementation defining Around first. Ordinary catch observes failure; callbacks and the log are not hidden library ports, their code is shown here.",
+          "depends_on": [
+            98
+          ]
         },
         {
           "language": "Haskell",
-          "code": "module ExecuteAroundExample where\n\nimport Control.Exception (bracket)\n\naround :: IO r -> (r -> IO ()) -> (r -> IO Int) -> IO Int\naround acquire release action = bracket acquire release action\n",
-          "notes_ru": "Контракты совпадают с LMX; IO-действие acquire передаётся без преждевременного исполнения. Реализация bracket — часть base.",
-          "notes_en": "The contracts match LMX. The acquire IO action is supplied without running it early. bracket is provided by base."
+          "code": "module ExecuteAroundExample where\nimport AroundInt (around)\nimport Control.Exception (IOException, try)\nimport Data.IORef (newIORef, modifyIORef', readIORef)\n\nnewtype Resource = Resource Int\n\nrun :: Int -> IO Int\nrun mode = do\n  events <- newIORef 0\n  let note n = modifyIORef' events (\\x -> x * 10 + n)\n      failure = ioError (userError \"ResourceFailure\")\n      acquire = do\n        note 1\n        if mode == 2 then failure else pure (Resource 42)\n      action (Resource value) = do\n        note 2\n        if mode == 1 then failure else pure value\n      release _ = note 3\n  result <- try (around acquire release action) :: IO (Either IOException Int)\n  logValue <- readIORef events\n  pure (either (const (-logValue)) (\\value -> value * 1000 + logValue) result)\n",
+          "notes_ru": "Haskell2010/base. Компилировать с модулем AroundInt из companion Execute Around implementation. Внешние пробы run 0, run 1, run 2. try находится в клиенте только для наблюдения распространённой ошибки; библиотечный cleanup показан отдельно.",
+          "notes_en": "Haskell2010/base. Compile with AroundInt from companion Execute Around implementation. External probes: run 0, run 1, run 2. Client try only observes the propagated failure; library cleanup is shown separately.",
+          "depends_on": [
+            98
+          ]
         },
         {
           "language": "Scala",
-          "code": "object ExecuteAroundExample {\n  def around[R](acquire: () => R,\n                release: R => Unit,\n                action: R => Int): Int = {\n    val resource = acquire()\n    try action(resource)\n    finally release(resource)\n  }\n}\n",
-          "notes_ru": "Scala 3. Явный try/finally сохраняет ровно тот же интерфейс трёх supplied функций. Для AutoCloseable существует стандартный Using.resource.",
-          "notes_en": "Scala 3. Explicit try/finally preserves the exact three-function interface. AutoCloseable also has the standard Using.resource alternative."
+          "code": "import AroundInt.around\n\nobject ExecuteAroundExample {\n  final case class Resource(value: Int)\n  final class ResourceFailure extends RuntimeException\n  def run(mode: Int): Int = {\n    var events = 0\n    def note(n: Int): Unit = { events = events * 10 + n }\n    try {\n      val value = around(\n        () => {\n          note(1)\n          if (mode == 2) throw new ResourceFailure\n          Resource(42)\n        },\n        (_: Resource) => note(3),\n        (resource: Resource) => {\n          note(2)\n          if (mode == 1) throw new ResourceFailure\n          resource.value\n        })\n      value * 1000 + events\n    } catch {\n      case _: ResourceFailure => -events\n    }\n  }\n}\n",
+          "notes_ru": "Scala 3. Компилировать вместе с AroundInt из companion Execute Around implementation. Внешние пробы ExecuteAroundExample.run(0/1/2). Клиентский catch не выполняет cleanup: он лишь переводит наблюдение отказа в число.",
+          "notes_en": "Scala 3. Compile with AroundInt from companion Execute Around implementation. External probes: ExecuteAroundExample.run(0/1/2). Client catch performs no cleanup; it only encodes the failure observation.",
+          "depends_on": [
+            98
+          ]
         }
       ],
       "sources": [
         {
-          "title": "GHC base, Control.Exception.bracket",
+          "title": "GHC base, Control.Exception",
           "url": "https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html",
-          "why_ru": "Порядок acquire/use/release и границы асинхронного cleanup.",
-          "why_en": "Acquisition/use/release ordering and asynchronous cleanup qualifications."
+          "why_ru": "catch/throwIO и различие синхронной обработки с маскированием асинхронных исключений у bracket. Готовый bracket в новой паре не используется.",
+          "why_en": "catch/throwIO and the distinction between synchronous handling and bracket asynchronous-exception masking. The new pair does not use ready bracket."
         },
         {
-          "title": "Scala Using API",
-          "url": "https://www.scala-lang.org/api/current/scala/util/Using%24.html",
-          "why_ru": "Стандартный resource-management аналог и политика нескольких исключений.",
-          "why_en": "Standard resource management and multiple-exception policy."
+          "title": "Scala 3 Book, Functional Error Handling",
+          "url": "https://docs.scala-lang.org/scala3/book/fp-functional-error-handling.html",
+          "why_ru": "Обычная обработка исключений как контрольный контекст; cleanup реализован собственным try/finally.",
+          "why_en": "Ordinary exception handling as context; cleanup is implemented with an explicit custom try/finally."
+        }
+      ],
+      "implementation_ids": [
+        98
+      ]
+    },
+    {
+      "id": 98,
+      "name": "Execute Around implementation",
+      "slug": "execute_around_implementation",
+      "kind": "implementation",
+      "paired_with": 84,
+      "usage_ids": [
+        84
+      ],
+      "scope": "core",
+      "summary_ru": "Полная повторяемая схема acquire/action/release с синхронными ошибками, без готового bracket/Using.",
+      "summary_en": "The complete reusable acquire/action/release mechanism for synchronous failures, without ready bracket/Using.",
+      "scenario_ru": "Принимать acquire()→resource, release(resource)→процедура и action(resource)→int. После успешного acquire выполнять release ровно один раз при нормальном выходе или ResourceFailure тела. Если acquire отказал, release не вызывать. Клиентский ресурс, журнал и правила отказа остаются в Execute Around.",
+      "scenario_en": "Accept acquire()→resource, release(resource)→procedure and action(resource)→int. After successful acquisition, release exactly once on normal exit or a ResourceFailure from the body. Failed acquisition must not release. The resource, log and application failure rules remain in Execute Around.",
+      "expected_ru": "Успех: журнал 123 и результат action. Ошибка action: журнал 123 и распространение ошибки. Ошибка acquire: журнал 1 без release. Соседний клиент кодирует эти случаи как 42123, −123, −1.",
+      "expected_en": "Success: log 123 and the action result. Body failure: log 123 and propagation. Acquisition failure: log 1 and no release. The adjacent client encodes these cases as 42123, −123 and −1.",
+      "lmx_notes_ru": "finally регистрируется только после успешного acquire. Helper объявляет разрешённое имя выхода ResourceFailure; клиент обрабатывает его обычным catch. Именованная передача resource сохраняет целый ресурс и исключает раскрытие единственной Structure. Helper не копирует клиентский кадр и не требует операнда.",
+      "lmx_notes_en": "finally is registered only after successful acquisition. The helper declares the permitted ResourceFailure exit and the client handles it with ordinary catch. Named resource supply passes the complete resource and avoids single-Structure expansion. The helper copies no client frame and needs no operand.",
+      "comparison_ru": "Каждый язык показывает собственный around. Haskell использует только обычные catch/throwIO, Scala — try/finally, LMX — finally. Готовые bracket, Using или скрытые resource-helpers не вызываются. Общий интерфейс сохраняет прикладные функции в клиенте.",
+      "comparison_en": "Every language shows its own around. Haskell uses ordinary catch/throwIO, Scala try/finally and LMX finally. No ready bracket, Using or hidden resource helper is called. Application callbacks remain in the client.",
+      "limits_ru": "Общая гарантия — синхронный ResourceFailure/соответствующая обычная ошибка; release сам не бросает. Самописный Haskell around не маскирует асинхронные исключения и не заявляет полную гарантию стандартного bracket. Отмена, async exceptions, аварийное завершение процесса и политика двух ошибок вне общей области. Это явно сохранённая синхронная граница прежнего сравнения, а не обещание заменить bracket во всех программах.",
+      "limits_en": "The shared guarantee covers synchronous ResourceFailure or its ordinary-error equivalent; release itself does not fail. The custom Haskell around does not mask asynchronous exceptions and makes no full standard-bracket guarantee. Cancellation, async exceptions, process termination and competing-error policy are outside scope. This explicitly retains the previous comparison synchronous boundary rather than promising to replace bracket everywhere.",
+      "sources": [
+        {
+          "title": "GHC base, Control.Exception",
+          "url": "https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html",
+          "why_ru": "catch/throwIO и различие синхронной обработки с маскированием асинхронных исключений у bracket. Готовый bracket в новой паре не используется.",
+          "why_en": "catch/throwIO and the distinction between synchronous handling and bracket asynchronous-exception masking. The new pair does not use ready bracket."
+        },
+        {
+          "title": "Scala 3 Book, Functional Error Handling",
+          "url": "https://docs.scala-lang.org/scala3/book/fp-functional-error-handling.html",
+          "why_ru": "Обычная обработка исключений как контрольный контекст; cleanup реализован собственным try/finally.",
+          "why_en": "Ordinary exception handling as context; cleanup is implemented with an explicit custom try/finally."
+        }
+      ],
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Around:\n    @: acquire\n    @: release\n    @: action\n    return: int\n    use:\n        throws:\n            ResourceFailure\n        @: resource acquire()\n        finally:\n            release(resource := resource)\n        return: action(resource := resource)\n",
+          "notes_ru": "Это авторский готовый Around для клиента. acquire/action могут иметь объявленный выход ResourceFailure; release не бросает. Загружать библиотеку до клиента в тот же namespace.",
+          "notes_en": "This is the author-supplied Around used by the client. acquire/action may declare ResourceFailure; release does not fail. Load the library into the same namespace before its client."
+        },
+        {
+          "language": "Haskell",
+          "code": "module AroundInt (around) where\nimport Control.Exception (SomeException, catch, throwIO)\n\naround :: IO r -> (r -> IO ()) -> (r -> IO Int) -> IO Int\naround acquire release action = do\n  resource <- acquire\n  let failed :: SomeException -> IO Int\n      failed err = release resource >> throwIO err\n  value <- action resource `catch` failed\n  release resource\n  pure value\n",
+          "notes_ru": "Haskell2010/base. Реализован именно синхронный cleanup без bracket, finally или onException. Модуль AroundInt подаётся компилятору вместе с клиентом; для автоматического поиска допустимо имя AroundInt.hs.",
+          "notes_en": "Haskell2010/base. Implements synchronous cleanup without bracket, finally or onException. Supply AroundInt together with its client; AroundInt.hs may be used for automatic module lookup."
+        },
+        {
+          "language": "Scala",
+          "code": "object AroundInt {\n  def around[R](acquire: () => R,\n                release: R => Unit,\n                action: R => Int): Int = {\n    val resource = acquire()\n    try action(resource)\n    finally release(resource)\n  }\n}\n",
+          "notes_ru": "Scala 3. Весь механизм показан через try/finally; готовый Using не используется. Компилировать этот объект с клиентом ExecuteAroundExample.",
+          "notes_en": "Scala 3. The complete mechanism uses try/finally; ready Using is not used. Compile this object with ExecuteAroundExample."
         }
       ]
     },
@@ -171,52 +414,131 @@
       "name": "Currying",
       "slug": "currying",
       "scope": "core",
-      "summary_ru": "Преобразование бинарного сложения в последовательность получения функции и её вызова с оставшимся аргументом.",
-      "summary_en": "Transform binary addition into obtaining a function and then supplying its remaining argument.",
-      "scenario_ru": "Построить add5 и add100, завершить обе фабричные активации, затем вызвать add5(1), add100(1), add5(1). Одноимённая локальная saved у вызывающего не должна менять захваченное значение.",
-      "scenario_en": "Build add5 and add100, finish both factory activations, then call add5(1), add100(1), add5(1). A same-named caller local must not replace the retained value.",
-      "expected_ru": "Последовательность 6, 101, 6; общий demo возвращает 6101006. Исходный прототип остаётся с saved=0. У каждой возвращённой функции один явный вход x.",
-      "expected_en": "The values are 6, 101 and 6; demo returns the encoding 6101006. The prototype retains saved=0. Each returned function has one explicit input x.",
-      "lmx_notes_ru": "Использован уже имеющийся в архиве приём H03: внешняя копия собирает поля, а saved записывается в фактического скопированного владельца inputs. Это явное сохранение значения в графе. Контейнер группы не принимается за владельца метода; frame фабрики не удерживается.",
-      "lmx_notes_en": "This applies the existing H03 technique: the grouped copy receives fields, while saved is written into the copied actual owner of inputs. Retention is explicit in the graph, not in the finished factory frame.",
-      "comparison_ru": "В Haskell функции естественно каррированы; Scala показывает Function2.curried. LMX реализует ту же наблюдаемую двухступенчатую операцию через возвращаемый метод и явное сохраняемое окружение. Это существенно длиннее встроенной функции двух функциональных языков; заменять это изменением default неверно, потому что default оставил бы дополнительный вход и возможность переопределения.",
-      "comparison_en": "Haskell functions are curried; Scala uses Function2.curried. LMX implements the same two-stage observation through a returned method and explicit retained environment. This is longer than built-in currying. Merely changing a default would leave another input and possible override, changing the contract.",
-      "limits_ru": "Показано каррирование конкретного бинарного сложения, а не универсальный curry для произвольной сигнатуры. Возвращённый LMX-граф подчиняется обычному времени жизни и правилам копирования; задержка исполнения raw-аргумента с погибшим кадром здесь не используется.",
-      "limits_en": "This is currying of a specific binary addition, not a generic curry for arbitrary signatures. The returned LMX graph follows ordinary lifetime and copying rules; no raw argument retains a dead frame.",
+      "summary_ru": "Клиент готового capture частично применяет собственное сложение и использует полученные функции после возврата фабрики.",
+      "summary_en": "A client of ready capture partially applies its own addition and uses the resulting functions after factory return.",
+      "scenario_ru": "Объявить прикладную binary-функцию сложения. С помощью одинакового готового capture построить add5 и add100, затем получить add5(1), add100(1), add5(1). Одноимённая LMX-локальная saved=1000 не меняет сохранённые значения.",
+      "scenario_en": "Declare the application binary addition. Use the same ready capture abstraction to create add5 and add100, then obtain add5(1), add100(1), add5(1). A same-named LMX caller local saved=1000 does not change retained values.",
+      "expected_ru": "6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.",
+      "expected_en": "6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.",
+      "lmx_notes_ru": "Curry\\capture — авторский helper из соседнего Integer partial-application implementation. Клиент содержит само сложение и все наблюдения. Полная работа copy/parent и сохранение binary/first показаны в companion; это не новый builtin и не удержание фабричного кадра.",
+      "lmx_notes_en": "Curry\\capture is the author-supplied helper from adjacent Integer partial-application implementation. The client contains addition and all observations. The complete copy/parent work and binary/first retention are shown in the companion; this is not a new built-in or retained factory frame.",
+      "comparison_ru": "Все три клиента используют готовый capture с полной собственной реализацией рядом. Прикладное сложение остаётся в каждом листинге. Haskell/Scala не заставляются вручную реализовывать граф LMX: их helper использует естественные лямбды, и эта разница видна в implementation-сравнении.",
+      "comparison_en": "All three clients use ready capture with complete custom implementations alongside. Application addition remains in every listing. Haskell/Scala are not forced to recreate the LMX graph; their helpers use natural lambdas and that difference stays visible in the implementation comparison.",
+      "limits_ru": "Сравнивается частичное применение конкретной binary int×int→int, не универсальный curry, varargs или захват всех динамических локалов. OPERANDS_TEMPLATE не заменяет сохранение окружения и добавил бы здесь промежуточную форму без пользы. Отдельные implicit defaults не используются.",
+      "limits_en": "The comparison covers partial application of binary int×int→int, not universal curry, varargs or capture of all dynamic locals. OPERANDS_TEMPLATE would not replace environment retention and would add an unnecessary intermediate form. Implicit defaults are not used.",
       "listings": [
         {
           "language": "LMX",
-          "code": "AdderPrototype:\n    int: saved 0\n    inputs:\n        int: x\n        return: int\n        add:\n            return: x + node\\saved\n\nAdderFactory:\n    int: increment\n    return: @\n    create:\n        @: instance (copy(AdderPrototype))\n        @: lexicalOwner parent(instance\\inputs)\n        lexicalOwner\\saved := increment\n        return: instance\\inputs\\add\n\nDemo:\n    return: int\n    run:\n        @: add5 AdderFactory\\create(5)\n        @: add100 AdderFactory\\create(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
-          "notes_ru": "Адаптация предоставленного примера H03. node\\saved сохраняет его нормативное лексическое значение. Вход только x, а saved не становится вторым параметром.",
-          "notes_en": "Adapted from the supplied H03 example, preserving its normative lexical node\\saved behavior. x is the sole input; saved is not another parameter."
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\apply; 5)\n        @: add100 Curry\\capture(Addition\\apply; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "notes_ru": "Вызов Demo\\run(). Предварительно загрузить LMX-реализацию Curry из companion Integer partial-application implementation. Оба возвращённых callable уже пережили завершение своих фабричных вызовов.",
+          "notes_en": "Call Demo\\run(). First load Curry from the LMX companion Integer partial-application implementation. Both returned callables outlive their completed factory invocations.",
+          "depends_on": [
+            99
+          ]
         },
         {
           "language": "Haskell",
-          "code": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd saved x = saved + x\n\ndemo :: Int\ndemo = let add5 = add 5\n           add100 = add 100\n       in add5 1 * 1000000 + add100 1 * 1000 + add5 1\n",
-          "notes_ru": "Haskell 2010. Применение add 5 создаёт функцию оставшегося аргумента без дополнительной фабрики в пользовательском коде.",
-          "notes_en": "Haskell 2010. Applying add to 5 produces a function of the remaining argument."
+          "code": "module CurryingExample where\nimport CurryInt (capture)\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = capture add 5\n           add100 = capture add 100\n       in add5 1 * 1000000 + add100 1 * 1000 + add5 1\n",
+          "notes_ru": "Haskell2010. Компилировать вместе с CurryInt из companion Integer partial-application implementation. Лексическое замыкание и его стоимость показаны отдельно.",
+          "notes_en": "Haskell2010. Compile with CurryInt from companion Integer partial-application implementation. Its lexical closure and code cost are shown separately.",
+          "depends_on": [
+            99
+          ]
         },
         {
           "language": "Scala",
-          "code": "object CurryingExample {\n  val add: (Int, Int) => Int = (saved, x) => saved + x\n  val curried: Int => Int => Int = add.curried\n\n  def demo: Int = {\n    val add5 = curried(5)\n    val add100 = curried(100)\n    add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n  }\n}\n",
-          "notes_ru": "Scala 3. Здесь именно curried у Function2; несколько списков параметров метода и каррирование не объявляются одним и тем же механизмом.",
-          "notes_en": "Scala 3. This explicitly uses Function2.curried, rather than conflating currying with multiple method parameter lists."
+          "code": "import CurryInt.capture\n\nobject CurryingExample {\n  def add(first: Int, second: Int): Int = first + second\n  def demo: Int = {\n    val add5 = capture(add, 5)\n    val add100 = capture(add, 100)\n    add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n  }\n}\n",
+          "notes_ru": "Scala 3. Компилировать с CurryInt из companion Integer partial-application implementation. Готовый .curried не используется ни клиентом, ни его helper.",
+          "notes_en": "Scala 3. Compile with CurryInt from companion Integer partial-application implementation. Neither client nor helper calls ready .curried.",
+          "depends_on": [
+            99
+          ]
         }
       ],
       "sources": [
         {
           "title": "Haskell 2010 Report, expressions",
           "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html",
-          "why_ru": "Функциональное применение и лямбда-выражения.",
-          "why_en": "Function application and lambda expressions."
+          "why_ru": "Функциональное применение, лямбда и лексически сохранённое значение.",
+          "why_en": "Function application, lambdas and lexically retained values."
         },
         {
-          "title": "Scala Tour, Multiple Parameter Lists",
-          "url": "https://docs.scala-lang.org/tour/multiple-parameter-lists.html",
-          "why_ru": "Различие multiple parameter lists и Function.curried.",
-          "why_en": "Distinguishes multiple parameter lists from Function.curried."
+          "title": "Scala Tour, Higher-order Functions",
+          "url": "https://docs.scala-lang.org/tour/higher-order-functions.html",
+          "why_ru": "Функция как вход и создаваемая лямбда; готовый Function2.curried в этой паре не используется.",
+          "why_en": "Function inputs and constructed lambdas; this pair does not use ready Function2.curried."
+        }
+      ],
+      "implementation_ids": [
+        99
+      ]
+    },
+    {
+      "id": 99,
+      "name": "Integer partial-application implementation",
+      "slug": "integer_partial_application_implementation",
+      "kind": "implementation",
+      "paired_with": 85,
+      "usage_ids": [
+        85
+      ],
+      "scope": "core",
+      "summary_ru": "Повторяемый capture(binary, first): сохранить функцию и первый int, вернуть callable одного int.",
+      "summary_en": "Reusable capture(binary, first): retain a function and first int, returning a callable of one int.",
+      "scenario_ru": "Для binary:(int,int)→int и first:int построить независимое сохранённое вычисление second→binary(first,second). Завершить фабрику, создать другую функцию и вызывать первую снова. Сложение не встроено в helper: его определяет клиент Currying.",
+      "scenario_en": "Given binary:(int,int)→int and first:int, build an independent retained computation second→binary(first,second). Finish the factory, build another function and call the first again. Addition is not built into the helper; the Currying client defines it.",
+      "expected_ru": "capture(add,5)(1)=6, capture(add,100)(1)=101, повтор первого даёт 6. Другая binary-функция также получает сохранённый первый и явный второй аргумент. Клиентская saved=1000 не заменяет capture; исходный LMX-прототип остаётся неизменным.",
+      "expected_en": "capture(add,5)(1)=6, capture(add,100)(1)=101 and calling the first again yields 6. A different binary function likewise receives the retained first and explicit second argument. Caller saved=1000 does not replace the capture; the LMX prototype is unchanged.",
+      "lmx_notes_ru": "Обычный copy строит отдельный граф окружения. parent(instance\\inputs) выбирает фактического скопированного владельца, в него записываются saved и binary; возвращается его одновходовый inputs\\apply. В теле node\\saved и node\\binary читают сохранённое окружение, а не одноимённые локалы вызывающего. Завершённый фабричный кадр не удерживается.",
+      "lmx_notes_en": "Ordinary copy creates a separate environment graph. parent(instance\\inputs) selects the actual copied owner; saved and binary are written there, and its single-input inputs\\apply is returned. node\\saved and node\\binary read the retained environment rather than same-named caller locals. No completed factory frame is retained.",
+      "comparison_ru": "LMX показывает всю графовую реализацию захвата, Haskell и Scala — собственную lambda-обёртку. Готовый Scala .curried не используется. Разница в стоимости механизма остаётся видна именно здесь; клиент не оплачивает её при каждом использовании.",
+      "comparison_en": "LMX shows the complete graph-based capture implementation; Haskell and Scala show custom lambda wrappers. Ready Scala .curried is not used. The mechanism cost difference remains visible here, while the client does not pay it at every use.",
+      "limits_ru": "Helper ограничен двумя int-входами и int-результатом; это не универсальный curry для произвольных сигнатур. Сохраняется первый аргумент, не меняется default исходного метода и не добавляется второй публичный вход возвращённой функции. Граф подчиняется обычному времени жизни; клиент не мутирует сохранённое окружение.",
+      "limits_en": "The helper is limited to two int inputs and an int result, not universal curry for arbitrary signatures. It retains the first argument rather than changing the original method default or exposing a second public input on the returned function. The graph follows ordinary lifetime rules and the client does not mutate its retained environment.",
+      "sources": [
+        {
+          "title": "Haskell 2010 Report, expressions",
+          "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html",
+          "why_ru": "Функциональное применение, лямбда и лексически сохранённое значение.",
+          "why_en": "Function application, lambdas and lexically retained values."
+        },
+        {
+          "title": "Scala Tour, Higher-order Functions",
+          "url": "https://docs.scala-lang.org/tour/higher-order-functions.html",
+          "why_ru": "Функция как вход и создаваемая лямбда; готовый Function2.curried в этой паре не используется.",
+          "why_en": "Function inputs and constructed lambdas; this pair does not use ready Function2.curried."
+        }
+      ],
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n",
+          "notes_ru": "Обобщён на любую binary с указанной int×int→int сигнатурой уже показанный в архиве приём H03/085. Загрузить этот граф до клиента. Никаких скрытых native-замыканий или специального операнда нет.",
+          "notes_en": "Generalizes the archive H03/085 construction to any binary with the stated int×int→int contract. Load this graph before the client. There are no hidden native closures or special operands."
+        },
+        {
+          "language": "Haskell",
+          "code": "module CurryInt (capture) where\n\ncapture :: (Int -> Int -> Int) -> Int -> (Int -> Int)\ncapture binary first = \\second -> binary first second\n",
+          "notes_ru": "Haskell2010. Вся обёртка показана. Передать модуль CurryInt компилятору с клиентом или назвать файл CurryInt.hs для поиска по имени.",
+          "notes_en": "Haskell2010. The complete wrapper is shown. Supply CurryInt with the client or name its file CurryInt.hs for module lookup."
+        },
+        {
+          "language": "Scala",
+          "code": "object CurryInt {\n  def capture(binary: (Int, Int) => Int, first: Int): Int => Int =\n    second => binary(first, second)\n}\n",
+          "notes_ru": "Scala 3. Собственная лямбда вместо вызова Function2.curried. Компилировать этот объект вместе с CurryingExample.",
+          "notes_en": "Scala 3. A custom lambda rather than Function2.curried. Compile this object with CurryingExample."
         }
       ]
     }
+  ],
+  "display_order": [
+    82,
+    91,
+    83,
+    92,
+    84,
+    98,
+    85,
+    99
   ]
 }

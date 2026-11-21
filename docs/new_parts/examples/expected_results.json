@@ -1,7 +1,7 @@
 {
-  "format": "LMX example expectations, editorial edition 2026-11-21",
+  "format": "LMX example expectations, operand/library edition 2026-11-21",
   "status": "expected outcomes; LMX and GHC were not executed in this documentation review",
-  "runner_contract": "Use the existing Fable source loader and invoke each named entry. No new LMX launcher or root profile is specified.",
+  "runner_contract": "Prepare each source with its load_before dependencies in the same fresh context using the existing Fable loader; then invoke the named entry. import exposes existing names and is not a new file loader. Required supplied kernel profiles are stated separately.",
   "source_examples": [
     {
       "id": "H01",
@@ -13,6 +13,9 @@
           "invoke": "ApplyProbe\\run()",
           "expected": 1408
         }
+      ],
+      "load_before": [
+        "libraries/lmx/Application.lm3"
       ]
     },
     {
@@ -41,13 +44,18 @@
             101,
             6
           ],
-          "original_saved_after": 0
+          "original_saved_after": 0,
+          "original_saved_path": "CapturePrototype\\saved"
         },
         {
           "variant": "Explicit saved actual through returned method",
           "invoke": "add5(1; saved := 25)",
-          "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs"
+          "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+          "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
         }
+      ],
+      "load_before": [
+        "../09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3"
       ]
     },
     {
@@ -97,6 +105,12 @@
             10
           ]
         }
+      ],
+      "load_before": [
+        "../02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3"
+      ],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
       ]
     },
     {
@@ -129,6 +143,9 @@
           ],
           "calls_after": 4
         }
+      ],
+      "load_before": [
+        "libraries/lmx/EvaluationModes.lm3"
       ]
     },
     {
@@ -159,6 +176,9 @@
           "next_invocations": 4,
           "body_invocations": 3
         }
+      ],
+      "load_before": [
+        "libraries/lmx/Cycles.lm3"
       ]
     },
     {
@@ -270,6 +290,9 @@
             13
           ]
         }
+      ],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
       ]
     },
     {
@@ -364,8 +387,28 @@
             57
           ],
           "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
         }
-      ]
+      ],
+      "load_before": [
+        "libraries/lmx/CharacterRange.lm3"
+      ],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+      ],
+      "declared_exits": [
+        "RangeArity"
+      ],
+      "exit_contract": "The client propagates the helper exit; every written application supplies exactly two bounds."
     },
     {
       "id": "V03",
@@ -420,7 +463,8 @@
           "reads": 2,
           "trace": 1202,
           "commanded_after": 0,
-          "sensed_after": 0
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
         },
         {
           "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
@@ -430,7 +474,8 @@
           "reads": 2,
           "trace": 1202,
           "commanded_after": 0,
-          "sensed_after": 0
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
         },
         {
           "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
@@ -440,8 +485,17 @@
           "reads": 2,
           "trace": 1202,
           "commanded_after": 0,
-          "sensed_after": 1
+          "sensed_after": 1,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
         }
+      ],
+      "observation_owner": "parent(device\\set), equal to parent(device\\observe)",
+      "observed_owner_fields": [
+        "writes",
+        "reads",
+        "trace",
+        "commanded",
+        "sensed"
       ]
     },
     {
@@ -461,7 +515,8 @@
           "expected": 13,
           "constraint": "one serial turn per admitted input; either arrival order"
         }
-      ]
+      ],
+      "completion_barrier": "Read after both add executions complete; an HTTP admission acknowledgement alone is insufficient."
     },
     {
       "id": "M05",
@@ -476,7 +531,8 @@
           "expected_application_replies": 0,
           "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
         }
-      ]
+      ],
+      "http_boundary": "A transport/admission response is not an application reply from resultless Lamp\\set."
     }
   ],
   "additional_fixtures": [
@@ -765,5 +821,6 @@
     "source_graph": "complete written program including typed primitive leaves and all receivers",
     "binary": "native methods only; binary R0 has a local pointer to the R0 graph, also under interpretation",
     "native_update": "existing explicit compilation and endturn mechanism"
-  }
+  },
+  "haskell_run_command": "runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs"
 }

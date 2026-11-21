@@ -90,6 +90,14 @@ def audit(root: Path) -> dict:
     all_ids: list[int] = []
     listing_count = 0
     total_bytes = 0
+    pattern_ids = []
+    implementation_ids = []
+    try:
+        manifest=json.loads((root/'comparison_sources/catalog_manifest.json').read_text(encoding='utf-8'))
+        expected_ids=set(manifest['pattern_ids'])|set(manifest['implementation_ids'])
+        assert manifest['pattern_ids']==list(range(1,91))
+    except (OSError,ValueError,KeyError,AssertionError) as exc:
+        return {'ok':False,'error_count':1,'errors':[{'file':'comparison_sources/catalog_manifest.json','message':str(exc)}]}
 
     def relative(path: Path) -> str:
         try:
@@ -152,7 +160,7 @@ def audit(root: Path) -> dict:
                             fail(comparison_path, f"Duplicate table row for ID {key}")
                         comparison_rows[key] = cells
 
-        for pattern in patterns:
+        for pattern in sorted(patterns,key=lambda p:(p.get('paired_with',p['id']),p.get('kind','pattern')=='implementation',p['id'])):
             if not isinstance(pattern, dict):
                 fail(json_file, "A pattern is not an object")
                 continue
@@ -161,6 +169,13 @@ def audit(root: Path) -> dict:
                 fail(json_file, f"Non-integer pattern ID: {identifier!r}")
                 continue
             all_ids.append(identifier)
+            record_kind=pattern.get('kind','pattern')
+            record_layer='implementation' if record_kind=='implementation' else 'usage' if pattern.get('implementation_ids') else 'scenario'
+            if record_kind=='implementation':
+                implementation_ids.append(identifier)
+                if pattern.get('paired_with') not in range(1,91): fail(json_file,f'ID {identifier}: invalid paired_with')
+            elif record_kind=='pattern': pattern_ids.append(identifier)
+            else: fail(json_file,f'ID {identifier}: unknown kind {record_kind!r}')
             slug = pattern.get("slug", "")
             if not isinstance(slug, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_]*", slug):
                 fail(json_file, f"Invalid ASCII snake_case slug for ID {identifier}: {slug!r}")
@@ -188,6 +203,8 @@ def audit(root: Path) -> dict:
                 "id": str(identifier),
                 "pattern": pattern.get("name", ""),
                 "scope": pattern.get("scope", ""),
+                "kind":record_kind,
+                "layer":record_layer,
                 "source": markdown_name,
             }
             measured = {}
@@ -228,7 +245,7 @@ def audit(root: Path) -> dict:
                 csv_row[f"{language}_nonblank_lines"] = str(counts["nonblank_lines"])
                 csv_row[f"{language}_utf8_bytes"] = str(counts["utf8_bytes"])
             expected_csv.append(csv_row)
-            pattern_reports.append({"id": identifier, "name": pattern.get("name"), "source": markdown_name, "metrics": measured})
+            pattern_reports.append({"id": identifier, "name": pattern.get("name"),"kind":record_kind,"layer":record_layer, "source": markdown_name, "metrics": measured})
 
             if comparison_text is not None:
                 cells = comparison_rows.get(identifier)
@@ -245,7 +262,7 @@ def audit(root: Path) -> dict:
                             expected_value = f"{value['nonwhitespace_characters']} / {value['nonblank_lines']}"
                             if cells[offset] != expected_value:
                                 fail(comparison_path, f"ID {identifier}/{language}: table says {cells[offset]!r}, expected {expected_value!r}")
-                    scope_label = SCOPES_RU.get(pattern.get("scope"))
+                    scope_label = {'implementation':'Реализация библиотеки','usage':'Использование библиотеки'}.get(record_layer,SCOPES_RU.get(pattern.get("scope")))
                     if scope_label is not None and cells[5] != scope_label:
                         fail(comparison_path, f"ID {identifier}: unexpected scope label {cells[5]!r}")
 
@@ -265,7 +282,7 @@ def audit(root: Path) -> dict:
                 fail(csv_path, "CSV is missing its UTF-8 BOM")
             reader = csv.DictReader(io.StringIO(csv_bytes.decode("utf-8-sig"), newline=""))
             header = reader.fieldnames or []
-            required_header = ["id", "pattern", "scope"] + [f"{l}_characters" for l in language_order] + [f"{l}_nonblank_lines" for l in language_order] + ["source"]
+            required_header = ["id", "pattern", "scope","kind","layer"] + [f"{l}_characters" for l in language_order] + [f"{l}_nonblank_lines" for l in language_order] + ["source"]
             optional_header = {f"{l}_utf8_bytes" for l in language_order}
             if [h for h in header if h not in optional_header] != required_header:
                 fail(csv_path, f"Unexpected CSV header: {header}")
@@ -306,16 +323,18 @@ def audit(root: Path) -> dict:
                     fail(pdf, "Missing PDF header or final EOF marker")
             except OSError as exc:
                 fail(pdf, f"Cannot read PDF: {exc}")
-        groups.append({"directory": group_name, "languages": language_order, "pattern_count": len(pattern_reports), "patterns": pattern_reports})
+        groups.append({"directory": group_name, "languages": language_order, "pattern_count":sum(p['kind']=='pattern' for p in pattern_reports),"implementation_count":sum(p['kind']=='implementation' for p in pattern_reports),"comparison_count": len(pattern_reports), "patterns": pattern_reports})
 
     seen = Counter(all_ids)
-    missing = sorted(set(range(1, 91)) - set(seen))
-    extra = sorted(set(seen) - set(range(1, 91)))
+    missing = sorted(expected_ids - set(seen))
+    extra = sorted(set(seen) - expected_ids)
     duplicates = {str(k): v for k, v in sorted(seen.items()) if v != 1}
     if missing or extra or duplicates:
-        fail(root, f"Expected IDs 1..90 exactly once: missing={missing}, extra={extra}, duplicates={duplicates}")
-    if listing_count != 270:
-        fail(root, f"Expected 270 listings; found {listing_count}")
+        fail(root, f"Catalog IDs must occur exactly once: missing={missing}, extra={extra}, duplicates={duplicates}")
+    if sorted(pattern_ids)!=list(range(1,91)): fail(root,'Original 90 pattern IDs/kinds were changed')
+    if sorted(implementation_ids)!=manifest['implementation_ids']: fail(root,'Implementation IDs/kinds differ from manifest')
+    if listing_count != 3*len(expected_ids):
+        fail(root, f"Expected {3*len(expected_ids)} listings; found {listing_count}")
     return {
         "ok": not errors,
         "scope": "Publication consistency and mechanical code counts. No claim of LMX execution, adapter guarantees, XLSX formula evaluation or PDF visual QA.",
@@ -327,7 +346,9 @@ def audit(root: Path) -> dict:
             "csv": "UTF-8 BOM required; *_utf8_bytes columns are checked if present, otherwise bytes remain in this report",
         },
         "group_count": len(json_files),
-        "pattern_count": len(all_ids),
+        "pattern_count": len(pattern_ids),
+        "implementation_count":len(implementation_ids),
+        "comparison_count":len(all_ids),
         "listing_count": listing_count,
         "total_source_utf8_bytes": total_bytes,
         "error_count": len(errors),

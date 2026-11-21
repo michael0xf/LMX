@@ -1,8 +1,47 @@
-"""Run the bounded Python scenarios from patterns.json; needs Python 3.10+."""
+"""Run 19 bounded Python scenarios and their declared companion modules.
+
+Needs Python 3.10+. Companion IDs are resolved from implementation_ids so the
+script remains valid after archive renumbering. No network or real database is
+used; the receipt records exact source hashes and the test boundary.
+"""
 from pathlib import Path
-from types import SimpleNamespace
-import copy,json,sys
-DATA=json.loads(Path(__file__).with_name('patterns.json').read_text())
+from types import ModuleType, SimpleNamespace
+import copy,datetime,hashlib,json,sys
+PATTERNS_PATH=Path(__file__).with_name('patterns.json')
+SOURCE_BYTES=PATTERNS_PATH.read_bytes()
+DATA=json.loads(SOURCE_BYTES)
+BY_ID={p['id']:p for p in DATA['patterns']}
+ORIGINAL_IDS=list(range(16,35))
+MODULE_NAMES={16:'lookup',31:'specification',32:'money'}
+COMPANIONS={}
+def source_code(pattern):
+    return next(l['code'] for l in pattern['listings'] if l['language']=='Python')
+def source_hash(code):
+    return hashlib.sha256(code.encode('utf-8')).hexdigest()
+def load_module(name,code):
+    module=ModuleType(name)
+    sys.modules[name]=module
+    exec(compile(code,name+'.py','exec'),module.__dict__)
+    return module
+for usage_id,module_name in MODULE_NAMES.items():
+    usage=BY_ID[usage_id]
+    implementation_ids=usage.get('implementation_ids',[])
+    assert len(implementation_ids)==1,('expected one declared companion',usage_id)
+    implementation_id=implementation_ids[0]
+    implementation=BY_ID[implementation_id]
+    assert implementation.get('kind')=='implementation'
+    assert usage_id in implementation.get('usage_ids',[])
+    code=source_code(implementation)
+    load_module(module_name,code)
+    COMPANIONS[implementation_id]={
+        'id':implementation_id,
+        'language':'Python',
+        'module':module_name,
+        'usage_ids':implementation['usage_ids'],
+        'source_sha256':source_hash(code),
+        'check':'exact companion source loaded and exercised by its client scenarios',
+        'result':'pass',
+    }
 RESULTS=[]
 def failed(fn,exception=Exception):
     try: fn()
@@ -21,13 +60,20 @@ class Db:
             raise
     def read_locked(self,id): return self.values[id]
     def write(self,id,value): self.values[id]=value
-for p in DATA['patterns']:
-    i=p['id'];n={'__name__':'example'}
-    code=next(l['code'] for l in p['listings'] if l['language']=='Python')
-    exec(compile(code,f'pattern_{i}.py','exec'),n)
+for i in ORIGINAL_IDS:
+    p=BY_ID[i]
+    code=source_code(p)
+    n=load_module(f'pattern_{i}',code).__dict__
     if i==16:
         a,b=n['Account'](7,100),n['Account'](9,250);r=n['Repository']([a,b])
         assert r.find(9) is b and r.find(10) is None
+        duplicate=n['Account'](7,999)
+        assert n['Repository']([a,duplicate]).find(7) is a
+        assert n['Repository']([]).find(7) is None
+        class NeverRead:
+            @property
+            def id(self): raise AssertionError('search continued after first match')
+        assert n['Repository']([a,NeverRead()]).find(7) is a
     elif i==17:
         db=Db();w=n['UnitOfWork'](db)
         w.mark(7,120);w.mark(7,130);w.mark(9,200)
@@ -94,12 +140,20 @@ for p in DATA['patterns']:
         assert n['RangeQuery'](100,200).execute(db)==[100,200]
         failed(lambda:n['RangeQuery'](200,100).execute(db),ValueError);assert len(calls)==1
     elif i==31:
-        f=n['both'](n['nonnegative'],n['below100']);assert [f(x) for x in [-1,50,100]]==[False,True,False]
+        f=n['build']();assert [f(x) for x in [-1,50,100]]==[False,True,False]
         calls=[];f=n['both'](lambda x:False,lambda x:calls.append(x));assert not f(1) and not calls
+        nested=n['both'](n['build'](),lambda x:x%2==0)
+        assert [nested(x) for x in [50,51,-2]]==[True,False,False]
+        assert nested(50) and nested(50)
     elif i==32:
         a,b,c=n['Money'](100,840),n['Money'](100,840),n['Money'](100,978)
-        assert a==b and a is not b and a!=c
-        failed(lambda:setattr(a,'cents',9))
+        assert n['same'](a,b) and a is not b and not n['same'](a,c)
+        assert n['demo']()==10
+        failed(lambda:setattr(a,'cents',9),AttributeError)
+        failed(lambda:setattr(a,'currency',9),AttributeError)
+        assert not hasattr(a,'__dict__')
+        def overwrite_component(): a[0]=9
+        failed(overwrite_component,TypeError)
     elif i==33:
         state={'version':4,'cents':100}
         def cas(id,version,cents):
@@ -123,7 +177,21 @@ for p in DATA['patterns']:
         assert e.acquire(7,1)==41 and e.acquire(7,2)==0
         assert e.release(7,1,41)==1 and e.acquire(7,2)==42
         assert e.save(7,1,41,99)==0 and e.save(7,2,42,150)==1 and saved==[150]
-    RESULTS.append({'id':i,'language':'Python','check':'bounded scenario with explicit in-memory fixtures','result':'pass'})
-report={'engine':sys.version.split()[0],'scope':'Python controls only; fixtures validate client logic, not database/transport adapters; LMX and C# were not executed.','checks':RESULTS}
+    RESULTS.append({'id':i,'language':'Python','source_sha256':source_hash(code),'implementation_ids':p.get('implementation_ids',[]),'check':'bounded scenario with explicit in-memory fixtures','result':'pass'})
+assert len(RESULTS)==19
+report={
+    'engine':sys.version.split()[0],
+    'review_time_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'input':'patterns.json',
+    'input_sha256':hashlib.sha256(SOURCE_BYTES).hexdigest(),
+    'harness':'validate_python.py',
+    'harness_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    'original_scenarios':19,
+    'companion_modules_exercised':len(COMPANIONS),
+    'all_passed':True,
+    'scope':'Python controls and the exact declared companion implementations only. Fixtures validate bounded client/helper logic, first-match identity/absence/early return, reusable predicate short-circuiting, and Money read-only components. In-memory fixtures do not validate real database, transaction, lock, HTTP, Message or transport providers. LMX and C# were not executed.',
+    'checks':RESULTS,
+    'companions':[COMPANIONS[i] for i in sorted(COMPANIONS)],
+}
 Path(__file__).with_name('python_validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps(report,ensure_ascii=False))

@@ -1,10 +1,9 @@
-Money:
-    immutable: int: cents 100
-    immutable: int: currency 840
-
-MoneyEqual:
-    @: left
-    @: right
+Demo:
     return: int
-    equals:
-        return: left\cents = right\cents && left\currency = right\currency
+    run:
+        throws: OperandArity
+        import: MoneyLibrary\Equality
+        @: first (copy(MoneyLibrary\immutable\Money))
+        @: second (copy(MoneyLibrary\immutable\Money))
+        @: third (merge(MoneyLibrary\immutable\Money; immutable: (int: currency 978)))
+        return: (first equals second) * 10 + (first equals third)

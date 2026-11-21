@@ -14,6 +14,8 @@ All eleven original entries remain. Layered, Hexagonal, Clean, and Onion overlap
 - [All 90 patterns](../PATTERN_CATALOG_90.en.md)
 - [Validation status](../VALIDATION.md)
 - [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
+- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
+- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -81,11 +83,25 @@ Explicit recipients make the example deterministic; a subscription catalog can l
 
 Independent transformations are connected in an ordered data flow.
 
+**Implementation of the supplied component:** [093. Pipe — implementation](093_pipe_implementation_comparision.md)
+
 **Scenario:** For one item -3, normalize its sign, double it, then add 1.
 
 **Observation:** 7; intermediate values are 3 and 6.
 
-The same synchronous core separates transformations from buffering/scheduling policy. No class hierarchy is needed for each filter.
+All three clients import a ready Pipe while retaining normalization, doubling, offset, and their order. LMX writes that order left to right; Java and Go pass the same callable list. The companion separately counts the explicit implementation loop in all three languages; client size is not presented as the full pipeline implementation.
+
+### 093. [Pipe — implementation](093_pipe_implementation_comparision.md)
+
+Implement the imported sequential handoff through a stage list.
+
+**Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
+
+**Scenario:** Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.
+
+**Observation:** For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.
+
+The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe.
 
 ### 014. [Blackboard](014_blackboard_comparision.md)
 
@@ -129,4 +145,4 @@ One capability switches independently of the rest. Enabling it does not imply fa
 
 ## Boundaries
 
-Sizes are computed from each pattern’s three listings. They exclude implementations of supplied libraries, runtime, HTTP hosts and databases. Read each case’s individual limits. IDs retain the original list; 86–90 are explicit additions.
+Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

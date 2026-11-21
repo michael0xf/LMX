@@ -6,17 +6,10 @@ Functions:
     next:
         return: x + 1
 
-Composition:
-    @: outer
-    @: inner
-    int: value
-    return: int
-    apply:
-        return: outer(inner(value))
-
 CompositionProbe:
     return: int
     run:
-        int: a Composition\apply(Functions\next; Functions\twice; 4)
-        int: b Composition\apply(Functions\twice; Functions\next; 4)
+        import: PipeLibrary
+        int: a (4 pipe Functions\twice Functions\next)
+        int: b (4 pipe Functions\next Functions\twice)
         return: a * 100 + b

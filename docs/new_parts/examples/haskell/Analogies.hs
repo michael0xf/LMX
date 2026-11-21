@@ -11,23 +11,50 @@ import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
 import Control.Monad (unless, void)
 import Data.Array (Array, listArray, (!), (//), elems)
 import Data.IORef (newIORef, readIORef, modifyIORef')
+import qualified Data.IORef as Ref
+import IntApply (apply)
+import CurryInt (capture)
+import IntPipe (pipe, pipeIO)
+import EvaluationModes (preparedTwice, rawTwice)
+import qualified StepIterator as Iterator
+import CharacterRange (between)
 
 assertEq :: (Eq a, Show a) => String -> a -> a -> IO ()
 assertEq name expected actual =
   unless (expected == actual) $
     error (name ++ ": expected " ++ show expected ++ ", got " ++ show actual)
 
-apply :: (Int -> Int) -> Int -> Int
-apply f x = f x
+applicationExample :: IO Int
+applicationExample = do
+  chosen <- newIORef ((*2) :: Int -> Int)
+  firstOperation <- readIORef chosen
+  let first = apply firstOperation 7
+  Ref.writeIORef chosen (+1)
+  secondOperation <- readIORef chosen
+  let second = apply secondOperation 7
+  pure (first * 100 + second)
 
 makeAdder :: Int -> Int -> Int
-makeAdder n x = n + x
+makeAdder n = capture (+) n
 
 closureExample :: (Int, Int, Int)
 closureExample =
   let add5 = makeAdder 5
       add100 = makeAdder 100
   in (add5 1, add100 1, add5 1)
+
+compositionExample :: (Int, Int)
+compositionExample = (pipe 4 [(*2), (+1)], pipe 4 [(+1), (*2)])
+
+compositionEffects :: IO (Int, Int, [String])
+compositionEffects = do
+  trace <- newIORef []
+  let twice x = modifyIORef' trace (++ ["twice"]) >> pure (x * 2)
+      next x = modifyIORef' trace (++ ["next"]) >> pure (x + 1)
+  first <- pipeIO 4 [twice, next]
+  second <- pipeIO 4 [next, twice]
+  seen <- readIORef trace
+  pure (first, second, seen)
 
 addWithDefault :: Int -> Maybe Int -> Int
 addWithDefault x supplied = x + maybe 5 id supplied
@@ -67,10 +94,9 @@ eventValue (Sample x) = x
 eventValue Finished = 0
 
 accepts :: String -> Bool
-accepts [a,b,'-',c,d] = all upper [a,b] && all digit [c,d]
-  where
-    upper x = x >= 'A' && x <= 'Z'
-    digit x = x >= '0' && x <= '9'
+accepts [a,b,'-',c,d] =
+  all (\x -> x `between` ('A','Z')) [a,b]
+    && all (\x -> x `between` ('0','9')) [c,d]
 accepts _ = False
 
 -- Effects are executed explicitly. Reusing the IO action is not reusing its result.
@@ -82,10 +108,46 @@ preparedAndRaw = do
   count1 <- readIORef preparedCount
   rawCount <- newIORef (0 :: Int)
   let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount
-  first <- rawNext
-  second <- rawNext
+  rawValue <- rawTwice rawNext
   count2 <- readIORef rawCount
-  pure ((value + value, count1), (first + second, count2))
+  pure ((preparedTwice value, count1), (rawValue, count2))
+
+preparedAndRawSeries :: IO ((Int, Int, Int), (Int, Int, Int))
+preparedAndRawSeries = do
+  preparedCount <- newIORef (0 :: Int)
+  let preparedNext = modifyIORef' preparedCount (+1) >> readIORef preparedCount
+  first <- preparedTwice <$> preparedNext
+  second <- preparedTwice <$> preparedNext
+  count1 <- readIORef preparedCount
+  rawCount <- newIORef (0 :: Int)
+  let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount
+  third <- rawTwice rawNext
+  fourth <- rawTwice rawNext
+  count2 <- readIORef rawCount
+  pure ((first, second, count1), (third, fourth, count2))
+
+iteratorCase :: [Int] -> (Int -> Int) -> IO (Int, Int, Int)
+iteratorCase source observe = do
+  remaining <- newIORef source
+  calls <- newIORef (0 :: Int)
+  bodies <- newIORef (0 :: Int)
+  total <- newIORef (0 :: Int)
+  let next = do
+        modifyIORef' calls (+1)
+        values <- readIORef remaining
+        case values of
+          [] -> pure Iterator.Stop
+          value : rest -> do
+            Ref.writeIORef remaining rest
+            pure (Iterator.Yield value)
+      body item = do
+        modifyIORef' bodies (+1)
+        modifyIORef' total (+ observe item)
+  Iterator.iterateUntilStop next body
+  result <- readIORef total
+  steps <- readIORef calls
+  bodyCalls <- readIORef bodies
+  pure (result, steps, bodyCalls)
 
 data SampleVariant = Good | Biased | ReadsTwice
 
@@ -158,14 +220,22 @@ fanOutExample = do
 main :: IO ()
 main = do
   assertEq "H01 apply" 14 (apply (*2) 7)
+  applicationExample >>= assertEq "H01 replaced operation" 1408
   assertEq "H03 closure" (6,101,6) closureExample
   assertEq "H04 explicit default model" [6,26,1,6]
     (map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing])
   assertEq "H05 explicit environment model" (26,6)
     (dynamicAdd (Env 25) 1, lexicalAdd (Env 5) 1)
   assertEq "H06 composition" (9,10) (((+1) . (*2)) (4 :: Int), ((*2) . (+1)) (4 :: Int))
+  assertEq "H06 ready pipe" (9,10) compositionExample
+  compositionEffects >>= assertEq "H06 stage order/count"
+    (9,10,["twice","next","next","twice"])
   preparedAndRaw >>= assertEq "H07 values/actions" ((2,1),(3,2))
+  preparedAndRawSeries >>= assertEq "H07 two-call series" ((2,4,2),(3,7,4))
   assertEq "H09 finite prefix" (12 :: Int) (sum (take 3 (map (*2) [1..])))
+  iteratorCase [1,2,3] (*2) >>= assertEq "H09 explicit iterator" (12,4,3)
+  iteratorCase [-2,0,4] (\value -> let item = value + 3 in item + item)
+    >>= assertEq "H09 zero/repeated reads" (22,4,3)
   assertEq "H11 conversion route" 101 (adapted 10)
   assertEq "H12 variants" (7,0) (eventValue (Sample 7), eventValue Finished)
   assertEq "R01 known record update" (Size 2 5 7)
@@ -182,8 +252,9 @@ main = do
   assertEq "A05 inclusive scan" [1,3,6,10 :: Int] (tail (scanl (+) 0 [1,2,3,4]))
   assertEq "A05 elementwise/dot" ([4,10,18],32 :: Int)
     (zipWith (*) [1,2,3] [4,5,6], sum (zipWith (*) [1,2,3] [4,5,6]))
-  assertEq "V02 whole text" [True,False,False,False]
-    (map accepts ["AB-09", "AB-090", "AB-0X", ['A','B','\0','0','9']])
+  assertEq "V02 whole text" [True,True,False,False,False,False,False,False,False,False,False]
+    (map accepts ["AB-09", "QZ-70", "", "AB-9", "AB-090", "ab-09", "AB-0X",
+      "XAB-09Y", ['A','B','\0','0','9'], "\x00c4\&B-09", "AB-\x0660\&9"])
   samplingCheck Good >>= assertEq "V03 good" (True,1)
   samplingCheck Biased >>= assertEq "V03 bias" (False,1)
   samplingCheck ReadsTwice >>= assertEq "V03 duplicate read" (False,2)

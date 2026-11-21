@@ -1,58 +1,36 @@
 # 082. Monad
 
-Контекстное связывание вычислений на конкретном примере Maybe: отсутствие результата пропускает следующие шаги.
+Использование готовой библиотеки Maybe<int> и её bind: отсутствие пропускает продолжение.
+
+**Реализация используемого компонента:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
 
 ## Общий сценарий
 
-Дважды поделить целое число пополам. Каждый шаг допускает только чётное число. Прогнать 8 и 6; во втором случае второй шаг должен вернуть отсутствие, а продолжение после отсутствия не вызывается.
+Клиент определяет прикладной half: чётное число превращается в присутствующую половину, нечётное — в none. Два bind применяют half к 8, 6 и 3. Конструкторы, контейнер и bind предоставлены соседним сравнением реализации.
 
-**Ожидаемое наблюдение:** Для 8: present=1, value=2 (Just 2 / Some(2)). Для 6: present=0 (Nothing / None). Bind не читает value отсутствующего результата. Законы unit/bind рассматриваются по наблюдаемому значению, без сравнения адресов контейнеров.
+**Ожидаемое наблюдение:** 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
 
-**Граница сравнения:** Ядро сценария. Сравнивается только контекст возможного отсутствия. IO, State, асинхронные эффекты и трансформеры монад сюда не включены. Контейнеры LMX считаются неизменяемыми по договору после передачи клиенту; произвольная внешняя мутация нарушила бы этот договор. Нельзя называть любой объект с методом bind монадой без проверки трёх законов.
+**Граница сравнения:** Использование библиотеки. Сравнивается только клиент конкретного Maybe<int>. Внешняя мутация опубликованных значений запрещена договором библиотеки. Это не универсальный Monad/IO/State и не доказательство законов для эффектных продолжений. Два bind явно сгруппированы слева; значение приоритета шаблона не подменяет закон ассоциативности монады.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
+Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
 
 ## LMX
 
 ```lmx
-Box:
-    int: present 0
-    int: value 0
-
-Values:
-    int: x
-    return: @
-    unit:
-        @: result (copy(Box))
-        result\present := 1
-        result\value := x
-        return: result
-    half:
-        @: result (copy(Box))
-        if: x % 2 = 0
-            result\present := 1
-            result\value := x / 2
-        return: result
-
-Bind:
-    @: input Box
-    @: next
-    return: @
-    apply:
-        if: input\present = 0
-            return: input
-        return: next(input\value)
-
 Example:
     int: x
     return: @
+    half:
+        import: Maybe
+        if: x % 2 = 0
+            return: unit(x / 2)
+        return: none()
     run:
-        @: initial Values\unit(x)
-        @: first Bind\apply(initial; Values\half)
-        return: Bind\apply(first; Values\half)
+        import: Maybe MaybeOps
+        return: (unit(x) bind half) bind half
 ```
 
-Входы: Exampleun(8), Exampleun(6). Box — только данные без методов, поэтому запись в собравшую copy группу записывает именно возвращаемое значение. Повторный вызов next получает обычный int.
+Входы Example\run(8), Example\run(6), Example\run(3). Зависимость: examples/lmx/091_maybe_container_and_bind_implementation.lm3, загруженный перед этим файлом. Реализация библиотеки считается отдельно.
 
 [Отдельный листинг](examples/lmx/082_monad.lm3)
 
@@ -60,81 +38,80 @@ Example:
 
 ```haskell
 module MonadExample where
+import MaybeInt (MaybeInt, unit, none, bind)
 
-half :: Int -> Maybe Int
-half x = if even x then Just (x `div` 2) else Nothing
+half :: Int -> MaybeInt
+half x = if even x then unit (x `div` 2) else none
 
-run :: Int -> Maybe Int
-run x = Just x >>= half >>= half
-
-demo :: (Maybe Int, Maybe Int)
-demo = (run 8, run 6)
+run :: Int -> MaybeInt
+run x = (unit x `bind` half) `bind` half
 ```
 
-Haskell 2010, Prelude. >>= и Just относятся к уже реализованному Maybe, его исходник не включён в измерение.
+Haskell2010. Скомпилировать вместе с examples/haskell/091_maybe_container_and_bind_implementation.hs: этот файл объявляет импортируемый модуль MaybeInt. Самописный bind показан целиком в companion. Внешние пробы run 8, run 6 и run 3 одинаково исключены из клиентского кода.
 
 [Отдельный листинг](examples/haskell/082_monad.hs)
 
 ## Scala
 
 ```scala
+import MaybeInt.*
+
 object MonadExample {
-  def half(x: Int): Option[Int] =
-    if (x % 2 == 0) Some(x / 2) else None
-
-  def run(x: Int): Option[Int] =
-    Some(x).flatMap(half).flatMap(half)
-
-  def demo = (run(8), run(6))
+  def half(x: Int): Value =
+    if (x % 2 == 0) unit(x / 2) else none()
+  def run(x: Int): Value = unit(x).bind(half).bind(half)
 }
 ```
 
-Scala 3, стандартный Option. flatMap здесь имеет тот же договор пропуска шага при None.
+Scala 3. Компилировать с examples/scala/091_maybe_container_and_bind_implementation.scala. Value и bind принадлежат этой авторской библиотеке; Option не используется. Внешние вызовы MonadExample.run(8), run(6), run(3).
 
 [Отдельный листинг](examples/scala/082_monad.scala)
 
 ## Разбор LMX
 
-LMX реализует конкретный Maybe<int> обычными структурами и методом Bind.apply. Поле present — часть демонстрационного типа; это не физический uninit и не новое ключевое слово. Создание результата явно копирует Box и заполняет его собственные слоты. Метод не сохраняет ссылку на завершённый кадр.
+Загрузить авторскую библиотеку Maybe/MaybeOps из Maybe container and bind implementation, затем этот клиент. import делает её уже загруженные объявления видимыми; это обычный namespace-import, а не новый файловый загрузчик. unit/none и bind имеют ровно контракт показанной библиотеки. Режим 0 достаточен: half передаётся как ссылка; bind решает, вызывать ли её. Приложение сохраняет условие чётности и цепочку вычисления. import выполняется в теле half/run; в DATA Example остаются только x и return, поэтому импортируемые постоянные свойства операнда не сдвигают позиционный x.
 
 ## Сопоставление
 
-Haskell использует стандартный Maybe и >>=, Scala — Option.flatMap. Их краткость здесь отражает уже существующую библиотечную абстракцию. В LMX показана её реализация для int; универсальный полиморфный интерфейс Monad и доказательство законов для произвольных эффектов этим листингом не создаются.
+Все три клиента используют готовую библиотеку с собственными реализациями, приведёнными рядом. Из клиентского размера исключена библиотека у всех трёх; обращения и импорты включены. Haskell здесь импортирует MaybeInt, Scala — MaybeInt, а не готовые Prelude Maybe и Option.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 405 | 32 |
-| Haskell | 166 | 7 |
-| Scala | 158 | 7 |
+| LMX | 131 | 11 |
+| Haskell | 169 | 6 |
+| Scala | 135 | 6 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
-Context-preserving composition, illustrated by Maybe: absence skips subsequent steps.
+Using a ready Maybe<int> library and its bind: absence skips the continuation.
 
-**Scenario.** Halve an integer twice, accepting only even inputs at each step. Run 8 and 6; the latter fails at the second step. A continuation following absence must not run.
+**Implementation of the supplied component:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
 
-**Expected observation.** 8 produces present=1, value=2 (Just 2 / Some(2)); 6 produces absence (Nothing / None). Bind does not read an absent payload. Unit/bind laws are observational, not container-address equality.
+**Scenario.** The client defines half: an even number yields a present half and an odd number yields none. Two binds apply half to 8, 6 and 3. Constructors, the container and bind are supplied by the adjacent implementation comparison.
 
-**LMX.** LMX implements a concrete Maybe<int> with ordinary structures and Bind.apply. The present field belongs to this example type; it is neither physical uninit nor a keyword. Results explicitly copy Box and fill their own slots. No expired activation is captured.
+**Expected observation.** 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
 
-**Comparison.** Haskell uses standard Maybe and >>=; Scala uses Option.flatMap. Their brevity includes an existing library abstraction. LMX spells out the int instance. This does not introduce a universal polymorphic Monad interface or prove laws for arbitrary effects.
+**LMX.** Load the author-supplied Maybe/MaybeOps library from Maybe container and bind implementation, then this client. import exposes already loaded declarations through ordinary namespace import; it is not a new file loader. unit/none and bind have exactly that library contract. Mode 0 suffices: half is passed as a reference and bind decides whether to call it. The parity condition and computation chain remain application code. Client imports are placed directly inside half/run, where the library is used. The companion implementation puts sys\OPERANDS_TEMPLATE first in MaybeOps DATA, preserving left/right as the first input positions.
 
-**Scope and limitations.** Only optional results are compared, excluding IO, State, asynchronous effects and transformers. LMX clients must not mutate published result containers. An arbitrary object with bind is not automatically a lawful monad.
+**Comparison.** All three clients use ready libraries whose custom implementations are shown alongside. Library code is excluded from every client count; calls and imports are included. Haskell imports MaybeInt and Scala imports MaybeInt rather than relying on Prelude Maybe or Option.
+
+**Scope and limitations.** Only the client of concrete Maybe<int> is compared. The library contract forbids external mutation of published values. This is not universal Monad/IO/State or a proof of laws for effectful continuations. The two binds are explicitly grouped to the left; the header priority is not the monad associativity law.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Call Exampleun(8) and Exampleun(6). Box has data only; writes into its copied grouping container fill the returned value. The continuation receives an ordinary int.
-- **Haskell:** Haskell 2010, Prelude. The existing implementation of Maybe is outside the measured listing.
-- **Scala:** Scala 3 standard Option; flatMap skips the next step on None.
+- **LMX:** Call Example\run(8), Example\run(6), Example\run(3). Dependency: examples/lmx/091_maybe_container_and_bind_implementation.lm3 loaded before this file. The library implementation is counted separately.
+- **Haskell:** Haskell2010. Compile together with examples/haskell/091_maybe_container_and_bind_implementation.hs, which declares the imported MaybeInt module. The companion shows the complete custom bind. External probes run 8, run 6 and run 3 are excluded from the client code equally.
+- **Scala:** Scala 3. Compile with examples/scala/091_maybe_container_and_bind_implementation.scala. Value and bind belong to that author-supplied library; Option is not used. External calls: MonadExample.run(8), run(6), run(3).
 
 ## Источники / Sources
 
-- [Haskell 2010 Report, predefined types and Monad](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html) — Определения Maybe и Monad; источник для контекста и законов.
-- [Scala Option API](https://www.scala-lang.org/api/current/scala/Option.html) — Контракт flatMap для Option; контрольный язык.
+- [Haskell 2010 Report, predefined types and Monad](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html) — Контекст Maybe и три закона bind; готовый Prelude Maybe в листингах этой пары не используется.
+- [Haskell 2010 Report, declarations and bindings](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html) — Собственный алгебраический тип, сопоставление конструкторов и объявления fixity.
+- [Scala 3 Book, Algebraic Data Types](https://docs.scala-lang.org/scala3/book/types-adts-gadts.html) — Собственный enum для двух вариантов Maybe; готовый Option не используется.
 
 **Норма LMX:** [CORE](../newdocs/CORE.md), [семантика](../newdocs/LMX_semantics.en.md), [guide](../newdocs/LMX_semantics_guide.en.md), [уточнение 21 ноября](../newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 

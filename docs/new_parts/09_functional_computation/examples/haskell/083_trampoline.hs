@@ -1,16 +1,11 @@
 module TrampolineExample where
+import BounceBool (Bounce, done, more, run)
 
-data Bounce a = Done a | More (() -> Bounce a)
+evenStep, oddStep :: Int -> Bounce
+evenStep 0 = done True
+evenStep n = more oddStep (n - 1)
+oddStep 0 = done False
+oddStep n = more evenStep (n - 1)
 
-run :: Bounce a -> a
-run (Done value) = value
-run (More next) = run (next ())
-
-evenStep, oddStep :: Int -> Bounce Bool
-evenStep 0 = Done True
-evenStep n = More (\() -> oddStep (n - 1))
-oddStep 0 = Done False
-oddStep n = More (\() -> evenStep (n - 1))
-
-demo :: Bool
-demo = run (evenStep 100001)
+parity :: Int -> Bool
+parity n = run (evenStep n)

@@ -14,6 +14,8 @@ The seven original entries remain distinct. MVC, MVP, MVVM, and Redux differ in 
 - [All 90 patterns](../PATTERN_CATALOG_90.en.md)
 - [Validation status](../VALIDATION.md)
 - [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
+- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
+- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -89,4 +91,4 @@ The pattern centralizes transition decisions. None of the variants automatically
 
 ## Boundaries
 
-Sizes are computed from each pattern’s three listings. They exclude implementations of supplied libraries, runtime, HTTP hosts and databases. Read each case’s individual limits. IDs retain the original list; 86–90 are explicit additions.
+Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

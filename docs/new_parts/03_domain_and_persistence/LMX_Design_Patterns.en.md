@@ -14,6 +14,8 @@ All original patterns 16–34 remain separate. Each triplet shows the same bound
 - [All 90 patterns](../PATTERN_CATALOG_90.en.md)
 - [Validation status](../VALIDATION.md)
 - [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
+- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
+- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -21,11 +23,25 @@ All original patterns 16–34 remain separate. Each triplet shows the same bound
 
 Domain collection access hides retrieval details.
 
+**Implementation of the supplied component:** [094. FindById — implementation](094_find_by_id_implementation_comparision.md)
+
 **Scenario:** Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.
 
 **Observation:** Return the existing account 9, then absence; do not create a second instance.
 
-All versions perform the same linear lookup. A SQL implementation can preserve the domain interface; SQL execution is outside this example.
+All clients use a ready, narrow FindById helper over records with id while retaining the domain Account and repository boundary. The companion exposes iteration, early return, and absence in every language. Ready LINQ is not compared against a manual loop only in LMX.
+
+### 094. [FindById — implementation](094_find_by_id_implementation_comparision.md)
+
+Implement imported first-record lookup by integer id.
+
+**Usage examples:** [016. Repository](016_repository_comparision.md)
+
+**Scenario:** Scan an ordered record sequence and return the first matching id or absence.
+
+**Observation:** Id 7 returns its original record; duplicate ids return the first; unknown ids and empty sequences return absence.
+
+All implementations explicitly show their own loop, id comparison, early return, and absence branch. Python next/filter and C# FirstOrDefault are not used to implement the helper. LMX/Python require id structurally; C# exposes that required access through IIdentified.
 
 ### 017. [Unit of Work](017_unit_of_work_comparision.md)
 
@@ -171,21 +187,49 @@ Every implementation keeps parameters separate from SQL text.
 
 Compose predicates independently of their candidate values.
 
+**Implementation of the supplied component:** [095. Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+
 **Scenario:** Combine nonnegative and below100 with AND; test -1,50,100.
 
 **Observation:** Results are false,true,false; the right predicate is skipped when the left is false.
 
-Ordinary methods, functions and Func are sufficient; a class hierarchy is not required.
+Each client defines concrete nonnegative/below100 predicates and imports the combinator that builds a reusable predicate. LMX makes composition an A both B expression; Python and C# call a factory. The companion explicitly implements evaluation and short-circuiting in all three languages.
+
+### 095. [Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+
+Implement imported binary predicate composition with short-circuiting.
+
+**Usage examples:** [031. Specification](031_specification_comparision.md)
+
+**Scenario:** Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.
+
+**Observation:** nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.
+
+LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used.
 
 ### 032. [Value Object](032_value_object_comparision.md)
 
 Equality follows component values rather than object identity.
 
+**Implementation of the supplied component:** [096. Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+
 **Scenario:** Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.
 
-**Observation:** The first pair is equal; the different currency is unequal, regardless of addresses.
+**Observation:** The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.
 
-Python frozen dataclass and C# readonly record struct supply value equality; LMX shows its explicit predicate honestly.
+All clients create two equal component values and a third with another currency, then call ready value equality. Implementation is separated symmetrically and shown alongside: an explicit LMX equals operand, tuple-based Python Money with same, and a C# readonly struct with Same. Neither client nor implementation size represents a universal dataclass/record generator.
+
+### 096. [Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+
+Fully show the concrete two-component Money representation and imported equality.
+
+**Usage examples:** [032. Value Object](032_value_object_comparision.md)
+
+**Scenario:** Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.
+
+**Observation:** Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.
+
+Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm.
 
 ### 033. [Optimistic Offline Lock](033_optimistic_offline_lock_comparision.md)
 
@@ -209,4 +253,4 @@ All variants carry the token to the protected write. A process-local guard does 
 
 ## Boundaries
 
-Sizes are computed from each pattern’s three listings. They exclude implementations of supplied libraries, runtime, HTTP hosts and databases. Read each case’s individual limits. IDs retain the original list; 86–90 are explicit additions.
+Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

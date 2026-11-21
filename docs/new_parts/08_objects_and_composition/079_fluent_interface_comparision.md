@@ -4,11 +4,11 @@
 
 ## Общий сценарий
 
-Настроить count=3 и price=7 через возвращаемый тот же контекст, затем получить произведение.
+Одним выражением настроить count=3 и price=7 через операнды, возвращающие тот же контекст, затем получить произведение.
 
 **Ожидаемое наблюдение:** 21; оба setter возвращают исходный объект.
 
-**Граница сравнения:** Ядро сценария. Один mutable контекст; concurrent access не допускается. Читаемость DSL определяется именами и композицией, одного return this недостаточно для хорошего API.
+**Граница сравнения:** Ядро сценария. Сравниваются ровно два бинарных setter и один последовательный владелец. Это разделяемая изменяемая конфигурация; persistent builder и произвольное число правых аргументов не обещаются. Пример становится выразительнее, даже если заголовок увеличивает число символов.
 
 Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
 
@@ -16,26 +16,28 @@
 
 ```lmx
 Options:
+    copy: sys\OPERANDS_TEMPLATE
     int: count 0
     int: price 0
-    int: value
     return: @
     withCount:
-        node\count := value
-        return: Options
+        @: target \left
+        target\count := \right[0]
+        return: target
     withPrice:
-        node\price := value
-        return: Options
+        @: target \left
+        target\price := \right[0]
+        return: target
 
 Demo:
     return: int
     run:
-        @: options Options\withCount(value := 3)
-        options := options\withPrice(value := 7)
+        import: Options
+        @: options (Options withCount 3) withPrice 7
         return: options\count * options\price
 ```
 
-Вызов Demo\run(). Возвращается исходная Options, а не результат copy. LMX-листинг разносит продолжение по двум явно записанным ссылочным шагам.
+Вызов Demo\run(). sys\OPERANDS_TEMPLATE — предоставленный шаблон ядра из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.
 
 [Отдельный листинг](examples/lmx/079_fluent_interface.lm3)
 
@@ -80,17 +82,17 @@ def demo():
 
 ## Разбор LMX
 
-Вызов Demo\run(). Возвращается исходная Options, а не результат copy. LMX-листинг разносит продолжение по двум явно записанным ссылочным шагам.
+withCount и withPrice — обычные методы с общим DATA-заголовком, полученным через copy: sys\OPERANDS_TEMPLATE. \left получает ссылку на Options, \right[0] — значение настройки. Возврат target связывает два реальных применения операндов в цепочку; это не специальный синтаксис setter и не скрытая библиотека настроек.
 
 ## Сопоставление
 
-Java/Python демонстрируют буквальную dot-chain; LMX — тот же return-context контракт с обычным путём метода. Это сравнительный API-аналог, не утверждение о наличии идентичного chaining-синтаксиса.
+LMX теперь показывает саму fluent-цепочку в expression; Java и Python используют цепочку методов. Все три изменяют и возвращают тот же объект, а не создают независимые варианты конфигурации. Общий заголовок операндов учтён строкой copy.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 252 | 17 |
+| LMX | 285 | 19 |
 | Java | 251 | 9 |
 | Python | 220 | 11 |
 
@@ -100,19 +102,19 @@ Java/Python демонстрируют буквальную dot-chain; LMX — �
 
 API operations return a context so the interaction can continue fluently.
 
-**Scenario.** Set count=3 and price=7 through the returned same context, then obtain their product.
+**Scenario.** Set count=3 and price=7 in one expression using operations that return the same context, then obtain the product.
 
 **Expected observation.** 21; both setters return the original object.
 
-**LMX.** Call Demo\run(). The original Options is returned, not a copy. The LMX listing spells continuation as two explicit reference steps.
+**LMX.** withCount and withPrice are ordinary methods whose shared DATA header comes from copy: sys\OPERANDS_TEMPLATE. \left obtains the Options reference and \right[0] the setting value. Returning target connects two actual operator applications; no special setter syntax or hidden settings library is introduced.
 
-**Comparison.** Java/Python show literal dot chaining; LMX uses the same return-context contract with ordinary method paths. This is an API analogue, not a claim of identical chaining syntax.
+**Comparison.** LMX now shows the fluent chain directly in an expression; Java and Python use method chaining. All three mutate and return the same object rather than create independent configuration values. The common operand header is accounted for by the copy line.
 
-**Scope and limitations.** One mutable context with no concurrent access. DSL readability depends on names and composition; return this alone does not make a good API.
+**Scope and limitations.** The comparison covers two binary setters and one serial owner. This is shared mutable configuration, not a persistent builder or an arbitrary variadic setter. The expression is more direct even if the header increases its character count.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Call Demo\run(). The original Options is returned, not a copy. The LMX listing spells continuation as two explicit reference steps.
+- **LMX:** Call Demo\run(). sys\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left.
 - **Java:** Call Example.demo(); main and printing are excluded.
 - **Python:** Call demo(); all shown classes and functions are counted.
 

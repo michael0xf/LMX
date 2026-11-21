@@ -1,0 +1,476 @@
+{
+  "reviewed_at_utc": "2026-11-21T14:16:48.108180+00:00",
+  "scope": "Root examples/lmx: V02,V03,V04,V05,M01,M05",
+  "reviewed_count": 6,
+  "changed_ids": [
+    "V02"
+  ],
+  "unchanged_ids": [
+    "V03",
+    "V04",
+    "V05",
+    "M01",
+    "M05"
+  ],
+  "new_application_helpers": [
+    "examples/libraries/lmx/CharacterRange.lm3",
+    "examples/libraries/haskell/CharacterRange.hs"
+  ],
+  "new_library_comparisons": [
+    "examples/library_comparisons/v02_character_range_comparision.md",
+    "examples/library_comparisons/V02TicketCode.hs"
+  ],
+  "metric": "non-whitespace Unicode characters, including comments if present",
+  "normative_sources": [
+    "newdocs/LMX_semantics.en.md#operand-receiver",
+    "newdocs/LMX_semantics.en.md#catch-common-model",
+    "newdocs/LMX_semantics.en.md#composition",
+    "newdocs/LMX_semantics.en.md#binding-autofill",
+    "newdocs/LMX_semantics.en.md#transport",
+    "newdocs/Old_TZ/threadMessageAPI.en.md",
+    "OPERAND_USAGE_PROFILE.md",
+    "MESSAGE_HTTP_PROFILE.md"
+  ],
+  "web_sources_read": [
+    {
+      "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html",
+      "title": "Haskell 2010 Report — Predefined Types and Classes",
+      "read_date": "2026-11-21",
+      "used_for": "Char/Ord/String/pair contract"
+    },
+    {
+      "url": "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html",
+      "title": "Haskell 2010 Report — Expressions",
+      "read_date": "2026-11-21",
+      "used_for": "backtick infix function application and patterns"
+    }
+  ],
+  "runtime_executed": false,
+  "items": [
+    {
+      "id": "V02",
+      "file": "examples/lmx/V02.lm3",
+      "decision": "changed",
+      "reason_ru": "Четыре проверки включительного диапазона используют один прозрачный операнд between. Точное ASCII-правило, проверка длины и дефиса остаются в Ticket; весь helper показан отдельно на LMX и Haskell. Клиент короче, но вместе с библиотекой исходник больше.",
+      "reason_en": "Four inclusive character-range checks use one transparent between operator. Exact ASCII rules, length and separator stay in Ticket; the complete helper is shown separately in LMX and Haskell. The client is shorter, but client plus library is larger.",
+      "old_chars": 301,
+      "new_chars": 263,
+      "saved_chars": 38,
+      "before": {
+        "chars": 301,
+        "nonempty_lines": 18,
+        "bytes_utf8": 518,
+        "sha256": "0a8fd5eeb884320f00c6decbc501eba594b68f6b6634e779de92d163f03675d7"
+      },
+      "after": {
+        "chars": 263,
+        "nonempty_lines": 11,
+        "bytes_utf8": 382,
+        "sha256": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7"
+      },
+      "operand_decision": "prepared_value_between_operator",
+      "library_decision": "extract_shared_character_range",
+      "library_boundary_ru": "Клиент: правила Ticket. Helper: только включительный диапазон char; его полная реализация и импорт показаны отдельно.",
+      "library_boundary_en": "Client: Ticket rules. Helper: inclusive char range only; its full implementation and import are separate.",
+      "preserved_checks": [
+        "length checked before every element access",
+        "ASCII A-Z and 0-9 remain written in client",
+        "exact length and separator; no substring search",
+        "all nine original cases retained including embedded NUL",
+        "operator header first; prepared mode 0; right arity checked before indexing",
+        "RangeArity declared by helper and propagated by client",
+        "full own helper on both sides; no delegated validator"
+      ],
+      "dependencies": [
+        "examples/libraries/lmx/CharacterRange.lm3 loaded in the same source context",
+        "supplied sys\\OPERANDS_TEMPLATE",
+        "ordinary char comparison, array length/index, declared-exit handling"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": true,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution",
+      "implementation_files": [
+        "examples/libraries/lmx/CharacterRange.lm3",
+        "examples/libraries/haskell/CharacterRange.hs"
+      ],
+      "comparison_file": "examples/library_comparisons/v02_character_range_comparision.md",
+      "full_lmx_chars_with_helper": 462,
+      "additional_expected_cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "description": "Non-ASCII uppercase letter U+00C4 is not in A-Z"
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "description": "Arabic-Indic digit U+0660 is not in 0-9"
+        }
+      ],
+      "haskell_changes_status": "Implemented by operand_design in Analogies.hs; all nine original cases and two Unicode negatives are present."
+    },
+    {
+      "id": "V03",
+      "file": "examples/lmx/V03.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Предмет примера — настоящее исполнение кандидата с подменённым read и отдельным счётчиком. Готовый result-операнд или универсальный checker легко скрывает двойное чтение; полезного повторяемого helper здесь нет.",
+      "reason_en": "The example tests the real candidate with a substituted read action and a separate call counter. A ready-result operator or universal checker would obscure duplicate reads; no useful repeated helper is present.",
+      "old_chars": 304,
+      "new_chars": 304,
+      "saved_chars": 0,
+      "before": {
+        "chars": 304,
+        "nonempty_lines": 23,
+        "bytes_utf8": 490,
+        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+      },
+      "after": {
+        "chars": 304,
+        "nonempty_lines": 23,
+        "bytes_utf8": 490,
+        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+      },
+      "operand_decision": "keep_explicit_scenario",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Проверяемый алгоритм остаётся в исходнике; перечисленные средства ядра/транспортного стенда не выдаются за новую прикладную библиотеку.",
+      "library_boundary_en": "The algorithm under test stays in the source; listed language/runtime/transport-fixture dependencies are not presented as a new application library.",
+      "preserved_checks": [
+        "good -> verdict 1, calls 1",
+        "biased -> verdict 0, calls 1",
+        "readsTwice -> verdict 0, calls 2 despite result 28",
+        "counter reset before every checker call",
+        "real candidate receives local read through normal autofill; gain explicit"
+      ],
+      "dependencies": [
+        "existing source loader/call executor",
+        "ordinary dynamic binding/autofill",
+        "graph state access through node"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution"
+    },
+    {
+      "id": "V04",
+      "file": "examples/lmx/V04.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Сам пример показывает catch у вызывающего кода: NoSample отличается от нормального нуля и другого отказа. Обёртка try скрыла бы изучаемую границу объявленных выходов, не сократив повторяемый алгоритм.",
+      "reason_en": "The example demonstrates catch at the caller: NoSample differs from a normal zero and from another failure. A try wrapper would hide the declared-exit boundary without factoring a repeated algorithm.",
+      "old_chars": 160,
+      "new_chars": 160,
+      "saved_chars": 0,
+      "before": {
+        "chars": 160,
+        "nonempty_lines": 15,
+        "bytes_utf8": 270,
+        "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+      },
+      "after": {
+        "chars": 160,
+        "nonempty_lines": 15,
+        "bytes_utf8": 270,
+        "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+      },
+      "operand_decision": "keep_explicit_scenario",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Проверяемый алгоритм остаётся в исходнике; перечисленные средства ядра/транспортного стенда не выдаются за новую прикладную библиотеку.",
+      "library_boundary_en": "The algorithm under test stays in the source; listed language/runtime/transport-fixture dependencies are not presented as a new application library.",
+      "preserved_checks": [
+        "NoSample -> verdict 1",
+        "normal return 0 -> verdict 0",
+        "unrelated declared exit not automatically treated as success",
+        "candidate executes exactly once; ordinary caller catch remains visible"
+      ],
+      "dependencies": [
+        "existing declared throw/catch mechanism",
+        "candidate with compatible return/exit contract"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+          "expected": 1
+        },
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+          "expected": 0
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution"
+    },
+    {
+      "id": "V05",
+      "file": "examples/lmx/V05.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Четыре физических действия должны оставаться видимыми и выполняться до вердикта. Универсальный predicate/pipeline с коротким замыканием мог бы пропустить выключение после первого отрицательного наблюдения. Сохраняются counters, trace и три аппаратных fixture.",
+      "reason_en": "All four physical actions must remain visible and execute before the verdict. A generic short-circuiting predicate/pipeline could skip switch-off after the first negative observation. Counters, trace and all three device fixtures are retained.",
+      "old_chars": 552,
+      "new_chars": 552,
+      "saved_chars": 0,
+      "before": {
+        "chars": 552,
+        "nonempty_lines": 33,
+        "bytes_utf8": 872,
+        "sha256": "c060fc1b578051c165e0af1f6c73b34a5b29f7e7b049d63a53a83fa8930677ec"
+      },
+      "after": {
+        "chars": 552,
+        "nonempty_lines": 33,
+        "bytes_utf8": 872,
+        "sha256": "c060fc1b578051c165e0af1f6c73b34a5b29f7e7b049d63a53a83fa8930677ec"
+      },
+      "operand_decision": "keep_explicit_scenario",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Проверяемый алгоритм остаётся в исходнике; перечисленные средства ядра/транспортного стенда не выдаются за новую прикладную библиотеку.",
+      "library_boundary_en": "The algorithm under test stays in the source; listed language/runtime/transport-fixture dependencies are not presented as a new application library.",
+      "preserved_checks": [
+        "normal/stuck-off/stuck-on verdicts 1/0/0",
+        "all cases perform two writes and two reads in order 1202",
+        "off command occurs even after a wrong first observation",
+        "final commanded=0; sensed=0/0/1 by fixture",
+        "counters/state observed at actual copied owner parent(device\\set), also owner of observe",
+        "fixture model remains distinct from real physical feedback provider"
+      ],
+      "dependencies": [
+        "fresh merged Indicator fixture for each fault value",
+        "actual copied owner selected with parent(device\\set)",
+        "for physical integration: an admitted real set/observe provider, with no automatic rollback"
+      ],
+      "expected_cases": [
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 1,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 1
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution",
+      "fixture_clarification": "Read counters and final physical-model state from the actual copied owner parent(device\\set), not the distinct outer grouping cells; verify parent(device\\observe) is the same owner."
+    },
+    {
+      "id": "M01",
+      "file": "examples/lmx/M01.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Локальный add — цель протокола одного владельца Message. Операторная запись не заменяет admission, очередь, последовательный turn и отдельные semantic replies; выносить транспорт в фиктивный синхронный helper нельзя.",
+      "reason_en": "Local add is the operation of a single Message-owner protocol. Operator notation does not replace admission, inbox order, serial turns or separate semantic replies; a fictitious synchronous transport helper would be misleading.",
+      "old_chars": 97,
+      "new_chars": 97,
+      "saved_chars": 0,
+      "before": {
+        "chars": 97,
+        "nonempty_lines": 9,
+        "bytes_utf8": 158,
+        "sha256": "846083a9976f0a62407d87913c837ae51812947d427e81e9dfdea3c9bb81debe"
+      },
+      "after": {
+        "chars": 97,
+        "nonempty_lines": 9,
+        "bytes_utf8": 158,
+        "sha256": "846083a9976f0a62407d87913c837ae51812947d427e81e9dfdea3c9bb81debe"
+      },
+      "operand_decision": "keep_explicit_scenario",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Проверяемый алгоритм остаётся в исходнике; перечисленные средства ядра/транспортного стенда не выдаются за новую прикладную библиотеку.",
+      "library_boundary_en": "The algorithm under test stays in the source; listed language/runtime/transport-fixture dependencies are not presented as a new application library.",
+      "preserved_checks": [
+        "one Message owns Counter and serially executes each admitted input",
+        "adds 4 and 9 in either order, then read after both completions ->13",
+        "intermediate semantic replies depend on arrival order",
+        "split read-then-write counterexample remains not transactional",
+        "HTTP admission is not semantic completion; correlation for asynchronous replies",
+        "no owner waits for a reply requiring its own future turn"
+      ],
+      "dependencies": [
+        "existing executing Message/Thread creation and ownership fixture",
+        "existing post/send/receive intake and one serial turn per admitted input",
+        "if remote: documented endpoint+route, application/lmx decoder/admission, sync semantic response or async replyTo/correlation",
+        "harness waits for both operation completions before scheduling final read"
+      ],
+      "expected_cases": [
+        {
+          "kind": "transport fixture",
+          "setup": "One owner; fresh Counter; value=0",
+          "calls": [
+            "Counter\\add(delta := 4)",
+            "Counter\\add(delta := 9)"
+          ],
+          "observe": "Counter\\read()",
+          "expected": 13,
+          "constraint": "one serial turn per admitted input; either arrival order"
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution"
+    },
+    {
+      "id": "M05",
+      "file": "examples/lmx/M05.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Отсутствие описания return является проверяемым свойством процедуры. Библиотечная обёртка с результатом/ACK изменила бы смысл; транспортный статус HTTP и прикладной ответ остаются разными.",
+      "reason_en": "The absence of a return description is the procedure property under test. A result/ACK wrapper would change the meaning; HTTP transport status remains distinct from an application reply.",
+      "old_chars": 49,
+      "new_chars": 49,
+      "saved_chars": 0,
+      "before": {
+        "chars": 49,
+        "nonempty_lines": 5,
+        "bytes_utf8": 79,
+        "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+      },
+      "after": {
+        "chars": 49,
+        "nonempty_lines": 5,
+        "bytes_utf8": 79,
+        "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+      },
+      "operand_decision": "keep_explicit_scenario",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Проверяемый алгоритм остаётся в исходнике; перечисленные средства ядра/транспортного стенда не выдаются за новую прикладную библиотеку.",
+      "library_boundary_en": "The algorithm under test stays in the source; listed language/runtime/transport-fixture dependencies are not presented as a new application library.",
+      "preserved_checks": [
+        "command 1 writes owner state 1",
+        "no declared return and zero application replies",
+        "no synthetic unanswered solely due to absent result contract",
+        "HTTP transport/admission status remains independent of application reply",
+        "explicit observation required to establish physical outcome"
+      ],
+      "dependencies": [
+        "existing source loader and optionally Message transport fixture",
+        "resultless procedure contract",
+        "if HTTP: existing transport/admission response policy without fabricating an application result"
+      ],
+      "expected_cases": [
+        {
+          "kind": "transport fixture",
+          "invoke": "Lamp\\set(command := 1)",
+          "expected_stored_state": 1,
+          "expected_application_replies": 0,
+          "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based source and contract review; source hashes and counts checked; no LMX or GHC execution"
+    }
+  ],
+  "helper_metrics": {
+    "LMX": {
+      "chars": 199,
+      "nonempty_lines": 11,
+      "bytes_utf8": 302,
+      "sha256": "8c08f5c6a8e461ddd72fe784c3157233c5fe610f3046a81126e3d54456e9e612"
+    },
+    "Haskell": {
+      "chars": 118,
+      "nonempty_lines": 3,
+      "bytes_utf8": 143,
+      "sha256": "e4dc95e35504ba31f8ffc0b51a36cb19126607b883c2d9714c12b70c6d9811f9"
+    },
+    "Haskell_client_unit": {
+      "chars": 186,
+      "nonempty_lines": 7,
+      "bytes_utf8": 226,
+      "sha256": "beaaf0b0ed20b8ec126761d7d85e3e9dcd3d63a4729744b165bcc067a1e292e3"
+    }
+  },
+  "aggregate": {
+    "old_lmx_client_chars": 1463,
+    "new_lmx_client_chars": 1425,
+    "lmx_helper_chars": 199,
+    "new_lmx_clients_plus_helper_chars": 1624
+  },
+  "independent_review": {
+    "reviewer": "patterns_ui_architecture",
+    "result": "No code issues found in CharacterRange or V02; typed char reads, header, arity ordering, throws propagation and short-circuit grouping checked. Additional Unicode fixture prose aligned with Analogies.hs."
+  }
+}

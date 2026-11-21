@@ -1,0 +1,597 @@
+{
+  "review_time_utc": "2026-11-21T14:21:11.000019+00:00",
+  "original_lmx_sources": 24,
+  "changed_lmx_sources": 7,
+  "implementation_comparisons": 6,
+  "original_source_cases_preserved": true,
+  "additional_fixture_count": 18,
+  "original_root_comparison_programs": 23,
+  "lmx_executed": false,
+  "haskell_executed": false,
+  "examples": [
+    {
+      "id": "H01",
+      "file": "examples/lmx/H01.lm3",
+      "changed": true,
+      "decision": "library_without_operand",
+      "reason_ru": "Повторяемый apply отделён от прикладных действий; обычный вызов уже выражает весь механизм, операнд добавил бы заголовок без пользы.",
+      "reason_en": "Extract reusable apply, keep application actions and rebinding in the client; an operand adds machinery to one direct call.",
+      "before": {
+        "characters": 314,
+        "nonblank_lines": 21,
+        "utf8_bytes": 469,
+        "sha256": "cb26d272c59ea84f6bb7450546363411b52d9ec9f9f776cdf1e11ca131ca5ae8"
+      },
+      "after": {
+        "characters": 237,
+        "nonblank_lines": 16,
+        "utf8_bytes": 367,
+        "sha256": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10"
+      },
+      "load_before": [
+        "libraries/lmx/Application.lm3"
+      ],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "H02",
+      "file": "examples/lmx/H02.lm3",
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Позиционный контракт fn и собственные имена кандидата должны остаться видимыми; библиотека спрятала бы предмет сравнения.",
+      "reason_en": "Keep signature positions and candidate names visible; a helper would hide the mechanism under test.",
+      "before": {
+        "characters": 272,
+        "nonblank_lines": 14,
+        "utf8_bytes": 390,
+        "sha256": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a"
+      },
+      "after": {
+        "characters": 272,
+        "nonblank_lines": 14,
+        "utf8_bytes": 390,
+        "sha256": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "H03",
+      "file": "examples/lmx/H03.lm3",
+      "changed": true,
+      "decision": "reuse_existing_capture_099",
+      "reason_ru": "Использована готовая capture из 099; сложение, две фабричные активации, внешнее saved и наблюдения остаются в клиенте. Полная реализация повторно связана рядом.",
+      "reason_en": "Reuse capture from 099 while keeping arithmetic, two closures, caller saved and observations in the client; link the complete implementation.",
+      "before": {
+        "characters": 424,
+        "nonblank_lines": 25,
+        "utf8_bytes": 641,
+        "sha256": "b3a4479cd8a28d15219c43bf039e08c1fcffe669b37657fbd2da036b624135ad"
+      },
+      "after": {
+        "characters": 264,
+        "nonblank_lines": 17,
+        "utf8_bytes": 409,
+        "sha256": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1"
+      },
+      "load_before": [
+        "../09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3"
+      ],
+      "original_cases_retained": 2,
+      "current_cases": 2
+    },
+    {
+      "id": "H04",
+      "file": "examples/lmx/H04.lm3",
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Готовый default, явные 25/0, динамический 100 и повторный вызов проверяют именно связывание DATA; capture имеет другой контракт.",
+      "reason_en": "Defaults, explicit 25/0, caller 100 and a repeated call test DATA binding, not lexical capture.",
+      "before": {
+        "characters": 265,
+        "nonblank_lines": 17,
+        "utf8_bytes": 422,
+        "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
+      },
+      "after": {
+        "characters": 265,
+        "nonblank_lines": 17,
+        "utf8_bytes": 422,
+        "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "H05",
+      "file": "examples/lmx/H05.lm3",
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "copy, изменение оригинала и dynamic/node чтения нельзя скрыть в новом caller без изменения проверяемой связи.",
+      "reason_en": "Keep copying, original mutation and dynamic/node reads explicit; another caller could change the binding under test.",
+      "before": {
+        "characters": 218,
+        "nonblank_lines": 18,
+        "utf8_bytes": 383,
+        "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+      },
+      "after": {
+        "characters": 218,
+        "nonblank_lines": 18,
+        "utf8_bytes": 383,
+        "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "H06",
+      "file": "examples/lmx/H06.lm3",
+      "changed": true,
+      "decision": "reuse_prepared_operand_pipe_093",
+      "reason_ru": "Повторяемая цепочка стадий выражена готовым pipe; DATA начинается с copy шаблона. Полный цикл 093 и обе Haskell-версии pure/IO показаны рядом; стадии остаются прикладными.",
+      "reason_en": "Reuse a prepared-value pipe with template-first DATA; show the entire 093 loop and both pure/IO Haskell variants, leaving stages in the client.",
+      "before": {
+        "characters": 290,
+        "nonblank_lines": 20,
+        "utf8_bytes": 431,
+        "sha256": "42616529a5a03d2b21cb189e2c14e7a462419f9f8ad4b68d5402c3297e09fe39"
+      },
+      "after": {
+        "characters": 201,
+        "nonblank_lines": 14,
+        "utf8_bytes": 313,
+        "sha256": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354"
+      },
+      "load_before": [
+        "../02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3"
+      ],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "H07",
+      "file": "examples/lmx/H07.lm3",
+      "changed": true,
+      "decision": "library_with_explicit_specialized_headers",
+      "reason_ru": "Два helper вынесены, но исходные typed-prepared и raw-mode1 заголовки сохранены: общий mode0 шаблон им не эквивалентен. Повторное const поверх copy не используется.",
+      "reason_en": "Extract both helpers while retaining the typed prepared and raw-mode1 headers; the generic mode0 template is not equivalent and repeated const declarations are not overrides.",
+      "before": {
+        "characters": 475,
+        "nonblank_lines": 32,
+        "utf8_bytes": 708,
+        "sha256": "e0dca2bc4dcbb84dfcf5fd48871a81ce41a4170859b62c0398ad5ab8e5920d81"
+      },
+      "after": {
+        "characters": 180,
+        "nonblank_lines": 14,
+        "utf8_bytes": 282,
+        "sha256": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb"
+      },
+      "load_before": [
+        "libraries/lmx/EvaluationModes.lm3"
+      ],
+      "original_cases_retained": 2,
+      "current_cases": 2
+    },
+    {
+      "id": "H08",
+      "file": "examples/lmx/H08.lm3",
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Короткие действия проверяют собственное место и прозрачное место caller; обёртка изменяет сам контекст, поэтому прямой код сохранён.",
+      "reason_en": "The two short actions test own versus transparent caller places; wrapping them changes the context under test.",
+      "before": {
+        "characters": 122,
+        "nonblank_lines": 17,
+        "utf8_bytes": 241,
+        "sha256": "23602fafc44e4e11d2b81122e9223af076341dd009418625b69b9f1694bbed0f"
+      },
+      "after": {
+        "characters": 122,
+        "nonblank_lines": 17,
+        "utf8_bytes": 241,
+        "sha256": "23602fafc44e4e11d2b81122e9223af076341dd009418625b69b9f1694bbed0f"
+      },
+      "load_before": [],
+      "original_cases_retained": 2,
+      "current_cases": 2
+    },
+    {
+      "id": "H09",
+      "file": "examples/lmx/H09.lm3",
+      "changed": true,
+      "decision": "library_without_new_operand",
+      "reason_ru": "Существующий цикл до Stop вынесен целиком; источник, декларация item и тело остаются у клиента. Prepared/raw operand добавил бы контракт либо изменил момент исполнения, поэтому не вводится.",
+      "reason_en": "Extract the existing Stop loop intact; keep source, item declaration and body in the client. No operand is added because it would alter evaluation or add an unnecessary contract.",
+      "before": {
+        "characters": 285,
+        "nonblank_lines": 25,
+        "utf8_bytes": 527,
+        "sha256": "4f2696bb54ba79bbc18d60c70bd8f48bfaae9dc2a88ac62c9b8d53350ecbd723"
+      },
+      "after": {
+        "characters": 212,
+        "nonblank_lines": 16,
+        "utf8_bytes": 367,
+        "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
+      },
+      "load_before": [
+        "libraries/lmx/Cycles.lm3"
+      ],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R01",
+      "file": "examples/lmx/R01.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Пример непосредственно проверяет стандартный merge: замену height на месте модели и добавление depth. У отдельной обёртки нет повторно используемой логики; она скрыла бы проверяемую композицию графа.",
+      "reason_en": "The example directly tests standard merge: replace height in the model slot and append depth. A wrapper has no reusable algorithm and would hide the graph composition under test.",
+      "before": {
+        "characters": 184,
+        "nonblank_lines": 11,
+        "utf8_bytes": 258,
+        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+      },
+      "after": {
+        "characters": 184,
+        "nonblank_lines": 11,
+        "utf8_bytes": 258,
+        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R02",
+      "file": "examples/lmx/R02.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Важен видимый негруппированный поток copy и позиционное присваивание двум местам. Вызов helper с готовым контейнером изменил бы границу stream/grouping/W/E.",
+      "reason_en": "The ungrouped copy stream and positional assignment to two places must remain visible. A helper returning a ready container would alter the stream/grouping/W/E boundary.",
+      "before": {
+        "characters": 93,
+        "nonblank_lines": 10,
+        "utf8_bytes": 169,
+        "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+      },
+      "after": {
+        "characters": 93,
+        "nonblank_lines": 10,
+        "utf8_bytes": 169,
+        "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R03",
+      "file": "examples/lmx/R03.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Прямые import, copy и parent нужны для сравнения исходного владельца метода, его скопированного владельца и отдельного группирующего контейнера. Это диагностический пример namespace, а не повторяемая прикладная функция.",
+      "reason_en": "Direct import, copy, and parent calls distinguish the original method owner, the copied owner, and the separate grouping container. This is a namespace diagnostic, not a reusable application function.",
+      "before": {
+        "characters": 244,
+        "nonblank_lines": 16,
+        "utf8_bytes": 376,
+        "sha256": "cd7f248391d45e2b9fcddc6c01de237172a8e578ffda65218e258b14880eafd5"
+      },
+      "after": {
+        "characters": 244,
+        "nonblank_lines": 16,
+        "utf8_bytes": 376,
+        "sha256": "cd7f248391d45e2b9fcddc6c01de237172a8e578ffda65218e258b14880eafd5"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R04",
+      "file": "examples/lmx/R04.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Пример проверяет число исполнений вычисляемого default и отсутствие публикации локальных записей в исходную форму. Вынесение источника или инициализации в новый helper изменило бы наблюдаемый контекст; ReadSource уже выделяет нужную повторяемую операцию.",
+      "reason_en": "The example checks computed-default execution count and the absence of local-write publication into source forms. Another wrapper would change the observed context; ReadSource already isolates the operation reused by the fixture.",
+      "before": {
+        "characters": 383,
+        "nonblank_lines": 26,
+        "utf8_bytes": 595,
+        "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+      },
+      "after": {
+        "characters": 383,
+        "nonblank_lines": 26,
+        "utf8_bytes": 595,
+        "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+      },
+      "load_before": [],
+      "original_cases_retained": 2,
+      "current_cases": 2
+    },
+    {
+      "id": "R06a",
+      "file": "examples/lmx/R06a.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Стандартный copy и последующая явная запись показывают одну общую скопированную цель и независимость оригинала. Новый helper не добавит композиции; он спрячет проверяемый aliasing.",
+      "reason_en": "Standard copy followed by an explicit write exposes one shared copied target and an unchanged original. A new helper adds no composition and would obscure the aliasing test.",
+      "before": {
+        "characters": 189,
+        "nonblank_lines": 11,
+        "utf8_bytes": 262,
+        "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+      },
+      "after": {
+        "characters": 189,
+        "nonblank_lines": 11,
+        "utf8_bytes": 262,
+        "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R06b",
+      "file": "examples/lmx/R06b.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Установка self, один copy и запись через copied\\self должны остаться видимыми: проверяются внутренняя замкнутость цикла и отличие внешнего группирующего контейнера.",
+      "reason_en": "Assigning self, performing one copy, and writing through copied\\self must remain visible: the test checks the internal cycle and the distinct outer grouping container.",
+      "before": {
+        "characters": 139,
+        "nonblank_lines": 10,
+        "utf8_bytes": 213,
+        "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+      },
+      "after": {
+        "characters": 139,
+        "nonblank_lines": 10,
+        "utf8_bytes": 213,
+        "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R07",
+      "file": "examples/lmx/R07.lm3",
+      "changed": true,
+      "decision": "changed",
+      "reason_ru": "Четыре стандартных поля заменены одним copy: sys\\OPERANDS_TEMPLATE первым в DATA. Готовые mode 0 и приоритет + совпадают с прежним заголовком; тело add, вложенный Example и два вычисления сохранены. Новый прикладной helper не требуется: это демонстрация реализации операнда, а стандартный заголовок уже предоставлен ядром.",
+      "reason_en": "Four standard fields are replaced by copy: sys\\OPERANDS_TEMPLATE first in DATA. Its prepared-value mode 0 and addition priority match the old header; the add body, nested Example, and both computations remain visible. No application helper is needed: this demonstrates an operand implementation using an already supplied kernel header.",
+      "before": {
+        "characters": 209,
+        "nonblank_lines": 15,
+        "utf8_bytes": 339,
+        "sha256": "dea0430e1605286c4d0fab52e8d294f02dad24248a5157e380b1869d420fe100"
+      },
+      "after": {
+        "characters": 159,
+        "nonblank_lines": 12,
+        "utf8_bytes": 266,
+        "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "R09",
+      "file": "examples/lmx/R09.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Различие локальной записи и замены фрагмента исходного графа требует именно двух явных путей присваивания и свежего uninit-состояния. Обёртка не даёт повторного использования и может скрыть выбранное логическое место.",
+      "reason_en": "The local-write versus source-graph-replacement distinction requires both explicit assignment paths and a fresh uninit state. A wrapper offers no reusable logic and could obscure the selected logical place.",
+      "before": {
+        "characters": 189,
+        "nonblank_lines": 13,
+        "utf8_bytes": 276,
+        "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+      },
+      "after": {
+        "characters": 189,
+        "nonblank_lines": 13,
+        "utf8_bytes": 276,
+        "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+      },
+      "load_before": [],
+      "original_cases_retained": 3,
+      "current_cases": 3
+    },
+    {
+      "id": "A01",
+      "file": "examples/lmx/A01.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Индексная замена через alias и последующее чтение нового имени — сама проверка общего дескриптора Structure/Array<@>. Дополнительный операнд либо helper скрыл бы эту операцию без выигрыша.",
+      "reason_en": "Indexed replacement through an alias followed by reading the new name is the actual Structure/Array<@> descriptor test. An extra operand or helper would hide that operation without a benefit.",
+      "before": {
+        "characters": 126,
+        "nonblank_lines": 11,
+        "utf8_bytes": 199,
+        "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+      },
+      "after": {
+        "characters": 126,
+        "nonblank_lines": 11,
+        "utf8_bytes": 199,
+        "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "V02",
+      "file": "examples/lmx/V02.lm3",
+      "changed": true,
+      "decision": "changed",
+      "reason_ru": "Четыре проверки включительного диапазона используют один прозрачный операнд between. Точное ASCII-правило, проверка длины и дефиса остаются в Ticket; весь helper показан отдельно на LMX и Haskell. Клиент короче, но вместе с библиотекой исходник больше.",
+      "reason_en": "Four inclusive character-range checks use one transparent between operator. Exact ASCII rules, length and separator stay in Ticket; the complete helper is shown separately in LMX and Haskell. The client is shorter, but client plus library is larger.",
+      "before": {
+        "characters": 301,
+        "nonblank_lines": 18,
+        "utf8_bytes": 518,
+        "sha256": "0a8fd5eeb884320f00c6decbc501eba594b68f6b6634e779de92d163f03675d7"
+      },
+      "after": {
+        "characters": 263,
+        "nonblank_lines": 11,
+        "utf8_bytes": 382,
+        "sha256": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7"
+      },
+      "load_before": [
+        "libraries/lmx/CharacterRange.lm3"
+      ],
+      "original_cases_retained": 9,
+      "current_cases": 11
+    },
+    {
+      "id": "V03",
+      "file": "examples/lmx/V03.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Предмет примера — настоящее исполнение кандидата с подменённым read и отдельным счётчиком. Готовый result-операнд или универсальный checker легко скрывает двойное чтение; полезного повторяемого helper здесь нет.",
+      "reason_en": "The example tests the real candidate with a substituted read action and a separate call counter. A ready-result operator or universal checker would obscure duplicate reads; no useful repeated helper is present.",
+      "before": {
+        "characters": 304,
+        "nonblank_lines": 23,
+        "utf8_bytes": 490,
+        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+      },
+      "after": {
+        "characters": 304,
+        "nonblank_lines": 23,
+        "utf8_bytes": 490,
+        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+      },
+      "load_before": [],
+      "original_cases_retained": 3,
+      "current_cases": 3
+    },
+    {
+      "id": "V04",
+      "file": "examples/lmx/V04.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Сам пример показывает catch у вызывающего кода: NoSample отличается от нормального нуля и другого отказа. Обёртка try скрыла бы изучаемую границу объявленных выходов, не сократив повторяемый алгоритм.",
+      "reason_en": "The example demonstrates catch at the caller: NoSample differs from a normal zero and from another failure. A try wrapper would hide the declared-exit boundary without factoring a repeated algorithm.",
+      "before": {
+        "characters": 160,
+        "nonblank_lines": 15,
+        "utf8_bytes": 270,
+        "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+      },
+      "after": {
+        "characters": 160,
+        "nonblank_lines": 15,
+        "utf8_bytes": 270,
+        "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+      },
+      "load_before": [],
+      "original_cases_retained": 2,
+      "current_cases": 2
+    },
+    {
+      "id": "V05",
+      "file": "examples/lmx/V05.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Четыре физических действия должны оставаться видимыми и выполняться до вердикта. Универсальный predicate/pipeline с коротким замыканием мог бы пропустить выключение после первого отрицательного наблюдения. Сохраняются counters, trace и три аппаратных fixture.",
+      "reason_en": "All four physical actions must remain visible and execute before the verdict. A generic short-circuiting predicate/pipeline could skip switch-off after the first negative observation. Counters, trace and all three device fixtures are retained.",
+      "before": {
+        "characters": 552,
+        "nonblank_lines": 33,
+        "utf8_bytes": 872,
+        "sha256": "c060fc1b578051c165e0af1f6c73b34a5b29f7e7b049d63a53a83fa8930677ec"
+      },
+      "after": {
+        "characters": 552,
+        "nonblank_lines": 33,
+        "utf8_bytes": 872,
+        "sha256": "c060fc1b578051c165e0af1f6c73b34a5b29f7e7b049d63a53a83fa8930677ec"
+      },
+      "load_before": [],
+      "original_cases_retained": 3,
+      "current_cases": 3
+    },
+    {
+      "id": "M01",
+      "file": "examples/lmx/M01.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Локальный add — цель протокола одного владельца Message. Операторная запись не заменяет admission, очередь, последовательный turn и отдельные semantic replies; выносить транспорт в фиктивный синхронный helper нельзя.",
+      "reason_en": "Local add is the operation of a single Message-owner protocol. Operator notation does not replace admission, inbox order, serial turns or separate semantic replies; a fictitious synchronous transport helper would be misleading.",
+      "before": {
+        "characters": 97,
+        "nonblank_lines": 9,
+        "utf8_bytes": 158,
+        "sha256": "846083a9976f0a62407d87913c837ae51812947d427e81e9dfdea3c9bb81debe"
+      },
+      "after": {
+        "characters": 97,
+        "nonblank_lines": 9,
+        "utf8_bytes": 158,
+        "sha256": "846083a9976f0a62407d87913c837ae51812947d427e81e9dfdea3c9bb81debe"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    },
+    {
+      "id": "M05",
+      "file": "examples/lmx/M05.lm3",
+      "changed": false,
+      "decision": "unchanged",
+      "reason_ru": "Отсутствие описания return является проверяемым свойством процедуры. Библиотечная обёртка с результатом/ACK изменила бы смысл; транспортный статус HTTP и прикладной ответ остаются разными.",
+      "reason_en": "The absence of a return description is the procedure property under test. A result/ACK wrapper would change the meaning; HTTP transport status remains distinct from an application reply.",
+      "before": {
+        "characters": 49,
+        "nonblank_lines": 5,
+        "utf8_bytes": 79,
+        "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+      },
+      "after": {
+        "characters": 49,
+        "nonblank_lines": 5,
+        "utf8_bytes": 79,
+        "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+      },
+      "load_before": [],
+      "original_cases_retained": 1,
+      "current_cases": 1
+    }
+  ],
+  "comparison_files": [
+    "library_comparisons/h01_apply_comparision.md",
+    "library_comparisons/h03_capture_comparision.md",
+    "library_comparisons/h06_pipe_comparision.md",
+    "library_comparisons/h07_evaluation_modes_comparision.md",
+    "library_comparisons/h09_iterator_comparision.md",
+    "library_comparisons/v02_character_range_comparision.md"
+  ],
+  "haskell_modules": [
+    "libraries/haskell/CharacterRange.hs",
+    "libraries/haskell/CurryInt.hs",
+    "libraries/haskell/EvaluationModes.hs",
+    "libraries/haskell/IntApply.hs",
+    "libraries/haskell/IntPipe.hs",
+    "libraries/haskell/StepIterator.hs"
+  ],
+  "reused_lmx_implementations": [
+    93,
+    99
+  ]
+}

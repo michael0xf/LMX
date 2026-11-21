@@ -1,27 +1,17 @@
 Steps:
+    int: n
     return: @
     even_step:
-        if: remaining = 0
-            finished := 1
-            answer := 1
-            return: 0
-        remaining -= 1
-        return: odd_step
+        if: n = 0
+            return: Bounce\done(value := 1)
+        return: Bounce\more(next := odd_step; argument := n - 1)
     odd_step:
-        if: remaining = 0
-            finished := 1
-            answer := 0
-            return: 0
-        remaining -= 1
-        return: even_step
+        if: n = 0
+            return: Bounce\done(value := 0)
+        return: Bounce\more(next := even_step; argument := n - 1)
 
-Runner:
-    int: remaining
+Example:
+    int: n
     return: int
     run:
-        int: finished 0
-        int: answer 0
-        @: next Steps\even_step
-        while: finished = 0
-            next := next()
-        return: answer
+        return: BounceRunner\run(Steps\even_step(n))

@@ -1,10 +1,8 @@
 module MonadExample where
+import MaybeInt (MaybeInt, unit, none, bind)
 
-half :: Int -> Maybe Int
-half x = if even x then Just (x `div` 2) else Nothing
+half :: Int -> MaybeInt
+half x = if even x then unit (x `div` 2) else none
 
-run :: Int -> Maybe Int
-run x = Just x >>= half >>= half
-
-demo :: (Maybe Int, Maybe Int)
-demo = (run 8, run 6)
+run :: Int -> MaybeInt
+run x = (unit x `bind` half) `bind` half

@@ -1,0 +1,24 @@
+MaybeValue:
+    int: present 0
+    int: value 0
+
+Maybe:
+    int: value
+    return: @
+    unit:
+        @: result (copy(MaybeValue))
+        result\present := 1
+        result\value := value
+        return: result
+    none:
+        return: MaybeValue
+
+MaybeOps:
+    copy: sys\OPERANDS_TEMPLATE
+    return: @
+    bind:
+        @: input MaybeValue \left
+        @: next \right[0]
+        if: input\present = 0
+            return: input
+        return: next(input\value)

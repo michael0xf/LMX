@@ -2,7 +2,7 @@
 
 Дата обращения: 21 ноября 2026. Источники определяют паттерн или контракт языка/библиотеки. Связь с конкретным примером поясняется в его сравнении. Листинги являются учебными адаптациями общего сценария, а не копиями больших исходных программ.
 
-| Источник | Паттерны |
+| Источник | Сравнения |
 | --- | --- |
 | [Martin Fowler — GUI Architectures ](https://martinfowler.com/eaaDev/uiArchs.html) | 001 |
 | [Martin Fowler — Passive View ](https://martinfowler.com/eaaDev/PassiveScreen.html) | 002 |
@@ -16,10 +16,10 @@
 | [Microsoft — Event-driven architecture style ](https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/event-driven) | 010 |
 | [Martin Fowler — CQRS ](https://martinfowler.com/bliki/CQRS.html) | 011 |
 | [Martin Fowler — Event Sourcing ](https://martinfowler.com/eaaDev/EventSourcing.html) | 012 |
-| [Gregor Hohpe and Bobby Woolf — Pipes and Filters ](https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html) | 013 |
+| [Gregor Hohpe and Bobby Woolf — Pipes and Filters ](https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html) | 013, 093 |
 | [Daniel D. Corkill — Blackboard Systems ](https://dancorkill.com/pubs/ai-expert.pdf) | 014 |
 | [Eclipse — Notes on the Plug-in Architecture ](https://www.eclipse.org/articles/Article-Plug-in-architecture/plugin_architecture.html) | 015 |
-| [Martin Fowler — Repository ](https://martinfowler.com/eaaCatalog/repository.html) | 016 |
+| [Martin Fowler — Repository ](https://martinfowler.com/eaaCatalog/repository.html) | 016, 094 |
 | [Martin Fowler — Unit of Work ](https://martinfowler.com/eaaCatalog/unitOfWork.html) | 017 |
 | [Martin Fowler — Data Mapper ](https://martinfowler.com/eaaCatalog/dataMapper.html) | 018 |
 | [Martin Fowler — Active Record ](https://martinfowler.com/eaaCatalog/activeRecord.html) | 019 |
@@ -34,15 +34,15 @@
 | [Martin Fowler — Identity Map ](https://martinfowler.com/eaaCatalog/identityMap.html) | 028 |
 | [Martin Fowler — Lazy Load ](https://martinfowler.com/eaaCatalog/lazyLoad.html) | 029 |
 | [Martin Fowler — Query Object ](https://martinfowler.com/eaaCatalog/queryObject.html) | 030 |
-| [Eric Evans and Martin Fowler — Specifications ](https://martinfowler.com/apsupp/spec.pdf) | 031 |
-| [Martin Fowler — Value Object ](https://martinfowler.com/eaaCatalog/valueObject.html) | 032 |
+| [Eric Evans and Martin Fowler — Specifications ](https://martinfowler.com/apsupp/spec.pdf) | 031, 095 |
+| [Martin Fowler — Value Object ](https://martinfowler.com/eaaCatalog/valueObject.html) | 032, 096 |
 | [Martin Fowler — Optimistic Offline Lock ](https://martinfowler.com/eaaCatalog/optimisticOfflineLock.html) | 033 |
 | [Martin Fowler — Pessimistic Offline Lock ](https://martinfowler.com/eaaCatalog/pessimisticOfflineLock.html) | 034 |
 | [Martin Fowler — Front Controller ](https://martinfowler.com/eaaCatalog/frontController.html) | 035 |
 | [Martin Fowler — Page Controller ](https://martinfowler.com/eaaCatalog/pageController.html) | 036 |
 | [Martin Fowler — Application Controller ](https://martinfowler.com/eaaCatalog/applicationController.html) | 037 |
 | [Microsoft Azure — Circuit Breaker ](https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker) | 038 |
-| [Microsoft Azure — Retry ](https://learn.microsoft.com/en-us/azure/architecture/patterns/retry) | 039 |
+| [Microsoft Azure — Retry ](https://learn.microsoft.com/en-us/azure/architecture/patterns/retry) | 039, 097 |
 | [Microsoft Azure — Bulkhead ](https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead) | 040 |
 | [Chris Richardson — Saga ](https://microservices.io/patterns/data/saga.html) | 041 |
 | [Microsoft Azure — Gateway Routing ](https://learn.microsoft.com/en-us/azure/architecture/patterns/gateway-routing) | 042 |
@@ -84,14 +84,23 @@
 | [Martin Fowler — Fluent Interface ](https://martinfowler.com/bliki/FluentInterface.html) | 079 |
 | [Java Design Patterns — Type Object implementation ](https://java-design-patterns.com/patterns/type-object/) | 080 |
 | [Java Design Patterns — Extension Objects ](https://java-design-patterns.com/patterns/extension-objects/) | 081 |
-| [Haskell 2010 Report, predefined types and Monad ](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html) | 082 |
-| [Scala Option API ](https://www.scala-lang.org/api/current/scala/Option.html) | 082 |
-| [Haskell 2010 Report, expressions ](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html) | 083, 085 |
-| [Scala TailCalls API ](https://www.scala-lang.org/api/current/scala/util/control/TailCalls%24.html) | 083 |
-| [GHC base, Control.Exception.bracket ](https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html) | 084 |
-| [Scala Using API ](https://www.scala-lang.org/api/current/scala/util/Using%24.html) | 084 |
-| [Scala Tour, Multiple Parameter Lists ](https://docs.scala-lang.org/tour/multiple-parameter-lists.html) | 085 |
+| [Scala 3 Book, Algebraic Data Types ](https://docs.scala-lang.org/scala3/book/types-adts-gadts.html) | 082, 083, 091, 092 |
+| [Haskell 2010 Report, declarations and bindings ](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html) | 082, 083, 091, 092 |
+| [Haskell 2010 Report, predefined types and Monad ](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html) | 082, 091 |
+| [Scala tailrec annotation ](https://www.scala-lang.org/api/current/scala/annotation/tailrec.html) | 083, 092 |
+| [Scala TailCalls API ](https://www.scala-lang.org/api/current/scala/util/control/TailCalls%24.html) | 083, 092 |
+| [Scala 3 Book, Functional Error Handling ](https://docs.scala-lang.org/scala3/book/fp-functional-error-handling.html) | 084, 098 |
+| [GHC base, Control.Exception ](https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html) | 084, 098 |
+| [Scala Tour, Higher-order Functions ](https://docs.scala-lang.org/tour/higher-order-functions.html) | 085, 099 |
+| [Haskell 2010 Report, expressions ](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html) | 085, 099 |
 | [Chris Richardson — Idempotent Consumer ](https://microservices.io/patterns/communication-style/idempotent-consumer.html) | 086 |
 | [Reactive Streams — asynchronous backpressure ](https://www.reactive-streams.org/) | 087 |
 | [Erlang — Supervision principles ](https://www.erlang.org/doc/system/sup_princ.html) | 088, 089 |
 | [Dean and Ghemawat — MapReduce ](https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/) | 090 |
+| [Oracle — IntUnaryOperator ](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/IntUnaryOperator.html) | 093 |
+| [Go specification — variadic parameters ](https://go.dev/ref/spec#Passing_arguments_to_..._parameters) | 093 |
+| [Python — Boolean operations ](https://docs.python.org/3/library/stdtypes.html#boolean-operations-and-or-not) | 095 |
+| [Microsoft — conditional logical operators ](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/boolean-logical-operators) | 095 |
+| [Python — immutable tuples ](https://docs.python.org/3/library/stdtypes.html#tuples) | 096 |
+| [Python — data model and slots ](https://docs.python.org/3/reference/datamodel.html#slots) | 096 |
+| [Microsoft — readonly struct ](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct#readonly-struct) | 096 |

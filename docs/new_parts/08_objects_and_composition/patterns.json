@@ -7,8 +7,8 @@
   ],
   "rationale_ru": "Java показывает номинальные интерфейсы, классы и явные объектные контракты; Python — динамическую композицию и функции. Такое сравнение не вынуждает все языки копировать Java-иерархии и выявляет реальные различия nominal/structural.",
   "rationale_en": "Java shows nominal interfaces, classes, and explicit object contracts; Python shows dynamic composition and functions. The comparison avoids forcing Java hierarchies on every language and reveals actual nominal/structural differences.",
-  "overview_ru": "Все десять исходных паттернов сохранены. Примеры работают в одном последовательном владельце; shared mutable состояние в LMX принадлежит Message. Отдельно отмечены границы Marker Interface и Fluent Interface: совпадение наблюдаемой задачи не означает одинаковой номинальной типизации или синтаксиса цепочек.",
-  "overview_en": "All ten original patterns remain. Examples use one serial owner; LMX shared mutable state belongs to a Message. Marker Interface and Fluent Interface explicitly distinguish equivalent observations from identical nominal typing or chaining syntax.",
+  "overview_ru": "Все десять исходных паттернов сохранены и проверены на пользу операндов и отдельной библиотеки. Fluent Interface теперь показывает реальную цепочку через OPERANDS_TEMPLATE; остальные примеры сохраняют прямые именованные операции там, где новая оболочка лишь увеличила бы механизм. Примеры работают у одного последовательного владельца; shared mutable состояние в LMX принадлежит Message.",
+  "overview_en": "All ten original patterns are retained and reviewed for useful operands and separate libraries. Fluent Interface now shows an actual chain through OPERANDS_TEMPLATE; the other cases keep direct named operations where an extra wrapper would only add machinery. Examples use one serial owner; LMX shared mutable state belongs to a Message.",
   "patterns": [
     {
       "id": 72,
@@ -338,23 +338,23 @@
       "slug": "fluent_interface",
       "summary_ru": "Операции API возвращают контекст для продолжения читаемой последовательности.",
       "summary_en": "API operations return a context so the interaction can continue fluently.",
-      "scenario_ru": "Настроить count=3 и price=7 через возвращаемый тот же контекст, затем получить произведение.",
-      "scenario_en": "Set count=3 and price=7 through the returned same context, then obtain their product.",
+      "scenario_ru": "Одним выражением настроить count=3 и price=7 через операнды, возвращающие тот же контекст, затем получить произведение.",
+      "scenario_en": "Set count=3 and price=7 in one expression using operations that return the same context, then obtain the product.",
       "expected_ru": "21; оба setter возвращают исходный объект.",
       "expected_en": "21; both setters return the original object.",
-      "lmx_notes_ru": "Вызов Demo\\run(). Возвращается исходная Options, а не результат copy. LMX-листинг разносит продолжение по двум явно записанным ссылочным шагам.",
-      "lmx_notes_en": "Call Demo\\run(). The original Options is returned, not a copy. The LMX listing spells continuation as two explicit reference steps.",
-      "comparison_ru": "Java/Python демонстрируют буквальную dot-chain; LMX — тот же return-context контракт с обычным путём метода. Это сравнительный API-аналог, не утверждение о наличии идентичного chaining-синтаксиса.",
-      "comparison_en": "Java/Python show literal dot chaining; LMX uses the same return-context contract with ordinary method paths. This is an API analogue, not a claim of identical chaining syntax.",
-      "limits_ru": "Один mutable контекст; concurrent access не допускается. Читаемость DSL определяется именами и композицией, одного return this недостаточно для хорошего API.",
-      "limits_en": "One mutable context with no concurrent access. DSL readability depends on names and composition; return this alone does not make a good API.",
+      "lmx_notes_ru": "withCount и withPrice — обычные методы с общим DATA-заголовком, полученным через copy: sys\\OPERANDS_TEMPLATE. \\left получает ссылку на Options, \\right[0] — значение настройки. Возврат target связывает два реальных применения операндов в цепочку; это не специальный синтаксис setter и не скрытая библиотека настроек.",
+      "lmx_notes_en": "withCount and withPrice are ordinary methods whose shared DATA header comes from copy: sys\\OPERANDS_TEMPLATE. \\left obtains the Options reference and \\right[0] the setting value. Returning target connects two actual operator applications; no special setter syntax or hidden settings library is introduced.",
+      "comparison_ru": "LMX теперь показывает саму fluent-цепочку в expression; Java и Python используют цепочку методов. Все три изменяют и возвращают тот же объект, а не создают независимые варианты конфигурации. Общий заголовок операндов учтён строкой copy.",
+      "comparison_en": "LMX now shows the fluent chain directly in an expression; Java and Python use method chaining. All three mutate and return the same object rather than create independent configuration values. The common operand header is accounted for by the copy line.",
+      "limits_ru": "Сравниваются ровно два бинарных setter и один последовательный владелец. Это разделяемая изменяемая конфигурация; persistent builder и произвольное число правых аргументов не обещаются. Пример становится выразительнее, даже если заголовок увеличивает число символов.",
+      "limits_en": "The comparison covers two binary setters and one serial owner. This is shared mutable configuration, not a persistent builder or an arbitrary variadic setter. The expression is more direct even if the header increases its character count.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Options:\n    int: count 0\n    int: price 0\n    int: value\n    return: @\n    withCount:\n        node\\count := value\n        return: Options\n    withPrice:\n        node\\price := value\n        return: Options\n\nDemo:\n    return: int\n    run:\n        @: options Options\\withCount(value := 3)\n        options := options\\withPrice(value := 7)\n        return: options\\count * options\\price\n",
-          "notes_ru": "Вызов Demo\\run(). Возвращается исходная Options, а не результат copy. LMX-листинг разносит продолжение по двум явно записанным ссылочным шагам.",
-          "notes_en": "Call Demo\\run(). The original Options is returned, not a copy. The LMX listing spells continuation as two explicit reference steps."
+          "code": "Options:\n    copy: sys\\OPERANDS_TEMPLATE\n    int: count 0\n    int: price 0\n    return: @\n    withCount:\n        @: target \\left\n        target\\count := \\right[0]\n        return: target\n    withPrice:\n        @: target \\left\n        target\\price := \\right[0]\n        return: target\n\nDemo:\n    return: int\n    run:\n        import: Options\n        @: options (Options withCount 3) withPrice 7\n        return: options\\count * options\\price\n",
+          "notes_ru": "Вызов Demo\\run(). sys\\OPERANDS_TEMPLATE — предоставленный шаблон ядра из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.",
+          "notes_en": "Call Demo\\run(). sys\\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left."
         },
         {
           "language": "Java",

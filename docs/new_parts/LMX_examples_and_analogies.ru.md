@@ -65,19 +65,9 @@ Namespace не требует ещё одной постоянной Structure �
 <a id="h01"></a>
 ### H01. `apply`: передать действие и вызвать его
 
-Haskell:
+В обеих версиях клиент получает готовый компонент apply. Полные реализации LMX и Haskell вынесены рядом в [сравнение библиотеки Apply](examples/library_comparisons/h01_apply_comparision.md); они не исчезли из сравнения. Прикладные действия и смена выбранной ссылки остаются в клиенте.
 
-```haskell
-apply :: (Int -> Int) -> Int -> Int
-apply f x = f x
-
-twice :: Int -> Int
-twice x = x * 2
-
--- apply twice 7 == 14
-```
-
-Самостоятельный LMX-пример:
+Для LMX нужно совместно подготовить [Application.lm3](examples/libraries/lmx/Application.lm3) и следующий [H01.lm3](examples/lmx/H01.lm3) существующим загрузчиком Fable. `import` открывает уже доступные имена, а не загружает файл:
 
 <!-- example: H01 -->
 ```lmx
@@ -89,26 +79,22 @@ Arithmetic:
     plusOne:
         return: value + 1
 
-Application:
-    @: operation
-    int: value
-    return: int
-    apply:
-        return: operation(value)
-
 ApplyProbe:
     return: int
     run:
+        import: Application
         @: chosen Arithmetic\twice
-        int: first Application\apply(chosen; 7)
+        int: first apply(chosen; 7)
         chosen := Arithmetic\plusOne
-        int: second Application\apply(chosen; 7)
+        int: second apply(chosen; 7)
         return: first * 100 + second
 ```
 
-`ApplyProbe\run()` → **1408**, то есть `14` и `8`. Присваивание `chosen` заменяет ссылку, не вызывает действие. DATA выбранного метода остаётся `Arithmetic`; размещение ссылки в `Application` этого не меняет. Внешний `apply` имеет собственные входы `operation` и `value`, а внутренний вызов явно передаёт одно число.
+`ApplyProbe\run()` → **1408**, то есть **14** и **8**. Присваивание chosen заменяет ссылку и не вызывает действие. DATA выбранного метода остаётся Arithmetic; импорт apply не меняет его. У Application свой DATA с operation/value и явным внутренним вызовом одного числового аргумента.
 
-Это практический аналог функции высшего порядка. Для него не требуется объявлять отдельный `fn`, как и отдельный класс-обёртку. Именованная сигнатура нужна, когда её ограничение входит в задачу. [Основание](newdocs/LMX_semantics.en.md#call-receivers).
+Haskell импортирует собственный `IntApply.apply` из показанной библиотеки. В [Analogies.hs](examples/haskell/Analogies.hs) applicationExample хранит выбранную функцию в IORef, заменяет её и проверяет тот же код **1408**; базовая проверка apply (*2) 7 = 14 также сохранена.
+
+Это практический аналог функции высшего порядка. Отдельный fn нужен только при требовании именованной сигнатуры — её проверяет H02. Операнд не добавлен: здесь один обычный вызов, и дополнительный заголовок только увеличил бы механизм. [Основание](newdocs/LMX_semantics.en.md#call-receivers).
 
 <a id="h02"></a>
 ### H02. Сигнатура, имена аргументов и тело — разные части
@@ -141,14 +127,20 @@ Haskell-аналог позиционного контракта — `Int -> Int
 
 Дополнительные проверки: поменять местами разные типы — отказ сигнатуры; поменять только имена — позиционное соответствие сохраняется; заменить default в описании `fn` — default кандидата не меняется. [Основание](newdocs/LMX_semantics.en.md#fn-signature); подробные B-10–B-12 и T02 находятся в [корпусе](LMX_regression_examples.to_fable.en.md#binding).
 
+Решение аудита: пример оставлен прямым. Его предмет — различие интерфейса сигнатуры и имён фактического DATA; библиотечный вызов спрятал бы проверяемую границу. Новый операнд её не упрощает.
+
 <a id="h03"></a>
 ### H03. `makeAdder`: вернуть метод вместе с нужным ему лексическим состоянием
 
-Именно этот результат был в обсуждении:
+В обеих версиях используются готовые библиотеки capture. Полный механизм LMX повторно взят из [099](09_functional_computation/099_integer_partial_application_implementation_comparision.md), а его сопоставление с Haskell расположено [рядом](examples/library_comparisons/h03_capture_comparision.md). Клиент задаёт собственное сложение и числа 5/100.
+
+Haskell-клиент:
 
 ```haskell
-makeAdder :: Int -> (Int -> Int)
-makeAdder n = \x -> n + x
+import CurryInt (capture)
+
+makeAdder :: Int -> Int -> Int
+makeAdder n = capture (+) n
 
 closureExample :: (Int, Int, Int)
 closureExample =
@@ -158,32 +150,23 @@ closureExample =
 -- (6,101,6)
 ```
 
-В текущем LMX значение сохраняется явно в копии. Здесь фабрика даже не меняет общий прототип:
+Для LMX существующий загрузчик готовит [неизменённый исходник 099](09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3) и [H03.lm3](examples/lmx/H03.lm3). Локальный CurryInt.hs для GHC — точная копия модуля той же реализации 099. Новый LMX-клиент:
 
 <!-- example: H03 -->
 ```lmx
-AdderPrototype:
-    int: saved 0
-    inputs:
-        int: x
-        return: int
-        add:
-            return: x + node\saved
-
-AdderFactory:
-    int: increment
-    return: @
-    create:
-        @: instance (copy(AdderPrototype))
-        @: lexicalOwner parent(instance\inputs)
-        lexicalOwner\saved := increment
-        return: instance\inputs\add
+Addition:
+    int: first
+    int: second
+    return: int
+    add:
+        return: first + second
 
 ClosureProbe:
     return: int
     run:
-        @: add5 AdderFactory\create(5)
-        @: add100 AdderFactory\create(100)
+        import: Curry
+        @: add5 capture(Addition\add; 5)
+        @: add100 capture(Addition\add; 100)
         int: saved 1000
         int: first add5(1)
         int: second add100(1)
@@ -191,11 +174,13 @@ ClosureProbe:
         return: first * 1000000 + second * 1000 + again
 ```
 
-`ClosureProbe\run()` → **6101006**, кодировка `(6, 101, 6)`. Исходный `AdderPrototype\saved` остаётся `0`. Обе фабричные активации закончились, но возвращённые методы имеют свои скопированные лексические связи. Локальное `saved = 1000` у проверяющего не переопределяет `node\saved`.
+`ClosureProbe\run()` → **6101006**, кодировка **(6, 101, 6)**. Исходный `CapturePrototype\saved` остаётся **0**. Обе фабричные активации закончились, но возвращённые методы имеют свои скопированные лексические связи. Локальное saved = 1000 у проверяющего не переопределяет `node\saved`.
 
-Копия не извлекала `increment` из исчезающего кадра: значение попало в нужную ветвь через явно написанное `lexicalOwner\saved := increment`. Владелец выбран как фактический родитель скопированной `inputs`. Внешняя группа `(copy(...))` собирает поток полей в отдельный контейнер со своими ячейками. Они отличаются от ячеек скопированного лексического корня. Замена её ячейки `saved` меняет именно эту ячейку и не меняет ячейку в лексическом корне. Возвращается ссылка на метод графа, а не адрес локальной переменной `instance`. Сохраняется нужное лексическое окружение по общей карте глубокого копирования; специально упаковывать весь кадр вызова не требуется.
+В полной библиотеке capture значение first и ссылка binary явно записываются в фактического владельца `parent(instance\inputs)`. Внешняя группа `(copy(...))` содержит свои клетки и не становится владельцем метода. Возвращается ссылка `instance\inputs\apply`, а не адрес локальной переменной instance; кадр фабрики не захватывается автоматически. Все эти операции сохранены в соседнем сравнении.
 
-`add5(1; saved := 25)` здесь **отклоняется**: `saved` не является входом DATA `inputs`. Это отличает пример от следующего. [Основание](newdocs/LMX_semantics.en.md#composition); [возвращаемые методы](newdocs/LMX_semantics_guide.en.md#factory-result).
+`add5(1; saved := 25)` по-прежнему **отклоняется**: saved не является входом DATA inputs. Единственный явный вход возвращённого метода теперь называется second, что соответствует общей библиотеке 099; позиционный вызов add5(1) не меняется. Это отличает случай от H04.
+
+Обычный вызов capture здесь яснее дополнительного операнда. [Копирование](newdocs/LMX_semantics.en.md#composition) и [возвращаемые методы](newdocs/LMX_semantics_guide.en.md#factory-result) задают ту же модель, что и до выноса библиотеки.
 
 <a id="h04"></a>
 ### H04. Другой `add5`: настоящий default, который можно переопределить
@@ -236,6 +221,8 @@ addWithDefault x supplied = x + maybe 5 id supplied
 
 Это не предлагаемая замена LMX-default на `Maybe`. Это обратный перевод его наблюдаемого поведения. Формальный вход остаётся в интерфейсе, потому что `merge` меняет значение поля модели, а не удаляет позицию. [Основание](newdocs/LMX_semantics.en.md#binding-autofill), [model slots](newdocs/LMX_semantics.en.md#composition).
 
+Решение аудита: merge, готовый default, явный 0 и повторный вызов оставлены в клиенте. Вынос в capture смешал бы два разных контракта: сохранённое лексическое значение H03 и переопределяемый вход DATA здесь.
+
 <a id="h05"></a>
 ### H05. Третий случай: свободное имя остаётся динамическим после копирования
 
@@ -268,17 +255,27 @@ BindingProbe:
 
 Удобная Haskell-модель такого динамического источника — явно передаваемое окружение `Env -> Int -> Int`; для лексического варианта — функция, созданная с конкретным `Env`. Это способ представить зависимость, а не утверждение, что Haskell сам использует неявное динамическое связывание. [Основание](newdocs/LMX_semantics.en.md#binding-caller-place).
 
+Решение аудита: copy, изменение оригинала и две формы чтения оставлены рядом. Обёртка могла бы добавить вызывающий контекст и тем самым изменить именно проверяемое динамическое связывание; оператор не требуется.
+
 <a id="h06"></a>
 ### H06. Композиция функций и композиция структур
 
-Haskell:
+Вместо специального двухстадийного Composition\apply используется готовый pipe из [093](02_architecture_and_boundaries/093_pipe_implementation_comparision.md). Его полное [сравнение с Haskell](examples/library_comparisons/h06_pipe_comparision.md) находится рядом; обе прикладные стадии остаются в клиенте.
+
+Haskell-клиент собственной библиотеки:
 
 ```haskell
--- ((+1) . (*2)) 4 == 9
--- ((*2) . (+1)) 4 == 10
+import IntPipe (pipe)
+
+compositionExample :: (Int, Int)
+compositionExample =
+  (pipe 4 [(*2), (+1)], pipe 4 [(+1), (*2)])
+-- (9,10)
 ```
 
-LMX, самостоятельный пример:
+Прямые проверки `((+1) . (*2)) 4 == 9` и `((*2) . (+1)) 4 == 10` также сохранены в Analogies.hs.
+
+Для LMX совместно готовятся [исходник PipeLibrary из 093](02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3) и [H06.lm3](examples/lmx/H06.lm3):
 
 <!-- example: H06 -->
 ```lmx
@@ -290,32 +287,27 @@ Functions:
     next:
         return: x + 1
 
-Composition:
-    @: outer
-    @: inner
-    int: value
-    return: int
-    apply:
-        return: outer(inner(value))
-
 CompositionProbe:
     return: int
     run:
-        int: a Composition\apply(Functions\next; Functions\twice; 4)
-        int: b Composition\apply(Functions\twice; Functions\next; 4)
+        import: PipeLibrary
+        int: a (4 pipe Functions\twice Functions\next)
+        int: b (4 pipe Functions\next Functions\twice)
         return: a * 100 + b
 ```
 
-Результат **910**. Порядок вызовов задан зависимостью значений. Это функциональная композиция. `merge` выполняет другую работу: получает структуры, совмещает соответствующие поля и копирует нужные связи. Полученную структуру можно затем исполнять; сам `merge` не означает ни `outer(inner(x))`, ни последовательное выполнение всех методов.
+`CompositionProbe\run()` → **910**. Ссылки Functions\twice и Functions\next подготавливаются без вызова; тело pipe вызывает стадии по порядку. Оно использует `copy: sys\OPERANDS_TEMPLATE` первым в DATA, затем собственный return: int. Общий header не содержит алгоритма обхода — цикл полностью показан в реализации.
 
-Контроль: счётчики у `inner` и `outer` должны увеличиться по одному на каждый `apply`; перестановка ссылок меняет результат с `9` на `10`. [Основание](newdocs/LMX_semantics.en.md#assignment-inside-expression), [композиция графа](newdocs/LMX_semantics.en.md#composition).
+Контроль эффектов сохранён: счётчики каждой стадии увеличиваются один раз на соответствующий конвейер; перестановка ссылок даёт 9 и 10. Haskell дополнительно импортирует полностью показанный pipeIO, чтобы проверить журнал twice,next,next,twice через IO. В обоих Haskell-вариантах seq получает промежуточный Int перед следующей стадией. Полный код обоих вариантов входит в соседнее сравнение.
+
+Это последовательная композиция вызовов, возвращающая конечное число. merge получает структуры, совмещает поля и копирует связи; сам merge не означает ни outer(inner(x)), ни исполнение всех методов. Сохраняемая фабрика композиции этим клиентом не обещается. [Основание](newdocs/LMX_semantics.en.md#operand-receiver); [композиция графа](newdocs/LMX_semantics.en.md#composition).
 
 <a id="h07"></a>
 ### H07. Значение, отложенное действие и исходное выражение
 
-В Haskell `let x = expensive in x + x` обозначает разделяемую зависимость от `x`; `let action = readSensor in action >> action` по-прежнему задаёт два исполнения действия. Функция, значение, исходное выражение и thunk не становятся одним понятием только из-за отложенности. Нестрогость Haskell и порядок `IO` рассматриваются отдельно в [описании выражений](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html) и [I/O](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html).
+В Haskell `let x = expensive in x + x` обозначает разделяемую зависимость от x; повторное выполнение одного IO-действия по-прежнему означает несколько исполнений. Нестрогость выражений и порядок IO — разные свойства ([выражения](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html), [I/O](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html)).
 
-LMX различает подготовленные значения операнда и исходные occurrences явно:
+Пара prepared/raw теперь является готовой библиотекой, чьи обе полные реализации показаны в [соседнем сравнении](examples/library_comparisons/h07_evaluation_modes_comparision.md). Клиент сохраняет Meter, исходное выражение, два независимых импорта и все эффекты. LMX загружает [EvaluationModes.lm3](examples/libraries/lmx/EvaluationModes.lm3) вместе с [H07.lm3](examples/lmx/H07.lm3):
 
 <!-- example: H07 -->
 ```lmx
@@ -325,26 +317,6 @@ Meter:
     next:
         node\calls += 1
         return: node\calls
-
-PreparedOps:
-    @: left int
-    []: @(int) right
-    const: int: PASS_ARGS_AS_IS 0
-    const: int: PRIORITY sys\priority("+")
-    return: int
-    twice:
-        return: \left + \left
-
-RawOps:
-    @: left
-    []: @ right
-    const: int: PASS_ARGS_AS_IS 1
-    const: int: PRIORITY sys\priority("+")
-    return: int
-    twice:
-        int: first sys\eval(left)
-        int: second sys\eval(left)
-        return: first + second
 
 Evaluation:
     return: int
@@ -356,14 +328,16 @@ Evaluation:
         return: (Meter\next() twice 0)
 ```
 
-| Два последовательных вызова; перед каждой серией `Meter\calls := 0` | Результаты | Всего вызовов `next` |
+| Два последовательных вызова; перед каждой серией Meter\calls := 0 | Результаты | Всего вызовов next |
 | --- | --- | ---: |
-| `Evaluation\prepared()` | `2`, `4` | 2 |
-| `Evaluation\raw()` | `3`, `7` | 4 |
+| Evaluation\prepared() | **2, 4** | **2** |
+| Evaluation\raw() | **3, 7** | **4** |
 
-В первом случае два чтения используют одно полученное значение. Во втором два явных `sys\eval` исполняют одну исходную форму дважды в её сохранённом контексте. Простое разыменование ссылки не является `eval`. Ни одна серия не записывает вычисленное число вместо выражения в исходный граф.
+В prepared два чтения `\left` используют одно полученное целое. В raw два `sys\eval(left)` исполняют исходную форму дважды в её живом контексте. Разыменование само по себе не является eval. Ни одна серия не записывает результат вместо исходного выражения; raw-эффекты нельзя слить в одно исполнение.
 
-Это проверяется числом эффектов, а не только арифметикой. Нельзя оптимизировать raw-вариант до одного вызова, если его эффект наблюдаем. [Основание](newdocs/LMX_semantics.en.md#operand-receiver), [исходные occurrences](newdocs/LMX_semantics.en.md#raw-operands).
+Заголовки сохранены явно по смыслу примера. Prepared имеет типизированные `@: left int` / `[]: @(int) right`; raw — общие ссылки на occurrences и PASS_ARGS_AS_IS 1. Готовый OPERANDS_TEMPLATE содержит общие ссылки и mode 0, поэтому его копирование не заменяет ни typed-контракт, ни raw-режим. Повторное одноимённое const после copy не используется как способ сменить свойство.
+
+Haskell-клиент импортирует preparedTwice для уже полученного Int и rawTwice для IO Int. Это сравнение наблюдаемых эффектов; оно не приписывает Haskell доступ к исходному LMX-графу. Analogies.hs сохраняет прежнюю проверку одного вызова и добавляет обе серии целиком: ((2,4,2),(3,7,4)). [Основание](newdocs/LMX_semantics.en.md#operand-receiver); [исходные occurrences](newdocs/LMX_semantics.en.md#raw-operands).
 
 <a id="h08"></a>
 ### H08. Состояние и вложенное действие без результата
@@ -399,22 +373,14 @@ StateProbe:
 
 Дополнительный отрицательный случай: внутри той же активации создать новое `int: y` без RHS во вложенном inline-блоке. Оно затеняет внешнее `y`, но не создаёт нового caller; при отсутствии `y` у реального caller новое место остаётся `uninit:int`. `required: y` должно обнаружить это, внешнее значение не меняется. [Основание](newdocs/LMX_semantics.en.md#shadowing-levels).
 
+Решение аудита: оба коротких действия и вызывающие места остаются явными. Библиотечная обёртка добавила бы caller и могла бы изменить адрес записи; отрицательная проверка inline-shadowing также сохранена.
+
 <a id="h09"></a>
 ### H09. Итератор, генератор и передаваемое объявление
 
-Haskell-результат:
+Haskell-выражения `sum (map (*2) [1,2,3])` и `sum (take 3 (map (*2) [1..]))` дают **12**. Чтобы честно показать механизм пользовательской библиотеки, рядом теперь приведены [оба полных цикла LMX/Haskell](examples/library_comparisons/h09_iterator_comparision.md), а не только готовый список.
 
-```haskell
-iteratorExample :: Int
-iteratorExample = sum (map (*2) [1,2,3])
--- 12
-
-finitePrefix :: Int
-finitePrefix = sum (take 3 (map (*2) [1..]))
--- 12
-```
-
-LMX использует переданное объявление шага и обычное тело:
+LMX-клиент использует прежний Cycles\iterate, вынесенный без изменения алгоритма в [Cycles.lm3](examples/libraries/lmx/Cycles.lm3). Этот файл подготавливается вместе с [H09.lm3](examples/lmx/H09.lm3). Источник чисел, объявление шага и тело остаются в клиенте:
 
 <!-- example: H09 -->
 ```lmx
@@ -434,23 +400,15 @@ Numbers:
             item *= 2
             total += item
         return: total
-
-Cycles:
-    @: iteration
-    @: body
-    iterate:
-        while: 1
-            iteration()
-            catch: Stop ()
-                break
-            body()
 ```
 
-`Numbers\demo()` → **12**. `next` вызывается четыре раза: три значения и один `Stop`. Тело исполняется три раза. Форма `int: item Numbers\next()` сохранена; очередной шаг исполняет её в принимающем корневом namespace, а тело использует полученное место `item`. Повторного вычисления инициализатора только ради входа в тело нет.
+`Numbers\demo()` → **12**. next вызывается **четыре** раза: три значения и один Stop. Тело исполняется **три** раза. Форма `int: item Numbers\next()` сохранена; очередной шаг исполняет её в принимающем корневом namespace, а тело использует полученное место item. Повторного вычисления инициализатора только ради входа в тело нет.
 
-Нулевой элемент тоже является элементом, а не концом потока. Отдельная серия `−2, 0, 4, Stop`, где тело прибавляет `3` и дважды читает `item`, даёт **22**, три исполнения тела и четыре вызова шага. Это D-01 из [корпуса](LMX_regression_examples.to_fable.en.md).
+Нулевой элемент тоже является элементом. Отдельная серия **−2, 0, 4, Stop**, где тело прибавляет **3** и дважды читает item, даёт **22**, три исполнения тела и четыре вызова шага. Это D-01 из [корпуса](LMX_regression_examples.to_fable.en.md); условие сохранено после выноса библиотеки.
 
-Haskell-список `[1..]` и этот stateful-итератор дают одинаковый конечный префикс, но организуют хранение и продвижение различно. Повторное чтение уже полученного элемента LMX не должно неявно вызывать следующий шаг. [Основание](newdocs/LMX_semantics.en.md#declaration-arguments); [полное сравнение Iterator](01_iterator_comparison.md).
+Haskell импортирует собственный StepIterator с полным типом Step a = Yield a | Stop и явным циклом. В Analogies.hs iteratorCase создаёт изменяемый источник, действие тела и счётчики; проверяются (12,4,3) и (22,4,3). Haskell передаёт значение callback-у явно и не получает механизма объявления переменной в чужом namespace.
+
+Операнд здесь не добавлен: предмет проверки — переданное объявление и его принимающий контекст. Замена на prepared-вызов изменила бы момент вычисления шага; raw-заголовок добавил бы новый слой без сокращения цикла. Ленивый список и stateful-источник дают общий конечный результат, но устроены по-разному. [Контракт деклараций](newdocs/LMX_semantics.en.md#declaration-arguments); [исходное сравнение Iterator](01_iterator_comparison.md).
 
 <a id="h10"></a>
 ### H10. Обобщённость и стабильные типовые связи
@@ -755,10 +713,7 @@ CycleProbe:
 <!-- example: R07 -->
 ```lmx
 Operands:
-    @: left
-    []: @ right
-    const: int: PASS_ARGS_AS_IS 0
-    const: int: PRIORITY sys\priority("+")
+    copy: sys\OPERANDS_TEMPLATE
     return: int
     add:
         return: \left + \right[0]
@@ -772,6 +727,10 @@ Operands:
 ```
 
 `Operands\Example\demo()` → **20**, то есть `7 + 13`. Один записанный граф выражения исполняется с двумя входами. Операнд находится по обычному имени метода и структурному DATA-контракту; отдельной регистрации в словаре операторов нет.
+
+`copy: sys\OPERANDS_TEMPLATE` стоит первым в DATA операнда и поставляет в namespace стандартные `left`, `right`, `PASS_ARGS_AS_IS 0` и приоритет сложения. Написанный `copy` остаётся в исходном графе; готового `return` в шаблоне нет, поэтому тип результата объявлен здесь явно. Это тот же предоставленный ядром заголовок, что описан в [профиле операндов](OPERAND_USAGE_PROFILE.md). Тело `add` показано полностью.
+
+Вложенный `Example` остаётся собственным фактическим DATA методов `calculate` и `demo`; поля заголовка из внешнего `Operands` не добавляются к их позиционным входам. Контракт данного fixture — бинарное применение `add`: один левый и ровно один правый `int`. Проверка произвольной арности и вариадический обход в этот сценарий не входят.
 
 Обычный Haskell-аналог вычисления — `calculate x = (x + 3) + x`. Если нужно также *осматривать и преобразовывать узлы*, можно явно выбрать AST:
 
@@ -1014,23 +973,16 @@ TicketCode:
     []: char candidate
     return: int
     accepts:
+        throws: RangeArity
+        import: CharacterRange
         if: length(candidate) != 5
-            return: 0
-        if: candidate[0] < 'A' || candidate[0] > 'Z'
-            return: 0
-        if: candidate[1] < 'A' || candidate[1] > 'Z'
             return: 0
         if: candidate[2] != '-'
             return: 0
-        int: position 3
-        while: position < 5
-            if: candidate[position] < '0' || candidate[position] > '9'
-                return: 0
-            position += 1
-        return: 1
+        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
 ```
 
-Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII.
+Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII. Операнд `between` импортирован из [собственной библиотеки CharacterRange](examples/libraries/lmx/CharacterRange.lm3); клиент сохраняет длину, дефис и конкретные диапазоны. [Полная пара реализаций LMX/Haskell](examples/library_comparisons/v02_character_range_comparision.md) показывает helper, способы загрузки, арность и стоимость отдельно. `throws: RangeArity` распространяет объявленный выход helper даже при заведомо корректных двух границах в каждом вызове. Режим 0 получает готовые символы; каждое применение явно сгруппировано перед `&&`.
 
 | Вход для `TicketCode\accepts(...)` | Результат |
 | --- | ---: |
@@ -1044,15 +996,18 @@ TicketCode:
 Haskell-эквивалент проверки:
 
 ```haskell
+import CharacterRange (between)
+
 accepts :: String -> Bool
-accepts [a,b,'-',c,d] = all upper [a,b] && all digit [c,d]
-  where
-    upper x = x >= 'A' && x <= 'Z'
-    digit x = x >= '0' && x <= '9'
+accepts [a,b,'-',c,d] =
+  all (\x -> x `between` ('A','Z')) [a,b] &&
+  all (\x -> x `between` ('0','9')) [c,d]
 accepts _ = False
 ```
 
 Этот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](newdocs/LMX_semantics.en.md#graph-tests).
+
+Библиотека проверяет только включительные границы. Перевёрнутый диапазон даёт false/0. Haskell фиксирует две границы типом пары; общий LMX-операнд проверяет длину `right` явно. Весь клиент LMX сократился с 301 до 263 непробельных символов, но с полной библиотекой (199) занимает 462: это полезное выделение общей операции, а не обещание меньшего полного standalone-кода.
 
 <a id="v03"></a>
 ### V03. Куда вставляется mock
@@ -1169,6 +1124,8 @@ Commissioning:
 
 Для каждой строки стенд создаёт свежую копию `device = (merge(Indicator; (int: fault F)))`, подставляя конкретное значение `F`, и вызывает `Commissioning\check(candidate := device)`. Это запись подготовки стенда; присваивание без объявления новой переменной не предлагается.
 
+Счётчики `writes`, `reads`, `trace` и конечные `commanded/sensed` стенд наблюдает у фактического скопированного владельца `parent(device\set)`; `parent(device\observe)` должен указывать на того же владельца. Внешний группирующий контейнер `device` имеет собственные ячейки, поэтому чтение `device\writes` само по себе не заменяет наблюдение состояния, которое меняет `node\writes` в методе. Это следует из [контракта копирования](newdocs/LMX_semantics.en.md#composition).
+
 | `fault` | Обратная связь | Вердикт | Конечное commanded / sensed | Writes / reads | Trace |
 | ---: | --- | ---: | --- | --- | ---: |
 | 0 | Следует команде | 1 | `0 / 0` | `2 / 2` | 1202 |
@@ -1209,6 +1166,8 @@ Counter:
 Контрпример: начальное `10`; оба отправителя отдельно читают `10`, затем каждый присылает запись `11`. Итог **11** допустим при таком протоколе. Последовательные turns не объединяют несколько отдельных сообщений в одну транзакцию. Исправление задачи — отправлять целиком `add(delta := 1)`, а не добавлять mutex вокруг чужого графа. [Основание](newdocs/LMX_semantics.en.md#delivery).
 
 На Haskell аналог владельца можно построить обычным циклом обработки `Chan Request`, запущенным через `forkIO`, и возвращать результат через `MVar`. В таком варианте счётчик передаётся следующей итерации цикла как обычное число. Это библиотечная реализация модели владения, а не автоматическое свойство любого Haskell-объекта. Полный пример находится в [Analogies.hs](examples/haskell/Analogies.hs).
+
+Для удалённого варианта стенд использует уже описанный [HTTP-профиль](newdocs/LMX_semantics.en.md#transport): endpoint + route, документ `application/lmx`, decoder и admission. Синхронный профиль может вернуть семантический результат в HTTP-ответе; асинхронный — подтвердить admission и доставить результат через `replyTo` с `correlation`. Финальный `read()` проверяется после завершения обоих add, а не только после двух подтверждений приёма. Операторная или библиотечная обёртка здесь не заменяет Message, отдельные turns и корреляцию результатов.
 
 <a id="m02"></a>
 ### M02. `ask` и fan-out: три запроса не превращаются в девять вычислений
@@ -1265,6 +1224,8 @@ Lamp:
 У `Lamp\set` нет описания `return`. Локальный или транспортируемый вызов с `command=1` меняет явное состояние и не создаёт прикладной ответ только ради транспортной схемы. Отсутствие такого ответа само по себе не становится `unanswered`. Успешная доставка письма и подтверждённое приложением исполнение команды — разные сведения.
 
 Для подтверждения фактического состояния приложение выбирает явный интерфейс с результатом или отдельное наблюдение, как V05. В Haskell `IO ()` явно описывает результат действия как unit; здесь важно не перенести его механически в несуществующую LMX-декларацию результата. [Основание](newdocs/Old_TZ/threadMessageAPI.en.md), T26.
+
+При HTTP-доставке это не запрещает предусмотренный профилем статус транспорта или подтверждение admission. Они не являются прикладным результатом `Lamp\set` и не создают отсутствующее описание `return`. Условия fixture по-прежнему требуют ноль прикладных ответов и не подменяют фактическую обратную связь HTTP-успехом.
 
 <a id="m06"></a>
 ### M06. Копирование, ссылка и передача владения

@@ -1,9 +1,27 @@
+import AroundInt.around
+
 object ExecuteAroundExample {
-  def around[R](acquire: () => R,
-                release: R => Unit,
-                action: R => Int): Int = {
-    val resource = acquire()
-    try action(resource)
-    finally release(resource)
+  final case class Resource(value: Int)
+  final class ResourceFailure extends RuntimeException
+  def run(mode: Int): Int = {
+    var events = 0
+    def note(n: Int): Unit = { events = events * 10 + n }
+    try {
+      val value = around(
+        () => {
+          note(1)
+          if (mode == 2) throw new ResourceFailure
+          Resource(42)
+        },
+        (_: Resource) => note(3),
+        (resource: Resource) => {
+          note(2)
+          if (mode == 1) throw new ResourceFailure
+          resource.value
+        })
+      value * 1000 + events
+    } catch {
+      case _: ResourceFailure => -events
+    }
   }
 }

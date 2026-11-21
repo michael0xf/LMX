@@ -1,0 +1,21 @@
+SpecificationLibrary:
+    independent: AndData:
+        @: first 0
+        @: second 0
+        inputs:
+            int: value
+            return: int
+            accepts:
+                return: node\first(value) && node\second(value)
+    Operators:
+        copy: sys\OPERANDS_TEMPLATE
+        return: @
+        both:
+            throws: OperandArity
+            if: length(right) != 1
+                throw: OperandArity()
+            @: instance (copy(AndData))
+            @: owner parent(instance\inputs)
+            owner\first := \left
+            owner\second := \right[0]
+            return: instance\inputs\accepts

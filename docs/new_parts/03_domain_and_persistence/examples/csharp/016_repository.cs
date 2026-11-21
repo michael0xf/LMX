@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
-public sealed record Account(int Id, int Cents);
+using ExampleLib;
+public sealed record Account(int Id, int Cents) : IIdentified;
 public sealed class Repository(IReadOnlyList<Account> rows) {
-    public Account? Find(int id) => rows.FirstOrDefault(row => row.Id == id);
+    public Account? Find(int id) => Records.FindById(rows, id);
 }

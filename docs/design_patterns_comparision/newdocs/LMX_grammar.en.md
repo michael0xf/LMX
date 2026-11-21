@@ -32,7 +32,7 @@
 
 ## 1. Scope and sources
 
-This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The old `Lingvamyxa_spec.txt` and [source comparison](source-comparison.en.md) preserve provenance, not a parallel norm. Only representative excerpts remain below; old examples do not extend the current rules.
+This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The accepted author clarifications through 2026-11-21 govern this revision; the in-archive [requirements](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) record their basis. The latest clarification makes `import`, `copy`, and `merge` consume ordinary CODE arguments everywhere, including when a DATA context accepts their results. [Source comparison](source-comparison.en.md) records provenance. Extracts attributed to the former `Lingvamyxa_spec.txt` illustrate unchanged lexical rules or are explicitly historical; they do not establish an alternative current language.
 
 <a id="structure"></a>
 
@@ -42,15 +42,15 @@ Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.
 
 A grammar rule is universal within its domain: a name, type, nesting level, or translator convenience creates no separate syntax branch. A proposed exception or contradiction between rules requires explicit discussion and must not be hidden by special-case parsing.
 
-P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container.
+P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container. All receivers remain as written in the source graph; computations, transformations, and DATA acceptance of emitted fields occur exclusively in the namespace. Terminal primitive declarations have the direct `{type value}` representation, without licensing eager computation of a nonterminal RHS.
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
-The clarification of 2026-11-15 that fn/sub/catch have one input data part is changed by the norm of 2026-11-19 ([the requirements](new_parts/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), decisions R09, R11, R13): `sub` is withdrawn, and `fn` only describes a signature by a data-form template, `fn(int: a; int: b; return: int)` or a block `fn:` with the same fields ([`fn` signature](LMX_semantics.en.md#fn-signature), [what is withdrawn](LMX_semantics.en.md#removed-builtins)). The inputs and the result (`return`) of a called Structure are described in its data, and the Structure itself is executed ([structural call](LMX_semantics.en.md#call-receivers)). The notation of the `catch` header is not changed by this norm ([`catch` in the common model](LMX_semantics.en.md#catch-common-model)). P0 only preserves written structure, without graph auto-fill or initializer execution; there is no separate signature grammar. Qualified helper receiver heads, such as `sys\check(S)` and `sys\translate(S)`, use ordinary path and call parsing. Sys member names are not globally reserved; no spelling-specific parser is introduced.
+`fn: name data` has two DATA arguments: a name atom and a Structure describing an ordered input-type signature and, when present, a `return` result. For example, `fn: SumSignature (int: a; int: b; return: int)` creates a named signature description, not executable code. A selected callable is an ordinary Structure `C`, and its actual `parent(C)` supplies DATA. `sub`, executable `fn`, `fncall`, and a separately supplied call-data parameter are withdrawn. `catch` retains its handler contract under this common data/call model. P0 preserves every written receiver and group; it does not resolve a signature, prepare a namespace, or execute initializers. Qualified helper heads such as `sys\check(S)` and `sys\translate(S)` use ordinary paths and Frames. See [named signatures](LMX_semantics.en.md#fn-signature) and [structural calls](LMX_semantics.en.md#call-receivers).
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a, b, c) := myFn()` (author's decisions of 2026-11-10, [journal](../LMX_blog/2026-11-10.md#no-structure-head)). A bounded Structure whose closing parenthesis is followed by `:=` becomes the left side of the write; the right side is parsed as that of `name := value`. Such a Structure holds at least one field. A Structure as the head of a Frame before a colon is not introduced: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notation — group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a left side yet ([plan](../next_core_tasks_v3.md#m6)).
+The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a, b, c) := myFn()`. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. This does not introduce a nonempty Structure as a Frame head before a colon: `(): value` remains a distinct empty-head form ([§14](#bounded)). Group positional assignment, including `(a b) := copy(Pair)`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -226,7 +226,7 @@ Outside a shielded literal, `#` starts a comment through the end of the physical
 
 A raw file-comment fence is a column-0 line of 3–80 `*` characters with only optional trailing spaces/tabs. Its closing fence must have the same length. Interior lines are not parsed as code, including malformed syntax; levels and closers are not checked. Ignoring a comment during parsing does not discard its text from the retained representation; a comment is not an executable operator. Fences do not nest; a different-length run is content. A missing closing fence is a file error. A title or `#` comment cannot be added to such a fence.
 
-A comment `#` acts through the end of the physical line or the end of the document it stands in, whichever comes first. The end of a document is the end of the input for the main document and the closing `}` for the document of a Mix mark ([§19](#mix)): in `x: a {#)} b` the comment ends at `}`, the mark is closed, and there is no error (the author's words of 2026-11-11: [a comment and the end of a Mix document](../LMX_blog/2026-11-11.md#lost-bracket-comment-in-mix-scanner)). The parser's current state, verified builds and remaining limits are recorded in the [implementation notes](implementation-notes.en.md).
+A comment `#` acts through the end of the physical line or of the current document, whichever comes first. The main document ends at input end; a Mix document ends at its closing `}` ([§19](#mix)). Thus `x: a {#)} b` ends the comment at `}` and closes the mark without a lost-parenthesis error. A physical line containing `#` is not a blank-line boundary, even if comment stripping would leave whitespace. Implementation status remains separate from this normative grammar; the [implementation notes](implementation-notes.en.md) are not evidence that every current requirement has been tested.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4016–4017.
 
@@ -251,9 +251,20 @@ Sources: §§4.0–4.3.
 
 `f(a, b, c)` is a compact Frame with a bounded argument Structure. `f: a b c` opens a short form at level N; its tail is at implicit level N + 1. An empty opening-line tail may continue with vertical children. A colon admits a bare, exact, or symbolic head.
 
-Horizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
+Horizontal whitespace and commas separate fields of the current tail. A single physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. A blank physical line is the separate full-block boundary defined in [§15](#levels). Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
-The two-field `int: i 5` is a Frame with two neighboring fields, and the three-field `@: ptr Model Other` is one with three; P0 neither parses them by receiver name nor assigns semantic roles to their fields. P0 builds `@: ptr Model: Other` as a Frame with atom `ptr` and nested Frame `Model: Other`, but it does not serve as a requirement with a candidate: the arguments of a receiver are read as code, and a nested Frame among them is a call of `Model`; the requirement and the candidate are written flat — `@: ptr Model Other`, `@: ptr Model 0` (a consequence of the author's decision of 2026-11-11 on arguments, [semantics](LMX_semantics.en.md#data-code-roles)). A requirement given by an `fn` signature is written just as flat: `@: sumPtr fn(int: a; int: b; return: int) SumContext\sum` has three fields in the tail of `@`, the second of which is a nested Frame `fn(...)`, one application of `fn`, inside which the arguments are read in the data role ([`fn` signature](LMX_semantics.en.md#fn-signature)); P0 parses it in the common way, and there is no separate signature grammar. A form that calls a Structure at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) gives a value when the data of the called Structure describe the result by a `return` field ([`return` in data](LMX_semantics.en.md#return-in-data)); the former unconditional prohibition «a launch has no result» (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р22, item 3; Р25, item 4) is withdrawn by the norm of 2026-11-19. P0 builds `i: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` as ordinary nested Frames, but they do not serve as a declaration of a place: only a receiver's Frame with its arguments declares a place (the author's decision of 2026-11-10, [semantics](LMX_semantics.en.md#receiver-args-only)), and in data `ms: int: time` declares a Structure `ms` with a field `time`. `call: args code` is an ordinary Frame with two positional fields (`call` has no separate data parameter); declaration selection and admission of the actual arguments follow P0.
+The two-field `int: i 5` and three-field `@: ptr Model Other` are ordinary Frames. P0 assigns no special field roles based on their head names. `@: ptr Model: Other` instead contains atom `ptr` and nested Frame `Model: Other`; it is not the flat three-argument requirement/candidate form. The receiver contract and the consuming DATA or CODE role determine subsequent meaning. The named signature form is equally ordinary: declare `fn: SumSignature (int: a; int: b; return: int)`, then use `@: sumPtr SumSignature SumContext\sum`. The second field names the requirement and the third names the candidate. A Structure call can provide a value where its actual DATA declares a compatible `return`. `i: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` remain ordinary nested Frames but do not declare places named `i`, `new_var`, or `ptr`: place receivers enumerate their own arguments. In DATA, `ms: int: time` declares Structure `ms` containing the terminal primitive declaration `time`. `call: args code` has two positional fields, with no separate DATA argument. See [roles](LMX_semantics.en.md#data-code-roles) and [place declarations](LMX_semantics.en.md#receiver-args-only).
+
+The same frames describe field-stream receivers. `import` has one or more admitted sources, `copy` exactly one, and `merge` at least two. All three read their source arguments as CODE, regardless of where the receiver is written. The common translator/consumer algorithm performs ordinary W/E selection and then checks admitted source arity. P0 must therefore not reject `merge(S)` merely for one written Structure: E may supply multiple sources. In DATA, `Struct: merge(A B)` is an ordinary declaration of `Struct`, with a receiver in its body. Its namespace consumes the result; `Struct` is not an implicit source or model. Several such operations retain their written order and separate operation maps.
+
+```lmx
+Struct:
+    merge(A B)
+    merge(C D)
+    copy(E)
+```
+
+A CODE place-declaration actual such as `int: item next()` is read as DATA under the resolved declaration contract. P0 preserves it as one Frame: semantics decides whether its inner name matches receiving DATA or the complete form occupies the current position. Passing it does not execute the initializer. This specific declaration contract does not turn an ordinary `Producer()` into a nonexecuted declaration: it remains an explicit call in the CODE arguments of `import`, `copy`, or `merge`, including in DATA placement. Bare Structure references and anonymous Structures remain values, not implicit calls. Thus both `merge(A B)` and `merge((int: x 1) (int: y 2))` provide structural source values. An anonymous container is not itself an implicit call, but its contents may contain explicit calls or computed initializers processed by ordinary contracts. Grouping neither quotes away those operations nor requires eager evaluation of every initializer. See [declaration arguments](LMX_semantics_guide.en.md#declaration-arguments).
 
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures.
 
@@ -339,7 +350,7 @@ Whitespace separates fields. `print: getTypedValue values[i]` does not turn into
 
 Application with explicit actual arguments requires its own Frame: short `merge: A C`, compact `merge(A C)`, or an equivalent vertical form. This rule applies to all heads without name-based exceptions. In `b: merge A C`, the body of Frame `b` contains neighboring atoms `merge`, `A`, `C`, not a nested `merge` Frame. P0 forms the complete written structural model without knowing the head's role or consulting its availability, signature, or category. A bare identifier remains an atom and captures no neighboring fields. Subsequent common resolution and consumption belong to [semantics](LMX_semantics.en.md#resolved-head-consumption), not additional P0 grouping rules.
 
-Expression-like sequences consist of atoms and operator fields. `print: a+b c` and `print: a + b c` produce the same structural split. The expression profile determines prefix, postfix, or infix roles, precedence, and operation meaning after P0. The C projection preserves ANSI C precedence and associativity; other backends use a separate profile, not a new structural grammar. The author's decision of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#one-parser)): the language has one parser, and it parses expressions too; there are no other parsers. An operator is a receiver head in infix position: its first operand stands on the left, the others on the right, to the end of the record; it takes a variable number of arguments. `(1 + 2 + 3 + 4)` reads as `(1 plus: 2 plus: 3 plus: 4)`; `(+ 1 2 3 4)` and `(1 + 2 3 4)` are the form with one receiver. The parser knows no precedence: precedence is applied at execution -- the expression tree is analysed, the receivers of higher precedence are executed first, those of lower precedence are moved into the parent, and the clean graph does not change. `(1 + 2 * 2 + 3)` gives 8; `(1 + 2 * 2 + 3 4 5 6)` and `(1 + * 2 2 + 3 4 5 6)` give the same as `(1 + 2 * 2 + 3 + 4 + 5 + 6)`. The priorities and the associativity at execution are those of C, and the power follows the rule of Python ([operators](#operators)); assignment has the lowest priority. Values are evaluated on demand of the consuming receiver: a result of another receiver that it needs is evaluated whatever the priority of that one, and its right part keeps its boundaries. The former rule of the same day on the high priority of assignment inside an expression is withdrawn ([expressions](LMX_semantics.en.md#assignment-inside-expression), [journal](../LMX_blog/2026-11-18.md#c-priorities)).
+Expression-like sequences consist of atoms and operator fields. `print: a+b c` and `print: a + b c` have the same structural split. One P0 parses expressions and every other form; name resolution, operator roles, priorities, and value dependencies are analyzed after this parse. An operator application is a receiver application with a left occurrence and a right sequence: `(1 + 2 + 3 + 4)` preserves the written chain corresponding to `(1 plus: 2 plus: 3 plus: 4)`, while `(+ 1 2 3 4)` has no written left occurrence. Bare names used as ordinary values do not capture neighbors or execute code. The common expression mechanism applies C-like relative priorities and Python-like power grouping ([§21](#operators)), with assignment at the lowest priority. It obtains necessary values on demand: a dependent receiver can run before a stronger-priority consumer without shortening its RHS or changing the written graph. All execution plans and intermediate values belong to namespace processing.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3105–3105.
 
@@ -359,11 +370,11 @@ Expression-like sequences consist of atoms and operator fields. `print: a+b c` a
 
 Sources: §§4.4, 4.5.2.1, 15.
 
-`(...)` bounds a Structure; empty `()` is allowed. `f()` is an empty compact Frame. `(): value` is a distinct form with head `()`, like `[]:`; it is not an empty Structure with an added value. The same short forms, separators, and levels apply inside brackets, and they read as outside brackets: the parser is one everywhere — in round, square, and curly brackets (the author's words of 2026-11-11: [one parser everywhere](../LMX_blog/2026-11-11.md#same-parser-inside-brackets), [agreement with the parser fixes](../LMX_blog/2026-11-11.md#one-parser-everywhere-no-unwrap); there is no separate parser of brackets, [§24](#automaton)). Therefore the rule for closing blocks is the same as outside brackets ([§15](#levels)): a decrease of the level by more than one without a tail cutter is a parse error, and `end: name` and the fence `---` are recognized. A tail cutter inside brackets acts on the levels opened inside the same brackets and does not close an unmatched bracket; a line whose next token is the matching closing bracket may return to the opener level without a cutter (next paragraph). A matching `)` or `]` completes both the bounded form and any short form still open inside it.
+`(...)` bounds a Structure; empty `()` is allowed. `f()` is an empty compact Frame. `(): value` has the distinct head `()`, like `[]:`, rather than an empty Structure with an added value. The same P0, short forms, separators, level transitions, and closers apply inside round, square, and Mix contexts. An ordinary decrease exceeding one level requires an admitted tail cutter; a matching `)` or `]` completes its bounded form and its open short forms. A tail cutter does not synthesize missing delimiters. In particular, a blank physical line closes to the current document root and reports an error if an internal paired form is still unmatched ([§15](#levels)); it cannot be ignored so that the form continues below the boundary. The outer `{...}` shell of the current Mix document is not such an internal unmatched form.
 
 After a physical newline, a bounded continuation must remain deeper than the opening line: at the corresponding dotted level or a deeper indentation column. A line whose next token is the matching closer may return to the opener level. `end:` and terminal closers do not replace missing `)`/`]`.
 
-Deeper lines and dots inside brackets read as outside brackets: a line deeper than the previous one opens a nested anonymous Structure instead of continuing the list of fields, and a dot that stands after the indentation spaces or tabs is an ordinary atom `.`, not a level marker; dots at the start of the line (the canonical leading zone, [§15](#levels)) still give the level, inside brackets too (the author's words of 2026-11-11: the parser is one everywhere; forms A, B, C — [closed questions on the parser](../LMX_blog/q/parser-forms-answered-20261111.md)). The content of the brackets reads as the same lines without brackets. Form A: `y` has two fields — the atom `a` and an anonymous Structure with the atom `b`; `z` is a sibling field.
+Deeper lines and dots inside brackets read as outside brackets. A deeper line opens a nested anonymous Structure instead of continuing a flat field list. A dot after indentation spaces/tabs is an ordinary atom `.`, while dots in the canonical leading zone still provide levels ([§15](#levels)). The content is parsed like the same lines outside brackets. In form A below, `y` has atom `a` and an anonymous Structure containing `b`; `z` is a sibling.
 
 ```text
 D: (
@@ -392,9 +403,9 @@ call(
     . ret: int)
 ```
 
-A closing bracket without an opening one is a parse error in any document P0 parses as code: the main document and the content of a Mix mark, except a mark inside a string, where an error in the mark does not fail the string ([§19](#mix)); the author's words of 2026-11-11: [a lost bracket is plainly an error](../LMX_blog/2026-11-11.md#lost-bracket-comment-in-mix-scanner). `x: a ) b` is an error; so is `x: a {)} b`: braces are not a comment, the content of a mark is parsed by the same parser, and a lost `)` inside it is an error ([§19](#mix)). Brackets within shielded content (strings, exact identifiers, comments) are not counted.
+A closing bracket without an opener is a parse error in the main document and in a Mix document. `x: a ) b` and `x: a {)} b` are errors; the Mix's unmatched `)` cannot close an outer pair. Marks embedded in strings have their separate non-fatal error contract ([§19](#mix)). Brackets inside shielded literal/comment content are not structural delimiters.
 
-The parser's current state, verified builds and remaining limits are recorded in the [implementation notes](implementation-notes.en.md).
+Implementation status is separate from this normative grammar; consult the [implementation notes](implementation-notes.en.md) without treating earlier build records as acceptance of these requirements.
 
 `target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators.
 
@@ -437,6 +448,7 @@ The canonical leading zone contains dots, spaces, and tabs; the dot count gives 
 | K → K − 1 | Complete the current vertical Structure before reading the next item at its own level. |
 | Increase exceeding one level | Invalid jump; inline nesting cannot replace a missing visible level on the next line. |
 | Decrease exceeding one level | Not an ordinary cut: an admitted tail cutter is required. |
+| Blank physical line outside shielded payload | Complete all open short/vertical forms to the current document root at virtual level −1; retain that root and create no field. |
 
 These are universal structural actions, not special rules for `if`, `match`, calls, or declarations. An increase explicitly requests a nested Structure field; a scalar item does not become its named head merely because deeper indentation follows. An ordinary cut completes the open field without turning the following item into a special closing receiver. For example, a sibling declaration closes the preceding Frame by its level, not by its declaration semantics. Naming a Frame does not require `end:`.
 
@@ -448,7 +460,7 @@ The “head — primary body Structure — trailer” envelope describes opening
 
 A newline in an open short form resets the counter to the level of **the physical line that just ended**, not to the deepest head written inside its tail. Inline nesting does not carry its implicit level across a newline. The next leading zone supplies the next visible level; an increase from the completed physical line's level can be only one step. The number of colons on the preceding line therefore does not permit skipping several levels on the next line.
 
-The newline itself is a separator, not a trailer. It means neither unconditional closure of all Frames nor preservation of the deepest inline body through any following line. The next level, visible marker, and open context determine ownership of the next item. The asymmetry is intentional: an increase opens a Structure, whereas completion requires a visible next item/marker, `;`, a matching bracket, or an admitted tail cutter.
+The newline itself is a separator, not a trailer. It means neither unconditional closure of all Frames nor preservation of the deepest inline body through any following line. The next level, visible marker, and open context determine ownership of the next item. The asymmetry is intentional: an increase opens a Structure, whereas completion requires a visible next item/marker, `;`, a matching bracket, an admitted tail cutter, a blank-line full boundary, or EOF.
 
 The following two spellings have different structures:
 
@@ -472,7 +484,7 @@ The marker is written at level 1, in `r`'s body. It completes the empty short fo
 
 ### Visible markers and closing scope
 
-**Closing blocks.** A block is closed by indentation, as in Python: a line that returns by one level closes the block, and no closing word is needed. A tail cutter is the visible form of a trailer ([§17](#close)): `end: name`, the fence `---`, or a terminal form (`return`, `until:`) in its permitted position. It is needed only where the level of the next line decreases by more than one; without it such a decrease is a parse error. One cutter, admissible in its position and profile, closes several levels at once. The rule is one in every block: inside brackets — round, square, and curly — it is the same as outside, and the parser is one everywhere (the implementation state is in [§14](#bounded)). A tail cutter inside brackets acts on the levels opened inside the same brackets and does not close an unmatched bracket. After a one-level block `end: name` need not be written. (The author's words of 2026-11-11: [one indent](../LMX_blog/2026-11-11.md#one-level-needs-no-close), [trailers](../LMX_blog/2026-11-11.md#trailers-close-many-levels), [the same rule inside brackets, one parser everywhere](../LMX_blog/2026-11-11.md#same-parser-inside-brackets).)
+**Closing blocks.** A one-level decrease closes the preceding block without a closing word. An ordinary decrease of more than one level requires an admitted tail cutter: `end: name`, `---`, or a terminal form in a permitted position. A blank physical line supplies full closure at virtual level −1, so no additional visible cutter is needed at that boundary. EOF also closes ordinary open forms under [§24](#automaton). The same mechanism applies inside bounded forms, subject to matching delimiters: no cut can replace a missing `)`, `]`, or inner `}`. The distinction is between an ordinary level transition and an explicit completion event, not between kinds of receiver.
 
 One level — no closing is needed:
 
@@ -501,7 +513,23 @@ A body-level `return` does not become a universal tail cutter by spelling; termi
 
 Within a bounded form, a newline itself neither closes the brackets nor performs the short-form step outwards. Continuation stays inside the bounded context; returning to the opening line's level before the matching bracket is permitted only for the matching closer itself ([§14](#bounded)). Newlines inside shielded strings, exact identifiers, and other lexical payload do not produce outer level events ([§24](#automaton)).
 
-An empty physical line outside shielded payload is a separate level-0 boundary event. It may close a level-1 tail by ordinary decrease but does not replace a visible delimiter between anonymous sibling sections at deeper levels. Such an empty line must not be confused with a single newline character between two non-empty items.
+A blank physical line outside shielded payload contains zero characters or only spaces/tabs. It is equivalent to a closing `---` at virtual level −1, above the current document's level-0 root. It immediately completes every open short and vertical form of that block, independently of its indentation; the root itself remains and subsequent items join it normally. The virtual level is an internal parser event, not a writable source level or graph node. Consecutive, leading, and already-root blank lines are idempotent. The event creates no field, anonymous Structure, call, executable instruction, return, or value. The next line is checked from the reset root context; its indentation is not discarded and cannot reopen the closed form.
+
+Blankness is determined from the original physical line and lexical mode, before whitespace or comment removal. A line containing `#`, level dots, or other source text is not blank. Blank lines inside allowed string/exact-identifier payloads, block text, or raw comments remain content; ordinary unterminated-literal errors still apply. Syntax validation of a `%`-disabled body uses this same blank-line rule. CRLF, LF, and lone CR all produce the same structural event while retaining their original byte spans ([§3](#positions)). A single newline between nonempty lines, or one final LF after the last item, does not itself create a blank line.
+
+For example, the blank line below closes all three nested bodies before `Next`:
+
+```lmx
+Root:
+    Child:
+        Leaf:
+            int: value 1
+
+Next:
+    int: value 2
+```
+
+The first block needs no additional trailer. By contrast, omitting that blank line and jumping directly from `int: value 1` to `Next:` without another admitted cutter remains an invalid multi-level dedent. Pretty-printers may insert blank lines only where full block closure is intended; visual spacing inside a continuing block must not change its tree.
 
 **Correct consecutive transitions** — `Lingvamyxa_spec.txt`, 3085–3088.
 
@@ -542,7 +570,7 @@ A dotted line contains only a leading zone with at least one dot and an admitted
 
 A fence of 3–80 dashes after the leading zone has the same role. Only horizontal whitespace and a `#` comment may follow it. It calls no receiver, has no argument, and cannot prefix `else:`, `return:`, or another item. On a decrease, it admits closing several open levels down to its own level K; a following K + 1 item may open a new anonymous Structure.
 
-An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
+An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, a blank-line full boundary, or EOF. A blank line closes the entire current block to its document root; it neither acts as a visible marker at K nor opens a following anonymous sibling. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
 
 An explicitly formed empty vertical body preserves a Frame with an empty Structure-body. P0 normalizes it exactly like `f()` and `f:`: there is no extra anonymous empty field; `f: ()`, by contrast, holds one field — an empty Structure. See [empty bodies](#empty-colon).
 
@@ -581,7 +609,7 @@ Sources: §§4.6, 7.5, 8.1–8.4, 15.
 
 `end: target` is a checked structural close. Its argument is a literal target, not an evaluated expression. The receiver supplies admitted targets: normally its head name and the canonical name from a `name` argument or name position. The name must be one admitted atom; exact spelling is compared as an atom value. With no valid name, the head is used. The close-target table may admit string/operator atoms as well as executable identifiers.
 
-`end: matrix` closes `[]: matrix`; not `end: [] matrix`. `end: fn` closes an open block `fn:`; the former form `fn: square …`, for which `end: square` was an alternative target, is withdrawn by the norm of 2026-11-19 ([what is withdrawn](LMX_semantics.en.md#removed-builtins)). Closure may cross several open implicit levels where position and profile admit it, but not unmatched bounded brackets. A named Frame does not require explicit `end:`: an ordinary admitted level cut also closes it. Bare `end` and `end <target>` are forbidden.
+`end: matrix` closes `[]: matrix`, not `end: [] matrix`. A named signature uses the ordinary declaration form `fn: SignatureName DataTemplate`; its admitted name target follows the same receiver-supplied close rules. `end: fn` can close an open `fn` form where valid. Closure may cross open implicit levels but never synthesize a missing bounded delimiter. A named Frame may also end by an admitted level cut, a blank-line full boundary, or EOF. Bare `end` and `end <target>` are forbidden.
 
 `return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at the opening level of a named executable Structure, including any ordinary Structure (there are no executable `fn`/`sub`), appends a return to its body and closes its Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body: an anonymous body closed by `until:` is an inline postcondition loop in the enclosing activation, and a named Frame closed by `until:` declares, in data, an ordinary named Structure whose executable body is that loop — declaring it does not run it; only an explicit call does — by the receiver `call` or, in code, by a form whose head is this Structure; in code the same Frame is a call of its head: the selected Structure is executed, its data are its `parent`, and the tail of the form is the actual arguments, which the common declaration selection accepts ([choosing the declaration](LMX_semantics.en.md#declaration-selection)); it is an error when the head names neither a callable nor a Structure ([semantics](LMX_semantics.en.md#data-code-roles)). No construct requires any of these trailers: they are P0 boundaries, not a condition of declaration. A named Structure closed by an ordinary level cut is declared the same way, by a form of data ([L3 §9](LMX_semantics.en.md#construction)); reaching the end of the code of a named Structure does not create `return`: no return is synthesized there ([`return` in data](LMX_semantics.en.md#return-in-data)). Their spelling alone does not make these words universal tail cutters. The source excerpt below with `fn: square (int(x)) (int)` is taken from the former specification: the executable `fn` and `sub` are withdrawn by the norm of 2026-11-19 ([what is withdrawn](LMX_semantics.en.md#removed-builtins)); it remains an illustration of the terminal `return`, not the current way to write a signature.
 
@@ -611,26 +639,36 @@ end: else
 
 Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct correction of 2026-09-23; the author's decision of 2026-11-10.
 
-A Frame's argument list is itself a Structure. P0 does not change the written boundaries: an anonymous Structure stays a field of the list also when it is the only one there, empty or not (author's decision of 2026-11-10, [journal](../LMX_blog/2026-11-10.md#p0-no-unwrap); the earlier rule of 2026-09-23, by which P0 replaced a sole anonymous Structure with its fields exactly once, is withdrawn). `s((a))` is a Frame with one field, the Structure `(a)`; `s(a b)` and `s: a b` yield one list of two fields, while `s((a b))` and `s: (a b)` yield one Structure field. `f()`, `f:`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f: ()` is the same as `f(())`: one field, an empty Structure. What a sole Structure means is decided by translation and interpretation: in data `A: (int: x 1)` declares `A` with one anonymous Structure inside it that has the field `x`, while `A` with the field `x` is declared by `A(int: x 1)` and `A: int: x 1` ([semantics](LMX_semantics.en.md#colon-declares)); in code the resolved head's contract applies: for a callable and for a receiver that takes its arguments as `code`, a sole Structure, written or computed, is read in two equal ways -- as written (reading W) and as the single Structure expanded (reading E): the candidates of both readings over all visible declarations of the name are counted together, exactly one candidate is executed, none is a refusal of the call, and more than one is an error of ambiguity; the expansion is made once, by one level, when the call is processed, neither in the tree nor in the graph; a receiver that takes its arguments as `data` receives exactly what is written ([semantics](LMX_semantics.en.md#whole-arguments), [choosing the declaration](LMX_semantics.en.md#declaration-selection), [two kinds of receivers](LMX_semantics.en.md#two-kinds-of-receivers)). The unwrapping postpass and the rejection of bare `f:` are removed in M8, slice 366; prepared consumers read the group by contract. Acceptance and the remaining M11 limits are in the [witness](../steps/witnesses/m8-preserved-groups-20261113/notes.md). The author's decision of 2026-11-11: [there must be no unwrapping](../LMX_blog/2026-11-11.md#one-parser-everywhere-no-unwrap).
+A Frame's argument list is itself a Structure. P0 retains every anonymous group, even a sole or empty one: `s(a b)` has two fields; `s((a b))` has one Structure field. `f()`, bare `f:`, and `f:` with an explicitly empty vertical body have the same empty Frame-body; a blank physical line after `f:` completes that empty body without creating a return or anonymous field. `f: ()` is instead `f(())`, one field containing an empty Structure. In DATA, `A: (int: x 1)` retains its anonymous inner Structure, whereas `A(int: x 1)` and `A: int: x 1` directly describe the field `x`. A receiver whose contract takes DATA arguments accepts them as written. A receiver whose arguments are CODE may consider the equal readings W (whole) and E (one-level expansion of one Structure not assigned to a named formal). Exactly one accepted declaration/reading/map is used, with no second expansion; zero candidates fail and multiple candidates are ambiguous. For `import`, `copy`, and `merge`, the source argument role is always CODE; placement inside DATA does not suppress W/E. This is semantic admission, never a P0 unwrapping pass. See [whole arguments](LMX_semantics.en.md#whole-arguments) and [selection](LMX_semantics.en.md#declaration-selection).
 
-Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f:` is read after P0 by the role of the Structure in the launch — in data it declares an empty Structure `f`, in code it is a call of `f`: a callable is called, an ordinary Structure is executed -- `f()` is the same as `call(f)`: `f` is executed, and its data are `parent(f)` ([structural call](LMX_semantics.en.md#call-receivers)); it is an error when `f` names neither a callable nor a Structure ([semantics](LMX_semantics.en.md#data-code-roles)). Before the author's decision of 2026-11-11 ([journal](../LMX_blog/2026-11-11.md#structure-call-by-name)), the form `f()` with an ordinary Structure as its head was refused in code, and such a Structure was executed only by the receiver `call`. The implementation executes the former rule (before 2026-11-19; the norm in force is the [structural call](LMX_semantics.en.md#call-receivers), the replacement is the [plan](../next_core_tasks_v3.md#binding-callables-20261119)): since slice 356 the clean graph launches such a Structure by the form `f()` in the code of a method and in code over given data, while in the root of a unit and in a Structure over itself it does not yet execute the role of code of a form with an ordinary Structure as its head by name (sub-step 5г of the [plan](../next_core_tasks_v3.md#m11)); the working frontend does not execute the launch by name (step 8). Calling and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling; a structural form performs no assignment ([semantics](LMX_semantics.en.md#forms-declare-or-call)).
+Parentheses are not a call marker. P0 gives `f()` and an empty `f:` the same Frame without checking whether `f` exists. A resolved ordinary head declares a Structure in DATA and calls it in CODE. The callable `C` itself executes over its actual `parent(C)`; the path used to obtain it does not substitute another parent. A head with its own receiver contract follows that contract. These forms perform no assignment merely because a colon is present. See [construction](LMX_semantics.en.md#construction) and [structural calls](LMX_semantics.en.md#call-receivers).
+
+Written grouping is also significant for field streams:
+
+```lmx
+f(copy(A))
+f((copy(A)))
+f(arg0 := (copy(A)))
+```
+
+The first supplies result fields; the second forms one Structure before `f` applies ordinary W/E; the third supplies that whole Structure explicitly to real formal `arg0`, suppressing E. `copy(Empty)` emits zero fields, while `(copy(Empty))` is one empty structural result. P0 preserves the grouping in every case, including `struct := (merge(A B))` and `return: (copy(A))`; the namespace performs the computation. The same distinction applies to nested `import`: its surrounding consumer receives the stream, with no duplicate hidden import into the caller. See [field streams](LMX_semantics_guide.en.md#field-streams).
 
 Bare `f:` without arguments and without a vertical body is the short form without arguments: a Frame with an empty body, like `f()`. Bare `f` is an ordinary admitted atomic expression; P0 retains it as an atom and does not create a call Frame. Under [semantics](LMX_semantics.en.md#resolved-head-consumption), a bare name reads the resolved value or reference without executing the Structure; its launch is written `call: f` or, in code, `f()`. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
 
-**Valid: the same empty P0 Frame; parentheses do not select a call** — author / автор, 2026-09-23.
+**Valid: the same empty P0 Frame; parentheses do not select a call** — author, 2026-09-23.
 
 ````text
 f()
 ````
 
-**Valid: an empty container, zero arguments** — author / автор, 2026-09-19.
+**Valid: an empty container, zero arguments** — author, 2026-09-19.
 
 ````text
 receiver:
 ---
 ````
 
-**Valid: one field, an empty Structure, as in `receiver(())` (author's decision of 2026-11-10; formerly the same empty container, zero arguments)** — author / автор, 2026-09-19.
+**Valid: one field, an empty Structure, as in `receiver(())` (author's decision of 2026-11-10; formerly the same empty container, zero arguments)** — author, 2026-09-19.
 
 ````text
 receiver: ()
@@ -642,17 +680,17 @@ receiver: ()
 
 Sources: §§0.0.2, 3.4.4.4, 15.0.
 
-`{...}` is a bounded Mix form. Outside a shielded literal/comment, `{` enters the same P0 in a local level-0 context; the opener column does not become the indentation base. Ordinary quotes, comments, levels, and nested forms apply inside. A `}` within a shielded literal standing in the mark (an ordinary string, a character constant, triple quotes, block text, an exact identifier) does not close it. A comment `#` in the mark acts through the end of the line or of the document, and the end of the mark's document is its closing `}`: `{#)}` is a mark with the comment `)`, not an error (the author's words of 2026-11-11: [a comment and the end of a Mix document](../LMX_blog/2026-11-11.md#lost-bracket-comment-in-mix-scanner)). The result is immediately retained as a Structure node with a Mix flag and source span. Internal newlines do not produce outer level events.
+`{...}` is a bounded Mix form. Outside shielded content, `{` enters the same P0 with its own local level-0 root; the opener's column does not become the indentation base. Quotes, comments, levels, and nested forms use the common rules. A `}` within a shielded literal does not close the mark. A `#` comment in the mark ends at newline or the document's closing `}`, so `{#)}` is valid. The parsed result is retained as a Mix-flagged Structure with its source span. Internal newlines do not produce outer level events. A blank line completes the current local block only; it neither closes the outer document nor replaces the Mix wrapper's required `}`.
 
-Braces are not a comment: the content of a mark is parsed by the same parser, so a mark with an error inside is a parse error and forms no pair with an outer bracket (the author's words of 2026-11-11: [braces are not a comment](../LMX_blog/2026-11-11.md#braces-are-not-a-comment), [a mark with an error is an error](../LMX_blog/2026-11-11.md#mark-errors-and-string-marks)); the exception is a mark inside a string, below. `x: a {)} b` and `x: a {(} b` are parse errors; so is `f(a {)} b)`: the `)` inside a mark with an error does not become the pair of the outer `(`.
+Braces are not comments. Their content is parsed by the same automaton, so a malformed mark is an error and its internal delimiter cannot pair with an outer one. `x: a {)} b`, `x: a {(} b`, and `f(a {)} b)` are errors. The separately described string-mark exception below does not change ordinary Mix parsing.
 
-Inline or tail Mix belongs to the current field sequence. Leading Mix before an ordinary item is placed before it at that item's level. In relaxed notation, prefix width may occupy part of indentation; in dotted notation, dots still determine the level. Column-0 lines containing only Mix forms are queued in order and anchored to the next ordinary item, or to the current/document-end context at EOF. Other standalone Mix lines use ordinary levels.
+Inline or tail Mix belongs to the current field sequence. Leading Mix before an ordinary item is placed before it at that item's level. In relaxed notation, prefix width may occupy part of indentation; in dotted notation, dots still determine the level. Column-0 lines containing only Mix forms are queued in order and anchored to the next ordinary item, or to the current/document-end context at a blank-line full boundary or EOF. A pending queue is resolved before a blank-line boundary and is never carried into the following block. Other standalone Mix lines use ordinary levels.
 
 An ordinary consumer may skip Mix nodes; a document consumer may build intervals. This is not automatic execution or substitution.
 
-Marks inside a string are parsed by the same Mix scanner as in ordinary text. The outer string payload is delimited first; its internal marks are then considered in their own bounded context. They must not alter the outer string's bounds or enter its surrounding active index. The string between the quotes is kept whole: marks are not cut out of it and are not ignorable insertions, and the original string value does not change because of them. A correct mark gives a separate mix-tree held at the string atom itself, not as a field of the surrounding record (preferably also at the character number in the atom, the author's words of 2026-11-11: [a tree at the atom and the character number](../LMX_blog/2026-11-11.md#mix-tree-at-character-of-atom)). The character number for a Mix coordinate is the number of the character in the displayed text, as seen on screen (the author's answer to Q4 of 2026-11-15, [journal](../LMX_blog/2026-11-15.md#mix-displayed-character)). A character outside the BMP, such as 🙂, counts as one character, not two UTF-16 code units (the author's clarification of 2026-11-13, [journal](../LMX_blog/2026-11-13.md#mix-non-bmp-character)). A mark with an error gives no tree and does not fail the string — it is not a parse error (the author's words: [inside strings braces are parsed but do not fail with an error](../LMX_blog/2026-11-11.md#braces-are-not-a-comment)). `x: "text{)}text{mix}"` is one string atom with the text whole and one mix-tree, for `{mix}` ([the author's words](../LMX_blog/2026-11-11.md#mark-errors-and-string-marks)).
+Marks inside a string use the same Mix scanner after the outer string payload has been delimited. They do not change the string's bounds, remove text from its value, or join the outer active-mark context. A valid mark gives a separate mix-tree associated with its string atom and displayed-character position. Positions count a non-BMP character such as 🙂 as one character, not two UTF-16 code units. An invalid string mark gives no tree and does not fail the string: `x: "text{)}text{mix}"` remains one whole string with one mix-tree, for `{mix}`. These contracts retain the author's 2026-11-11, 2026-11-13, and 2026-11-15 clarifications as stated here without requiring external journal files.
 
-The parser's current state, verified builds and remaining limits are recorded in the [implementation notes](implementation-notes.en.md).
+Implementation status is separate from this normative grammar; consult the [implementation notes](implementation-notes.en.md) without treating earlier build records as acceptance of these requirements.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 212–213.
 
@@ -699,7 +737,7 @@ The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`
 
 In this profile, `=` is comparison, not assignment syntax or a named field. An update is written with the operator `i := newValue`; P0 still parses `i: newValue` as an ordinary head form, but in translation and interpretation it no longer serves as an assignment (author's decision of 2026-11-10, [semantics](LMX_semantics.en.md#forms-declare-or-call)).
 
-`:=` is a separate operator token (the author's decision of 2026-11-07, [journal](../LMX_blog/2026-11-07.md)): P0 neither splits it into `:` and `=` nor makes a Frame head `a:` of `a:=5`; `a := 5` and `a:=5` are one form: a left side, the token `:=`, a right side. Its meaning, a write to a place already known and the supply of a named argument, is defined by the [semantics](LMX_semantics.en.md#assign-known); this decision defines neither the precedence nor the associativity of `:=`. They are defined by the author's decisions of 2026-11-18 ([journal](../LMX_blog/2026-11-18.md#assignment-signs-are-heads), [journal](../LMX_blog/2026-11-18.md#c-priorities)): an assignment sign -- `:=` and the compound `+=`, `-=` and the rest -- is a receiver head tied to the name written to its left; assignment has the lowest priority, groups to the right, and its right part is the whole expression to its right up to the end of the group. The table below sets the relative order of the operations, the stronger above: it is that of C, and the power `**` is described below. Values are obtained on demand ([semantics](LMX_semantics.en.md#assignment-inside-expression)): a low priority of the source of a value does not forbid evaluating it before the consumer. `1 + v := 2 + 3` gives 6, and `v` is 5; `10 * v := 2 + 3` gives 50; `1 + v := 2 * 3` gives 7, and `v` is 6; `1 + (v := 2) + 3` gives 6, and `v` is 2; `a := b := 10` assigns 10 to both; `v := 2 - 3` assigns −1. The record with one receiver stays: `(+ 2 - 3)` gives −1 ([journal](../LMX_blog/2026-11-18.md#general-for-all-receivers)). The rule of the same day by which an assignment inside an expression bound stronger than the other operators is withdrawn. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
+`:=` is one operator token: P0 neither splits it into `:` and `=` nor makes a Frame head `a:` from `a:=5`. Compact and spaced assignments have the same fields. The operator writes a resolved place or supplies a named actual according to its structural position ([semantics](LMX_semantics.en.md#assign-known)). Assignment receivers remain tied to their written left places; `1 + v := 2 * 3` does not become a C-style assignment to `1 + v`. Assignment has the lowest relative priority, groups right, and keeps the expression on its right through the enclosing group boundary. The stronger operations appear above weaker ones in the table. Necessary values are obtained on demand: `1 + v := 2 + 3` gives 6 with `v = 5`; `10 * v := 2 + 3` gives 50; `1 + v := 2 * 3` gives 7 with `v = 6`. Explicit `1 + (v := 2) + 3` instead leaves `v = 2`. `a := b := 10` assigns both places; `v := 2 - 3` and the existing receiver form `(+ 2 - 3)` give −1. This is value-dependency execution, not temporary promotion of assignment priority or graph regrouping. Effects and result admission follow [semantics](LMX_semantics.en.md#assignment-inside-expression).
 
 | level | operations | associativity |
 |---|---|---|
@@ -717,9 +755,9 @@ In this profile, `=` is comparison, not assignment syntax or a named field. An u
 | logical or | `\|\|` | left to right |
 | assignment | `:=` and the compound assignments, `**=` included | right to left |
 
-The logical `&&` and `||` evaluate the right operand only when it is needed. A name registered through `sys\operand` with a function of implementation and a priority has the role of an operand in an expression -- `(foo 1 2 3 4)`; lexically it stays an identifier, the parse does not single it out, and its priority enters the same scale as the priorities of the table ([semantics](LMX_semantics.en.md#operand-receiver)). `sys\name(identificator)` consumes a written identifier without evaluating it and gives its name as a string ([semantics](LMX_semantics.en.md#string-identifier)); `sys\priority` gives the priority of an operand by a string with its name ([semantics](LMX_semantics.en.md#expression-priority)). The author's decisions of 2026-11-18, [the requirements](new_parts/to_fable_operands_arguments_priorities.md).
+The logical `&&` and `||` obtain their right operand only when needed. A user operand is an ordinary method discovered through its DATA's explicit structural header: `left` is a reference, `right` is an Array of references, and `PASS_ARGS_AS_IS` and `PRIORITY` are required constant integer fields. Mode must be `0` or `1`; priority must be ready before grouping. No `sys\operand` registration, separate implementation name, or implicit default property is used. The method's ordinary `return` describes its result; an operator application does not add a hidden dereference. Mode `0` supplies prepared values by reference; mode `1` supplies original occurrences and their live source context, evaluated only when the method calls `sys\eval`. Arrays and strings remain single operands. A lexical identifier can therefore have operator, ordinary-call, or reference use after P0 without a spelling-specific parser branch. `sys\name(identifier)` reads the identifier spelling without resolving or executing it; `sys\priority(name)` reads an accessible operand's ready priority by string content. The full contracts are in [semantics](LMX_semantics.en.md#operand-receiver), the [worked guide](LMX_semantics_guide.en.md#operand-templates), and the [operand requirements](TZ/to_fable_operands_arguments_priorities.md).
 
-The author's directive of 2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the operator tokens of the compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power infix `**` -- each one token P0 does not split (`a+=b` and `a += b` are one form: a left side, the token, a right side). `**` groups to the right and binds tighter than `*`, `/`, `%`, `+`, `-` but looser than a call, an index and a field access; on its left it binds tighter than the unary `+`, `-`, `~`, on its right it admits a unary operand -- as in Python (the author's clarification of 2026-11-07): `-2 ** 2` is `-(2 ** 2)`, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; `^` stays the bitwise exclusive or. The meaning of the compound assignments is the [semantics](LMX_semantics.en.md#compound-assign); the precedence of the assignments themselves is set by the general rule of executing an expression (the author's decision of 2026-11-18, above), while effect ordering, types and errors are not set by the grammar; P0 does not implement the tokens yet.
+Compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and power `**` are single operator tokens; spacing does not alter them. Power groups right and binds above multiplication/addition but below call, index, and field access. On its left it binds above unary `+`, `-`, and `~`; on its right it admits a unary operand. Thus `-2 ** 2` is `-(2 ** 2)`, `2 ** -2` is `2 ** (-2)`, `2 ** 3 ** 2` is `2 ** (3 ** 2)`, and `2 * 3 ** 2` is `2 * (3 ** 2)`. `^` stays bitwise exclusive-or. Numeric admission and the result of negative powers follow LMX's numeric contract, not all of Python's semantics. [Compound assignment semantics](LMX_semantics.en.md#compound-assign) also govern effects; implementation acceptance verifies the common token and expression mechanisms.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4259–4259.
 
@@ -737,9 +775,9 @@ The author's directive of 2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the
 
 ## 22. Address, index, and path forms
 
-Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. Flat `@: ptr Model Other` leaves three neighboring fields in `@`'s tail; `@: ptr Model: Other` has two, the second being a nested Frame, which among a receiver's arguments is read as a call of `Model`, not as a requirement with a candidate ([semantics](LMX_semantics.en.md#data-code-roles)); `ptr: @: Model: 0` builds nested Frames by the common rules but does not declare a place `ptr` ([semantics](LMX_semantics.en.md#receiver-args-only)). A form that calls a Structure at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) gives a value when the data of the called Structure describe the result by a `return` field ([`return` in data](LMX_semantics.en.md#return-in-data)); the former unconditional prohibition «a launch has no result» (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р22, item 3; Р25, item 4) is withdrawn by the norm of 2026-11-19. P0 neither reorders arguments nor gives `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
+Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. Flat `@: ptr Model Other` has three neighboring fields; `@: ptr Model: Other` has atom `ptr` and a nested Frame. Their subsequent roles follow the resolved receiver contract and DATA/CODE context, not special P0 parsing. `ptr: @: Model: 0` is a nested Frame rather than a declaration of the place `ptr`. A named signature requirement uses the same flat form, `@: ptr Signature Candidate`. A CODE call can yield a value when its actual DATA declares a compatible `return`. `import`, `copy`, and `merge` always read their source arguments as CODE, including inside DATA declarations; anonymous Structures and bare references remain values. P0 neither reorders arguments nor resolves types, declarations, or assignments.
 
-Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. L2 indexing of any rank computes an offset without checks, including negative indexes. L3 reduces adjacent indexes to one linear index with one length check; this is common index-path semantics, not a separate P0 parse. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure in the role of data, it is the zero-based Nth occurrence of the name `field` at its root level, not an Array field; bare `s\field` is allowed only with one occurrence. A repeated declaration in data neither replaces the former one nor writes into it — it is one more occurrence of the name: after it the name is addressed only with the index of an occurrence, and access without an index is an error ([semantics](LMX_semantics.en.md#fields)). Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
+Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. `@x` explicitly obtains a numeric address; ordinary references do not require it. `\x` dereferences and does not execute code. Reserved `node` is lexical and stays fixed across nested bodies; it is not a synonym for the current DATA/stream recipient or a dynamically selected namespace. Field and index chains bind tighter than prefix operators. L2 indexing of any rank computes an offset without checks, including negative indexes. L3 reduces adjacent indexes to one linear index with one length check; this is common index-path semantics, not a separate P0 parse. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure in the role of data, it is the zero-based Nth occurrence of the name `field` at its root level, not an Array field; bare `s\field` is allowed only with one occurrence. A repeated declaration in data, including repeated declarations accepted from separate receiver streams, neither replaces the former one nor writes into it — it is one more occurrence of the name: after it the name is addressed only with the index of an occurrence, and access without an index is an error ([semantics](LMX_semantics.en.md#fields)). Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -767,7 +805,7 @@ In an evaluated call, C functions and macros receive already evaluated L2 values
 
 Type heads such as `int`, `char`, and `size_t` do not require `c.`. An unresolved ordinary name does not automatically become a C name. `c.` is not universal declarator, label, or C-tag syntax. `C:` separately accepts explicitly supplied string text; a string does not become code merely by appearing within `L1:`, `L2:`, or `L3:`.
 
-The file extension selects the outer profile, and the file itself is a Structure ([semantics](LMX_semantics.en.md#scope)). `L2` is a receiver: L2 code is written under it, the record `L2: (...)` lies in the graph as written, and by it the translator and the interpreter learn the level of the code; an `.lm2` file by itself is as if wrapped in this receiver (the author's decision of 2026-11-17, [journal](../LMX_blog/2026-11-17.md#lm2-file-wrapped-in-l2)). The words `L1` and `L3` select no profile and resolve as ordinary names. The previous direct L1 profile takes wrapperless `.lm1` input ([L1](L1_spec_en.md#scope)). The source excerpts below containing `L2:` describe the previous specification, not a rule of automatic profile selection. A catalog of library receivers is not grammar.
+The file extension selects the outer profile, and a file is itself a Structure ([semantics](LMX_semantics.en.md#scope)). `L2` is a receiver: `L2: (...)` remains written in the graph, and the consumer uses its contract to determine the code level. An `.lm2` file is treated as wrapped in that receiver. `L1` and `L3` do not themselves select profiles and resolve as ordinary names. The former direct L1 profile accepted wrapperless `.lm1` input; that historical profile is outside this archive. A receiver catalog does not add grammar.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 5150–5150.
 
@@ -791,29 +829,31 @@ Source: §15.0; this is the normative recognition model, and the EBNF below is i
 
 `P0 = (S, E, delta, O)`. State S contains source position/span base, lexical mode, normalized level, form stack, and output insertion cursor. Modes are `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, and `LINE_COMMENT`. Stack forms are the level-0 root, vertical form K, short head N with body N + 1, parenthesized/index forms with base B, and Mix with local base 0.
 
-Events E are `LEVEL(K)`, `ATOM(value)`, `HEAD(value)`, `COLON`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton.
+Events E are `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton.
 
 In a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. The line-comment mode (`LINE_COMMENT`, `#`) ends at the end of the line or of the document, and for the document of a Mix mark that end is its closing `}` ([§9](#comments), [§19](#mix)). Matching-delimiter search must use those same modes; a separate character counter is insufficient. Braces are neither a comment nor a lexical mode: a mark is a bounded form, its content is parsed by the same automaton, and a closing bracket inside a mark with an error does not become the pair of an outer opening bracket (`f(a {)} b)` is an error). The content of an already delimited string payload passes the Mix scanner as a separate bounded context: it does not remove this shielding, does not alter the string's bounds, and an error in a mark does not fail the string ([§19](#mix)).
 
-EOF completes the root after all forms admitting EOF closure. Unclosed bounded forms or lexical modes remain errors, as does a closing bracket without an opening one ([§14](#bounded)). Output O retains Structures, Frames, atoms, Mix flags, and spans; P0 does not execute code, resolve functions, or assign types.
+`BLANK_LINE` is recognized from the original physical line and lexical mode before whitespace/comment removal. It enters the common completion mechanism at virtual level −1, completes the current block immediately, resolves pending Mix-only anchors, and resets continuation to the local document root. It adds no output field or instruction. If an internal paired form is unmatched, it reports an error at the boundary with the opener location; it does not synthesize a delimiter. The current Mix document's own wrapper is excluded from this internal-pair check. Source spans record the actual boundary rather than an inserted textual `---`. Repeated boundaries are idempotent. The same event is used in disabled-body syntax validation.
+
+EOF completes the root after all forms admitting EOF closure. No final blank line or trailer is required, and one final LF need not be treated as a blank line. Unclosed bounded forms or lexical modes remain errors, as does a closing bracket without an opening one ([§14](#bounded)). Output O retains Structures, Frames, atoms, Mix flags, and spans; P0 does not execute code, resolve functions, or assign types.
 
 <a id="ebnf"></a>
 
 ## 25. Surface-form EBNF
 
-Source: §15.0. The formal notation and its original annotations are retained verbatim below. This is the same immutable source excerpt in both language versions; all constraints are explained in the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events are read with the lexical rules, not as permission for arbitrary characters. English annotations within the notation are not language tokens.
+Source: §15.0 of the former specification, revised here to express the current recognition rules. This projection is subordinate to the single automaton and the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events use the lexical rules; annotations are explanations, not language tokens. This archive revision concerns the English grammar.
 
-This EBNF does not replace the automaton: bare `f:` without an argument and without a vertical body is the short form with an empty body (author's decision of 2026-11-10; the historical notation below does not contain it); `newline/source-level composition` denotes the stated transitions, not arbitrary whitespace separation.
+This EBNF does not replace the automaton. `newline/source-level composition` means the stated transitions, not arbitrary whitespace separation. A blank physical line is a full-document-root completion event; it is recognized before generic whitespace skipping.
 
-By the author's decision of 2026-11-10, P0 does not unwrap the sole anonymous Structure occupying the whole list, empty or not ([empty bodies](#empty-colon)): `f()`, `f:`, and an explicitly empty vertical form yield the same Frame with an empty Structure-body, while `f: ()` yields a Frame with one field, an empty Structure. Read the historical notation below with this clarification.
+P0 never unwraps the sole anonymous Structure occupying an argument list ([empty bodies](#empty-colon)). `f()`, `f:`, and an explicitly empty vertical form have the same empty Frame-body; `f: ()` has one empty Structure field. The EBNF below is read with these retained group boundaries.
 
-By the author's decisions of 2026-11-11, `comment_body` ends at the end of the line or of the document (in a Mix mark, at its closing `}`), the content of round and square brackets is read by the same line rules as outside brackets (a deeper line opens an anonymous Structure, a dot after the indentation spaces is an atom), and a closing bracket without an opening one is a parse error ([§9](#comments), [§14](#bounded), [§19](#mix)). Read the historical notation below with this clarification as well.
+Comments stop at newline or document end, including the closing `}` of Mix. Round and square bounded content uses the same source-level rules: a deeper line opens an anonymous Structure, a dot after indentation spaces is an atom, and an unmatched closer is an error. Blank-line full closure follows the local-document and delimiter rules in [§14](#bounded), [§15](#levels), and [§19](#mix).
 
-The annotation on historical `nullary_line_body` is not a P0 check of name availability, role, or arity: a bare identifier is parsed as an atom by the common grammar. Those checks follow construction of the complete model under [the single semantic rule](LMX_semantics.en.md#resolved-head-consumption). The immutable excerpt below is retained as a source, not permission for a separate nullary-receiver parser. The annotation names `fn`/`sub` as visible nullary forms: there is no executable `fn` or `sub` under the norm of 2026-11-19 ([what is withdrawn](LMX_semantics.en.md#removed-builtins)); the annotation remains a historical text of the source, not a list of built-in heads.
+A bare identifier in `nullary_line_body` remains an atom. Availability, role, arity, and operand discovery are consumer checks after construction of the complete model. P0 performs no registered-nullary-receiver lookup and does not turn a bare callable reference into a call.
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 8760–8946.
+**Current EBNF projection**, derived from `Lingvamyxa_spec.txt`, 8760–8946, with the accepted corrections incorporated.
 
-````text
+````ebnf
     program             ::= { empty_line | physical_item }
 
     physical_item       ::= raw_file_comment_block
@@ -843,7 +883,7 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
 
     horizontal_space    ::= " " | tab
 
-    logical_line        ::= source_level line_content newline
+    logical_line        ::= source_level line_content (newline | EOF)
 
     indentation         ::= { "." | " " | tab }
 
@@ -860,10 +900,10 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
                             computed by the indentation-stack rule.
 
     empty_line          ::= trailing_horizontal_space newline
-                            level-0 structural boundary event;
-                            closes an open level-1 vertical tail by ordinary
-                            source-level decrease, but is not a same-level
-                            delimiter below level 1
+                            BLANK_LINE: full closure at virtual level -1;
+                            completes current short/vertical block to this
+                            document's root; emits no field; preserves lexical
+                            shielding and rejects unmatched internal pairs
 
     line_content        ::= dot_only_marker [ comment_body ]
                           | comment_body
@@ -874,7 +914,7 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
                             valid only if source_level > 0;
                             may delimit/open an anonymous Structure at that level
 
-    comment_body        ::= "#" ignored_until_newline
+    comment_body        ::= "#" ignored_until_newline_or_document_end
 
     disabled_body       ::= "%" enabled_line_body
 
@@ -894,11 +934,9 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
 
     colon_frame_body    ::= head ":" [ line_arguments ]
                             inline tail and following vertical children at
-                            N+1 together form the assembled body; a colon
-                            Frame with zero argument fields after that
-                            assembly is a current-P0 syntax error. Compact
-                            `name()` and `()` are not this production.
-                            Historical 620db86 P0 allowed the empty form.
+                            N+1 together form the assembled body; zero fields
+                            give the same empty Frame-body as name(). A blank
+                            physical line completes the entire current block.
 
     semicolon_segment_separator
                          ::= ";"
@@ -913,9 +951,8 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
                           | symbolic_head
 
     nullary_line_body   ::= name
-                            valid in executable statement position only when
-                            `name` resolves to a zero-argument consumable binding:
-                            registered nullary operator/receiver or visible zero-argument fn/sub
+                            an ordinary atom; semantic resolution does not
+                            introduce a P0 call or consume neighboring fields
 
     line_arguments      ::= short_tail
 
@@ -936,7 +973,8 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
     // the surrounding scan depth.
     // Physical newline is not a short-form trailer; after newline, the next
     // source-level event decides whether the open frame receives more fields
-    // or is completed by level rules.
+    // or is completed by level rules. A blank physical line is a distinct
+    // full boundary at virtual level -1, not ordinary newline composition.
     // Operator-token consumption is deferred to a later consumer.
 
     argument_list       ::= bounded_item_sequence
@@ -1007,13 +1045,13 @@ The annotation on historical `nullary_line_body` is not a P0 check of name avail
 
 ## 26. Structural-result EBNF
 
-Source: §15.1. This describes the parse result, not a second surface grammar or execution semantics. `Structure(...)` and `Frame(...)` denote result construction. The original formal notation is retained identically in RU/EN.
+Source: §15.1. This describes the parse result, not a second surface grammar or execution semantics. `Structure(...)` and `Frame(...)` denote result construction. This English projection uses the current completion rules; it does not imply an updated parallel translation.
 
-`FrameTrailer` is separate from argument fields. Comma appends/separates tail fields; semicolon first completes the short form at the current depth. A bounded closer closes its matching context; level transitions and receiver-admitted closers retain their distinct completion reasons. An ordinary item at a smaller level remains ordinary after the preceding form closes; its text does not automatically become a closing receiver.
+`FrameTrailer` is separate from argument fields. Comma appends/separates tail fields; semicolon first completes the short form at the current depth. A bounded closer closes its matching context; level transitions, blank-line full closure, EOF, and receiver-admitted closers retain their distinct completion reasons. An ordinary item at a smaller level remains ordinary after the preceding form closes; its text does not automatically become a closing receiver.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 9051–9109.
 
-````text
+````ebnf
     SourceFile
         ::= RootBlock
 
@@ -1079,7 +1117,7 @@ Source: §15.1. This describes the parse result, not a second surface grammar or
 
 ## 27. Original literal-boundary examples
 
-Historical parser examples witness lexical boundaries, not independent rules. Current expectations are in the [test corpus](../tests/parser/README.en.md); preserved source fixtures are not rewritten to match the new language.
+These preserved lexical examples illustrate literal boundaries. They do not override the current automaton or establish implementation test results; validation expectations are specified in this grammar and the [blank-line requirements](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 9297–9303.
 

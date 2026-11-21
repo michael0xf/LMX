@@ -11,48 +11,50 @@
 | [Binding, declarations, and import](#binding) | 18 | Defaults, alias/copy distinction, private, fn labels, repeated declaration arguments |
 | [Typing](#typing) | 7 | Physical field maps, complete models, fn contracts, behavior, nil and conversions |
 | [Operands and evaluation](#operands) | 18 | Prepared/raw modes, effect counts, argument boundaries, precedence, source graph |
-| [Validation and integration](#validation) | 5 | String checker, mock, catch, command/feedback, pending automatic schedule |
+| [Validation and integration](#validation) | 5 | String checker, mock, catch, command/feedback, separate admission/test phases |
 | [All 23 patterns](#patterns) | 23 | Complete independent source programs and distinguishing observations |
 | [Graph, arrays, and persistence](#graph) | 12 | Local/source separation, copies, cycles, schema composition, references, returned method |
 | [Native and interpreter execution](#native) | 6 | Four path combinations, compilation/turn boundary, dispatch, cleanup |
 | [Messages](#messages) | 4 | Serial ownership, fan-out, timeout arguments, storage transfer |
-| [Author question Q01](#author-question) | — | The automatic test/admission schedule; V05 is pending that answer |
+| [Phase contract Q01](#author-question) | — | Current construction, build-test, runtime and dispatch boundaries |
 
 There are **93 case families**. Most contain several positive, negative, or repeated-call variants;
-the table does not claim 93 executed tests. V05 has a pending scheduling oracle. C-01 is explicitly
-labelled as the currently documented derivation, rather than a separate author-confirmed decision.
+the table does not claim 93 executed tests. V05 uses the current separated-phase contract.
+C-01 retains only the exact inline-local initialization question identified by the bundled review notes.
 
 ## 1. Authority, scope, and how to use this document
 
-This corpus updates the earlier discussions of `add5`, defaults and free inputs, nested actions, code/data roles, lexical copying, native reuse, local state, structural typing, `test`, `catch`, RegEx-like validation, mocks, and integration self-testing. It also supplies a new complete scenario for each of the 23 attached design patterns and focused cases for the three new change requests.
+This corpus updates the earlier discussions of `add5`, defaults and free inputs, nested actions, code/data roles, lexical copying, native reuse, local state, structural typing, `test`, `catch`, RegEx-like validation, mocks, and integration self-testing. It also supplies a new complete scenario for each of the 23 attached design patterns and focused cases for the integrated change requirements.
 
 ### Governing sources
 
-The author's instruction for this task gives the three change requests and the current `LMX_Design*` documents precedence over conflicting older explanations. The three change requests are identified here by their contents and titles, not by an attachment viewer's display order:
+The normative model is the supplied `newdocs/` packet, including its five integrated change requirements and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
 
 | Code used below | Document / package path | Role |
 |---|---|---|
-| O / OPERAND | [to_fable_operands_arguments_priorities.md](reference/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
-| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
-| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
+| O / OPERAND | [to_fable_operands_arguments_priorities.md](newdocs/TZ/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
+| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
+| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
+| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
+| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
 | P3 / DP3 | [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | Current examples 19–23, updated 21 November |
-| S / SEM | [LMX_semantics.en.md](reference/LMX_semantics.en.md) | Remaining semantics, subject to the explicit overrides above |
-| G / GRAMMAR | [LMX_grammar.en.md](reference/LMX_grammar.en.md) | Common parsing and lexical rules, subject to those overrides |
-| [GUIDE] | [LMX_semantics_guide.en.md](reference/LMX_semantics_guide.en.md) | Worked explanations; superseded examples do not override the directives |
-| L2 | [L2_spec_en.md](reference/L2_spec_en.md) | Runtime/representation contracts and machine-level boundaries |
-| [CORE] | [CORE.md](reference/CORE.md) | Architecture; historical implementation descriptions remain historical |
-| [CODING] | [L2_L3_CODING_INSTRUCTION.md](reference/L2_L3_CODING_INSTRUCTION.md) | Existing implementation, validation, and source-style workflow |
+| S / SEM | [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | Current normative semantics with the supplied requirements integrated |
+| G / GRAMMAR | [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | Current common parsing and lexical rules |
+| [GUIDE] | [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | Worked explanations; superseded examples do not override the directives |
+| L2 | [L2_spec_en.md](newdocs/L2_spec_en.md) | Runtime/representation contracts and machine-level boundaries |
+| [CORE] | [CORE.md](newdocs/CORE.md) | Architecture; historical implementation descriptions remain historical |
+| [CODING] | [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | Existing implementation, validation, and source-style workflow |
 | README | [README.md](README.md) | Pattern inventory and verification scope |
 
-Document links are relative to the directory containing this file. The design-pattern guides and README are in that directory; the specifications, semantics guide, architecture and coding instructions, and change requests are in `reference/`. Upload-number postfixes have been removed from the filenames. Section and line references, and the SHA-256 values at the end, still identify the reviewed source contents; normalizing a path does not establish that a later revision has the same contents.
+Document links are relative to this file. Pattern comparisons, pattern guides and README are beside it; the normative documents are under `newdocs/`, their current requirements under `newdocs/TZ/`, and accepted supplements under `newdocs/Old_TZ/`. Section names and anchors identify the current contracts. Obsolete exported-file line numbers have been removed. The final snapshot records the exact normative files bundled with this revision.
 
 ### Required handling of contradictions
 
 **If two governing requirements still contradict each other after applying the author's stated precedence, Fable must ask the author before choosing a language rule or changing an expected result.** Present both passages and the smallest example whose behavior differs. Continue the independent cases meanwhile. The existing implementation, a convenient optimization, or an old passing test is not authority to settle a semantic conflict.
 
-An explicitly superseded statement is different: apply the accepted replacement and repair the stale documentation. Do not ask the author again whether to remove `sys\operand`, preserve the actual callable parent, or publish locals through `dirty`: the current directives already answer those questions. Q01 at the end records the remaining automatic-`test` scheduling conflict without blocking direct checker programs.
+An explicitly superseded statement is different: apply the accepted replacement and repair the stale documentation. Do not ask the author again whether to remove `sys\operand`, preserve the actual callable parent, or publish locals through `dirty`: the current directives already answer those questions. Q01 at the end records the now-separated admission/test phases. The exact no-RHS inline-local case C-01 remains the narrow review question already recorded in `newdocs/REVIEW_NOTES.md`.
 
 ### Running the examples
 
@@ -71,9 +73,9 @@ An executable Structure uses its actual parent as data. A call does not substitu
 
 An own declared input receives an explicit value, its ready/default description, or permitted autofill into its own place. A free name can instead designate the immediate caller's existing local place. The older transitive fallback remains an own working copy. Their different write destinations are tested separately. No local write-back/flush/dirty protocol is reinstated by these examples.
 
-`merge` copies the explicitly selected graph and its required lexical closure. It does not silently capture all locals of the calling activation or turn free names into bound formals. A returned method in G12 has explicitly prepared copied state. Data copying and native-entry registration are separate operations; code-update tests use explicit compilation and a turn boundary.
+`copy` copies one admitted structural source; `merge` composes at least two. Both emit field streams using one graph-copy map per operation. A grouped result, such as `(copy(Source))` or `(merge(Model Values))`, gives one Structure before the next consumer applies its ordinary rules. Both retain the required lexical closure. Neither silently captures all locals of the calling activation or turns free names into bound formals. The receiving DATA Structure is never an implicit merge source; separate operations retain separate maps and normal DATA redeclaration behavior. `import` uses the same standard CODE source processing but selects root constant declarations by reference, including ordinary user Structures. A returned method in G12 has explicitly prepared copied state. Data copying and native-entry registration are separate operations; code-update tests use explicit compilation and a turn boundary.
 
-An explicitly supplied ordinary structural template keeps all its written requirements. A named `fn` requirement instead compares the ordered input types and result contract. Behavior is checked by ordinary checker code. The direct checker programs remain useful regardless of how Q01's automatic test schedule is resolved.
+An explicitly supplied ordinary structural template keeps all its written requirements. A named `fn` requirement instead compares the ordered input types and result contract. Behavior is checked by ordinary checker code. The direct checker programs and the phase-specific cases in Q01 exercise separate parts of the documented admission process.
 
 ### Earlier discussion → current regression case
 
@@ -83,7 +85,7 @@ An explicitly supplied ordinary structural template keeps all its written requir
 | Nested action changing `y`; copy versus communication with the caller | B-03–B-05, P07, P10 |
 | `int: i findValue()` and organized code/data editing | B-07–B-08, G01–G02, G11 |
 | Local variables and the former `dirty` discussion | B-03–B-08, G01–G02, N01, N06 |
-| Dynamic binding after merge; explicit `node\` | B-02, G12, P22 |
+| Dynamic binding after copying; explicit `node\` | B-02, G12, P22 |
 | Copying, aliases, cycles, immutable sharing and prototype changes | G03–G06, P03, P12, P15–P17, P19–P22 |
 | Native execution, interpretation, reuse and modified code | N01–N05, OP18 |
 | Complete inspectable graph and serialization | OP17, G01, G10–G11 |
@@ -100,7 +102,7 @@ An explicitly supplied ordinary structural template keeps all its written requir
 <a id="binding"></a>
 ## B. Binding, defaults, signatures, declaration arguments, and import
 
-B-01–B-13 cover binding/callables, D-01–D-04 cover declaration arguments and import, and C-01 records the existing documented derivation for the nested-scope control example.
+B-01–B-13 cover binding/callables, D-01–D-04 cover declaration arguments and import, and C-01 retains the exact open initialization control case for an inline nested scope.
 
 ### B-01 — `add5`: compose a real default, retain the explicit argument
 
@@ -116,7 +118,7 @@ Checks:
     return: int
     demo:
         int: y 100
-        @: fiveContext merge(Addition; (int: y 5))
+        @: fiveContext (merge(Addition; (int: y 5)))
         @: add5 fiveContext\add
         int: omitted add5(1)
         int: overridden add5(1; y := 25)
@@ -128,9 +130,9 @@ Run `Checks\demo()`. Expect **62601**, encoding `6`, `26`, `1`. The copied data 
 
 This replaces the historical ambiguous `merge(add; y: 5)` illustration: here the source explicitly composes the data containing the formal, and then selects its nested implementation. It does not compose a body and silently invent an input.
 
-**Basis:** [B] §6.1, lines 159–171; [B] §4.2, lines 95–101; [S] §20, lines 1472–1482 (model slots and callable parts). Optional formal positions remain part of a signature: [B] §8.3, line 358.
+**Basis:** [B] §6.1; [B] §4.2; [S] §20 (model slots and callable parts). Optional formal positions remain part of a signature: [B] §8.3.
 
-### B-02 — Free dynamic input and explicit lexical input remain distinguishable after `merge`
+### B-02 — Free dynamic input and explicit lexical input remain distinguishable after `copy`
 
 ```lmx
 Source:
@@ -146,7 +148,7 @@ Source:
 Checks:
     return: int
     demo:
-        @: copied merge(Source)
+        @: copied (copy(Source))
         Source\y := 8
         int: y 25
         int: a copied\methods\dynamic(1)
@@ -158,7 +160,7 @@ With a fresh source, `Checks\demo()` returns **2606**. The free `y` gets the imm
 
 Also reject `copied\methods\dynamic(1; y := 25)` as an explicit call with an unknown formal: `y` is a free name here; the actual data of `dynamic` only declares `x`. A dynamic source is not silently added to the explicit signature.
 
-**Basis:** [B] §§4.2 and 6.2–6.5, lines 95–101, 175–214; [S] §20, lines 1451 and 1498–1500; [P1] “Reading the programs,” lexical-access paragraph.
+**Basis:** [B] §§4.2 and 6.2–6.5; [S] §20; [P1] “Reading the programs,” lexical-access paragraph.
 
 ### B-03 — Original nested action, now with the two deliberately different bindings
 
@@ -193,7 +195,7 @@ Do not preserve the old “every external write is a local copy” reading for `
 
 Variant: pass `Own\step(y := 10)` from caller `y = 0`; caller remains 0. This tests ordinary explicit copy semantics separately from autofill.
 
-**Basis:** [B] §6, lines 159–206 and acceptance B01–B05, lines 648–652; [P1] §7, lines 267–295.
+**Basis:** [B] §6 and acceptance B01–B05; [P1] §7.
 
 ### B-04 — A transit-only intermediary and an intermediary that establishes a place
 
@@ -223,7 +225,7 @@ Expect **5** from `through_fallback()` and **8** from `through_place()`. `transi
 
 The harness must also inspect write identity in both cases, not merely allow these two numbers to arise from delayed copy-out.
 
-**Basis:** [B] §6.4, lines 200–208; B acceptance B19–B21, lines 666–668; [P1] §7 explicitly explains the role of `required: value`.
+**Basis:** [B] §6.4; B acceptance B19–B21; [P1] §7 explicitly explains the role of `required: value`.
 
 ### B-05 — Retarget a caller-local reference without exposing a pointer-to-pointer type
 
@@ -248,7 +250,7 @@ Checks:
 
 Expect **9**. `selected` remains an ordinary reference variable in LMX; the hidden native address must address that variable's cell, not merely the previously selected Structure. `First\marker` remains 4. A second fixture giving `replace` an own declared `selected` input must leave the caller pointing at `First`.
 
-**Basis:** [B] §3, lines 63–70; [B] §6.2, lines 181–185; acceptance B06, line 653.
+**Basis:** [B] §3; [B] §6.2; acceptance B06.
 
 ### B-06 — Two-way `private`: omitted supply and explicit supply
 
@@ -285,7 +287,7 @@ Expect **0, 1, 0, 1**, respectively. No other `x` source is present in each isol
 
 Separate positive source-access check: the actual graph path through the modifier remains `PrivateSink\private\x`; binding must not flatten it into `PrivateSink\x`. An explicit write through a permitted graph path follows the ordinary mutability rules.
 
-**Basis:** [B] §5, lines 121–153; [B] §6.1, lines 159–171; [S] §12 `private` path rule, lines 1021–1023.
+**Basis:** [B] §5; [B] §6.1; [S] §12 `private` path rule.
 
 ### B-07 — A computed local is not overwritten code
 
@@ -311,7 +313,7 @@ Compare the written code occurrences, initializer expression and their reference
 
 This is the current analogue of the earlier `int: i findValue()` concern. The new accepted semantics make it an activation-local computation; its assignment no longer edits the code occurrence.
 
-**Basis:** [B] §§7.2–7.3, lines 226–245; [B] §10.1, lines 570–574; [B] §§11.3–12, lines 612–624; [D] §4.3, lines 137–141.
+**Basis:** [B] §§7.2–7.3; [B] §10.1; [B] §§11.3–12; [D] §4.3.
 
 ### B-08 — Unused and explicitly replaced computed defaults remain unevaluated
 
@@ -342,7 +344,7 @@ Run these as independent cases from counter 0:
 
 No entry pass executes every initializer. Two reads of the established working value do not run its initializer twice. A new independent call of `twice()` creates its ordinary new activation and runs the source initializer once again.
 
-**Basis:** [B] §§6.1 and 7.3, lines 169–171 and 238–245; [B] §10.1, line 574; [D] §4.1, lines 119–123; [S] §12, lines 1007–1009.
+**Basis:** [B] §§6.1 and 7.3; [B] §10.1; [D] §4.1; [S] §12.
 
 ### B-09 — A callable's actual parent survives reference placement and import
 
@@ -365,7 +367,7 @@ Expect **4** from `Other\demo()`, even though the caller's data has a ready valu
 
 Also compare direct `Original\read()` with the unambiguous explicit dispatcher form `call(code := Original\read)`: same actual parent, same default, same result 4.
 
-**Basis:** [B] §§4.1–4.2, lines 78–101; [B] §6.1, lines 161–169; [D] §6.1, line 220.
+**Basis:** [B] §§4.1–4.2; [B] §6.1; [D] §6.1.
 
 ### B-10 — `fn` external labels map by position, even when candidate names are swapped
 
@@ -390,7 +392,7 @@ Expect **27**, not 72. The signature's `left` is external position 1, which maps
 
 This is deliberately a noncommutative operation; addition would conceal the incorrect name-based remapping.
 
-**Basis:** [B] §8.3, lines 350–358; [B] §8.5, lines 378–426; [D] §5.1, lines 167–173.
+**Basis:** [B] §8.3; [B] §8.5; [D] §5.1.
 
 ### B-11 — A signature supplies type shape and public labels, not its default
 
@@ -416,7 +418,7 @@ Expect **80**. The first call uses the candidate's default 8; the second explici
 
 Variant with `required: int: actualValue` and no default: signature compatibility can still be positive, but `chosen()` is inadmissible even if the caller has a local `actualValue`. The call's missing required actual is decided before autofill. Supplying `publicValue := 3` passes the positional actual explicitly.
 
-**Basis:** [B] §§8.4–8.5, lines 364–388; [B] §9.7, lines 534–540; [D] §5.1, line 173.
+**Basis:** [B] §§8.4–8.5; [B] §9.7; [D] §5.1.
 
 ### B-12 — Type order matters; optional positions do not vanish
 
@@ -446,7 +448,7 @@ Reordered:
 
 This is a compatibility test, not an assertion that two algorithms with the same signature return the same result.
 
-**Basis:** [B] §§8.3 and 8.5, lines 350–358 and 390–426.
+**Basis:** [B] §§8.3 and 8.5.
 
 ### B-13 — Whole-Structure and field-expansion selection
 
@@ -481,7 +483,7 @@ At invocation, use the already selected map. Do not expand the chosen actual a s
 
 **Harness-level ambiguity fixtures:** additionally construct exactly the situations [B] §9.8 describes, without introducing an undocumented overload syntax. When W and E both fit one declaration, reject; when they fit different declarations, reject. A callable `C` whose whole value fits `call(code)` and whose fields fit `call(args code)` must make `call(C)` ambiguous. `call(code := C)` excludes E and selects only the one-argument form. This last assertion concerns selection; the harness must separately supply an executable body when it also wants to test the subsequent execution.
 
-**Basis:** [B] §§9.2–9.8, lines 470–564; [B] §4.1, lines 83–89.
+**Basis:** [B] §§9.2–9.8; [B] §4.1.
 
 ### D-01 — Repeated declaration arguments: negative, zero and positive elements
 
@@ -532,7 +534,7 @@ The initializer runs once per executed step; two reads in the body do not run it
 
 Repeat after systematically renaming `iteration/body/item` to `advance/action/element`. The results must be unchanged; no name-specific special branch is permitted.
 
-**Basis:** [D] §§3–4 and §7, lines 54–139, 228–273; [P1] §1 (the local accumulator and iterator arrangement).
+**Basis:** [D] §§3–4 and §7; [P1] §1 (the local accumulator and iterator arrangement).
 
 ### D-02 — Reorder named declaration arguments without reordering execution
 
@@ -565,7 +567,7 @@ The rejection precedes initializer execution. With the valid empty-body variant 
 cycles\iterate(body := (); iteration := int(item stream\next()))
 ```
 
-**Basis:** [D] §3.3 and §8, lines 88–111 and 275–294.
+**Basis:** [D] §3.3 and §8.
 
 ### D-03 — A matched declaration is retained, while an ordinary callable actual still executes
 
@@ -597,7 +599,7 @@ Run from counter 0 in separate fixtures:
 
 The first declaration does not fill position `first`; the name exists in the callee data, so the named branch applies. Unlike D-01, this is not the unknown inner-name positional branch. Passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
 
-**Basis:** [D] §§3.1–3.2, lines 54–86; [D] §5, lines 143–163; [B] §10.1, lines 570–574.
+**Basis:** [D] §§3.1–3.2; [D] §5; [B] §10.1.
 
 ### D-04 — Import ordinary structure names and signature names, preserve parents
 
@@ -629,11 +631,15 @@ Expect **15**. `factor`, `Inputs`, `TransformSignature` and `Transform` become i
 
 Negative fixtures directly reading bare `mutableValue` or `selected` in `Use\demo`, with no other source in scope, must fail at the ordinary reached name resolution. Do not claim a negative test from a dead branch.
 
-**Basis:** [D] §§6–6.1, lines 175–222; D acceptance I01–I09, lines 320–328.
+Multi-source variant: supply another Structure containing `const: int: bias 2`, replace the import with `import(Library Extra)`, and add `bias` to the final expression. Expect `17`, with the original imported parents preserved. Exercise the import both in `Use`'s DATA and as reached code in `demo`; its source arguments use ordinary CODE processing in both placements. The written import record stays in the source graph.
 
-### C-01 — Nested uninitialized local: current documented derivation
+In a nested-consumer harness, `f(import(Library Extra))` supplies its stream to `f` only; it must not also install the imported names in the caller as an extra effect. For a one-written-source fixture whose W and E readings both admit the sources, require ordinary ambiguity, not an import-specific preference for W. The multi-source example above is not such an ambiguity fixture.
 
-[B] §7.4, lines 247–261, asks the implementer to derive this control case from the ordinary algorithm, escalating to the author only if a new rule is needed. The attached current S already records that derivation in §12, lines 1082–1094 (executor reading R106): an inline scope is not a new caller, so its parent inline scope does not supply call autofill.
+**Basis:** [D] §§6–6.1; D acceptance I01–I09; [STREAM] §§5–7.
+
+### C-01 — A no-RHS local in an inline nested scope: retained control question
+
+The [current review notes](newdocs/REVIEW_NOTES.md#open-questions), [SEM]'s `shadowing-levels` section and [B] §7.4 retain this exact check. The old corpus incorrectly treated the unavailable executor answer R106 as a settled initialization oracle.
 
 ```lmx
 Worker:
@@ -644,9 +650,9 @@ Worker:
             required: x
 ```
 
-Invoke `Worker\work()` from a caller with no local `x`. The inner declaration creates a distinct place, shadows outer `x`, and remains **`uninit:int`**. The reached `required: x` refuses. Outer `x = 5` is not copied into it, and the refusal does not reset the outer place.
+Invoke `Worker\work()` from a caller with no local `x`. The inner declaration creates its own place and shadows the outer `x`. No new callable invocation occurs. The remaining question is whether the enclosing inline scope supplies autofill in this exact case, yielding `5`, or whether the new place remains `uninit:int`, causing the reached `required` check to refuse.
 
-Treat this as the current documented derived oracle, not as a missing answer or a claim of separate author approval of R106. If another concrete case exposes a contradiction requiring an additional observable rule, show that case to the author before choosing a resolution. This does not reopen ordinary call autofill, lexical shadowing, declaration-argument repetition, or import policy.
+First derive the result from the accepted general namespace algorithm. If that algorithm does not decide this case, return this precise example to the author; do not assign either initialization outcome as a passing oracle here. The separate inner identity and unchanged outer place remain required. This does not reopen ordinary call autofill, lexical shadowing or declaration-argument repetition.
 
 
 <a id="typing"></a>
@@ -687,10 +693,10 @@ mistake the model's slot zero for the candidate's slot zero.
 
 Run the public code in interpreted and native execution where supported. Test
 the presence/absence of any automatic admission invocation separately under the
-suite's scheduling question; this result oracle does not choose that schedule.
+phase-specific cases in V05/Q01; this result oracle checks the admitted program's values and places.
 
-**Basis:** [B] §8.2, lines 293–344 (all explicit requirements, extra candidate fields
-permitted); [S] §7, lines 272–277 (physical correspondence); [L2] §14, line 576
+**Basis:** [B] §8.2 (all explicit requirements, extra candidate fields
+permitted); [S] §7 (physical correspondence); [L2] §14
 (correspondence belongs to the reception/traversal, not a persistent arena map).
 
 ### T02 — Same fn signature, different behavior
@@ -732,11 +738,11 @@ The methods have different formal names and different bodies. The ordinary
 checker returns 1 for the first and 0 for the second.
 
 This source calls the checker explicitly, so its expected behavior does not
-depend on the unresolved automatic scheduling of `test`. A single successful
+depend on an implicit invocation of `test`. A single successful
 test of `Increment` is a statement about the performed check; it is not a proof
 about all possible inputs or a reason to accept the decrementing implementation.
 
-**Basis:** [B] §§8.1–8.5, especially lines 346–374; [S] §7, lines 294–306
+**Basis:** [B] §§8.1–8.5, especially; [S] §7
 (ordinary checker candidate, integer verdict). This is the direct analogue of
 distinguishing a type-correct function from a function with the required behavior.
 
@@ -777,17 +783,12 @@ body subtree, include them in the structural comparison. A matching pair of
 input/result types does not justify dropping that subtree. An actual `fn`
 requirement instead uses the positional callable rule illustrated by T02.
 
-**Priority note:** [S] §7, line 272, describes a Consumer-limited comparison that
-skips unused model fields. [B] §8.2, line 295, expressly says not to remove any
-branch of an explicitly supplied ordinary structural model merely because a
-Consumer does not currently use it. B governs this explicit-model case. Treat
-that older wording as requiring correction in its scope, not as an unanswered
-choice to give Fable.
+**Scope:** current [SEM] §7 distinguishes a Consumer-derived used interface from an explicitly selected structural template. The latter retains every stated requirement. A Consumer that happens to read only `x` does not delete `y` from an explicitly supplied `Richer` model.
 
 No check above materializes a missing `y` or fills it from a default in the model.
 Constructing a richer candidate is a separate explicit composition operation.
 
-**Basis:** [B] §8.2, lines 293–344; operand directive §2.3, lines 78–93
+**Basis:** [B] §8.2; operand directive §2.3
 (checking does not insert missing fields).
 
 ### T04 — A consumer can use a small interface without inventing a larger model
@@ -821,9 +822,9 @@ Negative fixture: supply a Structure with no `x`, reach the read, and require
 ordinary refusal of the unsatisfied used access. Do not assign a default zero or
 reinterpret an arbitrary physical slot as `x`. Keep admission timing and whether
 a statically known failure is diagnosed before that execution in the separate
-scheduling tests.
+phase-specific tests.
 
-**Basis:** [S] §§6–7, lines 242–277 (structural genericity and used accesses), scoped
+**Basis:** [S] §§6–7 (structural genericity and used accesses), scoped
 by [B] §8.2's rule for an explicitly supplied ordinary model. This example has no
 larger explicit model whose requirements could be removed.
 
@@ -863,8 +864,7 @@ inside reached code, rather than a `required` modifier at signature selection.
 An uninitialized integer must not become an initialized zero merely because a
 machine representation happens to contain zero bits.
 
-**Basis:** [B] §6.1, lines 159–171; [S] §9, line 451; [S] §12, line 976; [L2] §2,
-lines 141–147 (typed nil and comparison). No arithmetic on nil is asserted here.
+**Basis:** [B] §6.1; [S] §9; [S] §12; [L2] §2 (typed nil and comparison). No arithmetic on nil is asserted here.
 
 ### T06 — Representation compatibility is not actual-value range validation
 
@@ -889,7 +889,7 @@ For `1.5` to an integer, require an explicitly selected rounding policy before
 assigning an expected numeric result. This corpus does not silently borrow a
 numeric policy from ML, Ada, C or Python.
 
-**Basis:** [S] §5, lines 225–236; [S] §6, lines 249–255; [S] §8 case 11, line 365.
+**Basis:** [S] §5; [S] §6; [S] §8 case 11.
 The test concerns an explicit converter's behavior; it does not settle whether
 the runtime automatically executes admission checks in other contexts.
 
@@ -911,7 +911,7 @@ Conversely, add no nominal class-name equality where the given structural
 requirements suffice. The Message fixture controls the context; the test does
 not propose a global registry or new generic syntax.
 
-**Basis:** [S] §6, lines 240–255; [B] §8.3, lines 346–358.
+**Basis:** [S] §6; [B] §8.3.
 
 
 <a id="operands"></a>
@@ -951,7 +951,7 @@ Expected:
 There is no registration call. `subtract`'s DATA is `numeric_ops`, including when
 its name is imported into `arithmetic`.
 
-Source: [O] §§2.1–2.5, 3.1, 6.1 (lines 31–133, 136–152, 483–509); P23 lines 205–237.
+Source: [O] §§2.1–2.5, 3.1, 6.1; P23.
 
 ### OP02 — Left is separate; the right array preserves its occurrences
 
@@ -992,7 +992,7 @@ they must not shift the first right occurrence into `left`. For the container
 cases, provide genuine Array/Structure fixtures through the harness rather than
 changing `Array<T>` into `Array<@>` by reinterpreting its backing.
 
-Source: [O] §§2.3–2.4, 3.1–3.3 (lines 78–110, 136–186).
+Source: [O] §§2.3–2.4, 3.1–3.3.
 
 ### OP03 — Reading a prepared value twice versus evaluating source twice
 
@@ -1045,7 +1045,7 @@ Prepared mode obtains one value per reached evaluation and reads that value twic
 Raw mode explicitly starts two evaluations of the same source occurrence. Neither
 mode installs a persistent result cache into the source graph.
 
-Source: [O] §§3.1, 3.6–3.7, 5.3 (lines 136–152, 232–256, 420–436).
+Source: [O] §§3.1, 3.6–3.7, 5.3.
 
 ### OP04 — A raw operand chooses which source occurrence to execute
 
@@ -1082,7 +1082,7 @@ selection:
 Both leave `meter\calls = 0`. The unused right occurrence remains unexecuted,
 including when a walker later visits its physical record.
 
-Source: [O] §§3.6–3.7, 5.4 (lines 232–256, 438–453).
+Source: [O] §§3.6–3.7, 5.4.
 
 ### OP05 — Forwarding a raw occurrence preserves its original context
 
@@ -1123,7 +1123,7 @@ or substitutes another invocation with the same code address. The directive give
 no lifetime extension; use the existing invalid-lifetime behavior rather than
 inventing a new exception name in this corpus.
 
-Source: [O] §3.7 (lines 243–257), §10.7 R05–R08/R13.
+Source: [O] §3.7, §10.7 R05–R08/R13.
 
 ### OP06 — An operand returning a reference still returns a reference
 
@@ -1155,7 +1155,7 @@ The harness should also invoke `keep_left` directly with equivalent prepared
 value must match the operator application. Do not rewrite it as `keep_left(17; 99)`:
 the actual second input is an array of references.
 
-Source: [O] §§3.1, 3.3–3.4 (lines 136–152, 165–196).
+Source: [O] §§3.1, 3.3–3.4.
 
 ### OP07 — Ordinary callable references do not execute their targets
 
@@ -1187,7 +1187,7 @@ Expected numeric result: **1**, under the explicit numeric-address rule of this
 directive. `@: p S` instead creates an ordinary reference. This probe does not
 dereference the fabricated address `@S + 1`.
 
-Source: [O] §§2.1, 3.3 (lines 31–45, 165–186). The explicit numeric-address decision
+Source: [O] §§2.1, 3.3. The explicit numeric-address decision
 overrides older contradictory text; it is not a request for implicit pointer
 arithmetic on ordinary L3 references.
 
@@ -1222,7 +1222,7 @@ The embedded assignment neither adds a named actual nor writes the caller's
 separate same-named place. Its receiver demands the result of this particular
 assignment even though `scratch` previously had the ready value `100`.
 
-Source: [O] §§4.1–4.5, 5.1–5.2 (lines 287–384, 388–418); [B] §10.1.
+Source: [O] §§4.1–4.5, 5.1–5.2; [B] §10.1.
 
 ### OP09 — A standalone named actual still obeys the positional cursor
 
@@ -1240,7 +1240,7 @@ error available before effects must reject it before executing that producer.
 For the two accepted named actuals, instrument their RHS and verify written-order
 evaluation; mapping destinations must not reorder their effects.
 
-Source: [O] §§2.5, 4.1–4.4 (lines 112–132, 287–368); [B] §§9.4, 10.1.
+Source: [O] §§2.5, 4.1–4.4; [B] §§9.4, 10.1.
 
 ### OP10 — Demand evaluation performs the producing operation once
 
@@ -1270,7 +1270,7 @@ From a fresh graph, two successive `demand\demo()` calls return **4004** and
 RHS, records `4` or `5`, and supplies `40` or `50` as its one positional actual.
 Neither late walker traversal nor native lowering repeats the source call.
 
-Source: [O] §§4.5, 5.1–5.3, 6.3–6.4 (lines 370–436, 535–594).
+Source: [O] §§4.5, 5.1–5.3, 6.3–6.4.
 
 ### OP11 — Short circuit skips a whole effectful application
 
@@ -1300,7 +1300,7 @@ Also place the entire OP01 operand application with an effectful argument inside
 the skipped right side. Neither the operand method nor its argument producer may
 run. Parentheses alone are not an eager-evaluation instruction.
 
-Source: [O] §5.4 (lines 438–453), §10.3 D06–D08/D13.
+Source: [O] §5.4, §10.3 D06–D08/D13.
 
 ### OP12 — A while condition repeats evaluation, not a cached first result
 
@@ -1330,7 +1330,7 @@ three body executions add `5 + 10 + 15 = 30`; four condition evaluations call
 and one read. `c` is the surrounding callable's activation-local place; the loop
 does not publish it into the callable's parent graph.
 
-Source: [O] §5.5 (lines 455–479).
+Source: [O] §5.5.
 
 ### OP13 — Adjacent precedence levels must be distinguished
 
@@ -1361,7 +1361,7 @@ With known writable `a`, `b`, `c`, test `a := b := 7`: both places become 7.
 Test `c := (a := 4) + (b := 6) * 3`: the final values are `a = 4`, `b = 6`,
 `c = 22`. The integer examples avoid overflow and division-domain differences.
 
-Source: [O] §§6.1–6.3 (lines 481–586); [G] §21 lines 692–724.
+Source: [O] §§6.1–6.3; [G] §21.
 
 ### OP14 — sys\name consumes spelling, not the value of the identifier
 
@@ -1394,7 +1394,7 @@ Negative cases: `sys\name(52)` and `sys\name("sample")` do not supply the single
 written identifier required by this receiver. `sys\name` is not a general
 stringification operation.
 
-Source: [O] §§7.1–7.4 (lines 596–669).
+Source: [O] §§7.1–7.4.
 
 ### OP15 — sys\priority consults the same operand description without invoking it
 
@@ -1422,7 +1422,7 @@ Negative cases:
 | An ordinary callable missing the operand header | No invented operand priority |
 | Visible unresolved alternatives with different priorities/modes | Ambiguity before argument effects |
 
-Source: [O] §§8.1–8.4 (lines 671–758).
+Source: [O] §§8.1–8.4.
 
 ### OP16 — Structural discovery and fn compatibility are distinct checks
 
@@ -1454,7 +1454,7 @@ to positions 2 and 1 but retains that written RHS effect order. The same candida
 does not become an operand until its actual DATA also satisfies the separate
 name-sensitive operand header. Its DATA remains its actual parent.
 
-Source: [O] §§2.2–2.5, 9.3, 10.1, 10.8 (lines 47–132, 806–842, 965–981).
+Source: [O] §§2.2–2.5, 9.3, 10.1, 10.8.
 
 ### OP17 — The clean graph remains the written graph
 
@@ -1476,8 +1476,7 @@ the source representation. The program's explicit graph writes remain observable
 and are not grounds for rejecting a correct implementation; choose snapshots of
 the code occurrences, not of the deliberately mutated meter state.
 
-Source: [O] §§1, 4.2, 5.3–5.4, 6.3–6.4, 9.1 (lines 11–27, 300–333,
-420–453, 535–594, 762–779); [G] §§12–14.
+Source: [O] §§1, 4.2, 5.3–5.4, 6.3–6.4, 9.1; [G] §§12–14.
 
 ### OP18 — Native/interpreted equivalence includes types and effects
 
@@ -1496,14 +1495,13 @@ For OP06's reference result, compare the same logical reference behavior in both
 dispatch paths. Interpreter-internal result records must not change the public
 number of dereferences.
 
-Source: [O] §§3.3–3.4, 3.7, 6.4, 10 (lines 165–196, 242–256, 588–594,
-820–822); [B] §11.
+Source: [O] §§3.3–3.4, 3.7, 6.4, 10; [B] §11.
 
 
 <a id="validation"></a>
 ## V. Validation, mocks, catch, and integration self-testing
 
-The four complete checker programs have explicit result oracles. V05 concerns only the unresolved automatic schedule, tracked as Q01 below.
+The four complete checker programs have explicit result oracles. V05 checks the current separated construction, build-test and reached-admission phases summarized in Q01.
 
 ### V01. Full-string validation: the earlier RegEx question
 
@@ -1544,7 +1542,7 @@ TicketCode:
 
 Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `implements` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
 
-**Basis:** [B] §8.2 example uses `[]: char`; [G] §6, lines 130–138 gives character constants and string rules; [S] §§7–8, lines 271–299 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
+**Basis:** [B] §8.2 example uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
 
 ### V02. A mock is an ordinary dependency of the actual candidate
 
@@ -1588,7 +1586,7 @@ The actual candidate is invoked. Its uninitialized declared `read` receives the 
 
 The third candidate deliberately returns the correct number while doing the wrong amount of work. Checking the return value alone would miss it. The checker does not replace the candidate with a mock candidate; it replaces a dependency of that candidate.
 
-**Basis:** [B] §§6.1, 6.4, 6.5; P1 Strategy lines 86–116 and Observer lines 196–232; [S] §7 lines 294–300. These are direct ordinary calls, so the unresolved automatic scheduling of `test` does not affect their verdicts.
+**Basis:** [B] §§6.1, 6.4, 6.5; P1 Strategy and Observer; [S] §7. These are direct ordinary calls, so their verdicts follow their written invocations.
 
 ### V03. Expected recoverable failure is an explicit checker branch
 
@@ -1615,7 +1613,7 @@ FailureCheck:
 
 The handler is adjacent to the code it checks. There is no wrapping `try` construct, and a diagnostic assertion is not used for ordinary candidate rejection.
 
-**Basis:** [S] §7 lines 298–300 and §15 lines 1289–1362; P1 Iterator lines 43–82 and Visitor lines 338–384 show the same handler style under current callable notation.
+**Basis:** [S] §7 and §15; P1 Iterator and Visitor show the same handler style under current callable notation.
 
 ### V04. Integration self-test: command, feedback, reset, feedback
 
@@ -1660,7 +1658,7 @@ Commissioning:
         return: on_ack = 1 && on_seen = 1 && off_ack = 1 && off_seen = 0
 ```
 
-For each row, create a fresh candidate with `merge(Indicator; (int: fault F))`, where F is the row's fault value, and call `Commissioning\check(candidate := device)` with that reference.
+For each row, create a fresh candidate with `@: device (merge(Indicator; (int: fault F)))`, where F is the row's fault value, and call `Commissioning\check(candidate := device)` with that reference.
 
 | Fault | Meaning in this fixture | Verdict | Final `commanded` | Final `sensed` | Writes / reads | Trace |
 |---:|---|---:|---:|---:|---|---:|
@@ -1676,29 +1674,26 @@ For a connected implementation, bind `candidate` to the real supplied object wit
 
 **Basis:** P1 Observer, P2 State/Bridge, P3 Mediator; [S] §7 actual-candidate checking and §8 foreign-resource validity. The exact four-action scenario and numeric fault model are test data proposed here, not new language rules.
 
-### V05. Automatic `test` association: retain the cases, ask before choosing the schedule
+### V05. `test` association and the current execution phases
 
-The ordinary receiver spelling remains `test: op checkIncrement` ([S] §7, line 294). Its checker's result is ordinary int 1/0, and the checker receives the actual candidate (line 298). Those facts support the four direct fixtures above.
+The ordinary receiver `test: op checkIncrement` associates the receiving place with an ordinary checker. The checker receives the actual candidate and returns `int` 1/0. The current [SEM] §7 and `explicit-compilation` contract separate interface construction, the pre-C build-test stage, and reached runtime admission. Q01 below records those phases; the old list of contradictory source-snapshot quotations is no longer the governing contract.
 
-The supplied normative text gives incompatible scheduling statements:
+Use one fresh visible counter per independent fixture. Instrument the existing build/admission harness rather than inventing a new language API:
 
-- [S] line 264 and lines 1213–1220: automatic native `implements` is disabled; the interpreter uses the standard check at every call; all `test` receivers execute on the clean graph before compilation to C.
-- [S] lines 284 and 289: an earlier interface check is not repeated; a selected candidate's tests run at actual runtime admission.
-- [S] line 296: merely present `test` forms in data do not execute, and there is no separate pass finding nested tests.
-- [S] line 300: test calls use ordinary native/walker dispatch and do not force every nested call through the walker.
+| Fixture | Required observation |
+|---|---|
+| Construct a graph containing a candidate/checker association, with no executing code | Checker count `0`; no candidate body or computed default is run by interface matching |
+| In the explicit build-test stage, reach one ordinary successful checker invocation | Count `1`; its effects are real and failure would prevent accepting that build |
+| Put a `test` record in an unconsumed nested DATA branch | Its mere presence causes no checker call and no recursive test-discovery pass |
+| Explicitly invoke the same direct checker twice | Count `2`, with ordinary execution and no invented permanent behavioral-result cache |
+| Enter a prepared native path with no written explicit `implements` | No added automatic runtime `implements` layer |
+| Execute a reached interpreted call | Uses the standard `implements` mechanism; unexecuted branches are not pre-walked |
+| Receiving admission has checkers returning `1`, then `0`, then `1` | Only the first two run; the receiving admission fails |
+| Candidate advertises a different permissive checker | It does not replace the receiver's required checks |
 
-**Ask the author to resolve exactly when and how `test` forms are reached. Do not turn the following scheduling cases into silently chosen runtime behavior.** Direct invocations in V01–V04 already have concrete expected results and do not wait on this decision.
+An empty set of checks supplies no behavioral evidence. Running a checker completes the admission already in progress; recursively encountering that same unfinished admission is not a pass. Expected recoverable failures use ordinary `catch`; arbitrary exceptions and diagnostic failures are not successes. The checker's own calls use ordinary native/walker dispatch, so a build-test entry through the interpreter does not force every candidate/dependency call through the walker.
 
-When the scheduling rule is settled, test these distinctions with counters or event traces:
-
-1. Merely constructing a graph does not accidentally execute candidate side effects during a stage defined as structural-only.
-2. Known and dynamically selected candidates receive exactly the author-selected test stage; do not infer its frequency from old cached-admission wording.
-3. Receiver-owned checks are used. A candidate's own permissive checker must not replace them.
-4. The first checker returning 0 stops this check sequence; later checkers do not run.
-5. An empty set of checks supplies no behavioral evidence.
-6. Checking a candidate does not recursively restart that same unfinished admission. A cycle of unfinished checks is not a pass.
-7. Expected recoverable failures are handled as in V03; arbitrary exceptions and diagnostic failures are not passes.
-8. A checker can exercise effects as in V04; interpretation alone does not roll them back or make them imaginary.
+Report build-test calls, reached runtime admission events and explicit checker invocations separately. Their counts come from the exercised fixture's specified events; the phrase “two uses” alone does not identify two new admission events. Effects such as V04's device commands are not automatically cloned or rolled back.
 
 
 <a id="patterns"></a>
@@ -1777,10 +1772,10 @@ Packet:
         return: Packet
         small:
             node\payload := 6
-            return: merge(Packet)
+            return: (copy(Packet))
         large:
             node\payload := 14
-            return: merge(Packet)
+            return: (copy(Packet))
 
 PacketClient:
     @: product Packet
@@ -1795,7 +1790,7 @@ PacketClient:
         return: consume(first) + consume(second)
 ```
 
-**Entry:** `PacketClient\demo()` → **22**. The retained products read **6** and **14**, despite the prototype's final payload **99**; another demo call repeats the same result. **Basis:** [P1] §3; explicit store before merge, ordinary const-declaration import.
+**Entry:** `PacketClient\demo()` → **22**. The retained products read **6** and **14**, despite the prototype's final payload **99**; another demo call repeats the same result. **Basis:** [P1] §3; explicit store before copy, ordinary const-declaration import.
 
 ### P04 — Adapter: equal types do not erase positional meaning
 
@@ -2038,11 +2033,11 @@ Bundle:
     total:
         return: left\total() + right\total()
     demo:
-        @: a merge(Weight; (int: value 1))
-        @: b merge(Weight; (int: value 4))
-        @: c merge(Weight; (int: value 6))
-        @: inner merge(Bundle; (@: left b; @: right c))
-        @: tree merge(Bundle; (@: left a; @: right inner))
+        @: a (merge(Weight; (int: value 1)))
+        @: b (merge(Weight; (int: value 4)))
+        @: c (merge(Weight; (int: value 6)))
+        @: inner (merge(Bundle; (@: left b; @: right c)))
+        @: tree (merge(Bundle; (@: left a; @: right inner)))
         c\value := 100
         return: tree\total()
 ```
@@ -2113,7 +2108,7 @@ Panel:
         set_height:
             node\height := value
         finish:
-            return: merge(Panel)
+            return: (copy(Panel))
     ---
     demo:
         builder\set_width(2)
@@ -2138,8 +2133,8 @@ Coordinate:
     score:
         return: x * 10 + y
     demo:
-        @: original merge(Coordinate)
-        @: replica merge(original)
+        @: original (copy(Coordinate))
+        @: replica (copy(original))
         replica\y := 1
         original\x := 9
         return: original\score() + replica\score()
@@ -2162,7 +2157,7 @@ Cursor:
         @: snapshot
         return: Cursor
         save:
-            return: merge(Cursor)
+            return: (copy(Cursor))
         restore:
             node\state := snapshot\state
     ---
@@ -2251,16 +2246,16 @@ Border:
 Day:
     return: @
     badge:
-        return: merge(Badge; (int: value 3))
+        return: (merge(Badge; (int: value 3)))
     border:
-        return: merge(Border; (int: value 30))
+        return: (merge(Border; (int: value 30)))
 
 Night:
     return: @
     badge:
-        return: merge(Badge; (int: value 4))
+        return: (merge(Badge; (int: value 4)))
     border:
-        return: merge(Border; (int: value 40))
+        return: (merge(Border; (int: value 40)))
 
 Screen:
     @: factory
@@ -2334,8 +2329,8 @@ Room:
 Rooms:
     return: int
     demo:
-        @: first merge(Room)
-        @: second merge(Room)
+        @: first (copy(Room))
+        @: second (copy(Room))
         first\control\toggle()
         int: on first\control\enabled * 10 + first\fan\running
         first\control\toggle()
@@ -2347,35 +2342,36 @@ Rooms:
 
 **Entry:** `Rooms\demo()` → **11**. First room flags are **(1,1)** after the first toggle and **(0,0)** after the second and stop; second room and prototype remain **(0,0)**. Mediator path stores cause no new notifications or recursive notification loop. **Basis:** [P3] §22.
 
-### P23 — Interpreter: one expression, several activation contexts
+### P23 — Interpreter: copied header, one expression, several activation contexts
+
+The [Interpreter comparison](23_interpreter_comparison.md) shows the kernel's `sys\OPERANDS_TEMPLATE` separately. It supplies generic `left` and `right` reference inputs and the ready constant mode/priority properties, with **no result declaration**. The concrete parent below declares `return: int` once. For this independent fixture, provide that same kernel header; neither an extra result occurrence nor a general DATA last-declaration-wins rule is implied.
 
 ```lmx
 Operands:
-    @: left int
-    []: @(int) right
-    const: int: PASS_ARGS_AS_IS 0
-    const: int: PRIORITY sys\priority("+")
+    copy: sys\OPERANDS_TEMPLATE
     return: int
     add:
         return: \left + \right[0]
-
-Calculation:
-    int: n
-    return: int
-    calculate:
-        import: Operands
-        return: (n add 4) add n
-    demo:
-        int: zero calculate(0)
-        int: negative calculate(-3)
-        int: positive calculate(8)
-        int: repeated calculate(8)
-        if: positive != repeated
-            return: -999
-        return: zero + negative + positive
+    Calculation:
+        int: n
+        return: int
+        calculate:
+            return: (n add 4) add n
+        demo:
+            int: zero calculate(0)
+            int: negative calculate(-3)
+            int: positive calculate(8)
+            int: repeated calculate(8)
+            if: positive != repeated
+                return: -999
+            return: zero + negative + positive
 ```
 
-**Entry:** `Calculation\demo()` → **22**. The calls yield **4,−2,20,20**; they reuse the same expression graph, without storing one call's n in it or registering an operand separately. **Basis:** [P3] §23; operand directive revision6 §§2–3.
+**Entry:** `Operands\Calculation\demo()` → **22**. The calls yield **4, −2, 20, 20**. The calculated expression is the regression variant `(n + 4) + n`; the compact comparison's `(n + 3) + n` with inputs `2` and `5` yields `7 + 13 = 20`.
+
+The nested calculation finds `add` through the ordinary lexical namespace. `copy` consumes the header reference through the same CODE-source algorithm as elsewhere and contributes its fields through namespace; its written record remains in the source graph. Prepared mode supplies the computed numeric operands by reference. `left` is the left reference; `right[0]` is the first right reference; explicit dereferencing obtains their values. There is no separate operand registration and no permanent cache of one activation's `n` in the expression graph.
+
+Also check the effective operand DATA: exactly one concrete result declaration, both reference inputs, `PASS_ARGS_AS_IS = 0` and the addition priority. OP01–OP16 deliberately retain expanded headers because their tests mutate or inspect individual properties. **Basis:** [P3] §23; [OPERAND] §§2–3; [STREAM] §§1–3, 6–9.
 
 
 <a id="graph"></a>
@@ -2452,7 +2448,7 @@ SharedPair:
 SharingProbe:
     return: int
     run:
-        @: copied merge(SharedPair)
+        @: copied (copy(SharedPair))
         copied\left\value := 21
         return: copied\right\value * 100 + SharedValue\value
 ```
@@ -2474,12 +2470,12 @@ RingProbe:
     return: int
     run:
         Ring\self := Ring
-        @: copied merge(Ring)
+        @: copied (copy(Ring))
         copied\value := 8
         return: copied\self\value * 10 + Ring\value
 ```
 
-**Expected:** `RingProbe\run()` returns `83`; `copied\self` designates `copied`. The original self-reference still designates `Ring`. Traversal terminates and allocates one copy per copied source node, rather than following the cycle indefinitely.
+**Expected:** `RingProbe\run()` returns `83`; `copied\self` designates the copied Ring node and a second self traversal returns to that same copied node, never to the mutable original. Its copied `value` place is the one exposed by the collected field stream. The original self-reference still designates `Ring`. Traversal terminates and allocates one copy per copied source node. The explicit grouping wrapper is not required to be identical to the copied source-root descriptor; grouping neither copies the completed fields again nor reparents their existing relationships.
 
 ### G05 — Composition replaces a model field and appends new material
 
@@ -2497,7 +2493,7 @@ RecordPatch:
 RecordProbe:
     return: int
     run:
-        @: result merge(RecordModel; RecordPatch)
+        @: result (merge(RecordModel; RecordPatch))
         return: result\width * 100 + result\height * 10 + result\depth
 ```
 
@@ -2505,11 +2501,25 @@ RecordProbe:
 
 **Historical analogue:** the case establishes copied composition and replacement of the matching model field. Installing this new Structure into an application branch requires a separate explicit reference assignment; independently retained copies elsewhere do not silently update.
 
+**Field-stream variants:** retain G05's values and add the following independent observations under [STREAM] §§1–9:
+
+| Variant | Required observation |
+|---|---|
+| Write `merge(RecordModel RecordPatch)` inside an ordinary DATA declaration | Its namespace receives `width = 2`, `height = 5`, `depth = 7`; its source graph still contains the written merge, not substituted expanded fields |
+| The receiving DATA already declares `height = 99` | That place is not merge's model slot; the merge's own `height = 5` is received through ordinary DATA redeclaration/occurrence rules, without a hidden overwrite of `99` |
+| Two separate copy/merge operations receive material referring to one mutable source | Each operation has its own copy map; common targets are shared inside one operation, not automatically across both |
+| A source is computed by an explicit producer call | It runs once when that operation consumes the source, including when the operation is written in DATA; P0 and source inspection run it zero times |
+| An anonymous source contains a call or computed declaration | Its contents obey their ordinary contracts; grouping neither quotes away the call nor starts a blanket eager-initializer pass |
+| `copy(Empty)` versus `(copy(Empty))` | No output fields versus one explicitly grouped empty Structure; no missing source in either case |
+| One written `merge(S)` whose E reading supplies two admitted sources | Do not reject by written arity before W/E; retain ordinary ambiguity rules when more than one reading succeeds |
+
+Use an explicit real formal such as `f(arg0 := (copy(Source)))` when a variant needs to force whole delivery without E. A grouping wrapper by itself does not disable the next consumer's ordinary selection. Keep input-source arity separate from output-field count.
+
 ### G06 — The qualified immutable branch is the sharing exception
 
 **Kind:** graph fixture. **Sources:** [SEM] §§20, 22–23.
 
-Build an admitted `independent: immutable` branch `E` and a mutable template `T` with a reference to `E` and an ordinary mutable numeric field `count = 2`. Construct `A = merge(T)` and `B = merge(T)`.
+Build an admitted `independent: immutable` branch `E` and a mutable template `T` with a reference to `E` and an ordinary mutable numeric field `count = 2`. Construct `A = (copy(T))` and `B = (copy(T))`.
 
 **Expected:** both references to `E` are the original physical reference. `A.count` and `B.count` are distinct mutable places: writing `A.count = 8` leaves `B.count = 2` and `T.count = 2`. Repeat with the additional `const` qualification: the same identity rule applies. Repeat with only `independent`, or only `immutable`: those alone do not establish this retention exception.
 
@@ -2588,7 +2598,7 @@ AdderFactory:
     return: @
     create:
         AdderPrototype\saved := increment
-        @: instance merge(AdderPrototype)
+        @: instance (copy(AdderPrototype))
         return: instance\inputs\add
 
 ReturnedMethodProbe:
@@ -2605,7 +2615,7 @@ ReturnedMethodProbe:
 
 **Expected:** `ReturnedMethodProbe\run()` returns `610`, encoding `6` and `10`. The two returned methods retain their respective copied lexical graphs after both factory activations have ended. The prototype now holds `99`, and the caller's unrelated `saved = 1000` does not override explicit `node\saved`.
 
-`saved` is outside the methods' immediate input data. Consequently `plus5(1; saved := 40)` is an unknown-explicit-input rejection, unlike the true formal-default example B-01. The reference returned by `create` is not an address of its temporary local variable `instance`. The state entered the copy through the explicit `AdderPrototype\saved := increment`; `merge` did not capture the factory activation automatically.
+`saved` is outside the methods' immediate input data. Consequently `plus5(1; saved := 40)` is an unknown-explicit-input rejection, unlike the true formal-default example B-01. The reference returned by `create` is not an address of its temporary local variable `instance`. The state entered the copy through the explicit `AdderPrototype\saved := increment`; `copy` did not capture the factory activation automatically.
 
 <a id="native"></a>
 ## N. Execution paths, native entries, explicit recompilation, and cleanup
@@ -2614,7 +2624,7 @@ These are harness cases because selecting a backend, observing machine-entry reg
 
 ### N01 — One binding result in all four executor combinations
 
-**Kind:** backend matrix. **Sources:** [BIND] §§11–12; [CORE] §3.3; [CODING] “What a slice must present”.
+**Kind:** backend matrix. **Sources:** [BIND] §§11–12; [CORE] §3.3; [CODING] §§13–14.
 
 Run representative cases for explicit own values, autofill copies, direct caller aliases, transitive fallback copies, private sources/receivers, supplied declaration plus body, and imported method parent identity in all four combinations:
 
@@ -2625,7 +2635,7 @@ Run representative cases for explicit own values, autofill copies, direct caller
 | native | interpreter | identical selected logical places and effects |
 | native | native | identical selected logical places and effects; direct C call where statically known |
 
-Record `@x` relationships while the activations are alive, not unstable absolute address numbers. Reject a result where a bridge's own locals become the language caller, an alias is replaced by exit-time copy-out, or a fallback copy becomes an alias. This parity claim concerns successful program behavior; the automatic admission/test scheduling question Q01 is kept separate.
+Record `@x` relationships while the activations are alive, not unstable absolute address numbers. Reject a result where a bridge's own locals become the language caller, an alias is replaced by exit-time copy-out, or a fallback copy becomes an alias. This parity claim concerns successful program behavior; the phase-specific admission/test observations in Q01 are kept separate.
 
 ### N02 — Executable graph edits require explicit compilation and a turn boundary
 
@@ -2652,7 +2662,7 @@ No hidden code snapshot or automatic reverse-dependency invalidation is needed t
 
 ### N03 — Recompiling a target alone does not rewrite an old direct caller
 
-**Kind:** compilation dependency fixture; use N02. **Sources:** [SEM] §12, `explicit-compilation`; [CORE] §3.1.
+**Kind:** compilation dependency fixture; use N02. **Sources:** [SEM] §12, `explicit-compilation`; [CORE] §8.
 
 Keep the old compiled direct caller, change `target`, and compile only the target occurrence. Check generated/registered code: this operation does not rewrite the direct call embedded in old `caller`. Then explicitly compile the common unit containing both and cross the turn boundary; the next call must use the update.
 
@@ -2662,7 +2672,7 @@ The test must not claim that replacing one target table entry retroactively patc
 
 **Kind:** native table observation. **Sources:** [SEM] §20, “Native implementation reuse and copied callable occurrences”.
 
-Compile a source callable graph, record the call-table registrations, and perform `merge` on that graph into a new occurrence.
+Compile a source callable graph, record the call-table registrations, and obtain `(copy(Source))` from that graph as a new grouped result.
 
 **Expected:** distinct mutable graph/state for the new occurrence; any ordinary retained link to reusable native implementation material follows its documented terminal contract. The copy operation invokes no compiler and installs no new call-table entry for that new graph. Explicit compilation or restoration can subsequently register a suitable native binding. Sharing an implementation address does not make the two lexical/state graphs identical.
 
@@ -2691,11 +2701,11 @@ Use the existing `finally` construction and logging fixture; this is a control c
 <a id="messages"></a>
 ## M. Message isolation and real integration boundaries
 
-These cases are protocol harnesses. They provide small deterministic scenarios without inventing a new spelling for transport setup that is not fixed by the three current change requests.
+These cases are protocol harnesses. They provide small deterministic scenarios without inventing a new spelling for transport setup that is not fixed by the current documentation packet.
 
 ### M01 — A complete update is one owner operation
 
-**Sources:** [SEM] §§24–25; [CORE] §§5–6.
+**Sources:** [SEM] §§24–25; [CORE] §7.
 
 An owner starts with `total = 0`. Two senders submit complete `add(4)` and `add(9)` operations. Deliver both in either admitted order.
 
@@ -2728,48 +2738,44 @@ Test the same small graph under three operations:
 | Operation | Identity and ownership observation |
 |---|---|
 | ordinary reference passing within one owner | same graph; same structural parent |
-| `merge` or new executing Message from an explicitly supplied template | copied mutable graph; internal relations redirected; only admitted terminal exceptions shared |
+| `(copy(Template))` or a new executing Message from an explicitly supplied template | copied mutable graph; internal relations redirected; only admitted terminal exceptions shared |
 | supported transfer of a non-executing letter's storage | storage/addresses preserved; one owner after transfer; structural parent unchanged |
 
 Retain a result reference across an ordinary function return and confirm it stays reachable without an implicit return-time copy. After all ordinary roots are released, test collection at the specified end-of-turn boundary. Do not infer lifetime of an escaped pointer to a completed native activation from graph reachability.
 
 <a id="author-question"></a>
-## Q01. One unresolved author decision: automatic `test` scheduling
+## Q01. Current admission and test phases
 
-The direct programs in V01–V04 specify ordinary executions and have definite expected outcomes. This question concerns automatic discovery/reaching, scheduling, and repetition of `test` and admission, not the meaning of their arithmetic or device observations.
+This retained section ID now records the current phase contract. The older corpus's automatic-scheduling question cited a superseded document snapshot; the supplied `newdocs/` edition separates the stages. See [normative admission](newdocs/LMX_semantics.en.md#admission), [test receiver](newdocs/LMX_semantics.en.md#test-receiver-contract) and [explicit compilation](newdocs/LMX_semantics.en.md#explicit-compilation).
 
-The current SEM snapshot states all of the following:
-
-| Location | Wording's consequence |
+| Stage or event | Contract to observe |
 |---|---|
-| §7, line 264; §12, lines 1213–1220 | Automatic native `implements` is off; the interpreter applies the standard check at every call; all `test` receivers run on the clean graph before C compilation. |
-| §7, line 284 | The interpreter does not repeat admission already performed during clean-graph construction; reached admission concerns dynamically selected candidates. |
-| §7, line 289 | Candidate checks run at actual runtime admission, including where interface checking happened earlier. |
-| §7, line 296 | Presence of a `test` form in data does not run it, and there is no separate pass finding nested tests. |
-| §7, line 300 | Calls inside a checker use ordinary native/walker dispatch rather than forcing every call through the walker. |
+| Structural graph construction | Known candidate interfaces are checked; candidate bodies, computed defaults and analytical tests do not execute merely for matching |
+| Explicit pre-C build-test phase | The interpreter executes the build's reached tests on the clean graph; a failed test prevents acceptance/compilation of that build |
+| DATA namespace preparation | Root declarations and required stream receivers are interpreted; an arbitrary nested `test` record is not executed merely because it exists |
+| Prepared native execution | No additional automatic runtime `implements` layer; written explicit checks remain ordinary code |
+| Reached interpreted operation | Standard admission through the common mechanism; no pre-walk of unexecuted branches |
+| Admission requiring analytical checks | The receiving expression's specified checkers execute against the actual candidate; the first `0` stops the sequence |
+| Calls made by a checker | Ordinary native/walker dispatch; no hidden forced-walker mode, rollback or mock candidate |
 
-Some statements could describe different phases, but the supplied text does not specify the boundary sufficiently to derive one complete scheduling oracle. Do not resolve this merely by choosing the last paragraph encountered, or assume that “before C compilation” explains how a dynamically supplied runtime candidate was checked.
+V05 instruments these distinct events rather than assigning one global count to every possible use of a candidate. A build stage and a later dynamic reception are separate events; a native dispatch by itself is not an instruction to rerun every test in the graph. Explicit checker programs V01–V04 retain their concrete expected results.
 
-**Question to the author, in a concrete form:** for a checker that increments a visible counter and returns 1, what should the counter be (a) after constructing its graph, (b) after the pre-C-build test stage, (c) after two ordinary uses of the same known candidate, and (d) after supplying a different dynamic candidate? Which written `test` forms are reached by the build stage, and which by actual admission? Does “interpreter mode” govern the checker entry only or every candidate/dependency call made by it?
+## Documentation reconciliation applied in this revision
 
-After that answer, implement V05's scheduling cases with those exact counts/traces. Keep structural-only construction, a build-stage interpreted test execution, and any runtime admission stage explicitly distinguishable in receipts. Do not introduce a hidden test catalogue, automatic rollback, or a new candidate/mock category to answer this scheduling question.
-
-## Documentation reconciliation already decided by the supplied precedence
-
-These are migration notes, not additional author questions or reasons to block the new fixtures.
-
-| Stale or easily misread passage | Governing replacement and example |
+| Earlier corpus form or claim | Current contract used here |
 |---|---|
-| [GRAMMAR] §21, line 720; [GUIDE]'s final priority example uses `sys\operand` registration | [OPERAND] §§2, 9.2 remove registration. OP01 and P23 use the actual method's DATA header. |
-| Old executable `fn`/`sub`, anonymous `fn(...)` explanations, or separate code/data call arguments | [BIND] §§4, 8 and [DECL] §5.1: ordinary Structure execution with actual parent; named `fn: Name Data`. B-09–B-12. |
-| [SEM] §20, line 1492: “activation data enters a new copy” | Current P3 introduction and [BIND] §11.3 require explicit sources; no automatic capture/publication. G12 writes saved state before copying. |
-| Old load/dirty, local publication, copy-out or automatic native clearing | [BIND] §11.3 and [SEM] §12 explicitly withdraw them. B-03, B-07, G01, N02–N04. |
-| [SEM] §7, line 272: discard unused model branches, if applied to an explicitly supplied full ordinary template | [BIND] §8.2 expressly preserves every requirement in that explicit template. T03. A small consumer without a richer explicit model is T04. |
-| GRAMMAR's older ordinary level-0 blank-line description versus current pattern introductions | P1/P2/P3 specify a blank line as closing the whole ordinary root at virtual level −1. Preserve the source layout in this corpus. |
-| [CORE] §2.2: fixed Array and separate growing List | [SEM] §17 and [L2] §2 explicitly cancel that split and define common reserve/resize. G07–G09. |
-| [CORE] §3.1's computed-result interpretation of an explicit path address | [SEM] §12, `computed-field-address`, states that an explicit path addresses the declaration without executing it; [OPERAND] §3.3 supplies the numeric-`@` rule. G11. |
+| `reference/` document paths and old exported-file line numbers | Bundled `newdocs/` and `newdocs/TZ/` paths; stable sections/anchors |
+| Single-source `merge(Source)` intended to make one object | `(copy(Source))` |
+| Multi-source `merge(Model Values)` intended as one reference or returned Structure | `(merge(Model Values))` |
+| DATA placement gives import/copy/merge DATA arguments | All three consume ordinary CODE sources and use normal W/E in every placement |
+| Copying or merging directly overwrites the receiving source graph | The receiver remains written; its result stream is consumed through namespace |
+| Separate streams overlay the destination using merge's model-slot rule | Only one merge's explicit sources participate in its overlay; normal DATA repetition governs separate streams |
+| Inline-local outcome selected from old executor answer R106 | Exact C-01 remains the bounded review question recorded by the supplied specification |
+| Old automatic-test scheduling question | Current separated phases, V05 and Q01 |
+| User operands require a private registry or an input-template result type | Ordinary method/header discovery; P23 copies the shared header and declares its concrete result once |
+| Grouping a copied stream forces its wrapper to be the source-root copy | Preserve mapped sharing/cycles; G04 does not invent wrapper/root identity |
 
-If a future author update changes one of these decisions, update the primary rule and the affected expected results together, preserving a trace of the change. Do not leave an old explanation as a second live interpretation.
+An explicitly supplied full structural template still requires its complete stated tree. A named `fn` requirement compares ordered input types and the result; a Consumer-derived used interface is a different stated requirement. These are current branches of one admission mechanism. The old load-dirty publication, source initializer replacement, automatic native clearing and fixed-Array/separate-List rules are not restored.
 
 ## Suggested implementation sequence and evidence
 
@@ -2780,7 +2786,7 @@ This order groups dependencies; it adds no new project gate and does not require
 3. **Declaration arguments and import:** D-01–D-04, then P01 and P07. Check counts and visibility, not only final totals.
 4. **Expression operations:** OP01–OP16, then P23. Exercise skipped and repeated effects as well as arithmetic.
 5. **Graph composition and the complete pattern scenarios:** G01–G12 and P01–P23. Check aliases, retained copies, actual parents and source preservation.
-6. **Explicit checker programs:** V01–V04 and T02/T06. Resolve Q01 before assigning acceptance counts to V05's automatic schedule.
+6. **Explicit checker programs:** V01–V04 and T02/T06. Use V05/Q01 to distinguish construction, build-test and reached-admission events.
 7. **Backend parity and explicit update lifecycle:** the relevant N/OP18 matrix and generated-code observations; native-local places must preserve language semantics without being treated as arena records.
 8. **Codec, Message and integration fixtures:** G10, T07 and M01–M04 on the affected runtime components.
 
@@ -2801,41 +2807,48 @@ Do not weaken a negative control to make the implementation pass. Examples espec
 
 ## Snapshot record
 
-The following SHA-256 values identify the source documents used to prepare this corpus. They are document provenance, not evidence that an LMX implementation passed the cases.
+These SHA-256 values identify the bundled normative documents used for this revision. They are provenance, not execution receipts. Companion pattern guides and reports are regenerated in the same archive from their source examples; they do not receive stale hashes copied from an earlier package.
 
-| Source document (reviewed contents) | SHA-256 |
+| Bundled source document | SHA-256 |
 |---|---|
-| [CORE.md](reference/CORE.md) | `ebd795bac3307ccdb7d60738a826828daa21857009aae6d91801080620b563bf` |
-| [L2_L3_CODING_INSTRUCTION.md](reference/L2_L3_CODING_INSTRUCTION.md) | `8963b591bc57f67ccb32fae27a14f7249a7501695116619a6c683227d5125677` |
-| [L2_spec_en.md](reference/L2_spec_en.md) | `5b0498138332c3aa04796a8f2bd9e46a39f7c5eccb34ea200ca7593be20d3fa8` |
-| [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | `c2dac6c1ccf54b3655b8124400ed0e3f6e541a091a60b80015683a3f49c39130` |
-| [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | `01a6bac63db751e3c0565746ca90757f0b51b6cfdea2918d9fc1f817cfcc94b2` |
-| [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | `fed52ff2dbdd042cb6a536ef163035d81bfad5b7e5aad1b2e3154419d274c14d` |
-| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `d02dc800ff0ebc697b31a1c3777288e37f2eb4f22b1e6801f32b8dca2c7bb8c9` |
-| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
-| [LMX_grammar.en.md](reference/LMX_grammar.en.md) | `4daaca2adbd1de81843525df632d2fa391d95855df1747646f0131edd35f8116` |
-| [LMX_semantics.en.md](reference/LMX_semantics.en.md) | `416714593e1ef031ca57ad208cbd426e9e0bb765d6cb8f846cbfb721960f0ddf` |
-| [LMX_semantics_guide.en.md](reference/LMX_semantics_guide.en.md) | `3abac5f4d3879acba8c5f3b5de83649fefa17a4aa2017fae08625791b22cbccd` |
-| [README.md](README.md) | `986f70a112a158876a780b29a8882d96496fef9b310e8ccb85874b4ddfe50b4d` |
-| [to_fable_operands_arguments_priorities.md](reference/to_fable_operands_arguments_priorities.md) | `2c8dd9ec84606834308b4a5356dad5c9c50c581363ac9583341d99a4fe84c84d` |
+| [CORE.md](newdocs/CORE.md) | `bd651bb79369dc660f962e276dab5a65aba9dc0c513b96c24a06f68ccfcdc6cc` |
+| [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | `522947b9c7da5160afe5122a6e2c4b21e184049c00b28729769e3087332b0b69` |
+| [L2_spec_en.md](newdocs/L2_spec_en.md) | `34363ffd3d7af7182163fa46897e0625713c8102b21c4073c601aa263cc9478a` |
+| [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | `0bf3f5607a47f83ba0a4144b0349cb644752fca523db34c30bcda6dcf0088ef4` |
+| [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | `a7c1d92f37e6abc90a9480ae3df95019882e56bd328dab1da1a4c6fc24269c5c` |
+| [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | `83024fee931f815a4789cca37712ca7938559482f62023b8c5d7978bbc5f572e` |
+| [README.md](newdocs/README.md) | `87d341f557edfdc63698add3fee0da891b546c539a43d83ec939cec477d14af4` |
+| [REVIEW_NOTES.md](newdocs/REVIEW_NOTES.md) | `be903cd7492838baacbd0c6d31f0b998700b4d0156269f7c99f87847bcc52918` |
+| [implementation-notes.en.md](newdocs/implementation-notes.en.md) | `142d530a8e1e11318d6c8ee357ff065fcd308e2438ca93490a3658dad697c418` |
+| [kernel-implementation.en.md](newdocs/kernel-implementation.en.md) | `b659bb938becf02aef4bce8a3951c900480ebd2aacd61a9c3684b6e16aea580b` |
+| [source-comparison.en.md](newdocs/source-comparison.en.md) | `a2e6bdf86d60269bf1d80c6ff3e05772cfcb05d8e84c02519af9be4a5c88f18e` |
+| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
+| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
+| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
+| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
+| [to_fable_operands_arguments_priorities.md](newdocs/TZ/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
 
 <!-- Relative source links for the package layout. -->
-[O]: reference/to_fable_operands_arguments_priorities.md
-[OPERAND]: reference/to_fable_operands_arguments_priorities.md
-[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[BIND]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[DECL]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[O]: newdocs/TZ/to_fable_operands_arguments_priorities.md
+[OPERAND]: newdocs/TZ/to_fable_operands_arguments_priorities.md
+[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[BIND]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[DECL]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [P1]: LMX_Design_Patterns.en.md
 [DP1]: LMX_Design_Patterns.en.md
 [P2]: LMX_Design_Patterns10-18.en.md
+[DP2]: LMX_Design_Patterns10-18.en.md
 [P3]: LMX_Design_Patterns19-23.en.md
 [DP3]: LMX_Design_Patterns19-23.en.md
-[S]: reference/LMX_semantics.en.md
-[SEM]: reference/LMX_semantics.en.md
-[G]: reference/LMX_grammar.en.md
-[GRAMMAR]: reference/LMX_grammar.en.md
-[L2]: reference/L2_spec_en.md
-[GUIDE]: reference/LMX_semantics_guide.en.md
-[CORE]: reference/CORE.md
-[CODING]: reference/L2_L3_CODING_INSTRUCTION.md
+[S]: newdocs/LMX_semantics.en.md
+[SEM]: newdocs/LMX_semantics.en.md
+[G]: newdocs/LMX_grammar.en.md
+[GRAMMAR]: newdocs/LMX_grammar.en.md
+[L2]: newdocs/L2_spec_en.md
+[GUIDE]: newdocs/LMX_semantics_guide.en.md
+[CORE]: newdocs/CORE.md
+[CODING]: newdocs/L2_L3_CODING_INSTRUCTION.md
+[STREAM]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[M]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[BLANK]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

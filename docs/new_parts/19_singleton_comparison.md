@@ -1,6 +1,6 @@
 # 19. Singleton: LMX и семь других языков
 
-20 ноября 2026 года. Продолжение серии: шаблоны 19–23.
+20 ноября 2026 года. Обновлено 21 ноября 2026 года. Продолжение серии: шаблоны 19–23.
 
 ## Задача
 
@@ -12,7 +12,7 @@
 
 ## Архитектура LMX
 
-Именованная Structure Settings уже является одним объектом графа LMX. get возвращает именно эту Structure; merge не вызывается. Как в Python-провайдере с единственным settings, first и second обозначают один объект. Отдельный класс-контейнер экземпляра не требуется.
+Именованная Structure Settings уже является одним объектом графа LMX. get возвращает именно эту Structure; `copy` и `merge` не вызываются. Как в Python-провайдере с единственным settings, first и second обозначают один объект. Отдельный класс-контейнер экземпляра не требуется.
 
 Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание][B] · [Импорт][D] · [Границы блоков][E]
 
@@ -227,9 +227,9 @@ pub fn demo() -> i32 {
 
 ## Проверка
 
-Python, Java, C++ и TypeScript: выполнение demo и проверок роли шаблона. TypeScript выполнялся с удалением аннотаций типов, без отдельной проверки tsc. LMX, C#, Go и Rust: статическая проверка.
+В этой редакции проверены согласованность LMX-листинга с документами `newdocs`, явная группировка результатов копирования/композиции там, где нужен один объект, и ссылки на правила языка. Ожидаемый результат LMX следует из показанного сценария; запуск ядра не проводился.
 
-Метрики пересчитаны из восьми листингов этого файла. Ожидаемый результат LMX выведен по правилам языка.
+Листинги Python, Java, C++, C#, TypeScript, Go и Rust сохранены из исходного сравнения. Сообщения исходной редакции об их выполнении относятся к той проверке; это обновление документации не выдаёт их за новый запуск. Подсчёт размеров выполняется заново по листингам текущего файла.
 
 ## Источники
 
@@ -238,6 +238,6 @@ Python, Java, C++ и TypeScript: выполнение demo и проверок �
 - [Refactoring.Guru — Singleton](https://refactoring.guru/design-patterns/singleton)
 - [Refactoring.Guru — Singleton in Python](https://refactoring.guru/design-patterns/singleton/python/example)
 
-[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

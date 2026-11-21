@@ -1,6 +1,6 @@
 # 15. Builder: LMX и семь других языков
 
-20 ноября 2026 года. Продолжение серии: шаблоны 10–18.
+20 ноября 2026 года. Обновлено 21 ноября 2026 года. Продолжение серии: шаблоны 10–18.
 
 ## Задача
 
@@ -12,7 +12,7 @@
 
 ## Архитектура LMX
 
-Python отделяет Rectangle от Builder, который хранит заготовку и выдаёт её копию. В LMX заготовка — Rectangle, а операции builder вложены рядом с area и demo. builder имеет собственное DATA для value и результата Rectangle; node\width и node\height выбирают лексические поля заготовки. finish копирует уже записанный граф через merge(Rectangle).
+Python отделяет Rectangle от Builder, который хранит заготовку и выдаёт её копию. В LMX заготовка — Rectangle, а операции builder вложены рядом с area и demo. builder имеет собственное DATA для value и результата Rectangle; node\width и node\height выбирают лексические поля заготовки. finish получает поток копии уже записанного графа через `copy(Rectangle)` и возвращает одну Structure, явно сгруппированную как `(copy(Rectangle))`. [Потоки полей и группировка][S]
 
 Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание][B] · [Импорт][D] · [Границы блоков][E]
 
@@ -24,14 +24,14 @@ Python отделяет Rectangle от Builder, который хранит за
 
 | Язык | Непробельных символов | Всего символов | Строк | К размеру LMX |
 |---|---:|---:|---:|---:|
-| LMX | 354 | 568 | 24 | 1.00× |
+| LMX | 355 | 569 | 24 | 1.00× |
 | Python | 499 | 680 | 32 | 1.41× |
 | Java | 574 | 922 | 39 | 1.62× |
 | C++ | 436 | 617 | 34 | 1.23× |
 | C# | 581 | 925 | 40 | 1.64× |
 | TypeScript | 514 | 704 | 35 | 1.45× |
 | Go | 543 | 685 | 36 | 1.53× |
-| Rust | 565 | 767 | 41 | 1.60× |
+| Rust | 565 | 767 | 41 | 1.59× |
 
 Общая таблица серии доступна в [Excel](LMX_Comparison_10-18.xlsx) и [PDF](LMX_Comparison_10-18.pdf).
 
@@ -52,7 +52,7 @@ Rectangle:
         set_height:
             node\height := value
         finish:
-            return: merge(Rectangle)
+            return: (copy(Rectangle))
     ---
     demo:
         builder\set_width(3)
@@ -376,9 +376,9 @@ pub fn demo() -> i32 {
 
 ## Проверка
 
-Python, Java и C++17 исполнены с ожидаемыми результатами. TypeScript исполнен в Node с удалением аннотаций типов; отдельная статическая проверка TypeScript не выполнялась. Проверены независимость двух продуктов, изменение возвращённого продукта и повтор demo. C#, Go и Rust проверены статически; их компиляторы в этой среде недоступны.
+В этой редакции проверены согласованность LMX-листинга с документами `newdocs`, явная группировка результатов копирования/композиции там, где нужен один объект, и ссылки на правила языка. Ожидаемый результат LMX следует из показанного сценария; запуск ядра не проводился.
 
-Метрики пересчитаны из восьми листингов этого файла. Ожидаемый результат LMX проверен по правилам языка; исполнение на ядре LMX не проводилось.
+Листинги Python, Java, C++, C#, TypeScript, Go и Rust сохранены из исходного сравнения. Сообщения исходной редакции об их выполнении относятся к той проверке; это обновление документации не выдаёт их за новый запуск. Подсчёт размеров выполняется заново по листингам текущего файла.
 
 ## Источники
 
@@ -387,6 +387,8 @@ Python, Java и C++17 исполнены с ожидаемыми результ�
 - [Refactoring.Guru — Builder](https://refactoring.guru/design-patterns/builder)
 - [Refactoring.Guru — Builder in Python](https://refactoring.guru/design-patterns/builder/python/example)
 
-[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+
+[S]: newdocs/LMX_semantics.en.md#merge-two-forms

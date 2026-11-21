@@ -1,6 +1,6 @@
 # Design patterns in Lingvamyxa: 10–18
 
-English edition. 20 November 2026.
+English edition. 21 November 2026.
 
 This continues the first nine examples with State, Chain of Responsibility, Composite, Proxy, Facade, Builder, Prototype, Memento and Bridge. The order is instructional, not a popularity ranking. A concise Python implementation is the architectural starting point: related LMX methods share DATA, with demo placed in the same natural group.
 
@@ -12,17 +12,33 @@ Each example is an independent program. A callable's DATA is its actual parent. 
 
 An uninitialized declared input may receive a same-named value from the immediate caller. A free name with no own declaration may refer to a writable place in that caller. Autofill does not replace an existing default. Passing an established alias preserves its original place; the older transitive fallback does not turn a copy into an alias. `private` blocks implicit dynamic binding in both directions, not all explicit access.
 
-`node\` selects lexical stored data; it is not a parent operator. Explicit paths are used for state that must survive separate calls. `merge` creates an independent graph under the language's copying rules. A local working value and stored graph data are distinct. Product and snapshot examples write their intended values into the graph before copying it.
+`node\` selects lexical stored data; it is not a parent operator. Explicit paths are used for state that must survive separate calls. `copy` and `merge` copy source graph material under their respective contracts. A local working value and stored graph data are distinct. Product and snapshot examples write their intended values into the graph before copying it.
 
 A physical blank line closes the entire root syntax block. An inner `---` is used when the enclosing structure must continue after a nested structure ends. EOF can close the final block.
 
 [Binding rules][B] · [Import][D] · [Block boundaries][E]
 
+**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
+
 ## Comparison table
 
-[Excel with formulas](LMX_Comparison_10-18.xlsx) · [One-page PDF](LMX_Comparison_10-18.pdf)
+[Excel with formulas](LMX_Comparison_10-18.xlsx) · [PDF](LMX_Comparison_10-18.pdf)
 
 The main metric counts non-whitespace characters in each complete displayed program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns.
+
+| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 |
+| Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 |
+| Composite | 301 | 295 | 480 | 453 | 469 | 499 | 312 | 379 |
+| Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 |
+| Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 |
+| Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 |
+| Prototype | 164 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
+| Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 |
+| Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 |
+| **Total** | **2237** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
+| **Total / LMX** | 1.000× | 1.185× | 1.759× | 1.317× | 1.586× | 1.544× | 1.405× | 1.466× |
 
 ## 10. State
 
@@ -70,7 +86,7 @@ chain:
             return: 1
         return: 0
     even:
-        if: value % 2 == 0
+        if: value % 2 = 0
             return: 2
         return: 0
     dispatch:
@@ -92,7 +108,7 @@ With the default order, requests -2, 4, 3 yield 1, 2, 0. An explicit reversed or
 
 A minimal chain of exactly two configurable handlers. The first accepting handler ends processing; if both decline, the result is 0. Arbitrary chain length, an empty chain and asynchronous handlers are outside this scenario.
 
-**LMX: 296** non-whitespace characters. [Eight-language comparison](11_chain_of_responsibility_comparison.md).
+**LMX: 295** non-whitespace characters. [Eight-language comparison](11_chain_of_responsibility_comparison.md).
 
 [Refactoring.Guru — Chain of Responsibility in Python, conceptual example](https://refactoring.guru/design-patterns/chain-of-responsibility/python/example)
 
@@ -114,13 +130,15 @@ Pair:
     total:
         return: left\total() + right\total()
     demo:
-        @: a merge(Leaf; (int: value 2))
-        @: b merge(Leaf; (int: value 3))
-        @: c merge(Leaf; (int: value 5))
-        @: inner merge(Pair; (@: left b; @: right c))
-        @: tree merge(Pair; (@: left a; @: right inner))
+        @: a (merge(Leaf; (int: value 2)))
+        @: b (merge(Leaf; (int: value 3)))
+        @: c (merge(Leaf; (int: value 5)))
+        @: inner (merge(Pair; (@: left b; @: right c)))
+        @: tree (merge(Pair; (@: left a; @: right inner)))
         return: tree\total()
 ```
+
+Each merge has two explicit sources; grouping its output stream constructs one object for the corresponding reference variable.
 
 **Invocation:** `Pair\demo()`. **Expected result: 10.**
 
@@ -128,7 +146,7 @@ Leaves a=2, b=3, c=5 are created; inner pairs b with c, and tree pairs a with in
 
 A finite acyclic binary tree: every internal node has exactly two children and depth is arbitrary. LMX merge copies the used graph and redirects references, rather than sharing mutable a/b/c objects. Other versions use references or borrows. The comparison covers construction and reading without later leaf changes; copying costs and tree-editing semantics are not equated.
 
-**LMX: 291** non-whitespace characters. [Eight-language comparison](12_composite_comparison.md).
+**LMX: 301** non-whitespace characters. [Eight-language comparison](12_composite_comparison.md).
 
 [Refactoring.Guru — Composite in Python, conceptual example](https://refactoring.guru/design-patterns/composite/python/example)
 
@@ -214,7 +232,7 @@ Rectangle:
         set_height:
             node\height := value
         finish:
-            return: merge(Rectangle)
+            return: (copy(Rectangle))
     ---
     demo:
         builder\set_width(3)
@@ -232,7 +250,7 @@ After the first two steps, first has dimensions 3 and 4. Updating the workpiece 
 
 One product type, two steps, builder reuse and independent results. A separate Director and multiple product representations are outside the example. Dimensions are ordinary integers; geometric validation is not added in any language.
 
-**LMX: 354** non-whitespace characters. [Eight-language comparison](15_builder_comparison.md).
+**LMX: 355** non-whitespace characters. [Eight-language comparison](15_builder_comparison.md).
 
 [Refactoring.Guru — Builder](https://refactoring.guru/design-patterns/builder) · [Refactoring.Guru — Builder in Python](https://refactoring.guru/design-patterns/builder/python/example)
 
@@ -248,9 +266,9 @@ Point:
     score:
         return: x * 10 + y
     demo:
-        @: original merge(Point)
+        @: original (copy(Point))
         original\x := 7
-        @: replica merge(original)
+        @: replica (copy(original))
         replica\y := 9
         return: original\score() + replica\score()
 ```
@@ -259,9 +277,9 @@ Point:
 
 original remains (7,4), while replica becomes (7,9). Both retain score, which reads their own instance data. Changing the copy’s y does not change the original’s y; later changes to original.x likewise do not affect replica.x.
 
-One concrete type with two scalar fields is cloned. The example does not compare deep copying of nested mutable objects, external resources or arbitrary subtype hierarchies. merge has a broader graph contract; this comparison exercises only the scenario shared by all programs.
+One concrete type with two scalar fields is cloned. The example does not compare deep copying of nested mutable objects, external resources or arbitrary subtype hierarchies. copy has a broader graph contract; this comparison exercises only the scenario shared by all programs.
 
-**LMX: 162** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
+**LMX: 164** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
 
 [Refactoring.Guru — Prototype](https://refactoring.guru/design-patterns/prototype) · [Refactoring.Guru — Prototype in Python](https://refactoring.guru/design-patterns/prototype/python/example)
 
@@ -282,7 +300,7 @@ Editor:
         @: snapshot
         return: Editor
         save:
-            return: merge(Editor)
+            return: (copy(Editor))
         restore:
             node\state := snapshot\state
     ---
@@ -304,7 +322,7 @@ The first save captures 5 and the second captures 9. set(13) changes only the cu
 
 This is a minimal Memento with a cooperative API contract: the caretaker neither reads nor changes snapshot internals. Protection against deliberate access, snapshot immutability, owner validation and history limits are not claimed for any version. LMX private controls implicit binding and would not provide that protection. State consists of one number; no external resources are copied.
 
-**LMX: 332** non-whitespace characters. [Eight-language comparison](17_memento_comparison.md).
+**LMX: 333** non-whitespace characters. [Eight-language comparison](17_memento_comparison.md).
 
 [Refactoring.Guru — Memento](https://refactoring.guru/design-patterns/memento) · [Refactoring.Guru — Memento in Python](https://refactoring.guru/design-patterns/memento/python/example)
 
@@ -352,6 +370,8 @@ This is a functional Bridge: independently varying abstractions and implementati
 
 The LMX listings are identical to the individual comparison files. They were reviewed against the agreed rules and the author’s clarifications; the LMX kernel was not run here. Actual execution and static-review status for the other languages is recorded in each comparison file. The Excel and PDF figures were calculated from these same listings.
 
-[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+
+[S]: newdocs/LMX_semantics.en.md#merge-two-forms

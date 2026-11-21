@@ -1,6 +1,6 @@
 # Design Patterns in Lingvamyxa
 
-English edition · Revised 20 November 2026 · Nine independent examples
+English edition · Revised 21 November 2026 · Aligned with newdocs
 
 This edition starts from the Python programs in the companion comparisons and expresses their organization through LMX structures, shared DATA, and ordinary calls. The author's compact Decorator is reproduced exactly. Related methods, including `demo`, belong to a natural group; separate demonstration containers and standalone signatures are introduced only when the program actually needs them.
 
@@ -35,6 +35,8 @@ The order follows the companion files and serves navigation, rather than ranking
 **Syntax preserves structure.** A blank physical line, including a whitespace-only line, ends the whole ordinary syntactic block at the virtual level −1 above root. Inner `---` remains useful for closing a nested structure while retaining its enclosing root; Visitor uses it. EOF closes the final ordinary block. Protected lexical forms retain their own rules. [Block boundaries][E]
 
 **Declarations and imports retain their roles.** A supplied declaration form can be executed repeatedly while its body uses the resulting place, as in Iterator. `import` exposes const root declarations from DATA, including user structures; it neither imports ordinary mutable variables nor changes a method's actual parent. Factory uses it to expose `create`. [Declarations and import][D]
+
+**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
 
 <a id="iterator"></a>
 
@@ -129,10 +131,10 @@ Product:
         return: Product
         small:
             node\payload := 10
-            return: merge(Product)
+            return: (copy(Product))
         large:
             node\payload := 20
-            return: merge(Product)
+            return: (copy(Product))
 
 add1:
     @: product Product
@@ -149,11 +151,11 @@ add1:
 
 The author's `Product` structure supplies the prototype, its reader, and two factory methods. The consumer and its demonstration share `add1`.
 
-Inside `create`, `node\payload` selects the lexical field in `Product`, even though it is outside the factories' immediate parent. Each factory sets its value before `merge(Product)` creates a separate product. `execute` reads the supplied product and adds one: the two calls return 11 and 21.
+Inside `create`, `node\payload` selects the lexical field in `Product`, even though it is outside the factories' immediate parent. Each factory sets its value before `(copy(Product))` creates a separate product. `execute` reads the supplied product and adds one: the two calls return 11 and 21.
 
 If both products are retained, their readers continue to return 10 and 20 after the second creation; the prototype itself contains 20. `import: Product` exposes `create`, while `execute` is already available in its own group.
 
-This combines factory methods and prototype copying. The comparison concerns one numeric payload and usable product methods; it does not equate other languages' shallow copies with every behavior of a general LMX graph merge.
+This combines factory methods and prototype copying. The comparison concerns one numeric payload and usable product methods; it does not equate other languages' shallow copies with every behavior of a general LMX graph copy.
 
 [Eight-language comparison: 03_factory_method_node_prototype_comparison.md](03_factory_method_node_prototype_comparison.md).
 
@@ -409,23 +411,25 @@ These are expected behaviors for checking an implementation, not a report of LMX
 
 ## Complete source-length comparison
 
+[Excel](LMX_Comparison_2026-11-20.xlsx) · [PDF](LMX_Comparison_2026-11-20.pdf)
+
 The metric is **non-whitespace characters**, calculated as `sum(not ch.isspace() for ch in code)`. Each measured program includes declarations, imports, necessary language wrappers, and its demonstration method. The separate external entry call, printing, test harness, Markdown, and runtime implementation are excluded. Whitespace is omitted only from the measurement, not from the usable source.
 
-The following figures come from all 72 programs in the nine companion files. The LMX blocks above are identical to their measured counterparts. The ratio row divides each language's combined total by 2095; a value above 1 means a longer combined listing.
+The following figures come from all 72 programs in the nine companion files. The LMX blocks above are identical to their measured counterparts. The ratio row divides each language's combined total by 2097; a value above 1 means a longer combined listing.
 
 | Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Iterator | 285 | 363 | 524 | 375 | 389 | 413 | 391 | 424 |
 | Strategy | 201 | 204 | 428 | 304 | 360 | 345 | 318 | 305 |
-| Factory | 304 | 328 | 411 | 297 | 395 | 394 | 390 | 364 |
+| Factory | 306 | 328 | 411 | 297 | 395 | 394 | 390 | 364 |
 | Adapter | 163 | 160 | 203 | 165 | 209 | 217 | 179 | 165 |
 | Observer | 220 | 425 | 565 | 469 | 552 | 543 | 468 | 662 |
 | Decorator | 128 | 140 | 197 | 153 | 203 | 213 | 176 | 151 |
 | Command | 152 | 185 | 317 | 252 | 250 | 210 | 214 | 281 |
 | Template Method | 228 | 305 | 543 | 376 | 458 | 478 | 397 | 381 |
 | Visitor | 414 | 482 | 717 | 627 | 597 | 619 | 716 | 713 |
-| **Total** | **2095** | **2592** | **3905** | **3018** | **3413** | **3432** | **3249** | **3446** |
-| **Total / LMX** | 1.000× | 1.237× | 1.864× | 1.441× | 1.629× | 1.638× | 1.551× | 1.645× |
+| **Total** | **2097** | **2592** | **3905** | **3018** | **3413** | **3432** | **3249** | **3446** |
+| **Total / LMX** | 1.000× | 1.236× | 1.862× | 1.439× | 1.628× | 1.637× | 1.549× | 1.643× |
 
 These numbers describe the displayed programs. Names are not normalized, Python omits optional annotations, and identical static guarantees are not claimed. The examples compare concrete scenarios: two Observer subscriptions, a fixed Decorator chain, two Visitor visits, and one numeric field in Factory products.
 
@@ -441,6 +445,8 @@ Foreign-language execution and static-review details are recorded in the individ
 
 The current examples also follow the author's lexical `node` clarification and the instruction to use the Python programs as architectural prototypes. Each section links to its full eight-language comparison. The Russian edition contains the same nine LMX programs, entry calls, expected results, and comparison figures.
 
-[B]: reference/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: reference/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: reference/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+
+[S]: newdocs/LMX_semantics.en.md#merge-two-forms

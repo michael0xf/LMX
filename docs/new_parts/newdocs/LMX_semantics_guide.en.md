@@ -10,6 +10,20 @@ Example results are required behavior, not claims of implementation tests.
 All receivers remain as written in the clean source graph. Computations, transformations, and acceptance of
 receiver results happen exclusively in the namespace. Terminal primitive declarations use the direct
 `{type value}` representation; this does not allow an arbitrary initializer to run during parsing or graph building.
+Those leaves are part of the complete literal source graph, at the addresses referenced by Structure cells.
+`for`, `if`, `merge`, `copy`, and `import` remain written structures just like other receivers. Ordinary explicit
+graph assignment can replace them; when executable edits need recompilation, the existing compile/endturn
+restart boundary applies. There is no separate uneditable executable graph.
+
+The complete program is this graph plus a binary of compiled native methods. In the clean graph, `parent` and
+`length` follow logically from the written source relationships, and the rest is in the Lmx pointer array and its
+referenced records. The normal stored header remains; no per-read source reconstruction is implied. R0 is an
+ordinary compiled C method with a local pointer to its R0 graph. The interpreter also uses that binary R0.
+
+A call's namespace holds its ordinary local values, descriptions/references, and selected places; it is not a
+materialized copy of the source program. Neither entering a call nor taking the interpreted path creates a
+working graph under another name. Explicit user `copy`/`merge` results remain ordinary program-requested values,
+distinct from an automatic shadow representation of every execution.
 Root declaration discovery uses the ordinary DATA/CODE and modifier contracts without scanning arbitrary nested branches or following arbitrary graph references. When the consumer needs fields supplied by `import`, `copy`, or `merge`, it processes that receiver's explicit CODE sources through the common namespace algorithm. Such specified consumption can execute a written source call; it does not become a general pass executing the DATA body or expanding receivers in P0.
 
 ~~~lmx
@@ -47,16 +61,21 @@ trailer. These are recognition/round-trip expectations, not a claim that a parse
 already been performed. See [grammar §15](LMX_grammar.en.md#levels).
 
 <a id="admission-stages"></a>
-## Two admission steps
+## Admission and build checks
 
-| When | What happens |
+| Stage or execution path | What happens |
 |---|---|
-| Graph construction, known candidate | The used interface is checked. `test` is not executed. |
-| Actual admission at run time | A completed first step is not repeated. Specified `test` checks then execute. |
-| First check returns `0` | Admission stops immediately; remaining checks do not execute. |
+| Graph construction, known candidate | Applicable interface requirements are checked without executing the candidate body, initializers, or `test`. |
+| Build/test phase, after the clean graph and before C | Checks reached through the ordinary build/test receiver contracts execute; their checkers may call candidates. This is not recursive discovery of every nested DATA test. |
+| Reached interpreted call | The interpreter invokes standard `implements` for admission, including the checks required at that receiving site. Reused admission facts remain scoped to their operation/reception. |
+| Prepared native call | The prepared contract is used without an automatic runtime `implements` call. Required actual-value conversion checks retain their contract. |
+| Explicit `implements` | The written operation executes in both native and interpreted code. |
+| First required check returns `0` | That admission stops immediately; its remaining checks do not execute. |
 
-Knowing a candidate at construction does not remove the second step at actual admission. A value
-change alone does not rerun all checks. See [admission and test](LMX_semantics.en.md#admission).
+Known interface facts do not waive checks required at an actual receiving site. They also do not imply that
+every native store or graph edit reruns all tests. `sys\check`, `sys\checkL3`, and `sys\translate` do not execute
+application code or tests; `sys\compile` includes its explicit build/test phase without launching the graph's
+application entry. See [admission and test](LMX_semantics.en.md#admission).
 
 <a id="callable-description"></a>
 ## Input description and composition
@@ -86,7 +105,7 @@ int: x 5       # int with value 5
 @: ptr Model   # a reference to an existing Structure, no longer an empty void pointer
 ```
 
-A first definition allocates the place; in code a repeated form with a
+A first definition establishes the place; in code a repeated form with a
 candidate writes after admission, and a repeated form without a candidate
 only checks the requirement (in data a repeated form is one more occurrence
 of the name, [names and paths](LMX_semantics.en.md#fields)). The composed forms with the place in the outer head —
@@ -94,6 +113,14 @@ of the name, [names and paths](LMX_semantics.en.md#fields)). The composed forms 
 withdrawn by the author's decision of 2026-11-10
 ([semantics](LMX_semantics.en.md#receiver-args-only)): in data `ms: int: time`
 declares a Structure `ms` with a field `time`, not a place `ms`.
+
+For `int: x` without a value, the graph leaf is only the `uninit:int` code:
+`sizeof(value) = 0`. There is no hidden int cell, inner int record, or reserved
+payload waiting for its first assignment. The executing call can initialize its
+own local x without changing that source leaf. An explicit graph assignment
+`S\x := 5` instead replaces the selected `{uninit:int}` fragment by `{int 5}`.
+This replacement does not promise an unchanged raw payload address. The same
+distinction applies to other T; absence is not a zero value. [Author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 <a id="header-receivers"></a>
 ## Header and service tables
@@ -168,7 +195,7 @@ See [admission](LMX_semantics.en.md#admission) and [fn](#fn-signature).
 
 `myFunc()` directly calls a declared method. After `@: ptr myFunc`,
 `ptr()` calls through the pointer; repeated `@: ptr otherFunc` in code
-assigns another compatible method to that same cell (in data a repeated
+assigns another compatible method to that same execution place (in data a repeated
 form is one more occurrence of the name). Bare `myFunc` or `ptr` only
 reads a value. `(\ptr)()` calls after explicit dereference; `\ptr()`
 applies `\` to the **result** of the call under ordinary precedence,
@@ -460,6 +487,10 @@ write by `C` to the place `B.x` changes `B.x` but not `A.x`; if `B` has a transp
 <a id="private-binding"></a>
 ### Receiver private: in both directions
 
+`private` is an ordinary receiver already present in the clean graph. Recognizing it does not require another
+annotated graph in the binary. Compiled methods reflect the binding rule; a copied program carrying privacy or
+initialization flags would restore the removed working graph, not implement a necessary local variable.
+
 Two-way `private:` forbids the implicit dynamic participation of a specific declaration in both directions — for autofill, the
 transparent caller place, and the preserved dynamic part of the former binding:
 
@@ -541,13 +572,13 @@ declaration is resolved in the ordinary way through the outer context.
 [Shadowing of levels](LMX_semantics.en.md#shadowing-levels).
 
 <a id="inline-declaration-control"></a>
-The [binding requirement §7.4](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) retains one narrow semantic
-control case: the current frame has outer x = 5; a nested inline block, without a new callable invocation, declares
-a new int: x with no RHS/default; the caller of this frame has no x. Shadowing and a distinct inner place are
-settled. The remaining question is whether the enclosing inline scope qualifies as an autofill source, yielding
-5, or whether the new place remains `uninit:int`. No answer is inferred from an unavailable executor journal.
-First apply the common namespace algorithm; if it does not decide this case, ask only this concrete question.
-This does not reopen the settled rules for explicit initialization, same-level redeclaration, or call autofill.
+The [binding requirement §7.4](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) asks for this derivation:
+the current frame has outer x = 5; a nested inline block declares a new int: x with no RHS/default; there is no
+new callable invocation and the actual caller has no x. The new inner place is `uninit:int`. A lexical inline
+scope does not become a new caller for autofill, so the outer local 5 is not implicitly copied into the new
+declaration. A reached required check refuses the absent value; declaration alone supplies no zero. After
+leaving the inner scope, the original outer x is still 5. This follows from the common caller-source and
+shadowing rules, without an added initialization pass or another author decision.
 
 <a id="call-frame-20261115"></a>
 ### The call frame
@@ -558,8 +589,9 @@ the corresponding logical place and suppresses its initializer. A declaration-re
 and substitutes its declaration form as described [below](#declaration-arguments).
 
 There is no eager initializer pass. An unused computed DATA input does not run. When its selected namespace place
-is needed, the common mechanism evaluates the stored initializer; a resulting reference does not automatically
-call its referent. For @: fptr `getFuncPtr()`, the explicit call `fptr("hello world")` first obtains the pointer as
+is first needed, the common mechanism evaluates the stored initializer and retains the value in that activation's
+place. Later reads use that place's current value rather than invoking the initializer again; an executed repeated
+declaration can explicitly obtain and assign a new value. A resulting reference does not automatically call its referent. For @: fptr `getFuncPtr()`, the explicit call `fptr("hello world")` first obtains the pointer as
 needed and then calls the selected function. A direct source path `D\field` only inspects the written source record;
 it neither obtains a transformed namespace result nor runs a receiver.
 
@@ -571,8 +603,9 @@ In DATA, repeated physical declarations remain separate occurrences addressed wi
 Bare x and `@x` select the place established by binding: an own place for an ordinary actual, autofill, or preserved
 fallback, or the caller's real place for transparent binding. Own selected values/descriptions remain independent
 of later source-field replacement without deep-copying referenced objects. A write to an own local has no copy-out;
-a write through transparent binding changes the caller's place immediately. Explicit `D\x` := value writes the
-addressed graph place under the normal type and write restrictions.
+a write through transparent binding changes the caller's place immediately. Explicit `D\x` := value replaces
+the fragment at the addressed graph place under the normal type and write restrictions. Subsequent access to
+that structural field sees the new fragment; a reference to the previous fragment is not automatically retargeted.
 
 For a computed namespace input int: x `next()`, `@x` obtains its value and the local cell's address. By contrast,
 @(`D\field`) with source int: field `getValue()` addresses the original declaration record, not the result of
@@ -608,11 +641,11 @@ cycles:
 
 use:
     import: cycles
-    test:
+    run:
         iterate: int: item numbers\next()
             item *= 2
 
-use\test()
+use\run()
 ~~~
 
 Here numbers is an available external iterator whose `next()` returns an integer or throws Stop. Its position lives
@@ -662,9 +695,10 @@ caller place as the hidden address of the cell, and the fallback gives an own pl
 arena header `[type][value]`. Methods and ordinary Structures share compilation; distinct actual supplies produce
 distinct C signatures. Known native calls known native directly in C. Graph writes do not clear native: updating it
 requires explicit compilation and an endturn boundary. Before that boundary the time at which executable graph
-changes take effect is unspecified. There is no hidden compilation, no persistent caches, and no copy-out on exit;
-a transparent link does not extend lifetime, and at `yield` the selected link is not rebound to the same-named place
-of a new caller.
+changes take effect is unspecified. There is no hidden compilation, permanent cache of source-expression results,
+shared local-publication cache, or copy-out on exit. Ordinary activation values and scoped admission correspondences
+retain their separate contracts. A transparent link does not extend lifetime, and at `yield` the selected link
+is not rebound to the same-named place of a new caller.
 
 Local frames are not published. Load-dirty, the shared direct-access cache, and `flush()` are cancelled;
 explicit writes are observed through actual aliases in execution order.
@@ -688,8 +722,11 @@ copy and merge retain permitted reusable native implementation references under 
 not implicitly compile a new implementation or register a call-table binding; explicit compilation or restoration
 establishes the binding. A common implementation address does not replace the selected occurrence's lexical links.
 
-`sys\compile(S)` builds/checks the clean graph, translates to L1/C, compiles/links machine code, registers a successful
-result, and returns diagnostics. Graph writes neither clear native nor trigger hidden change tracking.
+`sys\compile(S)` builds/checks the clean graph, runs the required build/test phase before C generation, translates
+to L1/C, compiles/links machine code, registers a successful result, and returns diagnostics. That test phase may
+execute checkers and their candidate calls; it does not launch S's application entry or scan all nested DATA for
+tests. `sys\check`, `sys\checkL3`, and `sys\translate` execute neither application code nor `test`.
+Graph writes neither clear native nor trigger hidden change tracking.
 If A directly calls B, updating that call requires compilation of the unit containing the relevant caller/callee
 code, rather than assuming that recompiling B alone changes A's direct call.
 
@@ -717,8 +754,8 @@ These receivers process only their explicit admitted sources. All three always u
 | `merge` | CODE | Two or more | Composed fields |
 
 The source record remains intact. DATA acceptance uses the namespace and does not replace an import/copy/merge
-Frame with physical output fields in the clean graph. A terminal primitive declaration is the explicit
-representation exception `{type value}`; an unevaluated RHS remains its written form.
+Frame with physical output fields in the clean graph. A terminal primitive declaration is represented there
+as `{type value}`; it remains part of the full source. An unevaluated RHS remains its written form.
 
 ~~~lmx
 Struct:
@@ -835,6 +872,16 @@ ordinary. Separate receiver applications have separate maps.
 
 Accepting copied fields does not redefine node as the stream recipient. Copied methods retain the lexical
 relationships established through the copy map, and dynamic/lexical binding order stays unchanged.
+The grouping container is a different Structure with its own slots, distinct from the copied lexical owner's
+slots. Corresponding slots can refer to the same copied fragment without becoming one assignment destination.
+Replacing the group's slot does not replace the owner's slot. To change the DATA or lexical state used by a
+copied method, address its actual owner and intended field. When two routes follow a shared reference into
+the same nested Structure, they can still reach that nested Structure's same slot.
+
+Import supplies the original eligible declarations and preserves their original owners. Copy and merge
+deeply copy the used graph and preserve the corresponding copied owners through one operation map.
+Grouping either stream supplies a distinct container with its own cells; it neither performs another deep
+copy nor becomes the lexical owner of the received methods.
 [Composition](LMX_semantics.en.md#composition),
 [field-stream requirements](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 
@@ -947,8 +994,8 @@ f(v := 2 + 3; 6)        → two arguments: named v = 5, then positional 6
 ~~~
 
 In the first two cases, the particular v occurrence supplies the result of that particular assignment; an old v=100
-does not substitute for it. The assignment affects the corresponding DATA of receiving f, not a same-named caller
-place. The outer expression is one actual. The last line is admissible with v first in the formal order, because
+does not substitute for it. The assignment affects f's receiving activation-local input place described by its
+DATA; it neither overwrites the source DATA declaration nor targets a same-named caller local. The outer expression is one actual. The last line is admissible with v first in the formal order, because
 naming on the current position retains positional mode; an out-of-position v would require the next actual to
 be named too.
 
@@ -961,8 +1008,8 @@ Within one dynamic evaluation an occurrence executes once. With `read_once()` re
 check starts a new evaluation; there is no persistent result cache in the source graph.
 
 Short circuit remains demand-driven: `0 && (x := 1)` and `1 || (x := 1)` skip the assignment. No preliminary pass
-executes every bracketed form. `while ((c := getchar()) != EOF)` uses the enclosing callable's DATA and does one read
-per check. For A, B, EOF there are three reads and two body executions; c finally contains EOF.
+executes every bracketed form. `while ((c := getchar()) != EOF)` uses the selected c place in the enclosing
+activation and does one read per check. For A, B, EOF there are three reads and two body executions; c finally contains EOF.
 `while(c := getchar() != EOF)` is different: the RHS comparison produces the assigned Boolean, and the standalone
 named actual must also satisfy while's contract. See [expression semantics](LMX_semantics.en.md#assignment-inside-expression).
 

@@ -13,10 +13,25 @@ wherever their receiver records occur. An anonymous Structure is not itself a
 call, but its contents can contain calls and initializers with their ordinary
 contracts.
 
-All source receivers remain as written in the graph. Computation and semantic
-transformation occur in namespace; terminal primitive declarations are represented
-as `{type value}`. The source graph is not replaced by expanded import/merge/copy
-results.
+The clean graph is the complete literal source representation, including terminal
+primitive leaves as `{type value}` at addresses referenced by Structure cells.
+All receivers, including `for`, `if`, `merge`, `copy`, and `import`, remain as written.
+Computation and semantic transformation occur in namespace; results do not implicitly
+replace those source records. Ordinary explicit graph assignment can replace these
+fragments. Executable changes use the existing explicit compilation/endturn restart
+mechanism when recompilation is needed.
+
+The latest [author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+has priority over contrary earlier physical descriptions: `uninit:T` has only its
+code and zero payload; frame writes leave source unchanged; graph writes replace
+fragments. P01 is resolved, with no reserved T cell or raw payload-address promise.
+
+The program has only the complete graph and a binary of compiled native methods.
+R0 is an ordinary C method with a local pointer to its graph; interpreter execution
+also uses this binary R0. `parent` and `length` follow logically from source shape,
+and the other contents are represented by the Lmx pointer array and referenced
+records. Ordinary runtime bookkeeping remains; a working/expanded/callable graph,
+static DATA replica, or namespace-shaped program copy does not.
 
 ## Reading order
 
@@ -29,11 +44,15 @@ results.
 | [L2_spec_en.md](L2_spec_en.md) | Physical memory, machine-side operations, runtime interfaces and ABI |
 | [kernel-implementation.en.md](kernel-implementation.en.md) | Shared implementation algorithms and physical/runtime contracts |
 | [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md) | Developer integration and focused acceptance instructions |
-| [implementation-notes.en.md](implementation-notes.en.md) | Implementation distinctions, narrow review questions, and historical provenance |
+| [implementation-notes.en.md](implementation-notes.en.md) | Implementation distinctions, derived review cases, the resolved P01 author decision, and historical provenance |
 | [source-comparison.en.md](source-comparison.en.md) | Comparison of source forms and their roles |
 
 [REVIEW_NOTES.md](REVIEW_NOTES.md) records the applied changes, verification scope,
-and exact unresolved questions retained from the supplied requirements.
+and derivation of inherited review cases from the current rules. P01 records the
+author's completed zero-payload and graph-assignment decision. A genuine
+contradiction between applicable current requirements must be presented to the
+author with both clauses; superseded wording and routine derivations do not create
+an additional approval gate.
 
 <a id="requirements"></a>
 ## Requirements
@@ -44,6 +63,7 @@ Links to the documents have been adapted to this archive.
 
 | Requirement | Integrated subject |
 | --- | --- |
+| [Latest author clarification: complete program, uninit and graph assignment](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Highest-priority clarification: complete graph plus methods-only binary, local R0 graph pointer and binary R0 for interpretation, zero-payload uninit, replaceable source fragments, existing compile/endturn update boundary |
 | [Binding and callables](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Ordinary callable Structures, actual parent as DATA, named fn signatures, selection, binding places, two-way private |
 | [Declaration arguments and import](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Preserved declaration actuals, receiving-root namespace behavior, positional/named mapping, root-const import filter |
 | [Blank-line block termination](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Complete block termination within the common parser; verification of boundaries and examples |
@@ -102,6 +122,7 @@ background sources rather than repository build dependencies.
 ## Archive contents
 
 There are nine primary English documents, eight maintained English supplements,
-five source-requirement files, this index, and the review notes. Unrelated source
+six source-requirement files (the original five plus the latest author clarification),
+this index, and the review notes. Unrelated source
 trees, generated binaries, test logs, and scratch editing scripts are not part
 of the packet.

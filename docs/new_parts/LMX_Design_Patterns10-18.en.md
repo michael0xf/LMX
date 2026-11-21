@@ -34,11 +34,11 @@ The main metric counts non-whitespace characters in each complete displayed prog
 | Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 |
 | Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 |
 | Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 |
-| Prototype | 164 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
+| Prototype | 226 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
 | Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 |
 | Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 |
-| **Total** | **2237** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
-| **Total / LMX** | 1.000× | 1.185× | 1.759× | 1.317× | 1.586× | 1.544× | 1.405× | 1.466× |
+| **Total** | **2299** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
+| **Total / LMX** | 1.000× | 1.153× | 1.711× | 1.282× | 1.543× | 1.502× | 1.368× | 1.426× |
 
 ## 10. State
 
@@ -267,8 +267,10 @@ Point:
         return: x * 10 + y
     demo:
         @: original (copy(Point))
+        original := parent(original\score)
         original\x := 7
         @: replica (copy(original))
+        replica := parent(replica\score)
         replica\y := 9
         return: original\score() + replica\score()
 ```
@@ -277,9 +279,11 @@ Point:
 
 original remains (7,4), while replica becomes (7,9). Both retain score, which reads their own instance data. Changing the copy’s y does not change the original’s y; later changes to original.x likewise do not affect replica.x.
 
+After each grouped copy, the reference explicitly selects the actual parent of the copied score method. Field writes and method execution therefore use the same owner; neither grouping-wrapper identity nor a stable old primitive-field address is assumed.
+
 One concrete type with two scalar fields is cloned. The example does not compare deep copying of nested mutable objects, external resources or arbitrary subtype hierarchies. copy has a broader graph contract; this comparison exercises only the scenario shared by all programs.
 
-**LMX: 164** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
+**LMX: 226** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
 
 [Refactoring.Guru — Prototype](https://refactoring.guru/design-patterns/prototype) · [Refactoring.Guru — Prototype in Python](https://refactoring.guru/design-patterns/prototype/python/example)
 

@@ -24,6 +24,14 @@ substrate. The source graph, namespace rules, and LMX contracts determine the
 language. Generated L1/C is an implementation artifact; it is not a second
 source implementation or the semantic definition of L3.
 
+The program consists of the complete Lmx graph and a binary containing its
+compiled native methods. There is no additional persistent program part holding
+a second DATA image, callable graph, or expanded source. R0's compiled form is
+an ordinary C method with a local pointer to the R0 graph. Interpreter execution
+also uses this binary R0; it is not a separate graph-only launch without a binary
+entry. Ordinary activation, arena, scheduling, name, and call-table state remain
+runtime mechanisms rather than another representation of the program.
+
 One parser builds the complete written receiver–arguments structure. Interpretation
 and translation then apply the consumer's role and contract. A bare reference, a
 call Frame, a declaration receiver, and an operator position are distinguished by
@@ -44,6 +52,13 @@ merely to make a known direct call.
 and transformation takes place in namespace. Terminal primitive declarations are
 also in the graph, represented directly as `{type value}`.**
 
+This is a complete literal source graph. Terminal primitive representation is
+part of that completeness, with the Structure cell pointing at the represented
+leaf. `for`, `if`, `merge`, `copy`, `import`, and every other receiver remain
+written structures. Ordinary explicit graph assignment can replace them; the
+existing compile/endturn restart mechanism handles executable changes where
+recompilation is needed.
+
 P0 preserves Frames, grouping, argument order, and lexical nesting. Binding,
 expression evaluation, argument expansion, import, copying, and composition do
 not replace source receiver records with their computed results. A computed RHS
@@ -51,9 +66,11 @@ remains a written form. Serialization reconstructs a terminal primitive declarat
 from its value record and name; it preserves other written receiver records.
 
 A runtime operation can allocate the values and graph nodes required for its
-result. This does not replace its source record. An explicit permitted graph write
-has its ordinary effect; an assignment to an activation's own local does not
-implicitly publish that local into the source graph.
+result. This does not replace its source record. An explicit permitted graph
+assignment replaces the graph fragment at its selected structural place; an
+assignment to an activation's own local does not publish that local into the
+source graph. The author's [latest clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+makes this distinction explicit.
 
 A Structure is an ordered collection of fields holding references to values.
 Lexical nesting forms a forest, while stored references may add sharing and cycles.
@@ -63,10 +80,17 @@ fields inserted into every value.
 
 ### 2.2 Value records and the arena
 
-An arena contains a stream of typed value records. The type code immediately
-precedes the value; the code occupies four bytes in the documented record
-format. Physical kind is read from that record. Address-range information
-identifies storage ownership and does not infer the value's type.
+An arena contains a stream of typed records. For an initialized value, its type
+code immediately precedes its payload; the code occupies four bytes in the
+documented format. `uninit:T` consists of the code alone: `sizeof(value) = 0`,
+without a reserved T cell or inner T record. Physical kind is read from the
+record. Address-range information identifies ownership and does not infer type.
+
+[P01 is resolved by the author](implementation-notes.en.md#uninit-layout-conflict).
+Assigning 5 to an explicit graph field holding `{uninit:int}` replaces that
+fragment with `{int 5}`. This is not in-place retagging of reserved payload and
+does not preserve a raw value-cell address across the replacement. Frame-local
+initialization still changes only the selected execution place.
 
 Chunks can be added without moving value records. The arena's mark/revert and
 ownership-attachment operations retain their [L2 contracts](L2_spec_en.md#value-record).
@@ -82,6 +106,10 @@ contract.
 ### 2.3 Structures and variable-length Arrays
 
 The common `Lmx` descriptor contains `parent`, `length`, and `storage`.
+In the clean graph, `parent` and `length` are logically determined from the
+written source relationships; the remaining contents are represented through
+the Structure's array of pointers. This explains their origin, not a rule that
+header fields have no storage or must be recomputed from source text on every access.
 Native descriptors and capacity belong to arena tables, not additional header
 fields. Structure and `Array<@>` are interchangeable under their common
 field/index contract. A numeric `Array<T>` holds actual T elements.
@@ -146,10 +174,13 @@ It receives no artificial `D = C`, empty DATA Structure, or synthetic `data`
 field. Host launch parameters and internal access to the graph remain runtime
 details, not user signature inputs.
 
-The provided requirements fix that boundary but do not settle every source-role
-decision for unit-root records. The exact remaining acceptance question is
-recorded in [REVIEW_NOTES.md](REVIEW_NOTES.md#open-questions); it must not be
-answered by silently restoring the former self-DATA launch.
+The selected entry's source records retain their ordinary roles. In R0's executed
+CODE, reached executable declarations and resolved receivers use the common CODE
+rules; a form supplied as DATA is read under that receiving contract. The absence
+of DATA removes an input source, not this classification mechanism. A source-file
+or host entry profile must state which entry it selects; it does not implicitly
+call every declared Structure or turn R0 into its own DATA. See the
+[derived review cases](REVIEW_NOTES.md#open-questions).
 
 A result is described by `return` in DATA. This declaration assigns no result
 and creates no shared mutable result cell for recursive calls. In CODE,
@@ -199,6 +230,10 @@ resumption does not rebind the suspended invocation's dependencies.
 caller place is not offered implicitly by value or by place. A really visible
 private lexical declaration in the callee is not dynamically overridden.
 
+The ordinary `private` receiver remains in the clean graph and supplies this
+fact directly. Generated methods implement the binding rule; there is no marked
+copy of the program in the binary containing privacy or initialization flags.
+
 Explicit passing, explicitly filling a private receiving place, nested lexical
 visibility, explicit paths, and `node` remain available under the normal write
 restrictions. `private` is a filter on a selected place, not a permanent ban
@@ -214,10 +249,12 @@ An early use before a later own declaration can resolve through the ordinary
 outer context. A pre-scan of future declarations must not suppress that use.
 After the inner scope ends, the previous outer binding is visible again.
 
-The exact initialization of a new no-RHS local in an inline nested scope,
-with an outer same-name value but no new callable invocation, remains the
-narrow check from Binding TZ §7.4. See
-[the acceptance questions](REVIEW_NOTES.md#open-questions).
+For Binding TZ §7.4's exact case, a new no-RHS inner local is `uninit:int`:
+an inline scope creates a distinct declared place but no new callable caller.
+The current activation's outer x = 5 is therefore not a new autofill source,
+and the stated actual caller has no x. A reached required check refuses this
+absence; merely declaring the place does not synthesize 0 or copy 5. The outer
+place remains unchanged. See [the derivation](REVIEW_NOTES.md#open-questions).
 
 ## 4. Declaration, assignment, call, and admission
 
@@ -314,10 +351,21 @@ The positional cursor follows the accepted rule: a named actual at its own
 next position remains positional; an out-of-position named actual ends positional
 counting, after which only named actuals are allowed.
 
-The common `implements` supplies interface admission. Behavioral `test` is a
-separate execution-stage check. Native calls use their prepared contracts; this
-does not introduce repeated dynamic admission into every native primitive store.
-Existing numeric conversion/range checks retain their own contract.
+The common `implements` supplies structural/signature admission and the required
+behavioral checks. Construction checks a known candidate's interface without
+running its body, initializers, or `test`. The interpreter invokes standard
+`implements` at reached call admissions; prepared native calls use their prepared
+contracts without an automatic runtime `implements` call. An explicitly written
+`implements` runs in either path. Reused admission facts belong to `implements`
+within the established operation/reception scope, not to a new persistent
+namespace or resolution store.
+
+The build/test phase after clean-graph construction and before C generation runs
+the checks reached through the ordinary build/test receiver contracts. It does
+not recursively discover every nested `test` in DATA. A reached actual admission
+performs its required receiving checks; a false check stops later checks. This is
+not a blanket rerun on every graph mutation or native primitive store. Actual-value
+conversion/range checks retain their own contract.
 
 ## 5. Expressions and ordinary operand methods
 
@@ -443,6 +491,11 @@ copies. Reusable native implementation references and qualified
 
 The consuming namespace does not redefine `node` or reparent source referents.
 Packing the stream does not copy the completed fields a second time.
+The explicit grouping container has its own cells, distinct from the copied
+lexical owner's cells. Replacing its slot does not replace the owner's slot;
+references in either container can still lead to one shared nested Structure.
+Import retains original declaration and owner identity. Copy and merge deeply
+copy the used graph and preserve corresponding copied owners through their map.
 The graph-copy traversal does not bind or execute a copied callable merely
 because it is copied, compile new code, or register a new native entry. Source
 expressions still use the ordinary CODE-argument algorithm.
@@ -486,15 +539,18 @@ value-record headers. Hidden caller-place transport preserves the observable
 LMX type and write destination.
 
 There is no load-dirty publication cycle, flush receiver, copy-back of own
-locals, mandatory executable-tree snapshot, automatic graph-edit invalidation,
+locals, automatic executable-tree copy, automatic graph-edit invalidation,
 or implicit compilation on a failed native lookup. The current
 [activation supplement](Old_TZ/dirty.md) and
 [editing API](Old_TZ/mutating_debug_API.en.md) define the detailed boundary.
 
-`sys\compile` explicitly checks/prepares the selected graph, translates through
-L1/C, invokes the host toolchain, and installs successful native descriptors in
-the call tables. `sys\translate` produces L1 text and diagnostics. These operations
-do not execute the program just to obtain its source representation.
+`sys\compile` explicitly checks/prepares the selected graph, runs its required
+build/test phase, translates through L1/C, invokes the host toolchain, and installs
+successful native descriptors in the call tables. That check phase may execute
+checkers and their candidate calls; compile does not launch the selected graph's
+application entry. `sys\translate` produces L1 text and diagnostics, and
+`sys\check`/`sys\checkL3` return diagnostics; these check/translate operations
+do not execute application code or `test` merely to obtain a source representation.
 
 A successful compile does not rewrite already compiled direct callers. Compile
 the required unit when those call sites must change. `sys\endturn` unwinds

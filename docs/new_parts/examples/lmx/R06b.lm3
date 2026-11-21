@@ -1,0 +1,11 @@
+Ring:
+    int: value 3
+    @: self
+
+CycleProbe:
+    return: int
+    run:
+        Ring\self := Ring
+        @: copied (copy(Ring))
+        copied\self\value := 8
+        return: copied\self\value * 10 + Ring\value

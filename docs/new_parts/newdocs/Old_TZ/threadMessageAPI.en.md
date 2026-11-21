@@ -36,7 +36,7 @@ Arguments, `implements`, available conversions, tests, declared `throws`, and `c
 
 ## 8. REQUIRED GENERAL SUPPORT: `ms: int: time`
 
-In `timeout: ms: int: time 500`, `timeout` and `ms` remain written structural forms. The terminal primitive declaration `time` has the direct `{type value}` representation, so its source path is `timeout\ms\time`, without an extra `int` node. This is the terminal-primitive representation exception, not permission to evaluate arbitrary RHS forms or flatten all receivers. Namespace computations and admission leave the clean source graph intact. Incoming `(ms: int: time)` binds through ordinary structural checking. Handler `time` and configured timeout `time` are distinct places. Other names and deeper structures use the same algorithm; no postal parser is added.
+In `timeout: ms: int: time 500`, `timeout` and `ms` remain written structural forms. The terminal primitive declaration `time` has the direct `{type value}` representation, so its source path is `timeout\ms\time`, without an extra `int` node. This is the primitive leaf's physical source representation, included in the complete graph; it does not permit evaluating arbitrary RHS forms or flattening receivers. Namespace computations and admission leave the clean source graph intact. Incoming `(ms: int: time)` binds through ordinary structural checking. Handler `time` and configured timeout `time` are distinct places. Other names and deeper structures use the same algorithm; no postal parser is added.
 
 ## 9. Reference outcomes
 

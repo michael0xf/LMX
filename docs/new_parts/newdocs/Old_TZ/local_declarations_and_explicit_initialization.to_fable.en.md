@@ -8,8 +8,10 @@ and [binding rules](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) g
 The program remains one complete source graph. Receivers, declarations, executable assignments, written groups,
 and field order are preserved as written. Computations and transformations occur exclusively in the namespace.
 Terminal primitive declarations alone have the direct `{type value}` representation. A declaration establishes
-a place under its role; assignment changes an existing resolved place without replacing its source operator
-or creating another field.
+a place under its role; assignment changes an existing resolved place without implicitly replacing its own
+source operator or creating another field. The primitive leaf is part of the complete literal source graph,
+at the address held by its Structure cell. Ordinary explicit graph assignment can replace any addressed
+receiver structure; executable edits use the existing compile/endturn restart boundary when required.
 
 In executed CODE, explicit initialization can be written:
 
@@ -18,10 +20,15 @@ int: i
 i := findValue()
 ~~~
 
-The assignment executes when reached. The first declaration establishes an uninitialized int place; it does not
-silently substitute zero. The single declaration int: i `findValue()` instead declares/updates the place and obtains
+The assignment executes when reached. If no permitted ordinary input source supplies it, the first declaration
+establishes an uninitialized int place; it does not silently substitute zero. The single declaration int: i `findValue()` instead declares/updates the place and obtains
 its initializer under the ordinary declaration contract. A bare findValue reference does not call it, and
 i: `findValue()` is an ordinary structural form, not assignment.
+
+An uninitialized graph leaf is the code `uninit:int` alone, with zero value bytes. It contains no hidden
+preallocated int cell or nested record. Initializing the execution-local i leaves that source leaf unchanged;
+an explicit graph assignment to `M\i` replaces its selected fragment with the supplied `{int value}`.
+No stable raw payload address across that replacement is promised. [Author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 A direct source path such as `M\i` addresses the corresponding graph record; it does not evaluate a stored call or
 read a hidden activation cache. A computed namespace input obtains its value on demand through the common
@@ -36,9 +43,10 @@ for execution again. This creates no source-code field or new physical parent. T
 
 Same-level CODE redeclaration uses the existing place and does not clear it when no new RHS is supplied.
 A nested declaration shadows an outer one with a distinct place. DATA duplicates are physical occurrences,
-addressed by `S\[N]field`. The one unresolved initialization control case for a new uninitialized inline local is
-explicitly isolated in [binding §7.4](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md);
-it does not affect explicit initialization examples.
+addressed by `S\[N]field`. In [binding §7.4](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md)'s exact
+inline case, the new no-RHS local is `uninit:int`: the inline scope is not a new callable caller, and the stated
+actual caller has no x to supply. The outer x = 5 stays unchanged; a reached required check refuses the absence.
+This follows from the existing caller-source rule without an additional initialization mechanism.
 
 Writing a bound name does not promote it into a method field. Own actual/autofill/fallback places have no
 write-back; a transparent caller binding writes the caller's real place immediately. Explicit graph paths follow

@@ -13,6 +13,9 @@ and [L2 specification](L2_spec_en.md). The authoritative change requirements inc
 [blank physical lines](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
 [operands and expressions](TZ/to_fable_operands_arguments_priorities.md), and
 [field streams](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+The later [author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+has priority for complete source representation, the graph-plus-method-binary program model,
+R0, zero-payload uninit, and ordinary graph-fragment replacement.
 The 2026-11-21 field-stream requirements, with the latest author correction that import/copy/merge
 always take ordinary CODE arguments, control conflicting earlier composition examples and
 role-dependent source rules.
@@ -28,11 +31,26 @@ DATA or user arguments. `fn: name data` declares a named positional signature, n
 implementation. The special data name, separate data call parameter, `fncall`, and `sub` are
 removed; `node` remains lexical.
 
-**All receivers remain as written in the source graph. All computations and transformations are
-performed in the namespace.** Terminal primitive declarations are the representation exception:
-they are stored directly as `{type value}`. This exception does not authorize evaluation of
-arbitrary RHS expressions during parsing or graph construction. Import, copying, merging,
-argument binding, and expression planning do not rewrite their source receiver records.
+**The clean graph is the full literal source, including terminal primitive leaves. All receivers
+remain as written; computations and transformations are performed in the namespace.** Terminal
+primitive declarations are stored directly as `{type value}` at the address held by their
+Structure cell. This is their source representation, not an omission from the graph. It does
+not authorize evaluation of arbitrary RHS expressions during parsing or graph construction.
+Import, copying, merging, argument binding, and expression planning do not rewrite their source
+receiver records. Ordinary explicit graph assignment can replace any receiver structure,
+including `for`, `if`, `merge`, `copy`, and `import`; required recompilation uses the existing
+explicit compile/endturn restart boundary rather than a separate graph-editing protocol.
+
+The program has two parts: this complete Lmx graph and a binary containing compiled native
+methods. It has no further persistent DATA copy, callable graph, or expanded program store.
+`parent` and `length` in the clean graph are logically determined from the source; the remaining
+contents occupy the Structure's pointer array. This does not remove the ordinary descriptor
+fields or require source-text recomputation at every access.
+
+R0 is compiled as an ordinary C method with a local pointer to its R0 graph. The interpreter
+also runs with that binary R0: walking a method without a suitable native variant does not imply
+a binary-free R0 or another program representation. Runtime frames, arenas, call/name tables,
+mail, and scheduling remain the existing execution mechanisms, not additional program parts.
 
 <a id="principles"></a>
 ## 1. Principles
@@ -48,9 +66,10 @@ argument binding, and expression planning do not rewrite their source receiver r
    do not move. A spelling has one process-local canonical string address; resolved identifiers
    compare those pointers. A native local may use ordinary machine storage and is not thereby a
    graph record.
-4. **One uninitialized-place contract.** Every primitive T has an `uninit:T` representation that
-   preserves the actual T cell's address. A write initializes the same place and changes its
-   physical uninitialized state to T; its language type remains T. It does not imply zero.
+4. **Uninitialized means no payload.** `uninit:T` is only its type code: `sizeof(value) = 0`.
+   It contains neither a reserved T cell nor an inner T record. Frame assignment changes the
+   selected execution place without changing source; graph assignment replaces a fragment at
+   the selected structural place. Its receiving type remains T, and absence does not mean zero.
 5. **Scoped service tables.** Name resolution, selected actual maps, expression results, and copy
    maps live for the traversal, call, or operation that needs them and are released on its exits.
    They are not mandatory persisted preparation. Existing arena ownership, name, capacity, and
@@ -70,8 +89,8 @@ argument binding, and expression planning do not rewrite their source receiver r
    effective at the next entry. Known native calls may remain direct C calls.
 10. **Observable behavior controls optimization.** Types, selected places, initialization state,
     effects, lexical links, privacy, and lifetime must agree across native/walker combinations.
-    A narrow unresolved language case is isolated; it does not reopen settled requirements or
-    justify a second mechanism.
+    The author's [uninit clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+    resolves P01 and supersedes the former reserved-cell and first-write retagging descriptions.
 
 <a id="contract"></a>
 ## 1a. The builder and the two consumers
@@ -79,12 +98,13 @@ argument binding, and expression planning do not rewrite their source receiver r
 | Stage | Responsibility | What survives the stage |
 |---|---|---|
 | P0 and graph construction | Preserve written Frames, groups, order, source positions, and lexical links; construct terminal primitive records; intern names | The clean Lmx graph, typed records, ordinary address-to-name rows |
-| Interpreter | Read that graph under the current roles and namespace; execute reached operations | Program-authorized graph changes and ordinary live execution state |
+| Interpreter | Use the binary R0 entry and read the graph under current roles/namespace; execute reached operations | Program-authorized graph changes and ordinary live execution state |
 | Translator | Analyze the same graph and emit L1/C/native; use common admission and expression rules | Generated code and successful explicit call/native installations |
-| Generated loader | Allocate records and restore the same links, names, and ordinary native references through common constructors | The restored clean graph and legitimate arena tables |
+| Generated loader | Allocate records and restore the same links/names through common constructors; restore native bindings in existing call tables | The restored clean graph and legitimate arena tables |
 
 The loader does not need to embed P0 or keep source text as an execution reserve. A generated
-initialization is not a separate prepared program: it reproduces the clean graph. Construction
+initialization method constructs or restores the graph through the common mechanisms; it does
+not leave a static DATA replica or a second prepared program alongside that graph. Construction
 from text, `sys\fromLmx`, copy/merge results, child reservation, and mail uses the common graph
 allocation and ownership mechanisms. It does not execute arbitrary initializers or `test` to
 prepare future calls. Constant property acquisition, admission, or DATA consumption uses its own
@@ -107,11 +127,13 @@ and source formatting must not insert blank lines inside a block intended to con
 <a id="value-record"></a>
 ### 2.0. Value records
 
-A graph value record is a four-byte physical-type code immediately followed by the raw value:
-a number, word, reference, or the flat `parent/length/storage` descriptor. A graph reference points
-to the value, not to the tag. The type code occupies the four bytes immediately before that
-address. The logical record size is `sizeof(int) + size(type)`; it does not reserve space for the
-largest value and is not laid out as a C union.
+A graph value record has a four-byte physical-type code and the payload required by that type:
+a number, word, reference, or the flat `parent/length/storage` descriptor. For an initialized
+value, an ordinary graph reference points to its value bytes and the type code is immediately
+before that address. `uninit:T` has zero payload: its record is the type code alone. It must not
+be accessed as though a T cell or complete inner T record followed it. The logical record size
+is the type-code size plus the actual payload size; it reserves neither space for the largest
+value nor a future T value and is not laid out as a C union.
 
 The value is aligned as required by its type, and at least to four bytes. Padding lies between
 records rather than between tag and value. Typed aligned accesses read the code and value;
@@ -119,13 +141,17 @@ descriptor fields retain their natural alignment. With eight-byte pointers, an i
 8 bytes, a double/size_t/reference record 12 bytes with an aligned step of 16, and a three-field
 Lmx descriptor record 28 bytes with an aligned step of 32.
 
-For an ordinary record reference p:
+For an initialized value-record reference p:
 
 | Address | Meaning |
 |---|---|
 | p − 4 | Physical type code |
 | p | Value bytes or descriptor |
 | `descriptor.storage` | Dense elements/slots, outside the descriptor record |
+
+For `uninit:T`, the payload contributes zero bytes; only the physical type code is present.
+Inspecting that code is sufficient to observe absence. No raw T-value address can be retained
+from nonexistent payload storage for use after a future graph replacement.
 
 Type-sensitive readers, `sys\typeof`, indexing, dereference, admission, copying, and GC obtain
 type and size from the record. Earlier helpers named `lmx_range_classify`, `lmx_range_type_of`,
@@ -159,7 +185,7 @@ effects. Simple mode keeps stable addresses and does not collect.
 | Category | Physical payload and interpretation |
 |---|---|
 | Number primitive | The corresponding target-machine T value; exact scalar layout and numeric semantics follow the machine profile |
-| `uninit:T` | The uninitialized outer record followed by the complete T record and stable T cell (§3.2) |
+| `uninit:T` | Its physical type code only; zero payload, no reserved T cell and no inner T record (§3.2) |
 | Word | A pointer to the canonical identifier string; operators and receiver words use this same representation |
 | Reference | A typed reference cell containing an address, or zero under its ordinary contract |
 | Ordinary/immutable Structure | One flat Lmx descriptor with the corresponding physical code |
@@ -176,9 +202,10 @@ An already published ordinary Structure cannot become immutable in place merely 
 
 When the graph is known, emitted construction may size the needed records and backing blocks
 exactly and initialize them directly. Runtime construction obtains records from the same arena
-stream. A primitive place without a value has its T storage from construction; its first write
-does not allocate a new semantic place. Copying or parsing does not create an Array for every
-standalone cell.
+stream. A primitive declaration without a value contributes only its uninit:T code; construction
+does not reserve storage for a future T value. An explicit graph assignment supplies a new
+fragment under the existing allocation and ownership rules and replaces the selected field's
+fragment. Copying or parsing does not create an Array for every standalone primitive.
 
 Lmx descriptor addresses remain stable while backing storage may move. The arena's existing
 “descriptor address → capacity” table records capacity in elements. All variable-sized Arrays,
@@ -197,9 +224,10 @@ Structure/reference-Array slots, reference cells, parent links, and necessary or
 Dense numeric Array payloads are not scanned as pointers. A transient mark bitmap belongs to the
 collection pass; it is not an initialization-state bitmap for language places.
 
-Address-to-name rows survive for live named addresses and are removed for dead ones. The
-`uninit:T` representation and separately taken cell addresses preserve the same T cell; after a
-write its initialized state follows §3.2. Required model dependencies of an admitted live value
+Address-to-name rows survive for live named records and are removed for dead ones. Code-only
+uninit records have no payload to scan. Graph-field replacement follows ordinary reachability;
+an old fragment is not retained or transformed merely because it previously occupied that field.
+Required model dependencies of an admitted live value
 remain live for the operations needing that correspondence, without retaining an expired admitting
 frame. Typed scalar metadata and source/profile dependencies remain live where their physical
 objects require them. An `independent: immutable` branch is retained by its owner under the ordinary
@@ -291,28 +319,38 @@ no reverse-index registry or per-write maintenance.
 
 A terminal `int: x 10` inside S is an int record with value 10; S's slot points at the value and
 its address-to-name row names x. It is not a receiver Frame with an extra int child. Thus its
-path is `S\x`. A nonterminal declaration with a computed RHS retains its receiver record until
-ordinary namespace consumption requires the result. Modifier and other receiver records are
+path is `S\x`. A nonterminal declaration with a computed RHS retains its written receiver record
+in the source graph; ordinary namespace consumption obtains its result separately. Modifier and other receiver records are
 never flattened just because they contain a primitive declaration.
 
-A place without a value has one outer `uninit:T` record followed by the complete inner T record,
-including the T code and cell. The Structure slot reaches the outer record; the name and an
-address of the actual place reach the inner T cell. The earlier separately allocated pointer
-representation is replaced by the fixed offset within this record. Every declared primitive
-place owns its cell; independent places do not share one mutable cell or a code literal.
+**P01 — resolved by the author, 2026-11-21.** `uninit:T` is its type code alone:
+`sizeof(value) = 0`. There is no inner T record, preallocated T cell, unwritten T payload, or
+extra pointer to such a cell. The logical receiving type remains T, and absence is distinct
+from an initialized T value.
 
-The first assignment writes that same T cell and changes the place's physical state from
-`uninit:T` to T. Its language type remains T, its previously taken cell address stays valid under
-ordinary lifetime rules, and its name row does not move. Later writes use the same cell. The
-ordinary typed-absence value is `nil: T`, or `nil` where inferred; nil/required checks observe the
+The clean graph is the complete literal source representation, including terminal primitive
+leaves represented directly as `{type value}`. An assignment in an execution frame changes the selected
+namespace place and leaves this source graph unchanged. In contrast, explicit graph assignment
+replaces graph material at its addressed structural place. For source `int: novalue`, the write
+`struct\novalue := 5` replaces the selected `{uninit:int}` fragment with `{int 5}`. It is not a
+retag of a preallocated same-address T cell, and it promises no stable raw payload address across
+the replacement. A later lookup of that field observes the new fragment and its `int` type.
+
+This follows the [author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+and [L2 representation](L2_spec_en.md#uninit-record-control). The old question's
+[anchor](implementation-notes.en.md#uninit-layout-conflict) is retained as a resolved decision.
+Stable Structure descriptors and descriptor/index Array-element references are independent
+contracts; they do not turn an absent primitive into allocated payload storage.
+
+The ordinary typed-absence value is `nil: T`, or `nil` where inferred; nil/required checks observe the
 place's real initialization state. No initial zero, random value, or special blanket error is
-invented, and no unwritten payload is read merely to inspect absence or take the address.
+invented, and no nonexistent payload is read merely to inspect absence.
 An omitted input is not automatically required solely because its description has no default:
 requiredness is the receiving declaration's ordinary contract.
 
 An assignment to an own call-local place does not write the source graph. An assignment through
-a transparent caller place updates the caller's cell and initialization state immediately.
-`D\x := value` writes the explicitly selected graph place. None of these is copy-out on return.
+a transparent caller place updates the caller's selected execution place and initialization state immediately.
+`D\x := value` replaces the fragment at the explicitly selected graph place. None of these is copy-out on return.
 Signature descriptions themselves are not mutated when a call fills its own actual places.
 
 The existing exact scalar carrier `LmxScalarABI {size, init, copy}` describes access to a C
@@ -326,7 +364,7 @@ model/reference/referent information in the existing value transport. A typed ma
 must have a known lifetime and owner when retained; an automatic C local's address cannot be
 made persistent merely by storing it in a reference. A suitable immutable cell can keep its
 identity, while a copied scalar requires the correct destination ABI and protection checks before
-typed copy. Absent storage can be transported without reading its unwritten bytes. A source fact
+typed copy. An absent value is transported by its code without reading or reserving payload bytes. A source fact
 or equal C spelling alone does not prove physical storage compatibility, and an ABI match is not
 semantic conversion. Ordinary graph slots remain `void *`; aliasing them through `Lmx **` does
 not change the actual stored representation.
@@ -527,6 +565,11 @@ Const/immutable and type restrictions still govern writes. A copied explicitly s
 does not carry a private history into an unmarked new declaration. Modifier records stay in the
 graph, for example `S\private\field` rather than an automatic flattening to `S\field`.
 
+Recognize `private` from that ordinary receiver in the same clean graph. The native methods
+reflect the resulting binding rule; they do not need a second marked graph in the binary with
+privacy, initialization, or other per-node flags. Temporary resolution facts and actual frame
+values must not be turned into a persistent annotated program under a different name.
+
 A transparent name has ordinary LMX type T. Reads, writes, and address-taking use the caller's
 actual place, including its initialization state. A hidden native T* transports that place; it
 does not change the language type or require writing `\x`. For a reference variable the cell's
@@ -571,9 +614,11 @@ and independent receiving calls do not share mutable locals through the source g
 This rule is determined by the resolved declaring head. Ordinary `Producer()` and
 `Producer: argument` remain CODE calls when Producer is not a place-declaration receiver.
 Ordinary Structure/reference values do not automatically publish all their fields into the root.
-The specific no-RHS inline-shadowing check left by binding TZ §7.4 is isolated in the
-[notes](implementation-notes.en.md#inline-declaration-control), without an invented initialization
-value or global outer-local copying rule.
+For binding TZ §7.4's exact inline-shadowing case, the inner no-RHS place is `uninit:int`:
+an inline lexical scope adds no callable caller, and the stated actual caller has no x.
+A reached required check refuses the absent value; the distinct outer x remains 5. This is
+derived in the [notes](implementation-notes.en.md#inline-declaration-control), without a new
+initialization source or global outer-local copying rule.
 
 ### 3.5. Names, receiving views, and source facts
 
@@ -623,9 +668,12 @@ Language operator and receiver words use these same canonical strings and ordina
 
 Each arena has rows `{address, name}`. Address is that of the named primitive or Lmx itself;
 name is the canonical string pointer. It is not a separate occurrence-plus-port identity, owner
-and ordinal key, or incremental code. The cell of an uninitialized place has its name from
-construction; initialization changes no name row. Copying a named record creates the corresponding
-row with the same canonical string. Collection removes rows for dead records.
+and ordinal key, or incremental code. A code-only uninitialized declaration is still named;
+it does not need a nonexistent T cell to carry the name correspondence. Replacing a graph
+fragment preserves the selected declared name through the ordinary construction/name mechanism,
+without promising that the old record address or its name-table row stays the same. Copying a
+named record creates its corresponding row with the same canonical string. Collection removes
+rows for dead records.
 
 Named field lookup walks the relevant physical fields and their actual names under the ordinary
 DATA rules. A single occurrence is accessible by name. With multiple DATA declarations of that
@@ -638,7 +686,9 @@ its logical names look like immediate physical children.
 ### 5.2. Service tables for concrete work
 
 Namespace mappings and local places belong to the actual traversal/call. Construction, expression,
-copy, and admission tables live for the operation that needs them and are destroyed on its exits.
+copy, and traversal-correspondence tables live for the operation that needs them and are destroyed
+on its exits. Reused facts owned by `implements` remain scoped to the established operation or
+reception; they are not a new permanent namespace, all-environments cache, or arena resolution registry.
 The selected W/E map remains until the chosen call is executed; it is not recomputed with another
 reading. An implements correspondence maps required model fields to physical candidate fields,
 including reordered layouts, for the reads, addresses, and explicit writes it serves. The next
@@ -653,10 +703,13 @@ through `S[n]` store the actual slot representation; they do not preserve a froz
 field requirement merely because that slot once contained a different value.
 
 `sys\check`, `sys\checkL3`, and `sys\translate` reuse the necessary common builder/checker parts.
-Checking executes neither arbitrary user initializers nor `test`. For a candidate known at
-construction, interface admission is established there; a dynamically selected candidate is
-checked when actually received. Explicit runtime tests keep their separate accepted admission
-phase. Conversion range checks remain checks of the actual received numeric value.
+Checking executes neither arbitrary user initializers nor `test`. Construction establishes known
+candidate interface facts; reached interpreter calls invoke standard `implements`, including the
+required receiving checks and its scoped correspondence. Prepared native calls do not automatically invoke
+runtime `implements`; an explicitly written `implements` executes in either path. Actual-value
+conversion/range checks remain in force. A separate post-clean-graph, pre-C build/test phase runs
+checks reached through ordinary build/test receiver contracts, without a recursive DATA-test scan.
+Neither phase introduces blanket rechecking after every primitive write or graph mutation.
 
 <a id="interpreter"></a>
 ## 6. The interpreter
@@ -678,9 +731,11 @@ written groups, source parents, and the enclosing activation; it does not recurs
 all single-field groups or flatten nested scopes.
 
 R0 has no DATA or user actuals and is never launched over itself as artificial DATA. Its runtime
-scaffold and graph access remain implementation launch concerns. The limited source-role question
-about unit-root records is stated in the [notes](implementation-notes.en.md#root-role-control);
-it cannot justify restoring the removed self-data rule.
+scaffold and graph access remain implementation launch concerns. Its reached executable declarations
+and resolved receivers use ordinary CODE roles; DATA arguments still use their receiving contracts.
+An entry/source profile identifies what is launched and does not turn absent DATA into an implicit
+self-call or automatic invocation of every declared Structure. The
+[notes](implementation-notes.en.md#root-role-control) state this fixture boundary.
 
 If/else, while, for, until, and the ordinary nearest/named control transfers retain their language
 contracts. Inline loop conditions and bodies use the appropriate enclosing places. A while
@@ -714,8 +769,11 @@ not as a replacement for the new paths. No raw C stack is searched as a dictiona
 
 An activation retains its namespace, selected values/descriptions or places, and ordinary
 control state. Ready own values use ordinary value/reference copying; computed descriptions
-remain deferred. There is no eager pass over defaults, mandatory executable-code snapshot,
-or copied environment. Local declarations are sequential; source-path access remains explicit
+remain deferred until demanded. Once a place is initialized, later reads reuse its current value;
+they do not call that initializer again. A newly reached repeated declaration or a new dynamic
+expression evaluation performs its own required computation. There is no eager pass over defaults,
+automatic executable-graph copy, permanent source-result cache, or copied environment. Ordinary activation
+values and selected bindings are not a materialized namespace/program graph. Local declarations are sequential; source-path access remains explicit
 and does not execute a computed declaration. Passed declaration forms and their associated body
 use the receiving root place as specified in §3.4, without a separate fresh item for every step.
 
@@ -813,9 +871,14 @@ registering an implementation. The result must not depend on mutable addresses i
 can be released. Attaching same-process chunks moves ownership, not cell addresses or names;
 restoring from another process goes through the normal interning/link-restoration boundary.
 
-An explicit grouping wrapper does not independently copy already copied fields or redirect them
-back to source data. Stream reception does not rebind copied methods or redefine node as the
-receiver. Import performs no graph copy at all. Every source import/copy/merge receiver remains
+An explicit grouping wrapper is a distinct Lmx container with its own cells. Those cells are
+distinct from the copied lexical owner's cells even when they refer to the same copied records.
+Grouping does not independently deep-copy the emitted graph or redirect it back to source data.
+Replacing a wrapper slot changes that slot; following a shared reference into a nested Structure
+can still reach the same nested slot through either route. Stream reception does not rebind
+copied methods or redefine node as the receiver. Import performs no graph copy and preserves
+original declaration/owner identity; copy and merge deeply copy the used graph and select the
+corresponding copied owners through their operation map. Every source import/copy/merge receiver remains
 in place; direct source-path reads and serialization expose that written record, not its result.
 
 For group assignment, `(a b) := copy(Pair)` consumes result fields positionally. Obtain all RHS
@@ -831,11 +894,14 @@ transfers have no role. Keep common references, typed storage, and GC for indepe
 do not replace invalidation with dirty journals, version tracking, endturn hashing, or hidden
 compilation. An arbitrarily broken graph has no automatic repair guarantee.
 
-`sys\compile(S)` explicitly checks/builds the clean graph, translates through L1 and C, compiles
-and links, and registers successful variants in the existing call tables. Failure installs no
-new entry. `sys\translate(S)` returns L1 text and diagnostics, not LMX or installed native.
-Reuse common working builder components for the requested operation; no second infrastructure is
-required to maintain hypothetical future execution.
+`sys\compile(S)` explicitly checks/builds the clean graph, performs its required build/test phase
+before C generation, translates through L1 and C, compiles and links, and registers successful
+variants in the existing call tables. The check phase can execute checkers and their candidate
+calls through ordinary receiving contracts, without launching S's application entry or scanning
+all nested DATA for tests. Failure installs no new entry. `sys\translate(S)` returns L1 text and
+diagnostics, not LMX or installed native; it and `sys\check`/`sys\checkL3` do not execute application
+code or `test`. Reuse common working builder components for the requested operation; no second
+infrastructure is required to maintain hypothetical future execution.
 
 <a id="endturn-receiver"></a>
 `sys\endturn()` exits through registered finally cleanups in reverse order to the ordinary turn
@@ -852,19 +918,22 @@ Old native frames and their cleanups finish before their machine code is release
 ### 6.6. No local-frame publication
 
 The flush receiver, load-dirty, shared direct-access coherence cache, and return-time copy-back
-are absent. Explicit graph writes and transparent place writes remain immediately observable
-through their actual aliases. Message/mail publication and releasing a completed construction
-result retain their separate contracts; they are not frame write-back.
+are absent. A graph assignment replaces the selected fragment, visible through subsequent access
+to that structural place; it does not automatically retarget every reference to the previous
+fragment. Transparent execution-place writes remain immediately visible through bindings to
+that place. Message/mail publication and releasing a completed construction result retain their
+separate contracts; they are not frame write-back.
 
 <a id="native"></a>
 ## 7. Native and the C boundary
 
 A native descriptor is an ordinary Structure containing prepared signature variants,
-binary-module/entry identifiers, and L1/C source paths. Existing call tables are its primary
-store; Lmx has no native header field. Where explicit compilation adds the established ordinary
-native reference for an executable Structure or catch, it refers to this same descriptor.
-A named fn requirement creates no entry. Other DATA Structures receive no field merely because
-they exist. Machine addresses are bindings of the current process, not portable saved addresses.
+binary-module/entry identifiers, and L1/C source paths. Existing call tables store its binding
+to the selected executable occurrence; Lmx has no native header field. Explicit compilation
+registers that binding without injecting a `native` field into the source Structure or catch.
+An explicitly written ordinary user field named native retains only its ordinary field meaning;
+`sys\native(S)` queries the service table. A named fn requirement creates no implementation
+entry. Machine addresses are bindings of the current process, not portable saved addresses.
 
 A known native-to-native call may be emitted directly in C with actual values and necessary
 hidden place/context arguments. It need not package a graph, allocate universal Value wrappers,
@@ -958,6 +1027,8 @@ then `D\x := 9`. The declared input x gives the call an own place:
 | After return | Activation ended | 9 |
 
 `@x` addresses the local column; `@(D\x)` the source column. Return does not copy 2 into D.
+The explicit D\x assignment replaces that field's graph fragment; the table records the value found by
+each subsequent lookup, not a promise that a raw pointer to the previous fragment now denotes the replacement.
 The same observed starting number can arise through different binding modes:
 
 | Source of callee x, initially 5 | After callee `x := 9` | Addressed place |
@@ -994,8 +1065,8 @@ only checks actually run. Historical receipts do not prove this edition's behavi
 
 | Area | Evidence an implementation must eventually provide |
 |---|---|
-| Records and storage | Type immediately before value; correct alignment; unchanged cell address across first write; no type-by-range lookup; dense numeric Array and native-local distinctions |
-| Source graph | Every receiver/group retained; terminal primitive exception only; namespace processing leaves source parents/order/length intact absent explicit writes |
+| Records and storage | Initialized value layout and alignment; code-only uninit with zero payload; explicit graph-fragment replacement; no stable raw payload promise across replacement; no type-by-range lookup; dense numeric Array and native-local distinctions |
+| Source graph | Full source including primitive leaves and every receiver/group; namespace processing preserves it; ordinary explicit graph assignment can replace receiver fragments; executable updates use the existing compile/endturn boundary |
 | Parser closure | Empty/whitespace-only physical lines close to local root; comments/literals/Mix/pairs/EOF/source coordinates retain their contracts |
 | Calls and fn | Actual parent, no-data R0, no executable fn/sub/fncall; named two-argument fn; positional type comparison distinct from full structural models |
 | Selection | All applicable W/E pairs counted; no hidden rescue of required inputs; selected map reused; named-position counter and once-only actual effects |
@@ -1016,7 +1087,11 @@ observes the changed graph's expected result, restores it into a second simultan
 and observes that same intended state there. Native update tests respect explicit compilation and
 the endturn boundary instead of expecting automatic refresh after a graph write.
 
-The accepted TZs provide the detailed distinguishing-case matrices. The only unresolved
-interpretation checks inherited in this packet are isolated in the
-[implementation notes](implementation-notes.en.md#open-design); they must not be silently assigned
-invented expected values or treated as reopening unrelated accepted rules.
+The accepted TZs provide the detailed distinguishing-case matrices. The inherited inline-local
+case is derived from the caller-source rules, and entry fixtures state their selected source
+role in the [implementation notes](implementation-notes.en.md#open-design). Neither requires a
+new language rule. P01 is now resolved by the author's zero-payload and graph-replacement rule;
+implementation checks must use that rule rather than the superseded reserved-cell oracle.
+Report an author question only for a genuine
+contradiction between applicable current requirements, with the conflicting clauses and a
+minimal distinguishing case.

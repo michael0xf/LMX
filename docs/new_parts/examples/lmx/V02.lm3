@@ -1,0 +1,18 @@
+TicketCode:
+    []: char candidate
+    return: int
+    accepts:
+        if: length(candidate) != 5
+            return: 0
+        if: candidate[0] < 'A' || candidate[0] > 'Z'
+            return: 0
+        if: candidate[1] < 'A' || candidate[1] > 'Z'
+            return: 0
+        if: candidate[2] != '-'
+            return: 0
+        int: position 3
+        while: position < 5
+            if: candidate[position] < '0' || candidate[position] > '9'
+                return: 0
+            position += 1
+        return: 1

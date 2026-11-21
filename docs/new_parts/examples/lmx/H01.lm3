@@ -1,0 +1,23 @@
+Arithmetic:
+    int: value
+    return: int
+    twice:
+        return: value * 2
+    plusOne:
+        return: value + 1
+
+Application:
+    @: operation
+    int: value
+    return: int
+    apply:
+        return: operation(value)
+
+ApplyProbe:
+    return: int
+    run:
+        @: chosen Arithmetic\twice
+        int: first Application\apply(chosen; 7)
+        chosen := Arithmetic\plusOne
+        int: second Application\apply(chosen; 7)
+        return: first * 100 + second

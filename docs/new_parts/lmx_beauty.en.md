@@ -81,7 +81,7 @@ The reading difficulty comes from familiar names referring to things at a differ
 
 So `v` here is a function. `number(3)` also returns a function. When the expression is being built, `add(...)` does not yet add anything. There is no separate, explicit “tree” object in this Python listing: `tree` is a composite function that retains connections to other functions.
 
-The compact `lambda` creates a function object; its body runs when the function is called later. The [Python reference](https://docs.python.org/3/newdocs/expressions.html#lambda) relates this form to an ordinary function definition that returns the value of an expression.
+The compact `lambda` creates a function object; its body runs when the function is called later. The [Python reference](https://docs.python.org/3/reference/expressions.html#lambda) relates this form to an ordinary function definition that returns the value of an expression.
 
 To see how our `add` works, we can expand this notation:
 
@@ -169,4 +169,4 @@ The shorter version continues to explain the language’s intent: a shared mecha
 - [Operands, arguments, and precedence: revision 6](newdocs/TZ/to_fable_operands_arguments_priorities.md).
 - [Binding, DATA, and structural calls](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
 - [General overview of the language comparison](about_languages_comparision.en.md).
-- [Python Language Reference: Lambdas](https://docs.python.org/3/newdocs/expressions.html#lambda).
+- [Python Language Reference: Lambdas](https://docs.python.org/3/reference/expressions.html#lambda).

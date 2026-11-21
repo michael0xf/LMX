@@ -1,0 +1,22 @@
+Functions:
+    int: x
+    return: int
+    twice:
+        return: x * 2
+    next:
+        return: x + 1
+
+Composition:
+    @: outer
+    @: inner
+    int: value
+    return: int
+    apply:
+        return: outer(inner(value))
+
+CompositionProbe:
+    return: int
+    run:
+        int: a Composition\apply(Functions\next; Functions\twice; 4)
+        int: b Composition\apply(Functions\twice; Functions\next; 4)
+        return: a * 100 + b

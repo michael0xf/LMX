@@ -11,16 +11,31 @@ it to code.
 <a id="binding-callables-20261119"></a>
 ## Accepted model through 2026-11-21
 
-The five included requirements are [binding and callables](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+The six included requirements comprise [binding and callables](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
 [declaration arguments and import](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
 [blank physical line closure](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
 [operands and expressions](TZ/to_fable_operands_arguments_priorities.md), and
-[import/copy/merge field streams](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
-The latest author correction makes all three receivers consume ordinary CODE arguments in every
+[import/copy/merge field streams](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), plus the later
+[author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md), which has priority for
+zero-payload uninit, graph assignment, complete source, and the graph-plus-method-binary program model.
+The field-stream correction makes all three receivers consume ordinary CODE arguments in every
 placement, including inside DATA; common W/E applies everywhere. It supersedes the earlier
 DATA→DATA/CODE→CODE source table. The latest field-stream requirements refine earlier import and
 composition examples. Earlier
 accepted requirements under Old_TZ are incorporated baseline material, not a new pending plan.
+
+The complete program consists of the source graph and a binary containing compiled native methods.
+`parent` and `length` derive logically from the source relationships; other program content is in the
+Lmx pointer array and referenced records. R0 is an ordinary C method holding its R0-graph pointer
+locally, and the interpreter also uses the binary R0. This leaves ordinary runtime bookkeeping in
+place but permits no additional static DATA image, executable working graph, expanded program,
+or persistent graph disguised as namespace. Activation values and operation-local source views
+must serve their actual calls; they do not reconstruct a second executable program.
+
+For example, private status is recognized from the ordinary `private` receiver in that same graph.
+Generated methods implement its binding consequences without a binary copy marked with privacy,
+initialization, or other program flags. Such a marked copy is the removed working graph even if
+called a namespace image, descriptor cache, or execution metadata.
 
 | Topic | Required model | Earlier mechanism to retire if still present |
 |---|---|---|
@@ -36,6 +51,7 @@ accepted requirements under Old_TZ are incorporated baseline material, not a new
 | User operands | Ordinary method with left/right and explicit constant PASS_ARGS_AS_IS/PRIORITY; ordinary result; shared eval for raw occurrences | sys\operand registration, one args Array, universal reference result, implicit mode/priority |
 | Parser closure | Blank physical line invokes common complete close at local document root; protected content/pairs/Mix retain their rules | Ignoring a physical blank inside an intended continuing block or inventing a separate grammar subsystem |
 | Storage/native | Typed records, common variable-sized Arrays, ordinary machine locals, direct native calls where known, existing bridge/arena/GC | Typing by address ranges, hidden native compilation, local publication/flush, universal wrapper/registry additions |
+| Complete program | One complete graph plus compiled methods; R0 is a C method with a local graph pointer even for interpreter execution | Static DATA replicas, persistent working/expanded/callable graphs, global hidden program instances |
 
 Fn matching and call selection are different operations. A method with types `[int, Array<char>]`
 and different formal names can satisfy that fn requirement; one with reversed types cannot,
@@ -87,7 +103,9 @@ The essential implementation separations are:
 
 - The physical record's code/value and ownership are distinct from a source requirement or ABI
   spelling. Preserve exact scalar ABI transport and uninitialized-state inspection without
-  reading absent payload. Native locals do not have an arena tag before their address.
+  reading nonexistent payload: `uninit:T` is its type code alone, with no reserved T cell.
+  An explicit graph assignment replaces a fragment; execution-place assignment leaves source
+  unchanged. Native locals do not have an arena tag before their address.
 - The flat descriptor has parent/length/storage only. Capacity and native descriptors stay in
   their existing arena/call tables. Structure/reference Array operations share mechanisms;
   numeric Arrays remain dense typed storage.
@@ -113,11 +131,20 @@ context as another source, and separate operations do not share an implicit comb
 ## 4. Interpreter and admission
 
 The interpreter consumes the current source graph under the ordinary role and namespace rules;
-it does not depend on saved translator preparation. Admission retains its accepted phases:
-interface matching for a known candidate at construction, or for a dynamically selected candidate
-when received, and explicit runtime test checks at their designated admission boundary. Candidate
-matching does not speculatively run user assignments/defaults/converters/tests once per variant.
-A known candidate does not remove applicable runtime tests or value-dependent conversion checks.
+it does not depend on saved translator preparation. Construction establishes known candidate
+interface facts without executing bodies, initializers, or `test`. Reached interpreted calls
+invoke standard `implements`; prepared native calls use their prepared contracts without an
+automatic runtime `implements`. An explicitly written `implements` executes in either path.
+Reused admission facts remain within their established operation/reception scope, not a second
+persistent namespace or admission store.
+Candidate selection does not speculatively run assignments/defaults/converters/tests once per
+variant. A known interface does not waive a required receiving check or an actual-value range check.
+
+The separate build/test phase runs after clean-graph construction and before C generation.
+`sys\compile` includes this phase: it may execute checkers and candidate calls required by the
+ordinary build/test contracts, without launching the selected graph's application entry.
+`sys\check`, `sys\checkL3`, and `sys\translate` do not execute application code or `test`.
+No phase means that every later primitive write or graph edit reruns all checks.
 
 For ordinary explicit structural models, the entire specified tree is a requirement. Where the
 established receiving contract is relative to a particular Consumer, its ordinary projected
@@ -136,7 +163,8 @@ the remaining checks.
 
 A DATA pass executes root declaration receivers by their ordinary contracts, including modifiers.
 It does not recursively run every test form simply because one is present in DATA. Reached code
-can invoke tests under their contract. There is no hidden test catalog or skip-tests mechanism.
+and the build/test phase invoke checks through those same receiving contracts. There is no
+hidden test catalog or skip-tests mechanism.
 The reserved receiver spelling test is not a user-method naming convention; examples may use
 another ordinary method name without changing the test contract.
 
@@ -199,40 +227,72 @@ registration. sys\name consumes an identifier spelling and returns a normal char
 resolving or executing the named entity. Prefix dereference remains dereference, not eval.
 
 <a id="open-design"></a>
-## 5. Precisely bounded interpretation checks
+## 5. Derived review cases and the resolved physical-layout decision
 
-These checks preserve uncertainty actually present in the accepted material. They do not affect
-the many independently settled requirements above, and do not demand another approval of a
-routine representation choice. A future implementation report should give the general algorithm's
-derivation or a concrete author answer, not an arbitrary golden value.
+The common rules decide the inline-local and entry-role cases without a new language rule.
+Their expected observations are derived below. An implementation report should name the entry/source
+role used by its fixture and test the shared algorithm. The author answered P01 on 2026-11-21;
+§5.3 records that binding decision and retains the old anchor for existing references.
 
 <a id="inline-declaration-control"></a>
 ### 5.1. New uninitialized local in an inline nested scope
 
 The binding TZ §7.4 gives this exact situation: the current activation has outer x = 5; an inline
 nested block introduces a new `int: x` without RHS/default; there is no new callable invocation,
-and this activation's caller has no x. The inner declaration's separate place and shadowing are
-settled. The remaining question is whether the existing namespace/autofill rule treats the parent
-inline context as an allowed source and gives 5, or leaves the new place uninit:int. The previous
-executor statement choosing uninit:int is not an author resolution. Do not introduce universal
-outer-local copying or eager default evaluation to answer it.
+and this activation's caller has no x. The inner declaration creates its own place and shadows
+the outer one. Own-input autofill obtains a permitted same-named caller value; an inline lexical
+scope does not create a new caller. There is therefore no applicable supplying source in this
+fixture, and the inner place is `uninit:int`. A reached required check refuses that absence;
+the outer place remains 5 when its scope is restored. Neither zero nor a copied 5 is synthesized.
+This is the derivation requested by §7.4 from the ordinary algorithm, not an unavailable executor
+answer, an eager default pass, or a new universal copy of outer locals.
 
 <a id="root-role-control"></a>
 ### 5.2. Source records at a unit root
 
-R0's contract is settled: procedural entry, no DATA, no user actuals, no artificial self binding,
-no empty DATA object, and ordinary own executable declarations/references remain possible. The
-baseline documents separately recorded a question about how a unit root's source records are
-assigned their initial declaration/execution roles after removal of executable fn/sub and the
-self-data convention. The provided TZs do not supply a distinct answer to that source-reader
-question. It should be resolved through the common role rules or by a minimal root example;
-it is not permission to restore data=code or make runtime launch settings into user formals.
+R0 is a procedural entry with no DATA, user actuals, artificial self binding, or empty DATA
+object. Binding TZ §4.3 explicitly retains its own executable declarations and ordinary access
+to references. Once an entry is selected, its reached records use the ordinary CODE head rules;
+a form supplied in a DATA argument is read under that receiving declaration's contract. Removing
+R0's DATA does not remove source-role classification or give import a special DATA-argument mode.
+
+A source-file/host profile must identify the selected entry and the role of any surrounding
+document it reads. Where a worked fragment does not supply that host profile, a fixture can
+prepare its explicitly DATA description and invoke the named body through the ordinary call
+path. This does not invent automatic main discovery, call every declared Structure, or assert
+that arbitrary top-level text has one new default profile. In particular, do not restore
+data=code or convert runtime launch settings into user formals.
 
 Other old entries labeled OPEN—including implementation of call, source storage, precedence,
 selection, import policy, and native adapters—are implementation work or have explicit answers
 in the included requirements. They are not unresolved language questions in this packet.
 Earlier unrelated limits, such as safely unloading a module whose immutable branches remain
 externally retained, keep their ordinary ownership boundary without an invented new facility.
+
+<a id="uninit-layout-conflict"></a>
+### 5.3. P01 — resolved: uninit has zero payload; graph assignment replaces fragments
+
+The [author clarification of 2026-11-21](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+supersedes both earlier alternatives. `uninit:T` is only the type code; `sizeof(value) = 0`.
+There is neither an outer/inner T pair nor a single tag followed by reserved T storage. A
+named declaration without a value remains a named source leaf without allocating its future value.
+
+Assignment in an execution frame changes its namespace place and does not change the clean
+graph. That graph is the full literal source representation, including terminal primitive leaves
+`{type value}` at the addresses referenced by Structure cells. All receiver structures remain
+as written, including `for`, `if`, `merge`, `copy`, and `import`; ordinary explicit graph
+assignment can replace any of them. Required executable recompilation uses the existing
+compile/endturn restart boundary. Explicit graph assignment supplies a new fragment to the selected structural
+place: `struct\novalue := 5` replaces `{uninit:int}` with `{int 5}`. It does not retag an
+existing same-address T cell. A later lookup sees the new fragment and type; the old raw
+payload-address preservation promise is removed because no payload existed in the uninit leaf.
+
+Absence, nil/required checks and the distinction from numeric zero remain. Stable descriptor
+addresses, Array-element descriptor/index references, and execution-place binding keep their
+own contracts; none requires a graph uninit leaf to contain a T value cell. The primary
+[L2 rule](L2_spec_en.md#uninit-record-control) and
+[kernel rule](kernel-implementation.en.md#primitive-storage) implement this decision. No author
+question or blocked ABI oracle remains for P01.
 
 <a id="grammar-extraction"></a>
 ## 6. Parser and documentation verification
@@ -263,7 +323,9 @@ spellings, internal function names, provisional expected values, commands, check
 limits are historical evidence only. In particular, their executable fn/sub, fncall, separate
 data arguments, self-data R0, one-source merge, automatic container results, a DATA argument
 mode for import/copy/merge, old operand ABI,
-type-by-region, load-dirty, flush, and graph-rewriting descriptions are **superseded** by the active
+type-by-region, load-dirty, flush, graph-rewriting, working execution graphs, static DATA copies,
+materialized namespace/program copies, nested/preallocated uninit cells, and stable
+raw payload addresses across graph-field replacement are **superseded** by the active
 specifications. “Current”, “today”, “OPEN”, “PASS”, and publication language inside a receipt refer
 to its original date, never the 2026-11-21 target or a newly examined checkout.
 

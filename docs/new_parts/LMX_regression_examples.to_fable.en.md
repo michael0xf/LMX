@@ -13,14 +13,14 @@
 | [Operands and evaluation](#operands) | 18 | Prepared/raw modes, effect counts, argument boundaries, precedence, source graph |
 | [Validation and integration](#validation) | 5 | String checker, mock, catch, command/feedback, separate admission/test phases |
 | [All 23 patterns](#patterns) | 23 | Complete independent source programs and distinguishing observations |
-| [Graph, arrays, and persistence](#graph) | 12 | Local/source separation, copies, cycles, schema composition, references, returned method |
+| [Graph, arrays, and persistence](#graph) | 13 | Local/source separation, copies, cycles, schema composition, references, returned method, zero-payload uninit |
 | [Native and interpreter execution](#native) | 6 | Four path combinations, compilation/turn boundary, dispatch, cleanup |
 | [Messages](#messages) | 4 | Serial ownership, fan-out, timeout arguments, storage transfer |
 | [Phase contract Q01](#author-question) | — | Current construction, build-test, runtime and dispatch boundaries |
 
-There are **93 case families**. Most contain several positive, negative, or repeated-call variants;
-the table does not claim 93 executed tests. V05 uses the current separated-phase contract.
-C-01 retains only the exact inline-local initialization question identified by the bundled review notes.
+There are **94 case families**. Most contain several positive, negative, or repeated-call variants;
+the table does not claim 94 executed tests. V05 uses the current separated-phase contract.
+C-01 derives the no-RHS inline-local result from the current caller-source and shadowing rules: a distinct uninitialized place, not implicit copying of the outer local.
 
 ## 1. Authority, scope, and how to use this document
 
@@ -28,7 +28,7 @@ This corpus updates the earlier discussions of `add5`, defaults and free inputs,
 
 ### Governing sources
 
-The normative model is the supplied `newdocs/` packet, including its five integrated change requirements and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
+The normative model is the supplied `newdocs/` packet, including its five integrated change requirements, the author's subsequent uninitialized-record clarification, and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
 
 | Code used below | Document / package path | Role |
 |---|---|---|
@@ -37,6 +37,7 @@ The normative model is the supplied `newdocs/` packet, including its five integr
 | M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
 | BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
 | D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
+| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
 | P3 / DP3 | [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | Current examples 19–23, updated 21 November |
@@ -52,9 +53,9 @@ Document links are relative to this file. Pattern comparisons, pattern guides an
 
 ### Required handling of contradictions
 
-**If two governing requirements still contradict each other after applying the author's stated precedence, Fable must ask the author before choosing a language rule or changing an expected result.** Present both passages and the smallest example whose behavior differs. Continue the independent cases meanwhile. The existing implementation, a convenient optimization, or an old passing test is not authority to settle a semantic conflict.
+**Infer the behavior from the current TZ and their general rules, then repair inconsistent explanations and examples. Ask the author only if the governing current TZ explicitly prescribe incompatible outcomes.** In that case, present both passages and the smallest distinguishing example, and continue independent corrections. Missing wording in an old example is not by itself a new language decision; neither the existing implementation nor an old passing test overrides the current rules.
 
-An explicitly superseded statement is different: apply the accepted replacement and repair the stale documentation. Do not ask the author again whether to remove `sys\operand`, preserve the actual callable parent, or publish locals through `dirty`: the current directives already answer those questions. Q01 at the end records the now-separated admission/test phases. The exact no-RHS inline-local case C-01 remains the narrow review question already recorded in `newdocs/REVIEW_NOTES.md`.
+An explicitly superseded statement is different: apply the accepted replacement and repair the stale documentation. Do not ask the author again whether to remove `sys\operand`, preserve the actual callable parent, or publish locals through `dirty`: the current directives already answer those questions. Q01 at the end records the now-separated admission/test phases. C-01 is resolved by the current immediate-caller autofill and nested-shadowing rules; it no longer waits for a separate author decision.
 
 ### Running the examples
 
@@ -71,7 +72,9 @@ An explicitly superseded statement is different: apply the accepted replacement 
 
 An executable Structure uses its actual parent as data. A call does not substitute another data graph. `fn: Name Data` creates a positional signature requirement, not an executable function. Named actuals through that requirement use its public labels and then map by position to the real candidate.
 
-An own declared input receives an explicit value, its ready/default description, or permitted autofill into its own place. A free name can instead designate the immediate caller's existing local place. The older transitive fallback remains an own working copy. Their different write destinations are tested separately. No local write-back/flush/dirty protocol is reinstated by these examples.
+An own declared input receives an explicit value, its ready/default description, or permitted autofill into its own place. A free name can instead designate the immediate caller's existing local place. The older transitive fallback remains an own local copy. Their different write destinations are tested separately. No local write-back/flush/dirty protocol is reinstated by these examples.
+
+A source primitive without a value is a code-only `uninit:T` record with `sizeof(value) = 0`: it does not contain preallocated T storage or a complete inner T record. An ordinary local assignment changes the active place only. An explicit graph assignment replaces the selected fragment, for example `{uninit_int}` with `{int 5}`. This supplies no invariant that an old raw value address survives that replacement. G13 checks these distinctions without imposing an allocation strategy.
 
 `copy` copies one admitted structural source; `merge` composes at least two. Both emit field streams using one graph-copy map per operation. A grouped result, such as `(copy(Source))` or `(merge(Model Values))`, gives one Structure before the next consumer applies its ordinary rules. Both retain the required lexical closure. Neither silently captures all locals of the calling activation or turns free names into bound formals. The receiving DATA Structure is never an implicit merge source; separate operations retain separate maps and normal DATA redeclaration behavior. `import` uses the same standard CODE source processing but selects root constant declarations by reference, including ordinary user Structures. A returned method in G12 has explicitly prepared copied state. Data copying and native-entry registration are separate operations; code-update tests use explicit compilation and a turn boundary.
 
@@ -84,6 +87,7 @@ An explicitly supplied ordinary structural template keeps all its written requir
 | `add5(1; y := 25)` versus a genuine saved lexical value | B-01, B-02, G12 |
 | Nested action changing `y`; copy versus communication with the caller | B-03–B-05, P07, P10 |
 | `int: i findValue()` and organized code/data editing | B-07–B-08, G01–G02, G11 |
+| `uninit:T`, zero payload, `nil` versus zero, explicit graph initialization | G13, B-06, C-01, T05 |
 | Local variables and the former `dirty` discussion | B-03–B-08, G01–G02, N01, N06 |
 | Dynamic binding after copying; explicit `node\` | B-02, G12, P22 |
 | Copying, aliases, cycles, immutable sharing and prototype changes | G03–G06, P03, P12, P15–P17, P19–P22 |
@@ -102,7 +106,7 @@ An explicitly supplied ordinary structural template keeps all its written requir
 <a id="binding"></a>
 ## B. Binding, defaults, signatures, declaration arguments, and import
 
-B-01–B-13 cover binding/callables, D-01–D-04 cover declaration arguments and import, and C-01 retains the exact open initialization control case for an inline nested scope.
+B-01–B-13 cover binding/callables, D-01–D-04 cover declaration arguments and import, and C-01 checks the derived uninitialized state of a new no-RHS local in an inline nested scope.
 
 ### B-01 — `add5`: compose a real default, retain the explicit argument
 
@@ -221,7 +225,7 @@ Checks:
         return: value
 ```
 
-Expect **5** from `through_fallback()` and **8** from `through_place()`. `transit` never consumes `value`, so the retained older transitive channel gives `change` an own working copy. `required: value` in `connected` consumes and checks the visible local place; its call forwards the established alias. It does not declare a new variable.
+Expect **5** from `through_fallback()` and **8** from `through_place()`. `transit` never consumes `value`, so the retained older transitive channel gives `change` an own local copy. `required: value` in `connected` consumes and checks the visible local place; its call forwards the established alias. It does not declare a new variable.
 
 The harness must also inspect write identity in both cases, not merely allow these two numbers to arise from delayed copy-out.
 
@@ -637,22 +641,24 @@ In a nested-consumer harness, `f(import(Library Extra))` supplies its stream to 
 
 **Basis:** [D] §§6–6.1; D acceptance I01–I09; [STREAM] §§5–7.
 
-### C-01 — A no-RHS local in an inline nested scope: retained control question
+### C-01 — A no-RHS local in an inline nested scope remains uninitialized
 
-The [current review notes](newdocs/REVIEW_NOTES.md#open-questions), [SEM]'s `shadowing-levels` section and [B] §7.4 retain this exact check. The old corpus incorrectly treated the unavailable executor answer R106 as a settled initialization oracle.
+This follows from [B] §§6.1 and 7.2–7.4. Autofill uses the immediate caller's local context; lexical nesting alone does not create another callable invocation or make the outer inline area a new caller. The inner declaration creates its own place and shadows the outer one.
 
 ```lmx
 Worker:
+    return: int
     work:
         int: x 5
         if: x = 5
             int: x
             required: x
+        return: x
 ```
 
-Invoke `Worker\work()` from a caller with no local `x`. The inner declaration creates its own place and shadows the outer `x`. No new callable invocation occurs. The remaining question is whether the enclosing inline scope supplies autofill in this exact case, yielding `5`, or whether the new place remains `uninit:int`, causing the reached `required` check to refuse.
+Invoke `Worker\work()` from a caller with no local `x`. **Expected:** the inner place is `uninit:int`, and the reached `required: x` refuses; there is no normal numeric result. Do not read an uninitialized integer to test this rule and do not silently substitute either 0 or the outer value 5. The outer place retains 5.
 
-First derive the result from the accepted general namespace algorithm. If that algorithm does not decide this case, return this precise example to the author; do not assign either initialization outcome as a passing oracle here. The separate inner identity and unchanged outer place remain required. This does not reopen ordinary call autofill, lexical shadowing or declaration-argument repetition.
+**Positive control:** change only the inner declaration to `int: x 9`. The required check then succeeds and `Worker\work()` returns **5**, because leaving the inline block reveals the unchanged outer place. Inspect distinct place identities while the block is active. This derives the earlier bounded control example without adding lexical-area autofill, an entry initialization pass or publication of inner locals.
 
 
 <a id="typing"></a>
@@ -2036,13 +2042,14 @@ Bundle:
         @: a (merge(Weight; (int: value 1)))
         @: b (merge(Weight; (int: value 4)))
         @: c (merge(Weight; (int: value 6)))
+        c := parent(c\total)
         @: inner (merge(Bundle; (@: left b; @: right c)))
         @: tree (merge(Bundle; (@: left a; @: right inner)))
         c\value := 100
         return: tree\total()
 ```
 
-**Entry:** `Bundle\demo()` → **11**, while the separately retained local `c` reads **100**. Copying the used graph redirects the tree's links to copies; an implementation that keeps its mutable leaf link pointing at original `c` would incorrectly return 105. **Basis:** [P2] §12; semantics §20's common source-to-copy map.
+**Entry:** `Bundle\demo()` → **11**, while the separately retained local `c` reads **100**. Before insertion, `c` is explicitly set to its copied `total` method's actual parent; the later write therefore changes the original leaf's real DATA, not only a grouping-wrapper slot. Copying the used graph redirects the tree's links to copies; an implementation that keeps its mutable leaf link pointing at original `c` would incorrectly return 105. **Basis:** [P2] §12; semantics §20's common source-to-copy map.
 
 ### P13 — Proxy: refusal must skip delegation
 
@@ -2134,13 +2141,17 @@ Coordinate:
         return: x * 10 + y
     demo:
         @: original (copy(Coordinate))
+        original := parent(original\score)
         @: replica (copy(original))
+        replica := parent(replica\score)
         replica\y := 1
         original\x := 9
         return: original\score() + replica\score()
 ```
 
 **Entry:** `Coordinate\demo()` → **119**. The original ends at **(9,8)** and returns98; the replica ends at **(2,1)** and returns21; source `Coordinate` remains **(2,8)**. **Basis:** [P2] §16.
+
+After each grouped copy, the reference is deliberately set to the copied method's actual parent. Graph writes and `score` therefore use the same copied owner. The stream-collecting wrapper is a different Structure with its own cells; replacement of its primitive slot does not update the owner's slot.
 
 ### P17 — Memento: restore in reverse order
 
@@ -2471,11 +2482,11 @@ RingProbe:
     run:
         Ring\self := Ring
         @: copied (copy(Ring))
-        copied\value := 8
+        copied\self\value := 8
         return: copied\self\value * 10 + Ring\value
 ```
 
-**Expected:** `RingProbe\run()` returns `83`; `copied\self` designates the copied Ring node and a second self traversal returns to that same copied node, never to the mutable original. Its copied `value` place is the one exposed by the collected field stream. The original self-reference still designates `Ring`. Traversal terminates and allocates one copy per copied source node. The explicit grouping wrapper is not required to be identical to the copied source-root descriptor; grouping neither copies the completed fields again nor reparents their existing relationships.
+**Expected:** `RingProbe\run()` returns `83`; `copied\self` designates the copied Ring node and a second self traversal returns to that same copied node, never to the mutable original. The write follows `copied\self` to the copied Ring descriptor, so it replaces that owner's `value` fragment directly. The explicit grouping wrapper is a distinct Structure with its own cells: its separate `copied\value` remains **3**, while `copied\self\value` becomes **8**. The original self-reference still designates `Ring`. Traversal terminates and allocates one copy per copied source node. Grouping neither deep-copies the completed graph again nor reparents its existing relationships.
 
 ### G05 — Composition replaces a model field and appends new material
 
@@ -2617,6 +2628,87 @@ ReturnedMethodProbe:
 
 `saved` is outside the methods' immediate input data. Consequently `plus5(1; saved := 40)` is an unknown-explicit-input rejection, unlike the true formal-default example B-01. The reference returned by `create` is not an address of its temporary local variable `instance`. The state entered the copy through the explicit `AdderPrototype\saved := increment`; `copy` did not capture the factory activation automatically.
 
+<a id="uninit-graph"></a>
+### G13 — Literal graph, zero-payload uninit, and explicit graph replacement
+
+**Kind:** standalone source case plus representation observations by the existing harness. **Sources:** [UNINIT]; [SEM] primitive declarations and activation-local places; [L2] primitive storage.
+
+```lmx
+UninitializedGraph:
+    int: novalue
+    @: noReference
+    int: zero 0
+    @: nullReference 0
+    return: int
+    numberReady:
+        return: novalue != nil
+    referenceReady:
+        return: noReference != nil
+    localWrite:
+        novalue := 5
+        noReference := 0
+        return: novalue
+    storeGraph:
+        node\novalue := 5
+        node\noReference := 0
+        return: node\novalue
+    requireNumber:
+        required: novalue
+        return: novalue
+    checkZero:
+        required: zero
+        return: zero = 0 && zero != nil
+    checkNull:
+        required: nullReference
+        return: nullReference != nil
+```
+
+The harness invokes the listed methods without supplying unrelated same-named caller locals. Keep the graph fresh for the main sequence; run rejection variants separately.
+
+| Step | Required observations |
+|---|---|
+| Construct the clean graph without calling its methods | `novalue` has the `uninit:int` code and no value payload; `noReference` has the corresponding uninitialized-reference code and no value payload. In both records, `sizeof(value) = 0`. Neither record contains an allocated ordinary T cell, a hidden zero, or a complete inner T record. |
+| Call `numberReady()` and `referenceReady()` | Both return **0**. |
+| Call `checkZero()` and `checkNull()` | Both return **1**: the integer zero and null reference are initialized values, distinct from typed absence. |
+| Call `localWrite()` | Returns **5**. Its local integer is 5 and its local reference is null; the two source declarations remain their original zero-payload uninitialized records. |
+| Call `numberReady()` and `referenceReady()` again | Both still return **0**; neither assignment was published on return. |
+| Call `storeGraph()` | Returns **5**. Fresh inspection through the graph paths observes `{int 5}` for `novalue` and the ordinary initialized null-reference record for `noReference`. These are explicit graph-fragment replacements. |
+| Call `numberReady()`, `referenceReady()`, and `requireNumber()` afterward | Return **1**, **1**, and **5**, respectively. `zero` and `nullReference` remain their original initialized zeros. |
+
+On a fresh graph, `numberReady(novalue := 0)` returns **1**, while `numberReady(novalue := nil)` returns **0**; neither explicit actual initializes the source field. After `storeGraph()`, omission selects the ready value 5, explicit zero remains an initialized override, and explicit `nil` selects absence for that call rather than falling back to 5. A fresh `requireNumber()` refuses at the reached CODE `required`; `requireNumber(novalue := 0)` succeeds and returns **0**, while explicit `nil` refuses. Likewise `referenceReady(noReference := 0)` returns **1** without initializing the source reference.
+
+Inspect the source record's code and value-payload extent through the existing representation fixture. `sizeof(value) = 0` is the payload-size oracle, not a claim that a type code occupies zero bytes or a proposed new spelling of a public `sizeof` receiver. A native frame's local value is tested through the local-place contract; it is not required to contain an arena record before its machine storage.
+
+The clean graph keeps the written declaration and executable forms, with the ordinary terminal primitive representation `{type value}`. Only the explicit graph stores above replace their selected fragments. Do not require in-place retagging, a stable old raw value address, a particular allocator/reallocation path, or automatic repair of a pointer taken before replacement. Do not dereference such a raw pointer as a positive test. The author's clarification resolves the former physical-uninit question; this case does not leave it open.
+
+Add a graph fixture with two distinct Lmx structure cells initially pointing at the same `{uninit_int}` fragment. Assign **5** to one selected cell. Fresh observation sees `{int 5}` there while the other cell still refers to `{uninit_int}`; sharing an old fragment did not make those cells one destination. In the positive alias variant, two paths identify the same structure cell, so both see its replacement. This distinguishes structural-place identity from raw fragment-address identity and guards the copied-owner fixes in P12/P16 and G04.
+
+**Import versus deep copy and merge.** Use `Source` with a ready `value = 7` and a method `read` that returns its own DATA value, without an explicit overriding actual. Import that eligible method and separately obtain `(copy(Source))` and `(merge(Source; Empty))`, where `Empty` is an empty source Structure. The merge therefore has two admitted sources and no overlay that changes the initial value. The imported method and its parent are the original objects. Each copied method has its corresponding deeply copied parent. Each grouping wrapper is a distinct Structure with its own cells, different from the original or copied owner's cells. Change the original owner's `value` to **9**: the imported method returns **9**, and the copied methods still return **7**. Replace a grouped result's outer `value` slot with **50**: that group reads **50**, but its copied method still returns **7**. Replace that method's actual copied owner's `value` with **12**: the method now returns **12**, while the group's separate slot stays **50** and the original remains **9**. As a separate positive control, follow two references into one shared nested Structure and verify that paths selecting its same inner cell observe the same replacement. Distinct outer cells must not destroy the common copy map's shared-target relationships.
+
+**Literal graph and receiver replacement.** Use the existing parser/graph fixture to inspect ordinary valid written `for`, `if`, `merge`, `copy`, and `import` occurrences, including their receiver records, arguments, groups and source order. Each remains exactly its written form: processing a receiver produces namespace results without replacing its source occurrence with an expanded result. The same source-fidelity rule covers terminal primitives; `{type value}` is their direct literal representation, not permission to drop them from the graph. In the clean graph, `parent` and `length` are obtained logically from the source structure; the remaining written material is represented by the pointers in the ordinary Lmx structure array. There is no second hidden graph of program data or callable bodies.
+
+Use this additional standalone source to distinguish legal graph replacement from execution of the old receiver:
+
+```lmx
+EditableBranch:
+    int: ticks 0
+    return: int
+    act:
+        if: 1
+            node\ticks += 1
+        return: node\ticks
+```
+
+On a fresh graph, `EditableBranch\act()` returns **1**. In a separate fresh fixture, replace the written `if` occurrence in `act` with the terminal integer fragment `{int 5}` through the ordinary graph operations. The whole selected fragment is now that integer; the old conditional and increment are absent at that position. After the normal explicit compilation and reset/endturn restart for the changed unit, `act()` returns **0**, because an ordinary standalone integer statement does not increment `ticks`. There is no rule that reserves graph replacement for a separate narrow debugger-only API or forbids replacing a receiver merely because it used to be executable.
+
+Repeat the representation-level replacement with each selected receiver kind and with an ordinary data Structure, using a differently shaped valid graph fragment. Structural replacement itself is allowed; subsequent interpretation, admission or compilation applies the ordinary rules of the new consumer context. A replacement that makes a required argument incompatible can be rejected when consumed without redefining the graph operation as “only replace with the old shape.” Do not execute a stale compiled unit before its specified update boundary or invent automatic repair of old native/raw pointers.
+
+**Program and R0 inspection.** Inspect the resulting program representation and generated entry method, rather than inventing a new source-level boot protocol. The complete written program is the Lmx graph. The accompanying native binary contains methods, not a second repository of program data. Its R0 is an ordinary C method with a **local** pointer to the R0 graph. Running user bodies through the interpreter still uses a binary R0; “interpreted program” does not mean the absence of that binary entry. Reject a separate hidden callable graph, a persistent mirrored data graph, or a fabricated global R0-data object introduced to satisfy this fixture. This does not add `main`, input DATA or automatic root execution to the source R0 contract, and does not mistake ordinary temporary execution locals for another stored program graph.
+
+Trace the interpreter's actual program input and the lifetime of structures it creates while executing and repeating the fixture. Reject a parallel **working graph**, an expanded execution graph, a callable graph, or a materialized namespace graph used in place of the complete written graph, whatever the implementation calls it. Renaming that extra representation a cache or preparing it for each activation does not satisfy the rule. Ordinary ephemeral local values and execution bookkeeping are allowed; graphs explicitly requested by the program's `copy`/`merge` operations remain their ordinary semantic results. Neither is permission to maintain another executable version of the program.
+
+Use B-06's `private` declarations as a concrete negative control. The interpreter and translator encounter the ordinary written `private` receiver in the complete graph; the source path still passes through that receiver, such as `PrivateSink\private\x`. Both executor configurations retain B-06's **0,1,0,1** behavior. Reject an implementation that flattens `private` away and executes a second binary/marked graph carrying equivalent flags instead. Correct result flags alone are insufficient if the implementation obtains them through the forbidden duplicate representation. Ordinary binding decisions or generated method code are not a new flagged program graph.
+
 <a id="native"></a>
 ## N. Execution paths, native entries, explicit recompilation, and cleanup
 
@@ -2636,6 +2728,8 @@ Run representative cases for explicit own values, autofill copies, direct caller
 | native | native | identical selected logical places and effects; direct C call where statically known |
 
 Record `@x` relationships while the activations are alive, not unstable absolute address numbers. Reject a result where a bridge's own locals become the language caller, an alias is replaced by exit-time copy-out, or a fallback copy becomes an alias. This parity claim concerns successful program behavior; the phase-specific admission/test observations in Q01 are kept separate.
+
+Use G13's program/R0 inspection on both interpreted and native configurations: the binary entry remains an ordinary R0 method with a local graph pointer, and the complete source program remains in its graph rather than a hidden parallel data representation.
 
 ### N02 — Executable graph edits require explicit compilation and a turn boundary
 
@@ -2668,11 +2762,11 @@ Keep the old compiled direct caller, change `target`, and compile only the targe
 
 The test must not claim that replacing one target table entry retroactively patches all generated C callers. It also must not require an invented per-dispatch freshness check.
 
-### N04 — Copying a callable graph is not a compilation or registration request
+### N04 — Copying a graph containing methods is not a compilation or registration request
 
 **Kind:** native table observation. **Sources:** [SEM] §20, “Native implementation reuse and copied callable occurrences”.
 
-Compile a source callable graph, record the call-table registrations, and obtain `(copy(Source))` from that graph as a new grouped result.
+Compile a source Structure containing methods, record the call-table registrations, and obtain `(copy(Source))` from that graph as a new grouped result.
 
 **Expected:** distinct mutable graph/state for the new occurrence; any ordinary retained link to reusable native implementation material follows its documented terminal contract. The copy operation invokes no compiler and installs no new call-table entry for that new graph. Explicit compilation or restoration can subsequently register a suitable native binding. Sharing an implementation address does not make the two lexical/state graphs identical.
 
@@ -2770,10 +2864,11 @@ V05 instruments these distinct events rather than assigning one global count to 
 | DATA placement gives import/copy/merge DATA arguments | All three consume ordinary CODE sources and use normal W/E in every placement |
 | Copying or merging directly overwrites the receiving source graph | The receiver remains written; its result stream is consumed through namespace |
 | Separate streams overlay the destination using merge's model-slot rule | Only one merge's explicit sources participate in its overlay; normal DATA repetition governs separate streams |
-| Inline-local outcome selected from old executor answer R106 | Exact C-01 remains the bounded review question recorded by the supplied specification |
+| Inline-local initialization left as an open choice or based on old answer R106 | C-01 follows current caller-only autofill and nested own-place rules: uninit without a caller source, checked safely by required |
+| Nested/preallocated T storage under uninit, in-place retagging, or a stable raw address after graph initialization | Author clarification: code-only `uninit:T`, zero value payload; local writes stay local, explicit graph assignment replaces the fragment; G13 |
 | Old automatic-test scheduling question | Current separated phases, V05 and Q01 |
 | User operands require a private registry or an input-template result type | Ordinary method/header discovery; P23 copies the shared header and declares its concrete result once |
-| Grouping a copied stream forces its wrapper to be the source-root copy | Preserve mapped sharing/cycles; G04 does not invent wrapper/root identity |
+| Grouping a copied stream forces its wrapper to be the source-root copy | The wrapper and copied root are distinct Structures with distinct cells; mapped shared targets and cycles remain preserved; G04/G13 |
 
 An explicitly supplied full structural template still requires its complete stated tree. A named `fn` requirement compares ordered input types and the result; a Consumer-derived used interface is a different stated requirement. These are current branches of one admission mechanism. The old load-dirty publication, source initializer replacement, automatic native clearing and fixed-Array/separate-List rules are not restored.
 
@@ -2785,7 +2880,7 @@ This order groups dependencies; it adds no new project gate and does not require
 2. **Ordinary call, places, and signatures:** B-01–B-13, C-01, T01–T05. Establish that the right place is read and written before using richer scenarios as evidence.
 3. **Declaration arguments and import:** D-01–D-04, then P01 and P07. Check counts and visibility, not only final totals.
 4. **Expression operations:** OP01–OP16, then P23. Exercise skipped and repeated effects as well as arithmetic.
-5. **Graph composition and the complete pattern scenarios:** G01–G12 and P01–P23. Check aliases, retained copies, actual parents and source preservation.
+5. **Graph composition and the complete pattern scenarios:** G01–G13 and P01–P23. Check aliases, retained copies, actual parents, source preservation and zero-payload uninitialized records.
 6. **Explicit checker programs:** V01–V04 and T02/T06. Use V05/Q01 to distinguish construction, build-test and reached-admission events.
 7. **Backend parity and explicit update lifecycle:** the relevant N/OP18 matrix and generated-code observations; native-local places must preserve language semantics without being treated as arena records.
 8. **Codec, Message and integration fixtures:** G10, T07 and M01–M04 on the affected runtime components.
@@ -2799,7 +2894,7 @@ For each executed variant, preserve at least:
 | Execution | Caller/callee modes; whether the intended body/handler was reached |
 | Expected | Return/verdict, effects/counters, identities/write targets, and specified failure phase |
 | Actual | Observed counterparts, exact diagnostic if any, relevant trace |
-| Result | PASS / FAIL / NOT RUN / BLOCKED BY AUTHOR DECISION, with the concrete cause |
+| Result | PASS / FAIL / NOT RUN; use BLOCKED BY TZ CONFLICT only for quoted explicit contradictions between current governing TZ |
 
 Use the project's existing L2/L3 runners. For an implementation slice, run its minimal changed case and affected dependencies; choose full self-build and broader suites under [CODING]'s existing conditions. Preserve the difference between a source reviewed here, a program that translates, and a program whose required path actually ran.
 
@@ -2811,22 +2906,23 @@ These SHA-256 values identify the bundled normative documents used for this revi
 
 | Bundled source document | SHA-256 |
 |---|---|
-| [CORE.md](newdocs/CORE.md) | `bd651bb79369dc660f962e276dab5a65aba9dc0c513b96c24a06f68ccfcdc6cc` |
-| [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | `522947b9c7da5160afe5122a6e2c4b21e184049c00b28729769e3087332b0b69` |
-| [L2_spec_en.md](newdocs/L2_spec_en.md) | `34363ffd3d7af7182163fa46897e0625713c8102b21c4073c601aa263cc9478a` |
-| [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | `0bf3f5607a47f83ba0a4144b0349cb644752fca523db34c30bcda6dcf0088ef4` |
-| [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | `a7c1d92f37e6abc90a9480ae3df95019882e56bd328dab1da1a4c6fc24269c5c` |
-| [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | `83024fee931f815a4789cca37712ca7938559482f62023b8c5d7978bbc5f572e` |
-| [README.md](newdocs/README.md) | `87d341f557edfdc63698add3fee0da891b546c539a43d83ec939cec477d14af4` |
-| [REVIEW_NOTES.md](newdocs/REVIEW_NOTES.md) | `be903cd7492838baacbd0c6d31f0b998700b4d0156269f7c99f87847bcc52918` |
-| [implementation-notes.en.md](newdocs/implementation-notes.en.md) | `142d530a8e1e11318d6c8ee357ff065fcd308e2438ca93490a3658dad697c418` |
-| [kernel-implementation.en.md](newdocs/kernel-implementation.en.md) | `b659bb938becf02aef4bce8a3951c900480ebd2aacd61a9c3684b6e16aea580b` |
-| [source-comparison.en.md](newdocs/source-comparison.en.md) | `a2e6bdf86d60269bf1d80c6ff3e05772cfcb05d8e84c02519af9be4a5c88f18e` |
+| [CORE.md](newdocs/CORE.md) | `a1bd40c16303ddb368335f6dc8ce36b5b97fb80b0db11f413455e94ecc2fdb6c` |
+| [L2_L3_CODING_INSTRUCTION.md](newdocs/L2_L3_CODING_INSTRUCTION.md) | `21d848ca8469c1a841380947c8a5ec2f63f66535a1c06d1489fd43585e5d7810` |
+| [L2_spec_en.md](newdocs/L2_spec_en.md) | `fae448565904f3602d999e3e05a5f8b774b123a1ac05ff813fed8874106a93b1` |
+| [LMX_grammar.en.md](newdocs/LMX_grammar.en.md) | `a09f46cfbbc9a2135aa5ffba88e61ad489b15a7f5fbf7aaa8241a6210ee9af7d` |
+| [LMX_semantics.en.md](newdocs/LMX_semantics.en.md) | `a4cba3b213fd383b274be4e547816bccbd43703cba396428a6f3a0f2dc5a8741` |
+| [LMX_semantics_guide.en.md](newdocs/LMX_semantics_guide.en.md) | `d88aa052d208c8d962b49126b803e7b910e2407926ea905ebf89eae44e493459` |
+| [README.md](newdocs/README.md) | `13caa6dbe3ec29afab17cebec3f04a26c6c707d7aeb55fef3a38a3427980dc6e` |
+| [REVIEW_NOTES.md](newdocs/REVIEW_NOTES.md) | `95310dd90b1ef5379359728eb0b3a3450a94c9103f37ab616279a94681279fa3` |
+| [implementation-notes.en.md](newdocs/implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
+| [kernel-implementation.en.md](newdocs/kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
+| [source-comparison.en.md](newdocs/source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
 | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
 | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
 | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](newdocs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
 | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
 | [to_fable_operands_arguments_priorities.md](newdocs/TZ/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
+| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
 
 <!-- Relative source links for the package layout. -->
 [O]: newdocs/TZ/to_fable_operands_arguments_priorities.md
@@ -2852,3 +2948,4 @@ These SHA-256 values identify the bundled normative documents used for this revi
 [STREAM]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
 [M]: newdocs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
 [BLANK]: newdocs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[UNINIT]: newdocs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md

@@ -81,7 +81,7 @@ def demo():
 
 Поэтому `v` здесь — функция. `number(3)` тоже возвращает функцию. `add(...)` при построении выражения ещё ничего не складывает. Отдельного явного объекта «дерево» в этом Python-листинге нет: `tree` — составная функция, сохраняющая связи с другими функциями.
 
-Короткое `lambda` создаёт объект функции; его тело выполняется при последующем вызове. В [справочнике Python](https://docs.python.org/3/newdocs/expressions.html#lambda) эта форма сопоставляется с обычным определением функции, возвращающей значение выражения.
+Короткое `lambda` создаёт объект функции; его тело выполняется при последующем вызове. В [справочнике Python](https://docs.python.org/3/reference/expressions.html#lambda) эта форма сопоставляется с обычным определением функции, возвращающей значение выражения.
 
 Чтобы увидеть устройство нашего `add`, достаточно развернуть эту запись:
 
@@ -169,5 +169,5 @@ tree = add(add(v, number(3)), v)
 - [Операнды, аргументы и приоритеты: редакция 6](newdocs/TZ/to_fable_operands_arguments_priorities.md).
 - [Связывание, DATA и структурный вызов](newdocs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
 - [Общий обзор сравнения языков](about_languages_comparision.ru.md).
-- [Python Language Reference: Lambdas](https://docs.python.org/3/newdocs/expressions.html#lambda).
+- [Python Language Reference: Lambdas](https://docs.python.org/3/reference/expressions.html#lambda).
 

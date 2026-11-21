@@ -68,12 +68,26 @@ Structure uses common variable-array resizing: sys\resize changes length/storage
 the descriptor address. L2 storage addresses are not repaired after relocation;
 an L3 element reference holds the descriptor and index. An element assignment does not append a field.
 
+An explicit graph assignment replaces the selected fragment. In particular, a code-only `uninit:T`
+leaf has zero payload and no reserved T cell; supplying an initialized value installs its new fragment.
+The API does not promise a stable raw payload address across replacement. This is separate from
+the stable Structure descriptor and Array-element descriptor/index contracts above. Assignments to
+ordinary execution locals do not publish into the source graph.
+[Author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+
+The complete source graph includes those primitive leaves and every receiver as written. The same ordinary
+graph-assignment mechanism can replace `for`, `if`, `merge`, `copy`, `import`, their arguments, and other
+receiver structures. These application operations add no restriction making executable source unreplaceable
+and require no second graph or special mutation protocol. Existing ownership/protection contracts still apply.
+
 Graph edits are not tracked to clear native. Explicit sys\compile prepares a machine update through
-clean-graph construction/checking → L1 → C → compilation/registration. sys\endturn runs registered
+clean-graph construction/checking → the required build/test phase → L1/C → compilation/registration.
+The build/test phase executes checks reached through ordinary receiving contracts and may call candidates;
+it does not launch the selected application's entry or recursively enumerate all nested DATA tests. sys\endturn runs registered
 finally blocks to the ordinary turn boundary; catch does not intercept it and it does not return
 to its call site. Before the boundary, executable edit timing is unspecified; only successful
 compilation followed by endturn guarantees the updated next entry. Endturn itself does not compile.
-Old machine code remains alive through its frames/finally; a code snapshot is not required.
+Old machine code remains alive through its frames/finally; this creates no implicit snapshot of the executable graph.
 There is no automatic rollback of file, mail, or other effects. [Contract](../LMX_semantics.en.md#explicit-compilation).
 
 <a id="interpreter"></a>

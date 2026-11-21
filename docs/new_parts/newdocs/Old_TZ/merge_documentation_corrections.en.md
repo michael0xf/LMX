@@ -18,6 +18,13 @@ reference assignment `result := (merge(A B))`. Without that group, the receiver 
 consumer. A group at an argument boundary still participates in CODE W/E; named supply to a real formal,
 `f(arg0 := (copy(A)))`, passes the whole Structure without E.
 
+Import preserves original eligible declaration and owner identity. Copy and merge deeply copy
+the used graph, including required lexical owners, through their common operation map. The
+explicit grouping container has its own storage cells, distinct from the copied owner's cells.
+Replacing one container's slot does not replace the other's slot. Shared references can still
+lead to one nested Structure and therefore to the same slot inside that nested Structure.
+Grouping introduces no second deep copy and does not become a received method's lexical owner.
+
 The essential copying guarantees remain:
 
 - One common source-to-copy map spans every source of the operation. Shared targets and cycles are preserved;
@@ -35,7 +42,8 @@ The essential copying guarantees remain:
   Copying does not trigger compilation or register a new native implementation.
 
 All written receivers remain in the source graph. Computation, merging, filtering, grouping, and DATA acceptance
-happen in the namespace; terminal primitive declarations retain the direct `{type value}` exception.
+happen in the namespace; terminal primitive declarations remain part of the complete source in their direct
+`{type value}` representation at the address held by the Structure cell.
 A read of an original receiver path neither executes it nor exposes an automatically substituted output container.
 Explicit program writes keep their normal contract.
 

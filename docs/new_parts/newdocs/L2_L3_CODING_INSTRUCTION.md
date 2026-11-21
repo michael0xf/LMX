@@ -28,15 +28,37 @@ the two rules, and the differing outcomes. Continue independent work while that
 specific decision is resolved. Do not hide a new language rule in an implementation
 exception or make a test pass by silently changing its intended observation.
 
-The two exact review questions inherited from the supplied material are collected
-in [REVIEW_NOTES.md](REVIEW_NOTES.md#open-questions). They do not reopen the
-settled rules around calls, private, import, or field streams.
+The two inherited review cases are derived from the common rules in
+[REVIEW_NOTES.md](REVIEW_NOTES.md#open-questions). Implement those consequences;
+do not turn a resolved example or an unspecified host fixture profile into another
+language-approval gate. Ask the author only when applicable current requirements
+actually contradict one another, with both clauses and the distinguishing case.
 
 ## 2. One source graph and one parser
 
 **All receiver records remain in the source graph as written. Computations and
 semantic transformations take place exclusively in namespace. Terminal primitive
 declarations remain in the graph as direct `{type value}` records.**
+
+The graph is the complete literal source, including those primitive leaves at
+the addresses held by Structure cells. All receiver structures—including `for`,
+`if`, `merge`, `copy`, and `import`—remain available as written and can be replaced
+by ordinary explicit graph assignment. Do not introduce an uneditable executable
+representation or a special mutation protocol. Apply the existing explicit
+compile/endturn restart mechanism when an executable change needs recompilation.
+
+The whole program is that complete graph plus a binary containing compiled
+native methods. `parent` and `length` are logically determined from source
+structure; the other contents lie in the Lmx pointer array and its referenced
+records. Keep the ordinary stored-header contracts: this does not require
+reconstructing them from text on every access.
+
+R0 lowers to an ordinary C method with a local pointer to the R0 graph. The
+interpreter also uses a binary R0. Do not replace that local pointer by a hidden
+global program instance, or add a static DATA replica, materialized namespace
+graph, copied executable body, or expanded program for the walker. Frame values,
+source references, selected binding maps, and temporary compiler analysis serve
+their specific operations; they do not form a second runtime program graph.
 
 P0 builds the written receiver–arguments model, retaining every Frame, boundary,
 and explicit group. It does not execute defaults, import names, expand composition
@@ -146,7 +168,8 @@ replace the selected occurrence's lexical context.
 
 R0 has no DATA and no user actual arguments. Do not synthesize self-DATA, an empty
 DATA Structure, or an artificial data field. Host/runtime launch parameters are
-not user signature arguments.
+not user signature arguments. Its native C method holds the R0 graph pointer
+locally, including when the invoked program operations use the interpreter.
 
 `return` in DATA describes a result and assigns nothing. In CODE it is the return
 receiver. Ordinary Structure calls and explicit `call` may return that described
@@ -285,6 +308,11 @@ caller places are not offered; private visible lexical recipients are not
 overridden. Explicit passing, explicit paths, nested lexical access, and node
 remain possible under normal const/immutable restrictions.
 
+Read the existing `private` receiver from the same clean graph. Do not serialize
+a second privacy/initialization-marked graph into the binary or materialize one
+in the namespace. Generated methods reflect the binding decision; ordinary
+temporary facts and frame values do not justify a second program representation.
+
 Filter concrete places, not all uses of a spelling. A skipped private source
 does not hide every other admissible source of that name. New inner declarations
 can shadow outer ones under the ordinary scope rule.
@@ -310,12 +338,18 @@ shares its name.
 
 Own frame values/descriptions are independent of their source under the accepted
 activation contract. References retain their referenced targets. Unused computed
-inputs do not run. Reaching a repeated CODE declaration still runs its RHS even
-if another earlier operation read an associated source description.
+inputs do not run. Once an own input is demanded and initialized, later reads of
+that activation place reuse its current value; removing dirty publication does
+not mean reevaluating its initializer on every read. Reaching a repeated CODE
+declaration still runs its RHS and updates the same place. Separate calls and
+separate dynamic expression evaluations retain their own ordinary state.
 
-No-RHS nested-inline initialization is the exact open check recorded in
-[REVIEW_NOTES.md](REVIEW_NOTES.md#open-questions). Establish its intended result
-before adding an acceptance oracle; do not silently choose 5 or uninit:int.
+For Binding TZ §7.4's no-RHS inline case, the new inner place is `uninit:int`:
+the inline scope is not a new caller, and the stated actual caller has no x.
+The existing outer x = 5 remains unchanged. A reached required reception refuses
+the absent value. This is a consequence of ordinary caller autofill and distinct
+inner declaration identity, not an outer-local copying rule. Retain that explicit
+oracle in the [derived review case](REVIEW_NOTES.md#open-questions).
 
 ## 10. Operands, priorities, and effect ordering
 
@@ -440,14 +474,23 @@ contract. Use descriptor/index element references where required for movable
 backing. A numeric Array is not an Array of pointers to tagged values.
 
 Own local assignments do not publish to the source graph. A transparent caller
-place changes the actual caller cell, and an explicit graph path changes its
-actual target. These are separate admitted destinations, not stages of a
+place changes the selected caller execution place, and an explicit graph
+assignment replaces the fragment at its selected structural place. These are separate admitted destinations, not stages of a
 load-dirty publication protocol.
 
-Do not restore load-dirty, work-flush tables, copy-back, mandatory code snapshots,
+Do not restore load-dirty, work-flush tables, copy-back, automatic executable-graph copies,
 edit watchers, automatic native invalidation, or hidden compilation. Keep the
 physical storage and ordinary copy/collection machinery that the current
 contracts still require.
+
+Implement the [author's uninit clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md):
+`uninit:T` is its code only, with zero payload. No T cell or complete inner T
+record is preallocated. `struct\novalue := 5` replaces `{uninit:int}` by `{int 5}`
+at the addressed graph field. Remove tests that require in-place tag changes or
+a stable raw payload address across this replacement. Assignment in the execution
+frame remains independent of the clean source graph. P01 is closed; stable
+Structure descriptors and descriptor/index Array-element references keep their
+separate contracts.
 
 Known native→native calls remain direct C calls. Hidden autofill values can be
 ordinary parameters; transparent places carry the required cell address; the
@@ -455,10 +498,23 @@ retained fallback gives an own place. Native locals do not require artificial
 arena record headers.
 
 `sys\check` and `sys\checkL3` return diagnostics. `sys\translate` returns L1 and
-errors. `sys\compile` explicitly performs the selected translation/compile/
-registration operation. `sys\endturn` reaches the normal turn boundary through
-finally blocks, without ordinary catch interception or returning to the call
-site; it does not compile, check, or publish an edit itself.
+errors. These operations do not run the application or `test`. `sys\compile`
+performs clean-graph preparation, the required build/test phase, and the selected
+translation/compile/registration operation. Build tests run through the ordinary
+receiving contracts after the clean graph and before C generation; they may call
+checkers/candidates but do not launch the graph's application entry or recursively
+discover all nested DATA tests.
+
+Keep admission stages distinct. Construction establishes known interface facts
+without speculative user/default/test execution. Reached interpreter calls use
+standard `implements`, with admission facts scoped to their operation/reception; prepared native calls have
+no automatic runtime `implements`. Explicit `implements` is executed in either
+path. Required checks at an actual reception and actual-value conversion checks
+remain in force, without a blanket rerun after every write.
+
+`sys\endturn` reaches the normal turn boundary through finally blocks, without
+ordinary catch interception or returning to the call site; it does not compile,
+check, or publish an edit itself.
 
 Keep explicit helper operations in `sys`. `parent` and `length` retain their
 ordinary public contracts. `sys\indexof` uses the common immediate-element

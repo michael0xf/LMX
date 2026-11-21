@@ -37,7 +37,11 @@ creating a field or return. These rules supersede any historical P0 unwrapping o
 annotation. See [empty bodies](LMX_grammar.en.md#empty-colon) and [source levels](LMX_grammar.en.md#levels).
 
 All receivers remain as written in the source graph, with terminal primitive declarations represented directly
-as `{type value}`. Computations and transformations belong to the namespace. Historical excerpts or examples
+as `{type value}` at the addresses held by Structure cells. These leaves are part of the complete literal source.
+The [latest author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) also fixes
+code-only zero-payload uninit and ordinary graph-fragment replacement, including executable receiver structures;
+the existing compile/endturn boundary handles required machine updates. Computations and transformations belong
+to the namespace. Historical excerpts or examples
 do not authorize graph rewriting, executable fn/sub forms, a sys operand registry, or container-valued merge.
 
 Reported source SHA-256 values:

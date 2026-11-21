@@ -1,0 +1,12 @@
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+@: shared data[0]
+fn: producer () int
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+fn: g (int: a 1; int: b 2) int
+    return: a
+shared\Observed\seen := g(int: b producer())

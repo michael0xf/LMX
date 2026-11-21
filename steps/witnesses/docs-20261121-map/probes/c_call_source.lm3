@@ -1,0 +1,13 @@
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+    A:
+        int: x 1
+)
+@: shared data[0]
+fn: producer () int
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 5
+@: R merge(shared\A; (int: y producer()))
+shared\Observed\seen := R\y

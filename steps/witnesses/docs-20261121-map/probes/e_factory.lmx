@@ -1,0 +1,27 @@
+Product:
+    int: payload
+    return: int
+    read:
+        return: payload
+    create:
+        return: Product
+        small:
+            node\payload := 10
+            return: (copy(Product))
+        large:
+            node\payload := 20
+            return: (copy(Product))
+
+add1:
+    @: product Product
+    return: int
+    execute:
+        return: product\read() + 1
+
+Demo:
+    return: int
+    run:
+        import: Product add1
+        int: first execute(create\small())
+        int: second execute(create\large())
+        return: first + second

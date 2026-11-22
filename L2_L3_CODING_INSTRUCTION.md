@@ -10,8 +10,8 @@
 This instruction accompanies the standalone English documentation packet. It
 applies the [semantics](docs/LMX_semantics.en.md), [grammar](docs/LMX_grammar.en.md),
 [L2 contract](docs/L2_spec_en.md), and [kernel implementation contract](docs/kernel-implementation.en.md).
-The current [requirements](docs/README.md#requirements) and
-[accepted supplements](docs/README.md#accepted-supplements) are part of that model.
+The author's requirements and accepted supplements are part of that model: the
+[index](docs/README.md#subjects) names the place of each subject in the documents.
 
 The files in this archive are the review surface. Their relative links and
 examples can be checked without running a repository documentation generator,
@@ -97,8 +97,8 @@ level-completion mechanism, corresponding to the conceptual `-1` boundary
 where a source `---` cannot itself be written. Several consecutive blank lines
 are harmless.
 
-Apply the exact [blank-line requirements](docs/tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md)
-and the [grammar](docs/LMX_grammar.en.md), including paired delimiters, Mix documents,
+Apply the exact rule and the [observations of blank-line closure](docs/LMX_grammar.en.md#levels)
+of the [grammar](docs/LMX_grammar.en.md), including paired delimiters, Mix documents,
 EOF, and protected text. A blank line does not invent a matching closing bracket
 or silently repair malformed bounded syntax.
 
@@ -285,7 +285,8 @@ head's declaration contract supplies the distinction; no hardcoded list of
 `iterate`, `iteration`, `item`, or primitive receiver names is needed.
 
 The complete examples and named-order cases are in the
-[declaration/import requirements](docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+[declaration arguments](docs/LMX_semantics.en.md#declaration-arguments) and the
+[required observations](docs/LMX_semantics.en.md#declaration-observations).
 
 ## 8. Binding places and two-way private
 
@@ -351,7 +352,7 @@ not mean reevaluating its initializer on every read. Reaching a repeated CODE
 declaration still runs its RHS and updates the same place. Separate calls and
 separate dynamic expression evaluations retain their own ordinary state.
 
-For Binding TZ §7.4's no-RHS inline case, the new inner place is `uninit:int`:
+For the [no-RHS inline case](docs/LMX_semantics.en.md#inline-declaration-control), the new inner place is `uninit:int`:
 the inline scope is not a new caller, and the stated actual caller has no x.
 The existing outer x = 5 remains unchanged. A reached required reception refuses
 the absent value. This is a consequence of ordinary caller autofill and distinct
@@ -567,8 +568,10 @@ A minimal acceptance set covers:
 | Native/walker | Value, type, selected address and write destination across the applicable four combinations |
 | Thread/mail | One transport, ownership attachment, publication boundary, supervision distinct from lexical parent |
 
-Reuse the detailed acceptance tables in TZ and the accepted Thread/Message
-supplements. Record expected refusal, actual source inputs, reached values,
+Reuse the detailed acceptance tables of the primary documents: the observations of
+[binding](docs/LMX_semantics.en.md#binding-observations), [callables](docs/LMX_semantics.en.md#callable-observations), [operands](docs/LMX_semantics.en.md#operand-observations),
+[declaration arguments](docs/LMX_semantics.en.md#declaration-observations), [field streams](docs/LMX_semantics.en.md#field-stream-observations),
+[Thread/Message](docs/LMX_semantics.en.md#thread-message-observations) and [blank-line closure](docs/LMX_grammar.en.md#levels). Record expected refusal, actual source inputs, reached values,
 effect counts, diagnostics, and relevant addresses; a zero process exit is not
 a substitute for those observations.
 
@@ -599,6 +602,5 @@ green.
 
 The English packet is the current review edition. The accidentally supplied
 Russian grammar is excluded at the author's request; a complete Russian edition
-can follow after the English review. The requirements and supplements already
-issued are kept as task documents in `docs/tasks/`; their content is carried
-into the documentation, which alone is the norm.
+can follow after the English review. The author's requirements and supplements
+are carried into the documentation in full; the documentation alone is the norm.

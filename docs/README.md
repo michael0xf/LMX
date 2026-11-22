@@ -18,9 +18,9 @@ This is a self-contained documentation packet. Read and review the files as they
 are arranged in this archive; no repository documentation build, generated mirror,
 or absent journal is needed to follow its internal references.
 
-The packet integrates the supplied change requirements into the primary English
-documents and the accepted supplements. The latest author clarification is
-applied throughout: **import, copy, and merge always use ordinary CODE arguments**,
+The primary documents hold the whole norm: every change requirement and every
+accepted supplement of the author is carried into them. Among the latest rules:
+**import, copy, and merge always use ordinary CODE arguments**,
 wherever their receiver records occur. An anonymous Structure is not itself a
 call, but its contents can contain calls and initializers with their ordinary
 contracts.
@@ -33,8 +33,8 @@ replace those source records. Ordinary explicit graph assignment can replace the
 fragments. Executable changes use the existing explicit compilation/endturn restart
 mechanism when recompilation is needed.
 
-The latest [author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
-has priority over contrary earlier physical descriptions: `uninit:T` has only its
+The rules of [zero-payload `uninit` and graph assignment](LMX_semantics.en.md#uninit-zero-payload)
+have priority over contrary earlier physical descriptions: `uninit:T` has only its
 code and zero payload; frame writes leave source unchanged; graph writes replace
 fragments. P01 is resolved, with no reserved T cell or raw payload-address promise.
 
@@ -66,65 +66,35 @@ contradiction between applicable current requirements must be presented to the
 author with both clauses; superseded wording and routine derivations do not create
 an additional approval gate.
 
-<a id="requirements"></a>
-## Requirements
+<a id="subjects"></a>
+## Where each subject is specified
 
-`tasks/` contains the supplied change requirements. Their source language is retained;
-the operative English rules and examples are integrated into the primary documents.
-Links to the documents have been adapted to this archive.
+The author's change requirements and accepted supplements are carried into the
+primary documents in full; the primary documents alone are the norm. The table
+names the place of each subject.
 
-| Requirement | Integrated subject |
+| Subject | Where it is specified |
 | --- | --- |
-| [Latest author clarification: complete program, uninit and graph assignment](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Highest-priority clarification: complete graph plus methods-only binary, local R0 graph pointer and binary R0 for interpretation, zero-payload uninit, replaceable source fragments, existing compile/endturn update boundary |
-| [Binding and callables](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Ordinary callable Structures, actual parent as DATA, named fn signatures, selection, binding places, two-way private |
-| [Declaration arguments and import](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Preserved declaration actuals, receiving-root namespace behavior, positional/named mapping, root-const import filter |
-| [Blank-line block termination](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Complete block termination within the common parser; verification of boundaries and examples |
-| [Operands, arguments and priorities](tasks/to_fable_operands_arguments_priorities.md) | Ordinary operand methods, mandatory properties, prepared/raw modes, sys helpers, effect order and ordinary results |
-| [Import, copy and merge field streams — revision 2](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | Always-CODE arguments, source-preserving namespace processing, stream output, explicit grouping and source arity |
+| Complete program graph, binary of compiled methods, zero-payload `uninit`, graph assignment | [program representation](LMX_semantics.en.md#program-representation), [`uninit`](LMX_semantics.en.md#uninit-zero-payload), [graph assignment](LMX_semantics.en.md#graph-fragment-assignment), [required observations](LMX_semantics.en.md#regression-obligations) |
+| Callable Structures, actual parent as DATA, named `fn` signatures, selection, binding places, two-way `private` | [binding places](LMX_semantics.en.md#binding-places), [decisions R01–R19](LMX_semantics.en.md#binding-decisions), observations [B01–B27](LMX_semantics.en.md#binding-observations) and [C01–C36](LMX_semantics.en.md#callable-observations) |
+| Declaration arguments and `import` | [declaration arguments](LMX_semantics.en.md#declaration-arguments), [`import`](LMX_semantics.en.md#import-receiver), [required observations](LMX_semantics.en.md#declaration-observations) |
+| Blank-line block termination | [blank physical line and its observations](LMX_grammar.en.md#levels), [guide](LMX_semantics_guide.en.md#blank-line-blocks) |
+| Operand methods, prepared and raw modes, `sys` helpers, priorities | [operands](LMX_semantics.en.md#operand-receiver), [observations O01–F10](LMX_semantics.en.md#operand-observations) |
+| `import`, `copy` and `merge` field streams | [composition](LMX_semantics.en.md#composition), [observations G01–N01](LMX_semantics.en.md#field-stream-observations) |
+| Writable places, assignment and structural declaration | [writing a known place](LMX_semantics.en.md#assign-known) |
+| Local declarations and initialization | [declaration levels](LMX_semantics.en.md#shadowing-levels) |
+| Call frame without load-dirty publication | [call frame](LMX_semantics.en.md#call-frame-20261115) |
+| Application interface of inspection, insertion, copying and stepping | [chapter 36](LMX_semantics.en.md#edit-api) |
+| Thread/Message transport: `post`, reply waits, `send` and `receive` | [chapter 28](LMX_semantics.en.md#thread-message-api), [observations T01–T26](LMX_semantics.en.md#thread-message-observations) |
 
-The revision-2 stream requirement includes the author's corrections made during
-this review. It supersedes the earlier DATA-argument variants of these three
-receivers. This does not change the DATA-argument contracts of fn or modifiers.
+The field-stream rules supersede the earlier DATA-argument variants of `import`,
+`copy` and `merge`. This does not change the DATA-argument contracts of `fn` or
+modifiers. Earlier wording quoted to explain a migration does not establish an
+alternative current syntax.
 
-A requirement's revision and specific subject control its meaning; its original
-filename date alone is not an ordering rule. Earlier wording quoted to explain a
-migration does not establish an alternative current syntax. References inside TZ
-to older exported filenames identify the original baseline; this archive supplies
-the corresponding revised primary files listed above.
-
-<a id="accepted-supplements"></a>
-## Accepted supplements
-
-The supplements below are kept in `tasks/` beside the requirements. They were
-already applied; that does not make the documents optional, unapplied
-proposals, or an archive of competing norms. All eight supplied supplements
-have been reviewed and updated.
-
-| Supplement | Subject |
-| --- | --- |
-| [assignment_is_not_declaration.en.md](tasks/assignment_is_not_declaration.en.md) | Writable places, assignment and structural declaration |
-| [local_declarations_and_explicit_initialization.to_fable.en.md](tasks/local_declarations_and_explicit_initialization.to_fable.en.md) | Local declaration behavior and initialization |
-| [merge_documentation_corrections.en.md](tasks/merge_documentation_corrections.en.md) | Graph-copy relationships and composition |
-| [merge_documentation_corrections_next.en.md](tasks/merge_documentation_corrections_next.en.md) | Further composition/callable clarification |
-| [dirty.md](tasks/dirty.md) | Current activation and explicit-editing model; removal of load-dirty publication |
-| [mutating_debug_API.en.md](tasks/mutating_debug_API.en.md) | Explicit inspection, compilation and editing boundary |
-| [threadMessageAPI.en.md](tasks/threadMessageAPI.en.md) | Unified Thread/Message/mail API |
-| [threadMessageAPI_migration.en.md](tasks/threadMessageAPI_migration.en.md) | Integration and acceptance of the shared transport |
-
-`dirty.md` and `L2_L3_CODING_INSTRUCTION.md` were supplied in Russian and are
-English in this packet. The accidentally supplied `LMX_grammar.ru.md` is excluded
-at the author's request. A complete Russian edition is a separate later pass.
-
-Russian texts of four supplements stand beside the English ones and follow them
-(2026-11-22): [dirty.ru.md](tasks/dirty.ru.md),
-[mutating_debug_API.ru.md](tasks/mutating_debug_API.ru.md),
-[threadMessageAPI.ru.md](tasks/threadMessageAPI.ru.md) and
-[threadMessageAPI_migration.ru.md](tasks/threadMessageAPI_migration.ru.md).
-The former directory `old_parts/` held earlier versions of these supplements and
-of four requirements; it is removed. On the author's order of 2026-11-22 the
-former directories of requirements and of supplements are joined in `tasks/`,
-which holds the only copies, and their content is being carried into the
-primary documents, which alone are the norm.
+`L2_L3_CODING_INSTRUCTION.md` was supplied in Russian and is English in this
+packet. The accidentally supplied `LMX_grammar.ru.md` is excluded at the author's
+request. A complete Russian edition is a separate later pass.
 
 ## Scope and precedence
 
@@ -144,8 +114,6 @@ background sources rather than repository build dependencies.
 
 ## Archive contents
 
-There are nine primary English documents, eight maintained English supplements,
-six source-requirement files (the original five plus the latest author clarification),
-this index, and the review notes. Unrelated source
+There are nine primary English documents, this index, and the review notes. Unrelated source
 trees, generated binaries, test logs, and scratch editing scripts are not part
 of the packet.

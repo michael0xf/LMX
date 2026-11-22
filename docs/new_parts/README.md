@@ -83,11 +83,11 @@
 
 Структура может использоваться как код; DATA вызываемого метода — его фактический `parent`. Поэтому общие входы и `return` объявлены один раз в окружающей структуре. Это видно в `transform` у [Decorator](06_decorator_comparison.md), `checkout` у [Facade](14_facade_comparison.md) и `bridge` у [Bridge](18_bridge_comparison.md). Метод `demo` естественно находится в той же группе; наличие поля в DATA не обязывает каждый метод читать его. [Контракт структурного вызова](../LMX_semantics.en.md#structural-call)
 
-В [Flyweight](21_flyweight_comparison.md) `get` принадлежит `glyphs`, а `render` и `demo` — вложенной `drawing`. Сохранены короткие объявления `immutable: thin: int: width 2` и завершающий `return` на уровне объявления `demo`: он завершает тело `demo`. Пустая физическая строка закрывает весь текущий корневой блок, поэтому внутри `glyphs` пустых строк нет. [Грамматика][G] · [Границы блоков][E]
+В [Flyweight](21_flyweight_comparison.md) `get` принадлежит `glyphs`, а `render` и `demo` — вложенной `drawing`. Сохранены короткие объявления `immutable: thin: int: width 2` и завершающий `return` на уровне объявления `demo`: он завершает тело `demo`. Пустая физическая строка закрывает весь текущий корневой блок, поэтому внутри `glyphs` пустых строк нет. [Грамматика][G] · [Границы блоков](../LMX_grammar.en.md#levels)
 
 ### 2. Общий namespace и импорт объявлений
 
-`import` добавляет в namespace **корневые const-объявления DATA**. Объявление пользовательской структуры константно и без явного `const`, поскольку само объявление структуры не является переменной. Совпадение имён обрабатывается как обычное повторное объявление. Импорт метода не меняет его фактический DATA. [Правила import][D]
+`import` добавляет в namespace **корневые const-объявления DATA**. Объявление пользовательской структуры константно и без явного `const`, поскольку само объявление структуры не является переменной. Совпадение имён обрабатывается как обычное повторное объявление. Импорт метода не меняет его фактический DATA. [Правила import](../LMX_semantics.en.md#import-receiver)
 
 Так `import: Product` открывает `create` в [Factory](03_factory_method_node_prototype_comparison.md). В [Interpreter](23_interpreter_comparison.md) вложенная группа `example` видит `add` лексически и обходится без отдельного импорта. Вложенная `drawing` в [Flyweight](21_flyweight_comparison.md) находит `get` по лексической видимости и не нуждается в дополнительном импорте.
 
@@ -127,7 +127,7 @@
 
 ### 9. Пользовательский цикл и диспетчеризация Visitor
 
-[Iterator](01_iterator_comparison.md) реализует `cycles\iterate` обычным методом. Переданная форма `int: item numbers\next()` сохраняется как `iteration` и исполняется заново на каждом обороте; объявленное `item` доступно телу. `body()` меняет `item` и локальный `total` вызывающего. Состояние продвижения находится в итераторе, а `Stop` обрабатывается циклом. [Переданные формы объявлений][D]
+[Iterator](01_iterator_comparison.md) реализует `cycles\iterate` обычным методом. Переданная форма `int: item numbers\next()` сохраняется как `iteration` и исполняется заново на каждом обороте; объявленное `item` доступно телу. `body()` меняет `item` и локальный `total` вызывающего. Состояние продвижения находится в итераторе, а `Stop` обрабатывается циклом. [Переданные формы объявлений](../LMX_semantics.en.md#declaration-arguments)
 
 В [Visitor](09_visitor_comparison.md) узлы вызывают именованные действия `on_number` и `on_pair`. Контекст `Actions` предоставляет эти действия через установленное динамическое связывание; недостающая операция имеет явный fallback с `NoAction`. Так сохранены роли узлов и посетителя без отдельного visitor-параметра. [Порядок связывания и fallback](../LMX_semantics.en.md#binding-fallback)
 
@@ -168,17 +168,15 @@
 - [Грамматика][G]
 - [Практические разборы](../LMX_semantics_guide.en.md)
 - [Связывание и вызываемые структуры](../LMX_semantics.en.md#structural-call)
-- [Аргументы-объявления и import][D]
-- [Пустая строка как граница блока][E]
+- [Аргументы-объявления](../LMX_semantics.en.md#declaration-arguments) и [import](../LMX_semantics.en.md#import-receiver)
+- [Пустая строка как граница блока](../LMX_grammar.en.md#levels)
 - [Операнды, аргументы и приоритеты](../LMX_semantics.en.md#operand-receiver)
 - [Import, copy и merge: потоки полей](../LMX_semantics.en.md#composition)
 
-`docs/Old_TZ` содержит принятые дополнения, уже учтённые в основной документации; `docs/TZ` — согласованные требования. Объявление общего `sys\OPERANDS_TEMPLATE` для сравнительных примеров соответствует последнему решению автора: без собственного `return`, с общими ссылочными входами. Его полная запись дана в №23, а результат описывает конкретный операнд.
+Объявление общего `sys\OPERANDS_TEMPLATE` для сравнительных примеров соответствует последнему решению автора: без собственного `return`, с общими ссылочными входами. Его полная запись дана в №23, а результат описывает конкретный операнд.
 
 [S]: ../LMX_semantics.en.md
 [L2]: ../L2_spec_en.md
 [G]: ../LMX_grammar.en.md
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 [M]: ../LMX_semantics.en.md#composition
 

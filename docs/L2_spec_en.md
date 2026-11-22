@@ -438,7 +438,7 @@ writing `\x` instead of `x`. Ordinary `x`, `x := value`, expressions with `x` an
 place. For a used external name without an own active declaration: if the really visible lexical
 source is `private`, the lexical link applies; otherwise the transparent caller place; otherwise the former
 binding. The former binding (fallback) is kept together with `node` and its context of lexical
-and dynamic lookup and ranks below the two new paths (TZ, R01, R08).
+and dynamic lookup and ranks below the two new paths (decisions [R01 and R08](LMX_semantics.en.md#binding-decisions)).
 
 <a id="binding-autofill"></a>
 **An own declared place and autofill.** A value reaches the own place in this order:
@@ -578,7 +578,7 @@ shadows outer `x = 5`, and this activation's immediate caller has no x. The inne
 or initializer; an inline scope creates no new caller, so the enclosing local is not an autofill
 source. It remains `uninit:int`, and a reached `required: x` refuses; the outer place remains 5.
 An explicit inner initializer 9 instead satisfies the check without changing the outer place.
-This derives from Binding TZ §§6.1, 7.2 and 7.4, introduces no universal outer-local copying or
+This derives from the rules of [autofill](LMX_semantics.en.md#binding-autofill) and [declaration levels](LMX_semantics.en.md#shadowing-levels), introduces no universal outer-local copying or
 eager initializer pass, and makes no claim of an executed test. See the
 [control example](LMX_semantics.en.md#inline-declaration-control).
 

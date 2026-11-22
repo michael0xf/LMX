@@ -32,9 +32,9 @@ The order follows the companion files and serves navigation, rather than ranking
 
 **Lexical access is explicit.** `node\` selects lexical binding; it is not a parent operator. The examples use it for state that must persist in the graph. Bare assignments act on the place selected for the current execution. `private` restricts implicit dynamic binding in both directions: private sources are not supplied, and private lexical declarations are not dynamically replaced. Explicit passing and ordinary lexical visibility retain their rules. [Binding rules](../LMX_semantics.en.md#binding-places)
 
-**Syntax preserves structure.** A blank physical line, including a whitespace-only line, ends the whole ordinary syntactic block at the virtual level −1 above root. Inner `---` remains useful for closing a nested structure while retaining its enclosing root; Visitor uses it. EOF closes the final ordinary block. Protected lexical forms retain their own rules. [Block boundaries][E]
+**Syntax preserves structure.** A blank physical line, including a whitespace-only line, ends the whole ordinary syntactic block at the virtual level −1 above root. Inner `---` remains useful for closing a nested structure while retaining its enclosing root; Visitor uses it. EOF closes the final ordinary block. Protected lexical forms retain their own rules. [Block boundaries](../LMX_grammar.en.md#levels)
 
-**Declarations and imports retain their roles.** A supplied declaration form can be executed repeatedly while its body uses the resulting place, as in Iterator. `import` exposes const root declarations from DATA, including user structures; it neither imports ordinary mutable variables nor changes a method's actual parent. Factory uses it to expose `create`. [Declarations and import][D]
+**Declarations and imports retain their roles.** A supplied declaration form can be executed repeatedly while its body uses the resulting place, as in Iterator. `import` exposes const root declarations from DATA, including user structures; it neither imports ordinary mutable variables nor changes a method's actual parent. Factory uses it to expose `create`. [Declarations and import](../LMX_semantics.en.md#declaration-arguments)
 
 **Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
 
@@ -440,12 +440,10 @@ Foreign-language execution and static-review details are recorded in the individ
 ## Sources and agreement
 
 - [Binding and structural calls](../LMX_semantics.en.md#structural-call): actual parent DATA, ordinary references, defaults, autofill, caller places, and two-way `private`.
-- [Supplied declarations and import][D]: the declaration/body behavior of `iterate` and root const imports.
-- [Blank-line block termination][E]: complete root termination and retained inner `---` boundaries.
+- [Supplied declarations](../LMX_semantics.en.md#declaration-arguments) and [import](../LMX_semantics.en.md#import-receiver): the declaration/body behavior of `iterate` and root const imports.
+- [Blank-line block termination](../LMX_grammar.en.md#levels): complete root termination and retained inner `---` boundaries.
 
 The current examples also follow the author's lexical `node` clarification and the instruction to use the Python programs as architectural prototypes. Each section links to its full eight-language comparison. The Russian edition contains the same nine LMX programs, entry calls, expected results, and comparison figures.
 
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
 [S]: ../LMX_semantics.en.md#merge-two-forms

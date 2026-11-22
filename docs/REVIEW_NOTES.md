@@ -4,15 +4,16 @@ Date: 2026-11-21.
 
 ## 1. Review surface
 
-The package contains nine primary documents and eight maintained accepted
-supplements, plus six requirements under TZ: the original five and the latest
-author clarification added during this review. The English primary
+The package contains nine primary documents. The author's change requirements,
+the accepted supplements and the latest author clarification added during this
+review are carried into them in full; the table of subjects in the
+[index](README.md#subjects) names the place of each subject. The English primary
 documents are the current review edition. The Russian grammar accidentally
 included in the upload has been excluded at the author's request.
 
-The developer instruction and the supplement `dirty.md` have been translated into English
-while being reconciled with the current rules. The other accepted supplements
-have been edited as part of the documentation, not treated as unapplied work.
+The developer instruction has been translated into English while being reconciled with
+the current rules. The accepted supplements have been integrated into the primary
+documents as part of the documentation, not treated as unapplied work.
 
 Repository build diaries and historical execution receipts no longer serve as
 current normative statements. Where detailed receipts are preserved, they are
@@ -35,8 +36,8 @@ calls. An anonymous Structure can nevertheless contain calls or computed
 declarations. Their normal contracts determine when they execute. Grouping is
 neither a universal quotation nor a request to execute every initializer early.
 
-The corresponding [stream requirement](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md)
-has been updated to revision 2. Old tables and cases claiming that a source
+The [field-stream observations](LMX_semantics.en.md#field-stream-observations)
+state this contract. Old tables and cases claiming that a source
 Producer() cannot call merely because merge/import was written in DATA have
 been replaced.
 
@@ -58,7 +59,7 @@ through normal namespace/declaration behavior.
 
 ### 2.3 Blank lines
 
-The blank-line requirement is treated as clarification and verification of the
+The blank-line rule is treated as clarification and verification of the
 common structural-boundary algorithm. It does not introduce an independent
 parser or establish that an existing conforming parser needs a rewrite.
 
@@ -82,8 +83,8 @@ structure remains available as written and can be replaced through ordinary grap
 assignment; this includes executable `for`/`if` and `merge`/`copy`/`import` forms.
 When executable edits require recompilation, the existing compile/endturn restart
 boundary applies. No second executable representation or special restricted
-graph-editing protocol is introduced. The [new author note](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
-records these decisions and overrides contrary earlier wording.
+graph-editing protocol is introduced. The rules on [zero-payload `uninit`](LMX_semantics.en.md#uninit-zero-payload)
+and [graph assignment](LMX_semantics.en.md#graph-fragment-assignment) record these decisions and override contrary earlier wording.
 
 ### 2.5 The complete program is the graph and compiled methods
 
@@ -126,14 +127,14 @@ that representation under an alternative name.
 | Raw expression arguments | Original occurrence/context, explicit sys eval, no hidden evaluation by dereference, no permanent graph cache | Semantics, guide, kernel |
 | Expression order | Demand dependencies, per-evaluation effect count, normal C ordering plus the specified exponentiation rule | Semantics, grammar, coding instruction |
 | Sys name/priority | Identifier spelling without value lookup; priority from the available operand's ordinary properties | Semantics, L2, guide |
-| Import | Root const declarations, including intrinsically constant user Structures; preserved source identity/parent; multiple sources | Semantics, guide, accepted supplements |
+| Import | Root const declarations, including intrinsically constant user Structures; preserved source identity/parent; multiple sources | Semantics, guide |
 | Copy and merge | One source versus at least two admitted sources; field streams; explicit grouping for one Structure | Semantics, L2, kernel, guide |
-| Stream input and result | Always-CODE input algorithm; source count separate from output count; ordinary W/E; no destination model | All affected contracts and the revised stream TZ |
+| Stream input and result | Always-CODE input algorithm; source count separate from output count; ordinary W/E; no destination model | All affected contracts and the field-stream observations |
 | Arrays and physical types | Common variable-length descriptor/storage model; type code in the value record; ownership intervals do not determine type | L2, kernel, CORE |
-| Uninitialized graph leaves and graph assignment | `uninit:T` is code only with zero payload; graph assignment replaces fragments; frame assignment leaves source unchanged; P01 resolved by the author | Author clarification, semantics, L2, kernel, guide, accepted supplements |
-| Native/editing | Explicit compilation/update boundary; no restoration of old load-dirty or automatic invalidation mechanisms | Semantics, L2, kernel, accepted supplements |
-| Complete program and R0 | Full graph plus compiled-method binary; R0 C method with a local graph pointer; interpreter also uses binary R0; no disguised working graph | Author clarification, CORE, kernel, coding instruction, semantics, L2, guide |
-| Mail and ownership | One transport and source/donor ownership path; supervision parent distinct from lexical parent | L2, kernel, Thread/Message supplements |
+| Uninitialized graph leaves and graph assignment | `uninit:T` is code only with zero payload; graph assignment replaces fragments; frame assignment leaves source unchanged; P01 resolved by the author | Semantics, L2, kernel, guide |
+| Native/editing | Explicit compilation/update boundary; no restoration of old load-dirty or automatic invalidation mechanisms | Semantics, L2, kernel |
+| Complete program and R0 | Full graph plus compiled-method binary; R0 C method with a local graph pointer; interpreter also uses binary R0; no disguised working graph | CORE, kernel, coding instruction, semantics, L2, guide |
+| Mail and ownership | One transport and source/donor ownership path; supervision parent distinct from lexical parent | Semantics (Thread/Message chapters), L2, kernel |
 
 Physical record layout, alignment, scalar ABI, arena ownership, native bridging,
 copy correspondence, serialization, exceptions, and Thread/Message contracts
@@ -142,13 +143,11 @@ summary for those contracts.
 
 ## 4. Files and links
 
-All primary documents and accepted supplements have been processed. The original
-five TZ source files remain unchanged during this reconciliation. The sixth TZ
-file records the latest author clarification and takes priority where it revises
-earlier physical or graph-assignment wording. The supplied stream TZ already
-contains its revision-2 corrections. Links in the requirements
-that formerly opened older exported documents now refer to the corresponding
-files in the archive.
+All primary documents have been processed; the accepted supplements and the
+author's requirements are carried into them. The latest author clarification takes
+priority where it revises earlier physical or graph-assignment wording. Links that
+formerly opened older exported documents now refer to the corresponding primary
+documents.
 
 Historical references to repository journals, plans, scripts, or receipts are
 either replaced by an included normative reference or retained as plain provenance
@@ -174,17 +173,18 @@ The current activation has an outer x = 5. It enters an inline nested scope
 without making a new callable invocation. That scope declares a new int x with
 no RHS/default; the activation's actual caller has no same-named x.
 
-The new declaration creates a distinct inner place. Binding TZ §§6–7 permits
+The new declaration creates a distinct inner place. The rules of
+[autofill](LMX_semantics.en.md#binding-autofill) and [declaration levels](LMX_semantics.en.md#shadowing-levels) permit
 own-place autofill from the actual caller, not from a newly invented caller for
 an inline lexical scope. Consequently the inner place is `uninit:int`; a reached
 required check refuses the absence. The outer place remains 5. The derivation
 does not depend on a previous executor report and introduces neither implicit
 zero nor universal copying of outer locals. This supplies the ordinary-algorithm
-derivation requested by Binding TZ §7.4.
+derivation recorded in the [control example](LMX_semantics.en.md#inline-declaration-control).
 
 ### D2. Classification of unit-root source forms
 
-Binding TZ §4.3 preserves R0's own executable declarations and ordinary references
+The [R0 entry rule](LMX_semantics.en.md#root-entry) preserves R0's own executable declarations and ordinary references
 while removing DATA and user actuals. A selected R0 entry therefore consumes its
 reached records under the common CODE head contracts. Forms supplied as DATA use
 the receiving DATA contract; import/copy/merge always retain CODE arguments.
@@ -212,13 +212,13 @@ The [resolved record](implementation-notes.en.md#uninit-layout-conflict) retains
 the old anchor for links. Structure-descriptor stability and Array-element
 descriptor/index references are separate contracts. P01 requires no further
 author question, and its implementation oracle now follows the
-[latest author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+[zero-payload `uninit` rule](LMX_semantics.en.md#uninit-zero-payload) and the [graph-assignment rule](LMX_semantics.en.md#graph-fragment-assignment).
 
 ## 6. Validation scope
 
 Documentation validation checks local link targets and anchors, Markdown
 structure, preservation of useful explicit anchors, current normative wording,
-and consistency of the worked examples with the supplied requirements.
+and consistency of the worked examples with the stated rules.
 
 No runtime source repository was part of this task. Language execution,
 interpreter/native equivalence, or self-build results are not claimed from
@@ -227,12 +227,12 @@ implementation review.
 
 ### Current documentation review record
 
-The companion review read the original five governing TZ files, the subsequent
-author clarification, the primary contracts, and all eight maintained supplements.
+The companion review read the primary contracts, including the carried author
+requirements, the author clarification and the integrated supplements.
 The always-CODE source roles, const-root
 import identity, stream arities/grouping, independent copy maps, native-update
 boundary, local place behavior, test scheduling, and Message/Thread boundary were
-checked against those current requirements. Derived inline-local and entry-role
+checked against those current rules. Derived inline-local and entry-role
 cases are recorded in §5; P01 records the author's completed answer and the
 corresponding correction of storage, assignment and source-completeness wording.
 
@@ -241,8 +241,6 @@ edition. Reproducible file inventory, link/anchor, fence, and source-example che
 for the delivered revision belong to the accompanying current review report.
 Edited documentation files are intentionally changed; the supplied archive is
 the comparison baseline, not a claim that those edited files remain byte-identical.
-The five original TZ files are not edited by this reconciliation; the sixth
-records the new author clarification.
 
 Markdown/example checks validate document structure and internal consistency.
 They are not parser execution, native/interpreter conformance, transport results,

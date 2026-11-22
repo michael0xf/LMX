@@ -14,7 +14,7 @@
 
 В Python текущая ссылка хранится у Machine и обозначает bound method. LMX хранит state в локальном контексте demo; closed и opened получают это место как свободное имя и меняют его. Вызов выполняется непосредственно из demo, поэтому промежуточный fallback и запись в граф не требуются.
 
-Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
+Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт](../LMX_semantics.en.md#import-receiver) · [Границы блоков](../LMX_grammar.en.md#levels)
 
 ## Подсчёт исходников
 
@@ -285,5 +285,3 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 
 - [Refactoring.Guru — State in Python, conceptual example](https://refactoring.guru/design-patterns/state/python/example)
 
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

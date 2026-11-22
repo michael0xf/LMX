@@ -513,7 +513,7 @@ A body-level `return` does not become a universal tail cutter by spelling; termi
 
 Within a bounded form, a newline itself neither closes the brackets nor performs the short-form step outwards. Continuation stays inside the bounded context; returning to the opening line's level before the matching bracket is permitted only for the matching closer itself ([§14](#bounded)). Newlines inside shielded strings, exact identifiers, and other lexical payload do not produce outer level events ([§24](#automaton)).
 
-A blank physical line outside shielded payload contains zero characters or only spaces/tabs. It is equivalent to a closing `---` at virtual level −1, above the current document's level-0 root. It immediately completes every open short and vertical form of that block, independently of its indentation; the root itself remains and subsequent items join it normally. The virtual level is an internal parser event, not a writable source level or graph node. Consecutive, leading, and already-root blank lines are idempotent. The event creates no field, anonymous Structure, call, executable instruction, return, or value. The next line is checked from the reset root context; its indentation is not discarded and cannot reopen the closed form.
+A blank physical line outside shielded payload contains zero characters or only spaces/tabs. It is equivalent to a closing `---` at virtual level −1, above the current document's level-0 root. It immediately completes every open short and vertical form of that block, independently of its indentation; the root itself remains and subsequent items join it normally. The virtual level is an internal parser event, not a writable source level, graph node, receiver or level of L1/L2/L3. Structures already built are neither deleted nor merged with one another. Consecutive, leading, and already-root blank lines are idempotent. The event creates no field, anonymous Structure, call, executable instruction, return, or value. The next line is checked from the reset root context; its indentation is not discarded and cannot reopen the closed form.
 
 Blankness is determined from the original physical line and lexical mode, before whitespace or comment removal. A line containing `#`, level dots, or other source text is not blank. Blank lines inside allowed string/exact-identifier payloads, block text, or raw comments remain content; ordinary unterminated-literal errors still apply. Syntax validation of a `%`-disabled body uses this same blank-line rule. CRLF, LF, and lone CR all produce the same structural event while retaining their original byte spans ([§3](#positions)). A single newline between nonempty lines, or one final LF after the last item, does not itself create a blank line.
 
@@ -530,6 +530,29 @@ Next:
 ```
 
 The first block needs no additional trailer. By contrast, omitting that blank line and jumping directly from `int: value 1` to `Next:` without another admitted cutter remains an invalid multi-level dedent. Pretty-printers may insert blank lines only where full block closure is intended; visual spacing inside a continuing block must not change its tree.
+
+### Required observations of blank-line closure
+
+| № | Input or condition | Expected property |
+| --- | --- | --- |
+| 1 | The Factory of the [guide](LMX_semantics_guide.en.md#factory-result) | The root has exactly three declarations `Product`, `add1`, `Demo`; the last two do not get inside `Product`. |
+| 2 | A blank line after three or more open vertical/short levels, then a new root declaration | All former forms are completed; there is no «an additional trailer is needed» error. |
+| 3 | A line of only spaces/tabs instead of the blank line | The same tree and the same boundary. |
+| 4 | Several blank lines in a row, at the start and at the end of the document | There are no superfluous fields and anonymous structures. |
+| 5 | One newline between nonblank lines | The former rules of continuation and indentation work; one newline gives no full closure. |
+| 6 | A blank line before a line with the former nested indentation | The closed form does not resume; the line passes the ordinary check of levels from the new root context. |
+| 7 | A line `# comment` between lines of a block | It is not classified as blank; the former rules of comments act. |
+| 8 | A blank line inside an admitted multiline literal or a raw comment | The outer tree is not closed; the content is kept. |
+| 9 | A blank line with an open inner `(` or `[` | An error at the full boundary; the delimiter is not supplied and the blank line is not skipped. |
+| 10 | Two blocks inside a Mix separated by a blank line, with a correct closing `}` | The first local block is closed; the second stays in the same Mix document; the outer form is not closed. |
+| 11 | The last correct block ends with EOF, with a final LF and without it | Both variants are admissible and give the same tree. |
+| 12 | LF, CRLF and lone CR; different portions of the input in streaming reading | The tree is the same; the coordinates take into account the source width of the line break; the event does not depend on the buffer boundaries. |
+| 13 | Parse → output of the source → reparse | The structure of the tree is kept; formatting inserts no blank lines that break a block. |
+| 14 | A deferred line with only Mix, then a blank line and a new declaration | The binding is completed before the full boundary and does not pass to the next declaration. |
+| 15 | An empty `f:`, then a blank line and a new root declaration | `f` has an empty body equivalent to `f()`; the new declaration does not get into it. |
+| 16 | A deep block, then a jump down by more than one level without a blank line and without another admissible cutter | The former jump error is kept; the novelty does not allow arbitrary dedent. |
+
+Compare the Factory of the guide with the equivalent variant with `---` in which both return operations are also written `return: (copy(Product))`: when only the ways of completion differ, the structure of the graph and the behavior must be kept. If the kernel is available, `Demo\run()` must return `32`; the products kept after `small` and `large` must read `10` and `20`. Behavioral tests complement the check of the tree and do not replace it.
 
 **Correct consecutive transitions** — `Lingvamyxa_spec.txt`, 3085–3088.
 
@@ -1117,7 +1140,7 @@ Source: §15.1. This describes the parse result, not a second surface grammar or
 
 ## 27. Original literal-boundary examples
 
-These preserved lexical examples illustrate literal boundaries. They do not override the current automaton or establish implementation test results; validation expectations are specified in this grammar and the [blank-line requirements](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md).
+These preserved lexical examples illustrate literal boundaries. They do not override the current automaton or establish implementation test results; validation expectations are specified in this grammar, in particular in the [observations of blank-line closure](#levels).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 9297–9303.
 

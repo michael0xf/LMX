@@ -611,7 +611,7 @@ and independent receiving calls do not share mutable locals through the source g
 This rule is determined by the resolved declaring head. Ordinary `Producer()` and
 `Producer: argument` remain CODE calls when Producer is not a place-declaration receiver.
 Ordinary Structure/reference values do not automatically publish all their fields into the root.
-For binding TZ §7.4's exact inline-shadowing case, the inner no-RHS place is `uninit:int`:
+For the exact inline-shadowing case of the [control example](LMX_semantics.en.md#inline-declaration-control), the inner no-RHS place is `uninit:int`:
 an inline lexical scope adds no callable caller, and the stated actual caller has no x.
 A reached required check refuses the absent value; the distinct outer x remains 5. This is
 derived in the [notes](implementation-notes.en.md#inline-declaration-control), without a new
@@ -1087,7 +1087,7 @@ observes the changed graph's expected result, restores it into a second simultan
 and observes that same intended state there. Native update tests respect explicit compilation and
 the endturn boundary instead of expecting automatic refresh after a graph write.
 
-The accepted TZs provide the detailed distinguishing-case matrices. The inherited inline-local
+The observation tables of the primary documents provide the detailed distinguishing-case matrices. The inherited inline-local
 case is derived from the caller-source rules, and entry fixtures state their selected source
 role in the [implementation notes](implementation-notes.en.md#open-design). Neither requires a
 new language rule. P01 is now resolved by the author's zero-payload and graph-replacement rule;

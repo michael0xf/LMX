@@ -18,7 +18,7 @@
 
 Здесь `PASS_ARGS_AS_IS 0`: общий исполнитель expression сначала получает значения аргументов, затем передаёт ссылки на их типизированные места в `left` и `right`. `\left` и `\right[0]` читают эти значения; `[0]` выбирает первый правый аргумент из массива. Для внешнего `add` левое значение — результат внутреннего `add`. Конкретный числовой результат метода описан строкой `return: int`. Шаблон использует обычное сложение как источник приоритета; внутри `sys` оно записано `priority("+")`.
 
-Вложенная группа `example` видит `add` лексически, поэтому отдельный `import` не нужен. DATA методов `calculate` и `demo` — `example`; DATA самого `add` — `operands`. Поле `n` не обязывает `demo` его читать. Внутри единственного корневого объявления нет пустых строк, которые преждевременно завершили бы блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Границы блоков][E]
+Вложенная группа `example` видит `add` лексически, поэтому отдельный `import` не нужен. DATA методов `calculate` и `demo` — `example`; DATA самого `add` — `operands`. Поле `n` не обязывает `demo` его читать. Внутри единственного корневого объявления нет пустых строк, которые преждевременно завершили бы блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Границы блоков](../LMX_grammar.en.md#levels)
 
 Python сохраняет композицию `(x + 3) + x` в замыкании `tree`; LMX сохраняет её в графе тела `calculate`. Два вызова меняют вход, сохраняя одну форму вычисления. Режим `PASS_ARGS_AS_IS 1` с исходными аргументными вхождениями и явным `sys\eval` здесь не требуется. Разыменование `\` само по себе код не вызывает.
 
@@ -286,8 +286,6 @@ pub fn demo() -> i32 {
 
 - [GoF — Interpreter, intent, grammar, participants and sample code (MIT-hosted text)](https://people.csail.mit.edu/addy/pattern/pat5c.htm)
 
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
 
 [S]: ../LMX_semantics.en.md#merge-two-forms

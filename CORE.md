@@ -253,7 +253,7 @@ An early use before a later own declaration can resolve through the ordinary
 outer context. A pre-scan of future declarations must not suppress that use.
 After the inner scope ends, the previous outer binding is visible again.
 
-For Binding TZ §7.4's exact case, a new no-RHS inner local is `uninit:int`:
+For the [control example of declaration levels](docs/LMX_semantics.en.md#inline-declaration-control), a new no-RHS inner local is `uninit:int`:
 an inline scope creates a distinct declared place but no new callable caller.
 The current activation's outer x = 5 is therefore not a new autofill source,
 and the stated actual caller has no x. A reached required check refuses this
@@ -316,7 +316,7 @@ missing fields by merely being checked.
 ### 4.3 Declaration-form actuals
 
 A receiver declaration passed as an actual is read as DATA and retained as a
-form, according to the [declaration-argument supplement](docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+form, according to the [declaration-argument rule](docs/LMX_semantics.en.md#declaration-arguments).
 It is not eagerly reduced to its initializer value.
 
 If its name matches an input declaration, it replaces the selected declaration

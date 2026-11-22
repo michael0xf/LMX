@@ -684,7 +684,7 @@ A first body := ... followed by an unnamed actual is rejected. A present empty b
 
 Through a fn-typed reference the same public-name → position → candidate-place map applies. It selects the
 receiving place without changing the declaration's internal name or prematurely evaluating its RHS.
-[Normative declaration-argument requirements](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+[Declaration arguments](LMX_semantics.en.md#declaration-arguments).
 
 <a id="binding-executors"></a>
 Mandatory copying of executable code at entry is withdrawn, including the former copy of only
@@ -929,7 +929,7 @@ Demo:
         return: first + second
 ~~~
 
-In executable context, `Demo\run()` is expected to return 32. A product retained after small reads 10; one retained
+If the call `Demo\run()` is written in the same source right after `Demo`, a blank line separates it from the declaration. In executable context, `Demo\run()` is expected to return 32. A product retained after small reads 10; one retained
 after large reads 20. These are acceptance expectations, not reported runtime results. The group collects the
 copied field stream as one returned Structure under return's ordinary contract. The copy map preserves methods,
 their lexical data, and shared internal references. The original Product graph still holds the written receivers;

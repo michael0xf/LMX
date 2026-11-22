@@ -201,7 +201,7 @@ One case remains with the executor's reading ([the control example](LMX_semantic
 [Р106](../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
 where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
 between the caller's local context and the callee's place at the call, while an inline scope stays within the same
-activation; the value 5 would need a new rule, which the TZ forbids introducing. This is not an author's decision.
+activation; the value 5 would need a new rule, and the binding rules introduce none. This is not an author's decision.
 [Control example](LMX_semantics.en.md#inline-declaration-control).
 
 Bare x and @x refer to the selected place. The own place of the frame does not depend on source-field replacement immediately

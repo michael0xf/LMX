@@ -232,7 +232,7 @@ role used by its fixture and test the shared algorithm. The author answered P01 
 <a id="inline-declaration-control"></a>
 ### 5.1. New uninitialized local in an inline nested scope
 
-The binding TZ §7.4 gives this exact situation: the current activation has outer x = 5; an inline
+The [control example](LMX_semantics.en.md#inline-declaration-control) gives this exact situation: the current activation has outer x = 5; an inline
 nested block introduces a new `int: x` without RHS/default; there is no new callable invocation,
 and this activation's caller has no x. The inner declaration creates its own place and shadows
 the outer one. Own-input autofill obtains a permitted same-named caller value; an inline lexical
@@ -246,7 +246,7 @@ answer, an eager default pass, or a new universal copy of outer locals.
 ### 5.2. Source records at a unit root
 
 R0 is a procedural entry with no DATA, user actuals, artificial self binding, or empty DATA
-object. Binding TZ §4.3 explicitly retains its own executable declarations and ordinary access
+object. The [R0 entry rule](LMX_semantics.en.md#root-entry) explicitly retains its own executable declarations and ordinary access
 to references. Once an entry is selected, its reached records use the ordinary CODE head rules;
 a form supplied in a DATA argument is read under that receiving declaration's contract. Removing
 R0's DATA does not remove source-role classification or give import a special DATA-argument mode.

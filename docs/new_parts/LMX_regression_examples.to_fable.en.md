@@ -35,8 +35,8 @@ The normative model is the supplied `docs/` packet. The current author's operand
 | O / OPERAND | [LMX_semantics.en.md#operand-receiver](../LMX_semantics.en.md#operand-receiver) | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
 | B / BIND | [LMX_semantics.en.md#binding-places](../LMX_semantics.en.md#binding-places) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
 | M / STREAM | [LMX_semantics.en.md#composition](../LMX_semantics.en.md#composition) | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
-| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
-| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
+| BLANK | [LMX_grammar.en.md#levels](../LMX_grammar.en.md#levels) | Blank-line block completion by the common parser |
+| D / DECL | [LMX_semantics.en.md#declaration-arguments](../LMX_semantics.en.md#declaration-arguments) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
 | UNINIT | [LMX_semantics.en.md#uninit-zero-payload](../LMX_semantics.en.md#uninit-zero-payload) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
@@ -49,11 +49,11 @@ The normative model is the supplied `docs/` packet. The current author's operand
 | [CODING] | [L2_L3_CODING_INSTRUCTION.md](../../L2_L3_CODING_INSTRUCTION.md) | Existing implementation, validation, and source-style workflow |
 | README | [README.md](README.md) | Pattern inventory and verification scope |
 
-Document links are relative to this file. Pattern comparisons, pattern guides and README are beside it; the normative documents are under `docs/`, their current requirements under `docs/TZ/`, and accepted supplements under `docs/Old_TZ/`. Section names and anchors identify the current contracts. Obsolete exported-file line numbers have been removed. The final snapshot records the exact normative files bundled with this revision.
+Document links are relative to this file. Pattern comparisons, pattern guides and README are beside it; the normative documents are under `docs/`; the author's requirements and the accepted supplements are carried into them in full. Section names and anchors identify the current contracts. Obsolete exported-file line numbers have been removed. The final snapshot records the exact normative files bundled with this revision.
 
 ### Required handling of contradictions
 
-**Infer the behavior from the current TZ and their general rules, then repair inconsistent explanations and examples. Ask the author only if the governing current TZ explicitly prescribe incompatible outcomes.** In that case, present both passages and the smallest distinguishing example, and continue independent corrections. Missing wording in an old example is not by itself a new language decision; neither the existing implementation nor an old passing test overrides the current rules.
+**Infer the behavior from the current requirements and their general rules, then repair inconsistent explanations and examples. Ask the author only if the governing current requirements explicitly prescribe incompatible outcomes.** In that case, present both passages and the smallest distinguishing example, and continue independent corrections. Missing wording in an old example is not by itself a new language decision; neither the existing implementation nor an old passing test overrides the current rules.
 
 An explicitly superseded statement is different: apply the accepted replacement and repair the stale documentation. Do not ask the author again whether to remove `sys\operand`, preserve the actual callable parent, or publish locals through `dirty`: the current directives already answer those questions. Q01 at the end records the now-separated admission/test phases. C-01 is resolved by the current immediate-caller autofill and nested-shadowing rules; it no longer waits for a separate author decision.
 
@@ -317,7 +317,7 @@ Compare the written code occurrences, initializer expression and their reference
 
 This is the current analogue of the earlier `int: i findValue()` concern. The new accepted semantics make it an activation-local computation; its assignment no longer edits the code occurrence.
 
-**Basis:** [declaration levels](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [binding in the executors](../LMX_semantics.en.md#binding-executors); [D] §4.3.
+**Basis:** [declaration levels](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [binding in the executors](../LMX_semantics.en.md#binding-executors); [the graph and the nested levels of a passed form](../LMX_semantics.en.md#declaration-arguments).
 
 ### B-08 — Unused and explicitly replaced computed defaults remain unevaluated
 
@@ -348,7 +348,7 @@ Run these as independent cases from counter 0:
 
 No entry pass executes every initializer. Two reads of the established working value do not run its initializer twice. A new independent call of `twice()` creates its ordinary new activation and runs the source initializer once again.
 
-**Basis:** [autofill](../LMX_semantics.en.md#binding-autofill) and [initialization](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [D] §4.1; [S] §12.
+**Basis:** [autofill](../LMX_semantics.en.md#binding-autofill) and [initialization](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [the accepted form and the namespace](../LMX_semantics.en.md#declaration-arguments); [S] §12.
 
 ### B-09 — A callable's actual parent survives reference placement and import
 
@@ -371,7 +371,7 @@ Expect **4** from `Other\demo()`, even though the caller's data has a ready valu
 
 Also compare direct `Original\read()` with the unambiguous explicit dispatcher form `call(code := Original\read)`: same actual parent, same default, same result 4.
 
-**Basis:** [structural call](../LMX_semantics.en.md#structural-call); [autofill](../LMX_semantics.en.md#binding-autofill); [D] §6.1.
+**Basis:** [structural call](../LMX_semantics.en.md#structural-call); [autofill](../LMX_semantics.en.md#binding-autofill); [import of a model, a named signature and an implementation](../LMX_semantics.en.md#import-model-signature).
 
 ### B-10 — `fn` external labels map by position, even when candidate names are swapped
 
@@ -396,7 +396,7 @@ Expect **27**, not 72. The signature's `left` is external position 1, which maps
 
 This is deliberately a noncommutative operation; addition would conceal the incorrect name-based remapping.
 
-**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [public labels](../LMX_semantics.en.md#fn-public-labels); [D] §5.1.
+**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [public labels](../LMX_semantics.en.md#fn-public-labels); [fn labels for passed declarations](../LMX_semantics.en.md#fn-public-labels).
 
 ### B-11 — A signature supplies type shape and public labels, not its default
 
@@ -422,7 +422,7 @@ Expect **80**. The first call uses the candidate's default 8; the second explici
 
 Variant with `required: int: actualValue` and no default: signature compatibility can still be positive, but `chosen()` is inadmissible even if the caller has a local `actualValue`. The call's missing required actual is decided before autofill. Supplying `publicValue := 3` passes the positional actual explicitly.
 
-**Basis:** [the named signature and its data](../LMX_semantics.en.md#fn-signature); [public labels](../LMX_semantics.en.md#fn-public-labels); [declaration selection and `required`](../LMX_semantics.en.md#declaration-selection); [D] §5.1.
+**Basis:** [the named signature and its data](../LMX_semantics.en.md#fn-signature); [public labels](../LMX_semantics.en.md#fn-public-labels); [declaration selection and `required`](../LMX_semantics.en.md#declaration-selection); [fn labels for passed declarations](../LMX_semantics.en.md#fn-public-labels).
 
 ### B-12 — Type order matters; optional positions do not vanish
 
@@ -538,7 +538,7 @@ The initializer runs once per executed step; two reads in the body do not run it
 
 Repeat after systematically renaming `iteration/body/item` to `advance/action/element`. The results must be unchanged; no name-specific special branch is permitted.
 
-**Basis:** [D] §§3–4 and §7; [P1] §1 (the local accumulator and iterator arrangement).
+**Basis:** [passed declarations and their execution](../LMX_semantics.en.md#declaration-arguments) and the [canonical example](../LMX_semantics.en.md#declaration-arguments); [P1] §1 (the local accumulator and iterator arrangement).
 
 ### D-02 — Reorder named declaration arguments without reordering execution
 
@@ -571,7 +571,7 @@ The rejection precedes initializer execution. With the valid empty-body variant 
 cycles\iterate(body := (); iteration := int(item stream\next()))
 ```
 
-**Basis:** [D] §3.3 and §8.
+**Basis:** [positional counter](../LMX_semantics.en.md#named-actuals) and the [named record of the same call](../LMX_semantics.en.md#declaration-arguments).
 
 ### D-03 — A matched declaration is retained, while an ordinary callable actual still executes
 
@@ -603,7 +603,7 @@ Run from counter 0 in separate fixtures:
 
 The first declaration does not fill position `first`; the name exists in the callee data, so the named branch applies. Unlike D-01, this is not the unknown inner-name positional branch. Passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
 
-**Basis:** [D] §§3.1–3.2; [D] §5; [the call frame](../LMX_semantics.en.md#call-frame-20261115).
+**Basis:** [passing a declaration receiver](../LMX_semantics.en.md#declaration-arguments); [the boundary between a declaration receiver and a call](../LMX_semantics.en.md#declaration-arguments); [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 
 ### D-04 — Import ordinary structure names and signature names, preserve parents
 
@@ -639,7 +639,7 @@ Multi-source variant: supply another Structure containing `const: int: bias 2`, 
 
 In a nested-consumer harness, `f(import(Library Extra))` supplies its stream to `f` only; it must not also install the imported names in the caller as an extra effect. For a one-written-source fixture whose W and E readings both admit the sources, require ordinary ambiguity, not an import-specific preference for W. The multi-source example above is not such an ambiguity fixture.
 
-**Basis:** [D] §§6–6.1; D acceptance I01–I09; [import](../LMX_semantics.en.md#import-receiver); [streams and W/E](../LMX_semantics.en.md#composition).
+**Basis:** [import of a model, a named signature and an implementation](../LMX_semantics.en.md#import-model-signature); the [observations I01–I09](../LMX_semantics.en.md#declaration-observations); [import](../LMX_semantics.en.md#import-receiver); [streams and W/E](../LMX_semantics.en.md#composition).
 
 ### C-01 — A no-RHS local in an inline nested scope remains uninitialized
 
@@ -2858,7 +2858,7 @@ V05 instruments these distinct events rather than assigning one global count to 
 
 | Earlier corpus form or claim | Current contract used here |
 |---|---|
-| `reference/` document paths and old exported-file line numbers | Bundled `docs/` and `docs/TZ/` paths; stable sections/anchors |
+| `reference/` document paths and old exported-file line numbers | Bundled `docs/` paths; stable sections/anchors |
 | Single-source `merge(Source)` intended to make one object | `(copy(Source))` |
 | Multi-source `merge(Model Values)` intended as one reference or returned Structure | `(merge(Model Values))` |
 | DATA placement gives import/copy/merge DATA arguments | All three consume ordinary CODE sources and use normal W/E in every placement |
@@ -2894,7 +2894,7 @@ For each executed variant, preserve at least:
 | Execution | Caller/callee modes; whether the intended body/handler was reached |
 | Expected | Return/verdict, effects/counters, identities/write targets, and specified failure phase |
 | Actual | Observed counterparts, exact diagnostic if any, relevant trace |
-| Result | PASS / FAIL / NOT RUN; use BLOCKED BY TZ CONFLICT only for quoted explicit contradictions between current governing TZ |
+| Result | PASS / FAIL / NOT RUN; use BLOCKED BY REQUIREMENT CONFLICT only for quoted explicit contradictions between current governing requirements |
 
 Use the project's existing L2/L3 runners. For an implementation slice, run its minimal changed case and affected dependencies; choose full self-build and broader suites under [CODING]'s existing conditions. Preserve the difference between a source reviewed here, a program that translates, and a program whose required path actually ran.
 
@@ -2917,12 +2917,8 @@ These SHA-256 values identify the bundled normative documents used for this revi
 | [implementation-notes.en.md](../implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
 | [kernel-implementation.en.md](../kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
 | [source-comparison.en.md](../source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
-| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
-| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
 
 <!-- Relative source links for the package layout. -->
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[DECL]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [P1]: LMX_Design_Patterns.en.md
 [DP1]: LMX_Design_Patterns.en.md
 [P2]: LMX_Design_Patterns10-18.en.md
@@ -2937,5 +2933,4 @@ These SHA-256 values identify the bundled normative documents used for this revi
 [GUIDE]: ../LMX_semantics_guide.en.md
 [CORE]: ../../CORE.md
 [CODING]: ../../L2_L3_CODING_INSTRUCTION.md
-[BLANK]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 [UNINIT]: ../LMX_semantics.en.md#uninit-zero-payload

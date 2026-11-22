@@ -14,7 +14,7 @@
 
 В Python Room передаёт свой notify двум компонентам как callback. В LMX control и fan вложены в Room и обращаются к лексически видимому notify. Компоненты не называют друг друга. Их методы изменяют собственные хранимые флаги через node\; node здесь обозначает лексическое пространство компонента. Посредник единственный содержит правила взаимного изменения полей. `(copy(Room))` создаёт независимый комплект компонентов: `copy` сохраняет общую карту копирования и перенаправляет внутренние лексические связи, а явная группа собирает одну Structure для `room`. [Потоки полей и группировка][S]
 
-Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
+Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт](../LMX_semantics.en.md#import-receiver) · [Границы блоков](../LMX_grammar.en.md#levels)
 
 ## Подсчёт исходников
 
@@ -389,7 +389,5 @@ pub fn demo() -> i32 {
 
 - [Refactoring.Guru — Mediator in Python, conceptual example](https://refactoring.guru/design-patterns/mediator/python/example)
 
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
 [S]: ../LMX_semantics.en.md#merge-two-forms

@@ -14,7 +14,7 @@
 
 Python отделяет Rectangle от Builder, который хранит заготовку и выдаёт её копию. В LMX заготовка — Rectangle, а операции builder вложены рядом с area и demo. builder имеет собственное DATA для value и результата Rectangle; node\width и node\height выбирают лексические поля заготовки. finish получает поток копии уже записанного графа через `copy(Rectangle)` и возвращает одну Structure, явно сгруппированную как `(copy(Rectangle))`. [Потоки полей и группировка][S]
 
-Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
+Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт](../LMX_semantics.en.md#import-receiver) · [Границы блоков](../LMX_grammar.en.md#levels)
 
 ## Подсчёт исходников
 
@@ -387,7 +387,5 @@ pub fn demo() -> i32 {
 - [Refactoring.Guru — Builder](https://refactoring.guru/design-patterns/builder)
 - [Refactoring.Guru — Builder in Python](https://refactoring.guru/design-patterns/builder/python/example)
 
-[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
 [S]: ../LMX_semantics.en.md#merge-two-forms

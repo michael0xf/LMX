@@ -1878,7 +1878,7 @@ R0 — обычный метод, написанный на C, с локальн
 <a id="removed-builtins"></a>
 #### Что снято нормой 2026-11-19
 
-Сняты (ТЗ 2026-11-19, §4.4): особый смысл имени `data` — зарезервированное имя явной ссылки на данные запуска, путь `data\…` и запись `data := …`; отдельный параметр данных у `call`; встроенные `fncall` и `sub`; исполняемая форма `fn`. Слово «data» остаётся названием роли и обычным пользовательским именем по общим правилам; для `data`, `sub` и `fncall` различаются снятый встроенный смысл и явно объявленное обычное пользовательское имя. `node` остаётся зарезервированной операцией.
+Сняты (норма 2026-11-19): особый смысл имени `data` — зарезервированное имя явной ссылки на данные запуска, путь `data\…` и запись `data := …`; отдельный параметр данных у `call`; встроенные `fncall` и `sub`; исполняемая форма `fn`. Слово «data» остаётся названием роли и обычным пользовательским именем по общим правилам; для `data`, `sub` и `fncall` различаются снятый встроенный смысл и явно объявленное обычное пользовательское имя. `node` остаётся зарезервированной операцией.
 
 Историческая заметка о миграции: в текущем `call(D C)` D — это Structure фактических аргументов, а не подменяющая DATA; `C(D)` аналогично подаёт фактический аргумент. `call(C)` использует parent(C), а не C как собственные DATA. Старые семейства call с тремя аргументами и fncall сняты. Исполняемые объявления fn/sub заменены обычными структурными отношениями data/code и описаниями результата в фактическом родителе. Прежний путь `data\x` нужно заменить явным путём к нужной Structure; `node\x` уместен только тогда, когда задуманная цель — именно этот установленный лексический контекст. Обычное имя data и сохранённую зарезервированную операцию node нельзя смешивать.
 
@@ -1975,7 +1975,7 @@ Reordered:
 <a id="return-in-data"></a>
 #### `return` в данных
 
-Результат вызова описывает поле `return` данных (ТЗ 2026-11-19, решение R11): `return: int` либо вложенный блок для [результата-Structure](#structure-result). Объявление `return` в данных ничего не присваивает и не становится общей изменяемой ячейкой рекурсивных активаций. В коде `return` — ресивер возврата: голый `return` сохраняет выход без значения, `return: value` передаёт допустимый результат туда, где он описан, а достижение конца тела `return` не создаёт. Правила структурного результата, принимающих мест и очистки сохраняются ([выходы](#exits)). И `call`, и вызов Structure по имени возвращают значение по этому контракту; прежний безусловный запрет результата у запуска обычной Structure и у `call` снят вместе с `fncall`.
+Результат вызова описывает поле `return` данных (норма 2026-11-19, решение [R11](#binding-decisions)): `return: int` либо вложенный блок для [результата-Structure](#structure-result). Объявление `return` в данных ничего не присваивает и не становится общей изменяемой ячейкой рекурсивных активаций. В коде `return` — ресивер возврата: голый `return` сохраняет выход без значения, `return: value` передаёт допустимый результат туда, где он описан, а достижение конца тела `return` не создаёт. Правила структурного результата, принимающих мест и очистки сохраняются ([выходы](#exits)). И `call`, и вызов Structure по имени возвращают значение по этому контракту; прежний безусловный запрет результата у запуска обычной Structure и у `call` снят вместе с `fncall`.
 
 <a id="named-actuals"></a>
 ### Именованные, позиционные и фактические аргументы в форме объявления
@@ -1987,7 +1987,7 @@ Reordered:
 <a id="declaration-arguments"></a>
 #### Сохранение поставленного объявления
 
-**Ресивер объявления места**, поставленный как аргумент в контексте аргументов CODE, читается как DATA. Аргумент — это само объявление, и одна лишь передача не выполняет инициализатора. Если соответствующее ему объявление найдено в принимающем DATA, поставленная форма заменяет это объявление **в namespace этого вызова**, а не сохранением её предвычисленного значения и не изменением исходного DATA. Контракт разрешённой головной части отличает ресивер объявления от обычного вызова; это правило относится к `int(item expression)` так же, как и к `int: item expression`, и не является частным случаем для имён из примеров.
+**Ресивер объявления места**, поставленный как аргумент в контексте аргументов CODE, читается как DATA. Аргумент — это само объявление, и одна лишь передача не выполняет инициализатора. Если соответствующее ему объявление найдено в принимающем DATA, поставленная форма заменяет это объявление **в namespace этого вызова**, а не сохранением её предвычисленного значения и не изменением исходного DATA. Контракт разрешённой головной части отличает ресивер объявления от обычного вызова; это правило относится к `int(item expression)` так же, как и к `int: item expression`, и не является частным случаем для имён из примеров. Общая фраза «все объявления среди аргументов читаются как DATA» правилом не является: она смешала бы ресивер объявления места со структурной формой, которая в другой роли объявляла бы Structure. Чтение аргумента как DATA — свойство ресиверов объявления места и `fn`, каждого по его собственному объявленному контракту; оно не превращает ресиверы в одну категорию, не вводит новой группы ресиверов и не меняет ни другие вызовы языка, ни прямой вызов обычного callable.
 
 | Форма фактического аргумента | Отображение | Сохраняемый материал |
 | --- | --- | --- |
@@ -2021,7 +2021,7 @@ use:
 use\run()
 ```
 
-Здесь `numbers` — доступный итератор, метод `next()` которого выдаёт целые числа или бросает `Stop`. [Import](#import-receiver) предоставляет константное объявление Structure `iterate`; `iteration` и `body` — обычные входы-ссылки, и они остаются в фактическом DATA `cycles`. Первый фактический аргумент сохраняет форму объявления в `iteration`; второй — связанное с ним тело. `iteration()` продвигает итератор и устанавливает/обновляет `item`; `body()` изменяет то же самое место. Его физический родитель — записанная Structure аргументов, содержащая форму объявления, а не библиотечное определение `cycles\iterate`.
+Здесь `numbers` — итератор, доступный из внешнего контекста и разрешаемый по обычному контексту и исходным структурным связям; его метод `next()` выдаёт целые числа или бросает `Stop`. Состояние позиции хранится в `numbers`; библиотечный `iterate` его не создаёт. [Import](#import-receiver) предоставляет константное объявление Structure `iterate`; `iteration` и `body` — обычные входы-ссылки, и они остаются в фактическом DATA `cycles`. Первый фактический аргумент сохраняет форму объявления в `iteration`; второй — связанное с ним тело. `iteration()` продвигает итератор и устанавливает/обновляет `item`; `body()` изменяет то же самое место. Его физический родитель — записанная Structure аргументов, содержащая форму объявления, а не библиотечное определение `cycles\iterate`.
 
 | Итерация | Шаг | Тело |
 | --- | --- | --- |
@@ -2040,6 +2040,46 @@ use\run()
 Проверки формы вызова, доступные до выполнения эффектов, идут первыми: неизвестное явное имя формального параметра в `f(x := touch())` не запускает `touch()`. Сопоставление кандидатов не должно выполнять аргумент отдельно для каждого возможного объявления. Необходимые места приёма существуют раньше выражений, которые их используют. Вычисленные фактические аргументы выполняются один раз в записанном порядке, и каждый принимается раньше следующего; ошибка останавливает последующие фактические аргументы и предотвращает вход в тело. Фактические объявления DATA сохраняют свою форму вместо немедленного выполнения их правой части. Выбранные отображения сохраняются на протяжении всего выполнения.
 
 Переданный фактический аргумент заменяет соответствующее описание источника namespace и подавляет исходный инициализатор. Ноль — переданное значение; явный `nil` и опущение различаются. Несовместимое значение не заменяется значением по умолчанию. Без фактического аргумента остаётся собственное готовое значение выбранного кандидата или вычисляемое значение по умолчанию; локалы вызывающего не могут его заменить. Вычисляемые значения по умолчанию не выполняются ни при построении графа, ни в общем проходе по всей точке входа: неиспользуемое не выполняется. Опущенный вход без инициализатора может получить разрешённое автозаполнение после выбора, иначе он остаётся `uninit:T`. Вход `required` участвует в выборе, а достигнутый CODE `required` проверяет фактическое место в этой точке. Локальные записи не меняют ни значений по умолчанию будущих вызовов, ни объявлений в исходном тексте.
+
+<a id="declaration-observations"></a>
+#### Требуемые наблюдения A01–G01: аргументы-объявления, import и метки fn
+
+Это критерии согласованности нормативного текста и будущих проверок реализации. Добавление таблицы не означает, что код уже запускался.
+
+| ID | Случай | Ожидаемое описание |
+|---|---|---|
+| A01 | Ресивер объявления передан в аргументах CODE | Он читается как DATA; сохраняется форма объявления |
+| A02 | Принимающий код ещё не потребил и не исполнил форму | Initializer не запущен только из-за передачи |
+| A03 | В data нет имени item; первый формал — iteration | Целая форма `int: item …` занимает позицию iteration; внутреннее имя не выключает счётчик |
+| A04 | В data есть b, подано `int: b producer()` | Найденное объявление заменено в namespace; producer не вычислен вместо подстановки описания |
+| A05 | Явное `iteration := int(item …)` | Адресат — iteration; внутреннее имя item сохранено |
+| A06 | Именование совпало со своей позицией | Позиционный счётчик продолжает работать |
+| A07 | Именование не на своей позиции, далее безымянный actual | Сохраняется отказ по порядку подачи |
+| A08 | Body, затем iteration переданы явно по именам | Подача допустима; порядок исполнения определяется кодом iterate |
+| A09 | Первое исполнение принятой формы | Создаётся типизированное корневое место item текущего выполнения |
+| A10 | Повторное исполнение принятой формы | Повторно выполняется RHS и обновляется то же место |
+| A11 | Два чтения item после одного шага | Не вызывают next повторно |
+| A12 | Body изменяет item | Меняется полученное место, без отдельной вычисляемой копии и copy-out |
+| A13 | Полная трасса 10, 20, Stop | Next вызван три раза; тело дважды получает элемент и удваивает его |
+| A14 | Имена iteration/body/item заменены на advance/action/value | Смысл сохраняется, если соответствующие употребления переименованы |
+| A15 | В body есть настоящий вложенный уровень с новым item и явным RHS | Действует обычное затенение; корневое дополнение не выпрямляет уровни |
+| A16 | `Producer()` в аргументах CODE; Producer — обычный callable, не ресивер объявления места | Остаётся вызовом, не переводится этим правилом в DATA |
+| A17 | Обычная Structure передана обычным значением | Её получение само по себе не исполняет всё содержимое и не публикует все поля в корень |
+| A18 | Независимые выполнения принимающего кода | Не получают общее изменяемое item из исходного графа |
+| I01 | `import: cycles` в data вызываемого test | Импортируется константное объявление iterate; переменные iteration и body остаются в cycles и продолжают задавать входы метода |
+| I02 | Корневое const-объявление примитива или ссылки | Импортируется по тому же общему правилу |
+| I03 | Корневое объявление обычной переменной | Не импортируется |
+| I04 | Объявление пользовательской структуры Settings из раздела об import, без явного const | Импортируется: пользовательская структура не является переменной |
+| I05 | Const-объявление под модификатором считается корневым по общим правилам data | Импортируется по общему правилу, без отдельного требования к физическому parent |
+| I06 | Импортируемое имя совпало с другим объявлением | Применяется обычное повторное объявление |
+| I07 | Импортирована пользовательская структура | Её содержимое и исходный parent сохраняются |
+| I08 | `fn` создаёт корневое константное имя сигнатуры | Имя импортируется по общей норме; отдельного запрета на имена, созданные ресивером, нет |
+| I09 | `import: Library` из примера импорта модели, именованной сигнатуры и реализации | Импортируются PrioritiesTemplate, PrioritySignature и Priorities; selected и вложенные поля не импортируются; parent lookup остаётся Priorities |
+| F01 | Требование fn и кандидат имеют те же типы параметров в том же порядке, но разные имена | Соответствие fn допускается при совместимом результате; дерево тела не сравнивается |
+| F02 | Разные типы параметров кандидата переставлены, хотя имена совпадают с fn | Соответствие fn отклоняется: имена не переставляют параметры кандидата |
+| F03 | Именованные actuals переданы через ссылку с требованием fn | Имена интерфейса fn переводятся в позиции кандидата; прежний счётчик действует; вычисляемые actuals исполняются в порядке записи |
+| F04 | Обычная модель явно содержит lookup, а кандидат его не содержит | Обычное структурное требование не выполнено; правило сравнения fn не отбрасывает ветви структурной модели |
+| G01 | После подстановок, исполнений и import проверен исходный граф без явных пользовательских записей | Объявление и parent сохранены; рабочие значения не записаны в исходный code |
 
 <a id="native-structures"></a>
 ### Native обычной Structure и кадр
@@ -2301,7 +2341,7 @@ R0 is an ordinary C method with a local pointer to the R0 graph. The interpreter
 <a id="removed-builtins"></a>
 #### What is withdrawn by the norm of 2026-11-19
 
-Withdrawn (the requirements of 2026-11-19, §4.4): the special meaning of the name `data` -- the reserved name of an explicit reference to the data of a launch, the path `data\…` and the record `data := …`; the separate data parameter of `call`; the built-in `fncall` and `sub`; the executable form of `fn`. The word "data" remains the name of a role and an ordinary user name under the general rules; for `data`, `sub` and `fncall` the withdrawn built-in meaning is distinguished from an explicitly declared ordinary user name. `node` remains a reserved operation.
+Withdrawn (the norm of 2026-11-19): the special meaning of the name `data` -- the reserved name of an explicit reference to the data of a launch, the path `data\…` and the record `data := …`; the separate data parameter of `call`; the built-in `fncall` and `sub`; the executable form of `fn`. The word "data" remains the name of a role and an ordinary user name under the general rules; for `data`, `sub` and `fncall` the withdrawn built-in meaning is distinguished from an explicitly declared ordinary user name. `node` remains a reserved operation.
 
 Historical migration note: in current `call(D C)`, D is the actual-argument Structure, not substitute DATA; `C(D)` likewise supplies an actual. `call(C)` uses parent(C), not C as its own DATA. The older three-argument call and fncall families are withdrawn. Executable fn/sub declarations are replaced by ordinary structural data/code relationships and return descriptions in the actual parent. A former `data\x` path must be replaced with an explicit path to the intended Structure; `node\x` is appropriate only when the intended target is that established lexical context. The ordinary name data and the retained reserved operation node must not be conflated.
 
@@ -2398,7 +2438,7 @@ Fn-match extracts a type shape; it transfers no defaults, requiredness, throws o
 <a id="return-in-data"></a>
 #### `return` in data
 
-The result of a call is described by the `return` field of the data (the requirements of 2026-11-19, decision R11): `return: int` or a nested block for a [Structure result](#structure-result). A `return` declaration in data assigns nothing and does not become a common mutable cell of recursive activations. In code `return` is the return receiver: bare `return` keeps the exit without a value, `return: value` passes an admissible result to where it is described, and reaching the end of the body does not create `return`. The rules for a structural result, receiving places and cleanup are preserved ([exits](#exits)). Both `call` and a by-name call of a Structure return a value by this contract; the former unconditional prohibition of a result for the launch of an ordinary Structure and for `call` is withdrawn together with `fncall`.
+The result of a call is described by the `return` field of the data (the norm of 2026-11-19, decision [R11](#binding-decisions)): `return: int` or a nested block for a [Structure result](#structure-result). A `return` declaration in data assigns nothing and does not become a common mutable cell of recursive activations. In code `return` is the return receiver: bare `return` keeps the exit without a value, `return: value` passes an admissible result to where it is described, and reaching the end of the body does not create `return`. The rules for a structural result, receiving places and cleanup are preserved ([exits](#exits)). Both `call` and a by-name call of a Structure return a value by this contract; the former unconditional prohibition of a result for the launch of an ordinary Structure and for `call` is withdrawn together with `fncall`.
 
 <a id="named-actuals"></a>
 ### Named, positional and declaration-form actuals
@@ -2410,7 +2450,7 @@ The positional counter follows one rule. Naming the formal at the current positi
 <a id="declaration-arguments"></a>
 #### Preserve a supplied declaration
 
-A **place-declaration receiver** supplied as an argument in a CODE argument context is read as DATA. The argument is the declaration itself, and transmission alone executes no initializer. If its corresponding declaration is found in the receiving DATA, the supplied form replaces that declaration **in this call's namespace**, not by storing its precomputed value and not by changing source DATA. The resolved head's contract distinguishes a declaration receiver from an ordinary call; this rule applies to `int(item expression)` as well as `int: item expression`, and is not a special case for example names.
+A **place-declaration receiver** supplied as an argument in a CODE argument context is read as DATA. The argument is the declaration itself, and transmission alone executes no initializer. If its corresponding declaration is found in the receiving DATA, the supplied form replaces that declaration **in this call's namespace**, not by storing its precomputed value and not by changing source DATA. The resolved head's contract distinguishes a declaration receiver from an ordinary call; this rule applies to `int(item expression)` as well as `int: item expression`, and is not a special case for example names. The general phrase «all declarations among the arguments are read as DATA» is not the rule: it would confuse a place-declaration receiver with a structural form that would declare a Structure in another role. Reading an argument as DATA is a property of place-declaration receivers and of `fn`, each by its own declared contract; it does not turn the receivers into one category, introduces no new group of receivers and changes neither another call of the language nor the direct call of an ordinary callable.
 
 | Actual form | Mapping | Preserved material |
 | --- | --- | --- |
@@ -2444,7 +2484,7 @@ use:
 use\run()
 ```
 
-Here `numbers` is an available iterator whose `next()` yields integers or throws `Stop`. [Import](#import-receiver) exposes the constant Structure declaration `iterate`; `iteration` and `body` are ordinary reference inputs and remain in the actual DATA `cycles`. The first actual preserves the declaration form in `iteration`; the second is the associated body. `iteration()` advances the iterator and establishes/updates `item`; `body()` changes that very place. Its physical parent is the written argument Structure containing the declaration form, not the library definition `cycles\iterate`.
+Here `numbers` is an iterator available from the outer context and resolved by the ordinary context and the source structural links; its `next()` yields integers or throws `Stop`. The position state lives in `numbers`; the library `iterate` creates none. [Import](#import-receiver) exposes the constant Structure declaration `iterate`; `iteration` and `body` are ordinary reference inputs and remain in the actual DATA `cycles`. The first actual preserves the declaration form in `iteration`; the second is the associated body. `iteration()` advances the iterator and establishes/updates `item`; `body()` changes that very place. Its physical parent is the written argument Structure containing the declaration form, not the library definition `cycles\iterate`.
 
 | Iteration | Step | Body |
 | --- | --- | --- |
@@ -2463,6 +2503,46 @@ This rule does not publish all fields of every ordinary Structure reference as r
 Call-shape checks available before effects run first: an unknown explicit formal name in `f(x := touch())` does not run `touch()`. Candidate matching must not execute the argument separately for each possible declaration. Necessary receiving places exist before expressions that use them. Evaluated actuals run once in written order and each is received before the next; a failure stops later actuals and prevents body entry. DATA declaration actuals preserve their form instead of eagerly running their RHS. Selected mappings are retained through execution.
 
 A supplied actual replaces the corresponding namespace source description and suppresses that original initializer. Zero is a supplied value; explicit `nil` and omission differ. An incompatible value is not replaced by a default. Without an actual, the chosen candidate's own ready value or computed default remains; caller locals cannot replace it. Computed defaults execute neither at graph construction nor in an entry-wide pass: an unused one does not run. An omitted input with no initializer may receive permitted autofill after selection, otherwise it remains `uninit:T`. Input `required` participates in selection, while a reached CODE `required` checks the actual place at that point. Local writes change neither future calls' defaults nor source declarations.
+
+<a id="declaration-observations"></a>
+#### Required observations A01–G01: declaration arguments, import and fn labels
+
+These are the criteria of agreement of the normative text and of the future checks of the implementation. Adding the table does not mean that the code has already been run.
+
+| ID | Case | Expected description |
+| --- | --- | --- |
+| A01 | A place-declaration receiver is passed in CODE arguments | It is read as DATA; the declaration form is preserved |
+| A02 | The receiving code has not yet consumed or executed the form | The initializer is not run merely because of the passing |
+| A03 | `item` is absent from the data; the first formal is `iteration` | The whole form `int: item …` takes the position of `iteration`; the internal name does not switch the counter off |
+| A04 | `b` is in the data, `int: b producer()` is supplied | The found declaration is replaced in the namespace; `producer` is not computed instead of substituting the description |
+| A05 | Explicit `iteration := int(item …)` | The addressee is `iteration`; the internal name `item` is kept |
+| A06 | The naming coincided with its own position | The positional counter keeps working |
+| A07 | Naming not at its own position, then an unnamed actual | The refusal by the order of supply is kept |
+| A08 | `body`, then `iteration` are supplied explicitly by names | The supply is admissible; the order of execution is determined by the code of `iterate` |
+| A09 | The first execution of the accepted form | The typed root place `item` of the current execution is created |
+| A10 | A repeated execution of the accepted form | The RHS is executed again and the same place is updated |
+| A11 | Two reads of `item` after one step | They do not call `next` again |
+| A12 | `body` changes `item` | The obtained place changes, without a separate computed copy and copy-out |
+| A13 | The full trace 10, 20, `Stop` | `next` is called three times; the body twice gets an element and doubles it |
+| A14 | The names `iteration`/`body`/`item` are replaced by `advance`/`action`/`value` | The meaning is kept if the corresponding uses are renamed |
+| A15 | `body` has a genuine nested level with a new `item` and an explicit RHS | The ordinary shadowing acts; the root supplement does not straighten the levels |
+| A16 | `Producer()` in CODE arguments; `Producer` is an ordinary callable, not a place-declaration receiver | It stays a call and is not translated into DATA by this rule |
+| A17 | An ordinary Structure is passed as an ordinary value | Its reception does not by itself execute all its content and does not publish all fields into the root |
+| A18 | Independent executions of the receiving code | They do not get a common mutable `item` from the source graph |
+| I01 | `import: cycles` in the data of the called `test` | The constant declaration `iterate` is imported; the variables `iteration` and `body` stay in `cycles` and keep setting the inputs of the method |
+| I02 | A root const declaration of a primitive or a reference | It is imported by the same common rule |
+| I03 | A root declaration of an ordinary variable | It is not imported |
+| I04 | The declaration of the user Structure `Settings` from the section on `import`, without an explicit `const` | It is imported: a user Structure is not a variable |
+| I05 | A const declaration under a modifier is root by the common rules of data | It is imported by the common rule, without a separate requirement on the physical parent |
+| I06 | The imported name coincided with another declaration | The ordinary redeclaration applies |
+| I07 | A user Structure is imported | Its content and its original parent are kept |
+| I08 | `fn` creates a root constant name of a signature | The name is imported by the common norm; there is no separate ban on names created by a receiver |
+| I09 | `import: Library` from the example of the model, the named signature and the implementation | `PrioritiesTemplate`, `PrioritySignature` and `Priorities` are imported; `selected` and the nested fields are not imported; the parent of `lookup` stays `Priorities` |
+| F01 | An fn requirement and a candidate have the same parameter types in the same order but different names | The fn match is admitted with a compatible result; the body tree is not compared |
+| F02 | The different parameter types of the candidate are permuted although the names coincide with fn | The fn match is rejected: names do not permute the parameters of the candidate |
+| F03 | Named actuals are passed through a reference with an fn requirement | The names of the fn interface are translated into the positions of the candidate; the former counter acts; computed actuals are executed in the written order |
+| F04 | An ordinary model explicitly contains `lookup`, the candidate does not | The ordinary structural requirement is not met; the fn comparison rule does not discard the branches of a structural model |
+| G01 | After the substitutions, executions and `import` the source graph is checked without explicit user writes | The declaration and the parent are kept; working values are not written into the source code |
 
 <a id="native-structures"></a>
 ### Ordinary Structure native code and frames
@@ -2770,7 +2850,7 @@ Worker:
 | R05 | `private` действует в обе стороны для всех видов неявного динамического связывания: private-источник не предоставляется неявно; видимое private-объявление получателя не подменяется динамически. |
 | R06 | Явная передача, обычная вложенная лексическая видимость и явные пути не запрещаются через private. Ограничения записи, включая применимые const/immutable, сохраняются. |
 | R07 | Прежняя достижимость через цепочку A → B → C сохраняется, даже если B сам не потребляет имя. |
-| R08 | `node` сохраняется. Удаление node и прежнего лексического/динамического механизма из первого ТЗ отменено. |
+| R08 | `node` сохраняется. Удаление node и прежнего лексического/динамического механизма из первой редакции требований отменено. |
 | R09 | Для выбранной исполняемой Structure C роль data выполняет её фактический parent. Специальное слово `data` и отдельный параметр data в call удаляются. |
 | R10 | R0 не имеет data: это процедурный вход без аргументов. Для него не создаётся искусственная самопривязка data = code. |
 | R11 | `return` описывается полем data. Такое объявление не присваивает результат. В роли code return — ресивер возврата. `fncall` удаляется. |
@@ -3106,7 +3186,7 @@ The decisions R01–R19 of the norm of 2026-11-19 and the required observations 
 | R05 | `private` acts in both directions for all kinds of implicit dynamic binding: a private source is not supplied implicitly; a visible private declaration of the receiver is not replaced dynamically. |
 | R06 | Explicit passing, ordinary nested lexical visibility and explicit paths are not forbidden through private. Write restrictions, including the applicable const/immutable, are kept. |
 | R07 | The former reachability through the chain A → B → C is kept even if B itself does not consume the name. |
-| R08 | `node` is kept. The removal of node and of the former lexical/dynamic mechanism proposed by the first requirement is cancelled. |
+| R08 | `node` is kept. The removal of node and of the former lexical/dynamic mechanism proposed by the first edition of the requirements is cancelled. |
 | R09 | For the selected executable Structure C, its actual parent plays the role of data. The special word `data` and the separate data parameter of call are removed. |
 | R10 | R0 has no data: it is a procedural entry without arguments. No artificial self-binding data = code is created for it. |
 | R11 | `return` is described by a field of the data. Such a declaration assigns no result. In the code role `return` is the return receiver. `fncall` is removed. |
@@ -3714,7 +3794,7 @@ Struct:
 
 Ячейка-ссылка и используемый объект, на который она указывает, копируются через эту карту. Если `Holder` содержит ссылку p на Model, композиция `(merge(Model Holder))` использует уже установленную копию Model для p, а не создаёт третий экземпляр и не сохраняет исходную изменяемую цель. Более поздняя группа, собирающая поток, не дублирует эти поля независимо. Группа — это отдельный контейнер, принимающие ячейки которого отличны от ячеек скопированного лексического владельца. Запись состояния, предназначенная скопированному методу, должна выбирать его фактические скопированные DATA или лексического владельца; замена поля в контейнере группировки меняет только выбранную ячейку. Если ссылки в обоих контейнерах ведут к одной и той же вложенной Structure, пути через эти ссылки могут достигать одной и той же ячейки этой вложенной Structure; различные внешние ячейки не означают второго глубокого копирования их общих целей. Обычная `Struct1: Struct2` содержит атом-ссылку; копирование трактует его как ссылку, а не как синтаксически развёрнутое поддерево. Источники Structure и reference Array сохраняют свою существующую общую область; новое ограничение на одну категорию контейнера не добавляется.
 
-Принятие в другое namespace DATA не меняет лексический контекст скопированных методов и не превращает `node` в “текущего получателя потока”. `node` остаётся лексическим оператором выбранного вхождения. Его реальные связи DATA/parent и порядок связывания сохраняются. Одно лишь помещение существующей ссылки на метод в новую Structure не переназначает ему родителя; иная пара данных и кода требует фактического разрешённого построения или копирования соответствующих связей.
+Принятие в другое namespace DATA не меняет лексический контекст скопированных методов и не превращает `node` в “текущего получателя потока”. `node` остаётся лексическим оператором выбранного вхождения. Его реальные связи DATA/parent и порядок связывания сохраняются. Одно лишь помещение существующей ссылки на метод в новую Structure не переназначает ему родителя; иная пара данных и кода требует фактического разрешённого построения или копирования соответствующих связей. Скопированное объявление данных вроде `int: y 5` может давать обычное значение по умолчанию фактического кандидата; сравнение с сигнатурой `fn` не копирует значений по умолчанию из её шаблона, а явный ноль не является пропуском.
 
 Существуют два установленных случая сохранения. Повторно используемые ссылки на нативную реализацию — это конечные машинные реализации, отличные от изменяемых вхождений вызываемых и от лексических данных. Надлежащим образом квалифицированная ветвь `independent: immutable` **должна сохранять свою исходную физическую ссылку**, независимо от того, присутствует ли также `const`. Её корень не имеет внешнего лексического родителя, а её хранимый граф прошёл предварительную проверку immutable. Одна лишь метка, одно лишь `independent`, одно лишь `immutable` или один лишь нулевой родитель недостаточны; неудачная квалификация приводит к отказу, а не к молчаливому копированию, скрывающему сбой. Её исходные правила владельца и времени жизни остаются в силе. Весь прочий используемый изменяемый материал графа получает отдельное хранилище.
 
@@ -3867,7 +3947,7 @@ One operation copies the complete used graph with required references and lexica
 
 A reference cell and its used pointee are copied through this map. If `Holder` contains a reference p to Model, the composition `(merge(Model Holder))` uses the already established copy of Model for p, rather than making a third instance or retaining the original mutable target. A later group collecting the stream does not independently duplicate those fields. The group is a distinct container whose receiving cells are distinct from the copied lexical owner's cells. A state write intended for a copied method must select its actual copied DATA or lexical owner; replacing a field in the grouping container changes only that selected cell. If references in both containers lead to the same nested Structure, paths through those references can reach that nested Structure's same cell; distinct outer slots do not imply a second deep copy of their shared targets. Ordinary `Struct1: Struct2` contains a reference atom; copying treats it as a reference, not a syntactically expanded subtree. Structure and reference Array sources retain their existing common domain; no new single-container-category restriction is added.
 
-Acceptance into another DATA namespace does not change copied methods' lexical context or turn `node` into “the current stream recipient”. `node` remains the lexical operator of the selected occurrence. Its real DATA/parent relationships and binding order are preserved. Merely placing an existing method reference in a new Structure does not reparent it; a different data/code pairing requires an actual permitted construction or copying of the relevant relationships.
+Acceptance into another DATA namespace does not change copied methods' lexical context or turn `node` into “the current stream recipient”. `node` remains the lexical operator of the selected occurrence. Its real DATA/parent relationships and binding order are preserved. Merely placing an existing method reference in a new Structure does not reparent it; a different data/code pairing requires an actual permitted construction or copying of the relevant relationships. A copied data declaration such as `int: y 5` may provide the ordinary default of the actual candidate; the comparison with an `fn` signature copies no default from its template, and an explicit zero is not an omission.
 
 There are two established retention cases. Reusable native implementation references are terminal machine implementations, distinct from mutable callable occurrences and lexical data. A properly qualified `independent: immutable` branch **must retain its original physical reference**, whether or not `const` is also present. Its root has no external lexical parent and its stored graph has passed immutable preflight. A label alone, `independent` alone, `immutable` alone or zero parent alone is insufficient; failed qualification refuses rather than silently copying to hide failure. Its original owner/lifetime rules remain. All other used mutable graph material receives distinct storage.
 
@@ -3975,6 +4055,31 @@ Use:
 
 Чтение DATA у Use открывает `limit`, `Settings` и `Tool`; counter не открывается, и width/value по отдельности не поднимаются. Граф Use по-прежнему содержит `import: Library Other`. Аналогично, импорт циклов в [пример с аргументом-объявлением](#declaration-arguments) открывает его константное объявление iterate, оставляя iteration/body входами в циклах.
 
+<a id="import-model-signature"></a>
+То же относится к модели, именованной сигнатуре и реализации в одной библиотеке:
+
+~~~lmx
+Library:
+    PrioritiesTemplate:
+        []: char name
+        return: int
+    fn: PrioritySignature PrioritiesTemplate
+    Priorities:
+        []: char name
+        return: int
+        lookup:
+            return: sys\priority(name)
+    end: Priorities
+    @: selected PrioritySignature Priorities\lookup
+end: Library
+
+Use:
+    import: Library
+end: Use
+~~~
+
+В namespace `Use` добавляются три корневых константных имени: `PrioritiesTemplate`, `PrioritySignature` и `Priorities`. Обычная переменная-ссылка `selected` не импортируется; `name`, `return` и `lookup` не поднимаются из вложенной `Priorities` в корень `Use`. Импорт не меняет `parent`: данные для `Priorities\lookup` по-прежнему находятся в `Priorities`. `PrioritiesTemplate` — обычная минимальная структурная модель без `lookup`; `PrioritySignature` — именованное описание вызова, созданное `fn` на её основе. Трёхаргументная форма `@: selected PrioritySignature Priorities\lookup` явно разделяет имя ссылки, требование и фактический callable; её не переписывают как `@: selected PrioritySignature` с утверждением, будто двухаргументная форма уже выбрала реализацию: по общему правилу `@: p Model` первоначально ссылается на сам `Model`.
+
 `import(A Producer())` вызывает Producer один раз, когда import фактически потребляется, и выбирает допустимые объявления из этого результата, а также из A. Это верно и тогда, когда запись import находится в DATA; P0 и просмотр исходной записи import его не выполняют. Голые ссылки на источники и анонимные Structure-источники сами по себе не являются вызовами. Вызовы или инициализаторы внутри анонимной Structure по-прежнему подчиняются своим обычным контрактам потребления; import не вводит ни общего подавления, ни жадного обхода. Несколько вычисляемых источников сохраняют обычный порядок вычисления слева направо и не повторяются при отборе кандидатов. Обычные правила CODE W/E действуют в каждой позиции: единственная библиотека из Structure может соответствовать и чтению целой библиотеки, и чтению развёрнутого источника, и тогда выбор неоднозначен. У Import нет скрытого предпочтения для W. Его исходная запись и записанные границы аргументов остаются неизменными.
 
 Самостоятельный import передаёт свой выбранный поток объявлений в текущий namespace в порядке источников и объявлений. Вложенный `f(import(A B))`, напротив, передаёт этот поток потребителю аргументов f и не выполняет никакого дополнительного скрытого импорта в вызывающий контекст. `f((import(A B)))` собирает одну Structure до обычных правил W/E; явное именованное присваивание настоящему формальному параметру исключает E, когда требуется доставка целиком. Это обычные группы, а не новый синтаксис import.
@@ -4021,6 +4126,31 @@ Use:
 ```
 
 The DATA reading of Use exposes `limit`, `Settings` and `Tool`; it does not expose counter or separately lift width/value. The graph of Use still contains `import: Library Other`. Similarly, importing cycles in [the declaration-argument example](#declaration-arguments) exposes its constant iterate declaration while leaving iteration/body as inputs in cycles.
+
+<a id="import-model-signature"></a>
+The same holds for a model, a named signature and an implementation in one library:
+
+~~~lmx
+Library:
+    PrioritiesTemplate:
+        []: char name
+        return: int
+    fn: PrioritySignature PrioritiesTemplate
+    Priorities:
+        []: char name
+        return: int
+        lookup:
+            return: sys\priority(name)
+    end: Priorities
+    @: selected PrioritySignature Priorities\lookup
+end: Library
+
+Use:
+    import: Library
+end: Use
+~~~
+
+In the namespace of `Use` three root constant names are added: `PrioritiesTemplate`, `PrioritySignature` and `Priorities`. The ordinary reference variable `selected` is not imported; `name`, `return` and `lookup` are not lifted from the nested `Priorities` into the root of `Use`. Import does not change `parent`: the data for `Priorities\lookup` are still in `Priorities`. `PrioritiesTemplate` is an ordinary minimal structural model without `lookup`; `PrioritySignature` is the named call description created by `fn` on its basis. The three-argument form `@: selected PrioritySignature Priorities\lookup` explicitly separates the name of the reference, the requirement and the actual callable; it is not rewritten as `@: selected PrioritySignature` as if the two-argument form had chosen an implementation: by the general rule `@: p Model` first refers to `Model` itself.
 
 `import(A Producer())` calls Producer once when import is actually consumed and selects eligible declarations from that result as well as A. This holds even when the import record occurs in DATA; P0 and inspection of its source record do not execute it. Bare source references and anonymous source Structures are not themselves calls. Calls or initializers inside an anonymous Structure still follow their ordinary consuming contracts; import adds no blanket suppression or eager traversal. Multiple computed sources retain ordinary left-to-right evaluation and are not repeated during candidate selection. Ordinary CODE W/E applies in every placement: a sole library of Structures may fit both whole-library and expanded-source readings and be ambiguous. Import has no hidden preference for W. Its source record and written argument boundaries remain intact.
 

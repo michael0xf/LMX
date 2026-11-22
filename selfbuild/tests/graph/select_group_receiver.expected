@@ -1,0 +1,18 @@
+---
+    Observed:
+        int: seen 2
+    end: Observed
+---
+@: shared (data [] 0)
+fn: sink (int: value) int
+    return: value
+end: sink
+sub: main () (
+    Made:
+        int: a 1
+        int: b 2
+    end: Made
+)
+    :=: ((shared \ Observed) \ seen) (sink ((length Made)))
+end: main
+main:

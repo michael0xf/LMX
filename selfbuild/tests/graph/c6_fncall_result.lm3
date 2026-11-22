@@ -1,0 +1,20 @@
+# Witness c6_fncall_result -- f(fncall(int; Self\code)) with Self (seen + 1, return 7) and f(int: a)/f(u8: a):
+# the int pair, seen 1, r 7
+# Norm: fable R102/R103; step C6 (PLAN §17)
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: Self () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 7
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (u8: a) int
+    return: 2
+sub: main ()
+    f(fncall(int; Self\code))
+main()

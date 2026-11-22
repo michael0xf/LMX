@@ -112,6 +112,12 @@ is an intentional boundary. Avoid redundant `end:` or `---` markers when a
 normal single-level dedent or a permitted terminal return already expresses the
 intended close.
 
+`end: name` has its own purpose (the author's clarification of 2026-11-23,
+[journal](LMX_blog/2026-11-23.md#end-purpose)): it closes a long function that
+does not end with `return` and, where it helps the reader, a long nested
+function even when its last statement is `return`. After a short function, or
+after a top-level function that ends with `return`, it is redundant.
+
 ## 3. Declarations, calls, and writable places
 
 A bare atom reads a value/reference and does not invoke it. A method pointer or

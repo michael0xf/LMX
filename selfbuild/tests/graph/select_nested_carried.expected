@@ -1,0 +1,35 @@
+---
+    Observed:
+        int: seen 1
+        int: r 41
+    end: Observed
+---
+@: shared (data [] 0)
+fn: tick () int
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+    return: 3
+end: tick
+Model:
+end: Model
+fn: k (int: c) int
+    return: (c + 1)
+end: k
+fn: k (@: s Model) int
+    return: 90
+end: k
+fn: h (int: a) int
+    return: (a * 10)
+end: h
+fn: h (@: s Model) int
+    return: 80
+end: h
+fn: g (int: x) int
+    return: (x + 1)
+end: g
+fn: g (@: s Model) int
+    return: 70
+end: g
+sub: main ()
+    :=: ((shared \ Observed) \ r) (g (h (k (tick))))
+end: main
+main:

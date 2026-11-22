@@ -1,0 +1,19 @@
+# §14.2 C30: named actuals written in the reverse order, with effects: the map changes, the effects run
+# once, in written order (TZ §10.1).
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: t1 () int
+    shared\Observed\seen := shared\Observed\seen * 10 + 1
+    return: 1
+fn: t2 () int
+    shared\Observed\seen := shared\Observed\seen * 10 + 2
+    return: 2
+fn: f (int: a; int: b) int
+    return: a * 10 + b
+sub: main ()
+    shared\Observed\r := f(b := t1(); a := t2())
+main()

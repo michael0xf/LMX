@@ -1,0 +1,15 @@
+# §14.2 C11: a supply impossible by names contains an actual with an effect: the form check refuses before
+# that effect (TZ §9.4).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    return: a
+sub: main ()
+    f(tick(); z := 3)
+main()

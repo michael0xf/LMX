@@ -1,0 +1,18 @@
+# The sole actual calls a sub (no result): its description gives no value -- the answer of the actual, 5, for
+# every pair, before anything runs (two declarations: an int description would be ambiguous). Killer of mS10.
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+sub: s ()
+    shared\Observed\seen := shared\Observed\seen + 1
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (int: a; int: b) int
+    return: 2
+sub: main ()
+    f(s())
+main()

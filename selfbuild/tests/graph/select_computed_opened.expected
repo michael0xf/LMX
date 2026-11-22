@@ -1,0 +1,20 @@
+---
+    Observed:
+        int: seen 12
+    end: Observed
+---
+@: shared (data [] 0)
+fn: f (int: a; int: b) int
+    return: ((a * 10) + b)
+end: f
+sub: main () (
+    A:
+        int: a 1
+    end: A
+    B:
+        int: b 2
+    end: B
+)
+    :=: ((shared \ Observed) \ seen) (f (merge A B))
+end: main
+main:

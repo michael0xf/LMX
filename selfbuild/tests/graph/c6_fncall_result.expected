@@ -1,0 +1,22 @@
+---
+    Observed:
+        int: seen 1
+        int: r 7
+    end: Observed
+---
+@: shared (data [] 0)
+fn: Self () int
+    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+    return: 7
+end: Self
+fn: f (int: a) int
+    :=: ((shared \ Observed) \ r) a
+    return: a
+end: f
+fn: f (u8: a) int
+    return: 2
+end: f
+sub: main ()
+    f: (fncall int (Self \ code))
+end: main
+main:

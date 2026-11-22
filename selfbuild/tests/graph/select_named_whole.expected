@@ -1,0 +1,25 @@
+---
+    Observed:
+        int: seen 7
+    end: Observed
+---
+@: shared (data [] 0)
+Model:
+    int: a 0
+    int: b 0
+end: Model
+fn: f (@: a Model) int
+    return: 7
+end: f
+fn: f (int: a; int: b) int
+    return: ((a * 10) + b)
+end: f
+sub: main () (
+    S:
+        int: a 1
+        int: b 2
+    end: S
+)
+    :=: ((shared \ Observed) \ seen) (f (:= a S))
+end: main
+main:

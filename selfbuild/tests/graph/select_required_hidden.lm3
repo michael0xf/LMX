@@ -1,0 +1,16 @@
+# §9.8: f(int a) and f(int a; required int b), the caller has b: f(5) selects the first; the hidden b does
+# not rescue the second (TZ 2026-11-19 §9.7).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f (int: a) int
+    return: a
+fn: f (int: a; required: int: b) int
+    return: a * 10 + b
+sub: main () (
+    int: b 6
+)
+    shared\Observed\seen := f(5)
+main()

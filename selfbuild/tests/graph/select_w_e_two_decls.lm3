@@ -1,0 +1,18 @@
+# §9.8: W fits one declaration, E another: ambiguity without priority (TZ §9.3, §9.5).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+@: Model (int: a 0; int: b 0)
+fn: f (@: s Model) int
+    shared\Observed\seen := 1
+    return: 1
+fn: f (int: a; int: b) int
+    shared\Observed\seen := 2
+    return: 2
+sub: main () (
+    S(int: a 1; int: b 2)
+)
+    f(S)
+main()

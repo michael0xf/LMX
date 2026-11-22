@@ -1,0 +1,22 @@
+---
+    Observed:
+        int: seen 23
+    end: Observed
+---
+@: shared (data [] 0)
+Model:
+end: Model
+fn: f (@: s Model; int: n) int
+    return: (((length s) * 10) + n)
+end: f
+sub: main () (
+    A:
+        int: a 1
+    end: A
+    B:
+        int: b 2
+    end: B
+)
+    :=: ((shared \ Observed) \ seen) (f (merge A B) 3)
+end: main
+main:

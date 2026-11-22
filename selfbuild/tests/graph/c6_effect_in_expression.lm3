@@ -1,0 +1,21 @@
+# Witness c6_effect_in_expression -- f(1 + tick()) with f(int: a) and f(@: s; int: b): the one-argument int
+# signature is chosen, tick runs once: seen 1, r 4
+# Norm: fable R102 (выбор ничего не исполняет; автор 2026-11-07 «Имена и форму вызова проверять до вычисления
+# аргументов»; книга #named-actuals: вызываемое выбирается один раз, до аргументов); step C6
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (@: s; int: b) int
+    return: 2
+sub: main ()
+    f(1 + tick())
+main()

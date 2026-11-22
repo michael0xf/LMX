@@ -1,0 +1,18 @@
+# Witness c6_one_decl_ok -- f(tick()) with the one declaration f(int: a): seen 1, r 3
+# Norm: fable R102/R103 — вызов с одним объявлением есть частный случай выбора: пара судится по описанию до
+# вычисления; step C6
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+sub: main ()
+    f(tick())
+main()

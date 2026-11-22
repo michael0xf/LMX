@@ -1,0 +1,14 @@
+# §9.8: only f(required int b) without a default, the caller has b: f() has no candidate (TZ §9.7) --
+# refused, the body does not run.
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f (required: int: b) int
+    return: b
+sub: main () (
+    int: b 6
+)
+    shared\Observed\seen := f()
+main()

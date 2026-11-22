@@ -1,0 +1,16 @@
+# §9.8: S explicitly assigned to a formal: f(a := S) is read only as written, no E (TZ §9.3).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+@: Model (int: a 0; int: b 0)
+fn: f (@: a Model) int
+    return: 7
+fn: f (int: a; int: b) int
+    return: a * 10 + b
+sub: main () (
+    S(int: a 1; int: b 2)
+)
+    shared\Observed\seen := f(a := S)
+main()

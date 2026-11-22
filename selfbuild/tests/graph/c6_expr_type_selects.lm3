@@ -1,0 +1,24 @@
+# Witness c6_expr_type_selects -- f(1 + tick()) with f(int: a) and f(u8: a): the int pair, seen 1, r 4 (no rule
+# that an operator gives an int is used: the numeric contract of integers is open with the author)
+# Norm: fable R102/R103; step C6 (PLAN §17)
+# Green today, on today's admission (fable Р129, 2026-11-22): 1 + tick() is class (b), a primitive of no known
+# type; the pair f(u8: a) is refused before the evaluation because today's admission fills no u8 formal with any
+# value (select_operator_u8), so the int pair alone remains: seen 1, r 4. The reason changes: the static type of an
+# expression comes with step 21.14, the admission with step 21.8 (a).
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (u8: a) int
+    return: 2
+sub: main ()
+    f(1 + tick())
+main()

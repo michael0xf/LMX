@@ -1,0 +1,27 @@
+# Three nested calls, each name declared twice (an int, a Model): one candidate at each level, chosen by the
+# description before anything runs; the choice is carried to the evaluation: tick runs once, r 41.
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+@: Model ()
+fn: k (int: c) int
+    return: c + 1
+fn: k (@: s Model) int
+    return: 90
+fn: h (int: a) int
+    return: a * 10
+fn: h (@: s Model) int
+    return: 80
+fn: g (int: x) int
+    return: x + 1
+fn: g (@: s Model) int
+    return: 70
+sub: main ()
+    shared\Observed\r := g(h(k(tick())))
+main()

@@ -1,0 +1,23 @@
+# The inner call of a nested call is ambiguous (h(int a), h(int a; int b)): its description fails with 3, the
+# answer of the actual and so of the call, before anything runs (seen 0).
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+@: Model ()
+fn: h (int: a) int
+    return: a * 10
+fn: h (int: a; int: b) int
+    return: 2
+fn: g (int: x) int
+    return: x + 1
+fn: g (@: s Model) int
+    return: 70
+sub: main ()
+    shared\Observed\r := g(h(tick()))
+main()

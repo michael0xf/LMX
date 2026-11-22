@@ -1,0 +1,22 @@
+# Witness c6_effect_after_selection -- f(tick(); 4): the two-argument signature is chosen before the arguments
+# run; tick runs once: seen 1, r 34
+# Norm: fable R102 (выбор ничего не исполняет; автор 2026-11-07 «Имена и форму вызова проверять до вычисления
+# аргументов»; книга #named-actuals: вызываемое выбирается один раз, до аргументов); step C6
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (int: a; int: b) int
+    shared\Observed\r := a * 10 + b
+    return: a
+sub: main ()
+    f(tick(); 4)
+main()

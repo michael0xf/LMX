@@ -1,0 +1,14 @@
+# §9.8: only f(int a; int b), the caller b = 6: f(5) is selected without b, then autofill may fill b
+# (TZ §9.1, R03).
+(
+    Observed:
+        int: seen 0
+)
+@: shared data[0]
+fn: f (int: a; int: b) int
+    return: a * 10 + b
+sub: main () (
+    int: b 6
+)
+    shared\Observed\seen := f(5)
+main()

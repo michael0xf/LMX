@@ -1,0 +1,19 @@
+# Witness c6_call_result_type -- f(tick()) with f(int: a) and f(u8: a): the result of tick is the int pair: seen 1, r 3
+# Norm: fable R102/R103; step C6 (PLAN §17)
+(
+    Observed:
+        int: seen 0
+        int: r 0
+)
+@: shared data[0]
+fn: tick () int
+    shared\Observed\seen := shared\Observed\seen + 1
+    return: 3
+fn: f (int: a) int
+    shared\Observed\r := a
+    return: a
+fn: f (u8: a) int
+    return: 2
+sub: main ()
+    f(tick())
+main()

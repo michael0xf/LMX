@@ -39,7 +39,7 @@
 - **Приёмка примеров:** [регрессионный набор для Fable](LMX_regression_examples.to_fable.en.md).
 - **Результат проверки:** [отчёт о согласованности и исправлениях](LMX_consistency_review.ru.md).
 - **Нормативная документация:** [карта docs](../README.md) и [заметки о редакции](../REVIEW_NOTES.md).
-- **Последнее уточнение автора:** [uninit и явное присваивание в граф](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md); проверка [G13](LMX_regression_examples.to_fable.en.md#uninit-graph).
+- **Норма:** [`uninit` без полезной нагрузки](../LMX_semantics.en.md#uninit-zero-payload) и [явное присваивание в граф](../LMX_semantics.en.md#graph-fragment-assignment); проверка [G13](LMX_regression_examples.to_fable.en.md#uninit-graph).
 
 Для таблиц с устойчивым выравниванием открывайте XLSX или PDF. Дата в имени `LMX_Comparison_2026-11-20.*` сохранена: эта пара относится к примерам 1–9.
 

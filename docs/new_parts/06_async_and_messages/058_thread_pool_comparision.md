@@ -128,7 +128,7 @@ A bounded set of workers is reused for a sequence of jobs.
 - [Go — Effective Go concurrency](https://go.dev/doc/effective_go) — Ограниченный набор исполнителей переиспользуется для последовательности заданий.
 - [Erlang — Concurrent Programming](https://www.erlang.org/doc/system/conc_prog.html) — Ограниченный набор исполнителей переиспользуется для последовательности заданий.
 
-**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

@@ -38,8 +38,7 @@ annotation. See [empty bodies](LMX_grammar.en.md#empty-colon) and [source levels
 
 All receivers remain as written in the source graph, with terminal primitive declarations represented directly
 as `{type value}` at the addresses held by Structure cells. These leaves are part of the complete literal source.
-The [latest author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) also fixes
-code-only zero-payload uninit and ordinary graph-fragment replacement, including executable receiver structures;
+The semantics also fixes code-only zero-payload [uninit](LMX_semantics.en.md#uninit-zero-payload) and ordinary graph-fragment replacement, including executable receiver structures ([graph assignment](LMX_semantics.en.md#graph-fragment-assignment));
 the existing compile/endturn boundary handles required machine updates. Computations and transformations belong
 to the namespace. Historical excerpts or examples
 do not authorize graph rewriting, executable fn/sub forms, a sys operand registry, or container-valued merge.

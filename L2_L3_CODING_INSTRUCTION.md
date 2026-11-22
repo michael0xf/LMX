@@ -494,7 +494,7 @@ edit watchers, automatic native invalidation, or hidden compilation. Keep the
 physical storage and ordinary copy/collection machinery that the current
 contracts still require.
 
-Implement the [author's uninit clarification](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md):
+Implement the [zero-payload `uninit` rule](docs/LMX_semantics.en.md#uninit-zero-payload):
 `uninit:T` is its code only, with zero payload. No T cell or complete inner T
 record is preallocated. `struct\novalue := 5` replaces `{uninit:int}` by `{int 5}`
 at the addressed graph field. Remove tests that require in-place tag changes or

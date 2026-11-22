@@ -128,7 +128,7 @@ Map emits keys, shuffle routes them to owners, and reduce combines values per ke
 - [Dean and Ghemawat — MapReduce](https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/) — Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.
 - [Go — Pipelines and cancellation](https://go.dev/blog/pipelines) — Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.
 
-**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

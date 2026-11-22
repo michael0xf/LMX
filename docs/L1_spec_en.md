@@ -167,8 +167,7 @@ graph record `S\private\field` is not flattened into `S\field`. Use the common b
 checks on direct reads. The walker reads the original `private` receiver in the clean graph; the compiler emits the
 appropriate binding/hidden-argument logic from that same source. A second graph of private marks or access flags in the
 binary is forbidden, including one presented as a prepared runtime representation.
-[Author example](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#private-without-marked-graph);
-[full contract](LMX_semantics.en.md#private-binding).
+[Full contract](LMX_semantics.en.md#private-binding).
 
 <a id="call-frame-20261115"></a>
 ### Call frame

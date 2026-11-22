@@ -28,7 +28,7 @@ This corpus updates the earlier discussions of `add5`, defaults and free inputs,
 
 ### Governing sources
 
-The normative model is the supplied `docs/` packet, including its five integrated change requirements, the author's subsequent uninitialized-record clarification, and maintained `Old_TZ/` supplements. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
+The normative model is the supplied `docs/` packet. The current author's operand-template convenience is applied to P23. Pattern guides are companion examples of that model; a stale example does not establish a competing rule. The stream requirement fixes `import`, `copy` and `merge` as ordinary CODE-argument consumers in every placement.
 
 | Code used below | Document / package path | Role |
 |---|---|---|
@@ -37,7 +37,7 @@ The normative model is the supplied `docs/` packet, including its five integrate
 | M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
 | BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
 | D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
-| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
+| UNINIT | [LMX_semantics.en.md#uninit-zero-payload](../LMX_semantics.en.md#uninit-zero-payload) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
 | P3 / DP3 | [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | Current examples 19–23, updated 21 November |
@@ -2922,7 +2922,6 @@ These SHA-256 values identify the bundled normative documents used for this revi
 | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
 | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
 | [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
-| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
 
 <!-- Relative source links for the package layout. -->
 [O]: ../tasks/to_fable_operands_arguments_priorities.md
@@ -2948,4 +2947,4 @@ These SHA-256 values identify the bundled normative documents used for this revi
 [STREAM]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
 [M]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
 [BLANK]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
-[UNINIT]: ../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md
+[UNINIT]: ../LMX_semantics.en.md#uninit-zero-payload

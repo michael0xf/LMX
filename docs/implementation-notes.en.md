@@ -11,16 +11,10 @@ it to code.
 <a id="binding-callables-20261119"></a>
 ## Accepted model through 2026-11-21
 
-The six included requirements comprise [binding and callables](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-[declaration arguments and import](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-[blank physical line closure](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
-[operands and expressions](tasks/to_fable_operands_arguments_priorities.md), and
-[import/copy/merge field streams](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), plus the later
-[author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md), which has priority for
-zero-payload uninit, graph assignment, complete source, and the graph-plus-method-binary program model.
+The author's decisions of 2026-11-21 have priority for zero-payload uninit, graph assignment, complete source, and the graph-plus-method-binary program model ([program representation](LMX_semantics.en.md#program-representation)).
 The field-stream correction makes all three receivers consume ordinary CODE arguments in every
 placement, including inside DATA; common W/E applies everywhere. It supersedes the earlier
-DATA→DATA/CODE→CODE source table. The latest field-stream requirements refine earlier import and
+DATA→DATA/CODE→CODE source table. The latest field-stream rules refine earlier import and
 composition examples. Earlier
 accepted supplements are incorporated baseline material, not a new pending plan.
 
@@ -273,7 +267,7 @@ externally retained, keep their ordinary ownership boundary without an invented 
 <a id="uninit-layout-conflict"></a>
 ### 5.3. P01 — resolved: uninit has zero payload; graph assignment replaces fragments
 
-The [author clarification of 2026-11-21](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+The [zero-payload rule](LMX_semantics.en.md#uninit-zero-payload)
 supersedes both earlier alternatives. `uninit:T` is only the type code; `sizeof(value) = 0`.
 There is neither an outer/inner T pair nor a single tag followed by reserved T storage. A
 named declaration without a value remains a named source leaf without allocating its future value.

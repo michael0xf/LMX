@@ -74,8 +74,7 @@ A runtime operation can allocate the values and graph nodes required for its
 result. This does not replace its source record. An explicit permitted graph
 assignment replaces the graph fragment at its selected structural place; an
 assignment to an activation's own local does not publish that local into the
-source graph. The author's [latest clarification](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
-makes this distinction explicit.
+source graph. The semantics states this distinction in [graph assignment](docs/LMX_semantics.en.md#graph-fragment-assignment).
 
 A Structure is an ordered collection of fields holding references to values.
 Lexical nesting forms a forest, while stored references may add sharing and cycles.
@@ -521,7 +520,7 @@ One executor runs a turn for a Message identity. Successful finalization publish
 prepared mail and child reservations; failure discards unpublished work without
 rolling back earlier explicit graph changes. Stop requests, success, cleanup,
 waiting, delivery, and entry counts remain distinct under the
-[Thread/Message API](docs/tasks/threadMessageAPI.en.md).
+[Thread/Message API](docs/LMX_semantics.en.md#thread-message-api).
 
 `Thread.parent` and `Thread.children` define supervision. They are not
 `Lmx.parent` and do not create lexical visibility. A parent settles direct

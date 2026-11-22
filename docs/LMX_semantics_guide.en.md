@@ -120,7 +120,7 @@ payload waiting for its first assignment. The executing call can initialize its
 own local x without changing that source leaf. An explicit graph assignment
 `S\x := 5` instead replaces the selected `{uninit:int}` fragment by `{int 5}`.
 This replacement does not promise an unchanged raw payload address. The same
-distinction applies to other T; absence is not a zero value. [Author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+distinction applies to other T; absence is not a zero value. [Semantics: zero-payload `uninit`](LMX_semantics.en.md#uninit-zero-payload).
 
 <a id="header-receivers"></a>
 ## Header and service tables
@@ -966,11 +966,11 @@ ID, correlates reply and request. Prepare `answer` before sending `ask`;
 one undelivered request does not stop the others.
 
 `undelivered` receives the source request's already formed arguments;
-a declared failure goes to `catch`. Timeout starts at actual dispatch:
+a declared failure goes to `catch`. Timeout starts at the original send:
 a 500 ms threshold may yield an observed 512 ms while its threshold field
 remains 500. A late reply is not automatically discarded. The full contract
-and T01–T26 matrix are in the [semantics](LMX_semantics.en.md#thread-message-api)
-and the [transport acceptance matrix](tasks/threadMessageAPI.en.md).
+and the [T01–T26 matrix](LMX_semantics.en.md#thread-message-observations) are in the
+[semantics](LMX_semantics.en.md#thread-message-api).
 
 <a id="tables-and-registries"></a>
 ## Tables and providers as data

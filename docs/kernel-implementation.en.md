@@ -7,19 +7,12 @@ repository build implements or has passed these requirements. Dated implementati
 kept separately in [implementation notes](implementation-notes.en.md).
 
 The language contracts are the [semantics](LMX_semantics.en.md), [grammar](LMX_grammar.en.md),
-and [L2 specification](L2_spec_en.md). The authoritative change requirements included here are
-[binding and callables](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-[declaration arguments](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-[blank physical lines](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
-[operands and expressions](tasks/to_fable_operands_arguments_priorities.md), and
-[field streams](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
-The later [author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
-has priority for complete source representation, the graph-plus-method-binary program model,
+and [L2 specification](L2_spec_en.md). They have priority for complete source representation, the graph-plus-method-binary program model,
 R0, zero-payload uninit, and ordinary graph-fragment replacement.
-The 2026-11-21 field-stream requirements, with the latest author correction that import/copy/merge
+The 2026-11-21 field-stream rules, with the latest author correction that import/copy/merge
 always take ordinary CODE arguments, control conflicting earlier composition examples and
 role-dependent source rules.
-Accepted earlier contracts are retained except where these requirements explicitly change them.
+Accepted earlier contracts are retained except where these rules explicitly change them.
 
 <a id="binding-callables-20261119"></a>
 ## Current call and graph baseline
@@ -89,7 +82,7 @@ mail, and scheduling remain the existing execution mechanisms, not additional pr
    effective at the next entry. Known native calls may remain direct C calls.
 10. **Observable behavior controls optimization.** Types, selected places, initialization state,
     effects, lexical links, privacy, and lifetime must agree across native/walker combinations.
-    The author's [uninit clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+    The [zero-payload `uninit` rule](LMX_semantics.en.md#uninit-zero-payload)
     resolves P01 and supersedes the former reserved-cell and first-write retagging descriptions.
 
 <a id="contract"></a>
@@ -336,7 +329,7 @@ replaces graph material at its addressed structural place. For source `int: nova
 retag of a preallocated same-address T cell, and it promises no stable raw payload address across
 the replacement. A later lookup of that field observes the new fragment and its `int` type.
 
-This follows the [author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+This follows the [semantics](LMX_semantics.en.md#uninit-zero-payload)
 and [L2 representation](L2_spec_en.md#uninit-record-control). The old question's
 [anchor](implementation-notes.en.md#uninit-layout-conflict) is retained as a resolved decision.
 Stable Structure descriptors and descriptor/index Array-element references are independent

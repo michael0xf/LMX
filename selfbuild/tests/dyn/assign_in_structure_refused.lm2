@@ -3,7 +3,7 @@
 # `zz := 5` in the body of a named Structure is no translation error. zz is a hidden input of the Structure: at entry its
 # place is looked up in the roots of the call's own data first, then in the callers' bindings.
 # Holder declares only k, and the root declares no zz, so the launch of Holder over itself has no place for zz and is
-# refused at entry (implements). The refusal is caught and the exit is 7. Outcome 81: the launch passed without a refusal.
+# refused at entry (satisfies). The refusal is caught and the exit is 7. Outcome 81: the launch passed without a refusal.
 # Outcome 82: another refusal was caught.
 # Control in this file: Watcher writes the same zz and is launched over Given, whose root declares `int: zz 0`. The call
 # passes, and the value is observed by an explicit write into the data (rule Б: data\seen := zz) and a read from outside (5).
@@ -22,7 +22,7 @@ int: code 7
 ---
     call: Holder
     code := 81
-    catch: implements ()
+    catch: satisfies ()
         code := 7
     catch: call ()
         code := 82

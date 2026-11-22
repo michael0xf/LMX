@@ -1,6 +1,6 @@
 # Slice 306 (CALL-ENTRY-ADMISSION-ORDER; the rest of CALL-ARGUMENT-ORDER-AXBY -- the author's decision of 2026-11-07, the
 # book :724): every actual is received by its formal right after its own evaluation, whatever its kind -- a graph reference
-# admitted against the formal's model (a graph without the model's fields is the implicit `implements`), a number at a
+# admitted against the formal's model (a graph without the model's fields is the implicit `satisfies`), a number at a
 # modelled formal, a graph at a number formal and a number's address at a graph pointer formal the implicit `convert` -- so a
 # refusal leaves the following actuals unevaluated and the body not started: one rule for the static call and the call
 # through a callable place, positional and named, native and the walker.  `quote` is a free name bound in each caller's
@@ -76,7 +76,7 @@ fn: write_places () int
         @: Nums\f Hn
         @: Ptrs\f Hp
         return: 1
-        catch: implements ()
+        catch: satisfies ()
             return: 24
     ---
 end: write_places
@@ -101,12 +101,12 @@ end: pass_ptr
 fn: pass_ptr_place () int
     return: Ptrs\f(@ quote, touch())
 end: pass_ptr_place
-# Each caller below answers its call's value, 90 for the implicit `implements` and 91 for the implicit `convert`.
+# Each caller below answers its call's value, 90 for the implicit `satisfies` and 91 for the implicit `convert`.
 fn: c_pass () int
     ---
         ---
             return: pass()
-            catch: implements ()
+            catch: satisfies ()
                 return: 90
         ---
         catch: convert ()
@@ -117,7 +117,7 @@ fn: c_pass_place () int
     ---
         ---
             return: pass_place()
-            catch: implements ()
+            catch: satisfies ()
                 return: 90
         ---
         catch: convert ()
@@ -128,7 +128,7 @@ fn: c_pass_named () int
     ---
         ---
             return: pass_named()
-            catch: implements ()
+            catch: satisfies ()
                 return: 90
         ---
         catch: convert ()
@@ -245,7 +245,7 @@ fn: outer_num () int
         return: 114
     return: 0
 end: outer_num
-# The Slim (no y): the modelled formals are the implicit `implements` with touch() not evaluated.
+# The Slim (no y): the modelled formals are the implicit `satisfies` with touch() not evaluated.
 fn: outer_slim (Thin: t) int
     @: quote Thin t
     Trace\t := 0

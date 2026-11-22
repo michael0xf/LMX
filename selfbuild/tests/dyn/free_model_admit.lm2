@@ -1,10 +1,10 @@
 # Slice 260 (design 4.5 B2b-2c): a free (runtime-typed) value received by a place WITH a receiving model is admitted at run
 # time, in both executors -- received as the graph reference by the kernel's one receive (lmx_walk_value_receive with LMX: a
 # number is the implicit `convert`), then admitted against the model by the admission the typed program's places use
-# (lmx_implements_admit_receiving: a graph without the model's fields is the implicit `implements`).  take receives the free
+# (lmx_implements_admit_receiving: a graph without the model's fields is the implicit `satisfies`).  take receives the free
 # `quote` into a modelled own (`@: m Point quote`); pass hands it to the modelled formal of bump, whose own reception admits it
 # at the entry.  outer binds `quote` to the unit's Shape (y, x: a Point) through its formal: take reads 2, pass reads 2;
-# outer_slim binds it to Slim (pad only): take and pass are the implicit `implements`, caught; outer_num binds a number: take
+# outer_slim binds it to Slim (pad only): take and pass are the implicit `satisfies`, caught; outer_num binds a number: take
 # is the implicit `convert`, caught; outer_ptr binds `quote` to a pointer to its own graph reference (`@@: quote Point`, `quote:
 # @ inst`) and through dereferences it into a modelled own (`@: m Point, \quote`): the deref typed by the owning record and
 # admitted by the actual pointee (the deref level of P1-PTR-COVERAGE; the address of a graph-bound free name is the next
@@ -47,14 +47,14 @@ fn: outer_slim (Thin: t) int
     int: got 0
     ---
         got := take()
-        catch: implements ()
+        catch: satisfies ()
             got := 90
     ---
     if: got != 90
         return: 83
     ---
         got := pass()
-        catch: implements ()
+        catch: satisfies ()
             got := 91
     ---
     if: got != 91

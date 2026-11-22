@@ -3080,7 +3080,7 @@ fn: lm_compiler_scan_node_value (const: (@: source_node c.LmP0Node); @: value c.
         return: (cast: (int) (status))
     # implements(candidate, required, consumer) is decided at translation from
     # declarations; its head and operands are not lexical references either.
-    if: source_node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head(source_node, "implements")
+    if: source_node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head(source_node, "satisfies")
         return: (cast: (int) (0))
     # A cast contributes only its operand to lexical free-name analysis. The
     # head and its first field name a language operation and a C type.
@@ -5416,7 +5416,7 @@ fn: lm_compiler_emit_handler (const: (@: cf c.LmP0Node); int: p; int: i; int: mi
         return: (cast: (int) (1))
     if: np > 0 && c.fprintf(out_cell[0], "%sif: l2_pl%d = 0 || l2_pl%d\\array.size < %dU\n", d2, p, p, np) < 0
         return: (cast: (int) (1))
-    if: np > 0 && c.lm_compiler_emit_implicit_throw(mi, "implements", d2) != 0
+    if: np > 0 && c.lm_compiler_emit_implicit_throw(mi, "satisfies", d2) != 0
         return: (cast: (int) (1))
     f := 0
     if: ps != 0
@@ -5446,7 +5446,7 @@ fn: lm_compiler_emit_handler (const: (@: cf c.LmP0Node); int: p; int: i; int: mi
         if: vfn != 0
             if: c.fprintf(out_cell[0], "%sif: l2_pv%d = 0 || lmx_domain_type(l2_program_arena, l2_pv%d) != %s\n", d2, p, p, tcode) < 0
                 return: (cast: (int) (1))
-            if: c.lm_compiler_emit_implicit_throw(mi, "implements", d2) != 0
+            if: c.lm_compiler_emit_implicit_throw(mi, "satisfies", d2) != 0
                 return: (cast: (int) (1))
             if: c.sprintf(val, "%s(l2_pv%d)", vfn, p) < 0 || lm_compiler_own_store(mi, oi, d2, val) != 0
                 return: (cast: (int) (1))
@@ -5882,7 +5882,7 @@ fn: lm_compiler_emit_positional_admit (int: mi; const: (@: inst char); const: (@
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%s    if: l2_admit_status%d != c.LMX_WALK_OK\n%s        lmx_call_note_walk_fail(l2_admit_status%d)\n%s    ---\n%s---\n%sif: l2_admit_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, id, ind, id, ind, ind, ind, id) < 0
         return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_compiler_emit_implicit_throw(mi, "implements", ind)))
+    return: (cast: (int) (c.lm_compiler_emit_implicit_throw(mi, "satisfies", ind)))
 end: lm_compiler_emit_positional_admit
 
 # Original: l2src/l2trans.lm1:19799
@@ -6350,7 +6350,7 @@ fn: lm_compiler_emit_place_slot (int: mi; int: context; int: last; const: (@: in
     if: slot = 0 || context < 0 || c.lm_compiler_bump_ind(ind, @ inner) != 0
         return: 1
     tn_cell[0] := temp + 1
-    if: c.fprintf(out_cell[0], "%ssize_t: l2_pslot%d %s\n%sint: l2_pslots%d c.LMX_WALK_OK\n%sif: l2_cv%d.model != 0\n%s    l2_pslots%d: lmx_walk_value_slot(l2_program_arena, @ l2_cv%d, %s, %d, @ l2_pslot%d)\n%s---\n%sif: l2_pslots%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, temp, slot, ind, temp, ind, context, ind, temp, context, slot, last, temp, ind, ind, temp) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+    if: c.fprintf(out_cell[0], "%ssize_t: l2_pslot%d %s\n%sint: l2_pslots%d c.LMX_WALK_OK\n%sif: l2_cv%d.model != 0\n%s    l2_pslots%d: lmx_walk_value_slot(l2_program_arena, @ l2_cv%d, %s, %d, @ l2_pslot%d)\n%s---\n%sif: l2_pslots%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, temp, slot, ind, temp, ind, context, ind, temp, context, slot, last, temp, ind, ind, temp) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", inner) != 0
         return: 1
     if: c.fprintf(out_cell[0], "%s---\n%sif: l2_pslots%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_pslots%d)\n%s---\n", ind, ind, temp, ind, temp, ind) < 0
         return: 1
@@ -7111,7 +7111,7 @@ fn: lm_compiler_emit_actual_path_place_field (const: (@: path c.L2Path); int: mi
         ---
         if: printed < 0
             return: 1
-        if: c.fprintf(out_cell[0], "%sif: l2_aps%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
+        if: c.fprintf(out_cell[0], "%sif: l2_aps%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", ind) != 0
             return: 1
         if: c.fprintf(out_cell[0], "%s---\n%sif: l2_aps%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
             return: 1
@@ -8335,7 +8335,7 @@ fn: lm_compiler_emit_native_input_entry (int: mi; const: (@: ind char)) int
         fi := fi + 1
     ---
     if: m_dyn_cell[0][mi] != 0
-        if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && lmx_walk_admit_free_inputs(l2_input_values, %dU) != c.LMX_WALK_OK\n%s    l2_out_throw[0]: 0\n%s    return: %d\n%s---\n", ind, fi, ind, ind, c.lm_compiler_implicit_status(mi, "implements"), ind) < 0
+        if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && lmx_walk_admit_free_inputs(l2_input_values, %dU) != c.LMX_WALK_OK\n%s    l2_out_throw[0]: 0\n%s    return: %d\n%s---\n", ind, fi, ind, ind, c.lm_compiler_implicit_status(mi, "satisfies"), ind) < 0
             return: 1
         ---
     ---
@@ -11264,7 +11264,7 @@ fn: lm_compiler_prep_context_full (const: (@: source_node c.LmP0Node); int: mi; 
     # the same admission used for an anonymous empty Structure actual.
     if: port_call\body != 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (port_call\body))) = 0 && port_call\trailer = 0 && c.lm_compiler_head_resolve(mi, (cast: (const: @: c.LmP0Text) (port_call\head)), 0, 0) = 5
         return: (cast: (int) (lm_compiler_emit_empty_graph(-1, mi, ind, dest)))
-    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (port_call\head)), "implements")
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (port_call\head)), "satisfies")
         return: (cast: (int) (lm_compiler_prep_implements(source_node, dest)))
     # K03 S6: the callee is the check's one resolution of the head (l2_call_head_method; D-106: a callable formal of this
     # method shadows a unit method of its name), read once.  What it resolved selects the occurrence called: a callable
@@ -11865,7 +11865,7 @@ fn: lm_compiler_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_m
     if: cand != -1 && req != -1 && cand != req && c.lm_compiler_d105_fits(cand, req, h, t) = 0
         if: c.fprintf(out_cell[0], "%sif: %s != 0\n", ind, value) < 0
             return: (cast: (int) (1))
-        if: c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
+        if: c.lm_compiler_emit_implicit_throw(mi, "satisfies", ind) != 0
             return: (cast: (int) (1))
         # A present null still receives this formal's Model/sheet.
         if: form != 3 || computed_record = 0
@@ -12311,7 +12311,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
+            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", ind) != 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -17057,7 +17057,7 @@ fn: lm_compiler_emit_reference_received_record (int: ty; int: model; int: assert
             return: 1
         if: c.fprintf(out_cell[0], "%sif: lmx_domain_kind(l2_call_arena, (cast: (@: void) l2_cv%d.ref)) != c.LMX_KIND_STRUCT\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, t, deep, deep, deep) < 0
             return: 1
-        if: c.fprintf(out_cell[0], "%sl2_cv%d.ref: lmx_graph_value_in(l2_call_arena, (cast: (@: Lmx) l2_cv%d.ref), 1U)\n", deep, t, t) < 0 || c.fprintf(out_cell[0], "%sif: l2_cv%d.ref = 0 || lmx_domain_kind(l2_call_arena, (cast: (@: void) l2_cv%d.ref)) != c.LMX_KIND_STRUCT\n", deep, t, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", deep) != 0
+        if: c.fprintf(out_cell[0], "%sl2_cv%d.ref: lmx_graph_value_in(l2_call_arena, (cast: (@: Lmx) l2_cv%d.ref), 1U)\n", deep, t, t) < 0 || c.fprintf(out_cell[0], "%sif: l2_cv%d.ref = 0 || lmx_domain_kind(l2_call_arena, (cast: (@: void) l2_cv%d.ref)) != c.LMX_KIND_STRUCT\n", deep, t, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", deep) != 0
             return: 1
         if: c.fprintf(out_cell[0], "%s---\n%sl2_cv%d.type: c.LMX_TYPE_LMX\n%slmx_value_context_copy(@ l2_cv%d, 0)\n%s---\n", deep, deep, t, deep, t, ind) < 0
             return: 1
@@ -18714,7 +18714,7 @@ fn: lm_compiler_emit_split_source_definition (int: mi; int: oi; const: (@: ind c
         int: place_row c.lm_compiler_split_name_ix(oi)
         if: place_row < 0 || c.lm_compiler_bump_ind(ind, @ inner) != 0
             return: 1
-        if: c.fprintf(out_cell[0], "%sint: l2_sfield%d lmx_implements_receive_data_field(l2_program_arena, l2_cph[%dU], l2_cpl[%dU], l2_cp%d)\n%sif: l2_sfield%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, value, place_row, place_row, value, ind, value) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+        if: c.fprintf(out_cell[0], "%sint: l2_sfield%d lmx_implements_receive_data_field(l2_program_arena, l2_cph[%dU], l2_cpl[%dU], l2_cp%d)\n%sif: l2_sfield%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, value, place_row, place_row, value, ind, value) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", inner) != 0
             return: 1
         if: c.fprintf(out_cell[0], "%s---\n%sif: l2_sfield%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_sfield%d)\n%s---\n", ind, ind, value, ind, value, ind) < 0
             return: 1
@@ -20342,7 +20342,7 @@ fn: lm_compiler_emit_received_place_store_field (int: mi; const: (@: arena char)
     ---
     if: c.fprintf(out_cell[0], "%s    if: l2_pws%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t) < 0 || lm_compiler_emit_received_place_failure(mi, "convert", nested, at_entry) != 0
         return: 1
-    if: c.fprintf(out_cell[0], "%s    ---\n%s    if: l2_pws%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, t) < 0 || lm_compiler_emit_received_place_failure(mi, "implements", nested, at_entry) != 0
+    if: c.fprintf(out_cell[0], "%s    ---\n%s    if: l2_pws%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, t) < 0 || lm_compiler_emit_received_place_failure(mi, "satisfies", nested, at_entry) != 0
         return: 1
     if: c.fprintf(out_cell[0], "%s    ---\n%s    if: l2_pws%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, ind, t) < 0 || lm_compiler_emit_received_place_failure(mi, "interpreter", nested, at_entry) != 0
         return: 1
@@ -21505,9 +21505,9 @@ fn: lm_compiler_whole_decide (@: arguments c.L2ApplicationActuals; int: idx; int
             req := c.lm_compiler_nsty_get(idx, k)
             if: m_node_cell[0][idx] != 0 && m_node_cell[0][idx]\as != 0
                 if: lm_compiler_whole_applicable(models[k], req, idx, k, @ compatible) != 0 || alloc_err_cell[0] != 0
-                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_alloc_or(path, at, "malformed implements descriptor"))))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_alloc_or(path, at, "malformed satisfies descriptor"))))
                 if: compatible = 0
-                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_error(path, at, "implements is false in function argument"))))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_error(path, at, "satisfies is false in function argument"))))
                 ---
             else:
                 if: c.lm_compiler_admit_implements(models[k], req, req, 0, path, at, "function argument") != 0
@@ -21641,7 +21641,7 @@ fn: lm_compiler_emit_whole_call (@: arguments c.L2ApplicationActuals; int: idx; 
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
+    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "satisfies", ind) != 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
         return: (cast: (int) (1))

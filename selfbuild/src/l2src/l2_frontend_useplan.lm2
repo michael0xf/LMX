@@ -520,7 +520,7 @@ fn: lm_compiler_emit_slot_status (int: mi; const: (@: ind char); int: t) int
     @: inner char 0
     if: lm_compiler_bump_ind(ind, @ inner) != 0
         return: 1
-    if: c.fprintf(out_cell[0], "%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+    if: c.fprintf(out_cell[0], "%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "satisfies", inner) != 0
         return: 1
     if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "convert", inner) != 0
         return: 1
@@ -1177,17 +1177,17 @@ end: lm_compiler_descriptor_used
 fn: lm_compiler_admit_finish (int: cand; int: req; int: status; int: compatible; const: (@: cand_name c.LmP0Text); const: (@: path char); const: (@: at c.LmP0Node); const: (@: context char)) int
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     if: status != 0 || alloc_err_cell[0] != 0
-        return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "malformed implements descriptor")))
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "malformed satisfies descriptor")))
     if: cand = req
         return: (cast: (int) (0))
     if: compatible = 0
         if: context != 0 && c.strcmp(context, "function argument") = 0
-            return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false in function argument")))
+            return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false in function argument")))
         if: context != 0 && c.strcmp(context, "assignment") = 0
-            return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false in assignment")))
+            return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false in assignment")))
         if: context != 0 && c.strcmp(context, "return value") = 0
-            return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false in return value")))
-        return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false")))
+            return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false in return value")))
+        return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false")))
     return: (cast: (int) (0))
 end: lm_compiler_admit_finish
 
@@ -4730,11 +4730,11 @@ fn: lm_compiler_emit_model_admit_record_core (int: mi; int: req; @: source c.L2R
     if: c.fprintf(out_cell[0], "%sif: l2_admission%d = c.LMX_IMPLEMENTS_NO\n", ind, seq) < 0
         return: (cast: (int) (1))
     if: implicit_throw != 0
-        return: (cast: (int) (lm_compiler_emit_implicit_throw(mi, "implements", ind)))
+        return: (cast: (int) (lm_compiler_emit_implicit_throw(mi, "satisfies", ind)))
     if: at_mi >= 0
         if: m_throws_cell[0] = 0 || m_throws_cell[0][at_mi] = 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the admission of a dynamic candidate was not checked")))
-        return: (cast: (int) (lm_compiler_emit_implicit_throw(at_mi, "implements", ind)))
+        return: (cast: (int) (lm_compiler_emit_implicit_throw(at_mi, "satisfies", ind)))
     ---
     # DUPLICATE-STOP: a method off the status channel has no refusal to answer with (lm_compiler_d105_refusable): a machine function, which takes no admitted Structure.  What can still
     # fail here is the record the reads by name need: a broken invariant, or the arena's table of records that cannot grow.  That is said as such.
@@ -4770,7 +4770,7 @@ fn: lm_compiler_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: 
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: l2_dslot_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dslot_status%d)\n%s---\n%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_UNKNOWN\n%s    lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n%s---\n", ind, temp, ind, temp, ind, ind, temp, ind, ind) < 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, temp) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, temp) < 0 || lm_compiler_emit_implicit_throw(mi, "satisfies", ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_d105_emit_slot

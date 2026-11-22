@@ -1,7 +1,7 @@
 # Slice 286, CALLABLE-PLACE-FREE-SIGNATURE (Codex, 285 norm answers items 3-4; the book :370, :373, :387, :439).  A
 # callable place keeps the callable its definition put there.  A write there by any path -- the place's own path with a
 # free value, a free holder's path, the unit's place through `node` -- of a fn or a sub that does not take the call the
-# declaration forms is the implicit `implements` before anything changes: the old callable still answers.  A sub gives a
+# declaration forms is the implicit `satisfies` before anything changes: the old callable still answers.  A sub gives a
 # fn's call no result and a fn gives a sub's call one, and the declared throws are the same names in the same order, as
 # the static rule says (lm_compiler_sig_takes).  One that takes that call stands there, and the place's caller catches
 # its declared throw.  The `call` receiver over a fn whose written formal it forms no input for is not refused (the author's
@@ -66,7 +66,7 @@ fn: static_path () int
     int: refused 0
     ---
         @: Places\f Hw
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -80,7 +80,7 @@ fn: free_root () int
     int: refused 0
     ---
         @: Hq\f Hw
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -94,7 +94,7 @@ fn: unit_place () int
     int: refused 0
     ---
         @: node\f0 Hw
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -108,7 +108,7 @@ fn: sub_into_fn () int
     int: refused 0
     ---
         @: Places\f Hs
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -122,7 +122,7 @@ fn: fitting () int
     int: refused 0
     ---
         @: Fit\f Hh
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 0
@@ -136,7 +136,7 @@ fn: fn_into_sub () int
     int: refused 0
     ---
         @: Subs\t Hu
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -148,7 +148,7 @@ fn: sub_into_sub () int
     int: refused 0
     ---
         @: Subs\t Hs
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 0
@@ -160,7 +160,7 @@ fn: throws_into_plain () int
     int: refused 0
     ---
         @: Places\f Hb
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 1
@@ -174,7 +174,7 @@ fn: throws_into_throws () int
     int: refused 0
     ---
         @: Risky\f Hb2
-        catch: implements ()
+        catch: satisfies ()
             refused := 1
     ---
     if: refused != 0
@@ -194,7 +194,7 @@ fn: call_missing () int
     ---
         call: Hw
         return: 1
-        catch: implements ()
+        catch: satisfies ()
             return: 24
     ---
 end: call_missing
@@ -204,7 +204,7 @@ fn: call_fitting () int
         return: 1
         catch: call ()
             return: 22
-        catch: implements ()
+        catch: satisfies ()
             return: 24
     ---
 end: call_fitting

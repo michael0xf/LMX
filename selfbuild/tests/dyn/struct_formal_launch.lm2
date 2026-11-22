@@ -1,7 +1,7 @@
 # opus 414 probe (FABLE-O413-A item 2): a fn whose Structure formal gets no value, launched by `call:` -- the formal
 # stays absent and the body does not read it.  Expected by the norm (every declared input is optional; admission
 # goes by the given values): the body runs and bumps the unit's hit through a unit fn, read back by count() as
-# tests/os_twins/named_call_below_os.lm2 does: 7.  9 = an implicit `implements` refusal; 0 = the body did not run.
+# tests/os_twins/named_call_below_os.lm2 does: 7.  9 = an implicit `satisfies` refusal; 0 = the body did not run.
 int: hit 0
 Point:
     int: y 2
@@ -17,7 +17,7 @@ int: code 0
 ---
     call: take
     code := count()
-    catch: implements ()
+    catch: satisfies ()
         code := 9
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")

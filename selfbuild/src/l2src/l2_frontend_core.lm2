@@ -7942,10 +7942,10 @@ fn: lm_compiler_check_implements (const: (@: source_node c.LmP0Node); const: (@:
     int: result 0
     int: status
     if: source_node = 0 || source_node\as = 0 || source_node\as\frame = 0
-        return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements expects candidate, required, consumer")))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "satisfies expects candidate, required, consumer")))
     port_call := source_node\as\frame
     if: port_call\body = 0 || port_call\trailer != 0 || port_call\body\trailer != 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (port_call\body))) != 3
-        return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements expects candidate, required, consumer")))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "satisfies expects candidate, required, consumer")))
     a0 := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (port_call\body\first_field)))
     a1 := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (a0\next)))
     a2 := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (a1\next)))
@@ -7966,7 +7966,7 @@ fn: lm_compiler_check_implements (const: (@: source_node c.LmP0Node); const: (@:
         c.lm_compiler_xfree((cast: (@: void) cand))
         c.lm_compiler_xfree((cast: (@: void) req))
         c.lm_compiler_xfree((cast: (@: void) cons))
-        return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements expects descriptor names")))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "satisfies expects descriptor names")))
     status := c.lm_compiler_implements(cand, req, cons, @ result)
     c.lm_compiler_xfree((cast: (@: void) cand))
     c.lm_compiler_xfree((cast: (@: void) req))
@@ -7980,7 +7980,7 @@ fn: lm_compiler_check_implements (const: (@: source_node c.LmP0Node); const: (@:
     if: status != 0 && pr_said_cell[0] != 0
         return: (cast: (int) (1))
     if: status != 0
-        return: (cast: (int) (c.lm_compiler_error(path, source_node, "malformed implements descriptor")))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "malformed satisfies descriptor")))
     return: (cast: (int) (0))
 end: lm_compiler_check_implements
 
@@ -10143,10 +10143,10 @@ fn: lm_compiler_check_word_value (const: (@: source_node c.LmP0Node); const: (@:
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "unsupported body")))
     # implements has its value (§7): with operands its branch checks them (l2_check_implements); applied to nothing it
     # has none of its three.
-    if: c.lm_compiler_text_eq(w, "implements")
+    if: c.lm_compiler_text_eq(w, "satisfies")
         if: na != 0
             return: (cast: (int) (2))
-        return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements expects candidate, required, consumer")))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "satisfies expects candidate, required, consumer")))
     # The receivers the translator does not build (l2_check_word_stmt) and the unit instructions, as in a statement.
     if: c.lm_compiler_text_eq(w, "fm") || c.lm_compiler_text_eq(w, "synchronized") || c.lm_compiler_text_eq(w, "test") || c.lm_compiler_text_eq(w, "post") || c.lm_compiler_text_eq(w, "external")
         return: (cast: (int) (c.lm_compiler_error_name(path, source_node, "", (cast: (const: @: char) (w\data)), (cast: (size_t) (w\length)), " is not supported yet")))
@@ -10235,7 +10235,7 @@ fn: lm_compiler_value_model (@: value c.L2ValueSpan; int: mi; const: (@: path ch
                     status := c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (value\node)), "reference depth does not match the receiving contract")
                 else:
                     if: c.lm_compiler_colon_is_graph_ty(type) = 0
-                        status := c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (value\node)), "implements is false in function argument")
+                        status := c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (value\node)), "satisfies is false in function argument")
                     else:
                         \model := address\model
                         if: \model >= 0
@@ -10300,7 +10300,7 @@ fn: lm_compiler_admit_return (int: mi; @: first c.LmP0Field; int: n; const: (@: 
                     return: (cast: (int) (1))
                 return: (cast: (int) (lm_compiler_admit_site(mi)))
             if: cand < 0
-                return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false in return value")))
+                return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false in return value")))
             # D-105 native: the result of cmi reaches this method's result.
             if: c.lm_compiler_d105_note(mi, mi, 0 - 1, first, n, at) != 0
                 return: (cast: (int) (1))
@@ -10331,7 +10331,7 @@ fn: lm_compiler_admit_return (int: mi; @: first c.LmP0Field; int: n; const: (@: 
             return: (cast: (int) (1))
         return: (cast: (int) (lm_compiler_admit_site(mi)))
     if: ast = 2
-        return: (cast: (int) (c.lm_compiler_error(path, at, "implements is false in return value")))
+        return: (cast: (int) (c.lm_compiler_error(path, at, "satisfies is false in return value")))
     # D-105 native: the value's type reaches this method's result (or its formal, passed on as it is).
     if: c.lm_compiler_d105_note(mi, mi, 0 - 1, first, n, at) != 0
         return: (cast: (int) (1))
@@ -12667,7 +12667,7 @@ fn: lm_compiler_emit_tramp_receptions (int: i; int: n) int
     int: kind 0
     int: index i
     int: place_tmp
-    int: status c.lm_compiler_implicit_status(i, "implements")
+    int: status c.lm_compiler_implicit_status(i, "satisfies")
     if: lm_compiler_reception_count(i) = 0
         return: (cast: (int) (0))
     if: status <= 0
@@ -13207,7 +13207,7 @@ fn: lm_compiler_rw_opty (const: (@: source_node c.LmP0Node)) int
             return: (cast: (int) (c.lm_compiler_own_ty_of_param(ty)))
         # The same context-aware resolver supplies formal, name and path
         # contracts. A unit method never overrides an actual callable formal.
-        if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), "implements")
+        if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), "satisfies")
             return: (cast: (int) (0))
         if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), "length")
             return: (cast: (int) (2))

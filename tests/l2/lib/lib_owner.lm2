@@ -5,14 +5,14 @@
 # method then reads and A2's does not.
 # Library C's method takes an input the owner's model of it does not describe. try_c's written call
 # `c1\lib_c_next()` cannot be formed for that method, so the admission of C's instance to LibC is refused where
-# try_c binds it: try_c's implicit `implements`, which its handler takes (30).
+# try_c binds it: try_c's implicit `satisfies`, which its handler takes (30).
 # Library M's methods receive their formals themselves, at their entry, by M's own records; the owner's model of M
 # describes lib_m_bump's input by the owner's Model, which has y alone, and lib_m_take's by `nullary`. try_m builds a
 # Point (pad, y, x, next) and a Leaf (v, pad, w) for its reference while it runs: no translation saw them and M's
 # model together. M's formal receives the Point, and its reference's Leaf as M's Node, by M's own model and its
 # reference's declared pointee; the method reads and writes through the maps that gives, and try_m reads the Point
 # and the Leaf back. These methods have no C call, so they run walked too. A refusal at M's entry is the call's
-# implicit `implements`, which the caller's handler takes: try_n's Thin (pad, y) has no x (33); try_k's Far holds a
+# implicit `satisfies`, which the caller's handler takes: try_n's Thin (pad, y) has no x (33); try_k's Far holds a
 # Bare (v, pad) with no w, refused before M's body writes the Far's y (34, the y still 2). try_f binds M's instance
 # although M's lib_m_take takes a callable of another description, since M's body does not call it, and passes
 # `seven` (3); plus1 calls the `seven` it receives (8).
@@ -79,7 +79,7 @@ fn: try_c () int
     int: r 0
     @: c1 LibC lib_c_new()
     r: c1\lib_c_next()
-    catch: implements ()
+    catch: satisfies ()
         r: 30
     ---
 return: r
@@ -95,7 +95,7 @@ fn: try_n () int
     @: m2 LibM lib_m_new()
     q: merge: Thin
     r: m2\lib_m_bump(q)
-    catch: implements ()
+    catch: satisfies ()
         r: 33
     ---
 return: r
@@ -106,7 +106,7 @@ fn: try_k () int
     g: merge: Bare
     f\next: g
     r: m4\lib_m_bump(f)
-    catch: implements ()
+    catch: satisfies ()
         r: 34
     ---
 return: r * 100 + f\y
@@ -114,7 +114,7 @@ fn: try_f () int
     int: r 0
     @: m3 LibM lib_m_new()
     r: m3\lib_m_take(seven) * 10 + plus1(seven)
-    catch: implements ()
+    catch: satisfies ()
         r: 25
     ---
 return: r

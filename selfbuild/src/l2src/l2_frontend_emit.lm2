@@ -4955,7 +4955,7 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
     port_call := source_node\as\frame
     if: port_call\head = 0
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "unknown method")))
-    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (port_call\head)), "implements")
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (port_call\head)), "satisfies")
         return: (cast: (int) (c.lm_compiler_check_implements(source_node, path)))
     # D-106: a callable formal of this method shadows a unit method of its name.
     idx := c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\head)), @ fi)
@@ -5261,7 +5261,7 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                     # free name's value) is not judged statically: the formal's own reception admits the graph it holds at the
                     # callee's entry (a number is the implicit `convert`).
                     if: vty >= 0 && c.lm_compiler_ft_is_free(vty) = 0 && c.lm_compiler_colon_is_graph_ty(vty) = 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(vty)) != 1
-                        return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements is false in function argument")))
+                        return: (cast: (int) (c.lm_compiler_error(path, source_node, "satisfies is false in function argument")))
                     ---
                     if: check_unevaluated_cell[0] = 0 && c.lm_compiler_admit_site(mi) != 0
                         return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
@@ -10877,7 +10877,7 @@ fn: lm_compiler_rw_operand (const: (@: source_node c.LmP0Node); int: ty; int: pa
         # `implements(candidate, required, consumer)` over descriptor names is decided when the
         # program is translated: l2_prep_implements' own answer, 1 or 0, as the native emission
         # writes it, is an int literal here (-176).
-        if: c.lm_compiler_text_eq(t, "implements")
+        if: c.lm_compiler_text_eq(t, "satisfies")
             if: c.lm_compiler_tx_open(ib, ib_own, 8U) != 0 || c.lm_compiler_prep_implements(source_node, ib) != 0
                 return: (cast: (int) (1))
             return: (cast: (int) (c.lm_compiler_rw_lit(parent, (cast: (int) ((cast: (int) (ib\data[0] = 49)))), out)))
@@ -13237,8 +13237,8 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(h, "implements")
-        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "implements")))
+    if: c.lm_compiler_text_eq(h, "satisfies")
+        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "satisfies")))
     # An own Array of the body (-170; R5-3a: by its row, whatever its head word -- `[]: T x n`, `T: []: []: x`,
     # `[]: []: T x n`): the existing descriptor supplies this activation's ordinary binding.
     oi := c.lm_compiler_own_by_decl(rw_mi_cell[0], stmt)

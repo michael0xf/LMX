@@ -1,5 +1,5 @@
 # Slice 272: a slot holding a Structure or an Array directly, written by name from a runtime-typed holder.  It is rebound as PUT_REF
-# rebinds it, after the ordinary admission: a Structure to the model the slot declares (`implements` when it does not fit, the slot
+# rebinds it, after the ordinary admission: a Structure to the model the slot declares (`satisfies` when it does not fit, the slot
 # keeping its value), an Array by an Array of the same element type, anything else `convert`.  Typed readers see the written value.
 # Slice 274: a named Structure or Array in a slot is that slot's value, so its rebinding is data: every native word stays, including
 # the words of bodies with a machine operation (`machined`, which reads the root like the others).  Entry 7; 81.. name the failing check.
@@ -63,7 +63,7 @@ fn: outer_kid () int
         return: 81
     ---
         put_kid_wrong()
-        catch: implements ()
+        catch: satisfies ()
             caught := 1
     ---
     if: caught != 1 || read_kid() != 7

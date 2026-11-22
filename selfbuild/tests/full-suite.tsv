@@ -20,7 +20,7 @@ runs	os/os_requirements.lm2	7	nf
 runs	os/os_callable_result.lm2	7	nf
 # ordinary admission at the selected branch's real receiving place, positive and negative
 runs	os/os_implements.lm2	7	nf
-refuses	os/os_implements_refused.lm2	os_implements_refused.lm2:21:23: implements is false in function argument	nf
+refuses	os/os_implements_refused.lm2	os_implements_refused.lm2:21:23: satisfies is false in function argument	nf
 # the selected branch's own refusals, and the os block's structure
 refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:6:21: unknown method	nf
 refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:8:9: duplicate definition	nf
@@ -82,7 +82,7 @@ runs	dyn/free_pointer_paths.lm2	7	nf
 runs	dyn/free_machine_ops.lm2	7	nf
 # Slice 260 (design 4.5 B2b-2c): a free value received by a place with a receiving model -- a modelled own (declaration) and
 # a modelled formal -- is received as the graph reference and admitted against the model at run time in both executors: a
-# graph with the fields (Shape as Point), a graph without them (the implicit implements), a number (the implicit convert), a
+# graph with the fields (Shape as Point), a graph without them (the implicit satisfies), a number (the implicit convert), a
 # free pointer to a graph reference dereferenced into a modelled own (the deref level of the pointer coverage).
 runs	dyn/free_model_admit.lm2	7	nf
 # Slice 261 (design 4.5 B2b-2d; P1-PTR-COVERAGE, the address level): the address of a free name bound to a graph reference
@@ -195,9 +195,9 @@ runs	dyn/whole_arguments.lm2	7	nf
 runs	dyn/p0_groups.lm2	7	nf0
 # Slice 307: a Structure whose direct fields name the formals is given by its fields by the basic rule, whatever else it might fit (the author,
 # 2026-11-08: no search for arguments deeper in the Structure) -- k (Q: q; int: z 0) given QZ (int: z 5; Q: q) is 15, k(q := QZ) is 50; and a
-# Structure field of a whole call is admitted at its formal by the first part of implements -- a model without a field the callee uses is refused.
+# Structure field of a whole call is admitted at its formal by the first part of satisfies -- a model without a field the callee uses is refused.
 runs	dyn/whole_direct_fields.lm2	7	nf
-refuses	dyn/whole_field_refused.lm2	implements is false in function argument	nf
+refuses	dyn/whole_field_refused.lm2	satisfies is false in function argument	nf
 # Slice 302: a copy of a graph carries the codes of its occurrences' names, no spelling -- a named actual to a copied callable binds the formal of its name, a free input finds the copied formal by its code (IDENTIFIER-CODES).
 runs	dyn/copy_name_codes.lm2	7	nf
 # The := slice (the author, 2026-11-07; the book, assign-known and named-actuals): the operator writes a place already known

@@ -350,7 +350,9 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
             holder := (cast: (@: c.Lmx) actual)
             at := 2U
         actual := c.lmx_graph_get_in(g, holder, at)
-        if: c.lmx_graph_written_group(g, actual) != 0
+        # A written group and a form (a declaration among the actuals: a Frame of a declaring receiver, or the named cell of a
+        # literal form) are read by the reader of the runtime, as the interpreter reads them: nothing of a form is compiled or run here.
+        if: c.lmx_graph_written_group(g, actual) != 0 || (c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_declaration_name(g, actual) != 0) || (c.lmx_graph_kind(g, actual) = 1 && c.lmx_graph_name_of(g, actual) != 0)
             c.fprintf(f, "        if: lmx_graph_read_actual_value(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get_in(l2_g, ", call_id, call_id, i)
             status := lm_graph_emit_address(g, f, scope, holder)
             c.fprintf(f, ", %zuU), @ l2_av%d[%zuU]) != 0\n            %s\n", at, call_id, i, leave_failure)

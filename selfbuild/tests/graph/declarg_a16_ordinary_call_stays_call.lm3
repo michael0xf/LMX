@@ -1,0 +1,16 @@
+# Step 21.9 (a), declaration arguments (book #declaration-arguments), row A16 (conforms today): seen 74, calls 1: Producer() in the arguments of CODE stays a call executed once
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+fn: h (int: x 3; int: y 6) int
+    return: x * 10 + y
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(producer(); 4)
+main()

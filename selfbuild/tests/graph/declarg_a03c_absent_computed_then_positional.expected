@@ -1,0 +1,21 @@
+---
+    Observed:
+        int: seen 4
+        int: calls 0
+    end: Observed
+---
+fn: producer () int
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ calls) (((shared \ Observed) \ calls) + 1)
+    return: 7
+end: producer
+Any:
+end: Any
+fn: h (@: it Any; int: y 0) int
+    return: y
+end: h
+sub: main ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ seen) (h (int item (producer)) 4)
+end: main
+main:

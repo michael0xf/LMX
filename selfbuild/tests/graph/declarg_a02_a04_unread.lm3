@@ -1,0 +1,16 @@
+# Step 21.9 (a), declaration arguments (book #declaration-arguments), row A02, A04: seen 1, calls 0: the passing does not run the initializer; b is not read
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+fn: g (int: a 1; int: b 2) int
+    return: a
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := g(int: b producer())
+main()

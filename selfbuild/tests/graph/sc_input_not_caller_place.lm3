@@ -1,0 +1,15 @@
+# Entry Main: x is an input of D = parent(C), so it is C's own place: 5, written by the bare assignment to 6
+# (#call-frame-20261115: a bare write goes to the own place). Main's x stays the root's 100, and Main writes it into
+# after. D\seen 6, after 100.
+int: x 100
+int: after 0
+D:
+    int: x 5
+    int: seen 0
+    C:
+        x := x + 1
+        node\seen := x
+---
+Main:
+    D\C()
+    node\after := x

@@ -1,0 +1,11 @@
+# Р146, the nested variant (entry Outer\run): not a root rule. run runs over Outer: its own x 5 becomes 9 by the bare
+# write; `C()` runs C over Outer too, and its own input x is Outer's written 5 (#binding-places). node in C is Outer:
+# Outer\seen 5.
+Outer:
+    int: x 5
+    int: seen 0
+    run:
+        x := 9
+        C()
+    C:
+        node\seen := x

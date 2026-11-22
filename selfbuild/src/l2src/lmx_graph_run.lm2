@@ -835,7 +835,7 @@ fn: lmx_graph_work_capture_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @
     value := lmx_graph_select_binding(g, (cast: (@: c.Lmx) frame\code), name, @ selected, @ held, @ declared, 0, @ status)
     if: status != 0
         return: status
-    # A place of the immediate caller is denoted transparently (TZ 2026-11-19 R04, section 6.2): the new row stands for
+    # A place of the immediate caller is denoted transparently (the book, #binding-caller-place): the new row stands for
     # that row, with no copy; every other source keeps the former binding with its own copy (R01, R02).
     caller := lmx_graph_caller_place(g, frame, name, selected, @ at)
     # An open local namespace may still declare this name. Keep the entry
@@ -904,7 +904,7 @@ fn: lmx_graph_input_row (@: g c.LmxGraph; @: active c.LmxActivation; @: name cha
         return: 0
     return: row
 
-# Every use of a name announces it before the search, and the use chooses the binding of this activation now (TZ 2026-11-19 §6.3, §6.4): a write by a bare name
+# Every use of a name announces it before the search, and the use chooses the binding of this activation now (the book, #binding-fallback, #binding-chain): a write by a bare name
 # (lmx_graph_place_name), the address of a name (`@name`, lmx_graph_eval_value; the native image calls this too), a read (lmx_graph_operand_read -- the witness
 # k1_data_producer --, lmx_graph_named_int -- bind_place_chain_alias). lmx_graph_eval_record takes nothing itself: a bare name given as an actual is taken when the
 # call evaluates its operands (lmx_graph_operand_read; bind_place_chain_reference_pass), and `return:` ends the activation, so no call of it sees the place. The one
@@ -992,7 +992,7 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
         return: 3
     return: lmx_graph_work_bind_slot(g, frame, slot, name)
 
-# A reached declaration takes its place on the lexical level it stands on (TZ 2026-11-19, R16, §7.2): a visible row of
+# A reached declaration takes its place on the lexical level it stands on (the book, #shadowing-levels): a visible row of
 # its name on this very level is the place of a repeat, kept with its value; a declaration of DATA binds its physical
 # place; one on the root level of the code takes the DATA place of its name, as before (whether that level is nested in
 # the data is step 5 of the plan); otherwise the row this level gets again on each entry, or a new activation-owned row
@@ -1069,7 +1069,7 @@ fn: lmx_graph_work_site (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: holder c.
         row\expected_kind := required
         row\declared := c.lmx_graph_get_in(g, holder, index)
         # A new place with no value of its own takes the autofill of the immediate caller of this activation, never a
-        # place of an enclosing level of the same activation (TZ 2026-11-19 R03, section 7.4; Р114).
+        # place of an enclosing level of the same activation (the book, #binding-autofill, #inline-declaration-control; Р114).
         if: lmx_graph_place_without_value(g, raw) != 0
             filled := lmx_graph_work_autofill(g, frame, row, name, raw, lmx_graph_written_of(g, holder, index), @ status)
         if: filled = 0 && status = 0
@@ -1361,6 +1361,53 @@ fn: lmx_graph_work_open_marked (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: da
         j := j + 1U
     return: status
 
+# Is code an FN-pool object, or a Structure written inside the declaration of one -- an `fn:`/`sub:` record, or the
+# object it makes -- at any level of its physical owners? Those writings have no meaning under the norm (the book
+# #removed-builtins: `sub` and the executable form of `fn` are withdrawn), so they keep their old reading over
+# themselves until their programs are translated. 1 or 0.
+fn: lmx_graph_fn_written_within (@: g c.LmxGraph; @: code c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: at c.Lmx code
+    @: head char 0
+    if: state = 0
+        return: 1
+    while: at != 0
+        if: c.lmx_graph_method(g, at) != 0
+            return: 1
+        head := c.lmx_graph_name_of(g, (cast: (@: void) at))
+        if: head = state\w_fn || head = state\w_sub
+            return: 1
+        at := (cast: (@: c.Lmx) at\parent)
+    return: 0
+
+# The data of a callee C (the book #call-receivers: C is executed, its actual parent supplies DATA, and a call cannot
+# supply a replacement parent): its physical parent, the Lmx it is written in; a reference to C does not reparent it.
+# For a group written in a code record such as `@: C (...)` at R0 that is the record (Р148: such a group stands in
+# the role of code, it is no Structure of the unit). An FN-pool object, a Structure written inside an fn/sub
+# declaration (lmx_graph_fn_written_within) and a Structure with no parent give C itself: they keep the reading over
+# themselves.
+fn: lmx_graph_callee_data (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
+    @: owner c.Lmx 0
+    if: code = 0 || lmx_graph_fn_written_within(g, code) != 0
+        return: code
+    owner := (cast: (@: c.Lmx) code\parent)
+    if: owner = 0
+        return: code
+    return: owner
+
+# Is the unmarked field index of data an input of a structural call (the book #fn-signature: `return` describes a
+# result and is no input, a nested user Structure is not automatically a formal; #binding-places, Р146)? A place
+# declaration -- the notion of a place the rows use (lmx_graph_binding_name). Structures, callables and executable
+# records stay visible by name (lmx_graph_space_declarations) and open no row. 1 or 0.
+fn: lmx_graph_input_field (@: g c.LmxGraph; @: data c.Lmx; size_t: index) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: name char 0
+    int: place 0
+    name := lmx_graph_binding_name(g, data, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, index)), 1, @ place)
+    if: name = 0 || state = 0 || name = state\w_return
+        return: 0
+    return: place
+
 # One invocation owns its namespace. Only DATA root fields are installed at
 # entry; CODE declarations create their local rows when reached. No default
 # expression or initializer runs here, and no local is published to the graph.
@@ -1370,6 +1417,7 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @:
     size_t: marked 0U
     size_t: ordinal 0U
     int: status 0
+    int: view 0
     if: frame = 0 || active = 0 || active\code != code || data = 0 || body = 0
         return: 5
     c.memset((cast: (@: void) frame), 0, c.sizeof(c.LmxGraphFrame))
@@ -1388,12 +1436,19 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @:
     status := lmx_graph_space_declarations(g, data)
     if: status = 0 && body != data
         status := lmx_graph_space_declarations(g, body)
+    # A structural launch (body = C, data not C: its parent, lmx_graph_callee_data, or the data given by `S(D)` or
+    # `call(D; C)`) opens a row for each input of its data only (lmx_graph_input_field; the book #fn-signature: the
+    # input positions are the declared input places of the data): a field that is no input opens no row and takes no
+    # ordinal. A callable's data part (its body is its code part, not the callable) and a Structure over itself keep a
+    # row per field, as before: the data of an fn may hold Structures, and they keep their positions there. The test
+    # costs an FN call one comparison.
+    view := (cast: (int) (body = code && data != code))
     while: i < c.lmx_graph_count(data) && status = 0
         marked := lmx_graph_marked_count(g, data, i)
         if: marked != 0U
             status := lmx_graph_work_open_marked(g, frame, data, body, i, marked, ordinal)
             ordinal := ordinal + marked
-        else:
+        if: marked = 0U && (view = 0 || lmx_graph_input_field(g, data, i) != 0)
             status := lmx_graph_work_open_row(g, frame, data, body, i, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, i)), 1, ordinal)
             ordinal := ordinal + 1U
         i := i + 1U
@@ -1439,7 +1494,7 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
     @: row c.LmxGraphWork 0
     @: value void 0
     int: status 0
-    # A read is a use of the name: its binding is chosen now (TZ 2026-11-19 §6.3, §6.4).
+    # A read is a use of the name: its binding is chosen now (the book, #binding-fallback, #binding-chain).
     status := lmx_graph_input_take(g, name)
     if: status != 0
         return: status
@@ -2662,7 +2717,7 @@ fn: lmx_graph_lexical_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
     ---
     return: 0
 
-# The receiver's side of private (TZ 2026-11-19, R05, §5.1, §5.3): is the declaration of name that scope sees lexically
+# The receiver's side of private (the book, #binding-decisions, #private-binding): is the declaration of name that scope sees lexically
 # -- the one the lexical part selects, no other private one further out -- declared private? Selecting prepares nothing
 # and runs nothing. 1 or 0; no lexical declaration is not private.
 fn: lmx_graph_lexical_private (@: g c.LmxGraph; @: scope c.Lmx; @: name char) int
@@ -2891,10 +2946,10 @@ fn: lmx_graph_call_reading (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; @: e
         return: 2
     return: 0
 
-# The one actual of a call may be opened -- its fields weighed as the actuals of the opened reading (TZ 2026-11-19
-# §9.3): a name or a field path; a group of one of them (a grouped value: the opening is of what it holds); a written
+# The one actual of a call may be opened -- its fields weighed as the actuals of the opened reading (the book, #declaration-selection:
+# a name or a field path; a group of one of them (a grouped value: the opening is of what it holds); a written
 # group of several fields (one Structure written in place); a value obtained by execution that by description may be a
-# Structure (lmx_graph_computed_structure; fable Р130, TZ §9.4: computed once before the decision, both readings use
+# Structure (lmx_graph_computed_structure; fable Р130; the book, #declaration-selection, step 4: computed once before the decision, both readings use
 # it). Not a named actual (`formal := S` has no E), not a group of one other value (`h((5))` is a group read as an
 # expression, the book #declaration-selection), not an application whose described result is primitive. Nothing is
 # evaluated here.
@@ -2915,7 +2970,7 @@ fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: scope c.Lmx; @: expression c
         return: 1
     if: c.lmx_graph_name_of(g, raw) != 0 || c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
         return: 0
-    # A declaration among the actuals is a form, not a Structure written in place (TZ Declaration Arguments).
+    # A declaration among the actuals is a form, not a Structure written in place (the book, #declaration-arguments).
     if: c.lmx_graph_declaration_place_name(g, raw) != 0
         return: 0
     path := (cast: (@: c.Lmx) raw)
@@ -5845,10 +5900,10 @@ fn: lmx_graph_call_candidates (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
 fn: lmx_graph_actual_pure (@: g c.LmxGraph; @: expression c.Lmx; size_t: i) int
     return: (cast: (int) (lmx_graph_actual_effect_as(g, expression, i, 2) = 0))
 
-# The value the opened reading weighs (TZ 2026-11-19 §9.3): when the call has one actual that may be one Structure
+# The value the opened reading weighs (the book, #declaration-selection): when the call has one actual that may be one Structure
 # (lmx_graph_single_candidate), its value in whole -- a written group as data, a name or a path read (a group of one
 # around a name or a path is read through what it holds, lmx_graph_grouped_name), a value obtained by execution
-# evaluated now, once, before the decision (fable Р130; TZ §9.4: the same value serves both readings and is not
+# evaluated now, once, before the decision (fable Р130; the book, #declaration-selection, step 4: the same value serves both readings and is not
 # evaluated again at its reception) --; absent otherwise. No other actual is evaluated before the choice (fable R102,
 # R103): the pairs judge them (lmx_graph_pair_written). 0, or the answer of the read or the evaluation.
 # carry (0 when no actual is a call of a name): the sole actual that is a call of a name has its description read
@@ -5984,7 +6039,7 @@ fn: lmx_graph_declared_operand (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@
         return: 5
     return: lmx_graph_read_received_value(g, scope, operand, 2, out)
 
-# The pair of declaration code and the fields of the one Structure whole (the opened reading, TZ 2026-11-19 §9.3): a
+# The pair of declaration code and the fields of the one Structure whole (the opened reading, the book, #declaration-selection): a
 # named field gives the formal of its name, an unnamed one the formal of its position (lmx_graph_bind_fields); then each
 # field at the one admission of its formal, read as an actual is read (fable Р130): a declaration by its operand (the
 # attempt executes nothing: an operand that is an application fails the pair, R92); a primitive field as its cell; a
@@ -6055,7 +6110,7 @@ fn: lmx_graph_pair_opened (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; @: wh
         stage[0] := 0
     return: 0
 
-# The selection of the declaration by the call (TZ 2026-11-19 §9.2-§9.5; the book #declaration-selection): the
+# The selection of the declaration by the call (the book, #declaration-selection): the
 # candidates of the head name, the readings W (as written) and E (opened) (whole present: the value of the one actual
 # that may be a Structure), every candidate against both readings, and for every pair the assignment and the admission
 # -- nothing runs (fable R102, R103). W and E are equal: no preference by the whole value, the number of arguments or
@@ -6251,8 +6306,9 @@ fn: lmx_graph_eval_application (@: g c.LmxGraph; @: scope c.Lmx; @: application 
 end: lmx_graph_eval_application
 
 # The record that launches an ordinary Structure by name (the author 2026-11-11,
-# LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22): `S()` runs S over itself, `S(D)` and `S(data := D)` over
-# the data D -- the one argument data, by position or by name, bound by the one binder (lmx_graph_launch_formals: the
+# LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22): `S()` runs S over parent(S) (the book
+# #call-receivers; lmx_graph_call_data), `S(D)` and `S(data := D)` over the data D -- the one argument data, by
+# position or by name, bound by the one binder (lmx_graph_launch_formals: the
 # forms [] and [data]; two positional arguments or another name are no form, 5). The data is an operand of a launch
 # (lmx_graph_launch_operand) and the launch is the one of the receiver call (lmx_graph_call_data), so data that gives no
 # Structure answers as there. 0, or the answer of the launch.
@@ -6310,7 +6366,7 @@ fn: lmx_graph_field_structure (@: g c.LmxGraph; @: scope c.Lmx; @: field void) i
 # 2026-11-18, #opening-tries-other-signatures, R87-R89): the receiver's forms (lmx_graph_receivers_open; their formals are
 # all required: lmx_graph_receiver_form_of gives every formal) are tried with the fields of the Structure value stands
 # for as the actuals -- the one binder, by position and by name. A Structure of one field is opened too: W and E are
-# equal (TZ 2026-11-19 §9.3; §9.8, the row «W и E подходят одному объявлению»; the rule R89, opening is an attempt, is
+# equal (the book, #declaration-selection, #selection-examples, the row «W и E подходят одному объявлению»; the rule R89, opening is an attempt, is
 # withdrawn), so its field may take the form the whole took, and both readings count. A form is admitted when every
 # field it takes is admitted: a Structure
 # for args, data and code (lmx_graph_field_structure), any written description for return. A callable is not opened (as
@@ -6376,7 +6432,8 @@ fn: lmx_graph_receiver_reading (@: g c.LmxGraph; @: scope c.Lmx; @: head char; @
 # The receiver call (the book, call-receivers; the author 2026-11-11): the actual code and data are selected when the
 # call runs. Its forms (lmx_graph_receivers_open) are bound by the one binder, by position or by name through `:=`
 # (lmx_graph_launch_formals; R22): [args data code] is the launch without a result by its parts (lmx_graph_launch);
-# [code] is the code alone -- an ordinary Structure runs over itself as its data, a callable over its own data; [data
+# [code] is the code alone -- an ordinary Structure runs over parent(C) (the book #call-receivers;
+# lmx_graph_call_data), a callable over its own data; [data
 # code] runs the code over the data: the data stands before the code (the author 2026-11-11,
 # LMX_blog/2026-11-11.md#data-before-code; formerly the sources wrote `call: code data`). The operands are evaluated in
 # the order they are written (lmx_graph_launch_operand).
@@ -6438,12 +6495,15 @@ fn: lmx_graph_eval_explicit_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression
 end: lmx_graph_eval_explicit_call
 
 # The data and the code of a launch by the receiver call, in the order of the form: the data before the code. With
-# shorthand set (the one-argument form) no data is given and the code selects it.
+# shorthand set (the one-argument form `call(C)`, and the record `S()`) no data is given: the callee runs over
+# parent(C), its data (lmx_graph_callee_data; the book #call-receivers).
 fn: lmx_graph_call_data (@: g c.LmxGraph; @: given_data c.Lmx; @: given_code c.Lmx; int: shorthand) int
     c.LmxWalkValue: result
     if: shorthand = 0 && given_data = 0
         return: 5
     c.lmx_walk_value_clear(@ result)
+    if: shorthand != 0
+        given_data := lmx_graph_callee_data(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) given_code))))
     return: lmx_graph_launch_value(g, 0, given_data, 0, given_code, @ result)
 end: lmx_graph_call_data
 
@@ -9118,7 +9178,7 @@ sub: lmx_graph_space_close (int: opened)
 end: lmx_graph_space_close
 
 # The row a working row stands for: itself, or -- for a transparent place (LMX_WALK_VALUE_PLACE) -- the row of the
-# calling frame it denotes, followed to its end (A -> B -> C, TZ 2026-11-19 section 6.4). 0 when that row is gone.
+# calling frame it denotes, followed to its end (A -> B -> C, the book, #binding-chain). 0 when that row is gone.
 fn: lmx_graph_work_target (@: row c.LmxGraphWork) @: c.LmxGraphWork
     @: link c.LmxWalkValue 0
     @: frame c.LmxGraphFrame 0
@@ -9152,7 +9212,7 @@ fn: lmx_graph_row_owner (@: g c.LmxGraph; @: row c.LmxGraphWork; @@: frame c.Lmx
         active := c.lmx_activation_next(active)
     return: 0
 
-# The place of the immediate caller that name denotes transparently (TZ 2026-11-19 R04, section 6.2): the row of the
+# The place of the immediate caller that name denotes transparently (the book, #binding-caller-place): the row of the
 # calling frame -- its own place, its copy or its own transparent place -- whose place is the selected source; its
 # index in at. 0 for any other source: a farther activation, a field of data, a lexical level (the former binding, R01).
 fn: lmx_graph_caller_place (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name char; @: selected c.LmxGraphWork; @: at size_t) @: c.LmxGraphFrame
@@ -9181,7 +9241,7 @@ fn: lmx_graph_place_without_value (@: g c.LmxGraph; @: raw void) int
     int: kind c.lmx_graph_kind(g, c.lmx_graph_binding_leaf(g, raw))
     return: (cast: (int) (kind = 3 || kind = 8 || kind = 9))
 
-# Autofill (TZ 2026-11-19 R03, sections 6.1 and 7.3; Р110 items 2, 3, 5): at entry, an input with no actual and no value
+# Autofill (the book, #binding-autofill, #shadowing-levels; Р110 items 2, 3, 5): at entry, an input with no actual and no value
 # of its own takes the value of the same-named place of the immediate caller -- the receiving place and the source not
 # private, the source holding a value of the kind the place takes; a computed source is computed once in its place. The
 # value goes into the input's own cell, never an alias. 1 filled; 0 not; the answer of a failed computation in status.
@@ -9223,7 +9283,7 @@ fn: lmx_graph_required_names (@: g c.LmxGraph; @: raw void) size_t
         j := j + 1U
     return: n
 
-# A reached line `required: a b` (the book #required-receiver; TZ 2026-11-19 section 9.7): each name is used on this
+# A reached line `required: a b` (the book, #required-receiver): each name is used on this
 # line as a read uses it -- the binding is chosen now, the transparent place of the caller included -- and the place it
 # denotes must be initialized: a place without a value refuses 5, a name with no place 3, as a read of it does. A place
 # with its own initializer is initialized by its declaration and is not computed here. It declares no place.
@@ -9272,7 +9332,7 @@ fn: lmx_graph_record_effect (@: g c.LmxGraph; @: raw void; int: contract) int
     size_t: i 0U
     if: c.lmx_graph_kind(g, raw) != 4
         return: 0
-    # A declaration is a form whose initializer runs, never a written group read as data (TZ Declaration Arguments).
+    # A declaration is a form whose initializer runs, never a written group read as data (the book, #declaration-arguments).
     if: c.lmx_graph_declaration_place_name(g, raw) != 0 || c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
         return: 1
     if: contract = 2 && lmx_graph_written_group(g, raw) != 0
@@ -9312,7 +9372,7 @@ fn: lmx_graph_actual_effect (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx
         return: lmx_graph_actual_effect_as(g, expression, i, 0)
     return: lmx_graph_actual_effect_as(g, expression, i, lmx_graph_actual_contract(g, code, slot))
 
-# A value obtained by execution that by description may be a Structure or a reference (fable Р130; TZ 2026-11-19 §9.4):
+# A value obtained by execution that by description may be a Structure or a reference (fable Р130; the book, #declaration-selection, step 4):
 # an application whose description is unknown (lmx_graph_described_class 3) -- a receiver word (merge, parent, length,
 # typeof, sys ...), a head that is a path or a reference to a callable, a call of a name some declaration of which
 # declares a result that is no primitive word. Not a declaration; not a group: a group of one around a computed value
@@ -9415,7 +9475,7 @@ fn: lmx_graph_described_class_of (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; 
     count[0] := n
     return: answer
 
-# When does a call of a name go through the selection (TZ 2026-11-19 §9.5; fable R103 item 1): the name declares two or
+# When does a call of a name go through the selection (the book, #declaration-selection; fable R103 item 1): the name declares two or
 # more fn or sub, or one and the call has an opened reading (lmx_graph_single_candidate) or an actual with an effect --
 # its pair is judged before anything runs. A one-declaration call whose actuals are all without effects is the
 # selection's case too, but judging it first and calling it cannot differ observably: it keeps today's path. 1 or 0.
@@ -9439,7 +9499,7 @@ fn: lmx_graph_selection_applies (@: g c.LmxGraph; @: scope c.Lmx; size_t: n; @: 
 # computed actual to choose by; its refusal is this actual's answer; a chosen declaration with no result gives no value,
 # 5); a declaration -- the type of its place: a zero of that ABI. 0, 5, 4 without memory, or the answer of the inner
 # selection. entry (0, or two slots of a carry block): a choice another candidate of the outer call already made is
-# reused, no new search (TZ 2026-11-19 §9.4); a new choice that took W of the call written as the actual is recorded
+# reused, no new search (the book, #declaration-selection); a new choice that took W of the call written as the actual is recorded
 # with the carry of its own actuals, and the reception executes it (lmx_graph_carried_value; §9.5, §9.6).
 fn: lmx_graph_described_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out c.LmxWalkValue; @: known int; @@: entry void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -9593,7 +9653,7 @@ fn: lmx_graph_declared_abi (@: g c.LmxGraph; @: root void) @: void
     return: (cast: (@: void) c.lmx_graph_scalar_binding(word, @ description))
 
 # The reception of an actual whose call was chosen by its description (lmx_graph_described_value): the carried
-# declaration executes with the carry of its own actuals, no new search (TZ 2026-11-19 §9.5, §9.6); as
+# declaration executes with the carry of its own actuals, no new search (the book, #declaration-selection); as
 # lmx_graph_eval_selected after its choice: a declaration with no result gives no value (5). 0 or the answer.
 fn: lmx_graph_carried_value (@: g c.LmxGraph; @: scope c.Lmx; @@: entry void; @: raw void; @: out c.LmxWalkValue) int
     @: code c.Lmx (cast: (@: c.Lmx) entry[0])
@@ -9630,7 +9690,7 @@ fn: lmx_graph_carry_free (@: g c.LmxGraph; @@: carry void; @: expression c.Lmx) 
     c.free((cast: (@: void) carry))
 
 # A group of one around a name, a path or another such group, `((k))`: a grouped value, not a Structure written in
-# place -- the opened reading weighs what it holds (TZ 2026-11-19 §9.3, §9.6: `h((5))` is the contract of a numeric
+# place -- the opened reading weighs what it holds (the book, #declaration-selection: `h((5))` is the contract of a numeric
 # expression, not E). A group of one around an application stays as it is (lmx_graph_single_candidate). 1 or 0.
 fn: lmx_graph_grouped_name (@: g c.LmxGraph; @: raw void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())

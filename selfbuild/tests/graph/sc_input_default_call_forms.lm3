@@ -1,0 +1,11 @@
+# Entry Main: `C()`, `call(C)` and `call(code := C)` are one call over parent(C), the root (#call-receivers); each
+# reads the written x 5, not Main's 9. seen = ((0 * 10 + 5) * 10 + 5) * 10 + 5 = 555.
+int: seen 0
+int: x 5
+C:
+    node\seen := node\seen * 10 + x
+Main:
+    x := 9
+    C()
+    call(C)
+    call(code := C)

@@ -1,0 +1,13 @@
+# Entry Main: `@: Ref Old\C`, a field of the description, is a reference place and leaves C's parent unchanged
+# (#call-receivers: a call cannot supply a replacement parent). `Ref()` runs C over Old and reads Old's x 1, not the
+# root's 7. Old\seen 1.
+int: x 7
+Old:
+    int: x 1
+    int: seen 0
+    C:
+        node\seen := x
+---
+@: Ref Old\C
+Main:
+    Ref()

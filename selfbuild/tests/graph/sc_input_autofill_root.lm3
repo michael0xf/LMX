@@ -1,0 +1,12 @@
+# Р146, the variant without an own value (entry Main): the root's x has no value. Main's input x is filled by
+# `x := 9`; C's input x has no actual and no value of its own, so it is filled from the same-named place of the
+# immediate caller, Main's 9 (#binding-autofill). seen 9.
+# Red until autofill takes the current value of a loaded source place: Main's x is declared without a value and
+# written later, and the kernel gives C's x no value, so the read answers 5 (#binding-autofill).
+int: seen 0
+int: x
+C:
+    node\seen := x
+Main:
+    x := 9
+    C()

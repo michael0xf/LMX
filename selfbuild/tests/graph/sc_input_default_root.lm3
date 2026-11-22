@@ -1,0 +1,11 @@
+# Р146 in the form of Р148 (entry Main): the file is a description, the entry names the body. Main runs over its
+# parent, the root: its input x is the root's written 5, and `x := 9` writes Main's own place. `C()` runs C over
+# parent(C), the root (#call-receivers): C's own input x is the written 5, not Main's 9 (#binding-places). node in C
+# is the root: seen 5.
+int: seen 0
+int: x 5
+C:
+    node\seen := x
+Main:
+    x := 9
+    C()

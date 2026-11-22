@@ -124,7 +124,7 @@ fn: gp_private_check () int
     if: g = 0 || file = 0
         return: 101
     # CODE private is readable by the current activation and is no dynamic source of the child. A private field the
-    # child sees lexically is not replaced by a public dynamic field of the same spelling (TZ 2026-11-19, R05).
+    # child sees lexically is not replaced by a public dynamic field of the same spelling (the book, #binding-decisions).
     if: c.fputs("private: (int: x 7)\n\nPrivateCounter:\n    int: calls 0\n    int: local 0\nend: PrivateCounter\n\nLibrary:\n    private: (int: x 10)\n    fn: read () int\n        return: x\n    end: read\nend: Library\n\nfn: CodePrivate () int\n    private: (int: x 20)\n    x := 21\n    return: x * 100 + Library\\read()\nend: CodePrivate\n\nfn: CodePublic () int\n    int: x 20\n    x := 21\n    return: x * 100 + Library\\read()\nend: CodePublic\n\nfn: DataPrivate (private: (int: x 20)) int\n    return: x * 100 + Library\\read()\nend: DataPrivate\n\nfn: DataPrivateSource () int\n    return: DataPrivate\\data\\x\nend: DataPrivateSource\n", file) < 0
         return: 102
     # This nested method reads the root's private x before the local
@@ -133,7 +133,7 @@ fn: gp_private_check () int
     if: c.fputs("\nfn: F () int\n    int: before inner()\n    private: (int: x 20)\n    x := 21\n    return: before * 100 + inner()\n    fn: inner () int\n        return: x\n    end: inner\nend: F\n\nfn: FSource () int\n    return: F\\code\\x\nend: FSource\n\nOther:\n    int: x 40\n    fn: read () int\n        return: x\n    end: read\nend: Other\n\nPrivateLex:\n    private: (int: x 20)\n    fn: relay () int\n        int: selected x\n        x := 21\n        PrivateCounter\\local := x\n        return: Other\\read()\n    end: relay\nend: PrivateLex\n\nfn: InheritedPrivate () int\n    return: PrivateLex\\relay()\nend: InheritedPrivate\n\nfn: PrivateLexSource () int\n    return: PrivateLex\\x\nend: PrivateLexSource\n", file) < 0
         return: 102
     # The actual is read from a private source into a public DATA field. Library\read sees Library's private x
-    # lexically, so no dynamic field replaces it: read gives the reset 10 (TZ 2026-11-19, R05).
+    # lexically, so no dynamic field replaces it: read gives the reset 10 (the book, #binding-decisions).
     if: c.fputs("\nfn: explicit_relay (int: x) int\n    Library\\x := 10\n    return: Library\\read()\nend: explicit_relay\n\nfn: Explicit () int\n    private: (int: x 99)\n    Library\\x := 30\n    int: direct Library\\x\n    int: passed explicit_relay(Library\\x)\n    return: direct * 100 + passed\nend: Explicit\n\nfn: LibrarySource () int\n    return: Library\\x\nend: LibrarySource\n", file) < 0
         return: 102
     # A free name is resolved when it is first read; the body of a call is not scanned at its entry (the author,

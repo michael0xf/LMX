@@ -191,6 +191,11 @@ the same library; c5 (native `fncall(F)` to the opening) loses its object with 2
 in 21.5; c6 and its extension go into 21.5 unchanged; c6z moves onto `return` in DATA after 21.7. The plan's M15 text
 on `uninit:T` contradicted U §2–§3 and was corrected with the plan section.
 
+Corrected 2026-11-21, the executor's answer Р129: «c1–c4 stay» does not hold for the drafts as written. They make
+the library remember a map of uses in the arena, and the edition allows no persistent arena store of
+resolutions or admissions (`docs/kernel-implementation.en.md`, §5.2 and the table of removals). The library is
+derived anew as step 21.8 (a); step 21.5 lays the selection rule on today's admission.
+
 Already conforming, not to be touched by the new steps: the positional counter; an ordinary callable head stays a
 call; merge operands evaluated once with calls applied once; one copy map with shared targets, cycles and parents;
 receivers kept in the graph and in the dump; locals not published; index writes replace slots; `private` read from

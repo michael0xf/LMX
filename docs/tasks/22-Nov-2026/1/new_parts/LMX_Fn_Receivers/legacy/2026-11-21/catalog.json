@@ -1,0 +1,302 @@
+[
+  {
+    "name": "types",
+    "api": "RxTypes\\types",
+    "status": "BODY",
+    "scope": "физические типы полей; плотный Array<int>"
+  },
+  {
+    "name": "names",
+    "api": "RxNames\\names",
+    "status": "GAP",
+    "scope": "нужен доступ к существующей таблице имён"
+  },
+  {
+    "name": "signature",
+    "api": "RxSignature\\signature",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "полная сигнатура через общий семантический анализ FxKernel"
+  },
+  {
+    "name": "fn",
+    "api": "FxSignatureOperand\\make",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "OPERANDS_TEMPLATE: результат слева, все входы справа; типовые токены -> обычная fn-сигнатура"
+  },
+  {
+    "name": "lambda",
+    "api": "FxLambda\\lambda",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "N разных входов; последняя ступень возвращает точный исходный R"
+  },
+  {
+    "name": "apply",
+    "api": "RxApplyInt\\apply",
+    "status": "BODY",
+    "scope": "binary int; также unary int и @"
+  },
+  {
+    "name": "partial",
+    "api": "FxPartial\\partial",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "префикс 0..N; N-K входов; при K=N отложенный nullary"
+  },
+  {
+    "name": "uncurry",
+    "api": "FxUncurry\\uncurry",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "явные contract и failures; остановка по N, включая callable-result"
+  },
+  {
+    "name": "flip",
+    "api": "FxFlip\\flip",
+    "status": "BODY_WITH_BRIDGE",
+    "scope": "первые две позиции произвольного N>=2, вместе с типами"
+  },
+  {
+    "name": "compose",
+    "api": "RxComposeInt\\compose",
+    "status": "BODY",
+    "scope": "unary int и @; F(G(x))"
+  },
+  {
+    "name": "pipe",
+    "api": "RxPipeInt\\pipe",
+    "status": "BODY",
+    "scope": "unary int и @; G(F(x))"
+  },
+  {
+    "name": "identity",
+    "api": "RxIdentityInt\\identity",
+    "status": "BODY",
+    "scope": "фабрики identity для int и @"
+  },
+  {
+    "name": "map",
+    "api": "RxMap\\map",
+    "status": "BODY",
+    "scope": "последовательная обработка ссылок"
+  },
+  {
+    "name": "filter",
+    "api": "RxFilter\\filter",
+    "status": "BODY",
+    "scope": "ссылки + int-предикат"
+  },
+  {
+    "name": "fold",
+    "api": "RxFold\\fold",
+    "status": "BODY",
+    "scope": "левая свёртка ссылок"
+  },
+  {
+    "name": "zip",
+    "api": "RxZip\\zip",
+    "status": "BODY",
+    "scope": "пары ссылок; длина min"
+  },
+  {
+    "name": "zipWith",
+    "api": "RxZipWith\\zipWith",
+    "status": "BODY",
+    "scope": "ссылочная binary-функция"
+  },
+  {
+    "name": "scan",
+    "api": "RxScan\\scan",
+    "status": "BODY",
+    "scope": "n+1 результатов, начиная с seed"
+  },
+  {
+    "name": "bind",
+    "api": "RxBind\\bind",
+    "status": "BODY",
+    "scope": "конкретный Maybe<@>"
+  },
+  {
+    "name": "traverse",
+    "api": "RxTraverse\\traverse",
+    "status": "BODY",
+    "scope": "Maybe<@>, остановка на отсутствии"
+  },
+  {
+    "name": "memo",
+    "api": "RxMemo\\memo",
+    "status": "BODY",
+    "scope": "явное равенство ключей; линейный кеш"
+  },
+  {
+    "name": "fix",
+    "api": "RxFix\\fix",
+    "status": "BODY",
+    "scope": "явная рекурсия через self"
+  },
+  {
+    "name": "select",
+    "api": "RxSelect\\select",
+    "status": "BODY",
+    "scope": "физические индексы, ссылки"
+  },
+  {
+    "name": "omit",
+    "api": "RxOmit\\omit",
+    "status": "BODY",
+    "scope": "физические индексы, ссылки"
+  },
+  {
+    "name": "rename",
+    "api": "RxRename\\rename",
+    "status": "GAP",
+    "scope": "нужен штатный доступ к записи канонических имён"
+  },
+  {
+    "name": "reorder",
+    "api": "RxReorder\\reorder",
+    "status": "BODY",
+    "scope": "полная перестановка без повторов"
+  },
+  {
+    "name": "project",
+    "api": "RxProject\\project",
+    "status": "BODY",
+    "scope": "select и одна общая copy"
+  },
+  {
+    "name": "defaults",
+    "api": "RxDefaults\\defaults",
+    "status": "BODY",
+    "scope": "merge(fallback;source), порядок fallback"
+  },
+  {
+    "name": "diff",
+    "api": "RxDiff\\diff",
+    "status": "BODY",
+    "scope": "изменения вектора идентичностей ссылок"
+  },
+  {
+    "name": "patch",
+    "api": "RxPatch\\patch",
+    "status": "BODY",
+    "scope": "проверка базы и применение diff в новый контейнер"
+  },
+  {
+    "name": "bindFields",
+    "api": "RxBindFields\\bindFields",
+    "status": "BODY",
+    "scope": "defaults callable, не удаление входных позиций"
+  },
+  {
+    "name": "derive",
+    "api": "RxDerive\\derive",
+    "status": "BODY",
+    "scope": "обычная композиция merge"
+  },
+  {
+    "name": "transpose",
+    "api": "RxTranspose\\transpose",
+    "status": "BODY",
+    "scope": "прямоугольный массив ссылочных строк"
+  },
+  {
+    "name": "groupBy",
+    "api": "RxGroupBy\\groupBy",
+    "status": "BODY",
+    "scope": "явные keyOf/sameKey, стабильный порядок"
+  },
+  {
+    "name": "lazy",
+    "api": "RxLazy\\lazy",
+    "status": "BODY",
+    "scope": "thunk @; кеш первого успеха"
+  },
+  {
+    "name": "force",
+    "api": "RxForce\\force",
+    "status": "BODY",
+    "scope": "обычный запуск thunk"
+  },
+  {
+    "name": "once",
+    "api": "RxOnce\\once",
+    "status": "BODY",
+    "scope": "один успешный вызов; ошибки допускают новую попытку"
+  },
+  {
+    "name": "repeat",
+    "api": "RxRepeat\\repeat",
+    "status": "BODY",
+    "scope": "count запусков; массив результатов"
+  },
+  {
+    "name": "until",
+    "api": "RxUntil\\runUntil",
+    "status": "BODY",
+    "scope": "step, затем проверка; имя core until сохранено"
+  },
+  {
+    "name": "retry",
+    "api": "RxRetry\\retryCall",
+    "status": "BODY",
+    "scope": "ограниченные попытки для RxTaskFailure"
+  },
+  {
+    "name": "around",
+    "api": "RxAround\\around",
+    "status": "BODY",
+    "scope": "acquire / finally release / action"
+  },
+  {
+    "name": "recover",
+    "api": "RxRecover\\recover",
+    "status": "BODY",
+    "scope": "обработка RxTaskFailure с payload"
+  },
+  {
+    "name": "adapter",
+    "api": "RxAdapter\\adapter",
+    "status": "BODY",
+    "scope": "before -> F -> after; unary @"
+  },
+  {
+    "name": "permute",
+    "api": "RxPermute\\permute",
+    "status": "BODY",
+    "scope": "перестановка упакованных позиционных actuals"
+  },
+  {
+    "name": "overload",
+    "api": "RxOverload\\overload",
+    "status": "BODY",
+    "scope": "явные предикаты; ровно один выбранный callable"
+  },
+  {
+    "name": "predicate",
+    "api": "RxPredicate\\predicate",
+    "status": "BODY",
+    "scope": "нормализация к int 0/1"
+  },
+  {
+    "name": "guard",
+    "api": "RxGuard\\guard",
+    "status": "BODY",
+    "scope": "проверка до вызова"
+  },
+  {
+    "name": "trace",
+    "api": "RxTrace\\trace",
+    "status": "BODY",
+    "scope": "события входа, результата и выхода без результата"
+  },
+  {
+    "name": "contract",
+    "api": "RxContract\\contract",
+    "status": "BODY",
+    "scope": "явные pre/post вызовы"
+  },
+  {
+    "name": "composeData",
+    "api": "RxComposeData\\composeData",
+    "status": "BODY",
+    "scope": "merge фактического parent и overlay данных"
+  }
+]

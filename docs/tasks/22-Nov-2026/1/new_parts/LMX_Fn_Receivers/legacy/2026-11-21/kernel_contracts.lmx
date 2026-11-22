@@ -1,0 +1,24 @@
+# ТИПЫ ИНТЕРФЕЙСОВ ПОСТАВЩИКА FxKernel.
+# Это требования к функциям, а не готовая реализация FxKernel.
+# Подробный смысл полей, построения parent и времени жизни задан в
+# KERNEL_REQUIREMENTS.md. Запускаемых пустых заглушек здесь нет.
+# Все четыре операции могут сообщать FxTypeToken/FxKernelFailure.
+# Имена throws проверяются отдельно: signatureTypes не переносит эту политику.
+
+FxKernelSignatureAPI :: (@: subject; return: @)
+
+FxKernelNormalizeTypeAPI :: (@: token; return: @)
+
+FxKernelSignatureDataAPI :: (@: inputs; @: result; @: labels; return: @)
+
+FxKernelCallableAPI :: (@: contract; @: labels; @: bodyGraph; @: state; @: failures; return: @)
+
+# Требуется обычная структура-поставщик FxKernel с четырьмя методами:
+# signature(subject) -> {inputTypes,resultType,hasResult,names,throws}
+# normalizeType(token) -> каноническое полное требование
+# signatureData(inputs;result;labels) -> обычный DATA-шаблон
+# callable(contract;labels;bodyGraph;state;failures) -> обычный CODE
+# Именованные actuals signature(subject := F) исключают лишнюю W/E-развилку.
+# labels и failures — последовательности LMX-строк, не C char**.
+# Никакого дополнительного invokeByIndex или makeLambda здесь не требуется.
+

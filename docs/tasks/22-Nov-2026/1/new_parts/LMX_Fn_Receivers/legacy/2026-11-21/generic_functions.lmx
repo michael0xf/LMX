@@ -1,0 +1,671 @@
+# ОБЩИЕ lambda / partial / uncurry / flip.
+# Любое конечное число входов, их полные требования типов и исходный результат.
+# Это исходники целевой реализации ТЗ. FxKernel — явно перечисленный в ТЗ
+# адаптер к существующим анализатору сигнатур и строителю графа, не готовый API.
+# Операции не компилируют себя автоматически и не переиспользуют native от
+# прототипа с другим ABI. Создаются обычные owner -> DATA -> CODE.
+# Вызов результата начинает обычную активацию над его настоящим parent.
+# Параметры полученных функций имеют публичные имена p0,p1,... и required/private.
+# Все захваченные зависимости — явные поля state; private не даёт им становиться
+# случайными динамическими входами исходного callable.
+#
+# prefix — Structure/Array<@> из готовых типизированных ЗАПИСЕЙ значений.
+# Плотный Array<int> не переинтерпретируется как Array<@>. Примитивы принимаются
+# и сохраняются по значению; ссылочные значения сохраняют цель. copy(prefix)
+# для этого НЕ используется, поскольку он глубоко копировал бы цели ссылок.
+#
+# Схема FxKernel\signature(subject): inputTypes, resultType, hasResult, names,
+# throws. subject — callable либо fn-описание. resultType всегда имеет описание,
+# в том числе для void. hasResult не заменяет и не кодирует тип числовым нулём.
+# FxKernel\callable(contract; labels; bodyGraph; state; failures) формирует
+# обычный граф; внутри тела node\private\state даёт именно переданный state.
+
+# Снимок уже принятого значения через существующий prepared operand protocol.
+# Ресивер принимает указатель на значение слева; RHS не разворачивает его.
+# Для postfix (value record) общий handler передаёт present empty right Array.
+# Поддержка lifetime проверяется отдельно в ТЗ для четырёх комбинаций executors.
+FxRecordOperands:
+    copy: sys\OPERANDS_TEMPLATE
+    required: left right
+    return: @
+    record:
+        throws: FxRecordArity
+        if: length(right) != 0
+            throw: FxRecordArity()
+        return: left
+
+# Неинициализированная запись @ служит TYPE SPEC, а не нулевым значением.
+FxTypeTokens:
+    reference:
+        @: value
+
+# Имена исходов передаются builder как обычные LMX-строки. Builder интернирует
+# их при создании throws, но строки не притворяются заранее готовыми name atoms.
+FxCaptureFailures:
+    return: @
+    names:
+        private: @: out (copy(()))
+        sys\resize(out; 1)
+        out[0] := "FxRecordArity"
+        return: out
+
+FxStageFailures:
+    return: @
+    names:
+        private: @: out (copy(()))
+        sys\resize(out; 5)
+        out[0] := "FxIndex"
+        out[1] := "FxArity"
+        out[2] := "FxRecordArity"
+        out[3] := "FxTypeToken"
+        out[4] := "FxKernelFailure"
+        return: out
+
+# Конкатенация LMX-строк. Вспомогательные процедуры тоже написаны на LMX.
+FxConcat:
+    private:
+        []: char first
+        []: char second
+    return: []: char
+    concat:
+        private: []: char out ()
+        private: int: n length(first)
+        private: int: m length(second)
+        sys\resize(out; n + m)
+        private: int: i 0
+        while: i < n
+            out[i] := first[i]
+            i += 1
+        private: int: j 0
+        while: j < m
+            out[n + j] := second[j]
+            j += 1
+        return: out
+
+FxDecimal:
+    private: int: number
+    return: []: char
+    decimal:
+        throws: FxIndex
+        if: number < 0
+            throw: FxIndex()
+        private: []: char digits "0123456789"
+        private: []: char reversed ()
+        private: int: used 0
+        private: int: rest number
+        while: 1
+            sys\resize(reversed; used + 1)
+            reversed[used] := digits[rest % 10]
+            used += 1
+            rest := rest / 10
+            if: rest = 0
+                break
+        ---
+        private: []: char out ()
+        sys\resize(out; used)
+        private: int: i 0
+        while: i < used
+            out[i] := reversed[used - i - 1]
+            i += 1
+        return: out
+
+# Для сгенерированных публичных имён используется только ASCII p + digits.
+# Отдельное точное имя пригодится клиентам строителя для произвольных labels.
+# Его вход — допустимое имя без NUL; это ограничение exact identifier в грамматике.
+FxExactIdentifier:
+    private: []: char name
+    return: []: char
+    quote:
+        private: []: char out ()
+        private: int: extra 0
+        private: int: i 0
+        while: i < length(name)
+            if: name[i] = '`'
+                extra += 1
+            i += 1
+        sys\resize(out; length(name) + extra + 2)
+        out[0] := '`'
+        private: int: at 1
+        i := 0
+        while: i < length(name)
+            out[at] := name[i]
+            at += 1
+            if: name[i] = '`'
+                out[at] := '`'
+                at += 1
+            i += 1
+        out[at] := '`'
+        return: out
+
+FxLabels:
+    private: int: count
+    return: @
+    labels:
+        throws: FxIndex
+        if: count < 0
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := FxConcat\concat("p"; FxDecimal\decimal(i))
+            i += 1
+        return: out
+
+FxSlice:
+    private:
+        @: values
+        int: start
+        int: count
+    return: @
+    slice:
+        throws: FxIndex
+        if: start < 0 || count < 0 || start > length(values)
+            throw: FxIndex()
+        if: count > length(values) - start
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := values[start + i]
+            i += 1
+        return: out
+
+# Обычный signatureTypes остаётся создателем описания, не исполняемого тела.
+# Этот helper используется реализацией fn-операнда и общими фабриками.
+FxSignatures:
+    private:
+        @: inputs
+        @: result
+    return: @
+    make:
+        throws:
+            FxIndex
+            FxTypeToken
+            FxKernelFailure
+        private: @: labels FxLabels\labels(length(inputs))
+        private: @: data FxKernel\signatureData(inputs := inputs; result := result; labels := labels)
+        Built :: data
+        return: Built
+
+FxBuild:
+    private:
+        @: contract
+        []: char bodyText
+        @: state
+        @: failures
+    return: @
+    make:
+        throws:
+            FxTypeToken
+            FxKernelFailure
+        private: @: shape FxKernel\signature(subject := contract)
+        private: @: bodyGraph sys\fromLmx(bodyText)
+        return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures)
+
+FxCaptureState:
+    @: record 0
+
+# Получатель Ti -> @ использует штатное принятие аргумента, затем возвращает
+# запись уже принятого значения. Здесь нет независимого алгоритма conversion.
+FxCaptureOne:
+    private:
+        @: requirement
+        @: sourceRecord
+    return: @
+    capture:
+        throws:
+            FxIndex
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        private: @: inputTypes (copy(()))
+        sys\resize(inputTypes; 1)
+        inputTypes[0] := requirement
+        private: @: referenceType FxKernel\normalizeType(token := FxTypeTokens\reference[0])
+        private: @: contract FxSignatures\make(inputTypes; referenceType)
+        private: @: state (copy(FxCaptureState))
+        state\record := FxRecordOperands\record
+        private: @: failures FxCaptureFailures\names()
+        # FxRecordArity невозможно при написанном пустом RHS, но имя включается
+        # в явный контракт тела как объявленный исход используемого операнда.
+        private: @: receiver FxBuild\make(contract; "return: (p0 node\\private\\state\\record)\n"; state; failures)
+        return: receiver(p0 := \sourceRecord)
+
+FxCapturePrefix:
+    private:
+        @: inputTypes
+        @: prefix
+    return: @
+    capture:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        if: length(prefix) > length(inputTypes)
+            throw: FxArity()
+        private: @: captured (copy(()))
+        sys\resize(captured; length(prefix))
+        private: int: i 0
+        while: i < length(prefix)
+            captured[i] := FxCaptureOne\capture(inputTypes[i]; prefix[i])
+            i += 1
+        return: captured
+
+FxCallState:
+    @: target 0
+    @: targetContract 0
+    @: info 0
+    @: prefix 0
+    @: record 0
+    @: stageBuilder 0
+
+FxNewState:
+    private:
+        @: target
+        @: info
+        @: prefix
+    return: @
+    make:
+        throws:
+            FxIndex
+            FxTypeToken
+            FxKernelFailure
+        private: @: state (copy(FxCallState))
+        state\target := target
+        state\targetContract := FxSignatures\make(info\inputTypes; info\resultType)
+        state\info := info
+        state\prefix := prefix
+        state\record := FxRecordOperands\record
+        state\stageBuilder := FxLambdaStages\build
+        return: state
+
+# Сгенерированный named call использует fn-alias p0,p1,... . Совпадение этих
+# меток с собственными именами target не требуется: сигнатурное требование отображает по позиции.
+# Каждое значение назначено конкретному formal, поэтому целая Structure
+# не превращается случайно в дополнительную цепочку аргументов target.
+FxTargetCallText:
+    private:
+        int: total
+        int: captured
+        int: swapFirstTwo 0
+        int: hasResult
+    return: []: char
+    build:
+        throws: FxIndex
+        private: []: char out "private: @: fx_target node\\private\\state\\targetContract node\\private\\state\\target\n"
+        if: hasResult != 0
+            out := FxConcat\concat(out; "return: ")
+        out := FxConcat\concat(out; "fx_target(")
+        private: int: i 0
+        while: i < total
+            if: i > 0
+                out := FxConcat\concat(out; "; ")
+            out := FxConcat\concat(out; "p")
+            out := FxConcat\concat(out; FxDecimal\decimal(i))
+            out := FxConcat\concat(out; " := ")
+            if: i < captured
+                out := FxConcat\concat(out; "\\node\\private\\state\\prefix[")
+                out := FxConcat\concat(out; FxDecimal\decimal(i))
+                out := FxConcat\concat(out; "]")
+            else:
+                private: int: input i - captured
+                if: swapFirstTwo != 0
+                    if: i = 0
+                        input := 1
+                    if: i = 1
+                        input := 0
+                ---
+                out := FxConcat\concat(out; "p")
+                out := FxConcat\concat(out; FxDecimal\decimal(input))
+            ---
+            i += 1
+        out := FxConcat\concat(out; ")\n")
+        if: hasResult = 0
+            out := FxConcat\concat(out; "return\n")
+        return: out
+
+# partial(F; prefix) связывает первые k позиций любого F:(T0..Tn-1)->R.
+# Возвращаемая функция имеет ровно n-k входов и ИСХОДНЫЙ результат R.
+# k=0 — адаптер всех входов; k=n — nullary callable, не немедленный вызов F.
+# Повторное использование prefix ничего не перезаписывает. При ошибке приёма
+# очередного значения предыдущие эффекты conversions не откатываются.
+FxPartial:
+    private:
+        @: operation
+        @: prefix
+    return: @
+    partial:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: inputs info\inputTypes
+        private: int: n length(inputs)
+        private: int: k length(prefix)
+        if: k > n
+            throw: FxArity()
+        private: @: captured FxCapturePrefix\capture(inputs; prefix)
+        private: @: remaining FxSlice\slice(inputs; k; n - k)
+        private: @: contract FxSignatures\make(remaining; info\resultType)
+        private: @: state FxNewState\make(operation; info; captured)
+        private: []: char body FxTargetCallText\build(n; k; 0; info\hasResult)
+        return: FxBuild\make(contract; body; state; info\throws)
+
+# Одна промежуточная lambda-ступень хранит только префикс уже принятых значений.
+# Копируется массив ссылок на СНИМКИ, а не графы целей ссылочных аргументов.
+# Тело не имеет динамически найденных имён фабрики: record/stageBuilder —
+# явные ссылки в state. Исходный callable и его parent остаются прежними.
+FxLambdaMiddleText:
+    return: []: char
+    build:
+        return: "private: @: fx_state node\\private\\state\nprivate: @: fx_old fx_state\\prefix\nprivate: @: fx_next (copy(()))\nsys\\resize(fx_next; length(fx_old) + 1)\nprivate: int: fx_i 0\nwhile: fx_i < length(fx_old)\n    fx_next[fx_i] := fx_old[fx_i]\n    fx_i += 1\nfx_next[length(fx_old)] := (p0 node\\private\\state\\record)\nreturn: node\\private\\state\\stageBuilder(operation := fx_state\\target; info := fx_state\\info; prefix := fx_next)\n"
+
+FxLambdaStages:
+    private:
+        @: operation
+        @: info
+        @: prefix
+    return: @
+    build:
+        throws:
+            FxIndex
+            FxArity
+            FxTypeToken
+            FxKernelFailure
+        private: @: inputs info\inputTypes
+        private: int: n length(inputs)
+        private: int: k length(prefix)
+        if: k > n
+            throw: FxArity()
+        private: @: ownInputs (copy(()))
+        private: @: ownResult info\resultType
+        private: []: char body ""
+        private: @: failures info\throws
+        if: k < n
+            sys\resize(ownInputs; 1)
+            ownInputs[0] := inputs[k]
+        if: k + 1 < n
+            ownResult := FxKernel\normalizeType(token := FxTypeTokens\reference[0])
+            body := FxLambdaMiddleText\build()
+            # Исходный target здесь не вызывается. Точный throws промежуточной
+            # ступени задаётся контрактом builder и record, см. ТЗ.
+            failures := FxStageFailures\names()
+        else:
+            body := FxTargetCallText\build(n; k; 0; info\hasResult)
+        private: @: contract FxSignatures\make(ownInputs; ownResult)
+        private: @: state FxNewState\make(operation; info; prefix)
+        return: FxBuild\make(contract; body; state; failures)
+
+# lambda(F): T0 -> (T1 -> ... -> R), для любого конечного n.
+# Каждый вызов промежуточной ступени создаёт новую независимую ветку префикса.
+# n=1 — одна ступень с R; n=0 — nullary callable с R, F не вызывается фабрикой.
+# Если R — callable, последняя ступень возвращает его как итоговый результат.
+# Ни typeof результата, ни факт его вызываемости не запускают лишнюю ступень.
+FxLambda:
+    private: @: operation
+    return: @
+    lambda:
+        throws:
+            FxIndex
+            FxArity
+            FxTypeToken
+            FxKernelFailure
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: empty (copy(()))
+        return: FxLambdaStages\build(operation; info; empty)
+
+# flip(F) меняет ПЕРВЫЕ ДВЕ позиции произвольного n-арного callable, n>=2.
+# (A,B,T2,..)->R превращается в (B,A,T2,..)->R; R, включая void, сохраняется.
+# Меняются типы интерфейса и подстановка actuals, не только подписи имён.
+FxFlip:
+    private: @: operation
+    return: @
+    flip:
+        throws:
+            FxIndex
+            FxArity
+            FxTypeToken
+            FxKernelFailure
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: inputs info\inputTypes
+        private: int: n length(inputs)
+        if: n < 2
+            throw: FxArity()
+        private: @: reordered FxSlice\slice(inputs; 0; n)
+        reordered[0] := inputs[1]
+        reordered[1] := inputs[0]
+        private: @: contract FxSignatures\make(reordered; info\resultType)
+        private: @: empty (copy(()))
+        private: @: state FxNewState\make(operation; info; empty)
+        private: []: char body FxTargetCallText\build(n; 0; 1; info\hasResult)
+        return: FxBuild\make(contract; body; state; info\throws)
+
+FxUncurryState:
+    @: operation 0
+    @: stages 0
+
+FxUncurryText:
+    private:
+        int: count
+        int: hasResult
+    return: []: char
+    build:
+        throws: FxIndex
+        private: []: char out "private: @: fx_current node\\private\\state\\operation\n"
+        private: int: i 0
+        if: count = 0
+            out := FxConcat\concat(out; "private: @: fx_last node\\private\\state\\stages[0] fx_current\n")
+            if: hasResult != 0
+                out := FxConcat\concat(out; "return: ")
+            out := FxConcat\concat(out; "fx_last()\n")
+            if: hasResult = 0
+                out := FxConcat\concat(out; "return\n")
+            return: out
+        while: i + 1 < count
+            out := FxConcat\concat(out; "private: @: fx_stage")
+            out := FxConcat\concat(out; FxDecimal\decimal(i))
+            out := FxConcat\concat(out; " node\\private\\state\\stages[")
+            out := FxConcat\concat(out; FxDecimal\decimal(i))
+            out := FxConcat\concat(out; "] fx_current\nfx_current := fx_stage")
+            out := FxConcat\concat(out; FxDecimal\decimal(i))
+            out := FxConcat\concat(out; "(p0 := p")
+            out := FxConcat\concat(out; FxDecimal\decimal(i))
+            out := FxConcat\concat(out; ")\n")
+            i += 1
+        out := FxConcat\concat(out; "private: @: fx_last node\\private\\state\\stages[")
+        out := FxConcat\concat(out; FxDecimal\decimal(count - 1))
+        out := FxConcat\concat(out; "] fx_current\n")
+        if: hasResult != 0
+            out := FxConcat\concat(out; "return: ")
+        out := FxConcat\concat(out; "fx_last(p0 := p")
+        out := FxConcat\concat(out; FxDecimal\decimal(count - 1))
+        out := FxConcat\concat(out; ")\n")
+        if: hasResult = 0
+            out := FxConcat\concat(out; "return\n")
+        return: out
+
+# uncurry(curried; contract; failures) задаёт конечную СИГНАТУРУ явно.
+# contract:(T0..Tn-1)->R отличает последние возвращённые callable R от очередной
+# ступени. Нельзя выводить момент остановки правилом «пока результат callable».
+# failures — явно перечисленные именованные исходы всех вызываемых ступеней;
+# сам signatureTypes не переносит throws. Ни одна ступень не вызывается при построении.
+# Для библиотечной и внешней цепочки API одинаков: contract и failures явные.
+# Протокол промежуточной ступени — ровно Ti -> @, финальной — Tn-1 -> R.
+# Уточнённое signatureTypes/Structure-требование промежуточного результата не стирается
+# этим helper автоматически до @; такая внешняя цепочка требует адаптера.
+# n=0 строит nullary wrapper; n=1 вызывает одну ступень; n любое конечное.
+# При вызове wrapper все его actuals сначала принимаются обычным вызовом LMX,
+# затем ступени исполняются последовательно. Это не обещает перенести эффекты
+# вычисления позднего actual между стадиями, как в отдельно написанной цепочке.
+FxUncurry:
+    private:
+        @: operation
+        @: contract
+        @: failures
+    return: @
+    uncurry:
+        throws:
+            FxIndex
+            FxTypeToken
+            FxKernelFailure
+        private: @: info FxKernel\signature(subject := contract)
+        private: @: inputs info\inputTypes
+        private: int: n length(inputs)
+        private: @: stages (copy(()))
+        if: n = 0
+            sys\resize(stages; 1)
+            stages[0] := contract
+        else:
+            sys\resize(stages; n)
+            private: int: i 0
+            while: i < n
+                private: @: one FxSlice\slice(inputs; i; 1)
+                private: @: result FxKernel\normalizeType(token := FxTypeTokens\reference[0])
+                if: i + 1 = n
+                    result := info\resultType
+                stages[i] := FxSignatures\make(one; result)
+                i += 1
+        ---
+        private: @: state (copy(FxUncurryState))
+        state\operation := operation
+        state\stages := stages
+        private: @: flatContract FxSignatures\make(inputs; info\resultType)
+        private: []: char body FxUncurryText\build(n; info\hasResult)
+        return: FxBuild\make(flatContract; body; state; failures)
+
+# ПРИМЕРЫ ОБЩЕГО СЕМЕЙСТВА (не выполнены ядром).
+# Здесь намеренно три НЕОДИНАКОВЫХ типа, double-результат и проверка отсутствия
+# раннего запуска. Это проверяет обобщение, а не повторяет прежнее int+int.
+FxGenericCounter:
+    int: calls 0
+
+FxMixedTarget:
+    private:
+        int: number
+        double: scale
+        []: char text
+    return: double
+    evaluate:
+        FxGenericCounter\calls += 1
+        # В этом тесте number >= 0. Смешанная сигнатура не подразумевает
+        # неоговорённое автоматическое int -> double promotion в арифметике.
+        private: double: total 0.0
+        private: int: i 0
+        while: i < number
+            total += scale
+            i += 1
+        i := 0
+        while: i < length(text)
+            total += 1.0
+            i += 1
+        return: total
+
+FxProcedureTarget:
+    private:
+        int: count
+        []: char label
+    run:
+        FxGenericCounter\calls += count + length(label)
+
+FxNullaryTarget:
+    return: double
+    value:
+        FxGenericCounter\calls += 1
+        return: 2.5
+
+FxPairTarget:
+    private:
+        int: count
+        []: char label
+    return:
+        int: number
+        []: char text
+    create:
+        return: count label
+
+FxReturnedCallable:
+    private: int: value
+    return: int
+    increment:
+        return: value + 1
+
+FxCallableResultTarget:
+    private:
+        int: first
+        double: second
+    return: @
+    choose:
+        FxGenericCounter\calls += 1
+        return: FxReturnedCallable\increment
+
+FxGenericExamples:
+    return: int
+    run:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        FxGenericCounter\calls := 0
+        @: mixed FxLambda\lambda(operation := FxMixedTarget\evaluate)
+        @: afterInt mixed(p0 := 2)
+        @: afterDouble afterInt(p0 := 1.5)
+        sys\assert(FxGenericCounter\calls = 0)
+        double: result afterDouble(p0 := "abc")
+        sys\assert(result = 6.0)
+        sys\assert(FxGenericCounter\calls = 1)
+        @: another afterInt(p0 := 2.0)
+        sys\assert(another(p0 := "a") = 5.0)
+        sys\assert(afterDouble(p0 := "abcd") = 7.0)
+        @: prefix (copy(()))
+        sys\resize(prefix; 1)
+        prefix[0] := (4 FxRecordOperands\record)
+        @: bound FxPartial\partial(FxMixedTarget\evaluate; prefix)
+        sys\assert(bound(p0 := 0.5; p1 := "xy") = 4.0)
+        @: flipped FxFlip\flip(operation := FxMixedTarget\evaluate)
+        sys\assert(flipped(p0 := 1.5; p1 := 2; p2 := "abc") = 6.0)
+        @: mixedInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
+        @: mixedContract FxSignatures\make(mixedInfo\inputTypes; mixedInfo\resultType)
+        @: flattened FxUncurry\uncurry(mixed; mixedContract; FxStageFailures\names())
+        sys\assert(flattened(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
+        @: empty (copy(()))
+        @: same FxPartial\partial(FxMixedTarget\evaluate; empty)
+        sys\assert(same(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
+        @: all (copy(()))
+        sys\resize(all; 3)
+        all[0] := (2 FxRecordOperands\record)
+        all[1] := (1.5 FxRecordOperands\record)
+        all[2] := ("abc" FxRecordOperands\record)
+        @: thunk FxPartial\partial(FxMixedTarget\evaluate; all)
+        int: before FxGenericCounter\calls
+        sys\assert(thunk() = 6.0)
+        sys\assert(FxGenericCounter\calls = before + 1)
+        @: noArgs FxLambda\lambda(operation := FxNullaryTarget\value)
+        sys\assert(noArgs() = 2.5)
+        @: pair FxLambda\lambda(operation := FxPairTarget\create)
+        @: pairLast pair(p0 := 7)
+        int: pairNumber 0
+        []: char pairText ""
+        @: pairValue pairLast(p0 := "seven")
+        (pairNumber pairText) := (copy(pairValue))
+        sys\assert(pairNumber = 7)
+        sys\assert(length(pairText) = 5)
+        @: procedure FxLambda\lambda(operation := FxProcedureTarget\run)
+        @: procedureLast procedure(p0 := 3)
+        before := FxGenericCounter\calls
+        procedureLast(p0 := "ab")
+        sys\assert(FxGenericCounter\calls = before + 5)
+        @: returnsCallable FxLambda\lambda(operation := FxCallableResultTarget\choose)
+        @: chooseLast returnsCallable(p0 := 1)
+        @: returned chooseLast(p0 := 2.0)
+        sys\assert(returned = FxReturnedCallable\increment)
+        sys\assert(returned(4) = 5)
+        return: 1

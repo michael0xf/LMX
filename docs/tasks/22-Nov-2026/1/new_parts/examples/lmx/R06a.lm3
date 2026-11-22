@@ -1,0 +1,13 @@
+SharedValue:
+    int: value 7
+
+SharedPair:
+    @: left SharedValue
+    @: right SharedValue
+
+SharingProbe:
+    return: int
+    run:
+        @: copied (copy(SharedPair))
+        copied\left\value := 21
+        return: copied\right\value * 100 + SharedValue\value

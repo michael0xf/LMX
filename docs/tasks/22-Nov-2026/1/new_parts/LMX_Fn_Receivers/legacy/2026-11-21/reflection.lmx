@@ -1,0 +1,58 @@
+# ФИЗИЧЕСКИЕ ТИПЫ ПОЛЕЙ: сохранены три прежних библиотечных варианта.
+# types не является семантической сигнатурой callable. Общий signatureTypes получает
+# полные требования через явный FxKernel и не восстанавливает их из размеров.
+# Статическая подготовка; реальное ядро здесь не запускалось.
+
+RxTypeCodeBox:
+    int: value 0
+
+# typesRecords(S) возвращает структуру int-записей, НЕ плотный Array<int>.
+# Порядок и число физических полей S сохраняются; служебные header-поля в S
+# не входят. S — Structure/Array<@>, не плотный Array<T>. Пример:
+# typesRecords(source := (5; 7)) даёт два кода int.
+RxPhysicalTypes:
+    private: @: source
+    return: @
+    typesRecords:
+        private: @: result (copy(()))
+        sys\resize(result; length(source))
+        private: int: i 0
+        while: i < length(source)
+            private: @: box (copy(RxTypeCodeBox))
+            box\value := sys\typeof(source[i])
+            result[i] := box[0]
+            i += 1
+        return: result
+
+# types(S): плотный Array<int>, новый массив на каждый вызов.
+# []: int result () использует обычный конструктор типизированного пустого
+# массива; конкретный синтаксис, как и весь этот файл, ещё не прогнан ядром.
+# Никакого изменения типа обычной Structure через sys\resize здесь нет.
+RxTypes:
+    private: @: source
+    return: []: int
+    types:
+        private: []: int result ()
+        sys\resize(result; length(source))
+        private: int: i 0
+        while: i < length(source)
+            result[i] := sys\typeof(source[i])
+            i += 1
+        return: result
+
+# Точная плотная форма результата []:int с явно переданным готовым буфером.
+# types(source := S; output := buffer) изменяет buffer и возвращает тот же
+# массив. S также Structure/Array<@>. Новый тип массива не выводится из () .
+# Вариант позволяет переиспользовать буфер и не выделять новый при каждом вызове.
+RxTypesInto:
+    private:
+        @: source
+        []: int output
+    return: []: int
+    types:
+        sys\resize(output; length(source))
+        private: int: i 0
+        while: i < length(source)
+            output[i] := sys\typeof(source[i])
+            i += 1
+        return: output

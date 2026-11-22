@@ -1,0 +1,624 @@
+# ======================================================================
+# ВЫЧИСЛЕНИЕ, КОНТРОЛЬ И АДАПТЕРЫ.
+# Это библиотечные callable-структуры; raw expression здесь не сохраняется.
+# lazy получает готовую функцию без аргументов, а не адрес завершённого frame.
+# Результаты и входы этого семейства — ссылки @ на живые значения графа.
+# Вызовы последовательны внутри одного Message. Параллельного общего кеша нет.
+# Task может объявлять RxTaskFailure(@ payload). Другие именованные throws
+# требуют отдельного адаптера или явного расширения списка throws обёртки.
+# Служебное состояние находится выше inputs и помечено private.
+# ======================================================================
+
+RxThunkSignature :: (return: @)
+
+RxEffectSignature :: (@: value)
+
+RxPredicateSignature :: (@: value; return: int)
+
+RxPostconditionSignature :: (@: input; @: output; return: int)
+
+# Результат ровно одной попытки. catch зависит только от переданного payload;
+# ему не требуется скрытый доступ к private-локалам вызывающей обёртки.
+RxAttemptValue:
+    int: ok 0
+    @: value 0
+
+RxAttemptSuccess:
+    private: @: value
+    return: @
+    make:
+        private: @: result (copy(RxAttemptValue))
+        result\ok := 1
+        result\value := value
+        return: result
+
+RxAttemptFailure:
+    private: @: value
+    return: @
+    make:
+        private: @: result (copy(RxAttemptValue))
+        result\value := value
+        return: result
+
+RxAttempt:
+    private: @: operation RxThunkSignature
+    return: @
+    attempt:
+        return: RxAttemptSuccess\make(value := operation())
+        catch: RxTaskFailure (@: reason)
+            return: RxAttemptFailure\make(value := reason)
+
+# lazy(operation): отложенный вызов с кешированием первого успешного результата.
+# 0 = ещё нет результата, 1 = вычисляется, 2 = есть результат.
+# После неуспеха состояние снова 0; повторный force повторяет вызов.
+# Рекурсивное требование того же незавершённого результата отвергается.
+# Сохранённая ссылка не означает снимок содержимого изменяемого объекта.
+RxLazyPrototype:
+    private:
+        @: operation 0
+        int: state 0
+        @: result 0
+    inputs:
+        return: @
+        force:
+            throws:
+                RxTaskFailure
+                RxLazyCycle
+            if: node\private\state = 2
+                return: node\private\result
+            if: node\private\state = 1
+                throw: RxLazyCycle()
+            node\private\state := 1
+            private: int: completed 0
+            finally:
+                if: completed = 0
+                    node\private\state := 0
+            ---
+            private: @: operation RxThunkSignature node\private\operation
+            private: @: answer operation()
+            node\private\result := answer
+            node\private\state := 2
+            completed := 1
+            return: answer
+
+RxLazy:
+    private: @: operation RxThunkSignature
+    return: @
+    lazy:
+        private: @: instance (copy(RxLazyPrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        return: instance\inputs\force
+
+# force(thunk): обычный вызов полученной от lazy/once функции.
+# Пример: @: delayed RxLazy\lazy(operation := Build\make)
+#         @: answer RxForce\force(thunk := delayed)
+RxForce:
+    private: @: thunk RxThunkSignature
+    return: @
+    force:
+        throws:
+            RxTaskFailure
+            RxLazyCycle
+        return: thunk()
+
+# once(F): тот же контракт «один успешный вызов», удобное второе имя фабрики.
+# Не обещает ровно одну попытку после ошибки и не обеспечивает межпоточность.
+RxOnce:
+    private: @: operation RxThunkSignature
+    return: @
+    once:
+        return: RxLazy\lazy(operation := operation)
+
+# repeat(F; count): count последовательных вызовов F(), результат — их ссылки.
+# count=0 возвращает новый пустой контейнер. Ошибка прекращает повторения.
+# Пример: @: results RxRepeat\repeat(Build\make; 3)
+RxRepeat:
+    private:
+        @: operation RxThunkSignature
+        int: count
+    return: @
+    repeat:
+        throws:
+            RxTaskFailure
+            RxRange
+        if: count < 0
+            throw: RxRange()
+        private: @: results (copy(()))
+        sys\resize(results; count)
+        private: int: i 0
+        while: i < count
+            results[i] := operation()
+            i += 1
+        return: results
+
+# until: библиотечное имя runUntil, чтобы не затенять закрывающий core until.
+# runUntil(step; finished; initial) хотя бы один раз делает step(value), затем
+# проверяет finished(result). Предикат возвращает int, ненулевое = готово.
+# Пример: runUntil(Step\advance; Goal\reached; initial)
+RxUntil:
+    private:
+        @: step RxRefUnarySignature
+        @: finished RxPredicateSignature
+        @: initial
+    return: @
+    runUntil:
+        throws: RxTaskFailure
+        private: @: current initial
+        while: 1
+            current := step(value := current)
+            if: finished(value := current) != 0
+                return: current
+
+# retry: библиотечное имя retryCall; core retry остаётся локальным restart.
+# retryCall(F; attempts) повторяет только объявленный RxTaskFailure(payload).
+# attempts — общее число попыток, минимум 1. Последняя ошибка передаётся дальше.
+# Задержек, rollback и автоматической идемпотентности здесь нет.
+RxRetry:
+    private:
+        @: operation RxThunkSignature
+        int: attempts
+    return: @
+    retryCall:
+        throws:
+            RxTaskFailure
+            RxRange
+        if: attempts < 1
+            throw: RxRange()
+        private: int: attempt 0
+        private: @: lastFailure 0
+        while: attempt < attempts
+            attempt += 1
+            private: @: outcome RxAttempt\attempt(operation := operation)
+            if: outcome\ok != 0
+                return: outcome\value
+            lastFailure := outcome\value
+        throw: RxTaskFailure(lastFailure)
+
+# around(acquire; release; action): получить ресурс, установить finally,
+# исполнить action(resource). release выполняется при любом выходе action.
+# Если acquire не вернул ресурс, release не вызывается.
+# Пример: around(Resource\open; Resource\close; Work\run)
+RxAround:
+    private:
+        @: acquire RxThunkSignature
+        @: release RxEffectSignature
+        @: action RxRefUnarySignature
+    return: @
+    around:
+        throws: RxTaskFailure
+        private: @: resource acquire()
+        finally:
+            release(value := resource)
+        return: action(value := resource)
+
+# recover(F; handler): обработать только RxTaskFailure, сохранив его payload.
+# Ошибка из handler не попадает снова в этот же catch.
+# Пример: recover(Network\fetch; Cache\fallback)
+RxRecover:
+    private:
+        @: operation RxThunkSignature
+        @: handler RxRefUnarySignature
+    return: @
+    recover:
+        throws: RxTaskFailure
+        private: @: outcome RxAttempt\attempt(operation := operation)
+        if: outcome\ok != 0
+            return: outcome\value
+        return: handler(value := outcome\value)
+
+# adapter(F; before; after): x -> after(F(before(x))).
+# Это явное преобразование входа и результата ссылочной unary-функции.
+# Само построение адаптера ничего не вызывает.
+RxAdapterPrototype:
+    private:
+        @: operation 0
+        @: before 0
+        @: after 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            private: @: before RxRefUnarySignature node\private\before
+            private: @: operation RxRefUnarySignature node\private\operation
+            private: @: after RxRefUnarySignature node\private\after
+            private: @: converted before(value := value)
+            private: @: result operation(value := converted)
+            return: after(value := result)
+
+RxAdapter:
+    private:
+        @: operation RxRefUnarySignature
+        @: before RxRefUnarySignature
+        @: after RxRefUnarySignature
+    return: @
+    adapter:
+        private: @: instance (copy(RxAdapterPrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        owner\private\before := before
+        owner\private\after := after
+        return: instance\inputs\invoke
+
+# permute(F; order): построить unary-приёмник СТРУКТУРЫ actuals.
+# Он переставляет её физические поля и вызывает F через обычный call.
+# order — полный набор индексов, int-записи; F должен возвращать @.
+# actuals содержит безымянные позиционные значения. Именованные объявления
+# не превращаются перестановкой в позиционные и исключены из этого профиля.
+# Это упаковочный адаптер, а не автоматически созданная n-арная сигнатура.
+# Пример: @: swap RxPermute\permute(F; (1;0))
+#         @: result swap(value := arguments)
+RxPermutePrototype:
+    private:
+        @: operation 0
+        @: order 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            throws:
+                ReceiverIndex
+                ReceiverPermutation
+            private: @: ordered RxReorder\reorder(value; node\private\order)
+            return: call(args := ordered; code := node\private\operation)
+
+RxPermute:
+    private:
+        @: operation
+        @: order
+    return: @
+    permute:
+        private: @: instance (copy(RxPermutePrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        owner\private\order := (copy(order))
+        return: instance\inputs\invoke
+
+# overload(candidates) строит явный диспетчер по чистым предикатам.
+# Каждый candidate — запись {accepts:@ unary-int; operation:@ callable}.
+# Возвращённая функция получает всю Structure actuals в единственном value.
+# Проверяет ВСЕ предикаты без запуска target и требует ровно одно совпадение.
+# Это отдельная библиотечная политика; штатный выбор деклараций LMX неизменен.
+# Все operations в этом профиле возвращают @, предикаты не имеют эффектов.
+RxOverloadPrototype:
+    private: @: candidates 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            throws:
+                RxNoOverload
+                RxAmbiguousOverload
+            private: @: candidates node\private\candidates
+            private: @: chosen 0
+            private: int: matches 0
+            private: int: i 0
+            while: i < length(candidates)
+                private: @: candidate candidates[i]
+                private: @: accepts RxPredicateSignature candidate\accepts
+                if: accepts(value := value) != 0
+                    chosen := candidate\operation
+                    matches += 1
+                i += 1
+            if: matches = 0
+                throw: RxNoOverload()
+            if: matches > 1
+                throw: RxAmbiguousOverload()
+            return: call(args := value; code := chosen)
+
+RxOverload:
+    private: []: @ candidates
+    return: @
+    overload:
+        private: @: instance (copy(RxOverloadPrototype))
+        private: @: owner parent(instance\inputs)
+        # Снимок самой последовательности. Записи кандидатов остаются общими.
+        private: @: snapshot (copy(()))
+        sys\resize(snapshot; length(candidates))
+        private: int: i 0
+        while: i < length(candidates)
+            snapshot[i] := candidates[i]
+            i += 1
+        owner\private\candidates := snapshot
+        return: instance\inputs\invoke
+
+# predicate(F): нормализовать unary int-предикат к ровно 0/1.
+# Не объявляет функцию чистой и не доказывает свойства её алгоритма.
+RxPredicatePrototype:
+    private: @: operation 0
+    inputs:
+        private: @: value
+        return: int
+        invoke:
+            private: @: operation RxPredicateSignature node\private\operation
+            return: operation(value := value) != 0
+
+RxPredicate:
+    private: @: operation RxPredicateSignature
+    return: @
+    predicate:
+        private: @: instance (copy(RxPredicatePrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        return: instance\inputs\invoke
+
+# guard(F; accepts): проверить value перед единственным вызовом F(value).
+# Отказ — обычный именованный исход, не диагностическое завершение Message.
+RxGuardPrototype:
+    private:
+        @: operation 0
+        @: accepts 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            throws: RxGuardRejected
+            private: @: accepts RxPredicateSignature node\private\accepts
+            if: accepts(value := value) = 0
+                throw: RxGuardRejected(value)
+            private: @: operation RxRefUnarySignature node\private\operation
+            return: operation(value := value)
+
+RxGuard:
+    private:
+        @: operation RxRefUnarySignature
+        @: accepts RxPredicateSignature
+    return: @
+    guard:
+        private: @: instance (copy(RxGuardPrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        owner\private\accepts := accepts
+        return: instance\inputs\invoke
+
+# contract(F; before; after): pre(value), F(value), post(value,result).
+# after получает ссылки на текущие объекты, не снимок value до вызова F.
+# Проверки обычные вызовы; это не новый механизм satisfies/test.
+RxContractPrototype:
+    private:
+        @: operation 0
+        @: before 0
+        @: after 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            throws:
+                RxPrecondition
+                RxPostcondition
+            private: @: before RxPredicateSignature node\private\before
+            if: before(value := value) = 0
+                throw: RxPrecondition(value)
+            private: @: operation RxRefUnarySignature node\private\operation
+            private: @: result operation(value := value)
+            private: @: after RxPostconditionSignature node\private\after
+            if: after(input := value; output := result) = 0
+                throw: RxPostcondition(value; result)
+            return: result
+
+RxContract:
+    private:
+        @: operation RxRefUnarySignature
+        @: before RxPredicateSignature
+        @: after RxPostconditionSignature
+    return: @
+    contract:
+        private: @: instance (copy(RxContractPrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        owner\private\before := before
+        owner\private\after := after
+        return: instance\inputs\invoke
+
+# trace(F; sink): события 0=вход, 1=успех, 2=выход без результата.
+# Для каждого события создаётся отдельная запись; input/output — общие ссылки.
+# sink(event) — пользовательская процедура. Она сама выбирает журнал/Message.
+# sink не должен объявлять failures; автоматической отправки сообщений нет.
+# Для неуспеха payload ошибки не извлекается: finally сообщает только факт.
+RxTraceEvent:
+    int: phase 0
+    @: input 0
+    @: output 0
+    int: hasOutput 0
+
+RxTracePrototype:
+    private:
+        @: operation 0
+        @: sink 0
+    inputs:
+        private: @: value
+        return: @
+        invoke:
+            throws: RxTaskFailure
+            private: @: sink RxEffectSignature node\private\sink
+            private: @: entered (copy(RxTraceEvent))
+            entered\input := value
+            sink(value := entered)
+            private: int: complete 0
+            finally:
+                if: complete = 0
+                    private: @: abandoned (copy(RxTraceEvent))
+                    abandoned\phase := 2
+                    abandoned\input := value
+                    sink(value := abandoned)
+            ---
+            private: @: operation RxRefUnarySignature node\private\operation
+            private: @: result operation(value := value)
+            private: @: returned (copy(RxTraceEvent))
+            returned\phase := 1
+            returned\input := value
+            returned\output := result
+            returned\hasOutput := 1
+            complete := 1
+            sink(value := returned)
+            return: result
+
+RxTrace:
+    private:
+        @: operation RxRefUnarySignature
+        @: sink RxEffectSignature
+    return: @
+    trace:
+        private: @: instance (copy(RxTracePrototype))
+        private: @: owner parent(instance\inputs)
+        owner\private\operation := operation
+        owner\private\sink := sink
+        return: instance\inputs\invoke
+
+# ======================================================================
+# ПРИМЕРЫ К ОБЁРТКАМ. Это подготовленный код, не отчёт об успешном запуске.
+# RxActionExamples\run() должен вернуть 1. Он не запускается при загрузке.
+# Состояние ниже намеренно задано явным графом одного Message.
+# ======================================================================
+
+RxActionState:
+    int: calls 0
+    int: released 0
+    int: events 0
+
+RxActionFactory:
+    return: @
+    make:
+        RxActionState\calls += 1
+        return: RxCollectionInt\box(number := RxActionState\calls)
+    failOnce:
+        throws: RxTaskFailure
+        RxActionState\calls += 1
+        if: RxActionState\calls = 1
+            throw: RxTaskFailure(RxActionState)
+        return: RxCollectionInt\box(number := RxActionState\calls)
+    fail:
+        throws: RxTaskFailure
+        throw: RxTaskFailure(RxActionState)
+
+RxActionPair:
+    private:
+        int: first
+        int: second
+    return: @
+    encode:
+        return: RxCollectionInt\box(number := first * 10 + second)
+
+RxActionNullary:
+    return: @
+    zero:
+        return: RxCollectionInt\box(number := 0)
+
+RxActionAcceptsZero:
+    private: @: value
+    return: int
+    accepts:
+        return: length(value) = 0
+
+RxActionAcceptsPair:
+    private: @: value
+    return: int
+    accepts:
+        return: length(value) = 2
+
+RxActionZeroCandidate:
+    @: accepts RxPredicateSignature RxActionAcceptsZero\accepts
+    @: operation RxActionNullary\zero
+
+RxActionPairCandidate:
+    @: accepts RxPredicateSignature RxActionAcceptsPair\accepts
+    @: operation RxActionPair\encode
+
+RxActionCleanup:
+    private: @: value
+    release:
+        RxActionState\released += 1
+
+RxActionLogger:
+    private: @: value
+    record:
+        RxActionState\events += 1
+
+RxActionPositive:
+    private: @: value
+    return: int
+    accepts:
+        return: value\value > 0
+
+RxActionGoal:
+    private: @: value
+    return: int
+    reached:
+        return: value\value >= 4
+
+RxActionPost:
+    private:
+        @: input
+        @: output
+    return: int
+    doubled:
+        return: output\value = input\value * 2
+
+RxActionExamples:
+    return: int
+    run:
+        throws:
+            RxTaskFailure
+            RxLazyCycle
+            RxRange
+            RxGuardRejected
+            RxPrecondition
+            RxPostcondition
+            ReceiverIndex
+            ReceiverPermutation
+            RxNoOverload
+            RxAmbiguousOverload
+        RxActionState\calls := 0
+        @: delayed RxLazy\lazy(operation := RxActionFactory\make)
+        sys\assert(RxActionState\calls = 0)
+        @: first RxForce\force(thunk := delayed)
+        @: again RxForce\force(thunk := delayed)
+        sys\assert(first = again)
+        sys\assert(RxActionState\calls = 1)
+        @: result RxRepeat\repeat(RxActionFactory\make; 3)
+        sys\assert(length(result) = 3)
+        sys\assert(RxActionState\calls = 4)
+        RxActionState\calls := 0
+        @: retried RxRetry\retryCall(RxActionFactory\failOnce; 2)
+        sys\assert(retried\value = 2)
+        RxActionState\released := 0
+        @: identity RxIdentityRef\identity()
+        @: resource RxAround\around(RxActionFactory\make; RxActionCleanup\release; identity)
+        sys\assert(RxActionState\released = 1)
+        @: recovered RxRecover\recover(RxActionFactory\fail; identity)
+        sys\assert(recovered = RxActionState)
+        @: initial RxCollectionInt\box(number := 1)
+        @: last RxUntil\runUntil(RxCollectionDouble\twice; RxActionGoal\reached; initial)
+        sys\assert(last\value = 4)
+        @: guarded RxGuard\guard(RxCollectionDouble\twice; RxActionPositive\accepts)
+        @: two guarded(value := initial)
+        sys\assert(two\value = 2)
+        @: checked RxContract\contract(RxCollectionDouble\twice; RxActionPositive\accepts; RxActionPost\doubled)
+        @: checkedTwo checked(value := initial)
+        sys\assert(checkedTwo\value = 2)
+        RxActionState\events := 0
+        @: traced RxTrace\trace(RxCollectionDouble\twice; RxActionLogger\record)
+        @: tracedTwo traced(value := initial)
+        sys\assert(tracedTwo\value = 2)
+        sys\assert(RxActionState\events = 2)
+        @: adapted RxAdapter\adapter(identity; RxCollectionDouble\twice; RxCollectionDouble\twice)
+        @: four adapted(value := initial)
+        sys\assert(four\value = 4)
+        @: positive RxPredicate\predicate(operation := RxActionPositive\accepts)
+        sys\assert(positive(value := initial) = 1)
+        @: order (copy((1; 0)))
+        @: permuted RxPermute\permute(RxActionPair\encode; order)
+        @: arguments (copy((1; 2)))
+        @: twentyOne permuted(value := arguments)
+        sys\assert(twentyOne\value = 21)
+        @: candidates (copy(()))
+        sys\resize(candidates; 2)
+        candidates[0] := RxActionZeroCandidate
+        candidates[1] := RxActionPairCandidate
+        @: dispatch RxOverload\overload(candidates := candidates)
+        @: twelve dispatch(value := arguments)
+        sys\assert(twelve\value = 12)
+        @: noArguments (copy(()))
+        @: zero dispatch(value := noArguments)
+        sys\assert(zero\value = 0)
+        return: 1

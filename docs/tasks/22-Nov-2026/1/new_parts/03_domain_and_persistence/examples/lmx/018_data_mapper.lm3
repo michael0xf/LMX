@@ -1,0 +1,18 @@
+independent: AccountData:
+    int: id 0
+    int: cents 0
+
+Mapper:
+    @: rowStore
+    int: id
+    @: account
+    return: @
+    load:
+        @: row rowStore\read(id)
+        @: result (copy(AccountData))
+        result\id := row[0]
+        result\cents := row[1]
+        return: result
+    save:
+        rowStore\write(account\id; account\cents)
+        return: account

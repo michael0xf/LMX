@@ -1,14 +1,14 @@
-module MaybeInt (MaybeInt(..), unit, none, bind) where
+module MaybeValue (MaybeValue(..), some, none, bind) where
 
-data MaybeInt = Absent | Present Int deriving (Eq, Show)
+data MaybeValue a = Absent | Present a deriving (Eq, Show)
 
-unit :: Int -> MaybeInt
-unit = Present
+some :: a -> MaybeValue a
+some = Present
 
-none :: MaybeInt
+none :: MaybeValue a
 none = Absent
 
 infixl 1 `bind`
-bind :: MaybeInt -> (Int -> MaybeInt) -> MaybeInt
+bind :: MaybeValue a -> (a -> MaybeValue b) -> MaybeValue b
 bind Absent _ = Absent
 bind (Present value) next = next value

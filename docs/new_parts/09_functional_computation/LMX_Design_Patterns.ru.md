@@ -2,7 +2,7 @@
 
 Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
 
-Четыре исходных паттерна 82–85 сохранены как клиентские сравнения готовых компонентов. Рядом с каждым находится полная собственная реализация одной и той же библиотеки во всех трёх языках: Maybe/bind, Bounce/runner, synchronous around и capture первого int. Клиентские и implementation-размеры считаются отдельно и могут суммироваться для standalone-примера. Операнд bind использует готовые значения; остальные helpers сохраняют обычные вызовы там, где OPERANDS_TEMPLATE добавил бы только оболочку.
+В архиве одно текущее ядро LMX. Его операции вызываются напрямую; версии Maybe/Curry/Bounce для переключения не предлагаются. Основным выбран короткий корректный вариант текущего контракта и той же границы сравнения. Клиентам готовые компоненты доступны во всех трёх языках; в implementation-строках показаны настоящие тела, а общая инфраструктура посчитана отдельно. Прежние специализированные листинги сохранены рядом как пояснение и исключены из текущего подсчёта: они не подменяют общий контейнер или callable новым int-ограничением.
 
 ## Файлы
 
@@ -10,111 +10,108 @@ Haskell даёт естественный контроль для Maybe/Monad и
 - [Excel](LMX_Comparison_09_functional_computation.xlsx)
 - [PDF](LMX_Comparison_09_functional_computation.pdf)
 - [CSV](LMX_Comparison_09_functional_computation.csv)
-- [Методика](../COMPARISON_METHODOLOGY.ru.md)
-- [Общий каталог 90 паттернов](../PATTERN_CATALOG_90.ru.md)
-- [Статус проверки](../VALIDATION.md)
-- [Профиль Message и существующего HTTP-транспорта](../MESSAGE_HTTP_PROFILE.md)
-- [Операнды и библиотеки: правила этой редакции](../OPERAND_USAGE_PROFILE.md)
-- [Проверка всех 90 примеров](../OPERAND_LIBRARY_REVIEW.md)
+- [Current core dependencies and implementation cost](IMPLEMENTATION_DEPENDENCIES.md)
+- [Validation](VALIDATION_2026-11-22.md)
+- [Receiver API](../LMX_Fn_Receivers/API.md)
 
 ## Каталог
 
-### 082. [Monad](082_monad_comparision.md)
+### [082. Monad](082_monad_comparision.md)
 
-Использование готовой библиотеки Maybe<int> и её bind: отсутствие пропускает продолжение.
+Две операции bind над обобщённым Maybe; прикладной half по-прежнему проверяет чётность целого числа.
 
-**Реализация используемого компонента:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
+**Соседнее сравнение реализации:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
 
-**Сценарий:** Клиент определяет прикладной half: чётное число превращается в присутствующую половину, нечётное — в none. Два bind применяют half к 8, 6 и 3. Конструкторы, контейнер и bind предоставлены соседним сравнением реализации.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
+
+**Сценарий:** Вызвать half дважды через bind. В some хранится запись значения с его собственным типом, а next получает само значение по обычному контракту вызова. Для отсутствия продолжение не вызывается. Проверки остаются 8, 6 и 3.
 
 **Наблюдение:** 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
 
-Все три клиента используют готовую библиотеку с собственными реализациями, приведёнными рядом. Из клиентского размера исключена библиотека у всех трёх; обращения и импорты включены. Haskell здесь импортирует MaybeInt, Scala — MaybeInt, а не готовые Prelude Maybe и Option.
+### [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
 
-### 091. [Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
-
-Собственная библиотека Maybe<int>: конструкторы присутствия/отсутствия и бинарный bind во всех трёх языках.
+Обобщённый Maybe: наличие отделено от нуля, null, void и физического uninit; bind допускает изменение типа полезного значения.
 
 **Примеры использования:** [082. Monad](082_monad_comparision.md)
 
-**Сценарий:** Реализовать unit(int), none и bind(Maybe<int>, int→Maybe<int>). Для отсутствия bind возвращает отсутствие без чтения payload и без вызова продолжения; для присутствия вызывает продолжение один раз с числом. Клиент Monad использует именно эти реализации.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
 
-**Наблюдение:** unit(0) остаётся присутствующим нулём; none отличается от него. bind(none, next) не вызывает next; bind(unit(8), half) даёт присутствующее 4. Для чистых total-продолжений выполняются left identity, right identity и associativity по наблюдаемому значению.
+**Сценарий:** Реализовать some(record), none() и bind(input,next). Полезное значение хранится как запись {type,payload}; отсутствие определяется только флагом present. При наличии next вызывается ровно один раз с полезным значением.
 
-Во всех трёх листингах показаны собственный тип, конструкторы и вся логика bind. Haskell не использует Maybe/Monad из Prelude, Scala не использует Option/flatMap. Подсчёт включает этот код целиком; реализации примитивов, обычного вызова и структурного шаблона ядра остаются инфраструктурой языка.
+**Наблюдение:** some записи нуля остаётся присутствующим нулём; some записи null остаётся присутствующим null. none не читает value и bind(none,next) не вызывает next. Следующий результат может хранить другой тип.
 
-### 083. [Trampoline](083_trampoline_comparision.md)
+### [083. Trampoline](083_trampoline_comparision.md)
 
-Прикладные взаимные even/odd шаги поверх готового Bounce и runner.
+Взаимные even/odd шаги используют общий Bounce с nullary continuation, созданной partial.
 
-**Реализация используемого компонента:** [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md)
+**Соседнее сравнение реализации:** [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md), [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Сценарий:** Для неотрицательного n определить чётность взаимными шагами even/odd. Каждый незавершённый шаг возвращает More со ссылкой на другой шаг и числом n−1; он не вызывает другой шаг. Прогнать 0, 1 и 100001 через библиотечный runner, полностью показанный рядом.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
+
+**Сценарий:** Для неотрицательного n определить чётность. Незавершённый шаг возвращает more(partial(другой_шаг; (n−1))) без вызова другого шага. trampoline вызывает по одному сохранённому thunk до done.
 
 **Наблюдение:** 0 → true, 1 → false, 100001 → false; LMX возвращает 1, 0, 0. Каждый шаг возвращает управление драйверу; вложенная цепочка вызовов even/odd не накапливается.
 
-Во всех трёх языках из размера клиента исключены контейнер и runner одной явно заданной библиотеки. В соседнем блоке они реализованы и посчитаны для каждого языка. Haskell и Scala здесь также импортируют custom BounceBool, не готовый TailCalls.
+### [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md)
 
-### 092. [Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md)
-
-Собственный Bounce для логического результата и отложенного вызова с одним целочисленным аргументом; полный runner во всех трёх языках.
+Обобщённый Bounce хранит запись произвольного результата либо nullary thunk; runner не знает тип результата или исходную арность шага.
 
 **Примеры использования:** [083. Trampoline](083_trampoline_comparision.md)
 
-**Сценарий:** Реализовать Done(answer) и More(next, argument). done создаёт завершённое значение; more сохраняет ссылку на шаг и его int-аргумент, ничего не вызывая. run повторно вызывает один сохранённый шаг и получает новый Bounce до Done. Весь контейнер и драйвер показаны; клиент определяет even/odd.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
 
-**Наблюдение:** run(done(true)) сразу возвращает true. Каждый More исполняет сохранённый next ровно один раз с сохранённым argument. Клиент для 0, 1, 100001 получает true, false, false (LMX: 1, 0, 0); глубина вложенных вызовов шагов не растёт с n.
+**Сценарий:** Реализовать done(record), more(thunk) и trampoline(bounce). more сохраняет функцию без вызова; runner вызывает её ровно один раз на итерацию и возвращает результат done. Частичное связывание аргументов вынесено в общий partial.
 
-Во всех языках одинаковая модель отложенного вызова: функция Int→Bounce плюс уже сохранённый int. Никакой готовый Trampoline/TailCalls, monadic bind, CPS-преобразователь или scheduler не скрыт за интерфейсом. Haskell использует хвостовой драйвер, Scala — проверяемую @tailrec-функцию, LMX — while.
+**Наблюдение:** trampoline(done(record)) возвращает ту же запись результата без вызова continuation. Каждый more запускает сохранённый thunk один раз. Пример чётности даёт 1,0,0 в LMX и true,false,false в контролях, не накапливая рекурсивный стек шагов.
 
-### 084. [Execute Around](084_execute_around_comparision.md)
+### [084. Execute Around](084_execute_around_comparision.md)
 
-Клиент готового around предоставляет ресурс, действие и журнал; обычный выход и два отказа проверяют освобождение.
+Клиент вызывает прямой bracket; acquire/action/release и наблюдаемый журнал остались прикладным кодом.
 
-**Реализация используемого компонента:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
+**Соседнее сравнение реализации:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
 
-**Сценарий:** Ресурс содержит 42. acquire дописывает 1 в журнал, action — 2, release — 3. Mode 0 успешен, mode 1 бросает ResourceFailure из action, mode 2 — из acquire. Клиент использует одинаковый готовый Around во всех трёх языках и перехватывает ошибку только для наблюдения журнала.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
+
+**Сценарий:** Ресурс содержит 42. acquire дописывает 1 в журнал, action — 2, release — 3. Mode 0 успешен, mode 1 бросает ResourceFailure из action, mode 2 — из acquire. Клиент использует одинаковый готовый bracket во всех трёх языках и перехватывает ошибку только для наблюдения журнала.
 
 **Наблюдение:** run(0) → 42123: результат 42, журнал 123. run(1) → −123: ошибка тела дошла до клиента и release выполнен. run(2) → −1: acquisition отказал, release не выполнен. Ресурс не используется после cleanup.
 
-Все три клиента используют собственный готовый around с реализацией рядом. Library-код исключён симметрично; импорты, прикладные callbacks и наблюдение трёх исходов включены. Haskell больше не получает бесплатно standard bracket при сравнении с полной LMX-реализацией.
+### [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
 
-### 098. [Execute Around implementation](098_execute_around_implementation_comparision.md)
-
-Полная повторяемая схема acquire/action/release с синхронными ошибками, без готового bracket/Using.
+Обобщённый acquire/action/release: ресурс, полезный результат и дополнительные аргументы не привязаны к int.
 
 **Примеры использования:** [084. Execute Around](084_execute_around_comparision.md)
 
-**Сценарий:** Принимать acquire()→resource, release(resource)→процедура и action(resource)→int. После успешного acquire выполнять release ровно один раз при нормальном выходе или ResourceFailure тела. Если acquire отказал, release не вызывать. Клиентский ресурс, журнал и правила отказа остаются в Execute Around.
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
+
+**Сценарий:** После успешного acquire зарегистрировать release(resource), затем вызвать action(resource; additionalArgs...). Сохранить типизированную запись результата либо void. При ошибке acquisition release не вызывается; после успешного acquisition он вызывается ровно один раз при любом обычном выходе.
 
 **Наблюдение:** Успех: журнал 123 и результат action. Ошибка action: журнал 123 и распространение ошибки. Ошибка acquire: журнал 1 без release. Соседний клиент кодирует эти случаи как 42123, −123, −1.
 
-Каждый язык показывает собственный around. Haskell использует только обычные catch/throwIO, Scala — try/finally, LMX — finally. Готовые bracket, Using или скрытые resource-helpers не вызываются. Общий интерфейс сохраняет прикладные функции в клиенте.
+### [085. Currying](085_currying_comparision.md)
 
-### 085. [Currying](085_currying_comparision.md)
+Прямой partial строит add5 и add100 из обычной функции; процедура копирования окружения вынесена в общую реализацию.
 
-Клиент готового capture частично применяет собственное сложение и использует полученные функции после возврата фабрики.
+**Соседнее сравнение реализации:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Реализация используемого компонента:** [099. Integer partial-application implementation](099_integer_partial_application_implementation_comparision.md)
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
 
-**Сценарий:** Объявить прикладную binary-функцию сложения. С помощью одинакового готового capture построить add5 и add100, затем получить add5(1), add100(1), add5(1). Одноимённая LMX-локальная saved=1000 не меняет сохранённые значения.
+**Сценарий:** Объявить сложение и вызвать partial(add;(5)) и partial(add;(100)). Получить 6,101,6 после завершения фабрики. Локальное saved=1000 не меняет сохранённые значения. Префикс — Structure записей, а не скрытый список только int.
 
 **Наблюдение:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
-Все три клиента используют готовый capture с полной собственной реализацией рядом. Прикладное сложение остаётся в каждом листинге. Haskell/Scala не заставляются вручную реализовывать граф LMX: их helper использует естественные лямбды, и эта разница видна в implementation-сравнении.
+### [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-### 099. [Integer partial-application implementation](099_integer_partial_application_implementation_comparision.md)
+Общая реализация partial(F;prefix): произвольная смешанная сигнатура, 0≤k≤N, точный остаточный контракт и исходный return.
 
-Повторяемый capture(binary, first): сохранить функцию и первый int, вернуть callable одного int.
+**Примеры использования:** [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md)
 
-**Примеры использования:** [085. Currying](085_currying_comparision.md)
+**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
 
-**Сценарий:** Для binary:(int,int)→int и first:int построить независимое сохранённое вычисление second→binary(first,second). Завершить фабрику, создать другую функцию и вызывать первую снова. Сложение не встроено в helper: его определяет клиент Currying.
+**Сценарий:** Исследовать сигнатуру F, принять и сохранить k входных записей, построить callable оставшихся N−k позиций. Захваченные примитивы — снимки значения; ссылочные значения сохраняют идентичность цели. k=0 и k=N допустимы, раннего вызова F нет.
 
-**Наблюдение:** capture(add,5)(1)=6, capture(add,100)(1)=101, повтор первого даёт 6. Другая binary-функция также получает сохранённый первый и явный второй аргумент. Клиентская saved=1000 не заменяет capture; исходный LMX-прототип остаётся неизменным.
+**Наблюдение:** Общий случай сохраняет порядок и типы входов, точный R и объявленные failures. Для клиента сложения результат — 6,101,6. Для N=0 фабрика возвращает nullary callable; для k>N отказ происходит до публикации результата.
 
-LMX показывает всю графовую реализацию захвата, Haskell и Scala — собственную lambda-обёртку. Готовый Scala .curried не используется. Разница в стоимости механизма остаётся видна именно здесь; клиент не оплачивает её при каждом использовании.
+## Границы подсчёта
 
-## Границы сравнения
-
-Размеры вычислены из трёх листингов каждого сравнения. В связанных парах использование готового компонента и реализация этого компонента посчитаны отдельно и одинаково для всех трёх языков. Runtime, HTTP-хост и БД не подменяются строкой импорта. Номера 1–85 сохранены из исходного списка, 86–90 — добавленные паттерны; номера выше 90 обозначают отдельные реализации библиотечных компонентов.
+Измеряется только основной вариант — самый короткий рассмотренный допустимый алгоритм текущего контракта. Исторический LMX остаётся рядом с текущим кодом. Компоненты единого ядра и общая инфраструктура считаются отдельно. Выбор и подсчёт не означают успешного исполнения.

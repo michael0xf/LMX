@@ -1,5 +1,7 @@
 # Проверка и согласование документации LMX
 
+> Исторический отчёт предыдущей редакции. Его числа и сведения о запуске относятся к указанной в нём дате; это не отчёт о новой версии ядра. Текущие решения: [редакция 22 ноября](CORE_RECEIVERS_REVIEW.md), [проверки](VALIDATION.md), [статистика](STATISTICS_2026-11-22.md). Нормативные правила определяются актуальными docs и последними уточнениями автора.
+
 Редакция: 21 ноября 2026 года. Отчёт для Михаила и Fable.
 
 ## 1. Результат и границы работы
@@ -163,7 +165,7 @@
 | [LMX_Design_Patterns19-23.ru.md](LMX_Design_Patterns19-23.ru.md) | Проверен, сохранён | Проверены те же приложения и шаблон; соответствие EN и отдельным сравнениям. |
 | [LMX_regression_examples.to_fable.en.md](LMX_regression_examples.to_fable.en.md) | Исправлен | 94 семейства проверок; разрешён C-01; добавлен G13; исправлены G04/P12/P16; полнота графа, отсутствие рабочего графа, R0, private; обновлены хеши источников. |
 | [README.md](README.md) | Исправлен | Обновлены навигация, состав комплекта, приоритет уточнения автора и пересчитанные итоги сравнений. |
-| [about_languages_comparision.en.md](about_languages_comparision.en.md) | Исправлен | Уточнены стадии implements/native; обновлены суммы, минимумы и сравнение с Python после правки Prototype. |
+| [about_languages_comparision.en.md](about_languages_comparision.en.md) | Исправлен | Уточнены стадии satisfies/native; обновлены суммы, минимумы и сравнение с Python после правки Prototype. |
 | [about_languages_comparision.ru.md](about_languages_comparision.ru.md) | Исправлен | Согласовано с EN; 5789/6870 символов, 18/23 случаев короче Python, 17/23 минимумов. |
 | [lmx_beauty.en.md](lmx_beauty.en.md) | Исправлен | Проверены листинги и метрики; исправлены две ссылки на Python Language Reference. |
 | [lmx_beauty.ru.md](lmx_beauty.ru.md) | Исправлен | Проверены листинги и метрики; исправлены две ссылки на Python Language Reference. |

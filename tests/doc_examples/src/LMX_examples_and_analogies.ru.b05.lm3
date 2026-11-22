@@ -1,19 +1,23 @@
-Source:
-    int: y 5
-    methods:
-        int: x
-        return: int
-        dynamic:
-            return: x + y
-        lexical:
-            return: x + node\y
+Addition:
+    int: first
+    int: second
+    return: int
+    add:
+        return: first + second
 
-BindingProbe:
+ClosureProbe:
     return: int
     run:
-        @: copied (copy(Source))
-        Source\y := 8
-        int: y 25
-        int: a copied\methods\dynamic(1)
-        int: b copied\methods\lexical(1)
-        return: a * 100 + b
+        throws:
+            FxArity
+            FxIndex
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        @: add5 partial(Addition\add; (5))
+        @: add100 partial(Addition\add; (100))
+        int: saved 1000
+        int: first add5(1)
+        int: second add100(1)
+        int: again add5(1)
+        return: first * 1000000 + second * 1000 + again

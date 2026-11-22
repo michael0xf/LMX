@@ -13,8 +13,9 @@ import Data.Array (Array, listArray, (!), (//), elems)
 import Data.IORef (newIORef, readIORef, modifyIORef')
 import qualified Data.IORef as Ref
 import IntApply (apply)
-import CurryInt (capture)
-import IntPipe (pipe, pipeIO)
+import Partial (partial)
+import IntPipe (pipe, pipeIO, pipe2, pipeIO2)
+import Lazy (lazyIO)
 import EvaluationModes (preparedTwice, rawTwice)
 import qualified StepIterator as Iterator
 import CharacterRange (between)
@@ -35,7 +36,7 @@ applicationExample = do
   pure (first * 100 + second)
 
 makeAdder :: Int -> Int -> Int
-makeAdder n = capture (+) n
+makeAdder n = partial (+) n
 
 closureExample :: (Int, Int, Int)
 closureExample =
@@ -45,6 +46,24 @@ closureExample =
 
 compositionExample :: (Int, Int)
 compositionExample = (pipe 4 [(*2), (+1)], pipe 4 [(+1), (*2)])
+
+compositionFactoryExample :: (Int, Int)
+compositionFactoryExample = (pipe2 (*2) (+1) 4, pipe2 (+1) (*2) 4)
+
+lazySeries :: IO (Int, Int, Int)
+lazySeries = do
+  counter <- newIORef (0 :: Int)
+  let next = modifyIORef' counter (+1) >> readIORef counter
+      prepared = do
+        delayed <- lazyIO next
+        first <- delayed
+        second <- delayed
+        pure (first + second)
+  first <- prepared
+  second <- prepared
+  calls <- readIORef counter
+  pure (first, second, calls)
+
 
 compositionEffects :: IO (Int, Int, [String])
 compositionEffects = do
@@ -228,6 +247,8 @@ main = do
     (dynamicAdd (Env 25) 1, lexicalAdd (Env 5) 1)
   assertEq "H06 composition" (9,10) (((+1) . (*2)) (4 :: Int), ((*2) . (+1)) (4 :: Int))
   assertEq "H06 ready pipe" (9,10) compositionExample
+  assertEq "H06 composition factory" (9,10) compositionFactoryExample
+  lazySeries >>= assertEq "H07 memoized nullary action" (2,4,2)
   compositionEffects >>= assertEq "H06 stage order/count"
     (9,10,["twice","next","next","twice"])
   preparedAndRaw >>= assertEq "H07 values/actions" ((2,1),(3,2))

@@ -28,7 +28,7 @@ Check:
     @: item
     return: int
     accepts:
-        if: implements(item; Marker)
+        if: satisfies(item; Marker)
             return: 1
         return: 0
     demo:
@@ -90,7 +90,7 @@ Java и Python проверяют номинальную принадлежно�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 185 | 15 |
+| LMX | 184 | 15 |
 | Java | 238 | 7 |
 | Python | 177 | 10 |
 

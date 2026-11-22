@@ -33,20 +33,15 @@
 | [M01.lm3](lmx/M01.lm3) | `` |
 | [M05.lm3](lmx/M05.lm3) | `Lamp\set(command := 1)` |
 
-## Редакция с библиотеками
+## Редакция с общими ресиверами и выбором короткого варианта
 
-Проверены все 24 LMX-исходника и Analogies.hs. Переписаны 7 LMX-клиентов; рядом добавлены 6 полных сравнений реализаций. Все прежние результаты, счётчики и отрицательные проверки сохранены. [Полный аудит](OPTIMIZATION_REVIEW.md).
+Во всех шести парах H01,H02,H03,H04,H06,H07 основной — более короткий корректный полный LMX-код, второй вариант сохранён рядом и исключён из его размера. Сравниваются только корректные варианты с сопоставимой границей учёта. Естественные динамические вызовы, копирование и связывание LMX не заменяются искусственной архитектурной имитацией. [Аудит и таблица](OPTIMIZATION_REVIEW.md) · [Оба исходника и зависимости](variants.json).
 
-| Клиент | Готовая зависимость | Реализация |
-| --- | --- | --- |
-| [H01](lmx/H01.lm3) | [Application.lm3](libraries/lmx/Application.lm3) | [Полный код](library_comparisons/h01_apply_comparision.md) |
-| [H03](lmx/H03.lm3) | [099_integer_partial_application_implementation.lm3](../09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3) | [Полный код](library_comparisons/h03_capture_comparision.md) |
-| [H06](lmx/H06.lm3) | [093_pipe_implementation.lm3](../02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3) | [Полный код](library_comparisons/h06_pipe_comparision.md) |
-| [H07](lmx/H07.lm3) | [EvaluationModes.lm3](libraries/lmx/EvaluationModes.lm3) | [Полный код](library_comparisons/h07_evaluation_modes_comparision.md) |
-| [H09](lmx/H09.lm3) | [Cycles.lm3](libraries/lmx/Cycles.lm3) | [Полный код](library_comparisons/h09_iterator_comparision.md) |
-| [V02](lmx/V02.lm3) | [CharacterRange.lm3](libraries/lmx/CharacterRange.lm3) | [Полный код](library_comparisons/v02_character_range_comparision.md) |
+`expected_results.json` указывает `selected_variant`, `alternative_cases`, `variant_cases` и `variant_load_before`. Каждый вариант запускается отдельно. Все общие ресиверы входят в одно текущее ядро и доступны прямо. [LMX_Receivers.lmx](../LMX_Fn_Receivers/LMX_Receivers.lmx) — его видимые исходники, а не отдельная выбираемая версия библиотеки. Старые механизмы, если они нужны процедурному аналогу, явно записаны внутри самого примера. Каталог libraries сохраняет исходники механизмов для чтения, а не набор альтернативных ядер.
 
-H06, R07 и V02 требуют предоставленный ядром sys\OPERANDS_TEMPLATE. Он копируется первым в DATA операнда; полный стандартный заголовок дан в [профиле](../OPERAND_USAGE_PROFILE.md). H07 использует собственные typed/prepared и raw заголовки. Шесть Haskell-модулей лежат в libraries/haskell и доступны обычному поиску модулей по команде ниже.
+В H02 именованное требование записывается `PairOperation :: DATA`. Альтернатива строит такое же семантическое требование через `signatureTypes`, без публичного fn. H05/H08/H09 сохранены прямыми по причинам связывания, места записи и живой декларации/Stop; R07/V02 сохраняют OPERANDS_TEMPLATE первым в DATA.
+
+[Размеры](validation/functional_receiver_counts.json) относятся к основной части перед маркером альтернативы. [Скрипт выбора](tools/select_variants.py) и [проверка](tools/check_receiver_revision.py) воспроизводят это правило. Реализации библиотек показаны рядом и посчитаны отдельно.
 
 ## Haskell
 

@@ -48,6 +48,30 @@ def canonical_code(code: str) -> str:
     return code.strip() + "\n"
 
 
+PROCEDURAL_BEGIN = "# BEGIN PROCEDURAL LMX (excluded from character counts)"
+PROCEDURAL_END = "# END PROCEDURAL LMX"
+ALTERNATIVE_BEGIN = "# BEGIN ALTERNATIVE LMX (excluded from character counts)"
+ALTERNATIVE_END = "# END ALTERNATIVE LMX"
+
+
+def source_parts(text: str) -> tuple[str, str | None]:
+    """Count the current listing, retaining the archived original for review."""
+    begin,end = (ALTERNATIVE_BEGIN,ALTERNATIVE_END) if ALTERNATIVE_BEGIN in text else (PROCEDURAL_BEGIN,PROCEDURAL_END)
+    if begin not in text:
+        return text, None
+    primary, archive = text.split(begin, 1)
+    if end not in archive:
+        raise ValueError("Missing end of the alternative LMX listing")
+    archive, tail = archive.split(end, 1)
+    if tail.strip():
+        raise ValueError("Unexpected content after the procedural LMX archive")
+    lines = archive.strip("\r\n").splitlines()
+    if any(not line.startswith("# ") and line != "#" for line in lines):
+        raise ValueError("Procedural LMX must be entirely commented out")
+    old = "\n".join(line[2:] if line.startswith("# ") else "" for line in lines)
+    return canonical_code(primary), canonical_code(old)
+
+
 def metrics(code: str) -> dict[str, int]:
     return {
         "nonwhitespace_characters": sum(not ch.isspace() for ch in code),
@@ -190,8 +214,22 @@ def audit(root: Path) -> dict:
                 blocks, closed = fenced_blocks(markdown_text)
                 if not closed:
                     fail(markdown_path, "Unclosed Markdown code fence")
-                if len(blocks) != 3:
-                    fail(markdown_path, f"Expected exactly 3 fenced code blocks; found {len(blocks)}")
+                alternatives = pattern.get('alternative', {})
+                archived_count = len(alternatives) if alternatives else int(bool(pattern.get('procedural_lmx'))) + len(pattern.get('previous_controls', {}))
+                if len(blocks) != 3 + archived_count:
+                    fail(markdown_path, f"Expected 3 counted and {archived_count} archival fenced code blocks; found {len(blocks)}")
+                for language, alternate in alternatives.items():
+                    fence = LANGUAGES[language][2]
+                    if (fence, canonical_code(alternate['code'])) not in blocks[3:]:
+                        fail(markdown_path, f"Alternative {language} differs from its stored source")
+                if not alternatives and pattern.get('procedural_lmx'):
+                    old = canonical_code(pattern['procedural_lmx'])
+                    if ('lmx', old) not in blocks[3:]:
+                        fail(markdown_path, "Procedural LMX differs from the preserved original")
+                for language, old in ({} if alternatives else pattern.get('previous_controls', {})).items():
+                    fence = LANGUAGES[language][2]
+                    if (fence, canonical_code(old)) not in blocks[3:]:
+                        fail(markdown_path, f"Archived {language} differs from the preserved original")
 
             listings = pattern.get("listings", [])
             actual_order = [x.get("language") for x in listings if isinstance(x, dict)] if isinstance(listings, list) else []
@@ -216,6 +254,18 @@ def audit(root: Path) -> dict:
                     continue
                 normalized = canonical_code(code)
                 counts = metrics(normalized)
+                variants = pattern.get('variants', {}).get(language, {})
+                if variants:
+                    eligible=pattern.get('eligible_variants',{}).get(language,list(variants))
+                    if not eligible or any(v not in variants for v in eligible):
+                        fail(json_file, f"ID {identifier}/{language}: invalid eligible_variants")
+                        eligible=list(variants)
+                    minimum = min(metrics(canonical_code(variants[v]))['nonwhitespace_characters'] for v in eligible)
+                    if counts['nonwhitespace_characters'] != minimum:
+                        fail(json_file, f"ID {identifier}/{language}: primary is not the shortest eligible variant")
+                    selected = pattern.get('primary_variant', {}).get(language)
+                    if selected not in eligible or canonical_code(variants.get(selected,'')) != normalized:
+                        fail(json_file, f"ID {identifier}/{language}: primary_variant does not identify primary source")
                 measured[language] = counts
                 listing_count += 1
                 total_bytes += counts["utf8_bytes"]
@@ -224,9 +274,16 @@ def audit(root: Path) -> dict:
                 expected_sources.add(source_path.relative_to(directory).as_posix())
                 try:
                     actual_bytes = source_path.read_bytes()
-                    if actual_bytes != normalized.encode("utf-8"):
+                    actual_primary, archive = source_parts(actual_bytes.decode('utf-8')) if language == 'LMX' else (actual_bytes.decode('utf-8'), None)
+                    if actual_primary != normalized:
                         fail(source_path, f"ID {identifier}/{language}: source differs from code.strip() + LF")
-                except OSError as exc:
+                    if language == 'LMX' and pattern.get('alternative', {}).get('LMX'):
+                        if archive != canonical_code(pattern['alternative']['LMX']['code']):
+                            fail(source_path, "Missing or changed alternative in source file")
+                    elif language == 'LMX' and pattern.get('procedural_lmx'):
+                        if archive != canonical_code(pattern['procedural_lmx']):
+                            fail(source_path, "Missing or changed procedural original in source file")
+                except (OSError, UnicodeError, ValueError) as exc:
                     fail(source_path, f"Cannot read source: {exc.__class__.__name__}: {exc}")
                 if position < len(blocks):
                     found_language, found_code = blocks[position]
@@ -344,6 +401,7 @@ def audit(root: Path) -> dict:
             "nonblank_lines": "splitlines() entries with nonempty strip()",
             "utf8_bytes": "len(canonical_source.encode('utf-8')) including spaces and the final LF",
             "csv": "UTF-8 BOM required; *_utf8_bytes columns are checked if present, otherwise bytes remain in this report",
+            "procedural_originals": "Preserved in alternative/variants or procedural_lmx metadata, a separate Markdown fence and commented source section; excluded from main metrics. The primary is shortest among eligible comparable variants.",
         },
         "group_count": len(json_files),
         "pattern_count": len(pattern_ids),

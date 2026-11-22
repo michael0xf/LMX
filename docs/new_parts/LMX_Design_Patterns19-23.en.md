@@ -18,7 +18,7 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 [Binding rules](../LMX_semantics.en.md#binding-places) · [Import](../LMX_semantics.en.md#import-receiver) · [Block boundaries](../LMX_grammar.en.md#levels) · [Operand contract](../LMX_semantics.en.md#operand-receiver)
 
-**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
+**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary callable W/E rules still apply after grouping. Operands have a separate condition: LEFT is a written unnamed Structure and the sole RHS argument is another written unnamed Structure. Only that RHS outer group opens, once; LEFT stays whole, with no repeated opening or P0 removal. [Copying, composition and grouping][S]
 
 ## Comparison table
 
@@ -28,14 +28,14 @@ The main metric counts non-whitespace characters in each main application progra
 
 | Language | Total non-whitespace characters, 19–23 | Relative to LMX |
 |---|---:|---:|
-| LMX | 1393 | 1.00× |
+| LMX | 1389 | 1.00× |
 | Python | 1627 | 1.17× |
-| Java | 1970 | 1.41× |
+| Java | 1970 | 1.42× |
 | C++ | 1778 | 1.28× |
 | C# | 2144 | 1.54× |
-| TypeScript | 1957 | 1.40× |
+| TypeScript | 1957 | 1.41× |
 | Go | 1848 | 1.33× |
-| Rust | 2165 | 1.55× |
+| Rust | 2165 | 1.56× |
 
 ## 19. Singleton
 
@@ -71,6 +71,63 @@ Uniqueness is scoped to one provider in one serial execution context; in LMX thi
 
 One consumer obtains two matching products from the selected factory family.
 
+<!-- counted-lmx: primary -->
+```lmx
+Button:
+    int: value
+    return: int
+    render:
+        return: value
+
+Frame:
+    int: value
+    @: button
+    return: int
+    render:
+        return: value + button\render()
+
+Light:
+    return: @
+    button:
+        return: derive(Button; (int: value 1))
+    frame:
+        return: derive(Frame; (int: value 10))
+
+Dark:
+    return: @
+    button:
+        return: derive(Button; (int: value 2))
+    frame:
+        return: derive(Frame; (int: value 20))
+
+Client:
+    @: factory
+    return: int
+    render:
+        @: button factory\button()
+        @: frame factory\frame()
+        return: frame\render()
+    demo:
+        return: render(factory := Light) + render(factory := Dark)
+```
+
+Each factory method explicitly groups its merge stream before returning one product. The factory DATA is not a source of that composition.
+
+**Invocation:** `Client\demo()`. **Expected result: 33.**
+
+Client\render(factory := Light) obtains button 1 and frame 10; Frame.render calls Button.render and returns 11. The same Client\render(factory := Dark) obtains 2 and 20 and returns 22. One factory argument selects the family, and both products are created through it. Repeated factory-method calls produce independent products.
+
+Two configuration families and two product roles; the selected factory and the consumer’s workflow keep the family consistent. Products share a representation and differ in configuration, so this scenario needs no LightButton/DarkButton subclasses. No language here forbids a caller from deliberately mixing families. This does not compare GUI libraries or automatic proofs of compatibility. C++ expresses the factory interface with two function pointers, preserving the same runtime choice of family.
+
+**LMX: 458** non-whitespace characters. [Eight-language comparison](20_abstract_factory_comparison.md).
+
+[Refactoring.Guru — Abstract Factory](https://refactoring.guru/design-patterns/abstract-factory) · [Refactoring.Guru — Abstract Factory in Python](https://refactoring.guru/design-patterns/abstract-factory/python/example)
+
+The direct derive receiver is part of the current core and performs the same merge composition. All fields and both product families remain. The procedural form below uses the same core; the full receiver definition is linked in the comparison.
+
+### Procedural equivalent — excluded from the primary count
+
+<!-- uncounted-lmx: alternative -->
 ```lmx
 Button:
     int: value
@@ -110,22 +167,51 @@ Client:
         return: render(factory := Light) + render(factory := Dark)
 ```
 
-Each factory method explicitly groups its merge stream before returning one product. The factory DATA is not a source of that composition.
-
-**Invocation:** `Client\demo()`. **Expected result: 33.**
-
-Client\render(factory := Light) obtains button 1 and frame 10; Frame.render calls Button.render and returns 11. The same Client\render(factory := Dark) obtains 2 and 20 and returns 22. One factory argument selects the family, and both products are created through it. Repeated factory-method calls produce independent products.
-
-Two configuration families and two product roles; the selected factory and the consumer’s workflow keep the family consistent. Products share a representation and differ in configuration, so this scenario needs no LightButton/DarkButton subclasses. No language here forbids a caller from deliberately mixing families. This does not compare GUI libraries or automatic proofs of compatibility. C++ expresses the factory interface with two function pointers, preserving the same runtime choice of family.
-
-**LMX: 462** non-whitespace characters. [Eight-language comparison](20_abstract_factory_comparison.md).
-
-[Refactoring.Guru — Abstract Factory](https://refactoring.guru/design-patterns/abstract-factory) · [Refactoring.Guru — Abstract Factory in Python](https://refactoring.guru/design-patterns/abstract-factory/python/example)
-
 ## 21. Flyweight
 
 Repeated requests for a kind return one shared object; each use supplies its own external state.
 
+<!-- counted-lmx: primary -->
+```lmx
+glyphs:
+    int: kind
+    return: @
+    immutable: thin: int: width 2
+    immutable: thick: int: width 3
+    get:
+        if: kind = 0
+            return: thin
+        return: thick
+    drawing:
+        @: glyph
+        int: position
+        return: int
+        render:
+            return: glyph\width * 10 + position
+        demo:
+            @: first get(0)
+            @: second get(0)
+            @: third get(1)
+            return: render(first 3) + render(second 7) + render(third 1)
+```
+
+**Invocation:** `glyphs\drawing\demo()`. **Expected result: 81.**
+
+`first` and `second` refer to the same `thin`; `third` refers to the distinct `thick` object. `render` reads the named `width` field and receives a separate position: `23 + 27 + 31 = 81`. Python uses the same named-field model through `@dataclass(frozen=True)` with `width: int`, replacing the one-element tuple.
+
+`drawing` is nested in `glyphs`, so `get` is lexically visible. The DATA of `render` and `demo` is `drawing`; the DATA of `get` is `glyphs`. There are no blank lines inside the root block. The terminal `return` at the declaration level of `demo` closes its body; `render(first 3)` supplies two positional arguments.
+
+`immutable` protects the shared width from changes; a const binding alone does not make its contents immutable. All eight versions use two prebuilt flyweights, without dynamic caching or eviction. The `width` field stands for a potentially larger set of shared properties. This demonstrates state sharing and identity, rather than a measured memory saving. In Go, keeping shared data unchanged remains an API contract.
+
+**LMX: 281**, **Python: 309** non-whitespace characters. [Eight-language comparison](21_flyweight_comparison.md).
+
+[Refactoring.Guru — Flyweight in Python, conceptual example](https://refactoring.guru/design-patterns/flyweight/python/example)
+
+The final return now belongs to demo CODE. Its previous indentation placed it in drawing DATA. The non-whitespace count is unchanged; the old source is preserved below and excluded from counts.
+
+### Previous LMX — excluded from character counts
+
+<!-- uncounted-lmx: procedural -->
 ```lmx
 glyphs:
     int: kind
@@ -148,18 +234,6 @@ glyphs:
             @: third get(1)
         return: render(first 3) + render(second 7) + render(third 1)
 ```
-
-**Invocation:** `glyphs\drawing\demo()`. **Expected result: 81.**
-
-`first` and `second` refer to the same `thin`; `third` refers to the distinct `thick` object. `render` reads the named `width` field and receives a separate position: `23 + 27 + 31 = 81`. Python uses the same named-field model through `@dataclass(frozen=True)` with `width: int`, replacing the one-element tuple.
-
-`drawing` is nested in `glyphs`, so `get` is lexically visible. The DATA of `render` and `demo` is `drawing`; the DATA of `get` is `glyphs`. There are no blank lines inside the root block. The terminal `return` at the declaration level of `demo` closes its body; `render(first 3)` supplies two positional arguments.
-
-`immutable` protects the shared width from changes; a const binding alone does not make its contents immutable. All eight versions use two prebuilt flyweights, without dynamic caching or eviction. The `width` field stands for a potentially larger set of shared properties. This demonstrates state sharing and identity, rather than a measured memory saving. In Go, keeping shared data unchanged remains an API contract.
-
-**LMX: 281**, **Python: 309** non-whitespace characters. [Eight-language comparison](21_flyweight_comparison.md).
-
-[Refactoring.Guru — Flyweight in Python, conceptual example](https://refactoring.guru/design-patterns/flyweight/python/example)
 
 ## 22. Mediator
 

@@ -1,13 +1,19 @@
-SharedValue:
-    int: value 7
+Own:
+    int: y
+    step:
+        y += 3
 
-SharedPair:
-    @: left SharedValue
-    @: right SharedValue
+Free:
+    step:
+        y += 3
 
-SharingProbe:
+StateProbe:
     return: int
-    run:
-        @: copied (copy(SharedPair))
-        copied\left\value := 21
-        return: copied\right\value * 100 + SharedValue\value
+    ownCopy:
+        int: y 0
+        Own\step()
+        return: y
+    callerPlace:
+        int: y 0
+        Free\step()
+        return: y

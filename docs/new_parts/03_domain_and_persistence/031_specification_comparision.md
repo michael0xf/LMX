@@ -10,7 +10,7 @@
 
 **Ожидаемое наблюдение:** Результаты false,true,false. Правый предикат не вызывается, если левый дал false.
 
-**Граница сравнения:** Использование библиотеки. Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не implements. Короткий клиент и полный код combinator измеряются отдельно.
+**Граница сравнения:** Использование библиотеки. Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не satisfies. Короткий клиент и полный код combinator измеряются отдельно.
 
 Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
 
@@ -101,7 +101,7 @@ Compose predicates independently of their candidate values.
 
 **Comparison.** Each client defines concrete nonnegative/below100 predicates and imports the combinator that builds a reusable predicate. LMX makes composition an A both B expression; Python and C# call a factory. The companion explicitly implements evaluation and short-circuiting in all three languages.
 
-**Scope and limitations.** Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from implements. Client and complete combinator implementation are measured separately.
+**Scope and limitations.** Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from satisfies. Client and complete combinator implementation are measured separately.
 
 ### Dependencies and execution boundaries
 

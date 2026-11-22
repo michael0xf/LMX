@@ -2,10 +2,30 @@ Example:
     int: x
     return: @
     half:
-        import: Maybe
+        throws: FxRecordArity
         if: x % 2 = 0
-            return: unit(x / 2)
+            return: some(value := (x / 2 record))
         return: none()
     run:
-        import: Maybe MaybeOps
-        return: (unit(x) bind half) bind half
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+            FxCallFailure
+        return: bind(bind(some(value := (x record)); half); half)
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Example:
+#     int: x
+#     return: @
+#     half:
+#         import: Maybe
+#         if: x % 2 = 0
+#             return: unit(x / 2)
+#         return: none()
+#     run:
+#         import: Maybe MaybeOps
+#         return: (unit(x) bind half) bind half
+# END ALTERNATIVE LMX

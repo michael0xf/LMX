@@ -1,18 +1,16 @@
-Addition:
-    int: first
-    int: second
-    return: int
-    add:
-        return: first + second
+PairOperation :: (int: a; int: b; return: int)
 
-ClosureProbe:
+Candidate:
+    int: b
+    int: a
+    return: int
+    encode:
+        return: b * 10 + a
+
+SignatureProbe:
     return: int
     run:
-        import: Curry
-        @: add5 capture(Addition\add; 5)
-        @: add100 capture(Addition\add; 100)
-        int: saved 1000
-        int: first add5(1)
-        int: second add100(1)
-        int: again add5(1)
-        return: first * 1000000 + second * 1000 + again
+        @: selected PairOperation Candidate\encode
+        int: throughSignature selected(a := 2; b := 7)
+        int: directly Candidate\encode(a := 2; b := 7)
+        return: throughSignature * 100 + directly

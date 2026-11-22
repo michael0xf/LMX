@@ -18,7 +18,7 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 [Binding rules](../LMX_semantics.en.md#binding-places) · [Import](../LMX_semantics.en.md#import-receiver) · [Block boundaries](../LMX_grammar.en.md#levels)
 
-**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
+**Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary callable W/E rules still apply after grouping. Operands have a separate condition: LEFT is a written unnamed Structure and the sole RHS argument is another written unnamed Structure. Only that RHS outer group opens, once; LEFT stays whole, with no repeated opening or P0 removal. [Copying, composition and grouping][S]
 
 ## Comparison table
 
@@ -30,15 +30,15 @@ The main metric counts non-whitespace characters in each complete displayed prog
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 |
 | Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 |
-| Composite | 301 | 295 | 480 | 453 | 469 | 499 | 312 | 379 |
+| Composite | 296 | 295 | 480 | 453 | 469 | 499 | 312 | 379 |
 | Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 |
 | Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 |
 | Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 |
-| Prototype | 226 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
+| Prototype | 180 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
 | Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 |
 | Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 |
-| **Total** | **2299** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
-| **Total / LMX** | 1.000× | 1.153× | 1.711× | 1.282× | 1.543× | 1.502× | 1.368× | 1.426× |
+| **Total** | **2248** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
+| **Total / LMX** | 1.000× | 1.179× | 1.750× | 1.311× | 1.578× | 1.536× | 1.399× | 1.459× |
 
 ## 10. State
 
@@ -130,6 +130,43 @@ Pair:
     total:
         return: left\total() + right\total()
     demo:
+        @: a derive(Leaf; (int: value 2))
+        @: b derive(Leaf; (int: value 3))
+        @: c derive(Leaf; (int: value 5))
+        @: inner derive(Pair; (@: left b; @: right c))
+        @: tree derive(Pair; (@: left a; @: right inner))
+        return: tree\total()
+```
+
+Each derive applies the same structural construction as the former collected merge: it takes the model and overlay, producing one object for the corresponding reference variable. The core implementation is disclosed alongside the receiver sources; all original fields and construction values remain present.
+
+**Invocation:** `Pair\demo()`. **Expected result: 10.**
+
+Leaves a=2, b=3, c=5 are created; inner pairs b with c, and tree pairs a with inner. inner.total yields 8 and tree.total yields 10. The same operation works for further nesting of Pair.
+
+A finite acyclic binary tree: every internal node has exactly two children and depth is arbitrary. LMX merge copies the used graph and redirects references, rather than sharing mutable a/b/c objects. Other versions use references or borrows. The comparison covers construction and reading without later leaf changes; copying costs and tree-editing semantics are not equated.
+
+**LMX: 296** non-whitespace characters. [Eight-language comparison](12_composite_comparison.md).
+
+[Refactoring.Guru — Composite in Python, conceptual example](https://refactoring.guru/design-patterns/composite/python/example)
+
+### Procedural equivalent — excluded from counts
+
+<!-- uncounted-code: procedural-lmx -->
+```lmx
+Leaf:
+    int: value
+    return: int
+    total:
+        return: value
+
+Pair:
+    @: left
+    @: right
+    return: int
+    total:
+        return: left\total() + right\total()
+    demo:
         @: a (merge(Leaf; (int: value 2)))
         @: b (merge(Leaf; (int: value 3)))
         @: c (merge(Leaf; (int: value 5)))
@@ -138,17 +175,6 @@ Pair:
         return: tree\total()
 ```
 
-Each merge has two explicit sources; grouping its output stream constructs one object for the corresponding reference variable.
-
-**Invocation:** `Pair\demo()`. **Expected result: 10.**
-
-Leaves a=2, b=3, c=5 are created; inner pairs b with c, and tree pairs a with inner. inner.total yields 8 and tree.total yields 10. The same operation works for further nesting of Pair.
-
-A finite acyclic binary tree: every internal node has exactly two children and depth is arbitrary. LMX merge copies the used graph and redirects references, rather than sharing mutable a/b/c objects. Other versions use references or borrows. The comparison covers construction and reading without later leaf changes; copying costs and tree-editing semantics are not equated.
-
-**LMX: 301** non-whitespace characters. [Eight-language comparison](12_composite_comparison.md).
-
-[Refactoring.Guru — Composite in Python, conceptual example](https://refactoring.guru/design-patterns/composite/python/example)
 
 ## 13. Proxy
 
@@ -258,6 +284,34 @@ One product type, two steps, builder reuse and independent results. A separate D
 
 Copy an already configured instance, preserving its behavior and independent fields.
 
+<!-- counted-lmx: primary -->
+```lmx
+Point:
+    int: x 3
+    int: y 4
+    return: int
+    score:
+        return: x * 10 + y
+    demo:
+        throws: ReceiverParent
+        @: original bindFields(Point\score; (int: x 7))
+        @: replica bindFields(original; (int: y 9))
+        return: original() + replica()
+```
+
+**Invocation:** `Point\demo()`. **Expected result: 153.**
+
+The DATA of original contains (7,4), while replica owns (7,9). The references now denote the copied score methods; their actual owners are parent(original) and parent(replica). bindFields clones the real DATA and overlays defaults while retaining its method, so the second copy still comes from the configured first instance. Intermediate states before the old explicit x/y writes were not observed. No closure over a completed activation is introduced.
+
+One concrete type with two scalar fields is cloned. The example does not compare deep copying of nested mutable objects, external resources or arbitrary subtype hierarchies. copy has a broader graph contract; this comparison exercises only the scenario shared by all programs.
+
+**LMX: 180** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
+
+[Refactoring.Guru — Prototype](https://refactoring.guru/design-patterns/prototype) · [Refactoring.Guru — Prototype in Python](https://refactoring.guru/design-patterns/prototype/python/example)
+
+### Previous procedural LMX — excluded from character counts
+
+<!-- uncounted-lmx: procedural -->
 ```lmx
 Point:
     int: x 3
@@ -275,17 +329,7 @@ Point:
         return: original\score() + replica\score()
 ```
 
-**Invocation:** `Point\demo()`. **Expected result: 153.**
-
-original remains (7,4), while replica becomes (7,9). Both retain score, which reads their own instance data. Changing the copy’s y does not change the original’s y; later changes to original.x likewise do not affect replica.x.
-
-After each grouped copy, the reference explicitly selects the actual parent of the copied score method. Field writes and method execution therefore use the same owner; neither grouping-wrapper identity nor a stable old primitive-field address is assumed.
-
-One concrete type with two scalar fields is cloned. The example does not compare deep copying of nested mutable objects, external resources or arbitrary subtype hierarchies. copy has a broader graph contract; this comparison exercises only the scenario shared by all programs.
-
-**LMX: 226** non-whitespace characters. [Eight-language comparison](16_prototype_comparison.md).
-
-[Refactoring.Guru — Prototype](https://refactoring.guru/design-patterns/prototype) · [Refactoring.Guru — Prototype in Python](https://refactoring.guru/design-patterns/prototype/python/example)
+The complete bindFields/composeData implementation and its separate cost appear in the [Prototype comparison](16_prototype_comparison.md). The main client uses 180 characters rather than 226, including required throws; the shared core implementation cost is displayed separately.
 
 ## 17. Memento
 

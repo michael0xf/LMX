@@ -1,4 +1,4 @@
 module IntApply (apply) where
 
-apply :: (Int -> Int) -> Int -> Int
+apply :: (a -> b) -> a -> b
 apply operation value = operation value

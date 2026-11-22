@@ -1,5 +1,5 @@
 module ExecuteAroundExample where
-import AroundInt (around)
+import Around (bracket)
 import Control.Exception (IOException, try)
 import Data.IORef (newIORef, modifyIORef', readIORef)
 
@@ -17,6 +17,6 @@ run mode = do
         note 2
         if mode == 1 then failure else pure value
       release _ = note 3
-  result <- try (around acquire release action) :: IO (Either IOException Int)
+  result <- try (bracket acquire release action) :: IO (Either IOException Int)
   logValue <- readIORef events
   pure (either (const (-logValue)) (\value -> value * 1000 + logValue) result)

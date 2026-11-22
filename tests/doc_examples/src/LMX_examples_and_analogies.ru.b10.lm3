@@ -1,13 +1,14 @@
-RecordModel:
-    int: width 2
-    int: height 3
+Functions:
+    int: x
+    return: int
+    twice:
+        return: x * 2
+    next:
+        return: x + 1
 
-RecordPatch:
-    int: height 5
-    int: depth 7
-
-MergeProbe:
+CompositionProbe:
     return: int
     run:
-        @: result (merge(RecordModel; RecordPatch))
-        return: result\width * 100 + result\height * 10 + result\depth
+        int: a Functions\next(Functions\twice(4))
+        int: b Functions\twice(Functions\next(4))
+        return: a * 100 + b

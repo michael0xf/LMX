@@ -1,6 +1,6 @@
 # Сравнение: Объекты, зависимости и композиция
 
-Контрольные языки: **Java, Python**. Дата редакции: 2026-11-21.
+Контрольные языки: **Java, Python**. Дата редакции: 2026-11-22.
 
 Числа — непробельные символы / непустые строки показанных листингов. Комментарии включены. Использование библиотеки и её реализация имеют отдельные строки; граница одинакова для трёх языков.
 
@@ -12,7 +12,7 @@
 | 075 | [Object Pool](075_object_pool_comparision.md) | 278 / 24 | 350 / 14 | 280 / 16 | Ядро сценария |
 | 076 | [Simple Factory](076_simple_factory_comparision.md) | 201 / 17 | 155 / 5 | 141 / 7 | Ядро сценария |
 | 077 | [Multiton](077_multiton_comparision.md) | 246 / 21 | 283 / 13 | 291 / 13 | Ядро сценария |
-| 078 | [Marker Interface](078_marker_interface_comparision.md) | 185 / 15 | 238 / 7 | 177 / 10 | Ядро сценария |
+| 078 | [Marker Interface](078_marker_interface_comparision.md) | 184 / 15 | 238 / 7 | 177 / 10 | Ядро сценария |
 | 079 | [Fluent Interface](079_fluent_interface_comparision.md) | 285 / 19 | 251 / 9 | 220 / 11 | Ядро сценария |
 | 080 | [Type Object](080_type_object_comparision.md) | 225 / 16 | 283 / 11 | 265 / 14 | Ядро сценария |
 | 081 | [Extension Object](081_extension_object_comparision.md) | 255 / 21 | 285 / 12 | 308 / 16 | Ядро сценария |

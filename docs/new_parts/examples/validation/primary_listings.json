@@ -1,0 +1,23 @@
+{
+  "format": "lmx-primary-listings-v2",
+  "status": "source_text_not_runtime_receipt",
+  "source_prefix_ends_before": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+  "archive_end": "# END ALTERNATIVE LMX",
+  "counted_source_normalization": "code.strip() + LF",
+  "selected": {
+    "H01": "original",
+    "H02": "original",
+    "H03": "receivers",
+    "H04": "original",
+    "H06": "original",
+    "H07": "original"
+  },
+  "listings": {
+    "H01": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        int: second chosen(7)\n        return: first * 100 + second\n",
+    "H02": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @: selected PairOperation Candidate\\encode\n        int: throughSignature selected(a := 2; b := 7)\n        int: directly Candidate\\encode(a := 2; b := 7)\n        return: throughSignature * 100 + directly\n",
+    "H03": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws:\n            FxArity\n            FxIndex\n            FxRecordArity\n            FxTypeToken\n            FxKernelFailure\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        int: first add5(1)\n        int: second add100(1)\n        int: again add5(1)\n        return: first * 1000000 + second * 1000 + again\n",
+    "H04": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: explicit add5(1; y := 25)\n        int: zero add5(1; y := 0)\n        int: again add5(1)\n        return: first * 1000000 + explicit * 10000 + zero * 100 + again\n",
+    "H06": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: a Functions\\next(Functions\\twice(4))\n        int: b Functions\\twice(Functions\\next(4))\n        return: a * 100 + b\n",
+    "H07": "PreparedOps:\n    @: left int\n    []: @(int) right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"+\")\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    @: left\n    []: @ right\n    const: int: PASS_ARGS_AS_IS 1\n    const: int: PRIORITY sys\\priority(\"+\")\n    return: int\n    twice:\n        int: first sys\\eval(left)\n        int: second sys\\eval(left)\n        return: first + second\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n"
+  }
+}

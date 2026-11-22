@@ -1,11 +1,28 @@
-TicketCode:
-    []: char candidate
+ReadSource:
+    int: calls 0
     return: int
-    accepts:
-        throws: RangeArity
-        import: CharacterRange
-        if: length(candidate) != 5
-            return: 0
-        if: candidate[2] != '-'
-            return: 0
-        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
+    next:
+        node\calls += 1
+        return: 40 + node\calls
+
+ComputedInput:
+    int: value ReadSource\next()
+    return: int
+    changeLocal:
+        int: seen value
+        value := 99
+        return: seen
+
+LocalProbe:
+    return: int
+    run:
+        ReadSource\calls := 0
+        int: first ComputedInput\changeLocal()
+        int: second ComputedInput\changeLocal()
+        return: first * 100 + second
+    explicitInitialization:
+        ReadSource\calls := 0
+        int: i
+        i := ReadSource\next()
+        i += 3
+        return: i

@@ -1,15 +1,37 @@
-Functions:
-    int: x
-    return: int
-    twice:
-        return: x * 2
-    next:
-        return: x + 1
+CapturePrototype:
+    int: saved 0
+    @: binary 0
+    inputs:
+        int: second
+        return: int
+        apply:
+            return: node\binary(node\saved; second)
 
-CompositionProbe:
+Curry:
+    @: binary
+    int: first
+    return: @
+    capture:
+        @: instance (copy(CapturePrototype))
+        @: owner parent(instance\inputs)
+        owner\saved := first
+        owner\binary := binary
+        return: instance\inputs\apply
+
+Addition:
+    int: first
+    int: second
+    return: int
+    add:
+        return: first + second
+
+ClosureProbe:
     return: int
     run:
-        import: PipeLibrary
-        int: a (4 pipe Functions\twice Functions\next)
-        int: b (4 pipe Functions\next Functions\twice)
-        return: a * 100 + b
+        @: add5 Curry\capture(Addition\add; 5)
+        @: add100 Curry\capture(Addition\add; 100)
+        int: saved 1000
+        int: first add5(1)
+        int: second add100(1)
+        int: again add5(1)
+        return: first * 1000000 + second * 1000 + again

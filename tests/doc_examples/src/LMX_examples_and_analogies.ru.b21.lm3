@@ -1,16 +1,11 @@
-UnavailableSensor:
-    return: int
-    read:
-        throws: NoSample
-        throw: NoSample()
-    zero:
-        return: 0
+Ring:
+    int: value 3
+    @: self
 
-FailureCheck:
-    @: candidate
+CycleProbe:
     return: int
-    check:
-        candidate()
-        return: 0
-        catch: NoSample ()
-            return: 1
+    run:
+        Ring\self := Ring
+        @: copied (copy(Ring))
+        copied\self\value := 8
+        return: copied\self\value * 10 + Ring\value

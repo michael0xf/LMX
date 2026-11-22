@@ -1,11 +1,16 @@
-Ring:
-    int: value 3
-    @: self
-
-CycleProbe:
+Numbers:
+    int: position 0
     return: int
-    run:
-        Ring\self := Ring
-        @: copied (copy(Ring))
-        copied\self\value := 8
-        return: copied\self\value * 10 + Ring\value
+    next:
+        throws: Stop
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position
+    demo:
+        node\position := 0
+        int: total 0
+        Cycles\iterate: int: item Numbers\next()
+            item *= 2
+            total += item
+        return: total

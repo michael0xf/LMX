@@ -70,7 +70,7 @@ An explicitly superseded statement is different: apply the accepted replacement 
 
 ### Current decisions the examples intentionally encode
 
-An executable Structure uses its actual parent as data. A call does not substitute another data graph. `fn: Name Data` creates a positional signature requirement, not an executable function. Named actuals through that requirement use its public labels and then map by position to the real candidate.
+An executable Structure uses its actual parent as data. A call does not substitute another data graph. `Name :: Data` creates a positional signature requirement, not an executable function. Named actuals through that requirement use its public labels and then map by position to the real candidate.
 
 An own declared input receives an explicit value, its ready/default description, or permitted autofill into its own place. A free name can instead designate the immediate caller's existing local place. The older transitive fallback remains an own local copy. Their different write destinations are tested separately. No local write-back/flush/dirty protocol is reinstated by these examples.
 
@@ -94,7 +94,7 @@ An explicitly supplied ordinary structural template keeps all its written requir
 | Native execution, interpretation, reuse and modified code | N01–N05, OP18 |
 | Complete inspectable graph and serialization | OP17, G01, G10–G11 |
 | Arrays as Structures; mutable backing and references | G07–G09, OP02, OP16 |
-| Typing, `implements`, callable contracts and value guarantees | T01–T07, B-10–B-13, V01–V04 |
+| Typing, `satisfies`, callable contracts and value guarantees | T01–T07, B-10–B-13, V01–V04 |
 | RegEx analogue | V01 |
 | Where a mock goes; actual candidate validation | V02, T02 |
 | Nearby `catch`, cleanup and recoverable failures | V03, P01, P09, N06 |
@@ -134,7 +134,7 @@ Run `Checks\demo()`. Expect **62601**, encoding `6`, `26`, `1`. The copied data 
 
 This replaces the historical ambiguous `merge(add; y: 5)` illustration: here the source explicitly composes the data containing the formal, and then selects its nested implementation. It does not compose a body and silently invent an input.
 
-**Basis:** [own places and autofill](../LMX_semantics.en.md#binding-autofill); [parent and composition](../LMX_semantics.en.md#structural-call); [S] §20 (model slots and callable parts). Optional formal positions remain part of a signature: [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements).
+**Basis:** [own places and autofill](../LMX_semantics.en.md#binding-autofill); [parent and composition](../LMX_semantics.en.md#structural-call); [S] §20 (model slots and callable parts). Optional formal positions remain part of a signature: [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies).
 
 ### B-02 — Free dynamic input and explicit lexical input remain distinguishable after `copy`
 
@@ -376,7 +376,7 @@ Also compare direct `Original\read()` with the unambiguous explicit dispatcher f
 ### B-10 — `fn` external labels map by position, even when candidate names are swapped
 
 ```lmx
-fn: PairSignature (int: left; int: right; return: int)
+PairSignature :: (int: left; int: right; return: int)
 
 Backend:
     int: right
@@ -396,12 +396,12 @@ Expect **27**, not 72. The signature's `left` is external position 1, which maps
 
 This is deliberately a noncommutative operation; addition would conceal the incorrect name-based remapping.
 
-**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [public labels](../LMX_semantics.en.md#fn-public-labels); [fn labels for passed declarations](../LMX_semantics.en.md#fn-public-labels).
+**Basis:** [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies); [public labels](../LMX_semantics.en.md#fn-public-labels); [fn labels for passed declarations](../LMX_semantics.en.md#fn-public-labels).
 
 ### B-11 — A signature supplies type shape and public labels, not its default
 
 ```lmx
-fn: ValueSignature (int: publicValue 1; return: int)
+ValueSignature :: (int: publicValue 1; return: int)
 
 Backend:
     int: actualValue 8
@@ -427,7 +427,7 @@ Variant with `required: int: actualValue` and no default: signature compatibilit
 ### B-12 — Type order matters; optional positions do not vanish
 
 ```lmx
-fn: SelectionSignature (int: count; []: char text; return: int)
+SelectionSignature :: (int: count; []: char text; return: int)
 
 Compatible:
     int: n
@@ -452,7 +452,7 @@ Reordered:
 
 This is a compatibility test, not an assertion that two algorithms with the same signature return the same result.
 
-**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) and [public labels](../LMX_semantics.en.md#fn-public-labels).
+**Basis:** [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) and [public labels](../LMX_semantics.en.md#fn-public-labels).
 
 ### B-13 — Whole-Structure and field-expansion selection
 
@@ -614,7 +614,7 @@ Library:
     Inputs:
         int: n
         return: int
-    fn: TransformSignature Inputs
+    TransformSignature :: Inputs
     Transform:
         int: n
         return: int
@@ -701,14 +701,14 @@ Run the public code in interpreted and native execution where supported. Test
 the presence/absence of any automatic admission invocation separately under the
 phase-specific cases in V05/Q01; this result oracle checks the admitted program's values and places.
 
-**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) (all explicit requirements, extra candidate fields
+**Basis:** [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) (all explicit requirements, extra candidate fields
 permitted); [S] §7 (physical correspondence); [L2] §14
 (correspondence belongs to the reception/traversal, not a persistent arena map).
 
 ### T02 — Same fn signature, different behavior
 
 ```lmx
-fn: UnaryNumber (int: input; return: int)
+UnaryNumber :: (int: input; return: int)
 
 Increment:
     int: value
@@ -748,7 +748,7 @@ depend on an implicit invocation of `test`. A single successful
 test of `Increment` is a statement about the performed check; it is not a proof
 about all possible inputs or a reason to accept the decrementing implementation.
 
-**Basis:** [the named signature](../LMX_semantics.en.md#fn-signature), [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) and [public labels](../LMX_semantics.en.md#fn-public-labels), especially; [S] §7
+**Basis:** [the named signature](../LMX_semantics.en.md#fn-signature), [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) and [public labels](../LMX_semantics.en.md#fn-public-labels), especially; [S] §7
 (ordinary checker candidate, integer verdict). This is the direct analogue of
 distinguishing a type-correct function from a function with the required behavior.
 
@@ -773,16 +773,16 @@ Both:
     int: spare 100
 ```
 
-Invoke the public `implements` receiver explicitly in the harness, preserving
+Invoke the public `satisfies` receiver explicitly in the harness, preserving
 the distinction between success and the receiver's implementation-specific
 representation of its result:
 
 | Direct check | Required outcome |
 |---|---|
-| `implements(OnlyX, Minimal)` | Success |
-| `implements(OnlyX, Richer)` | Failure: missing `y` |
-| `implements(Both, Richer)` | Success: order and extra `spare` do not invalidate the model |
-| `implements(OnlyX, Richer, ConsumerReadingOnlyX)` | Failure for the explicitly supplied richer model; do not delete its `y` requirement |
+| `satisfies(OnlyX, Minimal)` | Success |
+| `satisfies(OnlyX, Richer)` | Failure: missing `y` |
+| `satisfies(Both, Richer)` | Success: order and extra `spare` do not invalidate the model |
+| `satisfies(OnlyX, Richer, ConsumerReadingOnlyX)` | Failure for the explicitly supplied richer model; do not delete its `y` requirement |
 
 If an ordinary model explicitly contains a method and requirements within its
 body subtree, include them in the structural comparison. A matching pair of
@@ -794,7 +794,7 @@ requirement instead uses the positional callable rule illustrated by T02.
 No check above materializes a missing `y` or fills it from a default in the model.
 Constructing a richer candidate is a separate explicit composition operation.
 
-**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [the operand header requirement](../LMX_semantics.en.md#operand-receiver)
+**Basis:** [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies); [the operand header requirement](../LMX_semantics.en.md#operand-receiver)
 (checking does not insert missing fields).
 
 ### T04 — A consumer can use a small interface without inventing a larger model
@@ -831,7 +831,7 @@ a statically known failure is diagnosed before that execution in the separate
 phase-specific tests.
 
 **Basis:** [S] §§6–7 (structural genericity and used accesses), scoped
-by [the rule for an explicitly supplied ordinary model](../LMX_semantics.en.md#fn-implements). This example has no
+by [the rule for an explicitly supplied ordinary model](../LMX_semantics.en.md#fn-satisfies). This example has no
 larger explicit model whose requirements could be removed.
 
 ### T05 — Zero, an omitted input and an explicit nil are distinguishable
@@ -917,13 +917,13 @@ Conversely, add no nominal class-name equality where the given structural
 requirements suffice. The Message fixture controls the context; the test does
 not propose a global registry or new generic syntax.
 
-**Basis:** [S] §6; [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements).
+**Basis:** [S] §6; [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies).
 
 
 <a id="operands"></a>
 ## OP. Operands, expression evaluation, and argument boundaries
 
-These cases follow OPERAND revision 6. In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
+These cases follow the current operand contract, including conditional RIGHT-only opening. In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
 
 ### OP01 — An ordinary method acquires operand use from its actual DATA
 
@@ -997,6 +997,25 @@ The prefix cases use the ordinary contract that permits the omitted left actual;
 they must not shift the first right occurrence into `left`. For the container
 cases, provide genuine Array/Structure fixtures through the harness rather than
 changing `Array<T>` into `Array<@>` by reinterpreting its backing.
+
+
+Also inspect the conditional opening with an unconstrained operand probe. `a`, `b`, `c`, and `d` stand for inert values in these shape checks; an application entry need not invoke the probe body to verify the supplied references.
+
+| Written application | RIGHT after operand admission | LEFT after operand admission |
+| --- | --- | --- |
+| `(a b) probe (c d)` | Two immediate right values, c and d | The original whole `(a b)` Structure |
+| `(a b) probe ((c d))` | One unnamed inner Structure `(c d)`; do not open it again | The original whole `(a b)` Structure |
+| `(a b) probe ()` | Zero right values after opening that one empty group | The original whole `(a b)` Structure |
+| `1 probe (c d)` | One whole Structure; scalar LEFT does not satisfy the condition | The scalar 1 |
+| `probe (c d)` with omitted LEFT | One whole Structure; omission does not satisfy the condition | Still omitted; no first-right shift |
+| `(a b) probe (c d) 7` | Two right occurrences: the whole group and 7 | The original whole `(a b)` Structure |
+| `(a b) probe producer()` returning a Structure | One returned Structure; no automatic opening | The original whole `(a b)` Structure |
+| `Name :: (A B)` | One whole right-hand Structure | Declaration identifier Name |
+| `Name :: A B` | Two right arguments, A and B | Declaration identifier Name |
+
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+
+Verify the retained source graph separately: P0 keeps every original group in all rows. Opening is a single operand-admission action on RIGHT, not a loop that retests the newly obtained arguments. `::` does not acquire an extra Frame or an automatic `end: Name` terminator from this rule. These checks do not change ordinary callable W/E candidate selection.
 
 Source: [operand header](../LMX_semantics.en.md#operand-receiver); [prepared values](../LMX_semantics.en.md#prepared-operands); [references and storage](../LMX_semantics.en.md#operand-storage).
 
@@ -1450,7 +1469,7 @@ Start with a working copy of OP01. Apply one mutation per independent fixture:
 Separate positive fn test:
 
 ```lmx
-fn: OperandPair (@: first; []: @ rest; return: int)
+OperandPair :: (@: first; []: @ rest; return: int)
 ```
 
 A candidate whose input types are `@`, then `Array<@>`, whose real names are
@@ -1511,7 +1530,7 @@ The four complete checker programs have explicit result oracles. V05 checks the 
 
 ### V01. Full-string validation: the earlier RegEx question
 
-The requirement is exactly two uppercase ASCII letters, a hyphen and two decimal digits. The entire string is consumed. This is an ordinary value checker; no RegEx subsystem or altered meaning of `implements` is introduced.
+The requirement is exactly two uppercase ASCII letters, a hyphen and two decimal digits. The entire string is consumed. This is an ordinary value checker; no RegEx subsystem or altered meaning of `satisfies` is introduced.
 
 ```lmx
 TicketCode:
@@ -1546,9 +1565,9 @@ TicketCode:
 | `TicketCode\accepts("XAB-09Y")` | 0 | No implicit substring search |
 | `TicketCode\accepts("AB\00009")` | 0 | Length-bearing string; embedded NUL is data and fails the separator check |
 
-Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `implements` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
+Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `satisfies` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
 
-**Basis:** the example of [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
+**Basis:** the example of [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
 
 ### V02. A mock is an ordinary dependency of the actual candidate
 
@@ -1692,8 +1711,8 @@ Use one fresh visible counter per independent fixture. Instrument the existing b
 | In the explicit build-test stage, reach one ordinary successful checker invocation | Count `1`; its effects are real and failure would prevent accepting that build |
 | Put a `test` record in an unconsumed nested DATA branch | Its mere presence causes no checker call and no recursive test-discovery pass |
 | Explicitly invoke the same direct checker twice | Count `2`, with ordinary execution and no invented permanent behavioral-result cache |
-| Enter a prepared native path with no written explicit `implements` | No added automatic runtime `implements` layer |
-| Execute a reached interpreted call | Uses the standard `implements` mechanism; unexecuted branches are not pre-walked |
+| Enter a prepared native path with no written explicit `satisfies` | No added automatic runtime `satisfies` layer |
+| Execute a reached interpreted call | Uses the standard `satisfies` mechanism; unexecuted branches are not pre-walked |
 | Receiving admission has checkers returning `1`, then `0`, then `1` | Only the first two run; the receiving admission fails |
 | Candidate advertises a different permissive checker | It does not replace the receiver's required checks |
 
@@ -2847,7 +2866,7 @@ This retained section ID now records the current phase contract. The older corpu
 | Structural graph construction | Known candidate interfaces are checked; candidate bodies, computed defaults and analytical tests do not execute merely for matching |
 | Explicit pre-C build-test phase | The interpreter executes the build's reached tests on the clean graph; a failed test prevents acceptance/compilation of that build |
 | DATA namespace preparation | Root declarations and required stream receivers are interpreted; an arbitrary nested `test` record is not executed merely because it exists |
-| Prepared native execution | No additional automatic runtime `implements` layer; written explicit checks remain ordinary code |
+| Prepared native execution | No additional automatic runtime `satisfies` layer; written explicit checks remain ordinary code |
 | Reached interpreted operation | Standard admission through the common mechanism; no pre-walk of unexecuted branches |
 | Admission requiring analytical checks | The receiving expression's specified checkers execute against the actual candidate; the first `0` stops the sequence |
 | Calls made by a checker | Ordinary native/walker dispatch; no hidden forced-walker mode, rollback or mock candidate |

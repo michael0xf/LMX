@@ -1,0 +1,26 @@
+FxTry:
+    private:
+        @: operation
+        @: args
+    return: @
+    attempt:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+        private: @: info FxKernel\signature(subject := operation)
+        return: FxKernel\attempt(operation; args; info\throws)
+
+FxApply:
+    private:
+        @: operation
+        @: args
+    return: @
+    apply:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: outcome FxTry\attempt(operation := operation; args := args)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value

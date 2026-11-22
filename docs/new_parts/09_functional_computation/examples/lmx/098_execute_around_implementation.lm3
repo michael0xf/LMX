@@ -1,12 +1,35 @@
-Around:
-    @: acquire
-    @: release
-    @: action
-    return: int
-    use:
+FxAround:
+    private:
+        @: acquire
+        @: release
+        @: action
+        @: arguments ()
+    return: @
+    around:
         throws:
-            ResourceFailure
-        @: resource acquire()
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: empty (copy(()))
+        private: @: resource FxApply\apply(acquire; empty)
+        private: @: resourceArgs FxOne\make(resource)
         finally:
-            release(resource := resource)
-        return: action(resource := resource)
+            FxApply\apply(release; resourceArgs)
+        ---
+        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
+        return: FxApply\apply(action; actionArgs)
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Around:
+#     @: acquire
+#     @: release
+#     @: action
+#     return: int
+#     use:
+#         throws:
+#             ResourceFailure
+#         @: resource acquire()
+#         finally:
+#             release(resource := resource)
+#         return: action(resource := resource)
+# END ALTERNATIVE LMX

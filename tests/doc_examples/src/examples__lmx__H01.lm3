@@ -1,0 +1,42 @@
+Arithmetic:
+    int: value
+    return: int
+    twice:
+        return: value * 2
+    plusOne:
+        return: value + 1
+
+ApplyProbe:
+    return: int
+    run:
+        @: chosen Arithmetic\twice
+        int: first chosen(7)
+        chosen := Arithmetic\plusOne
+        int: second chosen(7)
+        return: first * 100 + second
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Вариант с общими ресиверами LMX — не входит в подсчёт основной версии.
+# Arithmetic:
+#     int: value
+#     return: int
+#     twice:
+#         return: value * 2
+#     plusOne:
+#         return: value + 1
+# 
+# ApplyProbe:
+#     return: int
+#     run:
+#         throws:
+#             FxCallFailure
+#             FxKernelFailure
+#             FxTypeToken
+#         @: chosen Arithmetic\twice
+#         @: firstRecord apply(chosen; (7))
+#         int: first \firstRecord
+#         chosen := Arithmetic\plusOne
+#         @: secondRecord apply(chosen; (7))
+#         int: second \secondRecord
+#         return: first * 100 + second
+# END ALTERNATIVE LMX

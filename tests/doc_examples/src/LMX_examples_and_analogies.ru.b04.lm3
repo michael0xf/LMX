@@ -1,18 +1,23 @@
-Addition:
-    int: x
-    int: y
-    return: int
-    add:
-        return: x + y
+TypeSample:
+    int: value 0
 
-DefaultProbe:
+Candidate:
+    int: b
+    int: a
+    return: int
+    encode:
+        return: b * 10 + a
+
+SignatureProbe:
     return: int
     run:
-        int: y 100
-        @: fiveContext (merge(Addition; (int: y 5)))
-        @: add5 fiveContext\add
-        int: first add5(1)
-        int: explicit add5(1; y := 25)
-        int: zero add5(1; y := 0)
-        int: again add5(1)
-        return: first * 1000000 + explicit * 10000 + zero * 100 + again
+        throws:
+            FxIndex
+            FxTypeToken
+            FxKernelFailure
+        int: typeCode sys\typeof(TypeSample[0])
+        @: PairOperation (typeCode signatureTypes typeCode typeCode)
+        @: selected PairOperation Candidate\encode
+        int: throughSignature selected(p0 := 2; p1 := 7)
+        int: directly Candidate\encode(a := 2; b := 7)
+        return: throughSignature * 100 + directly

@@ -9,7 +9,32 @@ Functions:
 CompositionProbe:
     return: int
     run:
-        import: PipeLibrary
-        int: a (4 pipe Functions\twice Functions\next)
-        int: b (4 pipe Functions\next Functions\twice)
+        int: a Functions\next(Functions\twice(4))
+        int: b Functions\twice(Functions\next(4))
         return: a * 100 + b
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Вариант с общими ресиверами LMX — не входит в подсчёт основной версии.
+# Functions:
+#     int: x
+#     return: int
+#     twice:
+#         return: x * 2
+#     next:
+#         return: x + 1
+# 
+# CompositionProbe:
+#     return: int
+#     run:
+#         throws:
+#             FxArity
+#             FxIndex
+#             FxRecordArity
+#             FxTypeToken
+#             FxKernelFailure
+#         @: forward pipe(Functions\twice; Functions\next)
+#         @: backward pipe(Functions\next; Functions\twice)
+#         int: a forward(4)
+#         int: b backward(4)
+#         return: a * 100 + b
+# END ALTERNATIVE LMX

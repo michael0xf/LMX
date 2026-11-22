@@ -1,7 +1,7 @@
-object AroundInt {
-  def around[R](acquire: () => R,
-                release: R => Unit,
-                action: R => Int): Int = {
+object Around {
+  def bracket[R, A](acquire: () => R,
+                   release: R => Unit,
+                   action: R => A): A = {
     val resource = acquire()
     try action(resource)
     finally release(resource)

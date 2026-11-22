@@ -1,17 +1,33 @@
-Provider:
-    int: value 7
+PreparedOps:
+    @: left int
+    []: @(int) right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
     return: int
-    read:
-        return: value
+    twice:
+        return: \left + \left
 
-ImportProbe:
+RawOps:
+    @: left
+    []: @ right
+    const: int: PASS_ARGS_AS_IS 1
+    const: int: PRIORITY sys\priority("+")
     return: int
-    run:
-        import: Provider
-        int: value 99
-        int: original read()
-        @: copied (copy(Provider))
-        @: copiedOwner parent(copied\read)
-        copiedOwner\value := 12
-        int: changed copied\read()
-        return: original * 100 + changed
+    twice:
+        int: first sys\eval(left)
+        int: second sys\eval(left)
+        return: first + second
+
+Meter:
+    int: calls 0
+    return: int
+    next:
+        node\calls += 1
+        return: node\calls
+
+Evaluation:
+    return: int
+    prepared:
+        return: (Meter\next() PreparedOps\twice 0)
+    raw:
+        return: (Meter\next() RawOps\twice 0)

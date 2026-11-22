@@ -1,13 +1,17 @@
-Slots:
-    int: x 1
-    int: y 2
+Provider:
+    int: value 7
+    return: int
+    read:
+        return: value
 
-Replacement:
-    int: z 9
-
-SlotProbe:
+ImportProbe:
     return: int
     run:
-        @: same Slots
-        same[1] := Replacement[0]
-        return: length(Slots) * 100 + Slots\z
+        import: Provider
+        int: value 99
+        int: original read()
+        @: copied (copy(Provider))
+        @: copiedOwner parent(copied\read)
+        copiedOwner\value := 12
+        int: changed copied\read()
+        return: original * 100 + changed

@@ -1,14 +1,13 @@
-object BounceBool {
-  enum Bounce {
-    case Done(answer: Boolean)
-    case More(next: Int => Bounce, argument: Int)
+object Bounce {
+  enum Value[+A] {
+    case Done(answer: A)
+    case More(next: () => Value[A])
   }
-  def done(answer: Boolean): Bounce = Bounce.Done(answer)
-  def more(next: Int => Bounce, argument: Int): Bounce =
-    Bounce.More(next, argument)
+  def done[A](answer: A): Value[A] = Value.Done(answer)
+  def more[A](next: () => Value[A]): Value[A] = Value.More(next)
   @annotation.tailrec
-  def run(current: Bounce): Boolean = current match {
-    case Bounce.Done(answer) => answer
-    case Bounce.More(next, argument) => run(next(argument))
+  def run[A](current: Value[A]): A = current match {
+    case Value.Done(answer) => answer
+    case Value.More(next) => run(next())
   }
 }

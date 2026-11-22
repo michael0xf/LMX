@@ -1,20 +1,104 @@
 # 085. Currying
 
-Клиент готового capture частично применяет собственное сложение и использует полученные функции после возврата фабрики.
+Прямой partial строит add5 и add100 из обычной функции; процедура копирования окружения вынесена в общую реализацию.
 
-**Реализация используемого компонента:** [099. Integer partial-application implementation](099_integer_partial_application_implementation_comparision.md)
+**Соседнее сравнение реализации:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
 ## Общий сценарий
 
-Объявить прикладную binary-функцию сложения. С помощью одинакового готового capture построить add5 и add100, затем получить add5(1), add100(1), add5(1). Одноимённая LMX-локальная saved=1000 не меняет сохранённые значения.
+Объявить сложение и вызвать partial(add;(5)) и partial(add;(100)). Получить 6,101,6 после завершения фабрики. Локальное saved=1000 не меняет сохранённые значения. Префикс — Structure записей, а не скрытый список только int.
 
 **Ожидаемое наблюдение:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
-**Граница сравнения:** Использование библиотеки. Сравнивается частичное применение конкретной binary int×int→int, не универсальный curry, varargs или захват всех динамических локалов. OPERANDS_TEMPLATE не заменяет сохранение окружения и добавил бы здесь промежуточную форму без пользы. Отдельные implicit defaults не используются.
+Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
-## LMX
+## LMX — основной: текущее ядро
+
+```lmx
+Addition:
+    int: first
+    int: second
+    return: int
+    apply:
+        return: first + second
+
+Demo:
+    return: int
+    run:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+            FxCallFailure
+        @: add5 partial(Addition\apply; (5))
+        @: add100 partial(Addition\apply; (100))
+        int: saved 1000
+        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
+```
+
+Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.
+
+Тела используемых компонентов показаны рядом: [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+
+[Основной листинг](examples/lmx/085_currying.lm3)
+
+## Haskell — основной: обобщённая реализация
+
+```haskell
+module CurryingExample where
+import Partial (partial)
+
+add :: Int -> Int -> Int
+add first second = first + second
+
+demo :: Int
+demo = let add5 = partial add 5
+           add100 = partial add 100
+       in add5 1 * 1000000 + add100 1 * 1000 + add5 1
+```
+
+Haskell2010; клиент компилируется вместе с соседним авторским модулем реализации. Прежний вариант также сохранён ниже; его размер не суммируется с новым.
+
+Тела используемых компонентов показаны рядом: [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+
+[Основной листинг](examples/haskell/085_currying.hs)
+
+## Scala — основной: обобщённая реализация
+
+```scala
+import Partial.partial
+
+object CurryingExample {
+  def add(first: Int, second: Int): Int = first + second
+  def demo: Int = {
+    val add5 = partial(add, 5)
+    val add100 = partial(add, 100)
+    add5(1) * 1000000 + add100(1) * 1000 + add5(1)
+  }
+}
+```
+
+Scala 3; клиент использует соседний авторский generic-компонент. Прежний вариант сохранён ниже и исключён из нового подсчёта.
+
+Тела используемых компонентов показаны рядом: [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+
+[Основной листинг](examples/scala/085_currying.scala)
+
+## Выбор основного кода и подсчёт
+
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 283 | 20 |
+| Haskell | 180 | 8 |
+| Scala | 189 | 9 |
+
+Первичная таблица считает ровно `listings[].code`. Вторые варианты ниже не прибавляются к основным. [Допустимость и выбор алгоритма](variant_selection.json) воспроизводится скриптом. [Реестр зависимостей](IMPLEMENTATION_DEPENDENCIES.md) отдельно показывает, какие компоненты текущего ядра использует клиент и сколько стоит общее ядро новых ресиверов.
+
+## LMX — исторический процедурный пример; вне текущего подсчёта
 
 ```lmx
 Addition:
@@ -33,11 +117,15 @@ Demo:
         return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
 ```
 
-Вызов Demo\run(). Предварительно загрузить LMX-реализацию Curry из companion Integer partial-application implementation. Оба возвращённых callable уже пережили завершение своих фабричных вызовов.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/lmx/085_currying.lm3)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Haskell
+Историческая форма сохранена как объяснение исходного алгоритма. Она не объявляется действующей самостоятельной библиотекой или равной по общности заменой текущего ядра.
+
+Новые реализации доступны также в [LMX_Fn_Receivers](../LMX_Fn_Receivers/README.md). Исторический специализированный пример не ограничивает текущий общий API ядра.
+
+## Haskell — исторический специализированный пример; вне текущего подсчёта
 
 ```haskell
 module CurryingExample where
@@ -52,11 +140,11 @@ demo = let add5 = capture add 5
        in add5 1 * 1000000 + add100 1 * 1000 + add5 1
 ```
 
-Haskell2010. Компилировать вместе с CurryInt из companion Integer partial-application implementation. Лексическое замыкание и его стоимость показаны отдельно.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/haskell/085_currying.hs)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Scala
+## Scala — исторический специализированный пример; вне текущего подсчёта
 
 ```scala
 import CurryInt.capture
@@ -71,59 +159,47 @@ object CurryingExample {
 }
 ```
 
-Scala 3. Компилировать с CurryInt из companion Integer partial-application implementation. Готовый .curried не используется ни клиентом, ни его helper.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/scala/085_currying.scala)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Разбор LMX
+## Семантические границы
 
-Curry\capture — авторский helper из соседнего Integer partial-application implementation. Клиент содержит само сложение и все наблюдения. Полная работа copy/parent и сохранение binary/first показаны в companion; это не новый builtin и не удержание фабричного кадра.
+**Честная граница сравнения.** Сравнивается частичное применение сложения с двумя независимыми захватами, повторным вызовом и сохранённым локальным saved. Контроли используют соседний partial-компонент, реализованный через обычное замыкание; LMX использует своё общее построение callable. Тела и стоимость построителя показаны в 099 и реестре зависимостей, а дополнительные возможности LMX по арности отдельно оговорены.
 
-## Сопоставление
+**Основной LMX.** partial отражает входную сигнатуру, принимает заданный префикс обычными правилами и строит residual-callable с оставшимися типами и исходным return. Для двух int это add5(int)→int; helper не содержит такой специализации. Все операции доступны прямо из единого ядра; DATA Addition сохраняет исходные first/second и apply. Название каталожного паттерна Currying сохранено; конкретный тест здесь проверяет частичное применение. Отдельный curry, создающий последовательность unary-ступеней, реализован и разобран в [generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) и [каталоге ресиверов](../LMX_Fn_Receivers/CATALOG.md). Эти два API не объявляются одной операцией.
 
-Все три клиента используют готовый capture с полной собственной реализацией рядом. Прикладное сложение остаётся в каждом листинге. Haskell/Scala не заставляются вручную реализовывать граф LMX: их helper использует естественные лямбды, и эта разница видна в implementation-сравнении.
+**Наблюдаемый общий сценарий.** int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.
 
-## Объём показанного исходника
+**Возможности общего ядра.** int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 218 | 13 |
-| Haskell | 181 | 8 |
-| Scala | 190 | 9 |
-
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
 
 ## English explanation
 
-A client of ready capture partially applies its own addition and uses the resulting functions after factory return.
+Direct partial builds add5 and add100 from an ordinary function; environment copying belongs to the generic implementation.
 
-**Implementation of the supplied component:** [099. Integer partial-application implementation](099_integer_partial_application_implementation_comparision.md)
+**Companion implementation:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Scenario.** Declare the application binary addition. Use the same ready capture abstraction to create add5 and add100, then obtain add5(1), add100(1), add5(1). A same-named LMX caller local saved=1000 does not change retained values.
+**Scenario.** Declare addition and call partial(add;(5)) and partial(add;(100)). Obtain 6,101,6 after the factory completes. Local saved=1000 does not change retained values. The prefix is a Structure of records, not a hidden int-only list.
 
 **Expected observation.** 6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.
 
-**LMX.** Curry\capture is the author-supplied helper from adjacent Integer partial-application implementation. The client contains addition and all observations. The complete copy/parent work and binary/first retention are shown in the companion; this is not a new built-in or retained factory frame.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
 
-**Comparison.** All three clients use ready capture with complete custom implementations alongside. Application addition remains in every listing. Haskell/Scala are not forced to recreate the LMX graph; their helpers use natural lambdas and that difference stays visible in the implementation comparison.
+**Primary LMX.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
 
-**Scope and limitations.** The comparison covers partial application of binary int×int→int, not universal curry, varargs or capture of all dynamic locals. OPERANDS_TEMPLATE would not replace environment retention and would add an unnecessary intermediate form. Implicit defaults are not used.
+**Current core implementation.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
 
-### Dependencies and execution boundaries
-
-- **LMX:** Call Demo\run(). First load Curry from the LMX companion Integer partial-application implementation. Both returned callables outlive their completed factory invocations.
-- **Haskell:** Haskell2010. Compile with CurryInt from companion Integer partial-application implementation. Its lexical closure and code cost are shown separately.
-- **Scala:** Scala 3. Compile with CurryInt from companion Integer partial-application implementation. Neither client nor helper calls ready .curried.
+No execution of LMX or the control programs is claimed.
 
 ## Источники / Sources
 
 - [Haskell 2010 Report, expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html) — Функциональное применение, лямбда и лексически сохранённое значение.
 - [Scala Tour, Higher-order Functions](https://docs.scala-lang.org/tour/higher-order-functions.html) — Функция как вход и создаваемая лямбда; готовый Function2.curried в этой паре не используется.
 
-**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
-
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
+**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [guide](../../LMX_semantics_guide.en.md).
 
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

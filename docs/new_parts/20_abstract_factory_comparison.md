@@ -24,19 +24,84 @@ Light создаёт Button со значением 1 и Frame со значен
 
 | Язык | Непробельных символов | Всего символов | Строк | К размеру LMX |
 |---|---:|---:|---:|---:|
-| LMX | 462 | 687 | 36 | 1.00× |
-| Python | 468 | 652 | 35 | 1.01× |
-| Java | 591 | 859 | 34 | 1.28× |
-| C++ | 470 | 624 | 34 | 1.02× |
-| C# | 572 | 834 | 34 | 1.24× |
-| TypeScript | 636 | 818 | 36 | 1.38× |
-| Go | 582 | 728 | 36 | 1.26× |
-| Rust | 598 | 793 | 40 | 1.29× |
+| LMX | 458 | 683 | 36 | 1.00× |
+| Python | 468 | 652 | 35 | 1.02× |
+| Java | 591 | 859 | 34 | 1.29× |
+| C++ | 470 | 624 | 34 | 1.03× |
+| C# | 572 | 834 | 34 | 1.25× |
+| TypeScript | 636 | 818 | 36 | 1.39× |
+| Go | 582 | 728 | 36 | 1.27× |
+| Rust | 598 | 793 | 40 | 1.31× |
 
 Общая таблица этой пятёрки доступна в [Excel](LMX_Comparison_19-23.xlsx) и [PDF](LMX_Comparison_19-23.pdf).
 
 ## 1. LMX
 
+<!-- counted-lmx: primary -->
+```lmx
+Button:
+    int: value
+    return: int
+    render:
+        return: value
+
+Frame:
+    int: value
+    @: button
+    return: int
+    render:
+        return: value + button\render()
+
+Light:
+    return: @
+    button:
+        return: derive(Button; (int: value 1))
+    frame:
+        return: derive(Frame; (int: value 10))
+
+Dark:
+    return: @
+    button:
+        return: derive(Button; (int: value 2))
+    frame:
+        return: derive(Frame; (int: value 20))
+
+Client:
+    @: factory
+    return: int
+    render:
+        @: button factory\button()
+        @: frame factory\frame()
+        return: frame\render()
+    demo:
+        return: render(factory := Light) + render(factory := Dark)
+```
+
+Внешний вызов: `Client\demo()`. Он не входит в подсчёт.
+
+Client\render(factory := Light) получает кнопку 1 и рамку 10, затем Frame.render вызывает Button.render и возвращает 11. Тот же Client\render(factory := Dark) получает 2 и 20 и возвращает 22. Семейство выбирается одним аргументом фабрики, оба продукта создаются через неё. Повторные вызовы фабричных методов создают отдельные продукты.
+
+### Прямой ресивер текущего ядра
+
+`derive(base; overlay)` выполняет ту же общую композицию, что прежняя сгруппированная merge. Все поля Button/Frame, обе семьи, сохранённая ссылка button и оба render остаются в программе. Это архитектурная запись LMX; дополнительного предметного алгоритма внутри ресивера нет. Конструкторы и обычные поля контрольных языков выполняют сопоставимое создание/инициализацию объектов. Импорт ядра не требуется.
+
+[Полное определение RxDerive](LMX_Fn_Receivers/src/structures.lmx) содержит обычный merge и показано здесь для проверки границы. Его текст не включён в размер клиента, как и код runtime/конструкторных механизмов других языков.
+
+<!-- uncounted-lmx: core-implementation -->
+```lmx
+RxDerive:
+    @: base
+    @: extension
+    return: @
+    derive:
+        return: (merge(base; extension))
+```
+
+### Прямой процедурный аналог — не входит в основной подсчёт
+
+Это корректная запись того же смысла на том же текущем ядре, а не другая версия библиотеки.
+
+<!-- uncounted-lmx: alternative -->
 ```lmx
 Button:
     int: value
@@ -75,10 +140,6 @@ Client:
     demo:
         return: render(factory := Light) + render(factory := Dark)
 ```
-
-Внешний вызов: `Client\demo()`. Он не входит в подсчёт.
-
-Client\render(factory := Light) получает кнопку 1 и рамку 10, затем Frame.render вызывает Button.render и возвращает 11. Тот же Client\render(factory := Dark) получает 2 и 20 и возвращает 22. Семейство выбирается одним аргументом фабрики, оба продукта создаются через неё. Повторные вызовы фабричных методов создают отдельные продукты.
 
 ## 2. Python
 

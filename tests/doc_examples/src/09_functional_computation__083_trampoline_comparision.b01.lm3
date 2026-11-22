@@ -2,16 +2,37 @@ Steps:
     int: n
     return: @
     even_step:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+            FxCallFailure
         if: n = 0
-            return: Bounce\done(value := 1)
-        return: Bounce\more(next := odd_step; argument := n - 1)
+            return: done(value := (1 record))
+        return: more(thunk := partial(odd_step; (n - 1)))
     odd_step:
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+            FxCallFailure
         if: n = 0
-            return: Bounce\done(value := 0)
-        return: Bounce\more(next := even_step; argument := n - 1)
+            return: done(value := (0 record))
+        return: more(thunk := partial(even_step; (n - 1)))
 
 Example:
     int: n
     return: int
     run:
-        return: BounceRunner\run(Steps\even_step(n))
+        throws:
+            FxIndex
+            FxArity
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+            FxCallFailure
+        return: \trampoline(Steps\even_step(n))

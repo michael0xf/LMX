@@ -12,7 +12,7 @@
 
 ## Архитектура LMX
 
-Структуры Leaf и Pair повторяют две роли Python-прототипа. Pair не распознаёт конкретный вид ребёнка: вызывает одно и то же total. `merge` объединяет модель с явно переданной структурой значений и выдаёт поток полей. Группа `(merge(...))` собирает один экземпляр для переменной-ссылки. Поля left/right заполняются по обычным правилам одного merge; принимающая переменная не участвует в объединении. Оба источника обрабатываются как стандартные CODE-аргументы. [Потоки полей и группировка](../LMX_semantics.en.md#stream-or-group) Контейнер переменной длины и length не требуются бинарному дереву.
+Структуры Leaf и Pair повторяют две роли Python-прототипа. Pair не распознаёт конкретный вид ребёнка: вызывает одно и то же total. `merge` объединяет модель с явно переданной структурой значений и выдаёт поток полей. Операция ядра `derive(base; extension)` выполняет тот же `(merge(base; extension))` и возвращает собранный экземпляр. Импорт ей не требуется; исходник ядра показан отдельно в [structures.lmx](LMX_Fn_Receivers/src/structures.lmx). Поля left/right заполняются по обычным правилам одного merge; принимающая переменная не участвует в объединении. Оба источника обрабатываются как стандартные CODE-аргументы. [Потоки полей и группировка](../LMX_semantics.en.md#stream-or-group) Контейнер переменной длины и length не требуются бинарному дереву.
 
 Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт](../LMX_semantics.en.md#import-receiver) · [Границы блоков](../LMX_grammar.en.md#levels)
 
@@ -24,14 +24,14 @@
 
 | Язык | Непробельных символов | Всего символов | Строк | К размеру LMX |
 |---|---:|---:|---:|---:|
-| LMX | 301 | 457 | 19 | 1.00× |
-| Python | 295 | 430 | 22 | 0.98× |
-| Java | 480 | 756 | 33 | 1.59× |
-| C++ | 453 | 592 | 24 | 1.50× |
-| C# | 469 | 746 | 33 | 1.56× |
-| TypeScript | 499 | 673 | 32 | 1.66× |
-| Go | 312 | 426 | 28 | 1.04× |
-| Rust | 379 | 530 | 29 | 1.26× |
+| LMX | 296 | 452 | 19 | 1.00× |
+| Python | 295 | 430 | 22 | 1.00× |
+| Java | 480 | 756 | 33 | 1.62× |
+| C++ | 453 | 592 | 24 | 1.53× |
+| C# | 469 | 746 | 33 | 1.58× |
+| TypeScript | 499 | 673 | 32 | 1.69× |
+| Go | 312 | 426 | 28 | 1.05× |
+| Rust | 379 | 530 | 29 | 1.28× |
 
 Общая таблица серии доступна в [Excel](LMX_Comparison_10-18.xlsx) и [PDF](LMX_Comparison_10-18.pdf).
 
@@ -51,11 +51,11 @@ Pair:
     total:
         return: left\total() + right\total()
     demo:
-        @: a (merge(Leaf; (int: value 2)))
-        @: b (merge(Leaf; (int: value 3)))
-        @: c (merge(Leaf; (int: value 5)))
-        @: inner (merge(Pair; (@: left b; @: right c)))
-        @: tree (merge(Pair; (@: left a; @: right inner)))
+        @: a derive(Leaf; (int: value 2))
+        @: b derive(Leaf; (int: value 3))
+        @: c derive(Leaf; (int: value 5))
+        @: inner derive(Pair; (@: left b; @: right c))
+        @: tree derive(Pair; (@: left a; @: right inner))
         return: tree\total()
 ```
 
@@ -334,3 +334,30 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 - [Refactoring.Guru — Composite in Python, conceptual example](https://refactoring.guru/design-patterns/composite/python/example)
 
 
+
+## Процедурный эквивалент LMX — вне основного подсчёта
+
+Основной вариант с derive содержит 296 непробельных символов; этот эквивалент через merge — 301. Оба используют одно текущее ядро и дают тот же результат.
+
+<!-- uncounted-code: procedural-lmx -->
+```lmx
+Leaf:
+    int: value
+    return: int
+    total:
+        return: value
+
+Pair:
+    @: left
+    @: right
+    return: int
+    total:
+        return: left\total() + right\total()
+    demo:
+        @: a (merge(Leaf; (int: value 2)))
+        @: b (merge(Leaf; (int: value 3)))
+        @: c (merge(Leaf; (int: value 5)))
+        @: inner (merge(Pair; (@: left b; @: right c)))
+        @: tree (merge(Pair; (@: left a; @: right inner)))
+        return: tree\total()
+```

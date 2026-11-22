@@ -1,4 +1,4 @@
-module CurryInt (capture) where
+module Partial (partial) where
 
-capture :: (Int -> Int -> Int) -> Int -> (Int -> Int)
-capture binary first = \second -> binary first second
+partial :: (a -> b -> r) -> a -> (b -> r)
+partial binary first = \second -> binary first second

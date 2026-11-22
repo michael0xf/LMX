@@ -1,30 +1,42 @@
-BounceValue:
+FxBounce:
     int: done 0
-    int: answer 0
-    int: argument 0
+    @: value 0
     @: next 0
 
-Bounce:
-    int: value
-    @: next
-    int: argument
+FxDone:
+    private: @: value
     return: @
     done:
-        @: result (copy(BounceValue))
+        private: @: result (copy(FxBounce))
         result\done := 1
-        result\answer := value
-        return: result
-    more:
-        @: result (copy(BounceValue))
-        result\next := next
-        result\argument := argument
+        result\value := value
         return: result
 
-BounceRunner:
-    @: current BounceValue
-    return: int
-    run:
+FxMore:
+    private: @: thunk
+    return: @
+    more:
+        throws:
+            FxArity
+            FxKernelFailure
+            FxTypeToken
+        private: @: shape FxKernel\signature(subject := thunk)
+        if: length(shape\inputTypes) != 0
+            throw: FxArity()
+        private: @: result (copy(FxBounce))
+        result\next := thunk
+        return: result
+
+FxTrampoline:
+    private: @: current FxBounce
+    return: @
+    trampoline:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: empty (copy(()))
         while: current\done = 0
-            @: step current\next
-            current := step(current\argument)
-        return: current\answer
+            private: @: record FxApply\apply(current\next; empty)
+            current := \record
+        return: current\value

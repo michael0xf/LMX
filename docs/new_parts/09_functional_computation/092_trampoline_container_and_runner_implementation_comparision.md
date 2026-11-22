@@ -1,20 +1,125 @@
 # 092. Trampoline container and runner implementation
 
-Собственный Bounce для логического результата и отложенного вызова с одним целочисленным аргументом; полный runner во всех трёх языках.
+Обобщённый Bounce хранит запись произвольного результата либо nullary thunk; runner не знает тип результата или исходную арность шага.
 
 **Примеры использования:** [083. Trampoline](083_trampoline_comparision.md)
 
 ## Общий сценарий
 
-Реализовать Done(answer) и More(next, argument). done создаёт завершённое значение; more сохраняет ссылку на шаг и его int-аргумент, ничего не вызывая. run повторно вызывает один сохранённый шаг и получает новый Bounce до Done. Весь контейнер и драйвер показаны; клиент определяет even/odd.
+Реализовать done(record), more(thunk) и trampoline(bounce). more сохраняет функцию без вызова; runner вызывает её ровно один раз на итерацию и возвращает результат done. Частичное связывание аргументов вынесено в общий partial.
 
-**Ожидаемое наблюдение:** run(done(true)) сразу возвращает true. Каждый More исполняет сохранённый next ровно один раз с сохранённым argument. Клиент для 0, 1, 100001 получает true, false, false (LMX: 1, 0, 0); глубина вложенных вызовов шагов не растёт с n.
+**Ожидаемое наблюдение:** trampoline(done(record)) возвращает ту же запись результата без вызова continuation. Каждый more запускает сохранённый thunk один раз. Пример чётности даёт 1,0,0 в LMX и true,false,false в контролях, не накапливая рекурсивный стек шагов.
 
-**Граница сравнения:** Реализация библиотеки. Результат — Bool (LMX int 0/1), аргумент следующего шага — один int. Это минимальный tail-call trampoline, не полный continuation runtime и не бенчмарк. Выделение контейнеров и сборка памяти сохраняют свою стоимость; постоянный размер heap не обещается. Клиентские шаги должны возвращать Bounce, не рекурсивно запускать следующий шаг сами. В показанной LMX-реализации даже Done создаётся через copy: для входа n выделяется n+1 типизированных Bounce-контейнеров в арене Message. Замена локального current сама по себе не освобождает прежний контейнер; O(1) общего потребления памяти и автоматическая сборка здесь не заявляются. Это новая симметричная граница с явным Bounce; прежний специализированный LMX-драйвер без контейнеров имел другую стоимость. Haskell/Scala используют собственные GC-профили.
+Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-Показана реализация компонента на всех трёх языках. Её код полностью включён в эту строку сравнения; связанный прикладной пример считает только использование готового компонента.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
-## LMX
+## LMX — основной: текущее ядро
+
+```lmx
+FxBounce:
+    int: done 0
+    @: value 0
+    @: next 0
+
+FxDone:
+    private: @: value
+    return: @
+    done:
+        private: @: result (copy(FxBounce))
+        result\done := 1
+        result\value := value
+        return: result
+
+FxMore:
+    private: @: thunk
+    return: @
+    more:
+        throws:
+            FxArity
+            FxKernelFailure
+            FxTypeToken
+        private: @: shape FxKernel\signature(subject := thunk)
+        if: length(shape\inputTypes) != 0
+            throw: FxArity()
+        private: @: result (copy(FxBounce))
+        result\next := thunk
+        return: result
+
+FxTrampoline:
+    private: @: current FxBounce
+    return: @
+    trampoline:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: empty (copy(()))
+        while: current\done = 0
+            private: @: record FxApply\apply(current\next; empty)
+            current := \record
+        return: current\value
+```
+
+Основной листинг — точные определения FxBounce, FxDone, FxMore, FxTrampoline из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
+
+[Основной листинг](examples/lmx/092_trampoline_container_and_runner_implementation.lm3)
+
+## Haskell — основной: обобщённая реализация
+
+```haskell
+module Bounce (Bounce, done, more, run) where
+
+data Bounce a = Done a | More (() -> Bounce a)
+
+done :: a -> Bounce a
+done = Done
+
+more :: (() -> Bounce a) -> Bounce a
+more = More
+
+run :: Bounce a -> a
+run (Done answer) = answer
+run (More next) = run (next ())
+```
+
+Haskell2010; клиент компилируется вместе с соседним авторским модулем реализации. Прежний вариант также сохранён ниже; его размер не суммируется с новым.
+
+[Основной листинг](examples/haskell/092_trampoline_container_and_runner_implementation.hs)
+
+## Scala — основной: обобщённая реализация
+
+```scala
+object Bounce {
+  enum Value[+A] {
+    case Done(answer: A)
+    case More(next: () => Value[A])
+  }
+  def done[A](answer: A): Value[A] = Value.Done(answer)
+  def more[A](next: () => Value[A]): Value[A] = Value.More(next)
+  @annotation.tailrec
+  def run[A](current: Value[A]): A = current match {
+    case Value.Done(answer) => answer
+    case Value.More(next) => run(next())
+  }
+}
+```
+
+Scala 3; клиент использует соседний авторский generic-компонент. Прежний вариант сохранён ниже и исключён из нового подсчёта.
+
+[Основной листинг](examples/scala/092_trampoline_container_and_runner_implementation.scala)
+
+## Выбор основного кода и подсчёт
+
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 611 | 39 |
+| Haskell | 198 | 9 |
+| Scala | 303 | 13 |
+
+Первичная таблица считает ровно `listings[].code`. Вторые варианты ниже не прибавляются к основным. [Допустимость и выбор алгоритма](variant_selection.json) воспроизводится скриптом. [Реестр зависимостей](IMPLEMENTATION_DEPENDENCIES.md) отдельно показывает, какие компоненты текущего ядра использует клиент и сколько стоит общее ядро новых ресиверов.
+
+## LMX — исторический процедурный пример; вне текущего подсчёта
 
 ```lmx
 BounceValue:
@@ -49,11 +154,15 @@ BounceRunner:
         return: current\answer
 ```
 
-Оба поля состояния и сохранённый аргумент находятся в возвращаемом графе. Runner не требует удерживать активацию, создавшую More. Файл загружается перед клиентом Trampoline.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/lmx/092_trampoline_container_and_runner_implementation.lm3)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Haskell
+Историческая форма сохранена как объяснение исходного алгоритма. Она не объявляется действующей самостоятельной библиотекой или равной по общности заменой текущего ядра.
+
+Новые реализации доступны также в [LMX_Fn_Receivers](../LMX_Fn_Receivers/README.md). Исторический специализированный пример не ограничивает текущий общий API ядра.
+
+## Haskell — исторический специализированный пример; вне текущего подсчёта
 
 ```haskell
 module BounceBool (Bounce, done, more, run) where
@@ -71,11 +180,11 @@ run (Done answer) = answer
 run (More next argument) = run (next argument)
 ```
 
-Haskell2010. Собственные Bounce и run; готовый trampoline не импортируется. Передавать этот файл компилятору с клиентом или размещать как BounceBool.hs на пути поиска.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/haskell/092_trampoline_container_and_runner_implementation.hs)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Scala
+## Scala — исторический специализированный пример; вне текущего подсчёта
 
 ```scala
 object BounceBool {
@@ -94,49 +203,39 @@ object BounceBool {
 }
 ```
 
-Scala 3. Собственный enum и runner; @tailrec проверяет хвостовой вызов драйвера, но не вызывает готовый TailCalls. Компилировать вместе с клиентом.
+Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
 
-[Отдельный листинг](examples/scala/092_trampoline_container_and_runner_implementation.scala)
+Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
 
-## Разбор LMX
+## Семантические границы
 
-BounceValue — собственный контейнер, не builtin. done/more копируют его данные и заполняют новый результат; More хранит обычную ссылку и int в графе, не raw-вхождение и не адрес завершённого кадра. BounceRunner меняет только своё current и вызывает шаг из цикла. У done/more общий DATA, поэтому клиент явно именует value либо next/argument.
+**Честная граница сравнения.** Это сравнение общего Bounce-компонента и настоящего цикла исполнения: все три языка хранят done-результат либо отложенный nullary шаг. LMX показывает контейнеры и runner, а общий мост вызова учитывается отдельно. Старый BounceBool с фиксированным целым аргументом — сохранённая иллюстрация специализации, а не конкурирующий текущий контейнер.
 
-## Сопоставление
+**Основной LMX.** Основной листинг содержит контейнер, конструкторы и цикл из src/containers.lmx. Nullary-call выполняет обычный apply, а полученная запись @-результата шага явно разыменовывается для чтения ссылки на следующий Bounce; это не раскрытие группы аргументов. partial не дублируется внутри контейнера.
 
-Во всех языках одинаковая модель отложенного вызова: функция Int→Bounce плюс уже сохранённый int. Никакой готовый Trampoline/TailCalls, monadic bind, CPS-преобразователь или scheduler не скрыт за интерфейсом. Haskell использует хвостовой драйвер, Scala — проверяемую @tailrec-функцию, LMX — while.
+**Наблюдаемый общий сценарий.** Контейнер обобщён по результату, но протокол шага намеренно nullary→Bounce. Это математическая форма батута, а не случайная специализация на одном int-аргументе. У произвольной исходной функции аргументы связывает partial с произвольной сигнатурой.
 
-## Объём показанного исходника
+**Возможности общего ядра.** Контейнер обобщён по результату, но протокол шага намеренно nullary→Bounce. Это математическая форма батута, а не случайная специализация на одном int-аргументе. У произвольной исходной функции аргументы связывает partial с произвольной сигнатурой.
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 397 | 28 |
-| Haskell | 229 | 9 |
-| Scala | 361 | 14 |
-
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
 
 ## English explanation
 
-A custom Bounce for a Boolean result or a deferred call with one integer argument, with complete runners in all three languages.
+Generic Bounce holds an arbitrary result record or a nullary thunk; the runner does not know the result type or the original step arity.
 
 **Usage examples:** [083. Trampoline](083_trampoline_comparision.md)
 
-**Scenario.** Implement Done(answer) and More(next, argument). done creates completion; more stores a step reference and its integer argument without invoking it. run repeatedly invokes one stored step and receives the next Bounce until Done. The complete container and driver are shown; even/odd belong to the client.
+**Scenario.** Implement done(record), more(thunk) and trampoline(bounce). more stores the function without calling it; the runner calls it exactly once per iteration and returns the done result. Argument binding belongs to generic partial.
 
-**Expected observation.** run(done(true)) returns true immediately. Each More invokes the stored next exactly once with its stored argument. The client for 0, 1, 100001 yields true, false, false (LMX: 1, 0, 0); nested step-call depth does not grow with n.
+**Expected observation.** trampoline(done(record)) returns that result record without invoking a continuation. Each more invokes the retained thunk once. Parity yields 1,0,0 in LMX and true,false,false in the controls without accumulating a recursive step stack.
 
-**LMX.** BounceValue is a custom container, not a built-in. done/more copy its data and fill a new result; More stores an ordinary reference and int in the graph, not a raw occurrence or an expired-frame address. BounceRunner changes only its current place and calls a step from the loop. done/more share DATA, so the client explicitly names value or next/argument.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
 
-**Comparison.** All languages use the same deferred-call model: an Int→Bounce function plus an already stored int. No ready Trampoline/TailCalls, monadic bind, CPS transformer or scheduler is hidden behind the interface. Haskell uses a tail driver, Scala a checked @tailrec function and LMX a while loop.
+**Primary LMX.** The primary listing contains the container, constructors and loop from src/containers.lmx. Ordinary apply performs the nullary invocation; the resulting @ record is read as the reference to the next Bounce. partial is not duplicated inside the container.
 
-**Scope and limitations.** The result is Bool (LMX int 0/1), and a next step has one integer argument. This is a minimal tail-call trampoline, not a full continuation runtime or benchmark. Container allocation and collection retain their costs; constant heap size is not promised. Client steps must return Bounce instead of recursively running the next step themselves. In this LMX implementation even Done is created by copy: input n allocates n+1 typed Bounce containers in the Message arena. Replacing local current does not itself free the previous container; O(1) total memory and automatic collection are not claimed. This is the new symmetric boundary with explicit Bounce; the former specialized container-free LMX driver had a different cost. Haskell/Scala have their own GC profiles.
+**Current core implementation.** The primary listing contains the container, constructors and loop from src/containers.lmx. Ordinary apply performs the nullary invocation; the resulting @ record is read as the reference to the next Bounce. partial is not duplicated inside the container.
 
-### Dependencies and execution boundaries
-
-- **LMX:** State and the stored argument reside in the returned graph. The runner does not retain the activation that created More. Load this source before the Trampoline client.
-- **Haskell:** Haskell2010. Custom Bounce and run; no ready trampoline is imported. Supply this source with the client or place it as BounceBool.hs on the module search path.
-- **Scala:** Scala 3. Custom enum and runner; @tailrec checks the driver tail call but does not invoke ready TailCalls. Compile together with the client.
+No execution of LMX or the control programs is claimed.
 
 ## Источники / Sources
 
@@ -145,10 +244,8 @@ A custom Bounce for a Boolean result or a deferred call with one integer argumen
 - [Scala 3 Book, Algebraic Data Types](https://docs.scala-lang.org/scala3/book/types-adts-gadts.html) — Представление Bounce собственным enum.
 - [Scala tailrec annotation](https://www.scala-lang.org/api/current/scala/annotation/tailrec.html) — Компилятор отвергает @tailrec, если метод не может быть превращён в цикл; это проверка драйвера, не готовая библиотека Bounce.
 
-**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
-
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
+**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [guide](../../LMX_semantics_guide.en.md).
 
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

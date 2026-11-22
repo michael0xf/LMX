@@ -1,24 +1,13 @@
-Measurement:
-    int: gain
-    @: read
-    return: int
-    sample:
-        return: read() * gain
-    biased:
-        return: read() * gain + 1
-    readsTwice:
-        int: discarded read()
-        return: read() * gain
+SharedValue:
+    int: value 7
 
-SamplingCheck:
-    @: candidate
-    int: calls 0
+SharedPair:
+    @: left SharedValue
+    @: right SharedValue
+
+SharingProbe:
     return: int
-    fixedRead:
-        node\calls += 1
-        return: 7
-    check:
-        node\calls := 0
-        @: read fixedRead
-        int: result candidate(gain := 4)
-        return: result = 28 && node\calls = 1
+    run:
+        @: copied (copy(SharedPair))
+        copied\left\value := 21
+        return: copied\right\value * 100 + SharedValue\value

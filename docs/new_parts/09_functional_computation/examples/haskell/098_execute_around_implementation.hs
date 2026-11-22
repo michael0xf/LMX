@@ -1,10 +1,10 @@
-module AroundInt (around) where
+module Around (bracket) where
 import Control.Exception (SomeException, catch, throwIO)
 
-around :: IO r -> (r -> IO ()) -> (r -> IO Int) -> IO Int
-around acquire release action = do
+bracket :: IO r -> (r -> IO ()) -> (r -> IO a) -> IO a
+bracket acquire release action = do
   resource <- acquire
-  let failed :: SomeException -> IO Int
+  let failed :: SomeException -> IO a
       failed err = release resource >> throwIO err
   value <- action resource `catch` failed
   release resource

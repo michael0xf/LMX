@@ -1,11 +1,22 @@
-Pair:
-    int: first 2
-    int: second 7
+Functions:
+    int: x
+    return: int
+    twice:
+        return: x * 2
+    next:
+        return: x + 1
 
-StreamProbe:
+CompositionProbe:
     return: int
     run:
-        int: a 0
-        int: b 0
-        (a b) := (copy(Pair))
-        return: a * 10 + b
+        throws:
+            FxArity
+            FxIndex
+            FxRecordArity
+            FxTypeToken
+            FxKernelFailure
+        @: forward pipe(Functions\twice; Functions\next)
+        @: backward pipe(Functions\next; Functions\twice)
+        int: a forward(4)
+        int: b backward(4)
+        return: a * 100 + b

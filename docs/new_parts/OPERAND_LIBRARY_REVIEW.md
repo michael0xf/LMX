@@ -1,5 +1,7 @@
 # Аудит операндов и библиотек: все 90 примеров
 
+> Исторический отчёт предыдущей редакции. Его числа и сведения о запуске относятся к указанной в нём дате; это не отчёт о новой версии ядра. Текущие решения: [редакция 22 ноября](CORE_RECEIVERS_REVIEW.md), [проверки](VALIDATION.md), [статистика](STATISTICS_2026-11-22.md). Нормативные правила определяются актуальными docs и последними уточнениями автора.
+
 Проверены все 90 исходных дополнительных паттернов. Изменены листинги 11 основных примеров; добавлено 9 отдельных реализаций библиотек. Ни один исходный пункт не удалён.
 
 Решение учитывает выражение композиции, повторное использование, фактический размер показанного кода, одинаковую границу для трёх языков и сохранение поведения. Увеличение размера ради более явной цепочки указано числом; перенесённая в библиотеку реализация показана отдельно.
@@ -103,7 +105,7 @@
 | 075 | [075. Object Pool](08_objects_and_composition/075_object_pool_comparision.md) | Сохранён | take/give делают владение единственным ресурсом явным. Операнд не упрощает отказ и возврат; готовый pool скрыл бы весь измеряемый механизм примера. |
 | 076 | [076. Simple Factory](08_objects_and_composition/076_simple_factory_comparision.md) | Сохранён | Выбор вида и копирование продукта составляют сам Simple Factory. Новый операнд или внешний factory-helper скрыли бы прикладное правило выбора, а не повторяемую инфраструктуру. |
 | 077 | [077. Multiton](08_objects_and_composition/077_multiton_comparision.md) | Сохранён | Две записи и выбор ключа полностью выражают Multiton закрытого набора. Операнд и библиотека словаря добавили бы ненужную абстракцию к двум ключам. |
-| 078 | [078. Marker Interface](08_objects_and_composition/078_marker_interface_comparision.md) | Сохранён | Встроенный implements уже является общей структурной проверкой. Пользовательский операнд был бы оболочкой над ней; маркер auditable остаётся прикладным контрактом. |
+| 078 | [078. Marker Interface](08_objects_and_composition/078_marker_interface_comparision.md) | Сохранён | Встроенный satisfies уже является общей структурной проверкой. Пользовательский операнд был бы оболочкой над ней; маркер auditable остаётся прикладным контрактом. |
 | 079 | [079. Fluent Interface](08_objects_and_composition/079_fluent_interface_comparision.md) | Операнд | Полезна настоящая fluent-цепочка: оба setter принимают контекст слева, возвращают ту же ссылку и соединяются в одном выражении. Прикладные изменения полей остаются полностью в листинге; отдельная библиотека не нужна. |
 | 080 | [080. Type Object](08_objects_and_composition/080_type_object_comparision.md) | Сохранён | Общая ссылка kind и явное изменение TypeData — сам механизм Type Object. Дополнительный операнд не улучшает наблюдение разделяемого состояния; библиотека скрыла бы его. |
 | 081 | [081. Extension Object](08_objects_and_composition/081_extension_object_comparision.md) | Сохранён | install/query сохраняют наблюдаемую связь Host с расширением. Операнд не упрощает контракт; общий каталог расширений не нужен для единственного слота. |
@@ -198,7 +200,7 @@ All 90 original pattern cases were reviewed for operand syntax and reusable libr
 - **075 Object Pool:** take/give make ownership of the one resource explicit. An operand does not simplify refusal and return; a ready pool would hide the mechanism being demonstrated. 
 - **076 Simple Factory:** Kind selection and product copying are the Simple Factory itself. An operand or external factory helper would hide application selection rather than reusable infrastructure. 
 - **077 Multiton:** Two records and key selection fully express a closed-set Multiton. An operand or dictionary library would add an unnecessary abstraction for two keys. 
-- **078 Marker Interface:** Built-in implements already supplies the general structural check. A user operand would wrap that check; auditable remains the application contract. 
+- **078 Marker Interface:** Built-in satisfies already supplies the general structural check. A user operand would wrap that check; auditable remains the application contract. 
 - **079 Fluent Interface:** A genuine fluent chain is useful: both setters take the context on the left, return the same reference and compose in one expression. Application field updates remain fully visible; no separate library is needed. 
 - **080 Type Object:** The shared kind reference and explicit TypeData mutation are the Type Object mechanism. Another operand would not improve the shared-state observation; a library would hide it. 
 - **081 Extension Object:** install/query preserve the visible Host-to-extension relationship. An operand would not simplify the contract; a general extension catalog is unnecessary for one slot. 

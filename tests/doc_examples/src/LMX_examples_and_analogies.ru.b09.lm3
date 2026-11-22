@@ -1,16 +1,19 @@
-Numbers:
-    int: position 0
+Source:
+    int: y 5
+    methods:
+        int: x
+        return: int
+        dynamic:
+            return: x + y
+        lexical:
+            return: x + node\y
+
+BindingProbe:
     return: int
-    next:
-        throws: Stop
-        if: node\position >= 3
-            throw: Stop()
-        node\position += 1
-        return: node\position
-    demo:
-        node\position := 0
-        int: total 0
-        Cycles\iterate: int: item Numbers\next()
-            item *= 2
-            total += item
-        return: total
+    run:
+        @: copied (copy(Source))
+        Source\y := 8
+        int: y 25
+        int: a copied\methods\dynamic(1)
+        int: b copied\methods\lexical(1)
+        return: a * 100 + b

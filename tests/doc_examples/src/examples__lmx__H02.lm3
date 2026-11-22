@@ -1,0 +1,43 @@
+PairOperation :: (int: a; int: b; return: int)
+
+Candidate:
+    int: b
+    int: a
+    return: int
+    encode:
+        return: b * 10 + a
+
+SignatureProbe:
+    return: int
+    run:
+        @: selected PairOperation Candidate\encode
+        int: throughSignature selected(a := 2; b := 7)
+        int: directly Candidate\encode(a := 2; b := 7)
+        return: throughSignature * 100 + directly
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Вариант с общими ресиверами LMX — не входит в подсчёт основной версии.
+# TypeSample:
+#     int: value 0
+# 
+# Candidate:
+#     int: b
+#     int: a
+#     return: int
+#     encode:
+#         return: b * 10 + a
+# 
+# SignatureProbe:
+#     return: int
+#     run:
+#         throws:
+#             FxIndex
+#             FxTypeToken
+#             FxKernelFailure
+#         int: typeCode sys\typeof(TypeSample[0])
+#         @: PairOperation (typeCode signatureTypes typeCode typeCode)
+#         @: selected PairOperation Candidate\encode
+#         int: throughSignature selected(p0 := 2; p1 := 7)
+#         int: directly Candidate\encode(a := 2; b := 7)
+#         return: throughSignature * 100 + directly
+# END ALTERNATIVE LMX

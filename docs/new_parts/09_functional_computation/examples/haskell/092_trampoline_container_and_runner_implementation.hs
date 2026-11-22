@@ -1,13 +1,13 @@
-module BounceBool (Bounce, done, more, run) where
+module Bounce (Bounce, done, more, run) where
 
-data Bounce = Done Bool | More (Int -> Bounce) Int
+data Bounce a = Done a | More (() -> Bounce a)
 
-done :: Bool -> Bounce
+done :: a -> Bounce a
 done = Done
 
-more :: (Int -> Bounce) -> Int -> Bounce
+more :: (() -> Bounce a) -> Bounce a
 more = More
 
-run :: Bounce -> Bool
+run :: Bounce a -> a
 run (Done answer) = answer
-run (More next argument) = run (next argument)
+run (More next) = run (next ())

@@ -5,10 +5,7 @@ Point:
     score:
         return: x * 10 + y
     demo:
-        @: original (copy(Point))
-        original := parent(original\score)
-        original\x := 7
-        @: replica (copy(original))
-        replica := parent(replica\score)
-        replica\y := 9
-        return: original\score() + replica\score()
+        throws: ReceiverParent
+        @: original bindFields(Point\score; (int: x 7))
+        @: replica bindFields(original; (int: y 9))
+        return: original() + replica()

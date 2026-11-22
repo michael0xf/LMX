@@ -1,0 +1,152 @@
+# КОНТЕЙНЕРЫ НАД ЗАПИСЬЮ ЛЮБОГО ТИПА.
+# value — @ на полноценную type/value запись. Тег не заменяется на int.
+# present / ok / done — состояния протокола, а не тип пользовательского value.
+# Пустая строка, 0, @0, пустая структура и отсутствующее значение различаются.
+
+FxMaybe:
+    int: present 0
+    @: value 0
+
+FxSome:
+    private: @: value
+    return: @
+    some:
+        private: @: result (copy(FxMaybe))
+        result\present := 1
+        result\value := value
+        return: result
+
+FxNone:
+    return: @
+    none:
+        return: (copy(FxMaybe))
+
+FxBind:
+    private:
+        @: input FxMaybe
+        @: next
+    return: @
+    bind:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        if: input\present = 0
+            return: input
+        private: @: record FxApply\apply(next; FxOne\make(input\value))
+        private: @: result FxMaybe \record
+        return: result
+
+# Result также не фиксирует тип полезного значения или причины неуспеха.
+FxResult:
+    int: ok 0
+    @: value 0
+    @: reason 0
+
+FxOk:
+    private: @: value
+    return: @
+    ok:
+        private: @: result (copy(FxResult))
+        result\ok := 1
+        result\value := value
+        return: result
+
+FxErr:
+    private: @: reason
+    return: @
+    err:
+        private: @: result (copy(FxResult))
+        result\reason := reason
+        return: result
+
+FxBindResult:
+    private:
+        @: input FxResult
+        @: next
+    return: @
+    bindResult:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        if: input\ok = 0
+            return: input
+        private: @: record FxApply\apply(next; FxOne\make(input\value))
+        private: @: result FxResult \record
+        return: result
+
+# List — последовательность записей, а не неизменяемый связный список.
+# Список копируется поверхностно: типы и цели ссылочных значений сохранены.
+FxList:
+    private: @: values
+    return: @
+    list:
+        throws:
+            FxIndex
+        return: FxSlice\slice(values; 0; length(values))
+
+FxListBind:
+    private:
+        @: items
+        @: next
+    return: @
+    flatMap:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: result (copy(()))
+        private: int: i 0
+        while: i < length(items)
+            private: @: record FxApply\apply(next; FxOne\make(items[i]))
+            private: @: part \record
+            result := FxAppend\append(result; part)
+            i += 1
+        return: result
+
+# Bounce хранит либо итоговую запись, либо обычную nullary-функцию.
+# Число аргументов continuation не ограничено: partial(F;allArgs) создаёт thunk.
+# trampoline останавливается по done, а не по вызываемости результата.
+FxBounce:
+    int: done 0
+    @: value 0
+    @: next 0
+
+FxDone:
+    private: @: value
+    return: @
+    done:
+        private: @: result (copy(FxBounce))
+        result\done := 1
+        result\value := value
+        return: result
+
+FxMore:
+    private: @: thunk
+    return: @
+    more:
+        throws:
+            FxArity
+            FxKernelFailure
+            FxTypeToken
+        private: @: shape FxKernel\signature(subject := thunk)
+        if: length(shape\inputTypes) != 0
+            throw: FxArity()
+        private: @: result (copy(FxBounce))
+        result\next := thunk
+        return: result
+
+FxTrampoline:
+    private: @: current FxBounce
+    return: @
+    trampoline:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: empty (copy(()))
+        while: current\done = 0
+            private: @: record FxApply\apply(current\next; empty)
+            current := \record
+        return: current\value

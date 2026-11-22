@@ -1,12 +1,13 @@
-Operands:
-    copy: sys\OPERANDS_TEMPLATE
+RecordModel:
+    int: width 2
+    int: height 3
+
+RecordPatch:
+    int: height 5
+    int: depth 7
+
+MergeProbe:
     return: int
-    add:
-        return: \left + \right[0]
-    Example:
-        int: n
-        return: int
-        calculate:
-            return: (n add 3) add n
-        demo:
-            return: calculate(2) + calculate(5)
+    run:
+        @: result (merge(RecordModel; RecordPatch))
+        return: result\width * 100 + result\height * 10 + result\depth

@@ -7,3 +7,7 @@
 [LMX_Comparison_02_architecture_and_boundaries.xlsx](LMX_Comparison_02_architecture_and_boundaries.xlsx) · [LMX_Comparison_02_architecture_and_boundaries.pdf](LMX_Comparison_02_architecture_and_boundaries.pdf) · [LMX_Comparison_02_architecture_and_boundaries.md](LMX_Comparison_02_architecture_and_boundaries.md)
 
 Редактируемый источник материалов — patterns.json. Листинги вынесены в examples.
+
+## Редакция 22 ноября 2026
+
+[Единое ядро и обзор изменений](../CORE_RECEIVERS_REVIEW.md) · [правила выбора основного варианта](../COMPARISON_RULES.md) · [каталог ресиверов](../RECEIVERS.md) · [общая статистика](../STATISTICS_2026-11-22.md). Основные листинги, сохранённые поясняющие варианты и стоимость общих реализаций учитываются раздельно.

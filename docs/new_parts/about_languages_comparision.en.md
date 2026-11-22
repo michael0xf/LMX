@@ -2,7 +2,7 @@
 
 Updated **21 November 2026**. [Русская версия](about_languages_comparision.ru.md).
 
-**In this collection, LMX is shorter than Python in 18 of 23 examples**, with **15.74%** less application source overall. The model combines compact notation with typing, actor-style concurrency, low-level operations, and interpretation or native execution. These figures describe the current programs and the stated application/kernel counting boundary.
+**In this collection, LMX is shorter than Python in 19 of 23 examples**, with **16.54%** less application source overall. The model combines compact notation with typing, actor-style concurrency, low-level operations, and interpretation or native execution. These figures describe the current programs and the stated application/kernel counting boundary.
 
 The discussion concerns the model and the cost of its operations. Native performance comparable to optimized JVM execution is an architectural possibility: typed calculations and known calls can lower to ordinary C, while an external compiler performs machine-code optimization.
 
@@ -37,25 +37,24 @@ LMX was reviewed against the model and its results are expectations. All 161 lis
 | Examples | LMX | Python | Overall LMX reduction | LMX shorter than Python |
 | --- | ---: | ---: | ---: | ---: |
 | 1–9 | 2097 | 2592 | 19.10% | 8 of 9 |
-| 10–18 | 2299 | 2651 | 13.28% | 6 of 9 |
-| 19–23 | 1393 | 1627 | 14.38% | 4 of 5 |
-| All 1–23 | 5789 | 6870 | 15.74% | 18 of 23 |
+| 10–18 | 2248 | 2651 | 15.20% | 7 of 9 |
+| 19–23 | 1389 | 1627 | 14.63% | 4 of 5 |
+| All 1–23 | 5734 | 6870 | 16.54% | 19 of 23 |
 
-The first 18 examples total **4396 versus 5243**, a **16.15%** reduction. LMX is shorter than Python in 14 of 18 cases and shortest among eight languages in 13. Python has the smallest total among the other seven; C++ is shorter than Python for Factory, Builder, Prototype and Memento. In Factory, C++ is also shorter than LMX: **297 versus 306**.
+The first 18 examples total **4345 versus 5243**, a **17.13%** reduction. LMX is shorter than Python in 15 of 18 cases and shortest among eight languages in 13. Python has the smallest total among the other seven; C++ is shorter than Python for Factory, Builder, Prototype and Memento. In Factory, C++ is also shorter than LMX: **297 versus 306**.
 
 Across the full collection, LMX is shortest among eight languages in **17 of 23** cases. Python is the minimum among the other seven in **17 of 23** rows. Other language totals are Java **9809**, C++ **7743**, C# **9105**, TypeScript **8843**, Go **8241**, and Rust **8890**.
 
-There are five exceptions relative to Python:
+There are four exceptions relative to Python:
 
 | Example | LMX | Python | LMX longer |
 | --- | ---: | ---: | ---: |
 | Adapter | 163 | 160 | 1.88% |
-| Composite | 301 | 295 | 2.03% |
+| Composite | 296 | 295 | 0.34% |
 | Proxy | 191 | 181 | 5.52% |
-| Prototype | 226 | 209 | 8.13% |
 | Singleton | 141 | 127 | 11.02% |
 
-Substantial reductions include Observer **48.24%**, State **39.20%**, Builder **28.86%**, and Template Method **25.25%**. Explicit stream grouping enlarged several LMX listings. Prototype now explicitly selects each copied method’s actual parent before editing its fields; this correctness requirement makes it another exception. Interpreter became shorter through reuse of a common header.
+Substantial reductions include Observer **48.24%**, State **39.20%**, Builder **28.86%**, and Template Method **25.25%**. Explicit stream grouping enlarged several LMX listings. Prototype now uses the shorter bindFields operation of the single current kernel; its procedural equivalent remains beside it. These are alternative algorithms, not different library versions. Interpreter became shorter through reuse of a common header.
 
 ## Flyweight and Interpreter
 
@@ -69,9 +68,9 @@ The LMX application uses **159** non-whitespace characters against Python’s **
 
 ## Typing and structural contracts
 
-The LMX model provides physical value types, descriptions of admissible values, a conversion context, and structural compatibility checks through `implements`. A shared physical representation of structures does not remove requirements on the fields and operations actually used. Contracts can differ even when representations coincide: admissible ranges and usage matter alongside cell size.
+The LMX model provides physical value types, descriptions of admissible values, a conversion context, and structural compatibility checks through `satisfies`. A shared physical representation of structures does not remove requirements on the fields and operations actually used. Contracts can differ even when representations coincide: admissible ranges and usage matter alongside cell size.
 
-It is therefore accurate to say that compact notation coexists with typing and checkable contracts. Some data and call targets are selected dynamically. The interpreter applies the common admission mechanism at reached calls; prepared native execution has no additional automatic runtime `implements` layer. Explicitly written checks execute on either path. See [value descriptions](../LMX_semantics.en.md#descriptions), [the type and conversion context](../LMX_semantics.en.md#conversion-context), [used-interface checking](../LMX_semantics.en.md#admission), and [the binding and signature contract](../LMX_semantics.en.md#binding-places).
+It is therefore accurate to say that compact notation coexists with typing and checkable contracts. Some data and call targets are selected dynamically. The interpreter applies the common admission mechanism at reached calls; prepared native execution has no additional automatic runtime `satisfies` layer. Explicitly written checks execute on either path. See [value descriptions](../LMX_semantics.en.md#descriptions), [the type and conversion context](../LMX_semantics.en.md#conversion-context), [used-interface checking](../LMX_semantics.en.md#admission), and [the binding and signature contract](../LMX_semantics.en.md#binding-places).
 
 ## Actors, low-level operations and two execution paths
 

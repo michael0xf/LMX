@@ -14,9 +14,49 @@
           "expected": 1408
         }
       ],
-      "load_before": [
-        "libraries/lmx/Application.lm3"
-      ]
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "ApplyProbe\\run()",
+          "expected": 1408
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм."
     },
     {
       "id": "H02",
@@ -28,7 +68,50 @@
           "invoke": "SignatureProbe\\run()",
           "expected": 2772
         }
-      ]
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "SignatureProbe\\run()",
+          "expected": 2772
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Контроль использует встроенную функциональную сигнатуру и позиционное применение. Name::DATA и signatureTypes описывают такое же семантическое требование; создание типового описания не скрывает вычисление значения или предметный алгоритм."
     },
     {
       "id": "H03",
@@ -36,6 +119,35 @@
       "fresh_source_context": true,
       "guide": "../LMX_examples_and_analogies.ru.md#h03",
       "cases": [
+        {
+          "invoke": "ClosureProbe\\run()",
+          "expected": 6101006,
+          "components": [
+            6,
+            101,
+            6
+          ],
+          "original_callable_unchanged": true,
+          "independent_prefixes": [
+            5,
+            100
+          ]
+        },
+        {
+          "variant": "Explicit saved actual through returned method",
+          "invoke": "add5(1; saved := 25)",
+          "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+          "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core: direct generic receivers are present, no import or alternate library version.",
+        "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+      ],
+      "selected_variant": "receivers",
+      "alternative_variant": "original",
+      "alternative_cases": [
         {
           "invoke": "ClosureProbe\\run()",
           "expected": 6101006,
@@ -54,9 +166,66 @@
           "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
         }
       ],
-      "load_before": [
-        "../09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3"
-      ]
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_saved_after": 0,
+            "original_saved_path": "CapturePrototype\\saved"
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+            "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_callable_unchanged": true,
+            "independent_prefixes": [
+              5,
+              100
+            ]
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+            "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса."
     },
     {
       "id": "H04",
@@ -75,7 +244,71 @@
           ],
           "copied_default_after": 5
         }
-      ]
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "DefaultProbe\\run()",
+          "expected": 6260106,
+          "components": [
+            6,
+            26,
+            1,
+            6
+          ],
+          "copied_default_after": 5
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан."
     },
     {
       "id": "H05",
@@ -106,12 +339,61 @@
           ]
         }
       ],
-      "load_before": [
-        "../02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3"
-      ],
+      "load_before": [],
       "required_profile": [
-        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
-      ]
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "CompositionProbe\\run()",
+          "expected": 910,
+          "components": [
+            9,
+            10
+          ]
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP."
     },
     {
       "id": "H07",
@@ -144,9 +426,110 @@
           "calls_after": 4
         }
       ],
-      "load_before": [
-        "libraries/lmx/EvaluationModes.lm3"
-      ]
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "semantic_scope": "Both same-core algorithms are retained: original tests prepared/raw occurrences, receivers tests lazy caching plus two ordinary calls. They share output/count fixtures; the stronger raw-graph test belongs to original only.",
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\prepared()",
+            "Evaluation\\prepared()"
+          ],
+          "expected": [
+            2,
+            4
+          ],
+          "calls_after": 2
+        },
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\raw()",
+            "Evaluation\\raw()"
+          ],
+          "expected": [
+            3,
+            7
+          ],
+          "calls_after": 4
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ],
+        "receivers": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Полный смысл H07 включает реальные raw-occurrences и их исполнение через sys\\eval, а не только итоговые числа. Lazy и два обычных вызова — полезный дополнительный приём того же ядра, но он не сохраняет raw-контракт; поэтому не участвует в выборе основного для этого сценария. Haskell IO-аналог сравнивает эффекты и не выдаётся за доступ к LMX AST."
     },
     {
       "id": "H08",
@@ -822,5 +1205,28 @@
     "binary": "native methods only; binary R0 has a local pointer to the R0 graph, also under interpretation",
     "native_update": "existing explicit compilation and endturn mechanism"
   },
-  "haskell_run_command": "runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs"
+  "haskell_run_command": "runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs",
+  "receiver_revision": {
+    "date": "2026-11-22",
+    "variant_ids": [
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H06",
+      "H07"
+    ],
+    "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
+    "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+    "selected": {
+      "H01": "original",
+      "H02": "original",
+      "H03": "receivers",
+      "H04": "original",
+      "H06": "original",
+      "H07": "original"
+    },
+    "original_and_receivers_cases_preserved": true,
+    "runtime_executed": false
+  }
 }

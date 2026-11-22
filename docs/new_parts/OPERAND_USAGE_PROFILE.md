@@ -1,6 +1,6 @@
 # Операнды и библиотечные компоненты в сравнениях
 
-Редакция: 21 ноября 2026 года. Эта редакция использует текущие правила языка; новые встроенные операции не вводятся.
+Редакция: 22 ноября 2026 года. Эта редакция использует текущие правила языка; новые встроенные операции не вводятся.
 
 ## Готовый стандартный заголовок
 
@@ -27,7 +27,9 @@ sys:
 
 Поэтому Maybe-bind, pipe, retry и композиция предикатов могут передавать готовые ссылки на методы без `sys\eval`. Если справа написан вызов фабрики продолжения, этот вызов в режиме 0 исполняется при подготовке аргумента. Управление исполнением самого исходного фрагмента требует сырого режима 1 с отдельным корректно построенным описанием.
 
-`right` — массив ссылок на правые аргументы. Его наличие не создаёт автоматический fold: бинарная операция задаёт один правый аргумент, вариадическая явно обходит все элементы. Пустой массив и отсутствие аргумента различаются по обычному контракту. Контейнер, переданный одним аргументом, сохраняется целиком.
+`right` — массив ссылок на правые аргументы. Его наличие не создаёт автоматический fold: бинарная операция задаёт один правый аргумент, вариадическая явно обходит все элементы. Пустой массив и отсутствие аргумента различаются по обычному контракту. Контейнер, переданный одним аргументом, сохраняется целиком, кроме следующего узкого правила операнда.
+
+Операнд снимает один уровень группы только при одновременном выполнении трёх условий: `left` — написанная безымянная Structure, `length(right) = 1`, а `right[0]` — написанная безымянная Structure. Скобки снимаются только СПРАВА и ровно один раз за это применение операнда: непосредственное содержимое правой группы становится `right`. ЛЕВАЯ Structure остаётся целой и неизменной; она только задаёт условие. Вложенная правая группа повторно не раскрывается, а Structure, возвращённая функцией, автоматически не раскрывается. P0 никогда не выполняет это преобразование. Обычный выбор W/E у вызова callable — отдельное правило, не дополнительный проход раскрытия операндов. В `Name :: (A B)` слева имя, поэтому справа остаётся одна целая Structure; у `Name :: A B` справа два аргумента.
 
 Готовый шаблон задаёт приоритет сложения. В демонстрациях порядок связываний при необходимости показан скобками. Повторное объявление одноимённого const-поля в DATA не считается способом заменить свойство скопированного заголовка. Операнд с другими свойствами должен явно и корректно построить своё описание по общим правилам композиции.
 
@@ -63,6 +65,8 @@ Endpoint/route, `application/lmx`, admission, синхронный семант�
 ## English note
 
 The supplied `sys\OPERANDS_TEMPLATE` has prepared-value mode 0 and addition priority, with no forced result type. A copied header is counted in each operator implementation. Callable values are references until explicitly invoked. A right-argument Array does not imply an automatic fold.
+
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
 
 Following the author's clarification, positional supply is preferred and the copied standard header is first in an operand's DATA, before additional input fields. Thus `left` and `right` occupy the first two input positions. The named structural header requirement still applies. Importing a ready method preserves its original DATA.
 

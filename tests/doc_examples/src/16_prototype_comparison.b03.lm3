@@ -1,0 +1,22 @@
+RxComposeData:
+    @: code
+    @: overlay
+    return: @
+    composeData:
+        throws:
+            ReceiverParent
+        @: data parent(code)
+        if: data = 0
+            throw: ReceiverParent()
+        int: bodyIndex sys\indexof(code; data)
+        @: composed (merge(data; overlay))
+        return: composed[bodyIndex]
+
+RxBindFields:
+    private: @: operation
+    private: @: bindings
+    return: @
+    bindFields:
+        throws:
+            ReceiverParent
+        return: RxComposeData\composeData(operation; bindings)

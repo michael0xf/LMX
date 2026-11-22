@@ -1,4 +1,4 @@
-import AroundInt.around
+import Around.bracket
 
 object ExecuteAroundExample {
   final case class Resource(value: Int)
@@ -7,7 +7,7 @@ object ExecuteAroundExample {
     var events = 0
     def note(n: Int): Unit = { events = events * 10 + n }
     try {
-      val value = around(
+      val value = bracket(
         () => {
           note(1)
           if (mode == 2) throw new ResourceFailure

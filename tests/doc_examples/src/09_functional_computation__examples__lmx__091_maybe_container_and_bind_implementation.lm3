@@ -1,0 +1,60 @@
+FxMaybe:
+    int: present 0
+    @: value 0
+
+FxSome:
+    private: @: value
+    return: @
+    some:
+        private: @: result (copy(FxMaybe))
+        result\present := 1
+        result\value := value
+        return: result
+
+FxNone:
+    return: @
+    none:
+        return: (copy(FxMaybe))
+
+FxBind:
+    private:
+        @: input FxMaybe
+        @: next
+    return: @
+    bind:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        if: input\present = 0
+            return: input
+        private: @: record FxApply\apply(next; FxOne\make(input\value))
+        private: @: result FxMaybe \record
+        return: result
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# MaybeValue:
+#     int: present 0
+#     int: value 0
+# 
+# Maybe:
+#     int: value
+#     return: @
+#     unit:
+#         @: result (copy(MaybeValue))
+#         result\present := 1
+#         result\value := value
+#         return: result
+#     none:
+#         return: MaybeValue
+# 
+# MaybeOps:
+#     copy: sys\OPERANDS_TEMPLATE
+#     return: @
+#     bind:
+#         @: input MaybeValue \left
+#         @: next \right[0]
+#         if: input\present = 0
+#             return: input
+#         return: next(input\value)
+# END ALTERNATIVE LMX

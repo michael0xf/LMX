@@ -551,6 +551,10 @@ argument places. This still supports a single return expression, int results and
 [Commands, receipts and remaining work](../steps/witnesses/clean-call-20261108/notes.md).
 graph-check accepts optional EXPECTED-EXIT COUNT INTERPRETER-ANSWER after EXPECTED: the final argument checks the
 interpreter's exact diagnostic status (0..6); native/forced process success remains 0 or1.
+Since step 21.6 an optional ENTRY, the path of a body such as `Case\run`, follows them as the fourteenth
+field, and SOURCE may be several sources joined by `;`; the Graph tool takes the same two in `run SOURCES
+[COUNT] [ENTRY]` and `emit|emit-check SOURCES OUT native|forced [COUNT] [ENTRY]`
+([evidence](../steps/witnesses/fixture-entry-20261122/notes.md)).
 
 The graph11/tool11/rt08 tuple normalizes supported expressions to nested ordinary Lmx during construction.
 Neither execution consumer parses operator precedence. Compound arguments, nested paths and both a(5)/a:5 call forms

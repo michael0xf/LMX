@@ -1737,11 +1737,56 @@ fn: lm_graph_emit_methods (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @@: met
     return: status
 end: lm_graph_emit_methods
 
+# The entry of an image (step 21.6, decision R117): the function lm_graph_entry of the generated program does what
+# `run` does with the entry (lm_graph_call_entry). Every segment of the path is read from the one before it as a call
+# reads the head of a call (lmx_graph_application_head, the first from the code of the file); the body found is
+# launched as code over its parent as data (lmx_graph_call_data); the root is not executed. The path is known when
+# the image is written, so its segments stand in the generated text. A segment that is no Structure body, or not a
+# member, makes the program answer 3 and say which path. Both hosts of the image call it: the root of an ordinary
+# program and the adapter of emit-check. 0, or the failing answer.
+fn: lm_graph_emit_entry (@: f c.FILE; const: (@: entry char)) int
+    size_t: start 0U
+    size_t: stop 0U
+    size_t: size 0U
+    size_t: k 0U
+    if: f = 0 || entry = 0
+        return: 5
+    size := c.strlen(entry)
+    if: size = 0U
+        return: 5
+    c.fputs("external:\n    fn: lm_graph_entry (@: LmxGraph l2_g; @: Lmx l2_file) int\n        @: Lmx l2_es l2_file\n        @: Lmx l2_ep 0\n        @: Lmx l2_ex 0\n        @: void l2_ev 0\n        int: l2_st 0\n        int: l2_op 0\n", f)
+    c.fputs("        l2_st: lmx_graph_space_open(l2_g, l2_es, @ l2_op)\n        if: l2_st != 0\n            return: l2_st\n", f)
+    while: start < size
+        stop := start
+        while: stop < size && entry[stop] != 92
+            stop := stop + 1U
+        ---
+        c.fprintf(f, "        if: l2_st = 0\n            l2_st: lmx_graph_application_head(l2_g, l2_es, lmx_graph_intern(\"%.*s\", %zuU), 0, @ l2_ev)\n            l2_ex: (cast: (@: Lmx) l2_ev)\n", (cast: (int) (stop - start)), entry + start, stop - start)
+        c.fputs("            if: l2_st = 0 && lmx_graph_method(l2_g, l2_ex) != 0\n                l2_st: 3\n", f)
+        if: start > 0U
+            c.fputs("            if: l2_st = 0 && l2_ex\\parent != l2_es\n                l2_st: 3\n", f)
+        c.fputs("            l2_ep: l2_es\n            l2_es: l2_ex\n", f)
+        start := stop + 1U
+    ---
+    c.fputs("        if: l2_st = 8\n            l2_st: 3\n        if: l2_st = 3\n            c.fputs(\"graph: entry ", f)
+    k := 0U
+    while: k < size
+        if: entry[k] = 92
+            c.fputs("\\\\", f)
+        else:
+            c.fputc((cast: (int) entry[k]), f)
+        ---
+        k := k + 1U
+    ---
+    c.fputs(" is not found or is not a Structure body\\n\", c.stderr)\n        if: l2_st = 0\n            l2_st: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_ep), (cast: (@: Lmx) l2_es), 0)\n        lmx_graph_space_close(l2_op)\n        return: l2_st\n    end: lm_graph_entry\nend: external\n\n", f)
+    return: 0
+end: lm_graph_emit_entry
+
 # The L1 of the program of root at out_path (§7): the kernel headers, the program hooks the driver expects, the body of
 # the root -- native (its statements over the cells of the graph) or forced (the kernel's interpreter over the same
 # graph) -- which prints the graph before and after between GRAPH markers, the generated initialization of the clean
 # graph in R0's arena and root (l2_program_build), and main as the host's launch. 0, or the failing answer.
-fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path char); int: forced; int: check_root; int: runs) int
+fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path char); int: forced; int: check_root; int: runs; const: (@: entry char)) int
     @: f c.FILE 0
     @: value void 0
     # The code of the file (lmx_graph_file_code): the content of the record L2 an .lm2 file is wrapped in, else the root.
@@ -1764,6 +1809,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     if: check_root != 0
         host_fields := 1U
     int: opened 0
+    @: call_text char "lmx_graph_call(g, unit)"
     if: g = 0 || root = 0 || out_path = 0 || runs < 1
         return: 5
     # The translation is a traversal of the graph: its namespace begins empty and ends with the translation.
@@ -1793,20 +1839,32 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
             return: r
         ---
     ---
+    if: entry != 0
+        call_text := "lm_graph_entry(g, lmx_graph_file_code(g, unit))"
+        r := lm_graph_emit_entry(f, entry)
+    if: r != 0
+        c.fclose(f)
+        c.free((cast: (@: void) methods))
+        c.lmx_graph_space_close(opened)
+        return: r
     c.fputs("external:\n    fn: lm_graph_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        l2_g: lmx_graph_find(lmx_call_arena)\n", f)
     c.fputs("        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n", f)
     if: check_root = 0
         c.fputs("        if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"BEFORE\") != 0\n            return: 1\n", f)
-    if: forced = 0
-        r := lm_graph_emit_block(g, f, code, code, 0U, c.lmx_graph_count(code), 0, -1, -1, -1, temps)
-        if: r != 0
-            c.fclose(f)
-            c.free((cast: (@: void) methods))
-            c.lmx_graph_space_close(opened)
-            return: r
-        ---
+    if: entry != 0
+        c.fputs("        if: lm_graph_entry(l2_g, lmx_call_code) != 0\n            return: 1\n", f)
     else:
-        c.fputs("        if: lmx_graph_run(l2_g, lmx_call_code) != 0\n            return: 1\n", f)
+        if: forced = 0
+            r := lm_graph_emit_block(g, f, code, code, 0U, c.lmx_graph_count(code), 0, -1, -1, -1, temps)
+            if: r != 0
+                c.fclose(f)
+                c.free((cast: (@: void) methods))
+                c.lmx_graph_space_close(opened)
+                return: r
+            ---
+        else:
+            c.fputs("        if: lmx_graph_run(l2_g, lmx_call_code) != 0\n            return: 1\n", f)
+        ---
     ---
     c.fputs("        return: 0\n    end: lm_graph_root\nend: external\n\n", f)
     # The root's entry: the run of the program is a traversal with its own namespace (lmx_graph_space_open), shared
@@ -1821,7 +1879,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     # Like the `run` command's host, this separate adapter completes its own test after a successful body. Ordinary
     # `emit` gets no adapter and still fails R0 when the source supplies neither success nor an exit Message.
     if: check_root != 0
-        c.fprintf(f, "external:\n    fn: lm_graph_check_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph g lmx_graph_find(arena)\n        @: Lmx unit (cast: (@: Lmx) lmx_graph_get_in(g, code, 0U))\n        int: status 0\n        int: count 0\n        if: g = 0 || unit = 0 || lmx_graph_dump_marked(g, unit, c.stdout, \"BEFORE\") != 0\n            return: 1\n        while: count < %d && status = 0\n            status: lmx_graph_call(g, unit)\n            count: count + 1\n        ---\n        if: lmx_graph_dump_marked(g, unit, c.stdout, \"AFTER\") != 0\n            return: 1\n        if: status != 0\n            return: status\n        @: LmxThread thread lmx_thread_current()\n        @: LmxMsg message lmx_thread_message(thread)\n        if: message = 0\n            return: 1\n        message\\success: (cast: (LmxFlag) 1)\n        return: 0\n    end: lm_graph_check_root\nend: external\n\n", runs)
+        c.fprintf(f, "external:\n    fn: lm_graph_check_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph g lmx_graph_find(arena)\n        @: Lmx unit (cast: (@: Lmx) lmx_graph_get_in(g, code, 0U))\n        int: status 0\n        int: count 0\n        if: g = 0 || unit = 0 || lmx_graph_dump_marked(g, unit, c.stdout, \"BEFORE\") != 0\n            return: 1\n        while: count < %d && status = 0\n            status: %s\n            count: count + 1\n        ---\n        if: lmx_graph_dump_marked(g, unit, c.stdout, \"AFTER\") != 0\n            return: 1\n        if: status != 0\n            return: status\n        @: LmxThread thread lmx_thread_current()\n        @: LmxMsg message lmx_thread_message(thread)\n        if: message = 0\n            return: 1\n        message\\success: (cast: (LmxFlag) 1)\n        return: 0\n    end: lm_graph_check_root\nend: external\n\n", runs, call_text)
     # Ordinary emission builds the program in R0. A private emit-check host owns a separate program root, so clearing
     # the program's native entry cannot erase the adapter or change the program's lexical parent.
     c.fputs("external:\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        @: Lmx lmx_call_code 0\n        @: Lmx l2_method 0\n", f)
@@ -1884,9 +1942,202 @@ end: lm_graph_emit_program
 
 # ---- The command line of tools/graph_trans.lm2 ---------------------------------------------------------------------
 
+# Is text a count -- digits only, not empty? The last argument of a command that is not one is its ENTRY.
+fn: lm_graph_is_count (const: (@: text char)) int
+    size_t: i 0U
+    if: text = 0 || text[0] = 0
+        return: 0
+    while: text[i] != 0
+        if: text[i] < 48 || text[i] > 57
+            return: 0
+        i := i + 1U
+    ---
+    return: 1
+
+# SOURCES of a command: one path, or several joined by `;`. Several are built into ONE fresh root as a description, in
+# the order written: their texts are joined, each ended by a blank line (a full boundary of the block, step 21.3), and
+# parsed once; a diagnostic of the parser shows as PATH:LINE:COLUMN of the source it falls in. Nothing is executed.
+# Sources of both levels (.lm2 and others) are not built into one root: answer 2.
+fn: lm_graph_build_sources (@: g c.LmxGraph; const: (@: paths char); @@: out c.Lmx) int
+    @: copy char 0
+    @: joined char 0
+    @@: names char 0
+    @@: texts char 0
+    @: sizes size_t 0
+    @: firsts size_t 0
+    @: doc c.LmP0Document 0
+    @: diag c.LmP0Diagnostic 0
+    size_t: n 1U
+    size_t: i 0U
+    size_t: k 0U
+    size_t: total 0U
+    size_t: used 0U
+    size_t: line 1U
+    size_t: len 0U
+    int: level2 0
+    int: other 0
+    int: r 0
+    if: paths = 0 || out = 0
+        return: 2
+    if: c.strchr(paths, 59) = 0
+        return: lm_graph_build_file(g, paths, out)
+    copy := (cast: (@: char) c.malloc(c.strlen(paths) + 1U))
+    if: copy = 0
+        return: 1
+    c.strcpy(copy, paths)
+    while: copy[i] != 0
+        n := n + (cast: (size_t) (copy[i] = 59))
+        i := i + 1U
+    ---
+    names := (cast: (@@: char) c.calloc(n, sizeof(@: char)))
+    texts := (cast: (@@: char) c.calloc(n, sizeof(@: char)))
+    sizes := (cast: (@: size_t) c.calloc(n, sizeof(size_t)))
+    firsts := (cast: (@: size_t) c.calloc(n, sizeof(size_t)))
+    if: names = 0 || texts = 0 || sizes = 0 || firsts = 0
+        r := 1
+    if: r = 0
+        names[0] := copy
+        i := 0U
+        k := 1U
+        while: copy[i] != 0
+            if: copy[i] = 59
+                copy[i] := (cast: (char) 0)
+                names[k] := copy + (i + 1U)
+                k := k + 1U
+            i := i + 1U
+        ---
+        i := 0U
+        while: i < n && r = 0
+            len := c.strlen(names[i])
+            if: len >= 4U && c.strcmp(names[i] + (len - 4U), ".lm2") = 0
+                level2 := 1
+            else:
+                other := 1
+            ---
+            texts[i] := lm_graph_groups_read(names[i], @ sizes[i])
+            if: texts[i] = 0
+                c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", names[i])
+                r := 2
+            total := total + sizes[i]
+            i := i + 1U
+        ---
+    if: r = 0 && level2 != 0 && other != 0
+        c.fputs("graph: sources of both levels (.lm2 and others) are not built into one root\n", c.stderr)
+        r := 2
+    if: r = 0
+        joined := (cast: (@: char) c.malloc(total + (2U * n) + 1U))
+        if: joined = 0
+            r := 1
+        ---
+    if: r = 0
+        i := 0U
+        while: i < n
+            firsts[i] := line
+            c.memcpy(joined + used, texts[i], sizes[i])
+            used := used + sizes[i]
+            k := 0U
+            while: k < sizes[i]
+                line := line + (cast: (size_t) (texts[i][k] = 10))
+                k := k + 1U
+            ---
+            if: sizes[i] = 0U || texts[i][sizes[i] - 1U] != 10
+                joined[used] := (cast: (char) 10)
+                used := used + 1U
+                line := line + 1U
+            joined[used] := (cast: (char) 10)
+            used := used + 1U
+            line := line + 1U
+            i := i + 1U
+        ---
+        joined[used] := (cast: (char) 0)
+        if: c.lm_p0_parse_bytes(joined, used, @ doc) != 0
+            r := 2
+            if: doc != 0
+                diag := (cast: (@: c.LmP0Diagnostic) c.lm_p0_document_diagnostic(doc))
+            if: diag != 0
+                i := n - 1U
+                while: i > 0U && firsts[i] > diag\line
+                    i := i - 1U
+                ---
+                c.fprintf(c.stderr, "graph: %s:%zu:%zu: %s\n", names[i], (cast: (size_t) (diag\line)) - firsts[i] + 1U, (cast: (size_t) (diag\column)), (cast: (@: char) (diag\message)))
+            else:
+                c.fputs("graph: the sources cannot be read or parsed\n", c.stderr)
+            ---
+        else:
+            r := lm_graph_build_root(g, doc, level2, out)
+        ---
+    if: doc != 0
+        c.lm_p0_document_destroy(doc)
+    i := 0U
+    while: texts != 0 && i < n
+        c.free((cast: (@: void) texts[i]))
+        i := i + 1U
+    ---
+    c.free((cast: (@: void) texts))
+    c.free((cast: (@: void) names))
+    c.free((cast: (@: void) sizes))
+    c.free((cast: (@: void) firsts))
+    c.free((cast: (@: void) joined))
+    c.free((cast: (@: void) copy))
+    return: r
+
+# ENTRY of a command: the path of a body (`Case\run`). Every segment is read from the one before it as a call reads the
+# head of a call (lmx_graph_application_head: a written declaration is loaded, the first segment is looked up from the
+# code of the file). A segment after the first must be a member of the Structure before it (its parent is that
+# Structure): the lookup of the head goes outward, a path does not. The body is a Structure, launched as code over its
+# parent as data (lmx_graph_call_data) -- the structural call of the edition: the DATA of an executable Structure C is
+# parent(C) (CORE.md 3.1, L2_L3_CODING_INSTRUCTION.md 4). A callable (fn, sub) is no entry: it has its own data and its
+# own way of call, and a call of it is written in the body of the case. The root is not executed. A segment that is no
+# Structure body, or not a member, answers 3 and says which path; any other answer of the kernel is the answer.
+fn: lm_graph_call_entry (@: g c.LmxGraph; @: file c.Lmx; const: (@: entry char)) int
+    @: scope c.Lmx c.lmx_graph_file_code(g, file)
+    @: parent c.Lmx 0
+    @: target void 0
+    @: probe c.Lmx 0
+    size_t: start 0U
+    size_t: stop 0U
+    size_t: size 0U
+    int: opened 0
+    int: status 0
+    int: first 1
+    if: entry = 0 || scope = 0
+        return: 5
+    size := c.strlen(entry)
+    if: size = 0U
+        return: 5
+    status := c.lmx_graph_space_open(g, scope, @ opened)
+    if: status != 0
+        return: status
+    parent := scope
+    while: start < size && status = 0
+        stop := start
+        while: stop < size && entry[stop] != 92
+            stop := stop + 1U
+        ---
+        status := c.lmx_graph_application_head(g, scope, c.lmx_graph_intern(entry + start, stop - start), 0, @ target)
+        probe := (cast: (@: c.Lmx) target)
+        if: status = 0 && c.lmx_graph_method(g, probe) != 0
+            status := 3
+        if: status = 0 && first = 0 && probe\parent != scope
+            status := 3
+        if: status = 8
+            status := 3
+        if: status = 3
+            c.fprintf(c.stderr, "graph: entry %s is not found or is not a Structure body\n", entry)
+        if: status = 0
+            parent := scope
+            scope := probe
+            first := 0
+        start := stop + 1U
+    ---
+    if: status = 0
+        status := c.lmx_graph_call_data(g, parent, scope, 0)
+    c.lmx_graph_space_close(opened)
+    return: status
+
 # `run FILE`: the clean graph of FILE in a fresh arena, printed before and after the kernel's interpreter ran it
 # (GRAPH-BEFORE / GRAPH-AFTER markers). 0, or the interpreter's answer (printed).
-fn: lm_graph_run_file (const: (@: path char); int: runs) int
+fn: lm_graph_run_file (const: (@: path char); int: runs; const: (@: entry char)) int
     @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
     @: g c.LmxGraph 0
     @: root c.Lmx 0
@@ -1900,7 +2151,7 @@ fn: lm_graph_run_file (const: (@: path char); int: runs) int
     g := c.lmx_graph_open(arena)
     if: g = 0
         return: 1
-    r := lm_graph_build_file(g, path, @ root)
+    r := lm_graph_build_sources(g, path, @ root)
     if: r != 0
         c.fprintf(c.stderr, "graph: build answered %d\n", r)
         return: r
@@ -1908,7 +2159,11 @@ fn: lm_graph_run_file (const: (@: path char); int: runs) int
         c.fputs("graph: the graph does not print\n", c.stderr)
         return: 1
     while: count < runs && r = 0
-        r := c.lmx_graph_call(g, root)
+        if: entry = 0
+            r := c.lmx_graph_call(g, root)
+        else:
+            r := lm_graph_call_entry(g, root, entry)
+        ---
         count := count + 1
     ---
     if: r != 0
@@ -1923,7 +2178,7 @@ fn: lm_graph_run_file (const: (@: path char); int: runs) int
 end: lm_graph_run_file
 
 # `emit FILE OUT.lm1 native|forced`: the clean graph of FILE emitted as the L1 of a program (lm_graph_emit_program).
-fn: lm_graph_emit_file (const: (@: path char); const: (@: out_path char); int: forced; int: check_root; int: runs) int
+fn: lm_graph_emit_file (const: (@: path char); const: (@: out_path char); int: forced; int: check_root; int: runs; const: (@: entry char)) int
     @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
     @: g c.LmxGraph 0
     @: root c.Lmx 0
@@ -1936,11 +2191,11 @@ fn: lm_graph_emit_file (const: (@: path char); const: (@: out_path char); int: f
     g := c.lmx_graph_open(arena)
     if: g = 0
         return: 1
-    r := lm_graph_build_file(g, path, @ root)
+    r := lm_graph_build_sources(g, path, @ root)
     if: r != 0
         c.fprintf(c.stderr, "graph: build answered %d\n", r)
         return: r
-    r := lm_graph_emit_program(g, root, out_path, forced, check_root, runs)
+    r := lm_graph_emit_program(g, root, out_path, forced, check_root, runs, entry)
     if: r != 0
         c.fprintf(c.stderr, "graph: emit answered %d\n", r)
     c.lmx_graph_close(g)
@@ -2516,6 +2771,7 @@ fn: lm_graph_main (@@: args char; int: n) int
     int: forced 0
     int: check_root 0
     int: runs 1
+    @: entry char 0
     if: n >= 3 && c.strcmp(args[1], "method-mutation") = 0
         return: lm_graph_method_mutation(args[2])
     if: n >= 2 && c.strcmp(args[1], "mutation") = 0
@@ -2524,13 +2780,20 @@ fn: lm_graph_main (@@: args char; int: n) int
         return: lm_graph_intern_check()
     # Build/preflight only, through the same loader and dumps; no activation or executor is entered.
     if: n = 3 && c.strcmp(args[1], "check") = 0
-        return: lm_graph_run_file(args[2], 0)
+        return: lm_graph_run_file(args[2], 0, 0)
     if: n >= 3 && c.strcmp(args[1], "run") = 0
         if: n >= 4
-            runs := c.atoi(args[3])
+            if: lm_graph_is_count(args[3]) != 0
+                runs := c.atoi(args[3])
+                if: n >= 5
+                    entry := args[4]
+                ---
+            else:
+                entry := args[3]
+            ---
         if: runs < 1
             return: 2
-        return: lm_graph_run_file(args[2], runs)
+        return: lm_graph_run_file(args[2], runs, entry)
     if: n >= 3 && c.strcmp(args[1], "p0") = 0
         return: lm_graph_p0_file(args[2])
     if: n = 5 && c.strcmp(args[1], "groups") = 0
@@ -2546,11 +2809,18 @@ fn: lm_graph_main (@@: args char; int: n) int
             ---
         ---
         if: n >= 6
-            runs := c.atoi(args[5])
+            if: lm_graph_is_count(args[5]) != 0
+                runs := c.atoi(args[5])
+                if: n >= 7
+                    entry := args[6]
+                ---
+            else:
+                entry := args[5]
+            ---
         if: runs < 1
             return: 2
-        return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs)
-    c.fputs("graph_trans: usage: check FILE | run FILE [COUNT] | emit|emit-check FILE OUT.lm1 native|forced [COUNT] | p0 FILE | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
+        return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs, entry)
+    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
 

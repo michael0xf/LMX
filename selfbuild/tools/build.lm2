@@ -3523,7 +3523,8 @@ fn: bld_graph (@: repo char; @: stage char; @: base char; @: fe char; @: rt char
         c.fclose(rec)
         return: 2
     names[0] := "lm_graph_build_file"
-    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_build", names, 1, 1) != 0
+    names[1] := "lm_graph_build_root"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_build", names, 2, 1) != 0
         c.fclose(rec)
         return: 3
     names[0] := "lm_graph_main"
@@ -3555,7 +3556,7 @@ end: bld_graph
 # label/l2_libc.o. Everything of the new frontend but its link, which needs the runtime of the same generation
 # (bld_frontend_link). 0, or the failing step (1 arguments, 2 modules, backend or libc).
 fn: bld_frontend_objects (@: repo char; @: stage char; @: base char; @: previous_fe char; @: label char) int
-    @@: names char c.calloc(1U, sizeof(@: char))
+    @@: names char c.calloc(2U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: out char txt_path(stage, label)
     @: src char txt_path(stage, "src")
@@ -3577,7 +3578,8 @@ fn: bld_frontend_objects (@: repo char; @: stage char; @: base char; @: previous
         c.fclose(rec)
         return: 2
     names[0] := "lm_graph_build_file"
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_graph_build", names, 1, 1) != 0
+    names[1] := "lm_graph_build_root"
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_graph_build", names, 2, 1) != 0
         c.fclose(rec)
         return: 2
     names[0] := "lm_compiler_graph_main"
@@ -3748,7 +3750,7 @@ end: bld_graph_section_same
 # the graph itself (plan M11 5b part 2): every route answers interp_exit with the tool's line `graph: build answered N`
 # -- the interpreter's `run` and emit-check alike --, no graph is built, so no dump is printed, and no program is
 # emitted, translated, compiled, linked or run.
-fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char; @: interp_exit char) int
+fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char; @: interp_exit char; @: entry char) int
     @@: a char c.calloc(70U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: rec c.FILE 0
@@ -3786,9 +3788,13 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
     a[5] := "run"
     a[6] := source
     a[7] := runs
+    int: run_n 8
+    if: entry != 0
+        a[8] := entry
+        run_n := 9
     a[3] := interp_exit
     log := txt_path(out, "interp.log")
-    ok := (cast: (int) (bld_step(rec, a, 8, out, log, res) = 0))
+    ok := (cast: (int) (bld_step(rec, a, run_n, out, log, res) = 0))
     if: ok != 0 && expected_exit != 2
         ok := bld_graph_section_same(log, expected, "AFTER")
     # A row marked 2 is a refusal of the construction of the graph (plan M11 5b part 2): the answer N of the tool is the
@@ -3822,11 +3828,15 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
         a[7] := lm1
         a[8] := mode
         a[9] := runs
+        int: emit_n 10
+        if: entry != 0
+            a[10] := entry
+            emit_n := 11
         # A refusal of the construction (a row marked 2): emit-check answers the builder's N and its log says so; no
         # program is emitted, so nothing is translated, compiled, linked or run after it.
         if: expected_exit = 2
             a[3] := interp_exit
-        ok := (cast: (int) (bld_step(rec, a, 10, dir, txt_path(dir, "emit.log"), res) = 0))
+        ok := (cast: (int) (bld_step(rec, a, emit_n, dir, txt_path(dir, "emit.log"), res) = 0))
         if: ok != 0 && expected_exit = 2
             ok := file_has_line(txt_path(dir, "emit.log"), txt_cat("graph: build answered ", interp_exit))
         if: ok != 0 && expected_exit != 2

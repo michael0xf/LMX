@@ -1,6 +1,6 @@
 # Mutating debug API for an AI chat
 
-Applied application-interface requirements, reconciled through 2026-11-21. These define required behavior, not a claim of completed implementation and not a new LMX level. General language contracts belong to [L3](../LMX_semantics.en.md), [L2](../L2_spec_en.md), and the [grammar](../LMX_grammar.en.md).
+Applied application-interface requirements, reconciled through 2026-11-21. These define required behavior, not a claim of completed implementation and not a new LMX level. General language contracts belong to [L3](../spec/LMX_semantics.en.md), [L2](../spec/L2_spec_en.md), and the [grammar](../spec/LMX_grammar.en.md).
 
 <a id="status"></a>
 ## 0. Status
@@ -88,7 +88,7 @@ finally blocks to the ordinary turn boundary; catch does not intercept it and it
 to its call site. Before the boundary, executable edit timing is unspecified; only successful
 compilation followed by endturn guarantees the updated next entry. Endturn itself does not compile.
 Old machine code remains alive through its frames/finally; this creates no implicit snapshot of the executable graph.
-There is no automatic rollback of file, mail, or other effects. [Contract](../LMX_semantics.en.md#explicit-compilation).
+There is no automatic rollback of file, mail, or other effects. [Contract](../spec/LMX_semantics.en.md#explicit-compilation).
 
 <a id="interpreter"></a>
 ## 11. Interpreter control
@@ -182,4 +182,4 @@ The interface is ready only when all four operations act on a real application, 
 <a id="sources"></a>
 ## 25. Basis
 
-[Grammar](../LMX_grammar.en.md), [L3 semantics](../LMX_semantics.en.md), [L2 mechanisms](../L2_spec_en.md), and the [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). An approved general language rule governs when an older application example differs.
+[Grammar](../spec/LMX_grammar.en.md), [L3 semantics](../spec/LMX_semantics.en.md), [L2 mechanisms](../spec/L2_spec_en.md), and the [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). An approved general language rule governs when an older application example differs.

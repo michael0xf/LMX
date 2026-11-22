@@ -2,7 +2,7 @@
 
 **Status:** applied documentation requirement, updated in English through 2026-11-21.
 The former load-dirty mechanism and its publication rules are withdrawn. This file retains its name for existing
-references and states the current [call-frame contract](../LMX_semantics.en.md#call-frame-20261115);
+references and states the current [call-frame contract](../spec/LMX_semantics.en.md#call-frame-20261115);
 it is not evidence of completed runtime migration.
 
 ## 1. What remains
@@ -41,7 +41,7 @@ values and selected places do not form a working graph under another name. Nativ
 share the same place behavior; native locals have no arena tag immediately before their machine cell.
 Graph edits do not automatically clear native. Explicit compilation followed by the ordinary endturn boundary
 governs updated machine code; before that boundary executable edit timing is unspecified.
-[Compilation](../LMX_semantics.en.md#explicit-compilation).
+[Compilation](../spec/LMX_semantics.en.md#explicit-compilation).
 
 ## 2. What is withdrawn
 

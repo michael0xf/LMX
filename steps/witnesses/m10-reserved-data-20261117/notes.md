@@ -9,7 +9,7 @@ and ran the acceptance gates. Base: slice 414 `9e1e88cf`.
 
 By the book `data` is the reserved name of the explicit reference to the data of the current launch; before
 the author's decision of 2026-11-11 it was `var`
-([the special name `data`](../../../docs/LMX_semantics.ru.md#ordinary-var)). The working frontend and the
+([the special name `data`](../../../docs/spec/LMX_semantics.ru.md#ordinary-var)). The working frontend and the
 kernel still knew the word `var`: the frontend as the implicit data input of a code and as a child block of a
 named Structure that it collected beforehand as "written data", the kernel as a seeded word. Slice 412
 recorded the frontend part as a remnant; the kernel part was found while this slice was prepared.
@@ -46,7 +46,7 @@ Fixtures:
 - `data_source_cells` is migrated (the draft of haiku): the reserved reference is written `data`; the block
   `var:` that stood in the executed code of `T` moves into the data `TD` that `T` is launched over, because a
   structural form in executed code is a call of its head
-  ([the book](../../../docs/LMX_semantics.ru.md#colon-declares)); `T` checks `data = TD` and, by the bare name,
+  ([the book](../../../docs/spec/LMX_semantics.ru.md#colon-declares)); `T` checks `data = TD` and, by the bare name,
   `var = TD\var`. The pinned values are unchanged; the value 17 is read at `TD\var\x` instead of `T\var\x`
   (`values-changed.tsv`). The two-operand `call` keeps the old order, code first, until slice 416.
 - New `var_ordinary_child` with its full-suite row: `var` is an ordinary local of a `fn`, `data\x` reaches the

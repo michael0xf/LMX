@@ -455,7 +455,7 @@ Codex — закрыть по приёмке full46), **WALKROOT-PARTS36-UNSUPPO
 
 **Что читать.**
 - По порядку: [AGENTS.md](AGENTS.md) → [READ.ME](READ.ME) → верх [steps/current.md](steps/current.md) → план
-  [v3](next_core_tasks_v3.md) §§0/3/8/8a → [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md) → L2 §17/§20/§21.
+  [v3](next_core_tasks_v3.md) §§0/3/8/8a → [L2_L3_CODING_INSTRUCTION.md](docs/spec/L2_L3_CODING_INSTRUCTION.md) → L2 §17/§20/§21.
 - Из [`to_opus.md`](to_opus.md) (передача 2026-10-22) в силе:
   - §1 — приоритет 2026-10-23, граница честности, коммиты в main без разрешения, правило прерванных процессов;
   - пункты-поручения автора §2 (строки 27–45): обходчик по живому дереву, `os` через общий конвейер без native-подмены

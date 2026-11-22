@@ -60,7 +60,7 @@ def build(check=False):
         assert '{{' not in body, f'Unexpanded source excerpt in {c["id"]}'
         if c['id'] == 'admission-recipes':
             nums = re.findall(r'^### (\d+)\.', body, re.M)
-            assert nums == [str(n) for n in range(1, 15)], 'All 14 implements cases required'
+            assert nums == [str(n) for n in range(1, 15)], 'All 14 satisfies cases required'
             body = re.sub(r'^### (\d+)\.',
                           lambda m: f'<a id="admission-case-{m[1]}"></a>\n### {m[1]}.',
                           body, flags=re.M)
@@ -81,7 +81,7 @@ def build(check=False):
         assert links(ru) == links(en), f'Link mismatch: {c["id"]}'
 
     for lang in ('ru', 'en'):
-        path = ROOT / 'docs' / f'LMX_semantics.{lang}.md'
+        path = ROOT / 'docs' / 'spec' / f'LMX_semantics.{lang}.md'
         opening = path.read_text(encoding='utf-8').split('<!-- semantics-toc -->', 1)[0]
         opening = opening.split('<a id="scope">', 1)[0].rstrip()
         toc = '\n'.join(f'- [{n}. {c[f"title_{lang}"]}](#{c["id"]})'
@@ -123,4 +123,4 @@ if __name__ == '__main__':
     parser.add_argument('--check', action='store_true', help='Verify without writing files')
     args = parser.parse_args()
     count = build(check=args.check)
-    print(f'{"Verified" if args.check else "Rendered"} {count} paired semantic chapters, 14 implements cases and both verbatim source snapshots.')
+    print(f'{"Verified" if args.check else "Rendered"} {count} paired semantic chapters, 14 satisfies cases and both verbatim source snapshots.')

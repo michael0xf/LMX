@@ -118,7 +118,7 @@ Exploratory failures are retained and not inflated into compiler findings:
   that ABI storage after construction. This is a test setup repair.
 - Fixture02 then expected a second admission to the same already admitted R
   to replace its map when the giving Model changed: 50/4. That expectation
-  contradicts [preservation of established correspondence](../docs/LMX_semantics.en.md#correspondence-stability).
+  contradicts [preservation of established correspondence](../docs/spec/LMX_semantics.en.md#correspondence-stability).
   Final fixture03 uses separate fresh R/S receiving roles for the two actual
   value observations; it does not demand an implicit remap. The original
   fixture02, its 50/4 result and the stable-map implementation are preserved.

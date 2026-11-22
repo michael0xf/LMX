@@ -10,7 +10,7 @@ decisions named below and ran the acceptance gates. Base: slice 416+417 `03a7819
 
 Step A. By the book a call whose callee lists a name in `throws` is rejected unless the caller provides a
 `catch` for the name or lists it in its own `throws`
-([declared refusals](../../../docs/LMX_semantics.ru.md#exceptions)). A `call` selects its code at run time, so
+([declared refusals](../../../docs/spec/LMX_semantics.ru.md#exceptions)). A `call` selects its code at run time, so
 the check is made at the call. The native launch asked it (`lmx_call_launch`); the walker's `call` never did
 (`lmx_call_obligation` had one caller), so the same program gave 7 in a native root and 91 or 81 in a walked
 root. Sonnet reproduced it on the working set of slice 416+417 in both executors before any edit (four rows:
@@ -18,8 +18,8 @@ root0 7, root1 91 / 81).
 
 With it, three items the previous slices recorded: the reserved name `data` in the code of a root was not
 resolved ("unresolved name"), although a root runs over itself and is its own data
-([roles of data and code](../../../docs/LMX_semantics.ru.md#data-code-roles),
-[`data` is reserved](../../../docs/LMX_semantics.ru.md#ordinary-var)); the emitter registered the code part of
+([roles of data and code](../../../docs/spec/LMX_semantics.ru.md#data-code-roles),
+[`data` is reserved](../../../docs/spec/LMX_semantics.ru.md#ordinary-var)); the emitter registered the code part of
 a callable under the word `body`, the norm names the part `code`; nine red fixtures still held the text of the
 old operand order of `call`, and the green draft of `free_index_places` waited for a slice.
 
@@ -32,7 +32,7 @@ Step B, the clean graph (rulings R36 and R39 in `LMX_blog/q/fable-self-answers-2
   builder, as `@: name int` and a declaration with a value already are (R39 item 7).
 - A producer (`fn`, `sub`) declared in the root of the data of a launch was not found when its name was read:
   nothing is applied at entry, a declaration enters the namespace when the read reaches it
-  ([visibility of declarations](../../../docs/LMX_semantics.ru.md#declaration-visibility)).
+  ([visibility of declarations](../../../docs/spec/LMX_semantics.ru.md#declaration-visibility)).
 
 ## What changed
 
@@ -91,7 +91,7 @@ Fixtures, step A:
   part word.
 - `free_index_places` (draft of haiku, green in all six runs): line 112 `Box: ([]: int items 2)` becomes
   `Box: []: int items 2` — brackets around the content of a Structure make one anonymous Structure inside it
-  ([the book](../../../docs/LMX_semantics.ru.md#colon-declares)), so `Box\items` named nothing; line 30
+  ([the book](../../../docs/spec/LMX_semantics.ru.md#colon-declares)), so `Box\items` named nothing; line 30
   pinned the stale 5 for a local that the fixture itself writes to 12 through a pointer
   (`values-changed.tsv`).
 - Nine fixtures get the operands of `call` in the order of the norm and nothing else: `held_structure_places`,
@@ -126,7 +126,7 @@ Fixtures, step B (`selfbuild/tests/graph`):
 
 - The exclusion of the machine's receivers from the obligation is the norm, not a narrowing: operators in which
   the programmer sees no written `throws` raise a named refusal that need not be caught
-  ([declared refusals](../../../docs/LMX_semantics.ru.md#exceptions)), and a type mismatch at a reception is the
+  ([declared refusals](../../../docs/spec/LMX_semantics.ru.md#exceptions)), and a type mismatch at a reception is the
   implicit `convert`. Without it the full suite showed two newly red fixtures (`index_numeric_receive`,
   `var_own_repeat_receive`: the numeric reception calls a converter that lists `throws: range`).
 - The change of the lowering belongs to the same mechanism as the selection of the path root; each of the two

@@ -3,9 +3,9 @@
 fable_pc, 2026-11-07/08. Остаток поручения автора о `merge` (CODEX-OPUS-AUTHOR-FINISH-ASSIGN-MERGE-NATIVE-WALKER-20261107-01;
 пример автора `test(merge(test\args; (a: int: 5)))`, [журнал](../../../LMX_blog/2026-11-07.md)) после среза 303, в его
 независимой части: операнд `merge`, записанный частью `args` вызываемого (MERGE-OPERAND-FORMS, [реестр](../../defects.md)).
-Норма — [книга](../../../docs/LMX_semantics.ru.md#whole-arguments) (`mytest\args` — часть `args` вызываемого: формал `c` с
+Норма — [книга](../../../docs/spec/LMX_semantics.ru.md#whole-arguments) (`mytest\args` — часть `args` вызываемого: формал `c` с
 записанным умолчанием 3 и обязательный `a`; результат `merge` — Structure с `c` = 3 и `a` = 5; `merge` строит новое
-значение и не пишет в `mytest\args`) и [явная композиция тела вызываемого](../../../docs/LMX_semantics.ru.md#composition)
+значение и не пишет в `mytest\args`) и [явная композиция тела вызываемого](../../../docs/spec/LMX_semantics.ru.md#composition)
 («отдельные варианты … композицию `add\args`»). Подача результата единственным позиционным аргументом
 (CALL-WHOLE-ARGUMENTS-STRUCTURE) удержана: Codex (CODEX-FABLE-304-CHOICE-HOLD-20261107T233359456Z-01,
 [копия](records/pins/CODEX-FABLE-304-CHOICE-HOLD-20261107T233359456Z-01.txt)) не утверждает ни чтения «два метода одного
@@ -187,7 +187,7 @@ tp167, весь стейдж против source-tp167-a02):
 Документы ревью: [реестр дефектов](../../defects.md) — MERGE-OPERAND-FORMS (абзац «Срез 304» исправлен: слот пуст, ноль не
 придумывается; новый абзац «Ревью Codex среза 304» — механизм, отказы, фикстуры, обзор типизированного операнда),
 FORMAL-DEFAULT-FORMS (абзац ревью: предел операнда `f\args` при роде 2, умолчание не вычисляется); [заметки о
-реализации 4.2](../../../docs/implementation-notes.ru.md#assign-named-merge) RU и EN (пункт об операнде `f\args`);
+реализации 4.2](../../../docs/spec/implementation-notes.ru.md#assign-named-merge) RU и EN (пункт об операнде `f\args`);
 [selfbuild/README.md](../../../selfbuild/README.md) (259 входов — 66 исходников, 34 инструмента, 159 тестов; абзац
 Slice304); [steps/current.md](../../current.md) (абзац ревью перед абзацем 304; абзац 304 исправлен); книга и generated
 docs не менялись (абзац whole-arguments нуля не утверждал); журнал LMX_blog — новых реплик автора нет. Проверка
@@ -253,7 +253,7 @@ FORMAL-DEFAULT-FORMS, путь в args, нечисловые формалы и �
   открыт вопрос Codex автору. Generated docs перерисованы и проверены ([docs304-render](records/pins/docs304-render.tsv),
   [лог](records/pins/docs304-render.log), [терминал](records/pins/docs304-render.terminal.txt)): изменены только две
   строки `docs/LMX_semantics.ru.md` и `docs/LMX_semantics.en.md`, грамматика без изменений.
-- [Заметки о реализации 4.2](../../../docs/implementation-notes.ru.md#assign-named-merge) RU и EN: заголовок «реализация
+- [Заметки о реализации 4.2](../../../docs/spec/implementation-notes.ru.md#assign-named-merge) RU и EN: заголовок «реализация
   срезов 303–304, подача всей структуры удержана»; пункт об операнде `f\args` с пределами; пункт «Не сделано» — удержание
   304 и вопрос Codex.
 - [selfbuild/README.md](../../../selfbuild/README.md): 257 входов (66 исходников, 34 инструмента, 157 тестов — счёт

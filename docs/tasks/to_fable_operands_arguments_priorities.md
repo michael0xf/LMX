@@ -1008,15 +1008,15 @@ sys\priority("+")
 
 ### Документы LMX
 
-- [LMX_grammar.en.md](../LMX_grammar.en.md): общий разбор, имена, структурные формы и операции.
-- [LMX_semantics.en.md](../LMX_semantics.en.md): §§4, 6–7, 9, 11–12, 20, 22 — имена, аналитическая типизация, DATA/CODE, callable, связывание, merge и время жизни.
-- [LMX_semantics_guide.en.md](../LMX_semantics_guide.en.md).
-- [L2_spec_en.md](../L2_spec_en.md): storage, адресность, вызовы и нативное представление.
+- [LMX_grammar.en.md](../spec/LMX_grammar.en.md): общий разбор, имена, структурные формы и операции.
+- [LMX_semantics.en.md](../spec/LMX_semantics.en.md): §§4, 6–7, 9, 11–12, 20, 22 — имена, аналитическая типизация, DATA/CODE, callable, связывание, merge и время жизни.
+- [LMX_semantics_guide.en.md](../spec/LMX_semantics_guide.en.md).
+- [L2_spec_en.md](../spec/L2_spec_en.md): storage, адресность, вызовы и нативное представление.
 - `LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md`, уточнение от 20 ноября: `fn: name data`, позиционная проверка, соответствие имён actuals и фактический parent callable.
 - `LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md`: объявления-аргументы и импорт корневых const-объявлений.
 - `LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md`: пустая строка как завершение корневого блока.
 
-Источники исходного плана работ: [CORE.md](../../CORE.md) и [L2_L3_CODING_INSTRUCTION.md](../../L2_L3_CODING_INSTRUCTION.md). В репозитории применять изменения к их текущим версиям.
+Источники исходного плана работ: [CORE.md](../spec/CORE.md) и [L2_L3_CODING_INSTRUCTION.md](../spec/L2_L3_CODING_INSTRUCTION.md). В репозитории применять изменения к их текущим версиям.
 
 Последние решения автора имеют приоритет над противоречащими им фрагментами источников. Настоящая редакция объединяет структурное обнаружение операндов, обязательные поля режима и приоритета в последнем написании, обычный результат, передачу «как есть», исходный контекст и все сохранённые нормы присваивания, приоритетов, строк и fn. Отменённые правила регистрации и раскрытия Array не образуют альтернативной действующей нормы.
 

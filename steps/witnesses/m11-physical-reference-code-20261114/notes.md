@@ -26,7 +26,7 @@ AFTER36/mutation24 прошли. Полный bootstrap G1/G2/fixedpoint13 и п
   проверяют тип назначения, затем принимают текущую literal reference из source
   field через прежний store. Kind8/9 проверяют соответственно primitive family5/6
   без чтения непредъявленного payload и без записи в принимающее место.
-- [Представление места без значения](../../../docs/kernel-implementation.ru.md#lmx):
+- [Представление места без значения](../../../docs/spec/kernel-implementation.ru.md#lmx):
   wrapper не является initialized-флагом. Слот, служебный указатель и заранее
   существующая typed cell сохраняются; type-only проверка не читает старый payload.
   Настоящее `@: p int` без кандидата всё ещё требует отдельного общего construction

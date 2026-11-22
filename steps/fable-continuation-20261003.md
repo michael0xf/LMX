@@ -37,7 +37,7 @@ output directory name. This is the baseline every later comparison uses.
 
 **Norm.** An existing ordinary named Structure has a body and no arguments;
 `Model: x` in an executable body is an erroneous argument-bearing call
-([construction](../docs/LMX_semantics.en.md#construction), Q59). Explicit
+([construction](../docs/spec/LMX_semantics.en.md#construction), Q59). Explicit
 `merge` is the copy mechanism. A nested Structure that must exist at
 construction is a nested definition with its written body.
 
@@ -92,7 +92,7 @@ declaration or store (`@: Model b o`; a store into `@: Model r`) admitted by the
 used paths of that reference in its visible body, or by Model's whole shape?
 
 **Answer (no author question needed; the norm is explicit).** Consumer-relative
-used paths: [three-argument implements](../docs/LMX_semantics.en.md#three-argument-satisfies)
+used paths: [three-argument implements](../docs/spec/LMX_semantics.en.md#three-argument-satisfies)
 and L2 §implements. A genuinely known-thin Consumer admits a candidate lacking
 unused fields; a field the Consumer reads is required. The full-receiver
 behaviour described in `CORE_L2_L3_v2.md` §9.3 is Implementation, not authority.
@@ -123,7 +123,7 @@ behaviour described in `CORE_L2_L3_v2.md` §9.3 is Implementation, not authority
 ## 4. Native-only source producers: machine locals, foreign member paths, forward headers
 
 **Norm.** The retained graph keeps every source occurrence in source order,
-also in native-only bodies ([L2 interpretable tree](../docs/L2_spec_en.md#interpretable-tree)).
+also in native-only bodies ([L2 interpretable tree](../docs/spec/L2_spec_en.md#interpretable-tree)).
 Names are absent from the graph; an activation-local C value lives in machine
 activation storage and no graph pointer may outlive a stack object.
 
@@ -184,9 +184,9 @@ claim).
 
 | Row | Old expectation | Finding | Now |
 | --- | --- | --- | --- |
-| `unit_native_activation` | refused: `L2 operation outside a method body` | That rule is withdrawn ([scope](../docs/LMX_semantics.en.md#scope)): the root is compiled like every body. | runs, entry 7 |
+| `unit_native_activation` | refused: `L2 operation outside a method body` | That rule is withdrawn ([scope](../docs/spec/LMX_semantics.en.md#scope)): the root is compiled like every body. | runs, entry 7 |
 | `unit_arg_addr_pointer` | `root-pending` | The pending operation is built; the row had been reporting ACCEPTED. | runs, says `P local is null` |
-| `unit_discard_calls` | `root-pending`, entry 11112 | Translates now, but its counters used bare `hits: hits + N` in methods and a bare read at the root. A bare name in a method is its hidden input (Q52); the root's bare own value is not reloaded after a call ([working state](../docs/LMX_semantics.en.md#dynamic)). | callees write `node\hits`, the root reads the published cell through `@hits`; entry 11112 |
+| `unit_discard_calls` | `root-pending`, entry 11112 | Translates now, but its counters used bare `hits: hits + N` in methods and a bare read at the root. A bare name in a method is its hidden input (Q52); the root's bare own value is not reloaded after a call ([working state](../docs/spec/LMX_semantics.en.md#dynamic)). | callees write `node\hits`, the root reads the published cell through `@hits`; entry 11112 |
 
 <a id="full-gates"></a>
 ## 6. Full gates of this continuation
@@ -296,7 +296,7 @@ origin. Codex answered without escalating to the author. The ruling:
   dirty publication, then dispatch of the same selected occurrence through
   the common route. The reference cell is not re-read after its inputs are
   prepared, and publication does not move before argument evaluation
-  ([working state](../docs/LMX_semantics.en.md#dynamic)).
+  ([working state](../docs/spec/LMX_semantics.en.md#dynamic)).
 - **Witnesses required with the mechanism:** two interchangeable actual
   bodies that need `x` versus `y` at identical ABI positions and types; the
   actual copied lexical parent; a genuinely missing input; replacement of the
@@ -351,7 +351,7 @@ Later slices are committed separately with their own evidence.
 address arithmetic ([D-24](d24-addr.md): in a method this is C pointer
 arithmetic, not a walker node). L2 operations that need a machine address or
 raw memory are absent from an interpreted body
-([levels](../docs/LMX_semantics.en.md)); the retained graph still keeps every
+([levels](../docs/spec/LMX_semantics.en.md)); the retained graph still keeps every
 written occurrence in source order.
 
 **Implementation** (`dev/l2src_sandbox/l2trans.lm1`, symbols):
@@ -532,7 +532,7 @@ there, as every other foreign path is; the C compiler checks it. Recovered:
 `unit_indent_stack_field_index`.
 
 **A located literal diagnostic.** `08` is not a C99 integer literal
-([grammar](../docs/LMX_grammar.en.md)); the earlier ledger already records
+([grammar](../docs/spec/LMX_grammar.en.md)); the earlier ledger already records
 that the old index-only decimal reading must not come back. The refusal was
 the generic `unsupported body`. It is now said at the literal: an invalid
 octal digit, a valid octal literal without a producer (debt, not a rule), or
@@ -652,7 +652,7 @@ say.
   head with a literal tail is an unresolved call" is historical
   ([status note](free-names.md), [section C](generated-diagnostic-migration-20260930.md#unknown-head-10)).
 - The root is compiled like every body
-  ([scope](../docs/LMX_semantics.en.md#scope)); `L2 operation outside a method
+  ([scope](../docs/spec/LMX_semantics.en.md#scope)); `L2 operation outside a method
   body` is withdrawn.
 - For an existing named Structure `A`, `A: b` in a body selects the call
   route and is a call error (a named Structure has no arguments); it declares
@@ -1136,8 +1136,8 @@ Native code evaluated `f(b: mark(1); a: mark(2))` as `mark(2)`, then
 `mark(1)`; the interpreter did the same; the retained call held the two
 actuals at the formals' places with neither the names nor the written order.
 The norm keeps a graph's fields in lexical order and evaluates them in that
-order ([fields](../docs/LMX_semantics.en.md#fields),
-[callables](../docs/LMX_semantics.en.md#callables)); the core map called the
+order ([fields](../docs/spec/LMX_semantics.en.md#fields),
+[callables](../docs/spec/LMX_semantics.en.md#callables)); the core map called the
 rewriting a debt. Measured on the committed translator by a probe: the trace
 of the two calls was 21, natively and walked.
 
@@ -1287,7 +1287,7 @@ It is not to be moved past a claimed green graph release because the harness
 has no row for literal P0 intactness.
 
 **Prefix minus is a documented operator.**
-[Grammar, operators](../docs/LMX_grammar.en.md#operators) lists the prefixes
+[Grammar, operators](../docs/spec/LMX_grammar.en.md#operators) lists the prefixes
 `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~` and says that writing a prefix
 adjacent to its operand is style, not a P0 boundary. `- 1` is valid; the
 missing support in `l2_value_spans` and `l2_operand_run` is a translator gap
@@ -1305,7 +1305,7 @@ missing support in `l2_value_spans` and `l2_operand_run` is a translator gap
   prefix minus and decrement told apart by expression context, not by spacing
   or by the expected signature;
 - machine primitive types keep the C99 promotions of the target
-  ([low-level scope](../docs/L2_spec_en.md#lowlevel-scope)); the negated
+  ([low-level scope](../docs/spec/L2_spec_en.md#lowlevel-scope)); the negated
   result is not forced back to the unpromoted operand type; other numeric
   domains stay scoped debt;
 - witnesses: the original `- 1` actual, `-x`, `-(a + b)`, a binary minus
@@ -5064,8 +5064,8 @@ It answers the one edge asked with the last checkpoint.
   is not absence. Conversion/admission failure must not silently choose the
   captured value."
 - Its authorities are the book: the priority of sources and the forwarding to
-  a fixed point in [§12](../docs/LMX_semantics.en.md#dynamic), and the two
-  subsections of [composition](../docs/LMX_semantics.en.md#composition) on
+  a fixed point in [§12](../docs/spec/LMX_semantics.en.md#dynamic), and the two
+  subsections of [composition](../docs/spec/LMX_semantics.en.md#composition) on
   returned nested methods and on the lexical fallback.
 
 ### What changed
@@ -5283,7 +5283,7 @@ it, and with the comparison put back to the occurrence itself they fail.
 It is not landed. The relation exists because the node is a partial copy:
 slots 0 and 1 are the model's by address, a number is a fresh cell, and
 everything else, the steps and the nested bodies, is the model's by address
-(`lmx_walk_cell_copy`). L2 [§13](../docs/L2_spec_en.md#copy-merge) requires
+(`lmx_walk_cell_copy`). L2 [§13](../docs/spec/L2_spec_en.md#copy-merge) requires
 a copy of the complete used closure with references and `parent` links
 rewritten, and retains by address only a reusable native implementation and
 an admitted `independent: const: immutable` branch. A selector that reads
@@ -5494,7 +5494,7 @@ first change below.
 
 ### The book
 
-[§12](../docs/LMX_semantics.en.md#dynamic) lists three sources of a free
+[§12](../docs/spec/LMX_semantics.en.md#dynamic) lists three sources of a free
 name. Its compressed wording could be read as saying that a value a method
 read from its own lexical source is nothing its callees can receive. Three
 sentences are added to that paragraph, in both languages, beginning "It
@@ -7245,7 +7245,7 @@ what they said of the norm is superseded as marked here.
 ### The parent of a merge's copy
 
 The author's words: [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#merge-parent); the rule:
-[semantics #composition](../docs/LMX_semantics.en.md#composition). Codex: "merge copies the USED part of the existing tree and rewrites parent
+[semantics #composition](../docs/spec/LMX_semantics.en.md#composition). Codex: "merge copies the USED part of the existing tree and rewrites parent
 links INSIDE THE COPY, preserving the copied source relationships. The place
 that executes merge does not supply/redefine its lexical parent or trigger
 free-name resolution in that place." In the question's example, where no
@@ -7279,7 +7279,7 @@ input beside them.
 ### The receiver of a factory's result
 
 The author's words: [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#factory-reference-result);
-the rule: [semantics](../docs/LMX_semantics.en.md#factory-reference-result).
+the rule: [semantics](../docs/spec/LMX_semantics.en.md#factory-reference-result).
 Codex: "the old result-binding example must be REWRITTEN using the explicit @:
 receiver. The general dormant named-body rule remains; do not preserve a
 magic factory-initialization meaning for an unknown ordinary head just because
@@ -10589,7 +10589,7 @@ the settle put back returns 196 of them to `a71009cc`'s outcome (59 stay as K03,
 The bare head. Asked what a bare receiver atom is, the author answered (2026-10-06, relayed by Codex as
 K03-BARE-RECEIVER-ANSWER-20261006-01 with K03-UNIVERSAL-CONSUMPTION, K03-ONE-NAMESPACE-ONE-RESOLVER and
 K03-MODEL-BEFORE-ROLE; archived in the [author's log](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md), the rule in
-[semantics](../docs/LMX_semantics.en.md#resolved-head-consumption)): one namespace for merge,
+[semantics](../docs/spec/LMX_semantics.en.md#resolved-head-consumption)): one namespace for merge,
 fn, int, a Structure and a method alike; first the complete head/arguments model, then one resolution of what the
 head is; a bare resolved head is its application with zero written arguments, through the same consumer as `H()`,
 diagnosed where it stands, never a free or dynamic input, never collecting its neighbours -- for every head, not
@@ -11235,7 +11235,7 @@ checkpoint in this lane before S6 (next_core_tasks_v2.md, K03):
 - K03-S5-NS-ROLES. In a named Structure's body a one-atom tail that is no word -- `x: tick`, `x: j`, `x: Model`,
   `x: Foo`, x absent -- is still the shape `Type: name`, a field x of a type named by the head, refused in the second
   phase when no Structure has that name; at the root and in a method the same line defines x. Codex: a body is not a
-  signature -- the same ordinary role resolution applies there ([docs](../docs/LMX_semantics.en.md#resolved-head-consumption):
+  signature -- the same ordinary role resolution applies there ([docs](../docs/spec/LMX_semantics.en.md#resolved-head-consumption):
   an existing ordinary named Structure takes no arguments, an unknown head constructs, for absent b `b: A` and
   `@: b A` introduce b; next_core_tasks_dictionary_v2.md §3: the `Model: fresh` and named-model shortcut recognizers
   cannot stay beside the new classifier). The culprit is `l2_ns_decl_first`'s last one-atom branch (`l2_ident(head)`,

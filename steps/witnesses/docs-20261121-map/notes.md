@@ -13,11 +13,11 @@ Verdicts: **conforms**, **differs**, **not expressible** (the form is refused or
 those of the [plan](../../../next_core_tasks_v3.md#docs-20261121). «decided by opus» marks a reading derived from
 the norm during the map; fable confirmed the readings of A2.
 
-Requirements: [binding](../../../docs/LMX_semantics.en.md#binding-decisions) (B-TZ),
-[declaration arguments](../../../docs/LMX_semantics.en.md#declaration-arguments) (D-TZ),
-[streams](../../../docs/LMX_semantics.en.md#field-stream-observations) (S-TZ),
-[author clarification](../../../docs/LMX_semantics.en.md#no-working-graph) (U),
-[blank line](../../../docs/LMX_grammar.en.md#automaton) (L-TZ).
+Requirements: [binding](../../../docs/spec/LMX_semantics.en.md#binding-decisions) (B-TZ),
+[declaration arguments](../../../docs/spec/LMX_semantics.en.md#declaration-arguments) (D-TZ),
+[streams](../../../docs/spec/LMX_semantics.en.md#field-stream-observations) (S-TZ),
+[author clarification](../../../docs/spec/LMX_semantics.en.md#no-working-graph) (U),
+[blank line](../../../docs/spec/LMX_grammar.en.md#automaton) (L-TZ).
 Code: [lmx_graph.lm2](../../../selfbuild/src/l2src/lmx_graph.lm2),
 [lmx_graph_run.lm2](../../../selfbuild/src/l2src/lmx_graph_run.lm2),
 [p0_parser.lm2](../../../selfbuild/src/l2src/p0_parser.lm2).
@@ -75,7 +75,7 @@ The corpus family B-06 calls nested Structures with actuals and becomes runnable
 
 ### A3. The unit root
 
-[Review notes](../../../docs/REVIEW_NOTES.md), §5, D2: R0 consumes its records under CODE contracts, a fixture
+[Review notes](../../../docs/spec/REVIEW_NOTES.md), §5, D2: R0 consumes its records under CODE contracts, a fixture
 states its entry profile and names the body it calls, there is no automatic `main`. Today `lmx_graph_run` launches
 the root over itself (`lmx_graph_work_open_data(g, root, root, …)`), and the word `data` names it. A Structure
 declared at the root is refused at build (`a_v1_noreturn` → 2); inside the leading group its nested body takes the

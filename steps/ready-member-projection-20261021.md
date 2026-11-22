@@ -121,9 +121,9 @@ native-only protection or runtime name registry is added.
 <a id="l2-and-walker-scope"></a>
 ## L2 and walker scope
 
-[L2 scope](../docs/L2_spec_en.md#scope) explicitly assigns stored L3 to the
+[L2 scope](../docs/spec/L2_spec_en.md#scope) explicitly assigns stored L3 to the
 interpreter and machine L2 operations to native lowering; the
-[ABI contract](../docs/L2_spec_en.md#lowlevel-abi) governs C boundaries.
+[ABI contract](../docs/spec/L2_spec_en.md#lowlevel-abi) governs C boundaries.
 The earlier138 direct-C-factory forced-root `UNSUPPORTED`/exit3 observation is
 retained, but it does **not** create a requirement to interpret arbitrary C.
 Forcing an L2-only root out of its native implementation measures this coverage

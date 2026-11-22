@@ -70,6 +70,6 @@ end: f
   переменную, объявленную ниже, и имя ветви после выхода из неё. Проверка однократна и на дальнейшие
   записи в поле не влияет.
 
-[Ресивер `required`](../../docs/LMX_semantics.ru.md#required-receiver),
-[ресивер private:](../../docs/LMX_semantics.ru.md#private-binding),
-[видимость](../../docs/LMX_semantics.ru.md#declaration-visibility).
+[Ресивер `required`](../../docs/spec/LMX_semantics.ru.md#required-receiver),
+[ресивер private:](../../docs/spec/LMX_semantics.ru.md#private-binding),
+[видимость](../../docs/spec/LMX_semantics.ru.md#declaration-visibility).

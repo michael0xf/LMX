@@ -14,8 +14,8 @@ the shared event model, the opening/completion asymmetry, or the difference
 between an inline implicit level and a physical source line's level in enough
 detail. §10 also used N without making that distinction explicit when nested
 short forms occur on one line. These explanations are now restored in
-[RU §15](../docs/LMX_grammar.ru.md#levels) and
-[EN §15](../docs/LMX_grammar.en.md#levels), with §10 linking to that account.
+[RU §15](../docs/spec/LMX_grammar.ru.md#levels) and
+[EN §15](../docs/spec/LMX_grammar.en.md#levels), with §10 linking to that account.
 
 This edit changes no parser code, acceptance expectation, or semantic call rule.
 The already resolved `r: twice:` / fence witness is explained, not reopened as

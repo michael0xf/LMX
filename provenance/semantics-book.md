@@ -5297,71 +5297,71 @@ List — обычная последовательность ссылок, оп�
 
 ### Каталог ресиверов
 
-Следующая таблица исчерпывающа для этой редакции. Исходные объявления и [публичный API](new_parts/LMX_Fn_Receivers/API.md) задают порядок аргументов, политику отказов и документированные границы каждой операции.
+Следующая таблица исчерпывающа для этой редакции. Исходные объявления и [публичный API](patterns/LMX_Fn_Receivers/API.md) задают порядок аргументов, политику отказов и документированные границы каждой операции.
 
 | Ресивер | Контракт | Исходник |
 | --- | --- | --- |
-| `types` | физические коды типов полей; []:int по контракту языка | [reflection.lmx](new_parts/LMX_Fn_Receivers/src/reflection.lmx) |
-| `names` | физические канонические имена; анонимные элементы сохраняют типизированное отсутствие | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `signature` | обычное описание позиционной сигнатуры | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `signatureTypes` | тот же вид сигнатуры: токен типа результата слева, все упорядоченные токены входов справа | [fn_operand.lmx](new_parts/LMX_Fn_Receivers/src/fn_operand.lmx) |
-| `curry` | произвольная конечная арность, точный тип входа ступени и итоговый результат | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `apply` | произвольный вектор записей фактических аргументов; запись результата, включая явный void | [generic_runtime.lmx](new_parts/LMX_Fn_Receivers/src/generic_runtime.lmx) |
-| `partial` | префикс 0..N; точная остаточная сигнатура, полный префикс даёт отложенный вызов (thunk) | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `uncurry` | явный полный контракт цели и отказы ступеней, результат-вызываемое сохраняется | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `flip` | перестановка первых двух позиций из N>=2 с полными типами входов | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `compose` | внутренняя функция произвольной арности; внешняя потребляет её единственный результат; точный итоговый R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `pipe` | compose(second; first), точная сигнатура вызываемого | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `identity` | типизированная T -> T для любого допустимого типа значения | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `map` | каждая запись принимается как фактический аргумент типа обратного вызова, результат — вектор записей | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `filter` | типизированные значения; обычный целочисленный предикат истинности | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `foldl` | левая свёртка по любым записям аккумулятора, элемента и результата | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `zip` | пары типизированных записей, минимальная длина | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `zipWith` | произвольные типы двухместного обратного вызова, записи результата | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `scanl` | накопление с начальным значением, n+1 записей; тип аккумулятора не зашит | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `bind` | Maybe с любой типизированной записью; next получает фактическое значение нагрузки | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `traverse` | Maybe прямого вектора записей Structure; остановка на первом отсутствии | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `memoize` | любая арность и R; явное равенство векторов ключей, линейный кэш, локальный для Message | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `fix` | F(self;T0..Tn)->R становится T0..Tn->R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `select` | физический выбор в прямой Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `omit` | физические пропуски в прямой Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `rename` | одна графовая копия, затем обновление канонических имён полей | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `reorder` | полная проверенная перестановка, любые типы значений полей | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `project` | одна общая графовая копия выбранных полей | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `defaults` | merge(fallback; source), существующее присутствие, включая uninit, побеждает | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `diff` | патч по вектору идентичностей, а не глубокое равенство нагрузки | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `patch` | предварительно проверенный патч по вектору идентичностей в новом контейнере | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `bindFields` | значения DATA по умолчанию через merge; остаточные входные позиции не удаляются | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `derive` | обычная композиция merge | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `transpose` | прямоугольная Structure строк-значений; фиксированных размеров нет | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `groupBy` | типизированные ключи и явное равенство, стабильный порядок групп и членов | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `lazy` | типизированный нульарный thunk, кэшируется первый успешный результат | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `force` | нульарный вызов, возвращающий запись типизированного результата; прямой thunk() сохраняет R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `once` | любая арность и R; первый успех переиспользуется, отказ допускает повтор | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `repeat` | count вызовов с произвольным типизированным вектором фактических аргументов; записи результатов | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `runUntil` | состояние-запись; шаг, затем предикат, фиксированного типа нагрузки нет | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `retryCall` | конечное число попыток, объявленные отказы сохраняются в конверте FxCallFailure | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `bracket` | любой ресурс и результат; finally-освобождение; произвольные дополнительные входы действия | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `recover` | точная сигнатура; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `adapter` | произвольная внешняя и внутренняя арность, явный новый точный контракт | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `permute` | произвольное N, интерфейс и фактические аргументы переставляются вместе | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `overload` | явные чистые предикаты, ровно одна ветвь, полная внешняя сигнатура | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `predicate` | те же произвольные входы; нормализует обычный целочисленный булев выход | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `guard` | та же точная сигнатура с предусловием над всеми фактическими аргументами | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `trace` | произвольная сигнатура, события сохраняют типизированные аргументы, результат и различие void | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `contract` | та же сигнатура, pre(args), post(args,result) либо post(args) для void | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `composeData` | слияние DATA фактического родителя с явным слоем данных | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `record` | подготовленный постфиксный захват; указатель на типизированную запись, без разыменования значения | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `some` | Maybe present с любой типизированной записью значения, включая null | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `none` | отсутствие Maybe, отличное от присутствующего пустого или null-значения | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `ok` | успех Result с любой типизированной записью значения | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `err` | отказ Result с любой типизированной записью причины | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `bindResult` | цепочка типизированных успехов Result, отказ сохраняется | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `list` | голая Structure/Array<@>, неглубоко скопированный вектор записей | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `flatMap` | bind для List, без искусственной коробки list.items | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `done` | терминальный Bounce с записью результата | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `more` | приостановленный нульарный вызываемый, произвольные захваты через partial | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `trampoline` | итерация Bounce до done, итоговый результат-вызываемое никогда не исполняется | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `types` | физические коды типов полей; []:int по контракту языка | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `names` | физические канонические имена; анонимные элементы сохраняют типизированное отсутствие | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signature` | обычное описание позиционной сигнатуры | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signatureTypes` | тот же вид сигнатуры: токен типа результата слева, все упорядоченные токены входов справа | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `curry` | произвольная конечная арность, точный тип входа ступени и итоговый результат | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `apply` | произвольный вектор записей фактических аргументов; запись результата, включая явный void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
+| `partial` | префикс 0..N; точная остаточная сигнатура, полный префикс даёт отложенный вызов (thunk) | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `uncurry` | явный полный контракт цели и отказы ступеней, результат-вызываемое сохраняется | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `flip` | перестановка первых двух позиций из N>=2 с полными типами входов | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `compose` | внутренняя функция произвольной арности; внешняя потребляет её единственный результат; точный итоговый R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `pipe` | compose(second; first), точная сигнатура вызываемого | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `identity` | типизированная T -> T для любого допустимого типа значения | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `map` | каждая запись принимается как фактический аргумент типа обратного вызова, результат — вектор записей | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `filter` | типизированные значения; обычный целочисленный предикат истинности | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `foldl` | левая свёртка по любым записям аккумулятора, элемента и результата | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `zip` | пары типизированных записей, минимальная длина | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `zipWith` | произвольные типы двухместного обратного вызова, записи результата | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `scanl` | накопление с начальным значением, n+1 записей; тип аккумулятора не зашит | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `bind` | Maybe с любой типизированной записью; next получает фактическое значение нагрузки | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `traverse` | Maybe прямого вектора записей Structure; остановка на первом отсутствии | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `memoize` | любая арность и R; явное равенство векторов ключей, линейный кэш, локальный для Message | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `fix` | F(self;T0..Tn)->R становится T0..Tn->R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `select` | физический выбор в прямой Structure/Array<@> | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `omit` | физические пропуски в прямой Structure/Array<@> | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `rename` | одна графовая копия, затем обновление канонических имён полей | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `reorder` | полная проверенная перестановка, любые типы значений полей | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `project` | одна общая графовая копия выбранных полей | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `defaults` | merge(fallback; source), существующее присутствие, включая uninit, побеждает | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `diff` | патч по вектору идентичностей, а не глубокое равенство нагрузки | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `patch` | предварительно проверенный патч по вектору идентичностей в новом контейнере | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `bindFields` | значения DATA по умолчанию через merge; остаточные входные позиции не удаляются | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `derive` | обычная композиция merge | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `transpose` | прямоугольная Structure строк-значений; фиксированных размеров нет | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `groupBy` | типизированные ключи и явное равенство, стабильный порядок групп и членов | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `lazy` | типизированный нульарный thunk, кэшируется первый успешный результат | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `force` | нульарный вызов, возвращающий запись типизированного результата; прямой thunk() сохраняет R | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `once` | любая арность и R; первый успех переиспользуется, отказ допускает повтор | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `repeat` | count вызовов с произвольным типизированным вектором фактических аргументов; записи результатов | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `runUntil` | состояние-запись; шаг, затем предикат, фиксированного типа нагрузки нет | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `retryCall` | конечное число попыток, объявленные отказы сохраняются в конверте FxCallFailure | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `bracket` | любой ресурс и результат; finally-освобождение; произвольные дополнительные входы действия | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `recover` | точная сигнатура; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `adapter` | произвольная внешняя и внутренняя арность, явный новый точный контракт | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `permute` | произвольное N, интерфейс и фактические аргументы переставляются вместе | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `overload` | явные чистые предикаты, ровно одна ветвь, полная внешняя сигнатура | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `predicate` | те же произвольные входы; нормализует обычный целочисленный булев выход | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `guard` | та же точная сигнатура с предусловием над всеми фактическими аргументами | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `trace` | произвольная сигнатура, события сохраняют типизированные аргументы, результат и различие void | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `contract` | та же сигнатура, pre(args), post(args,result) либо post(args) для void | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `composeData` | слияние DATA фактического родителя с явным слоем данных | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `record` | подготовленный постфиксный захват; указатель на типизированную запись, без разыменования значения | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `some` | Maybe present с любой типизированной записью значения, включая null | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `none` | отсутствие Maybe, отличное от присутствующего пустого или null-значения | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `ok` | успех Result с любой типизированной записью значения | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `err` | отказ Result с любой типизированной записью причины | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bindResult` | цепочка типизированных успехов Result, отказ сохраняется | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `list` | голая Structure/Array<@>, неглубоко скопированный вектор записей | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `flatMap` | bind для List, без искусственной коробки list.items | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `done` | терминальный Bounce с записью результата | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `more` | приостановленный нульарный вызываемый, произвольные захваты через partial | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `trampoline` | итерация Bounce до done, итоговый результат-вызываемое никогда не исполняется | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 
 ### Построение, правила исходного текста и проверка
 
@@ -5369,7 +5369,7 @@ P0 сохраняет все записанные контейнеры. Дейс
 
 Захват и порождённый исходный текст сохраняют фактических родителей, приватное состояние и обычные правила времени жизни. Порождение кода должно учитывать завершение корня пустой строкой и явные отсекатели хвоста. Компиляция остаётся явной; скопированное или перестроенное вызываемое не наследует несовместимый нативный вход. Повторно используемые формы можно разделять, только если остаются верными их контракты типа, владения, состояния и эффектов.
 
-[Интеграция в ядро](kernel-implementation.ru.md#receiver-kernel-integration) задаёт переименование, реализацию мостов, матрицу общности и проверки взаимозаменяемости сигнатур. [Приёмочные случаи пакета](new_parts/LMX_Fn_Receivers/tests/ACCEPTANCE.md) — обязательные проверки исполнения, а не утверждения о завершённых запусках.
+[Интеграция в ядро](kernel-implementation.ru.md#receiver-kernel-integration) задаёт переименование, реализацию мостов, матрицу общности и проверки взаимозаменяемости сигнатур. [Приёмочные случаи пакета](patterns/LMX_Fn_Receivers/tests/ACCEPTANCE.md) — обязательные проверки исполнения, а не утверждения о завершённых запусках.
 
 <a id="adapter-behavior"></a>
 ### Поведение адаптеров и фабрик вызываемых
@@ -5520,7 +5520,7 @@ P0 сохраняет все записанные контейнеры. Дейс
 
 `partial`, `uncurry`, `flip`, `zipWith` и `traverse` сохраняют привычные имена действий. `runUntil` и `retryCall` отделены от управляющих `until` и `retry`.
 
-Имена ресиверов выбраны по устоявшимся аналогам: [Haskell Prelude](https://downloads.haskell.org/ghc/7.8.1-rc2/docs/html/libraries/haskell2010-1.1.1.1/Prelude.html), [Control.Exception.bracket](https://downloads.haskell.org/~ghc/9.14.1.20260916/docs/libraries/base-4.22.1.0/Control-Exception.html), [Clojure memoize](https://clojure.github.io/clojure/clojure.core-api.html#clojure.core/memoize), [Python functools.partial](https://docs.python.org/3/library/functools.html#functools.partial). Совпадение имени не обещает ленивость Haskell, асинхронную маскировку исключений или другие свойства чужого runtime; отличия от полных контрактов контрольных языков приведены в [каталоге ресиверов](new_parts/RECEIVERS.md).
+Имена ресиверов выбраны по устоявшимся аналогам: [Haskell Prelude](https://downloads.haskell.org/ghc/7.8.1-rc2/docs/html/libraries/haskell2010-1.1.1.1/Prelude.html), [Control.Exception.bracket](https://downloads.haskell.org/~ghc/9.14.1.20260916/docs/libraries/base-4.22.1.0/Control-Exception.html), [Clojure memoize](https://clojure.github.io/clojure/clojure.core-api.html#clojure.core/memoize), [Python functools.partial](https://docs.python.org/3/library/functools.html#functools.partial). Совпадение имени не обещает ленивость Haskell, асинхронную маскировку исключений или другие свойства чужого runtime; отличия от полных контрактов контрольных языков приведены в [каталоге ресиверов](patterns/RECEIVERS.md).
 
 [EN]
 **Edition of 22 November 2026.** All supplied receiver and container algorithms
@@ -5668,72 +5668,72 @@ a scheduler or shares an arena with another Message implicitly.
 ### Receiver catalog
 
 The following table is exhaustive for this revision. Source declarations and
-the [public API](new_parts/LMX_Fn_Receivers/API.md) specify argument order,
+the [public API](patterns/LMX_Fn_Receivers/API.md) specify argument order,
 failure policy and the documented boundaries of each operation.
 
 | Receiver | Contract | Source |
 | --- | --- | --- |
-| `types` | physical field type codes; []:int by language contract | [reflection.lmx](new_parts/LMX_Fn_Receivers/src/reflection.lmx) |
-| `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `signature` | ordinary positional signature description | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `signatureTypes` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](new_parts/LMX_Fn_Receivers/src/fn_operand.lmx) |
-| `curry` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `apply` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](new_parts/LMX_Fn_Receivers/src/generic_runtime.lmx) |
-| `partial` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `uncurry` | explicit full target contract and stage failures, callable result preserved | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `flip` | swap first two positions of N>=2 with full input types | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `compose` | inner arbitrary arity; outer consumes its one result; exact final R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `pipe` | compose(second; first), exact callable signature | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `identity` | typed T -> T for any valid value type | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `map` | each record admitted as actual callback type, result record vector | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `filter` | typed values; ordinary int truth predicate | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `foldl` | left fold over any accumulator/item/result records | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `zip` | pairs of typed records, min length | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `zipWith` | arbitrary binary callback types, result records | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `scanl` | seeded scan, n+1 records; accumulator type not hardwired | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `bind` | Maybe of any typed record; next gets actual payload value | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `traverse` | Maybe of direct Structure record vector; stop at first absence | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `memoize` | any arity/R; explicit key-vector equality, Message-local linear cache | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `fix` | F(self;T0..Tn)->R becomes T0..Tn->R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `select` | physical selection in direct Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `omit` | physical omissions in direct Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `rename` | one graph copy then canonical field names updated | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `reorder` | full checked permutation, any field value types | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `project` | one shared graph copy of selected fields | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `defaults` | merge(fallback; source), existing presence including uninit wins | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `diff` | identity-vector patch, not deep payload equality | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `patch` | prevalidated identity-vector patch in fresh container | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `bindFields` | DATA defaults through merge; residual input positions not removed | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `derive` | ordinary merge composition | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `transpose` | rectangular Structure of row values; no fixed dimensions | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `groupBy` | typed keys and explicit equality, stable group/member order | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
-| `lazy` | typed nullary thunk, first successful result cached | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `force` | nullary call returning typed result record; direct thunk() keeps R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `once` | any arity/R; first success reused, failure permits retry | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `repeat` | count calls with arbitrary typed actual vector; result records | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `runUntil` | record state; step then predicate, no fixed payload type | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `retryCall` | finite attempts, declared failures retained in FxCallFailure envelope | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `bracket` | any resource/result; finally release; arbitrary extra action inputs | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `recover` | exact signature; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `adapter` | arbitrary external/internal arity, explicit new exact contract | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `permute` | arbitrary N, reorder interface and actuals together | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `overload` | explicit pure predicates, exactly one branch, full external signature | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `predicate` | same arbitrary inputs; normalize ordinary int Boolean output | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `guard` | same exact signature with precondition over all actuals | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `trace` | arbitrary signature, events retain typed args/result/void distinction | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
-| `contract` | same signature, pre(args), post(args,result) or post(args) for void | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `composeData` | merge actual parent DATA with explicit data overlay | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
-| `record` | prepared postfix capture; pointer to typed record, no value dereference | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
-| `some` | Maybe present with any typed value record, including null | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `none` | Maybe absence, distinct from present empty/null value | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `ok` | Result success carrying any typed value record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `err` | Result failure carrying any typed reason record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `bindResult` | typed Result success chain, failure kept | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `list` | bare Structure/Array<@>, shallow copied record vector | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `flatMap` | List bind, no artificial list.items box | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `done` | terminal Bounce with result record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `more` | suspended nullary callable, arbitrary captures via partial | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
-| `trampoline` | iterate Bounce until done, never execute callable final result | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `types` | physical field type codes; []:int by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signature` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signatureTypes` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `curry` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `apply` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
+| `partial` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `uncurry` | explicit full target contract and stage failures, callable result preserved | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `flip` | swap first two positions of N>=2 with full input types | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `compose` | inner arbitrary arity; outer consumes its one result; exact final R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `pipe` | compose(second; first), exact callable signature | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `identity` | typed T -> T for any valid value type | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `map` | each record admitted as actual callback type, result record vector | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `filter` | typed values; ordinary int truth predicate | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `foldl` | left fold over any accumulator/item/result records | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `zip` | pairs of typed records, min length | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `zipWith` | arbitrary binary callback types, result records | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `scanl` | seeded scan, n+1 records; accumulator type not hardwired | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `bind` | Maybe of any typed record; next gets actual payload value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `traverse` | Maybe of direct Structure record vector; stop at first absence | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `memoize` | any arity/R; explicit key-vector equality, Message-local linear cache | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `fix` | F(self;T0..Tn)->R becomes T0..Tn->R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `select` | physical selection in direct Structure/Array<@> | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `omit` | physical omissions in direct Structure/Array<@> | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `rename` | one graph copy then canonical field names updated | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `reorder` | full checked permutation, any field value types | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `project` | one shared graph copy of selected fields | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `defaults` | merge(fallback; source), existing presence including uninit wins | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `diff` | identity-vector patch, not deep payload equality | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `patch` | prevalidated identity-vector patch in fresh container | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `bindFields` | DATA defaults through merge; residual input positions not removed | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `derive` | ordinary merge composition | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `transpose` | rectangular Structure of row values; no fixed dimensions | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `groupBy` | typed keys and explicit equality, stable group/member order | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `lazy` | typed nullary thunk, first successful result cached | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `force` | nullary call returning typed result record; direct thunk() keeps R | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `once` | any arity/R; first success reused, failure permits retry | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `repeat` | count calls with arbitrary typed actual vector; result records | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `runUntil` | record state; step then predicate, no fixed payload type | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `retryCall` | finite attempts, declared failures retained in FxCallFailure envelope | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `bracket` | any resource/result; finally release; arbitrary extra action inputs | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `recover` | exact signature; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `adapter` | arbitrary external/internal arity, explicit new exact contract | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `permute` | arbitrary N, reorder interface and actuals together | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `overload` | explicit pure predicates, exactly one branch, full external signature | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `predicate` | same arbitrary inputs; normalize ordinary int Boolean output | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `guard` | same exact signature with precondition over all actuals | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `trace` | arbitrary signature, events retain typed args/result/void distinction | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `contract` | same signature, pre(args), post(args,result) or post(args) for void | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `composeData` | merge actual parent DATA with explicit data overlay | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
+| `record` | prepared postfix capture; pointer to typed record, no value dereference | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `some` | Maybe present with any typed value record, including null | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `none` | Maybe absence, distinct from present empty/null value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `ok` | Result success carrying any typed value record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `err` | Result failure carrying any typed reason record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bindResult` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `list` | bare Structure/Array<@>, shallow copied record vector | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `flatMap` | List bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `done` | terminal Bounce with result record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `more` | suspended nullary callable, arbitrary captures via partial | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `trampoline` | iterate Bounce until done, never execute callable final result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 
 ### Construction, source rules and verification
 
@@ -5752,7 +5752,7 @@ only when their type, ownership, state and effect contracts remain valid.
 
 The [kernel integration](kernel-implementation.en.md#receiver-kernel-integration) specifies
 the rename, bridge implementation, generality matrix and signature interchangeability
-checks. The [package acceptance cases](new_parts/LMX_Fn_Receivers/tests/ACCEPTANCE.md)
+checks. The [package acceptance cases](patterns/LMX_Fn_Receivers/tests/ACCEPTANCE.md)
 are required execution checks, not claims of completed runtime tests.
 
 <a id="adapter-behavior"></a>
@@ -6116,4 +6116,4 @@ functools.partial](https://docs.python.org/3/library/functools.html#functools.pa
 The coincidence of a name does not promise the laziness of Haskell, asynchronous
 masking of exceptions or other properties of a foreign runtime; the differences from
 the full contracts of the control languages are stated in [the catalog of
-receivers](new_parts/RECEIVERS.md).
+receivers](patterns/RECEIVERS.md).

@@ -85,7 +85,7 @@
 
 Исходная спецификация: «Positional fields are assigned first in order. Once a named argument field is encountered,
 all following actual fields in that call must be named». Книга,
-[запись в известное место](../../docs/LMX_semantics.ru.md#assign-known):
+[запись в известное место](../../docs/spec/LMX_semantics.ru.md#assign-known):
 «Позиционные фактические аргументы предшествуют именованным». В примерах автора `f(a := 1, b := 2, c, e := 3)` и
 `(v := 2, 5)` позиционный стоит после именованного. Сегодня это отказ.
 
@@ -105,7 +105,7 @@ g(b := 2, 5)
 
 ### 6. Объявление, стоящее аргументом целиком
 
-Книга, [запись в известное место](../../docs/LMX_semantics.ru.md#assign-known)
+Книга, [запись в известное место](../../docs/spec/LMX_semantics.ru.md#assign-known)
 (решение 2026-11-11): «объявления в
 аргументах быть не может»; запись-вызов в аргументах даёт позиционный аргумент. Сегодня при `fn: g (int: a; int: b)`
 запись `g(int: b 2; 5)` отвечает 25: значение объявления подано первым по позиции. По пункту 3 автора это
@@ -170,7 +170,7 @@ fn: h () int
    `h()` из вопроса 7 даёт ошибку: в теле `if` имя `v` неизвестно.
 8. `int(k)` в выражении возвращает значение `k` после проверки типа.
 
-Норма: [грамматика](../../docs/LMX_grammar.ru.md#operators),
-[книга](../../docs/LMX_semantics.ru.md#assignment-inside-expression). Продолжение обсуждения —
+Норма: [грамматика](../../docs/spec/LMX_grammar.ru.md#operators),
+[книга](../../docs/spec/LMX_semantics.ru.md#assignment-inside-expression). Продолжение обсуждения —
 [операторы как ресиверы-головы](operators-as-receiver-heads-answered-20261118.md). Чтения исполнителя —
 [ответы исполнителя, Р74–Р76](fable-self-answers-20261110.md).

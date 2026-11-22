@@ -25,7 +25,7 @@
    оператора `:=` считает известным местом зарезервированную ссылку на данные текущего вызова
    (`lm_compiler_default_data_name`): сбор уже делал её входом активации (`lm_compiler_collect_asgn_body`), отказывала
    только проверка — «:= writes a place already known: its left side is not one here». По
-   [книге](../../../docs/LMX_semantics.ru.md#ordinary-var) имя `var` допускает присваивание оператором `:=`.
+   [книге](../../../docs/spec/LMX_semantics.ru.md#ordinary-var) имя `var` допускает присваивание оператором `:=`.
 
 ## Перепись фикстур
 

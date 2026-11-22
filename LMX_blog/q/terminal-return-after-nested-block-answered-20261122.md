@@ -7,7 +7,7 @@
 
 ## Что спрашивалось
 
-[Грамматика, §17](../../docs/LMX_grammar.en.md), два соседних предложения:
+[Грамматика, §17](../../docs/spec/LMX_grammar.en.md), два соседних предложения:
 
 > Terminal `return` at the opening level of a named executable Structure, including any ordinary Structure
 > (there are no executable `fn`/`sub`), appends a return to its body and closes its Frame. The same receiver at
@@ -21,10 +21,10 @@
 
 ## Что записано автором
 
-Объявление. [Сравнение Flyweight](../../docs/new_parts/21_flyweight_comparison.md), слова автора: «Завершающий
+Объявление. [Сравнение Flyweight](../../docs/spec/patterns/21_flyweight_comparison.md), слова автора: «Завершающий
 `return` расположен на уровне объявления `demo` и завершает его тело». То же сказано в
-[шаблонах 19–23](../../docs/new_parts/LMX_Design_Patterns19-23.ru.md) и в
-[указателе пакета](../../docs/new_parts/README.md). В программе `demo:` вложен в `drawing:`:
+[шаблонах 19–23](../../docs/spec/patterns/LMX_Design_Patterns19-23.ru.md) и в
+[указателе пакета](../../docs/spec/patterns/README.md). В программе `demo:` вложен в `drawing:`:
 
 ```lmx
     drawing:
@@ -55,7 +55,7 @@
         return: total
 ```
 
-Это [сравнение Iterator](../../docs/new_parts/01_iterator_comparison.md), пример `examples/lmx/H09.lm3`, руководство
+Это [сравнение Iterator](../../docs/spec/patterns/01_iterator_comparison.md), пример `examples/lmx/H09.lm3`, руководство
 с аналогиями, шаблоны проектирования на двух языках и регрессионный набор (два места). То же после `finally:` в
 примере 098 и после `post:` в примере 087.
 

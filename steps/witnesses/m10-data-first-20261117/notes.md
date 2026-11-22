@@ -9,7 +9,7 @@ over A); Fable set the order, took the decisions named below and ran the accepta
 ## What the slice is
 
 Step A. By the book the two-operand call is `call(data code)`
-([the table of call forms](../../../docs/LMX_semantics.ru.md#call-receivers); the author's answer 6 of
+([the table of call forms](../../../docs/spec/LMX_semantics.ru.md#call-receivers); the author's answer 6 of
 2026-11-11, `LMX_blog/q/colon-declares-answered-20261111.md`). The working frontend read the two operands the
 other way round, the code first: the lowering took the first operand as the code, the native launch evaluated
 the code and then the data, the walker evaluated slot 2 of an `EXEC` node (the code) and then slot 1 (the data).
@@ -19,8 +19,8 @@ Step B. A Structure called through a callable place received no record of a laun
 its own data were not asked when a free name of its code was resolved, and the call answered `implements`. And a
 write `:=` to a name that only the data of the launch declares was refused at translation, although by the
 executor's ruling R38 such a name is a place of the call
-([the frame of a call](../../../docs/LMX_semantics.ru.md#call-frame-20261115),
-[`:=` writes a known place](../../../docs/LMX_semantics.ru.md#assign-known)).
+([the frame of a call](../../../docs/spec/LMX_semantics.ru.md#call-frame-20261115),
+[`:=` writes a known place](../../../docs/spec/LMX_semantics.ru.md#assign-known)).
 
 ## What changed
 
@@ -68,8 +68,8 @@ Fixtures:
 - Migrated with changed pinned values (`values-changed.tsv`; drafts of haiku, decided by Fable before the run):
   `code_write_words` and `unit_n4_inline_named_rebind` pinned `D\T\v` as written by the call; by the book a
   form `T:` in executed code is a call of its head and a frame is not published into the graph
-  ([declaration or call](../../../docs/LMX_semantics.ru.md#colon-declares),
-  [frames are not published](../../../docs/LMX_semantics.ru.md#flush-receiver-contract)), so `D\T\v` stays the
+  ([declaration or call](../../../docs/spec/LMX_semantics.ru.md#colon-declares),
+  [frames are not published](../../../docs/spec/LMX_semantics.ru.md#flush-receiver-contract)), so `D\T\v` stays the
   declared 0.
 - `assign_in_structure_refused` (draft of haiku): the row of a translation refusal becomes a row `runs 7`. `zz
   := 5` in the code of `Holder` is no translation error; the launch of `Holder` over itself has no place `zz`
@@ -91,7 +91,7 @@ Fixtures:
 - `free_index_places`: the draft is green with a respelling of line 112, `Box: ([]: int items 2)` to `Box: []:
   int items 2`, that haiku's notes did not declare. The respelling is lawful — brackets around the content of a
   Structure make one anonymous Structure inside it
-  ([the book](../../../docs/LMX_semantics.ru.md#colon-declares)), so the path `Box\items` named nothing — but
+  ([the book](../../../docs/spec/LMX_semantics.ru.md#colon-declares)), so the path `Box\items` named nothing — but
   the sources were frozen for the bootstrap already; the fixture goes into the next slice with the reason
   recorded.
 

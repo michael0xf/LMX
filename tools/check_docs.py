@@ -12,7 +12,7 @@ def main():
     semantic_count=check_semantics(check=True)
     data=json.loads((ROOT/'provenance/grammar.json').read_text(encoding='utf-8'))
     for lang in ('ru','en'):
-        path=ROOT/'docs'/f'LMX_grammar.{lang}.md'
+        path=ROOT/'docs'/'spec'/f'LMX_grammar.{lang}.md'
         assert path.read_text(encoding='utf-8')==render(data,lang),f'Out of sync: {path}'
     ids=[s['id'] for s in data['sections']]
     assert len(ids)==len(set(ids))
@@ -33,14 +33,14 @@ def main():
                 count+=1
                 if lines is not None:
                     assert e['text']=='\n'.join(lines[e['start']-1:e['end']]),f'Altered source excerpt {e["start"]}'
-    ru=(ROOT/'docs/LMX_semantics.ru.md').read_text(encoding='utf-8').split('\n\n')
+    ru=(ROOT/'docs/spec/LMX_semantics.ru.md').read_text(encoding='utf-8').split('\n\n')
     expected=[
         '**Lingvamyxa (далее LMX) — язык, в котором программа — лексический лес примитивных массивов, связанный в динамический граф.** Эта организация самоподобно повторяется на уровне локальных акторов с физической адресацией в памяти и далее — на уровне дальних межмашинных сообщений с комплексной адресацией.',
         '**И данные, и исполняемые тела являются массивами**, представленными одними и теми же простыми универсальными структурами; каждое исполняемое тело — полноценное абстрактное выражение.',
         '**Типизация аналитическая, на уровне лексических ветвей.** Допуск любого кандидата в аргументы любого выражения сначала проверяет используемые поля и их интерфейсы для реальных Consumer-вызовов; дополнительную аналитическую часть (`test`) программист явно задаёт в принимающем выражении. Протестированные кандидаты и проверяющие выражения однозначно идентифицируются своими физическими адресами.'
     ]
     assert ru[:3]==expected,'Author opening changed'
-    assert len((ROOT/'docs/LMX_semantics.en.md').read_text(encoding='utf-8').split('\n\n'))==len(ru),'Semantic paragraph counts differ between RU/EN'
+    assert len((ROOT/'docs/spec/LMX_semantics.en.md').read_text(encoding='utf-8').split('\n\n'))==len(ru),'Semantic paragraph counts differ between RU/EN'
     inventory=json.loads((ROOT/'provenance/parser-tests.json').read_text(encoding='utf-8'))
     files=inventory['files']
     for f in files:
@@ -57,7 +57,7 @@ def main():
         for p in (base/'tests').rglob('*.lmx'):
             assert p.relative_to(base).as_posix() in represented,f'Missing parser input {p}'
     # Check only authored documentation; historical fixture links belong to their source trees.
-    docs=[*ROOT.glob('README*.md'),*ROOT.glob('docs/*.md'),*ROOT.glob('steps/*.md'),*ROOT.glob('claude_chat/*.md'),ROOT/'AGENTS.md',*ROOT.glob('tests/parser/README*.md')]
+    docs=[*ROOT.glob('README*.md'),*ROOT.glob('docs/spec/*.md'),*ROOT.glob('steps/*.md'),*ROOT.glob('claude_chat/*.md'),ROOT/'AGENTS.md',*ROOT.glob('tests/parser/README*.md')]
     for path in docs:
         text=path.read_text(encoding='utf-8')
         text=re.sub(r'(?ms)^(`{3,}).*?^\1\s*$','',text)
@@ -69,7 +69,7 @@ def main():
             if anchor:
                 assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
     tracked=check_eol()
-    print(f'OK: {semantic_count} paired semantic chapters, 14 implements cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening; line endings LF in the index for all {tracked} tracked files (verbatim imports exempt)')
+    print(f'OK: {semantic_count} paired semantic chapters, 14 satisfies cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening; line endings LF in the index for all {tracked} tracked files (verbatim imports exempt)')
 
 def check_eol():
     '''Every tracked text file is LF in the index (author, 2026-09-27: the whole project is LF, Windows adapts).

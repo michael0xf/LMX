@@ -93,7 +93,7 @@ Replacing a group's slot changes that slot. A state write intended for the metho
 
 The graph structures representing receivers and their arguments can be replaced with other graph fragments. There is no special unreplaceable representation for `for`, `if`, `merge`, `copy`, or `import`; their presence as executable forms does not prevent graph editing.
 
-Where an edit requires rebuilding the machine implementation, use the existing [explicit compilation and endturn mechanism](../LMX_semantics.en.md#explicit-compilation). Prepare the required update by explicit compilation, then pass through the specified `endturn` boundary so that the subsequent entry uses that update. Graph assignment does not introduce automatic native invalidation, and `endturn` alone is not a new implicit compiler.
+Where an edit requires rebuilding the machine implementation, use the existing [explicit compilation and endturn mechanism](../spec/LMX_semantics.en.md#explicit-compilation). Prepare the required update by explicit compilation, then pass through the specified `endturn` boundary so that the subsequent entry uses that update. Graph assignment does not introduce automatic native invalidation, and `endturn` alone is not a new implicit compiler.
 
 The existing rule for execution before the update boundary is retained. This note introduces neither a mandatory snapshot of executable code at call entry nor a new promise about the result of running stale native code before the specified update sequence completes.
 

@@ -52,8 +52,8 @@ details unchanged): `unit_k03_merge_op_anon_typed` and `_walk`, `unit_capture_st
 | `l2_unit_role` 5205 | a root item whose application head is `independent` is role 2 | REMOVE the role: `independent` is a receiver applied to its argument, resolved as every head is |
 | `l2_take_eternal` 27049 (caller 5964) | exactly `independent → const → immutable → ()` with a name and a Structure body, at the unit root; diagnostics "independent takes one qualified construction", "independent branch requires const", "independent branch requires immutable", "independent qualifies Structure construction", "eternal branch takes a name and a body", "eternal branch needs a name", "eternal branch takes a body block" | REMOVE as a shape; what it registers (the branch, its entries `l2_ns_eternal`, `l2_ebr_*`) becomes the effect of the combined qualification over a parentless Structure value, wherever the source writes it |
 
-What each receiver's own contract is (book: [qualification](../docs/LMX_semantics.en.md#qualification),
-[composition](../docs/LMX_semantics.en.md#composition), [eternal](../docs/LMX_semantics.en.md#eternal)):
+What each receiver's own contract is (book: [qualification](../docs/spec/LMX_semantics.en.md#qualification),
+[composition](../docs/spec/LMX_semantics.en.md#composition), [eternal](../docs/spec/LMX_semantics.en.md#eternal)):
 `const` protects the binding, `immutable` the value through every alias, `independent` the
 ownership of a value with no external lexical parent; only the combined qualification makes the
 eternal branch that `merge` retains by its exact physical profile. The copier keeps that identity by

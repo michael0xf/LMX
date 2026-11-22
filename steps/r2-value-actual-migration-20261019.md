@@ -13,7 +13,7 @@ working file. Do not attribute the EA results to the next WIP.
 
 ## Norm and cause
 
-The current [normative argument-position rule](../docs/LMX_semantics.en.md#callables)
+The current [normative argument-position rule](../docs/spec/LMX_semantics.en.md#callables)
 distinguishes a bare callable occurrence from an explicit call. Its receiving
 contract admits the computed value; it must not turn a call back into its head.
 The old nullary atom/Frame equivalence in the

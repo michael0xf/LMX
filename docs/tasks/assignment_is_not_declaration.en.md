@@ -3,8 +3,8 @@
 **Status:** applied documentation requirement, reconciled with the accepted rules through 2026-11-21.
 The directory name Old_TZ does not make its surviving contracts optional. This revision states the current rule;
 it does not claim that a runtime or native/walker test has passed.
-See [assignment](../LMX_semantics.en.md#assign-known),
-[binding](../LMX_semantics.en.md#binding-places), and [addressing](../L2_spec_en.md#lowlevel-address).
+See [assignment](../spec/LMX_semantics.en.md#assign-known),
+[binding](../spec/LMX_semantics.en.md#binding-places), and [addressing](../spec/L2_spec_en.md#lowlevel-address).
 
 An assignment updates an already resolved place. It creates no declaration or second field, and executing it
 does not implicitly replace its own receiver record. All receivers remain as written; computations and
@@ -44,5 +44,5 @@ by `S\[N]field`; a bare path is ambiguous when more than one occurrence matches.
 The former argument-to-own-field promotion, load/cache/dirty publication, shared direct-access cache, and flush
 are withdrawn. Message publication and explicit graph mutations keep their own contracts. Import and DATA
 acceptance of copy/merge streams do not mutate the clean source graph. All three receivers always consume ordinary CODE arguments, including in DATA placement; this does not call bare references or anonymous Structures.
-[Current frame contract](../LMX_semantics.en.md#call-frame-20261115),
+[Current frame contract](../spec/LMX_semantics.en.md#call-frame-20261115),
 [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).

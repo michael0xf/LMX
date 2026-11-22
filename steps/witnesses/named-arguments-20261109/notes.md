@@ -22,9 +22,9 @@ CODEX-OPUS-TAKE-WRITER-20261109T0104Z-01 ([to_opus.md](../../../to_opus.md)). И
 - `selfbuild/tools/build.lm2`: `graph_run_names` 18 → 20 (`[18] lmx_graph_bind_call`, `[19] lmx_graph_invoke_bound`).
 - `selfbuild/inputs.list`: семь фикстур Codex `tests/graph/named_*.lm2` и `named_arguments.expected` (Opus) — 336 входов.
 
-Норма: книга, [именованная подача](../../../docs/LMX_semantics.ru.md#named-actuals) (имена и форма — до эффектов
+Норма: книга, [именованная подача](../../../docs/spec/LMX_semantics.ru.md#named-actuals) (имена и форма — до эффектов
 аргументов, затем вычисление в порядке записи с немедленным приёмом; `a: 5` и `a(5)` — не именованная подача) и
-[запись в известное место](../../../docs/LMX_semantics.ru.md#assign-known). Новой семантики нет.
+[запись в известное место](../../../docs/spec/LMX_semantics.ru.md#assign-known). Новой семантики нет.
 
 ## Проверки
 

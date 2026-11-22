@@ -11,7 +11,7 @@ Two remnants that slices 412 and 413 recorded:
 
 - `@x` of a local addressed the graph cell of its declaration, which no write of the activation reaches,
   instead of the place the bare name reads and writes
-  ([the book, unary `@`](../../../docs/LMX_semantics.ru.md#method-reference-assignment));
+  ([the book, unary `@`](../../../docs/spec/LMX_semantics.ru.md#method-reference-assignment));
 - the cancelled refusal of an input without a value
   ([the author, 2026-11-16](../../../LMX_blog/2026-11-16.md#optional-inputs-required)) still stood in the
   frontend's static call and whole-argument form and in three places of the walker.

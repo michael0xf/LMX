@@ -34,7 +34,7 @@ fn: docs_check_all (@: repo char; @: preferred_l1 char; @: preferred_older char;
     if: failed != 0
         c.printf("FAIL: docs check: %s (status %d; semantics phase %d)\n", stage, failed, phase)
     if: failed = 0
-        if: c.printf("OK: %zu paired semantic chapters, 14 implements cases, both source snapshots; %zu paired grammar sections, %zu verbatim source excerpts, %zu imported files, links, exact semantic opening; line endings LF in the index for all %zu tracked files (verbatim imports exempt)\n", chapters, sections, examples, imported, tracked) < 0
+        if: c.printf("OK: %zu paired semantic chapters, 14 satisfies cases, both source snapshots; %zu paired grammar sections, %zu verbatim source excerpts, %zu imported files, links, exact semantic opening; line endings LF in the index for all %zu tracked files (verbatim imports exempt)\n", chapters, sections, examples, imported, tracked) < 0
             failed := 1
         ---
     ---
@@ -63,7 +63,7 @@ fn: docs_cli (@@: args char; int: count) int
         ---
         failed := docs_semantics_build(args[4], args[5], args[6], check_mode, @ chapters, @ phase)
         if: failed = 0
-            if: c.printf("%s %zu paired semantic chapters, 14 implements cases and both verbatim source snapshots.\n", action, chapters) < 0
+            if: c.printf("%s %zu paired semantic chapters, 14 satisfies cases and both verbatim source snapshots.\n", action, chapters) < 0
                 failed := 1
             ---
         ---

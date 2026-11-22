@@ -9,7 +9,7 @@
 обходе использует то же значение F и его own data. Следующий независимый обход
 строит свою F. Видимость метода не запускает вычисляемые initializers ordinary data.
 Источники: [части и создание метода](../../../provenance/semantics-book.md#method-parts) и
-[kernel §3.4](../../../docs/kernel-implementation.ru.md).
+[kernel §3.4](../../../docs/spec/kernel-implementation.ru.md).
 
 Изменён только lmx_graph_run.lm2: work_open_parts перед work_scan готовит
 непосредственные written declarations data/body прежним space_declarations.

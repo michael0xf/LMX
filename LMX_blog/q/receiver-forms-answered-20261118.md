@@ -10,7 +10,7 @@
 объявления, и с одним формалом.
 
 Из этого исполнитель вывел ([ответы исполнителя, Р87](fable-self-answers-20261110.md)) и записал в книгу,
-[выбор объявления](../../docs/LMX_semantics.ru.md#declaration-selection): `return`, `length`, `typeof`, `send` идут
+[выбор объявления](../../docs/spec/LMX_semantics.ru.md#declaration-selection): `return`, `length`, `typeof`, `send` идут
 тем же общим алгоритмом — их формы и оба чтения аргументов.
 
 ## Чего не хватает
@@ -74,5 +74,5 @@ int: n length(S)
   ([журнал](../2026-11-18.md#arg-example-corrected)) Structure с полем `x` записывается `S(int: x 9)` или
   `S: int: x 9`; `S: (int: x 9)` объявляет `S`, внутри которой одна анонимная Structure.
 
-Норма: [книга](../../docs/LMX_semantics.ru.md#declaration-selection). Чтения исполнителя —
+Норма: [книга](../../docs/spec/LMX_semantics.ru.md#declaration-selection). Чтения исполнителя —
 [ответы исполнителя, Р89](fable-self-answers-20261110.md).

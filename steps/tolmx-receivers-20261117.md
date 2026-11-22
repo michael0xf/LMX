@@ -5,8 +5,8 @@
 графового инструмента среза418+419 и чтение кода (sonnet; таблица по 42 записям и круговые прогоны лежат вне
 репозитория: `build2/codex_fix250generationchain01/runs/fable-m10-call-forms-20261116-01/receipts/sonnet/tolmx/REPORT.txt`).
 Самого `sys\toLmx` в чистом графе ещё нет: есть диагностический дамп (`lmx_graph_dump`), и всё измеренное
-относится к нему. Норма — [книга](../docs/LMX_semantics.ru.md#memory) и
-[спецификация ядра, §8](../docs/kernel-implementation.ru.md).
+относится к нему. Норма — [книга](../docs/spec/LMX_semantics.ru.md#memory) и
+[спецификация ядра, §8](../docs/spec/kernel-implementation.ru.md).
 
 ## Коротко
 
@@ -61,7 +61,7 @@
 ## `merge` в данных
 
 Поправка того же дня. После этого разбора автор решил: явный путь ничего не исполняет
-([журнал](../LMX_blog/2026-11-17.md#path-reads-no-execution), [книга](../docs/LMX_semantics.ru.md#path-reads-no-execution)).
+([журнал](../LMX_blog/2026-11-17.md#path-reads-no-execution), [книга](../docs/spec/LMX_semantics.ru.md#path-reads-no-execution)).
 Прежнее чтение исполнителя — «первая явная запись в `S` заменяет запись составленной Structure» (Р44) — снято.
 Для записи `S: merge: A B` решение значит:
 

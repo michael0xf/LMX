@@ -2,8 +2,8 @@
 
 fable_pc, 2026-11-07. Поручение автора через Codex (CODEX-OPUS-AUTHOR-FINISH-ASSIGN-MERGE-NATIVE-WALKER-20261107-01 и
 уточнения того же дня; приёмка — [steps/current.md](../../current.md), абзац решения о `:=`; передача —
-[to_fable.md](../../../to_fable.md), раздел «После 302»). Норма — [книга](../../../docs/LMX_semantics.ru.md#assign-known)
-(`assign-known`, `named-actuals`), [грамматика §21](../../../docs/LMX_grammar.ru.md#operators). Дефекты —
+[to_fable.md](../../../to_fable.md), раздел «После 302»). Норма — [книга](../../../docs/spec/LMX_semantics.ru.md#assign-known)
+(`assign-known`, `named-actuals`), [грамматика §21](../../../docs/spec/LMX_grammar.ru.md#operators). Дефекты —
 ASSIGN-KNOWN-OPERATOR, NAMED-BINDING-BY-HEAD ([реестр](../../defects.md)). Часть поручения о `merge` и всей структуре
 аргументов (MERGE-OPERAND-FORMS, CALL-WHOLE-ARGUMENTS-STRUCTURE) — ниже, «Границы»: общая форма whole-arguments
 удержана по ответу Codex до решения автора.
@@ -195,7 +195,7 @@ observe `4e3fc11a68706feab90af250a594212451abaff260a76921ce7c81c13560ada6` (driv
 «Срез 303»), MERGE-OPERAND-FORMS — формы «имя: тип: значение» закрыты, `f\args` удержано, CALL-WHOLE-ARGUMENTS-STRUCTURE —
 удержано до решения автора; абзац 303 в [steps/current.md](../../current.md); [selfbuild/README.md](../../../selfbuild/README.md) —
 247 входов и абзац Slice303; [план M5](../../../next_core_tasks_v3.md#m5-assign-operators) — статус `:=` реализован, составные
-OPEN; строка 40 [чек-листа](../../../next_core_tasks_v3_checklist.md); [заметки о реализации](../../../docs/implementation-notes.ru.md#assign-named-merge)
+OPEN; строка 40 [чек-листа](../../../next_core_tasks_v3_checklist.md); [заметки о реализации](../../../docs/spec/implementation-notes.ru.md#assign-named-merge)
 4.2 RU и EN — что сделано срезом и что удержано; книга [provenance/semantics-book.md](../../../provenance/semantics-book.md)
 (RU и EN, раздел whole-arguments) — фраза о статусе: `:=` и краткая форма реализованы, пример `merge` по-прежнему
 отказывает, удержан; generated docs `docs/LMX_semantics.ru.md`/`.en.md` перерисованы и проверены ([docs303-render](records/pins/docs303-render.tsv),

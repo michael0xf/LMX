@@ -7,7 +7,7 @@
 
 `private:` исключает поле из динамического связывания вызовов; прямая и обычная лексическая
 видимость сохраняются. Использовать общий binder без системы ограничений доступа:
-[норма](docs/LMX_semantics.ru.md#private-binding), [задача M14](next_core_tasks_v3.md#private-binding-plan).
+[норма](docs/spec/LMX_semantics.ru.md#private-binding), [задача M14](next_core_tasks_v3.md#private-binding-plan).
 
 Подготовил Fable — чат «fable2» (до 2026-11-11 он вёл работу под именем «opus2»). Прежний текст этого файла —
 передача Codex → Opus от 2026-11-08 — остался в истории git и текущей базой не является. Файл написан для чата
@@ -48,13 +48,13 @@ to_opus.md в соответствии с новым раскладом и со�
 
 В таком порядке: `AGENTS.md` → [READ.ME](READ.ME) → верхний раздел [steps/current.md](steps/current.md) → этот файл →
 раздел [M11 плана](next_core_tasks_v3.md#m11) → книга, разделы
-[роли `data` и `code`](docs/LMX_semantics.ru.md#data-code-roles),
-[объявление формой с двоеточием](docs/LMX_semantics.ru.md#colon-declares),
-[особое имя `data`](docs/LMX_semantics.ru.md#ordinary-var),
-[видимость](docs/LMX_semantics.ru.md#declaration-visibility),
-[части вызываемой Structure](docs/LMX_semantics.ru.md#method-parts),
-[ресиверы `call` и `fncall`](docs/LMX_semantics.ru.md#call-receivers),
-[имена и пути](docs/LMX_semantics.ru.md#fields) → журнал [2026-11-11](LMX_blog/2026-11-11.md) целиком (слова автора)
+[роли `data` и `code`](docs/spec/LMX_semantics.ru.md#data-code-roles),
+[объявление формой с двоеточием](docs/spec/LMX_semantics.ru.md#colon-declares),
+[особое имя `data`](docs/spec/LMX_semantics.ru.md#ordinary-var),
+[видимость](docs/spec/LMX_semantics.ru.md#declaration-visibility),
+[части вызываемой Structure](docs/spec/LMX_semantics.ru.md#method-parts),
+[ресиверы `call` и `fncall`](docs/spec/LMX_semantics.ru.md#call-receivers),
+[имена и пути](docs/spec/LMX_semantics.ru.md#fields) → журнал [2026-11-11](LMX_blog/2026-11-11.md) целиком (слова автора)
 → [ответы исполнителя](LMX_blog/q/fable-self-answers-20261110.md), части О и Р →
 [закрытые вопросы П1–П7](LMX_blog/q/colon-declares-answered-20261111.md).
 

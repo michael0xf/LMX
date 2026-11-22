@@ -17,8 +17,8 @@ Finally остаётся обычной Lmx со словом finally и пол�
 анонимное последовательное тело между разделителями ---; это не полный codec состояния.
 Scratch генератора объявляется существующим L3 build.lm2; это локальные буферы текущей трансляции, не часть графа.
 
-Норма: [области и finally](../../../docs/LMX_semantics.ru.md#branches),
-[грамматика](../../../docs/LMX_grammar.ru.md), [физическая модель](../../../docs/kernel-implementation.ru.md).
+Норма: [области и finally](../../../docs/spec/LMX_semantics.ru.md#branches),
+[грамматика](../../../docs/spec/LMX_grammar.ru.md), [физическая модель](../../../docs/spec/kernel-implementation.ru.md).
 Новых правил языка этот срез не вводит.
 
 ## Проверки

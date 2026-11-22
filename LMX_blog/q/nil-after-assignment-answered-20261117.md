@@ -34,6 +34,6 @@ fn: f (int: a) int
 вопросе исполнитель ошибочно приписал этой программе изменение вывода графа и упомянул `required`, которого в
 примере нет. Граф меняет прямое присваивание по пути, `data\a := 5`: запись значения — тип и значение, и если тип
 записи другой («T без инициализации»), присваивание его меняет. Правило 2026-11-08 «тип места при первом
-присваивании не меняется» отменено и снято из [книги](../../docs/LMX_semantics.ru.md#construction),
-[L2 §3](../../docs/L2_spec_ru.md#value-record), [спецификации ядра §3.2](../../docs/kernel-implementation.ru.md#primitive-storage)
+присваивании не меняется» отменено и снято из [книги](../../docs/spec/LMX_semantics.ru.md#construction),
+[L2 §3](../../docs/spec/L2_spec_ru.md#value-record), [спецификации ядра §3.2](../../docs/spec/kernel-implementation.ru.md#primitive-storage)
 и [плана](../../next_core_tasks_v3.md#typed-nil-plan).

@@ -123,9 +123,9 @@ end: anon
 ## 5а. Ответы автора 2026-11-16 и следствия для описи
 
 Слова автора записаны дословно в [журнале](../../LMX_blog/2026-11-16.md#answers-20261116); норма — в книге:
-[ресиверы `call` и `fncall`](../../docs/LMX_semantics.ru.md#call-receivers),
-[безымянная Structure в коде](../../docs/LMX_semantics.ru.md#data-code-roles),
-[ресивер `required`](../../docs/LMX_semantics.ru.md#required-receiver). Ниже — выводы исполнителя для плана описи,
+[ресиверы `call` и `fncall`](../../docs/spec/LMX_semantics.ru.md#call-receivers),
+[безымянная Structure в коде](../../docs/spec/LMX_semantics.ru.md#data-code-roles),
+[ресивер `required`](../../docs/spec/LMX_semantics.ru.md#required-receiver). Ниже — выводы исполнителя для плана описи,
 не слова автора.
 
 - **В1 → 4.** Безымянная Structure в коде не считается вызовом с аргументами, но её записи исполняются на месте, в

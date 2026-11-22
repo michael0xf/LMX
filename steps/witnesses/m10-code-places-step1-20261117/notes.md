@@ -14,8 +14,8 @@ opus in his own stage and return after that removal.
 
 The call frame of 2026-11-15 gives every call its own namespace: the root declarations of the data give the
 input places, the root declarations of the code the other local places, and a code local has no duty to exist in
-the data ([parts of a callable](../../../docs/LMX_semantics.ru.md#method-parts),
-[call frame](../../../docs/LMX_semantics.ru.md#call-frame-20261115)). The working frontend and the walker still
+the data ([parts of a callable](../../../docs/spec/LMX_semantics.ru.md#method-parts),
+[call frame](../../../docs/spec/LMX_semantics.ru.md#call-frame-20261115)). The working frontend and the walker still
 required every place of the code's table from the data of a launch (the old N4 requirement). Measured before any
 edit on the working set of slice 418+419:
 

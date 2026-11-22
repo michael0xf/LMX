@@ -32,8 +32,8 @@ Consumer:
 ~~~
 
 Пример не означает, что вход в Consumer автоматически исполняет вторую строку.
-[Правило достижения кода через ресивер](../../docs/LMX_semantics.ru.md#data-root-declaration-execution),
-[уточнение M14 без входной инициализации](../../docs/LMX_semantics.ru.md#call-frame-20261115).
+[Правило достижения кода через ресивер](../../docs/spec/LMX_semantics.ru.md#data-root-declaration-execution),
+[уточнение M14 без входной инициализации](../../docs/spec/LMX_semantics.ru.md#call-frame-20261115).
 Исходный [ответ автора о достижении test](../2026-11-13.md#data-root-receiver-execution)
 читается вместе с последующим [уточнением об отсутствии входного исполнения](../2026-11-15.md#m14-value-reading).
 

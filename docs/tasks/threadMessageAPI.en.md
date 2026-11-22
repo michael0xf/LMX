@@ -1,6 +1,6 @@
 # Ordinary LMX calls over Message transport: `post` and reply waits
 
-Applied transport requirements, reconciled through 2026-11-21. The governing contract is [L3 §28](../LMX_semantics.en.md#thread-message-api); migration of the old entry points has a [separate instruction](threadMessageAPI_migration.en.md). This document retains the detailed acceptance matrix. Its directory name does not create an alternative or optional Thread API, and no test success is asserted.
+Applied transport requirements, reconciled through 2026-11-21. The governing contract is [L3 §28](../spec/LMX_semantics.en.md#thread-message-api); migration of the old entry points has a [separate instruction](threadMessageAPI_migration.en.md). This document retains the detailed acceptance matrix. Its directory name does not create an alternative or optional Thread API, and no test success is asserted.
 
 ## 0. Required: replace the previous external-API design
 
@@ -87,4 +87,4 @@ Do not revive an external Thread API dictionary, reply registration as a callabl
 
 ## 12. Required deliverables and source priority
 
-Retain exact commands and results for T01–T26, local/transported and native/walker comparisons, and old send/receive regressions. In a conflict with current L3 rules, the [main semantics](../LMX_semantics.en.md#thread-message-api) governs over a historical example in this instruction.
+Retain exact commands and results for T01–T26, local/transported and native/walker comparisons, and old send/receive regressions. In a conflict with current L3 rules, the [main semantics](../spec/LMX_semantics.en.md#thread-message-api) governs over a historical example in this instruction.

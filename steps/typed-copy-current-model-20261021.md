@@ -3,7 +3,7 @@
 Codex remains the sole writer/build; goal ACTIVE. Public dev is unchanged.
 These are measurements on compiler103/runtime95, not a105 implementation
 or proof that the common paths are globally closed. The language contract
-remains [composition](../docs/LMX_semantics.ru.md#composition):one graph copy
+remains [composition](../docs/spec/LMX_semantics.ru.md#composition):one graph copy
 and one relocation map, not a name/Model guess or a backend-specific repair.
 
 ## Two measured losses, not one native guard

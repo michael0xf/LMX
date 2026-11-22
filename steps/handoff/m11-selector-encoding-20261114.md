@@ -17,8 +17,8 @@ delimiter разрешён без изменения global quoted_token_boundar
 
 Точное имя после снятия границ и свёртки удвоенных backticks является обычным каноническим именем.
 Токен внутри backticks атомарен: его `\`, `[` и `]` не становятся синтаксисом
-([грамматика, §5](../../docs/LMX_grammar.ru.md),
-[семантика имён и путей](../../docs/LMX_semantics.ru.md#fields)).
+([грамматика, §5](../../docs/spec/LMX_grammar.ru.md),
+[семантика имён и путей](../../docs/spec/LMX_semantics.ru.md#fields)).
 
 В [построителе](../../selfbuild/src/l2src/l2_graph_build.lm2) `lm_graph_build_occurrence` соединяет
 уже разобранные `[`, N, `]`, name в один WORD с payload `[N]name`. `lm_graph_build_selector` создаёт такой же WORD

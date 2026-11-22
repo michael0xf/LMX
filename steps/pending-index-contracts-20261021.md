@@ -74,7 +74,7 @@ native check method without changing expected values. This narrows backend
 coverage; it **does not fix or replace** the original root-walker RED.
 Both source forms, compiled artifacts and observations are retained.
 
-Clarification from the139 review: [L2 scope](../docs/L2_spec_en.md#scope)
+Clarification from the139 review: [L2 scope](../docs/spec/L2_spec_en.md#scope)
 assigns L2 machine operations to native lowering, not the L3 interpreter.
 The historical forced-root RED above measures unsupported forcing of an
 L2-only machine expression; it does not establish an obligation to interpret

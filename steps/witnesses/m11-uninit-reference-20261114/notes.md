@@ -14,7 +14,7 @@
 ## Норма и объём изменения
 
 - [Объявляющий контракт](../../../provenance/semantics-book.md#receiver-args-only)
-  и [представление места](../../../docs/kernel-implementation.ru.md#lmx):
+  и [представление места](../../../docs/spec/kernel-implementation.ru.md#lmx):
   `@: p int` без кандидата требует заранее существующее место int-reference,
   а не Structure-reference и не тип, определённый первым присваиванием.
   В слоте стоит wrapper8, он указывает на cell5 с именем p. Первое и дальнейшие

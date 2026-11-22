@@ -23,7 +23,7 @@ of that source. Constructing the graph must not destroy that information.**
 The author's exact clarification is archived in
 [the technical journal](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#graph-preservation).
 The existing architectural requirement is also recorded in
-[CORE, one graph](../../CORE.md).
+[CORE, one graph](../../docs/spec/CORE.md).
 
 This is structural recoverability, not a demand to reproduce identical source
 bytes. Existing equivalence of short, block and parenthesized spellings and

@@ -70,8 +70,8 @@ c вторая строка вызывает b(c), при неизвестном
 нельзя молча переписать в прежнее `@: Type var`: согласование формы ссылки
 не завершено этой заметкой.
 
-Норма: [семантика §9](../docs/LMX_semantics.ru.md#construction),
-[§11](../docs/LMX_semantics.ru.md#callables). Код: `l2_colon_bound_before`,
+Норма: [семантика §9](../docs/spec/LMX_semantics.ru.md#construction),
+[§11](../docs/spec/LMX_semantics.ru.md#callables). Код: `l2_colon_bound_before`,
 `l2_check_struct_call`, `l2_check_body`, `l2_colon_bind_shape`.
 
 ## 3. Найденное расхождение: новое значение и сохранённая ссылка
@@ -83,10 +83,10 @@ c вторая строка вызывает b(c), при неизвестном
 
 В текущем тексте и коде зафиксировано другое:
 
-- [Семантика §9](../docs/LMX_semantics.ru.md#construction), строка 567
+- [Семантика §9](../docs/spec/LMX_semantics.ru.md#construction), строка 567
   среза `6a3ac8d`: `A: b c` при неизвестном b связывает b с существующим
   дескриптором c без копирования; это уподоблено заполнению формала `(A: b)`.
-- [L2 §13](../docs/L2_spec_ru.md#copy-merge) повторяет эту трактовку.
+- [L2 §13](../docs/spec/L2_spec_ru.md#copy-merge) повторяет эту трактовку.
 - `dev/l2src_sandbox/l2trans.lm1`, `l2_emit_stmts`, строки 32212–32234
   того же среза: ветвь `l2_colon_bind_shape` вычисляет кандидата, выполняет
   нужный admission и передаёт его дескриптор в `l2_own_store`; merge отсутствует.
@@ -177,7 +177,7 @@ reference-to-reference возможность L3 этим кодом не док
 ### 6.1. Цепочки — отдельный вопрос
 
 `timeout: ms: int: time 500` уже объяснено в
-[описании Message API, §8.1](../docs/LMX_semantics.ru.md#thread-message-observations):
+[описании Message API, §8.1](../docs/spec/LMX_semantics.ru.md#thread-message-observations):
 настройка имеет путь `timeout\ms\time`, а int потребляет имя time и значение
 500, не создавая дополнительного поля int. Это обычная вложенная структура
 с ресивером объявления на конце, не новый способ передачи аргументов.

@@ -3,7 +3,7 @@
 Дата: 2026-11-18. Задавал исполнитель (сессия fable_pc). Статус: **закрыт ответом автора 2026-11-18**.
 
 Источники: сообщение автора и файл ТЗ, [журнал](../2026-11-18.md#tz-operands-arguments-priorities);
-[ТЗ](../../docs/LMX_semantics.ru.md#assignment-inside-expression).
+[ТЗ](../../docs/spec/LMX_semantics.ru.md#assignment-inside-expression).
 
 ## Запись
 

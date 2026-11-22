@@ -6,8 +6,8 @@ Codex is the sole writer/build owner. This development child starts at
 `644a7c51`, with full10 RED68/2683, kernel10 GREEN297/114 executed selftests
 and L3_10 eleven suites/four budgets. It continues the recorded
 [defect](defects.md#path-structure-leaf), not a new language decision.
-The common contract is [resolved-head consumption](../docs/LMX_semantics.en.md#resolved-head-consumption)
-and [callables](../docs/LMX_semantics.en.md#callables).
+The common contract is [resolved-head consumption](../docs/spec/LMX_semantics.en.md#resolved-head-consumption)
+and [callables](../docs/spec/LMX_semantics.en.md#callables).
 
 Owned code: `dev/l2src_sandbox/l2trans.lm1`, fourteen new
 `unit_path_structure_*.lm2` sources, comment corrections in the two old

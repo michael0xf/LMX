@@ -18,7 +18,7 @@ Model: p    # when Model is known ordinary Structure: same new reference p
 ```
 
 Use the author's [exact clarification](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#structure-reference-application)
-and [construction](../../docs/LMX_semantics.en.md#construction).
+and [construction](../../docs/spec/LMX_semantics.en.md#construction).
 There is no extra nominal `Type` category: primitives and ordinary Structures
 describe requirements; implements remains Consumer-relative.
 

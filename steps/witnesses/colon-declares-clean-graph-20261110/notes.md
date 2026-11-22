@@ -4,7 +4,7 @@
 [структурные формы объявляют или вызывают](../../../LMX_blog/2026-11-10.md#forms-declare-or-call),
 [объявление, а не присваивание](../../../LMX_blog/2026-11-10.md#colon-declares-not-assigns),
 [место объявляет только `ресивер: аргументы`](../../../LMX_blog/2026-11-10.md#receiver-args-only); книга —
-[объявление Structure](../../../docs/LMX_semantics.ru.md#colon-declares). План — раздел
+[объявление Structure](../../../docs/spec/LMX_semantics.ru.md#colon-declares). План — раздел
 [M7](../../../next_core_tasks_v3.md#m7), шаги 2–4, и шаг 3 раздела [M9](../../../next_core_tasks_v3.md#m9), оба только
 для чистого графа: построителя, интерпретатора и эмиттера. Понижение L3, машинный путь L2 и обходчик не менялись.
 

@@ -1,6 +1,6 @@
 # Lingvamyxa Crypto Provider — Implementation Notes for the Seven Planned Targets
 
-**Status:** historical implementation planning note; not a current LMX contract. The active work order is [v3](../next_core_tasks_v3.md), and current semantics are in the [L3 specification](../docs/LMX_semantics.en.md).
+**Status:** historical implementation planning note; not a current LMX contract. The active work order is [v3](../next_core_tasks_v3.md), and current semantics are in the [L3 specification](../docs/spec/LMX_semantics.en.md).
 **Date:** 2026-09-11  
 **Historical source:** `Lingvamyxa_spec.txt`, sections 19.32.10–19.32.21 (not present in this repository; integrated from `Lingvamyxa_L3_Crypto_Provider_Contract_Proposal_EN.md`).
 **Port list at the time:** reconstructed from the Revision-2 specification and the then-discussed VM porting plan.

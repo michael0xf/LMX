@@ -3,7 +3,7 @@
 Status: read-only source audit and proposed implementation, 2026-09-30. This note is not a language specification and does not record a completed repair.
 
 **Historical note, 2026-10-19:** the nullary atom/Frame equivalence and receiving-contract-selected invocation below are superseded
-by M1 and the current normative book's [argument-position rule](../docs/LMX_semantics.en.md#callables).
+by M1 and the current normative book's [argument-position rule](../docs/spec/LMX_semantics.en.md#callables).
 A bare callable denotes its occurrence; an explicit call is evaluated, then its result is admitted. A receiving formal must not
 turn f() back into f. Preserve this audit as history, not as authority for new goldens or context-dependent evaluation.
 
@@ -14,10 +14,10 @@ The narrow problem is selecting the value transmitted by an actual argument afte
 
 Accepted normative sources:
 
-- [Callable expressions](../docs/LMX_semantics.en.md#callables), especially the argument-position paragraph: a declared callable formal receives the callable occurrence reference; a value-returning callable executes when the receiving contract requires its result; a callable without a returned value, including `sub`, is transmitted by reference. Transport is not execution. A bare `return` does not supply a result. A bodyless `fn` remains a transportable interface descriptor, without an invented executable body.
-- [Construction and signatures](../docs/LMX_semantics.en.md#construction) and [L2 graph copy and merge](../docs/L2_spec_en.md#copy-merge): signatures are nonexecuting descriptions. Nonprimitive `(A: x)` and `(@: A x)` describe the same reference transmission and admission, not executable construction or copying. Primitive value and primitive-pointer formals are not synonyms.
-- [L2 typed addresses](../docs/L2_spec_en.md#lowlevel-address): addressing an actual Structure or a nonprimitive signature input obtains its descriptor; addressing an explicit pointer-value cell adds a reference level. No hidden transport-cell address or automatic removal of pointer depth may be introduced.
-- [Dynamic inputs and references](../docs/LMX_semantics.en.md#dynamic): explicit reference bindings keep their reference-value semantics. Their referent being callable does not turn the binding itself into an implicit call. Portable reference operations do not authorize machine address arithmetic in L3.
+- [Callable expressions](../docs/spec/LMX_semantics.en.md#callables), especially the argument-position paragraph: a declared callable formal receives the callable occurrence reference; a value-returning callable executes when the receiving contract requires its result; a callable without a returned value, including `sub`, is transmitted by reference. Transport is not execution. A bare `return` does not supply a result. A bodyless `fn` remains a transportable interface descriptor, without an invented executable body.
+- [Construction and signatures](../docs/spec/LMX_semantics.en.md#construction) and [L2 graph copy and merge](../docs/spec/L2_spec_en.md#copy-merge): signatures are nonexecuting descriptions. Nonprimitive `(A: x)` and `(@: A x)` describe the same reference transmission and admission, not executable construction or copying. Primitive value and primitive-pointer formals are not synonyms.
+- [L2 typed addresses](../docs/spec/L2_spec_en.md#lowlevel-address): addressing an actual Structure or a nonprimitive signature input obtains its descriptor; addressing an explicit pointer-value cell adds a reference level. No hidden transport-cell address or automatic removal of pointer depth may be introduced.
+- [Dynamic inputs and references](../docs/spec/LMX_semantics.en.md#dynamic): explicit reference bindings keep their reference-value semantics. Their referent being callable does not turn the binding itself into an implicit call. Portable reference operations do not authorize machine address arithmetic in L3.
 
 Equivalent canonical nullary source forms in an argument position must not acquire different semantics merely because one source node is an atom and another is a Frame. In particular, bare `s`, `s()`, `s: ()`, and an explicitly closed vertical nullary form cannot use punctuation to choose reference transmission versus invocation. Explicit execution in statement position is a different receiving role, not a punctuation exception.
 

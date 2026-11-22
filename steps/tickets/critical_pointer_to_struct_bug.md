@@ -14,9 +14,9 @@ The author identifies this as a pre-existing bug, independent of the later
 reference declaration/application proposal. Historical "reassignment"
 wording is superseded by the author's 2026-10-13 correction. The exact address clarification is in
 [the journal](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#structure-reference-address).
-Norms: [L2 §18](../../docs/L2_spec_en.md#lowlevel-address),
-[L3 §12](../../docs/LMX_semantics.en.md#dynamic), and
-[L1 projection](../../docs/L1_spec_en.md).
+Norms: [L2 §18](../../docs/spec/L2_spec_en.md#lowlevel-address),
+[L3 §12](../../docs/spec/LMX_semantics.en.md#dynamic), and
+[L1 projection](../../docs/spec/L1_spec_en.md).
 
 ## 2. Required invariant
 

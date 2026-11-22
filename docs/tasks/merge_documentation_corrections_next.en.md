@@ -2,7 +2,7 @@
 
 **Status:** applied documentation requirements, reconciled through 2026-11-21.
 The prior follow-up questions are not reopened; this document states their surviving consequences under the
-[current composition rules](../LMX_semantics.en.md#composition) and
+[current composition rules](../spec/LMX_semantics.en.md#composition) and
 [copy/merge note](merge_documentation_corrections.en.md). It records no new runtime test result.
 
 | Earlier finding | Current consequence |

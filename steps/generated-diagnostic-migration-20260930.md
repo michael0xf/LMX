@@ -236,7 +236,7 @@ The existing `toolchain-refuses` mode is insufficient unchanged: it treats an ar
 | `entry_ret_tr_puts` | Exact `MUST PRINT` output before a valid bare root return. |
 | `entry_ret_tr_two` | Exact `one`, then `two` output ordering before return. |
 
-Replace the invalid returns, then assert exact stdout. Derive triple-string bytes from [grammar section 7](../docs/LMX_grammar.en.md#raw-quotes), not from whatever the current emitter happens to produce: a content run of N >= 4 matching quotes contributes N - 1 quotes. Preserve leading content, both delimiter kinds, mixed runs, and length. A changed decoded character or dropped output must fail the witness.
+Replace the invalid returns, then assert exact stdout. Derive triple-string bytes from [grammar section 7](../docs/spec/LMX_grammar.en.md#raw-quotes), not from whatever the current emitter happens to produce: a content run of N >= 4 matching quotes contributes N - 1 quotes. Preserve leading content, both delimiter kinds, mixed runs, and length. A changed decoded character or dropped output must fail the witness.
 
 Leave the separate `entry_puts_triple_fence4` parser-debt row unchanged; it is not in this 43-row inventory.
 

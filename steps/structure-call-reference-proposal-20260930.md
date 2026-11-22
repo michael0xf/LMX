@@ -115,7 +115,7 @@ merge были обсуждением. Поэтому `merge: b A` с b как �
 ## 4. Возврат вложенного метода: зачем сейчас нужен снимок
 
 Прочитаны раздел «Возвращаемый вложенный метод»
-[семантики §20](../docs/LMX_semantics.ru.md#composition),
+[семантики §20](../docs/spec/LMX_semantics.ru.md#composition),
 [unit_make_adder](../dev/l2src_sandbox/tests/unit_make_adder.lm2) и
 конструктор `l2_emit_mad_construct_one:28925` в l2trans.
 

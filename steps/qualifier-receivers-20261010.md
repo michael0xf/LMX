@@ -9,16 +9,16 @@ placed it: [receiver-routes-census-20261010.md](receiver-routes-census-20261010.
 - The author (2026-10-10, verbatim in [`LMX_blog/2026-10-10.md#qualifier-receivers-20261010`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#qualifier-receivers-20261010)):
   three receivers consuming any Structure; his example, kept with its second operand as written:
   `return: independent: const: immutable: merge(Integer  int: value newValue)` in a method.
-- The book, [qualification](../docs/LMX_semantics.en.md#qualification): `const` protects a binding;
+- The book, [qualification](../docs/spec/LMX_semantics.en.md#qualification): `const` protects a binding;
   `immutable` protects the value through every alias; construction-time `immutable` qualifies the new
   value before publication. The former promise of `RuntimeImmutable` requalifying an already built
   ordinary tree in place was superseded by the author's 2026-10-12 answer: that use refuses;
   new immutable values are constructed in their type's pool. `independent` is the ownership of a value with no external
-  lexical parent. [Eternal branches](../docs/LMX_semantics.en.md#eternal): the combined qualification
+  lexical parent. [Eternal branches](../docs/spec/LMX_semantics.en.md#eternal): the combined qualification
   makes a sealed immutable independent branch whose root has `parent = 0`; "permitted runtime-value
   initialization occurs before publication without increasing the entry set"; membership is
   established by the typed-address-range index, "neither ... a flag on each branch" nor a registry.
-- [Composition](../docs/LMX_semantics.en.md#composition): `merge` retains by its original physical
+- [Composition](../docs/spec/LMX_semantics.en.md#composition): `merge` retains by its original physical
   address a proved `independent: immutable` branch, with `const` optional; everything else is
   copied. The 2026-10-10 triple requirement was superseded by the author's
   [2026-10-12 clarification](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/eternal-without-const.md).

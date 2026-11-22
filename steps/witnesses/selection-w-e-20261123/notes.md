@@ -10,8 +10,8 @@ log of the rows by Fable's own pins, ran the addressed set and the nine kernel s
 
 ## The norm
 
-- The book, [selection of a declaration](../../../docs/LMX_semantics.en.md#declaration-selection) and the required
-  observations [C01–C36](../../../docs/LMX_semantics.en.md#callable-observations): the readings W (the sole actual
+- The book, [selection of a declaration](../../../docs/spec/LMX_semantics.en.md#declaration-selection) and the required
+  observations [C01–C36](../../../docs/spec/LMX_semantics.en.md#callable-observations): the readings W (the sole actual
   whole) and E (its fields as actuals) are equal; candidates are checked without executing effects; a named actual
   `f(arg := S)` excludes E; no candidate is a refusal, more than one is an ambiguity.
 - The executor's answers: nothing runs before the choice (Р102); one declaration is a case of the rule (Р103);

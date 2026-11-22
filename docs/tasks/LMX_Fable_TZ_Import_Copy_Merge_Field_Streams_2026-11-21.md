@@ -506,9 +506,9 @@ P0 сохраняет эту группу. В namespace выполняется �
 
 Использованные материалы:
 
-- [LMX_semantics.en.md](../LMX_semantics.en.md): §§2, 4, 9, 11, 17, 20–21; `data-code-roles`, `group-assign`, `whole-arguments`, `declaration-selection`, `composition`, `merge-two-forms`.
-- [LMX_grammar.en.md](../LMX_grammar.en.md): обычные Frames, `empty-colon`, сохранение границ групп, групповое присваивание.
-- [LMX_semantics_guide.en.md](../LMX_semantics_guide.en.md): композиция, callable-примеры, native reuse.
+- [LMX_semantics.en.md](../spec/LMX_semantics.en.md): §§2, 4, 9, 11, 17, 20–21; `data-code-roles`, `group-assign`, `whole-arguments`, `declaration-selection`, `composition`, `merge-two-forms`.
+- [LMX_grammar.en.md](../spec/LMX_grammar.en.md): обычные Frames, `empty-colon`, сохранение границ групп, групповое присваивание.
+- [LMX_semantics_guide.en.md](../spec/LMX_semantics_guide.en.md): композиция, callable-примеры, native reuse.
 - [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md): §6, корневые const-объявления, пользовательские структуры, исходные parent и коллизии import.
 - [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md): общий выбор аргументов и сигнатур, DATA/parent, лексическое и динамическое связывание.
 - [to_fable_operands_arguments_priorities.md](to_fable_operands_arguments_priorities.md): действующая редакция правил выражений, написанных контейнеров и аргументов.

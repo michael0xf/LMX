@@ -6,7 +6,7 @@ Codex is the sole writer/build owner; Opus remains Q&A only. This child
 starts at `6fe106a7`: full11 RED70/2711, kernel11 GREEN297 with 114 executed
 selftests, L3_11 eleven suites/four budgets. It repairs the bounded
 [NODE-PATH-ANON-STRUCT](defects.md#node-path-anon-struct) failure under
-[existing path rules](../docs/LMX_semantics.en.md#fields), not a new language
+[existing path rules](../docs/spec/LMX_semantics.en.md#fields), not a new language
 decision. The historical label is inaccurate: the witness's `h:` is a
 named source body, not an anonymous Structure.
 

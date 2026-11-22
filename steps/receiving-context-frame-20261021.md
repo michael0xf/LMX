@@ -95,7 +95,7 @@ includes указывают на конкретные прежние build fixtu
 receiving proof. Поэтому даже прежнее полное `(value, requiredModel)`
 с неизменным текущим required contract проходило всю аналитику снова,
 если caller передавал giving context. Это противоречит
-[стабильности установленного соответствия](../docs/LMX_semantics.ru.md#correspondence-stability).
+[стабильности установленного соответствия](../docs/spec/LMX_semantics.ru.md#correspondence-stability).
 
 Giving namespace нужен, чтобы впервые выбрать соответствие; он не является
 новым требованием уже принятой полной receiving role и не даёт права

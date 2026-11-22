@@ -2,7 +2,7 @@
 
 Опубликован 2026-11-04, Opus, по ревью Codex `CODEX-OPUS-278-REVIEW-SOURCE-OCCURRENCE-20261104T133624Z-01`, [дословно](records/pins/codex-278-review-source-occurrence.txt). Часть U2/U3 [плана N4-U](../../../next_core_tasks_v3.md#code-data-occurrences).
 
-Нормы, [книга](../../../docs/LMX_semantics.ru.md): «В Structure, рассматриваемой как `data`, `s\[N]field` с нулевым `N` выбирает N-е исходное вхождение головы `field:` коренного уровня»; план: «Физическая позиция исходного вхождения сохраняется». Норма не менялась, менялась реализация.
+Нормы, [книга](../../../docs/spec/LMX_semantics.ru.md): «В Structure, рассматриваемой как `data`, `s\[N]field` с нулевым `N` выбирает N-е исходное вхождение головы `field:` коренного уровня»; план: «Физическая позиция исходного вхождения сохраняется». Норма не менялась, менялась реализация.
 
 P = build2/codex_fix250generationchain01. Архивные копии в [records](records) приведены к UTF-8 LF без BOM, хвостовых пробелов и цветовых кодов терминала; оригиналы в P связаны с [evidence.sha256](evidence.sha256).
 

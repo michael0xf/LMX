@@ -635,7 +635,7 @@ Only the original two indexed-STORE witnesses remain red and unchanged.
 Read01 is preserved **RED4/26** on the same translator source, executable
 `B4D665A463AC50076217CAEC51BC9F95DB32112D70F659F703B056CF21CDDBEC`.
 Its new witness wrongly expected bare `calls` to refresh after an explicit
-`node\calls` write. Under [L3 working-state rules](../docs/LMX_semantics.en.md#dynamic)
+`node\calls` write. Under [L3 working-state rules](../docs/spec/LMX_semantics.en.md#dynamic)
 the clean working snapshot remains0. The corrected witness uses an ordinary
 `readCalls` method's explicit lexical path to assert the real field becomes1;
 it does not remove that assertion or change caching semantics. Both original
@@ -1211,8 +1211,8 @@ facet mutations pass. This gate is terminal, not a pending process or release.
 The earlier implementation proposal to require an interprocedural replay of
 all mutations is superseded here. Constructor identity is not a language
 prerequisite for calling a runtime-selected value. The existing norms under
-[call admission](../docs/LMX_semantics.en.md#admission-case-7) and
-[transported callable](../docs/LMX_semantics.en.md#admission-case-8) already
+[call admission](../docs/spec/LMX_semantics.en.md#admission-case-7) and
+[transported callable](../docs/spec/LMX_semantics.en.md#admission-case-8) already
 require the actual selected callable's interface and available dynamic inputs
 to be checked at its call. A receiving contract and a current value are
 different facts; a contract may stay fixed while its compatible value changes.

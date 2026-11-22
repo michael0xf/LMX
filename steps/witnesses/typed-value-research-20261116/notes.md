@@ -22,8 +22,8 @@ is adopted; typing and the extraction of a value go through it, without checking
 alignment is left to the implementation ("optimal and universal, not by the rules of a C union");
 typed chunks of the arena may stay; arenas attach other arenas within a Message and one arena is
 never accessed from several threads. The norm is written in
-[L2 §3–§4](../../../docs/L2_spec_en.md#value-record) and in
-[the kernel specification §2.0](../../../docs/kernel-implementation.en.md#value-record); the order
+[L2 §3–§4](../../../docs/spec/L2_spec_en.md#value-record) and in
+[the kernel specification §2.0](../../../docs/spec/kernel-implementation.en.md#value-record); the order
 of work is [plan M15](../../../next_core_tasks_v3.md#typed-value-records). The language does not
 change.
 

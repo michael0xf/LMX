@@ -9,8 +9,8 @@
 [указательный тикет](steps/tickets/critical_pointer_to_struct_bug.md),
 [активная очередь](next_core_tasks_v3.md),
 [словарь](next_core_tasks_dictionary_v2.md),
-[карта ядра](CORE.md),
-[инструкция портирования](L2_L3_CODING_INSTRUCTION.md) и действующие `docs/`.
+[карта ядра](docs/spec/CORE.md),
+[инструкция портирования](docs/spec/L2_L3_CODING_INSTRUCTION.md) и действующие `docs/`.
 Это техническая декомпозиция двух тикетов, не новая спецификация языка.
 
 **Исторический checkpoint 2026-10-03, не текущее назначение исполнителя.** Тогда bounded срез завершили и передали Fable; сейчас действуют [план v3](next_core_tasks_v3.md) и [текущий слот writer/build](steps/current.md). На тот момент последний полный гейт — full32 RED130/1395;

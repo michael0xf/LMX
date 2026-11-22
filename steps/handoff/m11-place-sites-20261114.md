@@ -29,7 +29,7 @@ Implementation **OPEN**; baseline ещё выполняется root. Следу
 Основания: [книга, части метода](../../provenance/semantics-book.md#method-parts), строки875/877:
 CODE declaration — требование к выбранной DATA; её собственные места добавляются при предварительной
 подготовке метода. [Рабочее состояние](../../provenance/semantics-book.md#dynamic), строка1095,
-и [L2 §11/§18](../../docs/L2_spec_ru.md) отделяют formal activation cell от DATA и задают DATA-назначение
+и [L2 §11/§18](../../docs/spec/L2_spec_ru.md) отделяют formal activation cell от DATA и задают DATA-назначение
 CODE declaration. Старое argument-as-own-cache исключение из OLD сюда не переносится.
 
 Дополнительная будущая приёмка (ещё не выполнялась):
@@ -63,7 +63,7 @@ Root сообщил runtime3 как на seed387, так и на новом388. 
 [root_repeat_refused.lm2](../../selfbuild/tests/graph/root_repeat_refused.lm3) с голым
 `seen x` должен по-прежнему отказывать3: имя двух DATA-вхождений неоднозначно.
 
-Норма — [имена и пути](../../docs/LMX_semantics.ru.md#fields),
+Норма — [имена и пути](../../docs/spec/LMX_semantics.ru.md#fields),
 [роли data/code](../../provenance/semantics-book.md#data-code-roles),
 [публикация](../../provenance/semantics-book.md#direct-access-cache).
 Root и обычная Structure над собой используют общие правила. Нельзя пропускать их

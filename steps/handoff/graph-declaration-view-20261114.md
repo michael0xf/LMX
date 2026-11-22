@@ -7,7 +7,7 @@
 
 ## Задача и граница нормы
 
-В [семантике, роли data/code](../../docs/LMX_semantics.ru.md#data-code-roles) формалы
+В [семантике, роли data/code](../../docs/spec/LMX_semantics.ru.md#data-code-roles) формалы
 объявляются ресиверами: `int: arg default`, `@: arg Model`. Запись `arg: Model`
 объявляла бы Structure и в формалах запрещена. Это отдельная задача от исправления
 прямых актуалов ресивера: именованное фактическое задаёт только `:=`, но поля одного
@@ -116,9 +116,9 @@ receiver compositions. Проверять написанные пользова�
    `None/void` проверять в соответствующем контексте по признакам, не как обычный cell formal.
 4. Прочитать допустимые `const`/`immutable`/`independent` compositions, ссылки произвольной
    глубины и `c.T` без сведения к пяти scalar names; сохранить имя, leaf и квалификацию.
-   Формы сверять с [квалификацией](../../docs/LMX_semantics.ru.md#qualification) и L2.
+   Формы сверять с [квалификацией](../../docs/spec/LMX_semantics.ru.md#qualification) и L2.
 5. Прочитать Array и вложенный Array/reference/qualifier contract без sole-child unwrap
-   и без потери мерности; опираться на [Array](../../docs/LMX_semantics.ru.md#arrays),
+   и без потери мерности; опираться на [Array](../../docs/spec/LMX_semantics.ru.md#arrays),
    не объявлять machine `formal_type` полным синтаксическим валидатором.
 6. Изменение одной строки/признака исходного каталога должно отражаться в generated data
    без правок второго списка; malformed catalog — явный generation failure.

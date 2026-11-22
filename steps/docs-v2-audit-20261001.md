@@ -13,7 +13,7 @@ Deliverables:
 - [Remaining work through 8/8a in the archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
 - [Implementation dictionary](../next_core_tasks_dictionary_v2.md).
 - [Technical kernel/L2/L3 map](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/CORE_L2_L3_v2.md).
-- [L1→L2→L3 coding guide](../L2_L3_CODING_INSTRUCTION.md).
+- [L1→L2→L3 coding guide](../docs/spec/L2_L3_CODING_INSTRUCTION.md).
 
 Normative claims were compared with current specifications and recorded author
 decisions. Implementation claims were checked against source symbols and scoped

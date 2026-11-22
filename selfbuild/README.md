@@ -539,7 +539,7 @@ slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact comm
 are historical. The current input manifest has 402 entries.
 
 The slice descriptions below keep the names and forms of their day. The norm since the author's decisions of
-2026-11-10 and 2026-11-11 is the book ([roles `data` and `code`](../docs/LMX_semantics.en.md#data-code-roles)): the
+2026-11-10 and 2026-11-11 is the book ([roles `data` and `code`](../docs/spec/LMX_semantics.en.md#data-code-roles)): the
 parts of a callable are `args`, `return`, `data` and `code` (formerly `var` and `body`), the two-argument launch is
 `call: data code` (formerly `call: code data`), and several forms the slices describe are withdrawn there. Which
 translator reads what is told in the entries of slices 353 and 354 and in [plan M11](../next_core_tasks_v3.md#m11).
@@ -937,7 +937,7 @@ review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept its closure an
 in the translator; fable_pc) was STOPPED by the author's directive of 2026-11-08 (relayed by Codex; verbatim in
 LMX_blog/2026-11-08.md) before landing: nothing of it is in this package; its candidate a15 is kept as WIP in
 steps/witnesses/fix308-20261108 (the patch records/wip308-a15.patch, the receipts). The directive replaces the numeric-codes
-direction by a kernel implementation specification first (docs/kernel-implementation.ru.md, .en.md) and a rebuild after it.
+direction by a kernel implementation specification first (docs/spec/kernel-implementation.ru.md, .en.md) and a rebuild after it.
 The stopped candidate moved the translator's internal comparisons to codes: `LmP0Text`
 carries the code of its spelling, the one text boundary is `lm_p0_text_code` (P0 gives a code to every atom and head but a
 number, a string and an empty text; an exact identifier in backticks gets the code of its value -- the grammar's exact

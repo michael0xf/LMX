@@ -45,5 +45,5 @@ Structure, в том числе созданную `sub` или `fn` целик�
 исполнителем по его фактическим полям. Запрета, автоматического выбора тела и особой ветви для
 вызываемого нет; необычный результат такой программы не основание менять общий механизм.
 Ни одно из названных значений нормой не закреплено.
-[Ресиверы `call` и `fncall`](../../docs/LMX_semantics.ru.md#call-receivers),
-[части вызываемой Structure](../../docs/LMX_semantics.ru.md#method-parts).
+[Ресиверы `call` и `fncall`](../../docs/spec/LMX_semantics.ru.md#call-receivers),
+[части вызываемой Structure](../../docs/spec/LMX_semantics.ru.md#method-parts).

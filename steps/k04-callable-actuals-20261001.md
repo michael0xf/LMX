@@ -5,7 +5,7 @@ reproductions before its repair, as the plan's §1 asks, and it separates the ro
 matrix it measured from the ones it did not.
 
 Norm: [callable actual projection](callable-actual-projection-20260930.md) (its witness matrix),
-[docs/LMX_semantics.ru.md #callables](../docs/LMX_semantics.ru.md#callables) ("a declared callable
+[docs/LMX_semantics.ru.md #callables](../docs/spec/LMX_semantics.ru.md#callables) ("a declared callable
 formal receives the callable occurrence reference … Transport is not execution"),
 [archived next_core_tasks_v2.md](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md) §3 K04, and D-106 (a callable formal of a method
 shadows a same-named unit method).

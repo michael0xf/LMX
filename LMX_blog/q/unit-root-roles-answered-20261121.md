@@ -7,7 +7,7 @@
 
 ## Что записано
 
-[ТЗ 2026-11-19](../../docs/LMX_semantics.ru.md#root-entry), §4.3:
+[ТЗ 2026-11-19](../../docs/spec/LMX_semantics.ru.md#root-entry), §4.3:
 
 ~~~text
 R0 запускается как процедура без data и без пользовательских аргументов. Отсутствие data не компенсировать D = C, пустой служебной Structure или искусственным полем data.
@@ -25,7 +25,7 @@ R0 запускается как процедура без data и без пол
 `fn` описывает только сигнатуру, строго по тому же data-шаблону, включая поле return. Наличие return отличает возвращающий значение контракт от процедурного. `sub` удаляется.
 ~~~
 
-Книга, [роли data и code](../../docs/LMX_semantics.ru.md#data-code-roles): «В роли `code` всякая запись —
+Книга, [роли data и code](../../docs/spec/LMX_semantics.ru.md#data-code-roles): «В роли `code` всякая запись —
 вызов»; «Объявлений Structure в коде нет: код пользуется именами Structure из данных»; правило «форма с
 неизвестной головой объявляет Structure» действует только в данных.
 
@@ -92,7 +92,7 @@ int: seen SumContext\sum(a := 2; b := 3)
 
 Отдельного ответа автора в чате нет. Редакция документации от 2026-11-21 выводит случай из действующих правил
 и прямо говорит, что нового решения автора он не требует:
-[заметки о редакции, §5, D2](../../docs/REVIEW_NOTES.md#open-questions).
+[заметки о редакции, §5, D2](../../docs/spec/REVIEW_NOTES.md#open-questions).
 
 ~~~text
 Binding TZ §4.3 preserves R0's own executable declarations and ordinary references

@@ -2,7 +2,7 @@
 
 Исполнитель: fable. Норма — решение автора 2026-11-11:
 [ресиверы `call` и `fncall`](../../../LMX_blog/2026-11-11.md#call-receivers); книга —
-[ресиверы `call` и `fncall`](../../../docs/LMX_semantics.ru.md#call-receivers). План — раздел
+[ресиверы `call` и `fncall`](../../../docs/spec/LMX_semantics.ru.md#call-receivers). План — раздел
 [M10](../../../next_core_tasks_v3.md#m10), шаги 1–5 для чистого графа (интерпретатор и выпускаемый им `native`).
 Рабочий frontend (понижение L3 и обходчик) в срез не входит — шаг 6. Чтения исполнителя — часть Н
 [ответов](../../../LMX_blog/q/fable-self-answers-20261110.md); открытый вопрос автору — П6, порядок аргументов

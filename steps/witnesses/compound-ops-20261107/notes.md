@@ -23,18 +23,18 @@ fable_pc, 2026-11-07. Поручение автора через Codex — до�
   скобки, `2 ** -2` есть `2 ** (-2)`, `2 * 3 ** 2` есть `2 * (3 ** 2)`); не определены и уточняются до реализации:
   однократность вычисления места слева с эффектами (эквивалентность — не макроподстановка), типы и преобразования,
   отрицательная и дробная степень, `0 ** 0`, ошибки, атомарность, приоритет самих присваиваний. Generated
-  [RU](../../../docs/LMX_semantics.ru.md) / [EN](../../../docs/LMX_semantics.en.md).
+  [RU](../../../docs/spec/LMX_semantics.ru.md) / [EN](../../../docs/spec/LMX_semantics.en.md).
 - [Грамматика](../../../provenance/grammar.json), раздел `operators` (§21) RU и EN: токены одиннадцати составных
   присваиваний и `**` — по одному токену без деления в P0; группировка `**`; `^` — XOR; реализации токенов нет.
-  Generated [RU](../../../docs/LMX_grammar.ru.md) / [EN](../../../docs/LMX_grammar.en.md).
+  Generated [RU](../../../docs/spec/LMX_grammar.ru.md) / [EN](../../../docs/spec/LMX_grammar.en.md).
 - [План](../../../next_core_tasks_v3.md): новый пункт M5 — уточнения до реализации, реализация одним общим механизмом
   (токены P0, понижение `a op= b` в общий путь `:=` с однократно вычисленным местом, `**` как общая числовая операция ядра
   для native и обходчика), проверка обоих исполнителей с конкретными значениями и мутантами (группировка слева направо,
   повторное вычисление места, `^` как степень). [Чек-лист](../../../next_core_tasks_v3_checklist.md): строка M3/N3
   (`|` внутри обратных кавычек экранирован по ревью Codex
   [CODEX-FABLE-OPS-DOCS-REVIEW-20261107T191018160Z-01](records/pins/CODEX-FABLE-OPS-DOCS-REVIEW-20261107T191018160Z-01.txt)).
-  [steps/current.md](../../current.md): датированный абзац поручения. [Заметки о реализации](../../../docs/implementation-notes.ru.md)
-  RU/[EN](../../../docs/implementation-notes.en.md): новый 4.3. [Реестр дефектов](../../defects.md): запись
+  [steps/current.md](../../current.md): датированный абзац поручения. [Заметки о реализации](../../../docs/spec/implementation-notes.ru.md)
+  RU/[EN](../../../docs/spec/implementation-notes.en.md): новый 4.3. [Реестр дефектов](../../defects.md): запись
   COMPOUND-ASSIGN-AND-POWER (OPEN) рядом с ASSIGN-KNOWN-OPERATOR.
 
 ## Проверка документов

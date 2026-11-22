@@ -2,8 +2,8 @@
 
 **Status:** applied documentation requirement, reconciled with the 2026-11-21
 [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
-The [composition contract](../LMX_semantics.en.md#composition) and
-[L2 copying mechanics](../L2_spec_en.md#copy-merge) define implementation behavior.
+The [composition contract](../spec/LMX_semantics.en.md#composition) and
+[L2 copying mechanics](../spec/L2_spec_en.md#copy-merge) define implementation behavior.
 This note records required behavior rather than a report that a build passes it.
 
 `copy` accepts exactly one admitted source; `merge` accepts two or more; `import` accepts one or more. All three always consume ordinary CODE arguments, including when a DATA context accepts their output. Copy and merge emit result fields; import emits selected root constant declarations by original reference. Source arity follows ordinary W/E selection in every placement: one written Structure may expand to several admitted sources. Bare Structure references and anonymous groups are values, not implicit calls. An explicit `Producer()` is called when its argument is consumed, without eager P0 execution or source-graph replacement.

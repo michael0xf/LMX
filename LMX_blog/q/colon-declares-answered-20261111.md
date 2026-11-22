@@ -17,8 +17,8 @@
 В code `R: merge(A; B)` вызывает R, а в data задаёт Structure R с написанным выражением внутри.
 Результат в локальном месте-ссылке code получает форма `@: R merge(A; B)`.
 В data эта форма хранит вычисляемое описание: вход в вызов не исполняет merge заранее.
-[Объявляющий контракт](../../docs/LMX_semantics.ru.md#receiver-args-only),
-[кадр](../../docs/LMX_semantics.ru.md#call-frame-20261115).
+[Объявляющий контракт](../../docs/spec/LMX_semantics.ru.md#receiver-args-only),
+[кадр](../../docs/spec/LMX_semantics.ru.md#call-frame-20261115).
 
 ## П5. Именованная подача
 
@@ -37,8 +37,8 @@ f(arg: Struct) то в code это вызов arg без вариантов, f(a
 Ресивер объявления примитива сворачивается в ячейку, а не добавляет промежуточный
 уровень с именем int. Готовое значение сворачивается при построении чистого графа;
 вычисляемое объявление сохраняет написанный код.
-[Грамматика §18](../../docs/LMX_grammar.ru.md#empty-colon),
-[построение и кадр](../../docs/LMX_semantics.ru.md#call-frame-20261115).
+[Грамматика §18](../../docs/spec/LMX_grammar.ru.md#empty-colon),
+[построение и кадр](../../docs/spec/LMX_semantics.ru.md#call-frame-20261115).
 
 ## П3. Ссылка на Structure не копирует её дерево
 
@@ -53,9 +53,9 @@ f(arg: Struct) то в code это вызов arg без вариантов, f(a
 То есть У Struct1[0]\Struct2 parent не меняется -- а именно parent у нас это место в дереве
 ~~~
 
-[Объявление Structure](../../docs/LMX_semantics.ru.md#colon-declares),
-[композиция](../../docs/LMX_semantics.ru.md#composition),
-[видимость](../../docs/LMX_semantics.ru.md#declaration-visibility).
+[Объявление Structure](../../docs/spec/LMX_semantics.ru.md#colon-declares),
+[композиция](../../docs/spec/LMX_semantics.ru.md#composition),
+[видимость](../../docs/spec/LMX_semantics.ru.md#declaration-visibility).
 
 ## П6. Данные перед кодом
 

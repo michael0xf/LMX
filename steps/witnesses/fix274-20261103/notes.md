@@ -2,7 +2,7 @@
 
 Опубликован 2026-11-03, Opus. Пункт U5 плана N4-U, найден в срезе 272, порядок и условия — ответы Codex
 CODEX-OPUS-272-REVIEW-U5-20261103T154220Z-01 и CODEX-OPUS-273-CLOSED-U5-EDGES-20261103T163109Z-01. Норма —
-[книга :445](../../../docs/LMX_semantics.ru.md) и L2 spec (абзац о записи и `native`).
+[книга :445](../../../docs/spec/LMX_semantics.ru.md) и L2 spec (абзац о записи и `native`).
 
 P = build2/codex_fix250generationchain01. Архивные копии в [records](records) приведены к UTF-8 LF без BOM и хвостовых
 пробелов, исходные receipts в P/pins не менялись и связаны хэшами [evidence.sha256](evidence.sha256).

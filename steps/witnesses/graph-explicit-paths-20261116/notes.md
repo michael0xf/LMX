@@ -9,7 +9,7 @@ migration, took the decisions named below and ran the acceptance gates. Base: sl
 
 The baseline taken with slice 411 showed that of 266 pinned clean-graph fixtures only 60 passed. The
 boundary was commit b901f2bf (2026-11-15), which implemented the norm that the frames `data` and `code`
-are not published into the graph ([the book](../../../docs/LMX_semantics.ru.md#flush-receiver-contract)) and
+are not published into the graph ([the book](../../../docs/spec/LMX_semantics.ru.md#flush-receiver-contract)) and
 added one fixture of the new kind, but left the older fixtures pinning published values; they had been
 accepted by short lists. This slice moves the fixtures that the norm explains to explicit operations and
 repairs three places of the interpreter of the clean graph.
@@ -22,7 +22,7 @@ the expectation is not fitted to it.
 - Observation: a block of root data with one place per pinned value and an explicit write through a path
   in a final `sub: main`, as `tests/graph/call_frame_local` does.
 - A state that must outlive a call is written through `data\name`, the explicit path to the data of the
-  current launch ([the special name `data`](../../../docs/LMX_semantics.ru.md#ordinary-var)); a bare name is
+  current launch ([the special name `data`](../../../docs/spec/LMX_semantics.ru.md#ordinary-var)); a bare name is
   the local of the call.
 - A field of the root is read through `node\name` from a method of the root and through `data\name` from
   the code of the root itself: `node` is the space above a method, and the root is not a method.
@@ -44,12 +44,12 @@ Kernel (`lmx_graph_run.lm2`):
 - Reading a computed declaration through an explicit path executes the expression the declaration writes
   (`lmx_graph_declared_value`, called by `lmx_graph_step`), with no publication and no cache, in the scope
   of the Structure that holds the declaration. The norm says so
-  ([the call frame](../../../docs/LMX_semantics.ru.md#call-frame-20261115)); the interpreter answered 5, "this
+  ([the call frame](../../../docs/spec/LMX_semantics.ru.md#call-frame-20261115)); the interpreter answered 5, "this
   slice does not execute it", for `int` and for references alike, and publication had hidden the gap.
   Three fixtures of 2026-11-14 pinned that answer; they predate the norm and are migrated.
 - The scan of free names skips the operand of `include` and `predef`: it is text, not a name.
 - A write to a name bound to a function of the scope is refused again (answer 4): names of Structures are
-  not assigned ([the book](../../../docs/LMX_semantics.ru.md#colon-declares)). b901f2bf had lost the line.
+  not assigned ([the book](../../../docs/spec/LMX_semantics.ru.md#colon-declares)). b901f2bf had lost the line.
 - One function loses a needless `end:`; one fence closing two levels is added.
 
 Fixtures (`tests/graph`): 112 names — 110 migrated fixtures that pass in all three modes, and

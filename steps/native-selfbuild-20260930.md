@@ -464,7 +464,7 @@ The ordinary value type now comes from `l2_value_ft_of_own`, while own-storage
 codes remain unchanged. Previously `l2_colon_bound_ty` returned the storage
 code through `l2_ft_of_own`, and the bare-own branch of `l2_prep` emitted
 backing through `l2_emit_array_ptr`. The active
-[L2 argument contract](../docs/L2_spec_en.md#copy-merge) requires the same
+[L2 argument contract](../docs/spec/L2_spec_en.md#copy-merge) requires the same
 descriptor reference for the nonprimitive Array value, not implicit C decay.
 
 `l2_emit_array_desc` factors the common descriptor load from
@@ -601,7 +601,7 @@ Reuse the existing declaration, receiving-value and cell machinery:
    and `l2_emit_receiving_admit` from `l2_emit_reference_declaration`.
    Ordinary native local declarations and own-cell stores use that same
    result. Store only after successful admission. The receiver's omitted
-   initializer is its default zero ([L2 §18](../docs/L2_spec_en.md#lowlevel-address)),
+   initializer is its default zero ([L2 §18](../docs/spec/L2_spec_en.md#lowlevel-address)),
    not permission to preserve a value from a preceding execution. Normalize
    omission and explicit zero to the same null candidate at each reached
    declaration. Preallocation alone proves only the first initial state;
@@ -1039,7 +1039,7 @@ reach its intended refusal, not fail earlier with an unrelated generic error.
 
 `unit_address_reference_cell` and `unit_address_path_actual_span` formerly
 expected an indirect write to reload the caller's bare pointer automatically.
-That contradicts the existing [working-state rule](../docs/LMX_semantics.en.md#publication),
+That contradicts the existing [working-state rule](../docs/spec/LMX_semantics.en.md#publication),
 not a new rule selected for this migration. Both witnesses must instead
 assert the changed physical cell **and** the retained bare working value,
 while preserving pointer-depth checks. Do not restore address-taken cache
@@ -1125,7 +1125,7 @@ commit `cf7dd58b` and the fixture comments repeat that attribution. The author's
 load/dirty request and the publication boundaries restored from origins 21.5
 and 21.6 require the normal dirty write-back at calls and exits. Removing the
 former fresh I2 graph does not authorize dropping the inner activation's writes.
-The current [recursive trace](../docs/LMX_semantics.en.md#activation-history)
+The current [recursive trace](../docs/spec/LMX_semantics.en.md#activation-history)
 therefore uses one S with separate working values and ordinary publication.
 
 Native publication now uses ordinary dirty state. `l2_m_tracked`,
@@ -2287,7 +2287,7 @@ These examples are **not executed evidence yet**. They belong to receiving
 projection/call formation, not a reason to keep static C-name dispatch or
 to demand equality of hidden-name lists as a new compatibility rule.
 Use the selected actual's ordinary required inputs and the source priority
-in [semantics §12](../docs/LMX_semantics.en.md#dynamic); keep distinct arity
+in [semantics §12](../docs/spec/LMX_semantics.en.md#dynamic); keep distinct arity
 and same-arity/wrong-name witnesses. No author decision is currently needed.
 
 <a id="known-structure-call-classification"></a>
@@ -2297,7 +2297,7 @@ Read-only audit of `c8167af`: the old executable `Model: fresh` implicit
 clone and `T: b c` implicit alias paths are still live. `l2_colon_decl_shape`
 and `l2_colon_bind_shape` recognize a known Structure head; the tail name's
 absence selects construction in collection/checking and native/walker emission.
-That contradicts the accepted [construction rule](../docs/LMX_semantics.en.md#construction):
+That contradicts the accepted [construction rule](../docs/spec/LMX_semantics.en.md#construction):
 a known ordinary Structure head is a call, and an invalid/unknown actual never
 turns the call into declaration or merge. This known-head correction does not
 implement the separate unknown/nested-head resolution clarified by Q58.
@@ -2432,7 +2432,7 @@ conversion receiver inside an arithmetic operator.
 
 The integer resolver must return “not an integer domain” for pointers/text,
 not establish a blanket language ban. Machine typed-pointer arithmetic and
-comparison remain governed by L2/C99 ([§18](../docs/L2_spec_en.md#lowlevel-address));
+comparison remain governed by L2/C99 ([§18](../docs/spec/L2_spec_en.md#lowlevel-address));
 portable references in the L3 walker do not acquire numeric-address operations.
 Use precise invalid-L3-operand and incompatible-receiver controls. Division
 by zero must not be executed as an undefined native-C witness; existing walker

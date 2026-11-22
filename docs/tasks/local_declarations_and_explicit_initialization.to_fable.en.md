@@ -1,7 +1,7 @@
 # Local declarations and explicit initialization
 
 **Status:** applied documentation requirement, reconciled through 2026-11-21.
-The current [construction](../LMX_semantics.en.md#construction),
+The current [construction](../spec/LMX_semantics.en.md#construction),
 [declaration arguments](LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
 and [binding rules](LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) govern this note.
 

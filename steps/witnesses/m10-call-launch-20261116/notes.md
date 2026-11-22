@@ -18,7 +18,7 @@ Kernel (`lmx_walk_values.lm2`, `lmx_call.lm2`, `tools/build.lm2`):
 - `lmx_call_launch` replaces `lmx_call_selected_structure`; the latter is removed together with its
   prototype in the text an emitted program sees. `lmx_call_unary_data` no longer selects the `var` child
   of an ordinary Structure: `call(C)` is `call(C C)`, the data of the launch is `C` itself
-  ([the book, the receivers `call` and `fncall`](../../../docs/LMX_semantics.ru.md#call-receivers)).
+  ([the book, the receivers `call` and `fncall`](../../../docs/spec/LMX_semantics.ru.md#call-receivers)).
 - One function `lmx_call_launch_rows` forms the input vector a launched `fn`/`sub` enters with, sized by
   its header: a formal the launch writes no actual for takes its current default or stays absent, with no
   refusal. Both executors call it. Without it the native trampoline of a function reached through a
@@ -28,7 +28,7 @@ Kernel (`lmx_walk_values.lm2`, `lmx_call.lm2`, `tools/build.lm2`):
   (`lmx_activation_data_root_find`). Order: formals, actuals, roots of the data, inherited free inputs,
   parent. Two same-named roots end the search without binding a foreign name. This is the kernel's part
   of the norm that a call's namespace is made of the declarations of the roots of `data` and `code`
-  ([the call frame](../../../docs/LMX_semantics.ru.md#call-frame-20261115)); the frontend's static place map stays
+  ([the call frame](../../../docs/spec/LMX_semantics.ru.md#call-frame-20261115)); the frontend's static place map stays
   the fast path where it exists.
 - Walked root: the two rules that create a local binding excluded every holder inside the frame's source
   and node. In a walked root the code, the source and the node are one Structure, so every declaration of

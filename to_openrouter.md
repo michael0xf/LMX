@@ -15,7 +15,7 @@
 
 ## Рабочие источники и цель
 
-Прочитайте [AGENTS.md](AGENTS.md), [READ.ME](READ.ME), [текущее состояние](steps/current.md), [план v3](next_core_tasks_v3.md), [инструкцию кодинга](L2_L3_CODING_INSTRUCTION.md), [семантику L3 RU/EN](docs/LMX_semantics.ru.md), [L2-спецификацию](docs/L2_spec_ru.md) и [словарь](next_core_tasks_dictionary_v2.md). Старые `to_codex.md`, `to_opus.md` и результаты прежних сборок — датированные свидетельства, не новое назначение владельца и не замена текущих правил.
+Прочитайте [AGENTS.md](AGENTS.md), [READ.ME](READ.ME), [текущее состояние](steps/current.md), [план v3](next_core_tasks_v3.md), [инструкцию кодинга](docs/spec/L2_L3_CODING_INSTRUCTION.md), [семантику L3 RU/EN](docs/spec/LMX_semantics.ru.md), [L2-спецификацию](docs/spec/L2_spec_ru.md) и [словарь](next_core_tasks_dictionary_v2.md). Старые `to_codex.md`, `to_opus.md` и результаты прежних сборок — датированные свидетельства, не новое назначение владельца и не замена текущих правил.
 
 Цель v3 остаётся полной: общий механизм ресиверов и code/data, чистое ядро и полный gate; затем две действительные самосборки **L3 со вставками L2**, без рукописного L1; затем `post`, `sendMessage`/`receiveMessage` и T01–T26. L1 допустим только как генерируемый промежуточный уровень перед C. Закрывайте зависимости в порядке плана, публикуйте проверенные dependency-closed срезы в `main` коммитом и push. Частичный зелёный фокус не закрывает общий этап.
 

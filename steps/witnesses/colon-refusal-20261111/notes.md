@@ -3,8 +3,8 @@
 Исполнитель: fable. Норма — решение автора 2026-11-10:
 [структурные формы объявляют или вызывают](../../../LMX_blog/2026-11-10.md#forms-declare-or-call),
 [объявление, а не присваивание](../../../LMX_blog/2026-11-10.md#colon-declares-not-assigns); книга —
-[структурные формы](../../../docs/LMX_semantics.ru.md#forms-declare-or-call),
-[объявление Structure](../../../docs/LMX_semantics.ru.md#colon-declares). План — раздел
+[структурные формы](../../../docs/spec/LMX_semantics.ru.md#forms-declare-or-call),
+[объявление Structure](../../../docs/spec/LMX_semantics.ru.md#colon-declares). План — раздел
 [M7](../../../next_core_tasks_v3.md#m7), шаг 4 для рабочего frontend: понижение L3, обходчик, машинный путь L2 и
 машинный путь из чистого графа. В чистом графе шаг сделан срезом 346.
 

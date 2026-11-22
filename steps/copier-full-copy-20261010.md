@@ -11,7 +11,7 @@ template initialized through arguments (separate mutable instances), `independen
 immutable` (shared immutable values), a Message (deliberately shared storage). A case the three
 do not cover, or one that conflicts with Message/Thread identity, goes to the author as the
 smallest witness before any exception is coded. The semantics book already said this of
-ordinary copied targets ([composition](../docs/LMX_semantics.en.md#composition)); the kernel's
+ordinary copied targets ([composition](../docs/spec/LMX_semantics.en.md#composition)); the kernel's
 -186 k3 rule (pointer cell copied, pointee shared) contradicted it and is withdrawn. The
 throw-name carrier question (slice A2) is not touched by this decision.
 

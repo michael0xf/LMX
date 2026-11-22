@@ -549,8 +549,8 @@ LMX type and write destination.
 There is no load-dirty publication cycle, flush receiver, copy-back of own
 locals, automatic executable-tree copy, automatic graph-edit invalidation,
 or implicit compilation on a failed native lookup. The current
-[activation supplement](docs/tasks/dirty.md) and
-[editing API](docs/tasks/mutating_debug_API.en.md) define the detailed boundary.
+[call-frame contract](docs/LMX_semantics.en.md#call-frame-20261115) and
+[editing API](docs/LMX_semantics.en.md#edit-api) define the detailed boundary.
 
 `sys\compile` explicitly checks/prepares the selected graph, runs its required
 build/test phase, translates through L1/C, invokes the host toolchain, and installs

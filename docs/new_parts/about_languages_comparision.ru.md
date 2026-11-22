@@ -26,7 +26,7 @@
 
 ## Документация и проверка
 
-Нормативные ссылки теперь ведут в [docs](../README.md): [связывание](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), [объявления и import](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md), [границы блоков](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md), [операнды](../tasks/to_fable_operands_arguments_priorities.md), [потоки import/copy/merge](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+Нормативные ссылки теперь ведут в [docs](../README.md): [семантика](../LMX_semantics.en.md), [грамматика](../LMX_grammar.en.md) и [L2](../L2_spec_en.md).
 
 У import, copy и merge стандартные CODE-аргументы во всех контекстах. Copy принимает один допущенный источник, merge — два и более; их потоки явно группируются там, где нужен один структурный результат. Принимающий контекст не является скрытым источником merge. Записанные ресиверы сохраняются в графе; результаты принимаются через namespace. Эти правила учтены в примерах и подсчёте.
 

@@ -26,7 +26,7 @@ Names are not normalized; Python omits optional type annotations. Each language 
 
 ## Documentation and verification
 
-Normative links now target [docs](../README.md): [binding](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), [declarations and import](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md), [block boundaries](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md), [operands](../tasks/to_fable_operands_arguments_priorities.md), and [import/copy/merge streams](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+Normative links now target [docs](../README.md): [semantics](../LMX_semantics.en.md), [grammar](../LMX_grammar.en.md) and [L2](../L2_spec_en.md).
 
 Import, copy and merge use standard CODE arguments in every placement. Copy accepts one admitted source; merge accepts two or more. Their field streams are explicitly grouped where one structural result is needed. The receiving context is not an implicit merge source. Written receivers remain in the graph and results are accepted through the namespace. The examples and counts apply these rules.
 

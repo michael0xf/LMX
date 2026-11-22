@@ -15,7 +15,7 @@ merge always consume ordinary CODE arguments, including when written inside DATA
 W/E argument algorithm applies everywhere. This supersedes the earlier role-dependent source
 reading. The field-stream rules control any conflicting earlier composition example. [P01](#uninit-record-control) is resolved:
 `uninit:T` has a type code and zero payload, graph assignment replaces fragments, and the full literal
-source graph includes both all written receivers and direct primitive leaves.
+source graph includes both all written receivers and direct primitive leaves. Replacing `uninit:T` with `{T value}` cannot preserve a preexisting T-cell address, because `uninit:T` has zero payload.
 
 <a id="scope"></a>
 ## 1. Scope

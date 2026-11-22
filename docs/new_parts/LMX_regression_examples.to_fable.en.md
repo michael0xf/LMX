@@ -34,7 +34,7 @@ The normative model is the supplied `docs/` packet. The current author's operand
 |---|---|---|
 | O / OPERAND | [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
 | B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
-| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
+| M / STREAM | [LMX_semantics.en.md#composition](../LMX_semantics.en.md#composition) | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
 | BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
 | D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
 | UNINIT | [LMX_semantics.en.md#uninit-zero-payload](../LMX_semantics.en.md#uninit-zero-payload) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
@@ -639,7 +639,7 @@ Multi-source variant: supply another Structure containing `const: int: bias 2`, 
 
 In a nested-consumer harness, `f(import(Library Extra))` supplies its stream to `f` only; it must not also install the imported names in the caller as an extra effect. For a one-written-source fixture whose W and E readings both admit the sources, require ordinary ambiguity, not an import-specific preference for W. The multi-source example above is not such an ambiguity fixture.
 
-**Basis:** [D] §§6–6.1; D acceptance I01–I09; [STREAM] §§5–7.
+**Basis:** [D] §§6–6.1; D acceptance I01–I09; [import](../LMX_semantics.en.md#import-receiver); [streams and W/E](../LMX_semantics.en.md#composition).
 
 ### C-01 — A no-RHS local in an inline nested scope remains uninitialized
 
@@ -2382,7 +2382,7 @@ Operands:
 
 The nested calculation finds `add` through the ordinary lexical namespace. `copy` consumes the header reference through the same CODE-source algorithm as elsewhere and contributes its fields through namespace; its written record remains in the source graph. Prepared mode supplies the computed numeric operands by reference. `left` is the left reference; `right[0]` is the first right reference; explicit dereferencing obtains their values. There is no separate operand registration and no permanent cache of one activation's `n` in the expression graph.
 
-Also check the effective operand DATA: exactly one concrete result declaration, both reference inputs, `PASS_ARGS_AS_IS = 0` and the addition priority. OP01–OP16 deliberately retain expanded headers because their tests mutate or inspect individual properties. **Basis:** [P3] §23; [OPERAND] §§2–3; [STREAM] §§1–3, 6–9.
+Also check the effective operand DATA: exactly one concrete result declaration, both reference inputs, `PASS_ARGS_AS_IS = 0` and the addition priority. OP01–OP16 deliberately retain expanded headers because their tests mutate or inspect individual properties. **Basis:** [P3] §23; [OPERAND] §§2–3; [composition](../LMX_semantics.en.md#composition).
 
 
 <a id="graph"></a>
@@ -2512,7 +2512,7 @@ RecordProbe:
 
 **Historical analogue:** the case establishes copied composition and replacement of the matching model field. Installing this new Structure into an application branch requires a separate explicit reference assignment; independently retained copies elsewhere do not silently update.
 
-**Field-stream variants:** retain G05's values and add the following independent observations under [STREAM] §§1–9:
+**Field-stream variants:** retain G05's values and add the following independent observations under [composition](../LMX_semantics.en.md#composition):
 
 | Variant | Required observation |
 |---|---|
@@ -2920,7 +2920,6 @@ These SHA-256 values identify the bundled normative documents used for this revi
 | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
 | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
 | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
-| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
 | [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
 
 <!-- Relative source links for the package layout. -->
@@ -2944,7 +2943,5 @@ These SHA-256 values identify the bundled normative documents used for this revi
 [GUIDE]: ../LMX_semantics_guide.en.md
 [CORE]: ../../CORE.md
 [CODING]: ../../L2_L3_CODING_INSTRUCTION.md
-[STREAM]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
-[M]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
 [BLANK]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 [UNINIT]: ../LMX_semantics.en.md#uninit-zero-payload

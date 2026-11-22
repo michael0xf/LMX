@@ -46,7 +46,7 @@ sys:
 
 `PASS_ARGS_AS_IS 0` requests references to prepared values. `PRIORITY priority("+")` inside `sys` uses the precedence of built-in addition. The mandatory fields remain present in the operand’s effective DATA: ordinary `copy` supplies them through the namespace. The source graph retains the written `copy` record.
 
-The template has no `return`: the result belongs to the concrete operation, which declares `return: int` in `operands`. No result declaration is replaced by another. `example` separately describes its own methods’ result in its own DATA. [Operand contract](../tasks/to_fable_operands_arguments_priorities.md) · [Field streams](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+The template has no `return`: the result belongs to the concrete operation, which declares `return: int` in `operands`. No result declaration is replaced by another. `example` separately describes its own methods’ result in its own DATA. [Operand contract](../LMX_semantics.en.md#operand-receiver) · [Field streams](../LMX_semantics.en.md#composition).
 
 The formula remains recognizable. Seeing the two additions requires no translation of nested constructors into arithmetic notation. The language’s common expression mechanism provides parsing and execution; the user supplies the new operand’s body and uses its ordinary name.
 

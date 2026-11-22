@@ -886,7 +886,7 @@ deeply copy the used graph and preserve the corresponding copied owners through 
 Grouping either stream supplies a distinct container with its own cells; it neither performs another deep
 copy nor becomes the lexical owner of the received methods.
 [Composition](LMX_semantics.en.md#composition),
-[field-stream requirements](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+[field-stream observations](LMX_semantics.en.md#field-stream-observations).
 
 <a id="factory-result"></a>
 ## A returned method and a copied product

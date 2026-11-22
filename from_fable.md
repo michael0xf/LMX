@@ -99,7 +99,7 @@
 среза ядра — `acc_chain.sh` там же; пример целой приёмки — `O/tz-20261121/accept-p4/acc_p4_run.sh`.
 В строке отказа `graph-check` сверяет номер ответа только у интерпретатора (Р128).
 
-Свободные метки каталогов: `docs-index181`, `render-merge-71`, `render-grammar-14`.
+Свободные метки каталогов: `docs-index182`, `render-merge-71`, `render-grammar-14`.
 
 ## 4. Кто чем занят
 

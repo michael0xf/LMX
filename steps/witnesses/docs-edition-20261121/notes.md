@@ -160,3 +160,16 @@ of the placement, the repository notes and the generator's formatting of the gra
 `docs/new_parts/` 825 references to the packet directory were rewritten to the working documents; the manifest
 `docs/new_parts/MANIFEST.sha256` lost the 25 lines of the removed files and got the new hashes of the rewritten
 ones. Four validation records in JSON keep the packet paths as the history of the author's review.
+
+## The directory `docs/old_parts/` is removed
+
+2026-11-22, on the author's order to remove the duplicates of `docs/Old_TZ/` to the end. `docs/old_parts/` held
+fifteen files the author had moved out of `docs/new_parts/` before the packet arrived: earlier versions
+(2026-10-14 to 2026-11-20) of the eight supplements whose current texts are in `docs/Old_TZ/`, earlier versions
+of four requirements of `docs/TZ/` (one byte-equal, three older) and three Russian translations of earlier
+supplement texts. The twelve earlier versions are removed. The three Russian files are moved to `docs/Old_TZ/`
+and brought to the current English texts line by line; `dirty.ru.md` there is the Russian text of the current
+`dirty.md`, with the author's former Russian wording kept where the meaning is unchanged. Three links follow
+the move: in the executor's ledger, in the plan dictionary and in a review record of 2026-09-30. No current
+working document linked to `docs/old_parts/`. In the three moved files nine kept Russian lines that had
+lagged behind the earlier English text were corrected as well.

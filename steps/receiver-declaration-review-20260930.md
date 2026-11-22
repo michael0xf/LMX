@@ -177,7 +177,7 @@ reference-to-reference возможность L3 этим кодом не док
 ### 6.1. Цепочки — отдельный вопрос
 
 `timeout: ms: int: time 500` уже объяснено в
-[описании Message API, §8.1](../docs/old_parts/threadMessageAPI.ru.md):
+[описании Message API, §8.1](../docs/Old_TZ/threadMessageAPI.ru.md):
 настройка имеет путь `timeout\ms\time`, а int потребляет имя time и значение
 500, не создавая дополнительного поля int. Это обычная вложенная структура
 с ресивером объявления на конце, не новый способ передачи аргументов.

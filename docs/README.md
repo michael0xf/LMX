@@ -115,6 +115,15 @@ supplements have been reviewed and updated.
 English in this packet. The accidentally supplied `LMX_grammar.ru.md` is excluded
 at the author's request. A complete Russian edition is a separate later pass.
 
+Russian texts of four supplements stand beside the English ones and follow them
+(2026-11-22): [dirty.ru.md](Old_TZ/dirty.ru.md),
+[mutating_debug_API.ru.md](Old_TZ/mutating_debug_API.ru.md),
+[threadMessageAPI.ru.md](Old_TZ/threadMessageAPI.ru.md) and
+[threadMessageAPI_migration.ru.md](Old_TZ/threadMessageAPI_migration.ru.md).
+The former directory `old_parts/` held earlier versions of these supplements and
+of four requirements of `TZ/`; it is removed, and `Old_TZ/` and `TZ/` hold the
+only copies.
+
 ## Scope and precedence
 
 The operative documents reflect the latest author requirements. Accepted

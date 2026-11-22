@@ -19,7 +19,6 @@ os:
             c.free(wmode)
             return: stream
         end: os_file_open
-
         # A private binary scratch stream in the caller's fresh working
         # directory. MSVCRT tmpfile chooses the drive root instead. The OS
         # creates the unique empty file; D keeps delete-on-last-close.
@@ -44,7 +43,6 @@ os:
             c.free(mode)
             return: stream
         end: os_file_temporary
-
         # Remove the named entry itself, without resolving/following it first.
         # Preserve the ordinary CRT return value; no missing-file exemption.
         fn: os_file_remove (@: path char) int
@@ -63,13 +61,11 @@ os:
         fn: os_file_temporary () @: c.FILE
             return: (cast: (@: c.FILE) c.tmpfile())
         end: os_file_temporary
-
         fn: os_file_open (@: path char; @: mode char) @: c.FILE
             if: path = 0 || mode = 0 || path[0] = (cast: (char) 0) || mode[0] = (cast: (char) 0)
                 return: 0
             return: (cast: (@: c.FILE) c.fopen(path, mode))
         end: os_file_open
-
         fn: os_file_remove (@: path char) int
             if: path = 0
                 return: -1

@@ -131,7 +131,6 @@ os:
     default:
         include: "<unistd.h>" "<sys/stat.h>" "<errno.h>" "<limits.h>"
         define: LmxPathStat struct stat
-
         fn: os_path_join (@: base char; @: tail char) @: char
             size_t: count 0U
             if: base = 0 || tail = 0
@@ -143,7 +142,6 @@ os:
                 return: txt_cat(base, tail)
             return: txt_path(base, tail)
         end: os_path_join
-
         fn: os_path_dirname (@: path char) @: char
             size_t: after c.strlen(path)
             size_t: at 0U
@@ -162,7 +160,6 @@ os:
                 ---
             return: txt_ndup(path, after)
         end: os_path_dirname
-
         fn: fp_posix_parent (@: path char) @: char
             size_t: count c.strlen(path)
             while: count > 0U && path[count - 1U] != (cast: (char) 47)
@@ -173,7 +170,6 @@ os:
                 return: txt_dup("/")
             return: txt_ndup(path, count)
         end: fp_posix_parent
-
         # Unlike an OS failure, memory/length failure is never ignored.
         # readlink's ssize_t is converted as a whole before a size_t local.
         fn: fp_posix_readlink (@: path char; @@: out char) int
@@ -203,7 +199,6 @@ os:
                 capacity := 2U * capacity
             ---
         end: fp_posix_readlink
-
         fn: fp_posix_cwd () @: char
             @: buffer char 0
             @: error_cell int (cast: (@: int) (@ c.errno))
@@ -224,7 +219,6 @@ os:
                 capacity := 2U * capacity
             ---
         end: fp_posix_cwd
-
         # Input has explicit length: embedded NUL must not truncate into a
         # different existing pathname. A result is fresh and NUL-terminated.
         fn: os_path_resolve_nonstrict (@: input char; size_t: input_count; @@: out char; @: out_count size_t) int

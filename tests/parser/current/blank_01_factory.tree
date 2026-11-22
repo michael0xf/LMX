@@ -1,0 +1,56 @@
+structure fields=3
+  frame head="Product" body=structure fields=4
+    frame head="int" body=structure fields=1
+      atom "payload"
+    frame head="return" body=structure fields=1
+      atom "int"
+    frame head="read" body=structure fields=1
+      frame head="return" body=structure fields=1
+        atom "payload"
+    frame head="create" body=structure fields=3
+      frame head="return" body=structure fields=1
+        atom "Product"
+      frame head="small" body=structure fields=2
+        frame head="node\payload" body=structure fields=1
+          atom "10"
+        frame head="return" body=structure fields=1
+          structure fields=1
+            frame head="copy" body=structure fields=1
+              atom "Product"
+      frame head="large" body=structure fields=2
+        frame head="node\payload" body=structure fields=1
+          atom "20"
+        frame head="return" body=structure fields=1
+          structure fields=1
+            frame head="copy" body=structure fields=1
+              atom "Product"
+  frame head="add1" body=structure fields=3
+    frame head="@" body=structure fields=2
+      atom "product"
+      atom "Product"
+    frame head="return" body=structure fields=1
+      atom "int"
+    frame head="execute" body=structure fields=1
+      frame head="return" body=structure fields=3
+        frame head="product\read" body=structure fields=0
+        atom "+"
+        atom "1"
+  frame head="Demo" body=structure fields=2
+    frame head="return" body=structure fields=1
+      atom "int"
+    frame head="run" body=structure fields=4
+      frame head="import" body=structure fields=2
+        atom "Product"
+        atom "add1"
+      frame head="int" body=structure fields=2
+        atom "first"
+        frame head="execute" body=structure fields=1
+          frame head="create\small" body=structure fields=0
+      frame head="int" body=structure fields=2
+        atom "second"
+        frame head="execute" body=structure fields=1
+          frame head="create\large" body=structure fields=0
+      frame head="return" body=structure fields=3
+        atom "first"
+        atom "+"
+        atom "second"

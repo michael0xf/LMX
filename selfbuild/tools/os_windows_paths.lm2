@@ -59,19 +59,16 @@
 os:
     win:
         include: "<windows.h>" "<winioctl.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
-
         fn: fpw_u16 (@: bytes char; size_t: at) unsigned
             unsigned: lo (cast: (unsigned) bytes[at]) & 255U
             unsigned: hi (cast: (unsigned) bytes[at + 1U]) & 255U
             return: lo | (hi << 8)
         end: fpw_u16
-
         fn: fpw_u32 (@: bytes char; size_t: at) unsigned
             unsigned: lo fpw_u16(bytes, at)
             unsigned: hi fpw_u16(bytes, at + 2U)
             return: lo | (hi << 16)
         end: fpw_u32
-
         # Counted UTF-16 is not borrowed as a NUL-terminated string. Invalid
         # or embedded-NUL path text must not become a different existing path.
         # Valid scalar filenames preserve their exact UTF-8 bytes.
@@ -106,7 +103,6 @@ os:
             out[0] := text
             return: 0
         end: fpw_from_counted
-
         fn: fpw_finalpath (@: path char; @@: out char; @: error unsigned) int
             @: wpath c.void 0
             @: handle c.void c.INVALID_HANDLE_VALUE
@@ -151,7 +147,6 @@ os:
             c.free(wpath)
             return: result
         end: fpw_finalpath
-
         fn: fpw_findleaf (@: path char; @@: out char; @: error unsigned) int
             @: wpath c.void 0
             @: fd c.WIN32_FIND_DATAW 0
@@ -183,7 +178,6 @@ os:
             c.free(fd)
             return: result
         end: fpw_findleaf
-
         # kind1=symlink,2=mount point,0=unsupported. Only Substitute is read;
         # PrintName, Reserved and unused Flags do not become acceptance gates.
         fn: fpw_readlink (@: path char; @@: out char; @: kind int; @: error unsigned) int
@@ -290,11 +284,9 @@ os:
             c.free(wide)
             return: result
         end: fpw_readlink
-
         fn: fpw_separator (unsigned: byte) int
             return: (cast: (int) (byte = 47U || byte = 92U))
         end: fpw_separator
-
         fn: fpw_slashes (@: path char) @: char
             @: copy char txt_dup(path)
             size_t: at 0U
@@ -307,7 +299,6 @@ os:
             ---
             return: copy
         end: fpw_slashes
-
         # Original byte slices, but colon-at-WCHAR1 follows the native
         # splitroot contract. A supplementary point occupies two WCHARs.
         fn: fpw_parts (@: path char; @: drive_after size_t; @: tail_at size_t) int
@@ -359,7 +350,6 @@ os:
             ---
             return: 0
         end: fpw_parts
-
         fn: fpw_isabs (@: path char) int
             size_t: count c.strlen(path)
             size_t: width 0U
@@ -375,7 +365,6 @@ os:
                 return: 1
             return: 0
         end: fpw_isabs
-
         fn: os_path_join (@: base char; @: tail char) @: char
             size_t: bn 0U
             size_t: tn 0U
@@ -447,7 +436,6 @@ os:
             out[used] := (cast: (char) 0)
             return: out
         end: os_path_join
-
         # split returns a caller-owned head and the byte index of the original
         # tail. Trim only the tail-head's separators, never the drive/root.
         fn: fpw_split (@: path char; @@: head char; @: tail_at size_t) int
@@ -470,7 +458,6 @@ os:
                 return: 1
             return: 0
         end: fpw_split
-
         fn: os_path_dirname (@: path char) @: char
             @: head char 0
             size_t: tail 0U
@@ -478,7 +465,6 @@ os:
                 return: 0
             return: head
         end: os_path_dirname
-
         fn: fpw_norm (@: input char) @: char
             @: path char fpw_slashes(input)
             @: part char 0
@@ -563,7 +549,6 @@ os:
                 return: 0
             return: out
         end: fpw_norm
-
         # normcase is exactly the native invariant lowercase route used by
         # ntpath._readlink_deep, NOT Python str.lower from os_path_join.
         fn: fpw_normcase (@: path char; @@: out char; @: error unsigned) int
@@ -607,15 +592,12 @@ os:
             c.free(mapped)
             return: result
         end: fpw_normcase
-
         fn: fpw_deep_stops (unsigned: error) int
             return: (cast: (int) (error = 1U || error = 2U || error = 3U || error = 5U || error = 21U || error = 32U || error = 50U || error = 67U || error = 87U || error = 4390U || error = 4392U || error = 4393U))
         end: fpw_deep_stops
-
         fn: fpw_final_stops (unsigned: error) int
             return: (cast: (int) (error = 1U || error = 2U || error = 3U || error = 5U || error = 21U || error = 32U || error = 50U || error = 53U || error = 65U || error = 67U || error = 87U || error = 123U || error = 161U || error = 1005U || error = 1920U || error = 1921U))
         end: fpw_final_stops
-
         # Operation-local seen keys, not an arbitrary link-count limit. A
         # relative target is meaningful here only for an actual symlink.
         fn: fpw_deep (@: input char; @@: out char; @: error unsigned) int
@@ -700,7 +682,6 @@ os:
             fp_seen_free(seen, count)
             return: result
         end: fpw_deep
-
         # Find the resolvable prefix, retaining the unresolved suffix and the
         # original native query error. Unexpected OS errors still propagate.
         fn: fpw_nonstrict (@: input char; @@: out char; @: error unsigned) int
@@ -805,7 +786,6 @@ os:
             c.free(next_tail)
             return: result
         end: fpw_nonstrict
-
         # Same counted-path interface as the POSIX adapter. A successful
         # result is owned, scalar UTF-8, and has an explicit byte count.
         fn: os_path_resolve_nonstrict (@: input char; size_t: input_count; @@: out char; @: out_count size_t) int

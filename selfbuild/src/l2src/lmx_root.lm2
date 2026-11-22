@@ -166,7 +166,6 @@ fn: lmx_root_open_graph (@: root c.LmxRoot; c.LmxCallEntry: entry; ulong: limit;
     graph\parent := 0
     root\parent_children := (cast: (@: void) parent_children)
     # Qualified sealed ranges are ordinary owner-arena values reached from ordinary graph fields.
-
     # R0 and its structural parent are each one allocation. Their first by-value LmxMsg prefix
     # gives the common Message address/kind; exact range type remains Thread.
     parent := (cast: (@: c.LmxThread) c.lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
@@ -686,11 +685,9 @@ fn: lmx_root_report_contains (c.uintptr_t: address; c.uintptr_t: first; size_t: 
     if: address - first < bytes
         return: 1
     return: 0
-
 end: lmx_root_report_contains
 fn: lmx_root_report_offset (c.uintptr_t: address; c.uintptr_t: first) size_t
     return: (cast: (size_t) (address - first))
-
 end: lmx_root_report_offset
 fn: lmx_root_report_ref (@: arena c.LmxArena; @: stream void; @: p void) int
     @: pool c.LmxPool

@@ -38,13 +38,13 @@
   {
     "name": "tests/t1.lmx",
     "stdout_file": "tests/parser/previous-l1/goldens/t1.stdout",
-    "reason": "P0 sole-anonymous-container normalize: sources body lost one sole anonymous Structure around its sole atom; System\\out\\println lost one sole anonymous Structure around its 7-field expression; other frames unchanged.",
+    "reason": "Today's parse refuses this input with code 17 \"unindent does not match any outer indentation level\" at 82:9. Reason (the blank-line rule, author 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md, check 6): a blank line closes the whole current block; the indented line after it opens a new anonymous level from the root, and the later return to the earlier indentation falls into no level. The golden is the text of this diagnostic, not a tree; the earlier tree stays in git history and in tests/parser/imported.",
     "commit": "bc228814aef8e0a1aadbe83266574cdb80ddfd3d"
   },
   {
     "name": "tests/t2.lmx",
     "stdout_file": "tests/parser/previous-l1/goldens/t2.stdout",
-    "reason": "P0 sole-anonymous-container normalize: sources sole-Structure unwrap plus several System\\out\\println frames each lost one sole anonymous Structure around their expression fields; control-flow frames otherwise unchanged.",
+    "reason": "Today's parse refuses this input with code 17 \"unindent does not match any outer indentation level\" at 127:9. Reason (the blank-line rule, author 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md, check 6): a blank line closes the whole current block; the indented line after it opens a new anonymous level from the root, and the later return to the earlier indentation falls into no level. The golden is the text of this diagnostic, not a tree; the earlier tree stays in git history and in tests/parser/imported.",
     "commit": "bc228814aef8e0a1aadbe83266574cdb80ddfd3d"
   },
   {
@@ -62,13 +62,13 @@
   {
     "name": "tests/t0.lmx",
     "stdout_file": "tests/parser/previous-l1/goldens/t0.stdout",
-    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{color: red}` at character 14 and of `{end}` at character 34; nothing else changed.",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{color: red}` at character 14 and of `{end}` at character 34; nothing else changed. The blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) changed this output again: the input has a blank line before an indented line.",
     "commit": "slice 359"
   },
   {
     "name": "tests/test4.lmx",
     "stdout_file": "tests/parser/previous-l1/goldens/test4.stdout",
-    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{red}` at character 14 and of `{end}` at character 27; nothing else changed.",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{red}` at character 14 and of `{end}` at character 27; nothing else changed. The blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) changed this output again: the input has a blank line before an indented line.",
     "commit": "slice 359"
   },
   {
@@ -77,5 +77,55 @@
     "diagnostic": "13@26:3",
     "reason": "One parser in every block (the author, 2026-11-11, journal #same-parser-inside-brackets): inside round brackets a level drop of more than one step without a tail cutter is a parse error, as outside brackets. The third group of the case drops from `. . . test2` to `. print`; its first two groups give the trees they gave.",
     "commit": "slice 359"
+  },
+  {
+    "name": "tests/if_else_dotted_empty_body_gap_probe.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/if_else_dotted_empty_body_gap_probe.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/if_else_dotted_nested_empty_body_gap_probe.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/if_else_dotted_nested_empty_body_gap_probe.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/if_else_empty_body_gap_probe.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/if_else_empty_body_gap_probe.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/test.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/test.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_l4_generic_table_key.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_l4_generic_table_key.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_registry_default_lookup.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_registry_default_lookup.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_registry_empty_join.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_registry_empty_join.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_registry_multicolumn.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_registry_multicolumn.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_registry_none_cell.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_registry_none_cell.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
+  },
+  {
+    "name": "tests/trans_registry_view_parity.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/trans_registry_view_parity.stdout",
+    "reason": "Blank-line rule (author, 2026-11-20, docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md): a blank physical line closes the whole current block; the input has a blank line before an indented line, so the form before it is no longer resumed."
   }
 ]

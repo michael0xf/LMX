@@ -104,7 +104,6 @@ end: lm_p0_indent_stack_free
 # Original: parser.lm1:299 lm_p0_indent_stack_free_any
 sub: lm_p0_indent_stack_free_any (@: object void)
     @: stack c.LmP0IndentStack
-
     stack := object
     lm_p0_indent_stack_free(stack)
 end: lm_p0_indent_stack_free_any
@@ -113,7 +112,6 @@ end: lm_p0_indent_stack_free_any
 fn: lm_p0_indent_stack_push (@: document c.LmP0Document; @: stack c.LmP0IndentStack; size_t: column; size_t: line; size_t: source_column) int
     size_t: new_capacity
     @: columns size_t
-
     if: stack\count = stack\capacity
         if: stack\capacity = 0U
             new_capacity := 8U
@@ -127,7 +125,6 @@ fn: lm_p0_indent_stack_push (@: document c.LmP0Document; @: stack c.LmP0IndentSt
             return: 0
         stack\columns := columns
         stack\capacity := new_capacity
-
     ---
     stack\columns[stack\count] := column
     stack\count := stack\count + 1U
@@ -148,7 +145,6 @@ end: lm_p0_indent_stack_new_empty
 # Original: parser.lm1:333 lm_p0_indent_stack_new
 fn: lm_p0_indent_stack_new (@: document c.LmP0Document) @: c.LmP0IndentStack
     @: stack c.LmP0IndentStack
-
     stack := lm_p0_indent_stack_new_empty()
     if: stack = 0
         lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while creating indentation stack")
@@ -167,7 +163,6 @@ end: lm_p0_indent_stack_delete
 # Original: parser.lm1:349 lm_p0_indent_stack_copy
 fn: lm_p0_indent_stack_copy (@: document c.LmP0Document; @: target c.LmP0IndentStack; const: (@: source c.LmP0IndentStack); size_t: line; size_t: column) int
     size_t: capacity
-
     c.memset(target, 0, c.sizeof(target[0]))
     if: source\capacity > source\count
         capacity := source\capacity
@@ -177,7 +172,6 @@ fn: lm_p0_indent_stack_copy (@: document c.LmP0Document; @: target c.LmP0IndentS
     ---
     if: capacity = 0U
         return: 1
-
     target\columns := c.lm_own_new_zero(capacity * c.sizeof(c.size_t))
     if: target\columns = 0
         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while copying indentation levels")
@@ -191,7 +185,6 @@ end: lm_p0_indent_stack_copy
 # Original: parser.lm1:369 lm_p0_indent_stack_clone
 fn: lm_p0_indent_stack_clone (@: document c.LmP0Document; const: (@: source c.LmP0IndentStack); size_t: line; size_t: column) @: c.LmP0IndentStack
     @: target c.LmP0IndentStack
-
     target := lm_p0_indent_stack_new_empty()
     if: target = 0
         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while copying indentation levels")
@@ -211,7 +204,6 @@ end: lm_p0_indent_tab_column
 sub: lm_p0_scan_indent_column (const: (@: source char); size_t: start; size_t: limit_index; @: out_offset size_t; @: out_column size_t)
     size_t: p
     size_t: column
-
     p := start
     column := 0U
     while: p < limit_index && c.lm_p0_is_horizontal_space(source[p])
@@ -222,7 +214,6 @@ sub: lm_p0_scan_indent_column (const: (@: source char); size_t: start; size_t: l
             column := column + 1U
         ---
         p := p + 1U
-
     ---
     out_offset[0] := p
     out_column[0] := column
@@ -232,7 +223,6 @@ end: lm_p0_scan_indent_column
 fn: lm_p0_visual_column_between (const: (@: source char); size_t: start; size_t: limit_index) size_t
     size_t: p
     size_t: column
-
     p := start
     column := 0U
     while: p < limit_index
@@ -253,7 +243,6 @@ fn: lm_p0_visual_column_between (const: (@: source char); size_t: start; size_t:
             continue
         column := column + 1U
         p := p + 1U
-
     ---
     return: column
 end: lm_p0_visual_column_between
@@ -263,7 +252,6 @@ fn: lm_p0_count_line_breaks (const: (@: source char); size_t: start; size_t: lim
     size_t: count
     size_t: i
     size_t: width
-
     count := 0U
     i := start
     while: i < limit_index
@@ -274,7 +262,6 @@ fn: lm_p0_count_line_breaks (const: (@: source char); size_t: start; size_t: lim
             continue
         i := i + 1U
     ---
-
     return: count
 end: lm_p0_count_line_breaks
 
@@ -284,12 +271,10 @@ sub: lm_p0_position_in_slice (const: (@: text char); size_t: byte_count; size_t:
     size_t: line
     size_t: column
     size_t: width
-
     line := base_line
     column := base_column
     if: index > byte_count
         index := byte_count
-
     ---
     i := 0U
     while: i < index
@@ -301,7 +286,6 @@ sub: lm_p0_position_in_slice (const: (@: text char); size_t: byte_count; size_t:
             continue
         column := column + 1U
         i := i + 1U
-
     ---
     out_line[0] := line
     out_column[0] := column
@@ -312,14 +296,12 @@ sub: lm_p0_advance_layout_line (const: (@: source char); size_t: byte_count; siz
     size_t: next_offset
     size_t: line_breaks
     size_t: width
-
     next_offset := line_end
     line_breaks := lm_p0_count_line_breaks(source, line_start, line_end)
     width := c.lm_p0_line_break_width_at(source, byte_count, next_offset)
     if: width != 0U
         line_breaks := line_breaks + 1U
         next_offset := next_offset + width
-
     ---
     offset[0] := next_offset
     line[0] := line[0] + line_breaks
@@ -335,33 +317,28 @@ end: lm_p0_index_is_line_start
 # Original: parser.lm1:492 lm_p0_line_rest_is_horizontal_space
 fn: lm_p0_line_rest_is_horizontal_space (const: (@: source char); size_t: start; size_t: limit_index) int
     size_t: i
-
     i := start
     while: i < limit_index
         if: c.lm_p0_is_horizontal_space(source[i]) = 0
             return: 0
         i := i + 1U
     ---
-
     return: 1
 end: lm_p0_line_rest_is_horizontal_space
 
 # Original: parser.lm1:504 lm_p0_find_physical_line_end
 fn: lm_p0_find_physical_line_end (const: (@: source char); size_t: byte_count; size_t: start) size_t
     size_t: i
-
     i := start
     while: i < byte_count && c.lm_p0_is_line_break(source[i]) = 0
         i := i + 1U
     ---
-
     return: i
 end: lm_p0_find_physical_line_end
 
 # Original: parser.lm1:514 lm_p0_text_has_prefix_name
 fn: lm_p0_text_has_prefix_name (const: (@: text char); size_t: byte_count; const: (@: name char); int: allow_bare) int
     size_t: name_length
-
     name_length := c.strlen(name)
     if: byte_count < name_length
         return: 0
@@ -393,13 +370,10 @@ end: lm_p0_trailer_role_is_tail_cutter
 # Original: parser.lm1:540 lm_p0_node_head_is
 fn: lm_p0_node_head_is (const: (@: p0_node c.LmP0Node); const: (@: name char)) int
     size_t: name_length
-
     if: p0_node = 0 || p0_node\kind != c.LM_P0_NODE_FRAME
         return: 0
-
     name_length := c.strlen(name)
     return: p0_node\as\frame\head\length = name_length && c.memcmp(p0_node\as\frame\head\data, name, name_length) = 0
-
 # A `return` trailer line with no value: the word alone, or followed by a space or a comment --
 # not `return:` (lm_p0_legacy_trailer_role gives both spellings the RETURN role).
 end: lm_p0_node_head_is
@@ -407,7 +381,6 @@ end: lm_p0_node_head_is
 # Original: parser.lm1:551 lm_p0_trailer_text_is_bare
 fn: lm_p0_trailer_text_is_bare (const: (@: text char); size_t: byte_count) int
     return: ((lm_p0_text_has_prefix_name(text, byte_count, "return", 1) != 0) && (lm_p0_text_has_prefix_name(text, byte_count, "return", 0) = 0))
-
 # The Frames a bare `return` closes besides an fn (author 2026-09-24, Q19.1/Q19.3): a callable
 # Structure without a result -- a sub or an fm head, or a named Structure, a colon Frame with no
 # inline tail and a vertical body -- and never a Frame whose head is a control word (A1: if,
@@ -436,7 +409,6 @@ fn: lm_p0_trailer_role_accepts_target (c.LmP0TrailerRole: role; const: (@: targe
         return: 0
     if: ((target\kind = c.LM_P0_NODE_STRUCTURE) && (target\as\structure\trailer != 0))
         return: 0
-
     # `return` closes a callable Frame (author 2026-09-24, Q19.1/Q19.3): `return: value` an fn
     # only, a bare `return` also a callable without a result (lm_p0_return_closes_bare).  Every
     # other trailer word closes any Frame.  The rule is written here; the trailer.target lookup it
@@ -523,11 +495,9 @@ fn: lm_p0_find_python_string_end (const: (@: text char); size_t: byte_count; siz
     char: quote
     size_t: i
     size_t: run_length
-
     if: c.lm_p0_starts_python_string(text, byte_count, start) = 0
         out_end[0] := start
         return: 0
-
     quote := text[start]
     i := start + 3U
     while: i < byte_count
@@ -535,7 +505,6 @@ fn: lm_p0_find_python_string_end (const: (@: text char); size_t: byte_count; siz
             run_length := 1U
             while: i + run_length < byte_count && text[i + run_length] = quote
                 run_length := run_length + 1U
-
             ---
             if: run_length = 3U
                 out_end[0] := i + 3U
@@ -543,7 +512,6 @@ fn: lm_p0_find_python_string_end (const: (@: text char); size_t: byte_count; siz
             i := i + run_length
             continue
         i := i + 1U
-
     ---
     out_end[0] := byte_count
     return: 0
@@ -552,7 +520,6 @@ end: lm_p0_find_python_string_end
 # Original: parser.lm1:683 lm_p0_skip_python_string_unchecked
 fn: lm_p0_skip_python_string_unchecked (const: (@: text char); size_t: byte_count; size_t: start) size_t
     size_t: limit_index
-
     if: lm_p0_find_python_string_end(text, byte_count, start, @ limit_index) = 0
         return: byte_count
     return: limit_index
@@ -563,7 +530,6 @@ sub: lm_p0_scan_layout_prefix (const: (@: source char); size_t: byte_count; size
     size_t: p
     size_t: indent_column
     size_t: dot_level
-
     lm_p0_scan_indent_column(source, start, byte_count, @ p, @ indent_column)
     dot_level := 0U
     while: p < byte_count && source[p] = '.'
@@ -572,7 +538,6 @@ sub: lm_p0_scan_layout_prefix (const: (@: source char); size_t: byte_count; size
         while: p < byte_count && c.lm_p0_is_horizontal_space(source[p]) != 0
             p := p + 1U
         ---
-
     ---
     out_offset[0] := p
     out_indent_column[0] := indent_column
@@ -592,11 +557,9 @@ fn: lm_p0_dash_fence_status (const: (@: text char); size_t: byte_count; @: out_d
     size_t: i
     int: closed
     size_t: brace_end
-
     dash_count := 0U
     while: dash_count < byte_count && text[dash_count] = '-'
         dash_count := dash_count + 1U
-
     ---
     if: out_dash_count != 0
         out_dash_count[0] := dash_count
@@ -605,7 +568,6 @@ fn: lm_p0_dash_fence_status (const: (@: text char); size_t: byte_count; @: out_d
         return: c.LM_P0_DASH_FENCE_NONE
     if: dash_count > c.LM_P0_MAX_FENCE_LENGTH
         return: c.LM_P0_DASH_FENCE_TOO_LONG
-
     i := dash_count
     while: i < byte_count
         if: c.lm_p0_is_horizontal_space(text[i]) != 0
@@ -621,14 +583,12 @@ fn: lm_p0_dash_fence_status (const: (@: text char); size_t: byte_count; @: out_d
         ---
         return: c.LM_P0_DASH_FENCE_TRAILING_TEXT
     ---
-
     return: c.LM_P0_DASH_FENCE_VALID
 end: lm_p0_dash_fence_status
 
 # Original: parser.lm1:749 lm_p0_validate_dash_fence_line
 fn: lm_p0_validate_dash_fence_line (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: line; size_t: column) int
     int: status
-
     status := (cast: (int) lm_p0_dash_fence_status_after_comment_trim(text, byte_count, 0))
     if: status = c.LM_P0_DASH_FENCE_TOO_LONG
         lm_p0_set_diagnostic(document, 25, line, column, "dash delimiter fence length exceeds 80 characters")
@@ -642,43 +602,35 @@ end: lm_p0_validate_dash_fence_line
 # Original: parser.lm1:761 lm_p0_match_block_string_fence_line
 fn: lm_p0_match_block_string_fence_line (const: (@: source char); size_t: line_start; size_t: line_end; size_t: eq_count) int
     size_t: i
-
     if: eq_count < 3U || eq_count > c.LM_P0_MAX_FENCE_LENGTH || line_start + eq_count > line_end
         return: 0
-
     i := 0U
     while: i < eq_count
         if: source[line_start + i] != '='
             return: 0
         i := i + 1U
-
     ---
     if: line_start + eq_count < line_end && source[line_start + eq_count] = '='
         return: 0
-
     i := line_start + eq_count
     while: i < line_end
         if: c.lm_p0_is_horizontal_space(source[i]) = 0
             return: 0
         i := i + 1U
     ---
-
     return: 1
 end: lm_p0_match_block_string_fence_line
 
 # Original: parser.lm1:785 lm_p0_match_raw_comment_fence_line
 fn: lm_p0_match_raw_comment_fence_line (const: (@: source char); size_t: line_start; size_t: line_end; size_t: star_count) int
     size_t: i
-
     if: star_count < 3U || star_count > c.LM_P0_MAX_FENCE_LENGTH || line_start + star_count > line_end
         return: 0
-
     i := 0U
     while: i < star_count
         if: source[line_start + i] != '*'
             return: 0
         i := i + 1U
-
     ---
     if: line_start + star_count < line_end && source[line_start + star_count] = '*'
         return: 0
@@ -689,17 +641,14 @@ end: lm_p0_match_raw_comment_fence_line
 sub: lm_p0_dump_append_size (@: dump c.LmP0Dump; size_t: value)
     c.LmP0DumpScratch: scratch
     size_t: index
-
     if: value = 0U
         lm_p0_dump_append_cstr(dump, "0")
         return
-
     index := 32U
     while: value > 0U
         index := index - 1U
         scratch\buffer[index] := '0' + value % 10U
         value := value / 10U
-
     ---
     lm_p0_dump_append(dump, (cast: (const: @: char) scratch\buffer) + index, 32U - index)
 end: lm_p0_dump_append_size
@@ -1721,11 +1670,9 @@ fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Struct
     size_t: span_line
     size_t: span_column
     size_t: absolute_offset
-
     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
     if: p0_node = 0
         return: 0
-
     p0_node\flags := p0_node\flags | c.LM_P0_NODE_MIX
     lm_p0_position_in_slice(text, byte_count, start, line, column, @ span_line, @ span_column)
     p0_node\span\line := span_line
@@ -1733,12 +1680,10 @@ fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Struct
     p0_node\span\length := limit_index - start
     if: lm_p0_pointer_source_offset(document, text + start, @ absolute_offset)
         p0_node\span\offset := absolute_offset
-
     ---
     if: lm_p0_append_field(document, structure, p0_node) = 0
         lm_p0_free_node(p0_node)
         return: 0
-
     # The content of the mark is a nested document; an empty mark keeps the node's own empty Structure.
     if: limit_index > start + 2U
         if: lm_p0_parse_nested(document, (text + start + 1U), (limit_index - start - 2U), span_line, (span_column + 1U), 0, 0U, 0U, 0U, 0, @ payload) = 0
@@ -4177,8 +4122,14 @@ fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack 
             raw_length := raw_length - 1U
         ---
         if: (raw_length = 0U)
+            c.memset(event, 0, c.sizeof(event[0]))
+            event\kind := c.LM_P0_STREAM_EVENT_BLANK
+            event\line := line[0]
+            event\column := 1U
+            event\offset := line_start
             lm_p0_advance_layout_line(source, byte_count, line_start, line_end, offset, line)
-            continue
+            has_event[0] := 1
+            return: 1
         p := line_start
         level := 0U
         dotted_level := 0
@@ -4212,6 +4163,15 @@ fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack 
             text_length := ((line_start + raw_length) - p)
             lm_p0_trim_right(@ text, @ text_length)
             if: ((text_length = 0U) || (text[0] = '#'))
+                if: ((text_length = 0U) && (mark_skip = 0U))
+                    c.memset(event, 0, c.sizeof(event[0]))
+                    event\kind := c.LM_P0_STREAM_EVENT_BLANK
+                    event\line := line[0]
+                    event\column := 1U
+                    event\offset := line_start
+                    lm_p0_advance_layout_line(source, byte_count, line_start, line_end, offset, line)
+                    has_event[0] := 1
+                    return: 1
                 lm_p0_advance_layout_line(source, byte_count, line_start, line_end, offset, line)
                 continue
             if: (lm_p0_stream_indent_level(document, indent_stack, 0, group_base_set, indent_column, line[0], ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
@@ -4266,6 +4226,9 @@ fn: lm_p0_disabled_state_accept_event (@: document c.LmP0Document; @: state c.Lm
     int: is_tail_cutter
     done_after_event[0] := 0
     done_before_event[0] := 0
+    if: (event\kind = c.LM_P0_STREAM_EVENT_BLANK)
+        done_before_event[0] := 1
+        return: 1
     if: (event\level = (cast: (size_t) -1))
         if: state\pending_item
             event\level := (state\pending_level + 1U)
@@ -4388,6 +4351,54 @@ fn: lm_p0_validate_disabled_block (@: document c.LmP0Document; const: (@: indent
     return: (status && (document\diagnostic\code = 0))
 end: lm_p0_validate_disabled_block
 
+# A blank physical line (no characters, or only spaces and tabs) closes every open form of the current document back
+# to its root: the full boundary at the virtual level -1 (the author, 2026-11-20). It adds no field, no empty Structure,
+# no call and no return. The queue of lines holding only a Mix finishes here, a pending delimiter is resolved without
+# opening an anonymous block, the continuation context returns to the root. Blank lines in a row close nothing more.
+fn: lm_p0_stream_apply_blank (@: document c.LmP0Document; @: stack c.LmP0Stack; @: pending c.LmP0PendingDelimiter; @: pending_mix c.LmP0PendingMix; @: indent_stack c.LmP0IndentStack) int
+    if: (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, 0U) = 0)
+        return: 0
+    if: (lm_p0_stream_resolve_pending_delimiter(document, stack, pending, (cast: (size_t) -1)) = 0)
+        return: 0
+    lm_p0_stack_truncate_deeper(stack, 0U)
+    indent_stack\count := 1U
+    return: 1
+
+# The logical line failed inside an unclosed ( or [ and the next physical line is blank: the error stays code 5 and
+# moves to the blank line, naming the opening delimiter (the author, 2026-11-20, check 9). No delimiter is completed.
+sub: lm_p0_blank_after_open_pair (@: document c.LmP0Document; const: (@: source char); size_t: byte_count; size_t: line; size_t: line_start; size_t: line_end)
+    size_t: blank_start
+    size_t: blank_end
+    size_t: i
+    size_t: width
+    size_t: blank_line
+    size_t: opener_line
+    size_t: opener_column
+    if: ((document\diagnostic = 0) || (document\diagnostic\code != 5) || (line_end >= byte_count))
+        return
+    blank_start := (line_end + c.lm_p0_line_break_width_at(source, byte_count, line_end))
+    if: (blank_start >= byte_count)
+        return
+    blank_end := lm_p0_find_physical_line_end(source, byte_count, blank_start)
+    i := blank_start
+    while: ((i < blank_end) && c.lm_p0_is_horizontal_space(source[i]))
+        i := (i + 1U)
+    ---
+    if: (i != blank_end)
+        return
+    blank_line := line
+    i := line_start
+    while: (i < blank_start)
+        width := c.lm_p0_line_break_width_at(source, byte_count, i)
+        blank_line := (blank_line + (cast: (size_t) (width > 0U)))
+        i := (i + (width + (cast: (size_t) (width = 0U))))
+    ---
+    opener_line := document\diagnostic\line
+    opener_column := document\diagnostic\column
+    document\diagnostic\line := blank_line
+    document\diagnostic\column := 1U
+    c.snprintf(document\diagnostic\message, 256U, "blank line inside an unclosed form (the opening delimiter is at %zu:%zu)", opener_line, opener_column)
+
 # Original: parser.lm1:3677 lm_p0_parse_stream
 fn: lm_p0_parse_stream (@: document c.LmP0Document) int
     const: (@: source char)
@@ -4487,6 +4498,12 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
         if: (raw_length = 0U)
             if: (line_end = byte_count)
                 break
+            if: (group_tail = 0)
+                if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
+                    status := 0
+                    break
+                has_last_physical_level := 0
+                last_physical_level := 0U
             lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
             continue
         p := line_start
@@ -4561,6 +4578,12 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
             if: ((text_length = 0U) || (text[0] = '#'))
                 if: (line_end = byte_count)
                     break
+                if: ((text_length = 0U) && (group_tail = 0) && (has_leading_mix_prefix = 0))
+                    if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
+                        status := 0
+                        break
+                    has_last_physical_level := 0
+                    last_physical_level := 0U
                 lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
                 continue
             if: (lm_p0_stream_indent_level(document, indent_stack, group_tail, @ group_base_set, indent_column, line, ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
@@ -4675,6 +4698,7 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
             lm_p0_stream_event_delete(mix_event)
         ---
         if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
+            lm_p0_blank_after_open_pair(document, source, byte_count, line, line_start, line_end)
             status := 0
             break
         has_last_physical_level := 1
@@ -4955,7 +4979,6 @@ fn: lm_p0_atom_names (const: (@: p0_node c.LmP0Node); const: (@: name c.LmP0Text
         i := i + 1U
     ---
     return: 1
-
 # Does frame's trailer close it as its empty vertical body's explicit end -- an empty colon Frame whose tail cutter is
 # `end:` with one atom naming the Frame (grammar §18: `f:` with an explicitly closed empty vertical body; `end: f`
 # closes it as `---` does)?  A bare `end`, another target, or more than the name is no such closure.
@@ -4980,7 +5003,6 @@ fn: lm_p0_end_closes_empty_colon (const: (@: frame c.LmP0Frame)) int
     if: only = 0 || only\value = 0
         return: 0
     return: lm_p0_atom_names((cast: (const: @: c.LmP0Node) only\value), (cast: (const: @: c.LmP0Text) frame\head))
-
 # The explicit `end:` closure of empty colon Frames, through the tree: such a Frame is marked closed as the delimiter
 # marks it (LM_P0_FRAME_DELIMITER_CLOSED) and keeps no trailer -- the closure is syntax, not a trailer of the value.
 end: lm_p0_end_closes_empty_colon

@@ -73,7 +73,6 @@ os:
     win:
         include: "<windows.h>"
         # The shared binary opener lives in os_file_open.lm2.
-
         # Follow the target, including symbolic links; attributes of the link
         # itself must not make a broken link an existing file/directory.
         # 0 absent/stat error,1 regular disk file,2 directory,3 other,-1 memory.
@@ -115,7 +114,6 @@ os:
             c.free(info)
             return: kind
         end: os_path_kind
-
         fn: os_directory_entries (@: dir char; @@@: out_names char; @@: out_kinds unsigned; @: out_count size_t) int
             @: pattern char 0
             @: wpattern c.void 0
@@ -207,7 +205,6 @@ os:
         include: "<dirent.h>" "<sys/stat.h>" "<errno.h>"
         define: LmxFsDirent struct dirent
         define: LmxFsStat struct stat
-
         fn: os_path_kind (@: path char) int
             @: status c.LmxFsStat 0
             int: kind 0
@@ -227,7 +224,6 @@ os:
             c.free(status)
             return: kind
         end: os_path_kind
-
         fn: os_directory_entries (@: dir char; @@@: out_names char; @@: out_kinds unsigned; @: out_count size_t) int
             @: directory c.DIR 0
             @: entry c.LmxFsDirent 0

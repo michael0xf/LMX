@@ -146,6 +146,11 @@ specification, the guide, the kernel implementation notes, the implementation no
 instruction, dated notes in two requirements, the author's example R02 with its manifest hashes. Record of the
 executor: R124 of `LMX_blog/q/fable-self-answers-20261110.md`.
 
+2026-11-22. The author edited that rule (`LMX_blog/2026-11-22.md#operand-left-unnamed-structure`): the
+parentheses on the right are opened when `left` is an unnamed Structure and the single `right` argument is an
+unnamed Structure too. The same documents carry the edited rule; records of the executor: R136, and R137 for
+the integer numeric contract decided the same day.
+
 ## The packet copy is removed
 
 2026-11-21, on the author's order («удалите дубли в newdocs и поменяйте ссылки в md везде в документах из

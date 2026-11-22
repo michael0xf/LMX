@@ -1016,8 +1016,9 @@ three right values. In prefix `(foo 1 2 3 4)` no left actual is written; all fou
 and ordinary defaults/requiredness determine whether omission is admissible. No `has_left` marker
 or implicit shift of the first right value is added. An Array or Structure remains one operand
 container; dense numeric Array storage is not reinterpreted as `Array<@>`. An operand has one opening
-of its own: its single `right` argument, when it is an unnamed Structure, is opened; a Structure
-returned from a function is not opened (author's decision, 2026-11-21).
+of its own: when its `left` is an unnamed Structure and its single `right` argument is an unnamed
+Structure too, the parentheses on the right are opened and `right` receives all their content; a
+Structure returned from a function is not opened (author's decisions, 2026-11-21 and 2026-11-22).
 
 These references address values in genuine typed records: value at p, four-byte code at p − 4.
 A container reference addresses its typed descriptor. An untagged C temporary is not such a

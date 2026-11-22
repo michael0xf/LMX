@@ -16,7 +16,7 @@
 
 LMX и Python используют именованное поле `width`: в LMX оно находится в `immutable`-структуре, в Python — в `@dataclass(frozen=True)`. Поле может быть частью более богатого набора общих свойств. `immutable` защищает содержимое глифа; одной константности имени для такого обещания недостаточно. Возврат и присваивание структурной ссылки сохраняют идентичность; копирование через `copy` здесь не требуется.
 
-Внутри `glyphs` нет пустых строк: по принятому правилу пустая строка завершила бы весь корневой блок. Завершающий `return` расположен на уровне объявления `demo` и завершает его тело. Пробелы в `render(first 3)` разделяют два позиционных аргумента. [Связывание][B] · [Импорт][D] · [Границы блоков][E]
+Внутри `glyphs` нет пустых строк: по принятому правилу пустая строка завершила бы весь корневой блок. Завершающий `return` расположен на уровне объявления `demo` и завершает его тело. Пробелы в `render(first 3)` разделяют два позиционных аргумента. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
 
 ## Подсчёт исходников
 
@@ -271,6 +271,5 @@ pub fn demo() -> i32 {
 
 - [Refactoring.Guru — Flyweight in Python, conceptual example](https://refactoring.guru/design-patterns/flyweight/python/example)
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

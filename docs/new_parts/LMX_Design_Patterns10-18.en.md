@@ -16,7 +16,7 @@ An uninitialized declared input may receive a same-named value from the immediat
 
 A physical blank line closes the entire root syntax block. An inner `---` is used when the enclosing structure must continue after a nested structure ends. EOF can close the final block.
 
-[Binding rules][B] · [Import][D] · [Block boundaries][E]
+[Binding rules](../LMX_semantics.en.md#binding-places) · [Import][D] · [Block boundaries][E]
 
 **Copying and field streams.** `import`, `copy`, and `merge` use ordinary CODE arguments in every placement. `copy` accepts one admitted source, while `merge` accepts at least two; both emit field streams. When one object is required, an explicit group collects that result: `(copy(Product))` or `(merge(Model Settings))`. The receiving structure is not an additional merge source. Written receivers remain in the source graph; namespace processing consumes their results. Ordinary W/E rules still apply after grouping. [Copying, composition and grouping][S]
 
@@ -374,7 +374,6 @@ This is a functional Bridge: independently varying abstractions and implementati
 
 The LMX listings are identical to the individual comparison files. They were reviewed against the agreed rules and the author’s clarifications; the LMX kernel was not run here. Actual execution and static-review status for the other languages is recorded in each comparison file. The Excel and PDF figures were calculated from these same listings.
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 

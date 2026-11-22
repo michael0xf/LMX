@@ -1075,7 +1075,7 @@ The machine profile retains grouping, arithmetic, comparisons, logic, bitwise op
 a colon form declares or calls under its role. Overflow and raw indexing follow the machine
 contract, not L3 guarantees. `a[i][j]` addresses a rectangular multidimensional Array;
 `a[i]\[j]` follows a reference to a separate Array, while `s\[N]field` selects a source name
-occurrence. [Common expression requirements](tasks/to_fable_operands_arguments_priorities.md).
+occurrence. [Expressions, assignment and demand](LMX_semantics.en.md#assignment-inside-expression).
 
 <a id="lowlevel-sync"></a>
 ## 22. synchronized

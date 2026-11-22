@@ -14,7 +14,7 @@ negative обрабатывает отрицательное число и во�
 
 Как Python-функция с двумя default-параметрами, DATA LMX задаёт first = negative и second = even. dispatch вызывает first, а при нулевом результате — second. value передаётся обработчикам через autofill. Готовые defaults не заменяются одноимёнными локалями: перестановка выполнена явно через dispatch(-2; even; negative). Java и C# дают обычную перегрузку для defaults, Go и Rust — короткую функцию-обёртку.
 
-Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание][B] · [Импорт][D] · [Границы блоков][E]
+Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
 
 ## Подсчёт исходников
 
@@ -325,6 +325,5 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 
 - [Refactoring.Guru — Chain of Responsibility in Python, conceptual example](https://refactoring.guru/design-patterns/chain-of-responsibility/python/example)
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

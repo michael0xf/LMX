@@ -90,8 +90,7 @@ R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: 
 <a id="own"></a>
 ## 11. Local call frame
 
-The norm of 2026-11-19 (binding and callables) was accepted by the author in the
-[TZ](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) and is in force in the edition of 2026-11-21; its
+The norm of 2026-11-19 (binding and callables) was accepted by the author (the [decisions R01–R19](LMX_semantics.en.md#binding-decisions)) and is in force in the edition of 2026-11-21; its
 application is recorded in the [plan](../next_core_tasks_v3.md#docs-20261121). This section states the new norm in the
 same words as [L2 §11](L2_spec_en.md#call).
 
@@ -198,7 +197,7 @@ fields remain and are selected by `S\[n]x`. An explicit path is not restricted b
 order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
 <a id="inline-declaration-control"></a>
-One case remains with the executor's reading ([TZ §7.4](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+One case remains with the executor's reading ([the control example](LMX_semantics.en.md#inline-declaration-control),
 [Р106](../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
 where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
 between the caller's local context and the callee's place at the call, while an inline scope stays within the same

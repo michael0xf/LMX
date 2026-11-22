@@ -14,7 +14,7 @@
 
 Python increment / twice / square / pipeline / demo собраны в группу pipeline. execute сохраняет последовательность шагов, а demo задаёт prepare и finish обычными ссылками. Данные шага передаются через autofill.
 
-Структура задаёт общий DATA связанных методов. Метод обращается к нужным ему полям; отдельная оболочка для demo из-за остальных полей не требуется. Обычная ссылка `@: name method` не вызывает method и не требует самостоятельного `fn`. Программа по-прежнему использует типы объявленных полей и правила конкретных вызовов. [Связывание и ссылки][B]
+Структура задаёт общий DATA связанных методов. Метод обращается к нужным ему полям; отдельная оболочка для demo из-за остальных полей не требуется. Обычная ссылка `@: name method` не вызывает method и не требует самостоятельного `fn`. Программа по-прежнему использует типы объявленных полей и правила конкретных вызовов. [Связывание и ссылки](../LMX_semantics.en.md#binding-places)
 
 Пустая строка завершает корневой синтаксический блок. Внутренний `---` сохраняется там, где нужно продолжить внешнюю структуру. `node\` выбирает лексическую связь, а не переход к parent. [Границы блоков][E]
 
@@ -314,7 +314,7 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 
 ## Источники правил и примеров
 
-- [Связывание, структурный вызов и необязательный самостоятельный fn-контракт][B].
+- [Связывание](../LMX_semantics.en.md#binding-places), [структурный вызов](../LMX_semantics.en.md#structural-call) и необязательный самостоятельный [fn-контракт](../LMX_semantics.en.md#fn-signature).
 - [Переданные объявления и импорт корневых const-объявлений][D].
 - [Пустая строка как завершение корневого блока][E].
 
@@ -323,6 +323,5 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 - [Refactoring.Guru — Template Method](https://refactoring.guru/design-patterns/template-method)
 - [Refactoring.Guru — Template Method in Rust, conceptual example](https://refactoring.guru/design-patterns/template-method/rust/example)
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

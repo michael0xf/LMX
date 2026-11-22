@@ -32,8 +32,8 @@ The normative model is the supplied `docs/` packet. The current author's operand
 
 | Code used below | Document / package path | Role |
 |---|---|---|
-| O / OPERAND | [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
-| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
+| O / OPERAND | [LMX_semantics.en.md#operand-receiver](../LMX_semantics.en.md#operand-receiver) | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
+| B / BIND | [LMX_semantics.en.md#binding-places](../LMX_semantics.en.md#binding-places) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
 | M / STREAM | [LMX_semantics.en.md#composition](../LMX_semantics.en.md#composition) | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
 | BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
 | D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
@@ -134,7 +134,7 @@ Run `Checks\demo()`. Expect **62601**, encoding `6`, `26`, `1`. The copied data 
 
 This replaces the historical ambiguous `merge(add; y: 5)` illustration: here the source explicitly composes the data containing the formal, and then selects its nested implementation. It does not compose a body and silently invent an input.
 
-**Basis:** [B] §6.1; [B] §4.2; [S] §20 (model slots and callable parts). Optional formal positions remain part of a signature: [B] §8.3.
+**Basis:** [own places and autofill](../LMX_semantics.en.md#binding-autofill); [parent and composition](../LMX_semantics.en.md#structural-call); [S] §20 (model slots and callable parts). Optional formal positions remain part of a signature: [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements).
 
 ### B-02 — Free dynamic input and explicit lexical input remain distinguishable after `copy`
 
@@ -164,7 +164,7 @@ With a fresh source, `Checks\demo()` returns **2606**. The free `y` gets the imm
 
 Also reject `copied\methods\dynamic(1; y := 25)` as an explicit call with an unknown formal: `y` is a free name here; the actual data of `dynamic` only declares `x`. A dynamic source is not silently added to the explicit signature.
 
-**Basis:** [B] §§4.2 and 6.2–6.5; [S] §20; [P1] “Reading the programs,” lexical-access paragraph.
+**Basis:** [parent and composition](../LMX_semantics.en.md#structural-call); [the transparent caller place](../LMX_semantics.en.md#binding-caller-place), [the former binding with explicit paths](../LMX_semantics.en.md#binding-fallback) and [the chain of calls](../LMX_semantics.en.md#binding-chain); [S] §20; [P1] “Reading the programs,” lexical-access paragraph.
 
 ### B-03 — Original nested action, now with the two deliberately different bindings
 
@@ -199,7 +199,7 @@ Do not preserve the old “every external write is a local copy” reading for `
 
 Variant: pass `Own\step(y := 10)` from caller `y = 0`; caller remains 0. This tests ordinary explicit copy semantics separately from autofill.
 
-**Basis:** [B] §6 and acceptance B01–B05; [P1] §7.
+**Basis:** [binding places](../LMX_semantics.en.md#binding-places) and the [observations B01–B05](../LMX_semantics.en.md#binding-observations); [P1] §7.
 
 ### B-04 — A transit-only intermediary and an intermediary that establishes a place
 
@@ -229,7 +229,7 @@ Expect **5** from `through_fallback()` and **8** from `through_place()`. `transi
 
 The harness must also inspect write identity in both cases, not merely allow these two numbers to arise from delayed copy-out.
 
-**Basis:** [B] §6.4; B acceptance B19–B21; [P1] §7 explicitly explains the role of `required: value`.
+**Basis:** [chain of calls](../LMX_semantics.en.md#binding-chain); the [observations B19–B21](../LMX_semantics.en.md#binding-observations); [P1] §7 explicitly explains the role of `required: value`.
 
 ### B-05 — Retarget a caller-local reference without exposing a pointer-to-pointer type
 
@@ -254,7 +254,7 @@ Checks:
 
 Expect **9**. `selected` remains an ordinary reference variable in LMX; the hidden native address must address that variable's cell, not merely the previously selected Structure. `First\marker` remains 4. A second fixture giving `replace` an own declared `selected` input must leave the caller pointing at `First`.
 
-**Basis:** [B] §3; [B] §6.2; acceptance B06.
+**Basis:** [own place and caller's place](../LMX_semantics.en.md#binding-places); [the transparent caller place](../LMX_semantics.en.md#binding-caller-place); the [observation B06](../LMX_semantics.en.md#binding-observations).
 
 ### B-06 — Two-way `private`: omitted supply and explicit supply
 
@@ -291,7 +291,7 @@ Expect **0, 1, 0, 1**, respectively. No other `x` source is present in each isol
 
 Separate positive source-access check: the actual graph path through the modifier remains `PrivateSink\private\x`; binding must not flatten it into `PrivateSink\x`. An explicit write through a permitted graph path follows the ordinary mutability rules.
 
-**Basis:** [B] §5; [B] §6.1; [S] §12 `private` path rule.
+**Basis:** [two-way `private`](../LMX_semantics.en.md#private-binding); [autofill](../LMX_semantics.en.md#binding-autofill); [S] §12 `private` path rule.
 
 ### B-07 — A computed local is not overwritten code
 
@@ -317,7 +317,7 @@ Compare the written code occurrences, initializer expression and their reference
 
 This is the current analogue of the earlier `int: i findValue()` concern. The new accepted semantics make it an activation-local computation; its assignment no longer edits the code occurrence.
 
-**Basis:** [B] §§7.2–7.3; [B] §10.1; [B] §§11.3–12; [D] §4.3.
+**Basis:** [declaration levels](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [binding in the executors](../LMX_semantics.en.md#binding-executors); [D] §4.3.
 
 ### B-08 — Unused and explicitly replaced computed defaults remain unevaluated
 
@@ -348,7 +348,7 @@ Run these as independent cases from counter 0:
 
 No entry pass executes every initializer. Two reads of the established working value do not run its initializer twice. A new independent call of `twice()` creates its ordinary new activation and runs the source initializer once again.
 
-**Basis:** [B] §§6.1 and 7.3; [B] §10.1; [D] §4.1; [S] §12.
+**Basis:** [autofill](../LMX_semantics.en.md#binding-autofill) and [initialization](../LMX_semantics.en.md#shadowing-levels); [the call frame](../LMX_semantics.en.md#call-frame-20261115); [D] §4.1; [S] §12.
 
 ### B-09 — A callable's actual parent survives reference placement and import
 
@@ -371,7 +371,7 @@ Expect **4** from `Other\demo()`, even though the caller's data has a ready valu
 
 Also compare direct `Original\read()` with the unambiguous explicit dispatcher form `call(code := Original\read)`: same actual parent, same default, same result 4.
 
-**Basis:** [B] §§4.1–4.2; [B] §6.1; [D] §6.1.
+**Basis:** [structural call](../LMX_semantics.en.md#structural-call); [autofill](../LMX_semantics.en.md#binding-autofill); [D] §6.1.
 
 ### B-10 — `fn` external labels map by position, even when candidate names are swapped
 
@@ -396,7 +396,7 @@ Expect **27**, not 72. The signature's `left` is external position 1, which maps
 
 This is deliberately a noncommutative operation; addition would conceal the incorrect name-based remapping.
 
-**Basis:** [B] §8.3; [B] §8.5; [D] §5.1.
+**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [public labels](../LMX_semantics.en.md#fn-public-labels); [D] §5.1.
 
 ### B-11 — A signature supplies type shape and public labels, not its default
 
@@ -422,7 +422,7 @@ Expect **80**. The first call uses the candidate's default 8; the second explici
 
 Variant with `required: int: actualValue` and no default: signature compatibility can still be positive, but `chosen()` is inadmissible even if the caller has a local `actualValue`. The call's missing required actual is decided before autofill. Supplying `publicValue := 3` passes the positional actual explicitly.
 
-**Basis:** [B] §§8.4–8.5; [B] §9.7; [D] §5.1.
+**Basis:** [the named signature and its data](../LMX_semantics.en.md#fn-signature); [public labels](../LMX_semantics.en.md#fn-public-labels); [declaration selection and `required`](../LMX_semantics.en.md#declaration-selection); [D] §5.1.
 
 ### B-12 — Type order matters; optional positions do not vanish
 
@@ -452,7 +452,7 @@ Reordered:
 
 This is a compatibility test, not an assertion that two algorithms with the same signature return the same result.
 
-**Basis:** [B] §§8.3 and 8.5.
+**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) and [public labels](../LMX_semantics.en.md#fn-public-labels).
 
 ### B-13 — Whole-Structure and field-expansion selection
 
@@ -485,9 +485,9 @@ Structural:
 
 At invocation, use the already selected map. Do not expand the chosen actual a second time.
 
-**Harness-level ambiguity fixtures:** additionally construct exactly the situations [B] §9.8 describes, without introducing an undocumented overload syntax. When W and E both fit one declaration, reject; when they fit different declarations, reject. A callable `C` whose whole value fits `call(code)` and whose fields fit `call(args code)` must make `call(C)` ambiguous. `call(code := C)` excludes E and selects only the one-argument form. This last assertion concerns selection; the harness must separately supply an executable body when it also wants to test the subsequent execution.
+**Harness-level ambiguity fixtures:** additionally construct exactly the situations the [required selection examples](../LMX_semantics.en.md#selection-examples) describe, without introducing an undocumented overload syntax. When W and E both fit one declaration, reject; when they fit different declarations, reject. A callable `C` whose whole value fits `call(code)` and whose fields fit `call(args code)` must make `call(C)` ambiguous. `call(code := C)` excludes E and selects only the one-argument form. This last assertion concerns selection; the harness must separately supply an executable body when it also wants to test the subsequent execution.
 
-**Basis:** [B] §§9.2–9.8; [B] §4.1.
+**Basis:** [declaration selection](../LMX_semantics.en.md#declaration-selection) and its [examples](../LMX_semantics.en.md#selection-examples); [structural call](../LMX_semantics.en.md#structural-call).
 
 ### D-01 — Repeated declaration arguments: negative, zero and positive elements
 
@@ -603,7 +603,7 @@ Run from counter 0 in separate fixtures:
 
 The first declaration does not fill position `first`; the name exists in the callee data, so the named branch applies. Unlike D-01, this is not the unknown inner-name positional branch. Passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
 
-**Basis:** [D] §§3.1–3.2; [D] §5; [B] §10.1.
+**Basis:** [D] §§3.1–3.2; [D] §5; [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 
 ### D-04 — Import ordinary structure names and signature names, preserve parents
 
@@ -643,7 +643,7 @@ In a nested-consumer harness, `f(import(Library Extra))` supplies its stream to 
 
 ### C-01 — A no-RHS local in an inline nested scope remains uninitialized
 
-This follows from [B] §§6.1 and 7.2–7.4. Autofill uses the immediate caller's local context; lexical nesting alone does not create another callable invocation or make the outer inline area a new caller. The inner declaration creates its own place and shadows the outer one.
+This follows from [autofill](../LMX_semantics.en.md#binding-autofill) and [declaration levels](../LMX_semantics.en.md#shadowing-levels) (see the [control example](../LMX_semantics.en.md#inline-declaration-control)). Autofill uses the immediate caller's local context; lexical nesting alone does not create another callable invocation or make the outer inline area a new caller. The inner declaration creates its own place and shadows the outer one.
 
 ```lmx
 Worker:
@@ -701,7 +701,7 @@ Run the public code in interpreted and native execution where supported. Test
 the presence/absence of any automatic admission invocation separately under the
 phase-specific cases in V05/Q01; this result oracle checks the admitted program's values and places.
 
-**Basis:** [B] §8.2 (all explicit requirements, extra candidate fields
+**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) (all explicit requirements, extra candidate fields
 permitted); [S] §7 (physical correspondence); [L2] §14
 (correspondence belongs to the reception/traversal, not a persistent arena map).
 
@@ -748,7 +748,7 @@ depend on an implicit invocation of `test`. A single successful
 test of `Increment` is a statement about the performed check; it is not a proof
 about all possible inputs or a reason to accept the decrementing implementation.
 
-**Basis:** [B] §§8.1–8.5, especially; [S] §7
+**Basis:** [the named signature](../LMX_semantics.en.md#fn-signature), [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) and [public labels](../LMX_semantics.en.md#fn-public-labels), especially; [S] §7
 (ordinary checker candidate, integer verdict). This is the direct analogue of
 distinguishing a type-correct function from a function with the required behavior.
 
@@ -794,7 +794,7 @@ requirement instead uses the positional callable rule illustrated by T02.
 No check above materializes a missing `y` or fills it from a default in the model.
 Constructing a richer candidate is a separate explicit composition operation.
 
-**Basis:** [B] §8.2; operand directive §2.3
+**Basis:** [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements); [the operand header requirement](../LMX_semantics.en.md#operand-receiver)
 (checking does not insert missing fields).
 
 ### T04 — A consumer can use a small interface without inventing a larger model
@@ -831,7 +831,7 @@ a statically known failure is diagnosed before that execution in the separate
 phase-specific tests.
 
 **Basis:** [S] §§6–7 (structural genericity and used accesses), scoped
-by [B] §8.2's rule for an explicitly supplied ordinary model. This example has no
+by [the rule for an explicitly supplied ordinary model](../LMX_semantics.en.md#fn-implements). This example has no
 larger explicit model whose requirements could be removed.
 
 ### T05 — Zero, an omitted input and an explicit nil are distinguishable
@@ -870,7 +870,7 @@ inside reached code, rather than a `required` modifier at signature selection.
 An uninitialized integer must not become an initialized zero merely because a
 machine representation happens to contain zero bits.
 
-**Basis:** [B] §6.1; [S] §9; [S] §12; [L2] §2 (typed nil and comparison). No arithmetic on nil is asserted here.
+**Basis:** [autofill](../LMX_semantics.en.md#binding-autofill); [S] §9; [S] §12; [L2] §2 (typed nil and comparison). No arithmetic on nil is asserted here.
 
 ### T06 — Representation compatibility is not actual-value range validation
 
@@ -917,7 +917,7 @@ Conversely, add no nominal class-name equality where the given structural
 requirements suffice. The Message fixture controls the context; the test does
 not propose a global registry or new generic syntax.
 
-**Basis:** [S] §6; [B] §8.3.
+**Basis:** [S] §6; [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements).
 
 
 <a id="operands"></a>
@@ -957,7 +957,7 @@ Expected:
 There is no registration call. `subtract`'s DATA is `numeric_ops`, including when
 its name is imported into `arithmetic`.
 
-Source: [O] §§2.1–2.5, 3.1, 6.1; P23.
+Source: [operand discovery](../LMX_semantics.en.md#operand-receiver); [prepared values](../LMX_semantics.en.md#prepared-operands); [precedence](../LMX_semantics.en.md#assignment-inside-expression); P23.
 
 ### OP02 — Left is separate; the right array preserves its occurrences
 
@@ -998,7 +998,7 @@ they must not shift the first right occurrence into `left`. For the container
 cases, provide genuine Array/Structure fixtures through the harness rather than
 changing `Array<T>` into `Array<@>` by reinterpreting its backing.
 
-Source: [O] §§2.3–2.4, 3.1–3.3.
+Source: [operand header](../LMX_semantics.en.md#operand-receiver); [prepared values](../LMX_semantics.en.md#prepared-operands); [references and storage](../LMX_semantics.en.md#operand-storage).
 
 ### OP03 — Reading a prepared value twice versus evaluating source twice
 
@@ -1051,7 +1051,7 @@ Prepared mode obtains one value per reached evaluation and reads that value twic
 Raw mode explicitly starts two evaluations of the same source occurrence. Neither
 mode installs a persistent result cache into the source graph.
 
-Source: [O] §§3.1, 3.6–3.7, 5.3.
+Source: [prepared values](../LMX_semantics.en.md#prepared-operands); [original occurrences](../LMX_semantics.en.md#raw-operands) and [`sys\eval`](../LMX_semantics.en.md#expression-eval); [demand and once-only](../LMX_semantics.en.md#assignment-inside-expression).
 
 ### OP04 — A raw operand chooses which source occurrence to execute
 
@@ -1088,7 +1088,7 @@ selection:
 Both leave `meter\calls = 0`. The unused right occurrence remains unexecuted,
 including when a walker later visits its physical record.
 
-Source: [O] §§3.6–3.7, 5.4.
+Source: [original occurrences](../LMX_semantics.en.md#raw-operands) and [`sys\eval`](../LMX_semantics.en.md#expression-eval); [short-circuiting](../LMX_semantics.en.md#assignment-inside-expression).
 
 ### OP05 — Forwarding a raw occurrence preserves its original context
 
@@ -1129,7 +1129,7 @@ or substitutes another invocation with the same code address. The directive give
 no lifetime extension; use the existing invalid-lifetime behavior rather than
 inventing a new exception name in this corpus.
 
-Source: [O] §3.7, §10.7 R05–R08/R13.
+Source: [`sys\eval` and the source context](../LMX_semantics.en.md#expression-eval); [observations R05–R08, R13](../LMX_semantics.en.md#operand-observations).
 
 ### OP06 — An operand returning a reference still returns a reference
 
@@ -1161,7 +1161,7 @@ The harness should also invoke `keep_left` directly with equivalent prepared
 value must match the operator application. Do not rewrite it as `keep_left(17; 99)`:
 the actual second input is an array of references.
 
-Source: [O] §§3.1, 3.3–3.4.
+Source: [prepared values](../LMX_semantics.en.md#prepared-operands); [references and storage](../LMX_semantics.en.md#operand-storage).
 
 ### OP07 — Ordinary callable references do not execute their targets
 
@@ -1193,7 +1193,7 @@ Expected numeric result: **1**, under the explicit numeric-address rule of this
 directive. `@: p S` instead creates an ordinary reference. This probe does not
 dereference the fabricated address `@S + 1`.
 
-Source: [O] §§2.1, 3.3. The explicit numeric-address decision
+Source: [operand discovery](../LMX_semantics.en.md#operand-receiver); [reference and numeric address](../LMX_semantics.en.md#method-reference-assignment). The explicit numeric-address decision
 overrides older contradictory text; it is not a request for implicit pointer
 arithmetic on ordinary L3 references.
 
@@ -1228,7 +1228,7 @@ The embedded assignment neither adds a named actual nor writes the caller's
 separate same-named place. Its receiver demands the result of this particular
 assignment even though `scratch` previously had the ready value `100`.
 
-Source: [O] §§4.1–4.5, 5.1–5.2; [B] §10.1.
+Source: [embedded assignment and demand](../LMX_semantics.en.md#assignment-inside-expression); [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 
 ### OP09 — A standalone named actual still obeys the positional cursor
 
@@ -1246,7 +1246,7 @@ error available before effects must reject it before executing that producer.
 For the two accepted named actuals, instrument their RHS and verify written-order
 evaluation; mapping destinations must not reorder their effects.
 
-Source: [O] §§2.5, 4.1–4.4; [B] §§9.4, 10.1.
+Source: [`fn` and the structural template](../LMX_semantics.en.md#fn-signature); [named and embedded assignment](../LMX_semantics.en.md#assignment-inside-expression); [declaration selection](../LMX_semantics.en.md#declaration-selection); [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 
 ### OP10 — Demand evaluation performs the producing operation once
 
@@ -1276,7 +1276,7 @@ From a fresh graph, two successive `demand\demo()` calls return **4004** and
 RHS, records `4` or `5`, and supplies `40` or `50` as its one positional actual.
 Neither late walker traversal nor native lowering repeats the source call.
 
-Source: [O] §§4.5, 5.1–5.3, 6.3–6.4.
+Source: [demand, once-only and the table of effects](../LMX_semantics.en.md#assignment-inside-expression).
 
 ### OP11 — Short circuit skips a whole effectful application
 
@@ -1306,7 +1306,7 @@ Also place the entire OP01 operand application with an effectful argument inside
 the skipped right side. Neither the operand method nor its argument producer may
 run. Parentheses alone are not an eager-evaluation instruction.
 
-Source: [O] §5.4, §10.3 D06–D08/D13.
+Source: [short-circuiting](../LMX_semantics.en.md#assignment-inside-expression); [observations D06–D08, D13](../LMX_semantics.en.md#operand-observations).
 
 ### OP12 — A while condition repeats evaluation, not a cached first result
 
@@ -1336,7 +1336,7 @@ three body executions add `5 + 10 + 15 = 30`; four condition evaluations call
 and one read. `c` is the surrounding callable's activation-local place; the loop
 does not publish it into the callable's parent graph.
 
-Source: [O] §5.5.
+Source: [the `while` condition](../LMX_semantics.en.md#assignment-inside-expression).
 
 ### OP13 — Adjacent precedence levels must be distinguished
 
@@ -1367,7 +1367,7 @@ With known writable `a`, `b`, `c`, test `a := b := 7`: both places become 7.
 Test `c := (a := 4) + (b := 6) * 3`: the final values are `a = 4`, `b = 6`,
 `c = 22`. The integer examples avoid overflow and division-domain differences.
 
-Source: [O] §§6.1–6.3; [G] §21.
+Source: [precedence and associativity](../LMX_semantics.en.md#assignment-inside-expression); [G] §21.
 
 ### OP14 — sys\name consumes spelling, not the value of the identifier
 
@@ -1400,7 +1400,7 @@ Negative cases: `sys\name(52)` and `sys\name("sample")` do not supply the single
 written identifier required by this receiver. `sys\name` is not a general
 stringification operation.
 
-Source: [O] §§7.1–7.4.
+Source: [`sys\name`](../LMX_semantics.en.md#string-identifier).
 
 ### OP15 — sys\priority consults the same operand description without invoking it
 
@@ -1428,7 +1428,7 @@ Negative cases:
 | An ordinary callable missing the operand header | No invented operand priority |
 | Visible unresolved alternatives with different priorities/modes | Ambiguity before argument effects |
 
-Source: [O] §§8.1–8.4.
+Source: [`sys\priority`](../LMX_semantics.en.md#expression-priority).
 
 ### OP16 — Structural discovery and fn compatibility are distinct checks
 
@@ -1460,7 +1460,7 @@ to positions 2 and 1 but retains that written RHS effect order. The same candida
 does not become an operand until its actual DATA also satisfies the separate
 name-sensitive operand header. Its DATA remains its actual parent.
 
-Source: [O] §§2.2–2.5, 9.3, 10.1, 10.8.
+Source: [operand header and `fn`](../LMX_semantics.en.md#operand-receiver); [`fn` signature](../LMX_semantics.en.md#fn-signature); [observations O and F](../LMX_semantics.en.md#operand-observations).
 
 ### OP17 — The clean graph remains the written graph
 
@@ -1482,7 +1482,7 @@ the source representation. The program's explicit graph writes remain observable
 and are not grounds for rejecting a correct implementation; choose snapshots of
 the code occurrences, not of the deliberately mutated meter state.
 
-Source: [O] §§1, 4.2, 5.3–5.4, 6.3–6.4, 9.1; [G] §§12–14.
+Source: [expressions and demand](../LMX_semantics.en.md#assignment-inside-expression); [operand discovery](../LMX_semantics.en.md#operand-receiver); [G] §§12–14.
 
 ### OP18 — Native/interpreted equivalence includes types and effects
 
@@ -1501,7 +1501,7 @@ For OP06's reference result, compare the same logical reference behavior in both
 dispatch paths. Interpreter-internal result records must not change the public
 number of dereferences.
 
-Source: [O] §§3.3–3.4, 3.7, 6.4, 10; [B] §11.
+Source: [references and storage](../LMX_semantics.en.md#operand-storage); [`sys\eval`](../LMX_semantics.en.md#expression-eval); [demand](../LMX_semantics.en.md#assignment-inside-expression); [observations](../LMX_semantics.en.md#operand-observations); [binding in the executors](../LMX_semantics.en.md#binding-executors).
 
 
 <a id="validation"></a>
@@ -1548,7 +1548,7 @@ TicketCode:
 
 Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `implements` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
 
-**Basis:** [B] §8.2 example uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
+**Basis:** the example of [the positional branch of `implements`](../LMX_semantics.en.md#fn-implements) uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
 
 ### V02. A mock is an ordinary dependency of the actual candidate
 
@@ -1592,7 +1592,7 @@ The actual candidate is invoked. Its uninitialized declared `read` receives the 
 
 The third candidate deliberately returns the correct number while doing the wrong amount of work. Checking the return value alone would miss it. The checker does not replace the candidate with a mock candidate; it replaces a dependency of that candidate.
 
-**Basis:** [B] §§6.1, 6.4, 6.5; P1 Strategy and Observer; [S] §7. These are direct ordinary calls, so their verdicts follow their written invocations.
+**Basis:** [autofill](../LMX_semantics.en.md#binding-autofill), [the chain of calls](../LMX_semantics.en.md#binding-chain) and [explicit paths](../LMX_semantics.en.md#binding-fallback); P1 Strategy and Observer; [S] §7. These are direct ordinary calls, so their verdicts follow their written invocations.
 
 ### V03. Expected recoverable failure is an explicit checker branch
 
@@ -2382,7 +2382,7 @@ Operands:
 
 The nested calculation finds `add` through the ordinary lexical namespace. `copy` consumes the header reference through the same CODE-source algorithm as elsewhere and contributes its fields through namespace; its written record remains in the source graph. Prepared mode supplies the computed numeric operands by reference. `left` is the left reference; `right[0]` is the first right reference; explicit dereferencing obtains their values. There is no separate operand registration and no permanent cache of one activation's `n` in the expression graph.
 
-Also check the effective operand DATA: exactly one concrete result declaration, both reference inputs, `PASS_ARGS_AS_IS = 0` and the addition priority. OP01–OP16 deliberately retain expanded headers because their tests mutate or inspect individual properties. **Basis:** [P3] §23; [OPERAND] §§2–3; [composition](../LMX_semantics.en.md#composition).
+Also check the effective operand DATA: exactly one concrete result declaration, both reference inputs, `PASS_ARGS_AS_IS = 0` and the addition priority. OP01–OP16 deliberately retain expanded headers because their tests mutate or inspect individual properties. **Basis:** [P3] §23; [operand discovery](../LMX_semantics.en.md#operand-receiver); [composition](../LMX_semantics.en.md#composition).
 
 
 <a id="graph"></a>
@@ -2392,7 +2392,7 @@ These cases extend the earlier discussions about `int: i getValue()`, one repres
 
 ### G01 — A computed input survives writes to the local variable
 
-**Kind:** source case. **Sources:** [SEM] §12, `call-frame-20261115`, `path-reads-no-execution`, `flush-receiver-contract`; [BIND] §11.3.
+**Kind:** source case. **Sources:** [SEM] §12, `call-frame-20261115`, `path-reads-no-execution`, `flush-receiver-contract`; [binding in the executors](../LMX_semantics.en.md#binding-executors).
 
 ```lmx
 ReadSource:
@@ -2427,7 +2427,7 @@ ComputedProbe:
 
 ### G02 — Explicit initialization adjacent to use
 
-**Kind:** source case; reuses `ReadSource` from G01. **Sources:** [SEM] §§9, 12; [BIND] §§6–7.
+**Kind:** source case; reuses `ReadSource` from G01. **Sources:** [SEM] §§9, 12; [binding](../LMX_semantics.en.md#binding-places) and [declaration levels](../LMX_semantics.en.md#shadowing-levels).
 
 ```lmx
 LocalInitialization:
@@ -2589,11 +2589,11 @@ For a selected Thread, add a same-platform restart case for its serializable cal
 
 In one active call to `ComputedInput\changeLocal`, obtain `@value`; separately obtain `@(ComputedInput\value)` from an external inspection call before executing the producer.
 
-**Expected:** under [OPERAND] §3.3 the explicit `@` operation produces a numeric address. In the first observation that address identifies the selected activation-local integer place, obtaining its value under the ordinary demand rules. In the second it identifies the written source declaration, not the result of `ReadSource\next()`, and does not run that producer. These address observations must not be relabelled as implicit ordinary reference construction. A native local is tested through its declared place/type contract; do not inspect four bytes before an arbitrary C local as if it were an arena record.
+**Expected:** under the [numeric-address rule](../LMX_semantics.en.md#method-reference-assignment) the explicit `@` operation produces a numeric address. In the first observation that address identifies the selected activation-local integer place, obtaining its value under the ordinary demand rules. In the second it identifies the written source declaration, not the result of `ReadSource\next()`, and does not run that producer. These address observations must not be relabelled as implicit ordinary reference construction. A native local is tested through its declared place/type contract; do not inspect four bytes before an arbitrary C local as if it were an arena record.
 
 ### G12 — A factory returns a method of an explicitly prepared copy
 
-**Kind:** source case. **Sources:** [BIND] §4.2; [SEM] §20; [DP1] §3; [DP3] “Reading the examples”.
+**Kind:** source case. **Sources:** [parent and composition](../LMX_semantics.en.md#structural-call); [SEM] §20; [DP1] §3; [DP3] “Reading the examples”.
 
 ```lmx
 AdderPrototype:
@@ -2716,7 +2716,7 @@ These are harness cases because selecting a backend, observing machine-entry reg
 
 ### N01 — One binding result in all four executor combinations
 
-**Kind:** backend matrix. **Sources:** [BIND] §§11–12; [CORE] §3.3; [CODING] §§13–14.
+**Kind:** backend matrix. **Sources:** [binding in the executors](../LMX_semantics.en.md#binding-executors); [CORE] §3.3; [CODING] §§13–14.
 
 Run representative cases for explicit own values, autofill copies, direct caller aliases, transitive fallback copies, private sources/receivers, supplied declaration plus body, and imported method parent identity in all four combinations:
 
@@ -2917,16 +2917,10 @@ These SHA-256 values identify the bundled normative documents used for this revi
 | [implementation-notes.en.md](../implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
 | [kernel-implementation.en.md](../kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
 | [source-comparison.en.md](../source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
-| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
 | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
 | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
-| [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
 
 <!-- Relative source links for the package layout. -->
-[O]: ../tasks/to_fable_operands_arguments_priorities.md
-[OPERAND]: ../tasks/to_fable_operands_arguments_priorities.md
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[BIND]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [DECL]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [P1]: LMX_Design_Patterns.en.md

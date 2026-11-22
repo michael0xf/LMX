@@ -14,7 +14,7 @@ Editor сохраняет значения 5 и 9, затем меняется �
 
 Editor владеет state и операциями set/read. Вложенная группа history описывает вход snapshot и результат Editor. save возвращает явно сгруппированную копию живого графа Editor — `(copy(Editor))`; restore записывает сохранённое значение в лексическое поле node\state исходного Editor. Снимки не являются ссылками на один изменяемый state. Python использует ту же схему save/restore и копию объекта. [Потоки полей и группировка][S]
 
-Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание][B] · [Импорт][D] · [Границы блоков][E]
+Применены согласованные правила: DATA метода — его фактический parent; обычные ссылки на методы не требуют отдельного `fn`; объявленные входы без initializer допускают autofill, свободные имена — связь с местом непосредственного caller. `node\` выбирает лексическую связь. Пустая строка завершает корневой блок. [Связывание](../LMX_semantics.en.md#binding-places) · [Импорт][D] · [Границы блоков][E]
 
 ## Подсчёт исходников
 
@@ -364,7 +364,6 @@ pub fn demo() -> i32 {
 - [Refactoring.Guru — Memento](https://refactoring.guru/design-patterns/memento)
 - [Refactoring.Guru — Memento in Python](https://refactoring.guru/design-patterns/memento/python/example)
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 

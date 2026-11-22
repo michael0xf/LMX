@@ -204,7 +204,7 @@ not through a special pointer-call rule.
 <a id="native-structures"></a>
 ## Native and interpreter frames
 
-The rules below consolidate the [binding and callable requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+The rules below consolidate the [binding and callable norm](LMX_semantics.en.md#binding-places),
 including the named positional fn clarification. The interpreter, native paths, and their bridges must preserve the
 same logical places and effects. Documentation examples specify acceptance behavior; they do not establish which
 parts a particular repository build already implements.
@@ -557,7 +557,7 @@ by the general order, to the caller's place. [Examples in the semantics](LMX_sem
 <a id="shadowing-levels"></a>
 ### Shadowing of levels
 
-The author's rule in the [binding requirements §7.1](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) is:
+The author's rule in the section on [declaration levels](LMX_semantics.en.md#shadowing-levels) is:
 
 > A declaration at a nested level shadows the outer declaration of the same name. At one level there is nothing to
 > shadow; the parent one is used.
@@ -572,7 +572,7 @@ declaration is resolved in the ordinary way through the outer context.
 [Shadowing of levels](LMX_semantics.en.md#shadowing-levels).
 
 <a id="inline-declaration-control"></a>
-The [binding requirement §7.4](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) asks for this derivation:
+The [control example](LMX_semantics.en.md#inline-declaration-control) asks for this derivation:
 the current frame has outer x = 5; a nested inline block declares a new int: x with no RHS/default; there is no
 new callable invocation and the actual caller has no x. The new inner place is `uninit:int`. A lexical inline
 scope does not become a new caller for autofill, so the outer local 5 is not implicitly copied into the new
@@ -704,7 +704,7 @@ Local frames are not published. Load-dirty, the shared direct-access cache, and 
 explicit writes are observed through actual aliases in execution order.
 [Agreed norm](LMX_semantics.en.md#call-frame-20261115),
 [executors](LMX_semantics.en.md#binding-executors),
-[binding and callable requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
+[binding decisions](LMX_semantics.en.md#binding-decisions).
 
 <a id="flush-receiver-contract"></a>
 <a id="direct-access-cache"></a>
@@ -1187,5 +1187,5 @@ guessed unary priority. Missing or ambiguous operands cause ordinary resolution 
 priority. The named signature is `fn: PrioritySignature ([]: char name; return: int)`, distinct from the ordinary
 PrioritiesTemplate explained [above](#fn-signature).
 
-[Operand requirements](tasks/to_fable_operands_arguments_priorities.md) give the full acceptance matrix for these
+The [operand observations](LMX_semantics.en.md#operand-observations) give the full acceptance matrix for these
 templates, argument modes, effects, priorities, strings, and signatures.

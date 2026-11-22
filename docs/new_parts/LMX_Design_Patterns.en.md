@@ -24,13 +24,13 @@ The order follows the companion files and serves navigation, rather than ranking
 
 ## Reading the programs
 
-**Structures group data and methods.** An executed structure uses its actual parent as DATA. Several methods can therefore share declarations of inputs, state, references, and `return`. Each method uses the fields it needs; this does not require an artificial container for `demo`. Working places belong to individual activations. A method invoked only for effects need not manufacture a numeric result merely because the group's DATA also describes the result used by another method. Its caller does not consume a result. [Calls and binding][B]
+**Structures group data and methods.** An executed structure uses its actual parent as DATA. Several methods can therefore share declarations of inputs, state, references, and `return`. Each method uses the fields it needs; this does not require an artificial container for `demo`. Working places belong to individual activations. A method invoked only for effects need not manufacture a numeric result merely because the group's DATA also describes the result used by another method. Its caller does not consume a result. [Calls and binding](../LMX_semantics.en.md#structural-call)
 
 **References are ordinary values.** `@: selected twice` initializes a reference with the method value `twice`; it does not call it. `selected := thrice` changes that reference. Normal call admission and the selected method's DATA still govern invocation. `fn: Name Data` remains available for an explicitly requested standalone signature requirement. None of these nine programs needs that additional contract.
 
 **Autofill and writable context serve different purposes.** A declared, uninitialized input can receive a copy of a same-named value from its immediate caller. A free name without its own declaration can identify an immediate caller's local place. An established alias can be forwarded without changing that place. The older transitive fallback must not be mistaken for such an alias; Command deliberately establishes the intermediary's connection before executing its action. A ready own default is retained unless explicitly replaced.
 
-**Lexical access is explicit.** `node\` selects lexical binding; it is not a parent operator. The examples use it for state that must persist in the graph. Bare assignments act on the place selected for the current execution. `private` restricts implicit dynamic binding in both directions: private sources are not supplied, and private lexical declarations are not dynamically replaced. Explicit passing and ordinary lexical visibility retain their rules. [Binding rules][B]
+**Lexical access is explicit.** `node\` selects lexical binding; it is not a parent operator. The examples use it for state that must persist in the graph. Bare assignments act on the place selected for the current execution. `private` restricts implicit dynamic binding in both directions: private sources are not supplied, and private lexical declarations are not dynamically replaced. Explicit passing and ordinary lexical visibility retain their rules. [Binding rules](../LMX_semantics.en.md#binding-places)
 
 **Syntax preserves structure.** A blank physical line, including a whitespace-only line, ends the whole ordinary syntactic block at the virtual level −1 above root. Inner `---` remains useful for closing a nested structure while retaining its enclosing root; Visitor uses it. EOF closes the final ordinary block. Protected lexical forms retain their own rules. [Block boundaries][E]
 
@@ -439,13 +439,12 @@ Foreign-language execution and static-review details are recorded in the individ
 
 ## Sources and agreement
 
-- [Binding and structural calls][B]: actual parent DATA, ordinary references, defaults, autofill, caller places, and two-way `private`.
+- [Binding and structural calls](../LMX_semantics.en.md#structural-call): actual parent DATA, ordinary references, defaults, autofill, caller places, and two-way `private`.
 - [Supplied declarations and import][D]: the declaration/body behavior of `iterate` and root const imports.
 - [Blank-line block termination][E]: complete root termination and retained inner `---` boundaries.
 
 The current examples also follow the author's lexical `node` clarification and the instruction to use the Python programs as architectural prototypes. Each section links to its full eight-language comparison. The Russian edition contains the same nine LMX programs, entry calls, expected results, and comparison figures.
 
-[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
 [D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 

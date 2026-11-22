@@ -628,13 +628,13 @@ Supported operations have the following relative precedence, strongest first. Th
 | Logical OR | `\|\|` | left to right |
 | Assignment | `:=` and supported compound assignments, including `**=` | right to left |
 
-The special power rule remains: `**` groups right, binds below call/index/field access and above multiplication, binds tighter than unary `+`, `-`, `~` on its left, and admits a unary operand on its right. Thus `-2 ** 2` is −4, `(-2) ** 2` is 4, `2 ** -2` groups as `2 ** (-2)`, and `2 ** 3 ** 2` is 512. Numerical admissibility remains the selected LMX numeric contract. `=` is comparison, corresponding to C `==`; `:=` is assignment. Commas and semicolons keep their structural roles. No C conditional or comma operator is introduced.
+The special power rule remains: `**` groups right, binds below call/index/field access and above multiplication, binds tighter than unary `+`, `-`, `~` on its left, and admits a unary operand on its right. Thus `-2 ** 2` is −4, `(-2) ** 2` is 4, `2 ** -2` groups as `2 ** (-2)`, and `2 ** 3 ** 2` is 512. Numerical admissibility remains the selected LMX numeric contract. `=` is comparison, corresponding to C `==`; `:=` is assignment. Commas and semicolons keep their structural roles. No C conditional or comma operator is introduced. The numeric result of `2 ** -2` and its admissible types are determined by the LMX numeric contract; the whole numeric semantics of Python is not carried over automatically. This asymmetric rule cannot be replaced by the single line «power is above all unary operations»; for the other unary operations, which have no such analogue in Python, no invented Python behavior is assigned: the existing LMX relations are kept and shown explicitly in the full implementation table. The existing type conversions and `sizeof` of the machine profile agree with the corresponding relations of the C grammar. The table sets the relative order, not concrete numeric priorities; the basis for the comparison with C is the expression grammar of ISO/IEC 9899:1999 with corrigenda (WG14 N1256) §§6.5.2–6.5.16, and for short-circuiting §§6.5.13–6.5.14.
 
-Before a receiver executes, the values it actually needs are obtained. A needed result can require executing another receiver of lower priority; the producer's own operands retain their written and priority-defined boundaries. This does not raise the producer's priority. An assignment head is tied to the place written immediately to its left: `1 + v := 2 + 3` must not be reparsed as assignment to `1 + v`. Here the first addition needs the result of that assignment; its RHS computes 5, the assignment writes `v = 5`, and the addition returns 6. The prior value of `v` does not replace the result of this occurrence.
+Before a receiver executes, the values it actually needs are obtained. A needed result can require executing another receiver of lower priority; the producer's own operands retain their written and priority-defined boundaries. This does not raise the producer's priority. An assignment head is tied to the place written immediately to its left: `1 + v := 2 + 3` must not be reparsed as assignment to `1 + v`. Here the first addition needs the result of that assignment; its RHS computes 5, the assignment writes `v = 5`, and the addition returns 6. The prior value of `v` does not replace the result of this occurrence. A mere coincidence of the name with a formal does not establish this binding. `1 + (v := 2 * 3)` gives the same result and the same effect as `1 + v := 2 * 3`; this is a coincidence of two concrete computations, and the form without parentheses gets no new anonymous container in P0. Precedence and the rules of obtaining values change, the basic structural grammar is kept; the permissibility of additional LMX forms that C forbids does not by itself contradict the agreement of results on the common subset.
 
 Each operation occurrence executes once in one dynamic evaluation. The consumer receives its retained result, not a later reread of a mutable place. A new invocation, iteration, condition check or explicit `sys\eval` starts a new evaluation. No result cache is installed in the source graph. Ordinary name reads do not search for future assignments: `v := v + 1` reads the old `v` on the right. Neighboring operations alone create no dependency; `10 * 2 + 3` is 23.
 
-Demand preserves short-circuiting: neither `0 && (x := 1)` nor `1 || (x := 1)` writes `x`. A skipped operand, including a call or a user operator application, does not later run because the walker reaches its record. There is no eager pass through all groups, initializers or assignments, and selection does not speculatively execute candidates.
+Demand preserves short-circuiting: neither `0 && (x := 1)` nor `1 || (x := 1)` writes `x`. A skipped operand, including a call or a user operator application, does not later run because the walker reaches its record. There is no eager pass through all groups, initializers or assignments, and selection does not speculatively execute candidates. The order of evaluation of actual arguments remains as the LMX rules establish; carrying over the C precedence table does not carry over the peculiarities or the unspecified order of evaluation of C.
 
 | Expression | Result | Written value of `v` |
 | --- | ---: | ---: |
@@ -670,21 +670,23 @@ operand_template:
     const: int: PRIORITY
 ```
 
-All four named fields must be present in the candidate's DATA. `left` is a reference input and `right` an Array of references. `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `implements` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution.
+All four named fields must be present in the candidate's DATA. `left` is a reference input and `right` an Array of references. `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `implements` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
 
-The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@: left int`, `[]: @(int) right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer.
+The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@: left int`, `[]: @(int) right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
 
 A positional `fn` requirement remains a different check. For example, `fn: PairSignature (@: first; []: @ rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
+<a id="prepared-operands"></a>
 #### Prepared values: `PASS_ARGS_AS_IS 0`
 
-Expression analysis identifies the written left occurrence and the right occurrence sequence using groups and priorities. Needed occurrences are evaluated once. The reference to the left value is supplied to `left`, and references to the right values form `right` in source order. `(1 foo 2 3 4)` therefore supplies a reference to 1 and an Array of three references. `(foo 1 2 3 4)` has no written left actual and four right occurrences; the first right value is not moved into `left`. Omitted inputs, defaults and requiredness remain ordinary call rules. A present empty right Array differs from an omitted actual.
+Expression analysis identifies the written left occurrence and the right occurrence sequence using groups and priorities. Needed occurrences are evaluated once. The reference to the left value is supplied to `left`, and references to the right values form `right` in source order. `(1 foo 2 3 4)` therefore supplies a reference to 1 and an Array of three references. `(foo 1 2 3 4)` has no written left actual and four right occurrences; the first right value is not moved into `left`. Omitted inputs, defaults and requiredness remain ordinary call rules. A present empty right Array differs from an omitted actual. The name of the operation and its constant properties are not included in the array of values, and the left value is not duplicated there.
 
 Each written container is one operand: `(foo A)` with an Array `A` gives one reference in `right`, and `(A foo B C)` gives one left and two right references. No general Array/string expansion is introduced. The ordinary single-Structure W/E rule keeps its defined call-selection scope. An operand has its own rule: when its `left` is an unnamed Structure and its single `right` argument is an unnamed Structure too, the parentheses on the right are opened and `right` receives all their content; a Structure returned from a function is not opened (the author's decisions of 2026-11-21 and 2026-11-22). `a foo b` cannot be textually replaced by `foo(a; b)`, because the second operator input is an Array of references.
 
+<a id="operand-storage"></a>
 References point at values of typed storage records, with the type code immediately before the value. A reference to a container addresses its typed descriptor. A dense `Array<T>` is not reinterpreted as `Array<@>`, and an untagged native temporary is not treated as an arena record by reading four bytes before its address. The common value-storage mechanism materializes a suitable record only when required, with ordinary lifetime.
 
-The method returns its ordinary declared value: `return: int` produces an integer; `return: @` produces a reference. Operator use and explicit call do not remove different numbers of reference levels. Expression storage representation is an implementation matter and does not create a universal reference-return contract.
+The method returns its ordinary declared value: `return: int` produces an integer; `return: @` produces a reference. Operator use and explicit call do not remove different numbers of reference levels. Expression storage representation is an implementation matter and does not create a universal reference-return contract. `return: @local_sum` is not a substitute for a numeric result: it returns an explicit numeric address with the ordinary lifetime of the place.
 
 ```lmx
 operands:
@@ -711,12 +713,12 @@ The required results are 7 for `Example\calculate(2)`, 13 for `Example\calculate
 <a id="raw-operands"></a>
 #### Original occurrences: `PASS_ARGS_AS_IS 1`
 
-The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `[]: @ right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract.
+The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `[]: @ right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
 
 <a id="expression-eval"></a>
 `sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a stored callable reference remains a reference unless the form calls it. `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
 
-The occurrence retains its source evaluation context for the duration of the application, including when passed to a helper. The helper's same-named locals cannot capture it. Embedded assignments keep their receiving-DATA rule, and the original binding/private access is preserved without granting the operand new implicit access to private places. A physical source address alone does not identify a live activation; the existing context transport must retain that distinction. Raw passing extends no activation lifetime and cannot restore a finished frame. Statically known fragments may use the same prepared native implementation; neither a second parser nor a second VM is required.
+The occurrence retains its source evaluation context for the duration of the application, including when passed to a helper. The helper's same-named locals cannot capture it. Embedded assignments keep their receiving-DATA rule, and the original binding/private access is preserved without granting the operand new implicit access to private places. A physical source address alone does not identify a live activation; the existing context transport must retain that distinction. Raw passing extends no activation lifetime and cannot restore a finished frame. Statically known fragments may use the same prepared native implementation; neither a second parser nor a second VM is required. A long-lived computation is formed by an ordinary callable with its DATA and, where needed, by explicit composition/`merge`.
 
 The raw version of `add` uses this DATA and body:
 
@@ -735,23 +737,186 @@ raw_operands:
 
 With the same `calculate` body importing `raw_operands`, the results remain 7, 13 and 20. The outer `add` receives the original group `(n add 3)` on its left; its explicit evaluation invokes the inner raw `add`. The raw implementation controls whether and how often to evaluate an occurrence.
 
-Before effectful operand arguments run, grouping and consumption mode must be unambiguous. Unresolved candidates with different priorities or modes produce ordinary ambiguity; candidates with identical properties can proceed to ordinary explicit-actual selection. Hidden binding never chooses an operator signature.
+Before effectful operand arguments run, grouping and consumption mode must be unambiguous. Unresolved candidates with different priorities or modes produce ordinary ambiguity; candidates with identical properties can proceed to ordinary explicit-actual selection. Hidden binding never chooses an operator signature. Diagnostics distinguish: (1) the name does not resolve to a suitable executable candidate; (2) the DATA does not match the structural header, a field is missing or the interface is incompatible; (3) `PASS_ARGS_AS_IS` gives no constant `0/1` or `PRIORITY` gives no constant integer priority; (4) the priority or the mode is ambiguous before the arguments run; (5) the concrete actuals or the declared result are incompatible with the consumer's ordinary contract; (6) in raw execution the ordinary access or lifetime contract of the source context is not kept. Matching the header template does not cancel the checks of a concrete call; for `sys\priority` the absence of a suitable operand is a resolution error, whereas for `sys\name` the absence of a declaration of a correct identifier is not an error; assignment errors are described through the real place and the rules of LMX.
 
 <a id="string-identifier"></a>
 ### `sys\name`: an identifier's spelling
 
 `sys\name(identificator)` consumes one written identifier and returns its spelling as an ordinary variable-length LMX `Array<char>`. It does not resolve a variable, read its value, execute its initializer or call a same-named method. A valid identifier need not be declared. Exact-identifier quoting is removed and a doubled backtick becomes one literal backtick: ``sys\name(`long name`)`` yields `"long name"`; an empty exact identifier yields an empty string. `sys\name(ptr)` yields `"ptr"`, not the name of its target.
 
-The existing canonical-name representation and service name table supply the spelling. No registration table, new encoding, mandatory per-call allocation or address-identity guarantee is introduced. The result is an ordinary Lmx character Array with no trailing NUL. `f(sys\name(foo))` and `f(a := sys\name(foo))` each pass one complete Array; characters are not expanded into actuals.
+The existing canonical-name representation and service name table supply the spelling. No registration table, new encoding, mandatory per-call allocation or address-identity guarantee is introduced. The result is an ordinary Lmx character Array with no trailing NUL. `f(sys\name(foo))` and `f(a := sys\name(foo))` each pass one complete Array; characters are not expanded into actuals. The interpreter and prepared native code obtain the same content, and translation needs no execution of the designated entity to obtain its name. This is obtaining the spelling from the existing representation, not serialization of a variable's value or reparsing of source text; it introduces no universal conversion of arbitrary values to text, and an inappropriate argument is handled by the existing rules of an invalid form.
 
 <a id="expression-priority"></a>
 ### `sys\priority`: a priority by string name
 
 The query's named signature is `fn: PrioritySignature ([]: char name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
 
-Names are matched by string content at this explicit lookup boundary. A separately created string with the same contents yields the same answer; ordinary resolved identifiers still use canonical addresses. `sys\priority(sys\name(foo))` performs no call of `foo`. The query reads its ready `PRIORITY`, registers nothing and evaluates no operand arguments. Missing, unsuitable or ambiguous operands produce ordinary resolution/contract diagnostics; no priority is invented. Discovery and query share the same description, not divergent registries.
+Names are matched by string content at this explicit lookup boundary. A separately created string with the same contents yields the same answer; ordinary resolved identifiers still use canonical addresses. `sys\priority(sys\name(foo))` performs no call of `foo`. The query reads its ready `PRIORITY`, registers nothing and evaluates no operand arguments. Missing, unsuitable or ambiguous operands produce ordinary resolution/contract diagnostics; no priority is invented. Discovery and query share the same description, not divergent registries. The placement of the receiver in `sys` does not limit the lookup to the field names of that service group. With a statically known name the translator may obtain the value beforehand; with a computed string name the ordinary lookup mechanism is used; the semantics and the result match the interpreter.
 
-These expression rules are specified in full by the supplied [operand requirements](tasks/to_fable_operands_arguments_priorities.md).
+The required observations of operands, strings and priorities are [O01–F10](#operand-observations).
+
+<a id="operand-observations"></a>
+### Required observations O01–F10 of operands, strings and priorities
+
+The checks are requirements, not a statement that an implementation was run. The interpreter and the applicable native paths are checked under the current admission; automatic checks are not added where the native contract does not provide them.
+
+#### Structural discovery and mandatory properties
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| O01 | An ordinary method `foo` matches the template; mode `0`; the body sums `left` and the whole `right`; `(1 foo 2 3 4)` | The number `10` without registration |
+| O02 | The name resolves to an ordinary Structure, but the mandatory header is absent | The operand role does not arise merely from the fact that a Structure exists |
+| O03 | The needed arguments and the body of an ordinary operand increment counters | Each effect happens once in the given application |
+| O04 | Only a description by `fn` is presented instead of an executable candidate | It gets no body and does not become an implementation |
+| O05 | Saving and loading an ordinary graph with a method and its DATA | The method, the links and the properties are saved; no separate registration is restored |
+| O06 | A statically known operator application in native code | An ordinary call of the same method with `left/right` and an ordinary result |
+| O07 | There is no `PRIORITY`, there is no `PASS_ARGS_AS_IS`, or a field gives no admissible constant value | A contract mismatch; no implicit defaults are added |
+| O08 | Separate fixtures admit the absence of `left`; mode `0`; `foo` gives ten times the sum of `right`; priority of `*` or of `=`; `(foo 2 + 3)` | With priority `*`: `23`; with priority `=`: `50` |
+| O09 | `@: ptr add` with a suitable method | An ordinary reference without applying the operand |
+| O10 | `int: value 1 + @Struct` | A numeric address by the author's rule, ordinary arithmetic |
+| O11 | Unresolved candidates require different priorities or modes | Ambiguity before the user arguments are executed |
+| O12 | The template contains a field the candidate does not have, including the case of a default in the template | The check does not materialize the field; the absence is not hidden |
+| O13 | The needed fields are obtained by an ordinary explicit `merge` | The already constructed actual DATA is checked |
+
+In O08 the priorities are obtained through `sys\priority`; the fixtures are independent. Special rules for an absent `left` and numeric codes of levels are not introduced.
+
+#### Inputs and the ordinary result
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| I01 | `(1 foo 2 3 4)`, mode `0` | A reference to `1` separately, references to `2/3/4` in `right`; two input places |
+| I02 | Contracts admit or forbid the absence of the operand actuals | The ordinary defaults, `required` and admissible binding apply |
+| I03 | `(foo A)`, `A` is an Array, the absence of `left` is admissible | One right argument-container, without a shift to the left |
+| I04 | `(A foo S T)`, the values are containers | One reference on the left and two on the right, without expanding the content |
+| I05 | A method with `return: int` returns a number | The expression gets this number; the needed storage representation is created by the common mechanism |
+| I06 | A method with `return: @` returns a reference | The logical result stays a reference in an ordinary and in an operator call |
+| I07 | The next operand needs the address of the result of a native numeric computation | A real typed record is provided, not an untagged C temporary |
+| I08 | The actual argument is a dense numeric Array | Its storage is not reinterpreted as an array of references |
+| I09 | An ordinary call `f(A)` receives an Array | One container, without a new expansion |
+| I10 | The left or the right occurrence is an embedded assignment, mode `0` | One reference to the result, one effect, no additional named actual |
+| I11 | `(foo 1 2 3 4)` when the absence of `left` is admissible | Four references on the right; the first right element is not moved to the left |
+| I12 | A supplied empty Array and an absent `right` | Different cases of ordinary reception |
+| I13 | The physical representation matches, the LMX requirement is incompatible | The LMX contract is checked; a physical match is not enough |
+| I14 | A method uses `lhs/rhs` instead of the required `left/right` | The common fn compatibility alone does not replace the structural operand template |
+| I15 | `Example\calculate(2)`, `Example\calculate(5)`, `Example\demo()` from the full `add` demo | `7`, `13`, `20` |
+| I16 | An ordinary and an operator call get equivalent actuals and context | One body and one logical result type |
+| I17 | The DATA matches the minimal header but the method has no result | It supplies no value to the expression; the ordinary call contract applies |
+
+#### Arguments, data and control
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| D01 | `f(1 + (v := 2) + 3)`; the first formal `x`, a separate field `v` | One actual; `x = 6`, `v = 2` |
+| D02 | The calling context has a `v` too | D01 and D09 write into the data of `f`; the separate `v` of the caller is not changed |
+| D03 | `f(v := 2 + 3; 6)`; `v` is the first formal | Two actuals; `v = 5`, the second formal gets `6` |
+| D04 | The same record, `v` is not in the first position | The ban of a positional actual after an out-of-position named actual is kept |
+| D05 | `while ((c := read()) != EOF)`; the source `A, B, EOF` | Three reads, two executions of the body, `c = EOF` |
+| D06 | `0 && (x := 1)` | `x` is not changed |
+| D07 | `1 \|\| (x := 1)` | `x` is not changed |
+| D08 | The non-executed right branch contains a user operand with an effect | The method and the evaluation of its arguments do not start |
+| D09 | `f(1 + v := 2 + 3)`; the first formal `x`, a separate field `v` | One actual; `x = 6`, `v = 5` |
+| D10 | D09 with the earlier `v = 100` and separately with a declared place without a value | In both cases `x = 6`, `v = 5`; the old value does not replace the result of the assignment |
+| D11 | `f(1 + v := read_once() + 3)`; the read returns `4` | One read; one actual `8`; `v = 7`; the walk does not repeat the assignment |
+| D12 | Two separate executions of D11 | Two reads in total; the result of the first execution is not cached for the second |
+| D13 | `f(0 && v := tick())` and `f(1 \|\| v := tick())` | `tick()` is not called; `v` is not changed; `f` gets one logical argument |
+| D14 | In code with declared places: `v := 100; x := v; v := 5` | `x = 100`, `v = 5`; an ordinary read does not start the future write |
+| D15 | Several executions of an expression with an on-demand assignment | The original nesting, the names, `parent` and `length` of the clean graph are kept |
+
+#### Priorities
+
+| ID | Record | Expected result |
+| --- | --- | --- |
+| P01 | `2 + 3 * 4` | `14` |
+| P02 | `(2 + 3) * 4` | `20` |
+| P03 | `20 - 6 - 3` | `11` |
+| P04 | `24 / 4 / 2` | `3` |
+| P05 | `a := b := 10` | `a = 10`, `b = 10` |
+| P06 | `c := (a := 10) + (b := 20) * 2` | `a = 10`, `b = 20`, `c = 50` |
+| P07 | `-2 ** 2` and `(-2) ** 2` | `-4` and `4` |
+| P08 | `2 ** -2` | The grouping `2 ** (-2)` |
+| P09 | `2 ** 3 ** 2` | `512` |
+| P10 | `2 * 3 ** 2` | `18` |
+| P11 | `1 + (v := 2 * 3)` | `7`; `v = 6` |
+| P12 | `1 + v := 2 * 3` | `7`; `v = 6`; the chain of the dependency analysis (`1 plus: v let: 2 mult: 3`) is kept |
+| P13 | `v := v + 1` in ordinary code, earlier `v = 100` | `v = 101`; the right read does not call this same assignment again |
+| P14 | `10 * v := 2 + 3` | `50`; `v = 5`, including the case with another earlier value |
+| P15 | `c := (read() != EOF)` in ordinary code; `read()` returns `EOF` | One read; `c` gets the logical false, not `EOF` |
+| P16 | `10 * 2 + 3` | `23`; the neighboring addition does not become the source of the value of the literal `2` |
+| P17 | `(+ 2 - 3)` | `-1`; the mathematical notation of the common expression is kept |
+
+For the supported shifts, comparisons, bitwise and logical operations add minimal checks of the boundaries of the adjacent levels of the table; do not limit the checks to arithmetic, leaving the other levels on the former scheme.
+
+#### Identifier to string
+
+In the examples a result in quotes denotes the character content of an ordinary Lmx Array.
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| S01 | `sys\name(foo)` with an undeclared `foo` | `"foo"`, length `3` |
+| S02 | `sys\name(foo)` when the variable `foo = 42` | `"foo"`; the value `42` is not read for the conversion |
+| S03 | `sys\name(foo)`, where `foo` is a method with a call counter | `"foo"`; the method is not called |
+| S04 | `sys\name(x)`, where obtaining the value of `x` would require an initializer with an effect | `"x"`; the initializer is not executed |
+| S05 | `sys\name(foo)`, where `foo` matches the operand template | `"foo"`; the method is not executed |
+| S06 | The first two calls of the examples of identifier spelling: one with a bare identifier, the other with an exact identifier | The same content `"foo"` |
+| S07 | An exact identifier with spaces and punctuation | The content of the name is kept without the outer quotes |
+| S08 | An exact identifier with a doubled backtick | One literal backtick in the result |
+| S09 | An empty exact identifier | An empty array of characters, length `0` |
+| S10 | `sys\name(ptr)`, where `ptr` points to `Target` | `"ptr"` |
+| S11 | Obtaining the name in the interpreter and in prepared native code | The same content; an ordinary variable-length Lmx char Array, without an added NUL |
+| S12 | `f(sys\name(foo))` and `f(a := sys\name(foo))` | In both cases the whole Array is passed; the characters do not become a chain of actual arguments |
+
+#### Priority query by name
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| Q01 | ``sys\priority(sys\name(`+`))`` | The priority of addition from the common expression mechanism; not the level of the unary sign |
+| Q02 | The DATA of the method `foo` contains `PRIORITY p` and an admissible `PASS_ARGS_AS_IS`; a query by name | The result `p` |
+| Q03 | The name is passed as a separately created array of characters with the content `"+"` | The same result as Q01, regardless of the address of the array |
+| Q04 | The name does not denote an available operand | An ordinary resolution error; the name is not registered and no fictitious priority is returned |
+| Q05 | The name of an ordinary callable that does not match the operand contract | No operand priority is invented for it |
+| Q06 | The priority of `foo` is queried, whose implementation has an observable effect | The body of the method is not executed; its ready property is read |
+| Q07 | The field `PRIORITY` of the method `foo` is set by the priority query of `+` | The priority queries of `foo` and of `+` return one number |
+| Q08 | A static and a computed string name in the interpreter and in native code | The same priority for the same available operand |
+| Q09 | PrioritySignature is compared with a method lookup that has one input query of type Array<char> and the result int | The signature matches regardless of the names query/lookup and of the body of the method |
+| Q10 | `priorityCall(name := "+")` through a reference with the requirement PrioritySignature to such a lookup | The actual is normalized into position 1 and goes to query; the data stay parent(lookup) |
+| Q11 | An ordinary PrioritiesTemplate explicitly contains the field lookup with a nested requirement | The structural check takes this field and the stated subtree into account; the fn rules are not applied to the template |
+| Q12 | The minimal PrioritiesTemplate of the `fn` signature section | It has only name and return; the absence of lookup in the template is not a requirement that the candidate has no additional fields |
+
+#### Arguments as is and `sys\eval`
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| R01 | `RawExample\calculate(2)`, `RawExample\calculate(5)`, `RawExample\demo()` from the demo with arguments as is | `7`, `13`, `20`; the outer `add` gets the original group on the left |
+| R02 | A raw method does not execute one argument that contains an effect/throw | No effect and no exception from the skipped argument |
+| R03 | Two `sys\eval` of one occurrence with an observable effect | Two executions; each keeps its own once-only |
+| R04 | Two reads of an already prepared parameter in mode `0` | The source expression is not started again |
+| R05 | The argument contains `n`, and the implementation of the operand has its own `n` | The original context of the argument is kept |
+| R06 | The argument is passed to a helper while the source context is alive | `sys\eval` keeps its origin and access |
+| R07 | A raw argument contains an embedded assignment | At execution the rules of the corresponding DATA of the section on the named argument and the embedded assignment are kept |
+| R08 | The argument reads a private field available at the source point | Its original access is kept; the operand itself gets no implicit access to a foreign private |
+| R09 | `\left` for a reference to a source Structure | An ordinary dereference; no arbitrary code is started |
+| R10 | The formal requires a physical `int`, the raw argument is a non-executed Structure | The type is not masked by its hidden execution |
+| R11 | Two raw operands have different `PRIORITY` | Each keeps its own grouping |
+| R12 | The mode is absent or holds a value outside `0/1` | A contract mismatch |
+| R13 | A raw argument is stored beyond the lifetime of the source activation | The mere storing of the reference neither holds nor restores the activation |
+| R14 | Several evaluations of a source structure | Its `parent`, `length` and written fields are not rewritten for the sake of the execution plan |
+
+#### The common positional branch of `fn`
+
+For the two-input fixtures use `PairSignature` of the section on the template and `fn`; it is an independent fn check, not operand discovery.
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| F01 | `fn: PairSignature (@: first; []: @ rest; return: int)` | A named signature, two inputs and a result; there is no body |
+| F02 | A candidate `lhs: @`, `rhs: Array<@>`, the result `int`, another name/body | A match of the types by positions |
+| F03 | The inputs of the candidate go `Array<@>`, then `@` | A mismatch; named supply does not change the order of the types of the signature |
+| F04 | Another number/type of inputs or another result | The ordinary fn diagnostics; `return` is not counted as an input |
+| F05 | Through an fn-reference `first := p`, `rest := arr` are supplied | They go to `lhs/rhs` by positions without renaming the candidate |
+| F06 | `pair(rest := makeRest(); first := makeFirst())` | The effects in the written order, supply to positions 2 and 1 |
+| F07 | Different values of defaults at the same types | The fn comparison does not change; the sources are taken from the candidate |
+| F08 | The candidate has `required` and `throws` | The ordinary requirements of the concrete call are kept |
+| F09 | The fn-label names and the real names of the candidate are available | Hidden binding uses the real names, does not take part in choosing the signature |
+| F10 | The candidate is accepted by fn | The DATA stays `parent(C)`, the template does not replace it |
 
 <a id="assign-known"></a>
 #### Writing a known place: `:=`
@@ -980,7 +1145,7 @@ SumContext:
 @: sumPtr SumSignature SumContext\sum
 ```
 
-The three arguments of `@` are the reference name, signature requirement and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature.
+The three arguments of `@` are the reference name, signature requirement and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same `fn` requirement: the common admission applies the positional comparison to the new callable.
 
 Input positions are the data template's ordinary declared input places in order. `return` describes a result and is not an input; a nested user Structure is not automatically a formal, and an Array is one input regardless of element count. No `return` means a procedural signature. A structured result uses ordinary DATA notation:
 
@@ -994,9 +1159,10 @@ PairData:
 fn: PairSignature PairData
 ```
 
+<a id="fn-implements"></a>
 #### The positional branch of `implements`
 
-The common `implements` has a distinct rule for a resolved `fn` requirement. It extracts the ordered input types and presence/type of the result from the named description, obtains the candidate `C`'s corresponding contract from its actual `parent(C)`, and compares corresponding positions. Input count and order matter; optional/defaulted inputs remain positions. Types include the actual LMX requirements for typed references, Array elements and structural results, not just C sizes or raw tags.
+The common `implements` has a distinct rule for a resolved `fn` requirement. It extracts the ordered input types and presence/type of the result from the named description, obtains the candidate `C`'s corresponding contract from its actual `parent(C)`, and compares corresponding positions. Input count and order matter; optional/defaulted inputs remain positions. Types include the actual LMX requirements for typed references, Array elements and structural results, not just C sizes or raw tags. The compatibility rules of the types themselves stay common: `fn` changes the way the parts of a contract are chosen and matched; it adds no second set of primitive types and no converters of its own, and the fact that a separate call would succeed by converting its actuals gives no right to permute or skip the declared positions of the signature.
 
 Formal names, initializer values and implementation-body trees are not fn-match criteria. Candidate positions are never rearranged to match names. Hidden native arguments, dynamically bound free names and CODE locals are not additional explicit positions. The comparison executes no body or initializer and creates no second parser or admission engine. It does not substitute the template for `parent(C)`.
 
@@ -1022,6 +1188,7 @@ fn: PrioritySignature PrioritiesTemplate
 
 The same composition can be written `PrioritiesMerged: merge(PrioritiesTemplate (lookup: return: sys\priority(name)))`. This ordinarily declares `PrioritiesMerged`; `merge` consumes its sources as standard CODE arguments and supplies its fields through the namespace. The bare `PrioritiesTemplate` reference and the anonymous Structure are values, not calls of those Structures. The contents of the group retain their ordinary contracts. In particular, supplying the Structure containing `lookup` does not execute that method or its `sys\priority` call. Copying preserves the selected method's actual lexical/DATA links through the common map; acceptance of a stream is not arbitrary reparenting.
 
+<a id="fn-public-labels"></a>
 #### Public labels and the candidate's own contract
 
 On a call through a reference constrained by `fn`, the signature's formal names are the public labels of explicit actuals. Normal positional/named mapping first identifies a signature position; that position maps to the candidate input at the same index. The candidate's own names are used by direct calls and are not fallback aliases of the public interface. Actual expressions still evaluate once in written order, not in position order. Declaration-form actuals use that same external map without changing the preserved form's internal name ([declaration arguments](#declaration-arguments)).
@@ -1216,6 +1383,50 @@ The shorthand with the callable's name to the left of `:=`, such as `square := x
 
 A returned reference preserves its exact target identity. Constructing a result, if necessary, belongs to evaluation of the returned expression, not the transfer operation. Returning from a nested function ends its activation, not automatically the entire actor. Exit and cleanup ordering is defined under [exits](#exits).
 
+<a id="callable-observations"></a>
+#### Required observations C01–C36: call, signatures and executors
+
+| ID | Scenario | Expected result |
+| --- | --- | --- |
+| C01 | One `C` is called directly and through an unambiguous `call` with the same actuals | The parent, the binding, the effects and the result match |
+| C02 | The old `call(D C)` after migration | `D` is treated as `args`, not as a substitution of the parent |
+| C03 | Two `C` occurrences with different parents and a common native implementation | Each uses its own actual data |
+| C04 | The reference `ExistingCode` is placed inside `NewContainer` | The parent of `ExistingCode` is not changed by itself |
+| C05 | R0 is started without arguments | There is no data and no artificial `D = C`; an ordinary procedural execution |
+| C06 | `fn: SumSignature SumData` with `return` in `SumData` and `fn: StepSignature StepData` without `return` | The names of the created signatures are given by the first argument; two kinds of contracts are described by one `fn`, no implementation is created |
+| C07 | `@: sumPtr SumSignature SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` given by the first argument of `fn` and checks the callable with its parent, not the fields inside the code |
+| C08 | All the examples of the table of required selection examples | The results match the table; hidden inputs do not change the choice |
+| C09 | W is chosen with a whole Structure | At execution one structural actual is kept without expansion |
+| C10 | E is chosen with one or several fields | The chosen map is used; there is no repeated expansion |
+| C11 | An impossible by names/form supply contains an effectful actual | The refusal of the form check available before its effect |
+| C12 | A refusal at the reception of the next actual | The following actuals and the body are not executed; no repeated evaluation for the sake of candidates |
+| C13 | An assignment/declaration inside an actual expression | The places of `F` are available at the needed moment; the ordinary priorities and the single evaluation are kept |
+| C14 | An ordinary Structure whose parent describes `return` is called in an expression | A valid result is obtained without `fncall`; the result is set in the data, not by an arbitrary field of the body |
+| C15 | `catch` with a payload, a nested area, a repeated call and cleanup | The former semantics of the landing pad is kept after the common migration of the inputs |
+| C16 | `node` and an ordinary user `data` | `node` keeps its built-in semantics; `data` has no special substitution |
+| C17 | One explicit contract, but different hidden copy/place bindings | The chosen native entry/adapter keeps the real mode of the place |
+| C18 | A runtime call without a suitable native entry | The existing admissible path works, without hidden compilation |
+| C19 | Copy/merge and the saving of the graph of a callable | The real parent, sharing and records are kept; a stack address does not become a portable value |
+| C20 | Only a data template is passed to `fn`, without a separate name | Refusal by the two-argument contract of `fn`; the name is not derived from the first input field of the template |
+| C21 | One declared `SumSignature` is used by name in the requirements of two callable references | The created description is reused; `fn` creates no implementation of these references |
+| C22 | The structural result of `PairSignature` from the section on the named signature | `return` and the fields of the result belong to the data template; `fn` has no outer arguments of the result and no body |
+| C23 | `Priorities` is compared with the minimal `PrioritiesTemplate` | The whole tree of the minimal template is checked; an additional `lookup` of the candidate does not make it incompatible |
+| C24 | A candidate without `lookup` is compared with the ordinary template `Priorities` | Refusal of the structural check: `lookup` and its subtree are included in the explicitly given requirement |
+| C25 | Fn `[int, Array<char>] → int`, a candidate with the same types and other names | The fn-match is positive; the names are not keys of the comparison |
+| C26 | The same fn, a candidate `[Array<char>, int] → int`, the names coincide | The fn-match is refused; the coinciding names do not rearrange the positions |
+| C27 | `chosen(text := "x"; count := 3)` from the section on public labels | The supply through the external labels of fn; candidate `n = 3`, `s = "x"`; the result 3 |
+| C28 | A named actual uses only the inner name `n`, which is not in the fn interface of `chosen` | Refusal by the unknown external name; the direct call `First\select` with `n` is allowed |
+| C29 | Fn `[int a, int b]`, a candidate `[int b, int a]`; `p(a := 1; b := 2)` | The fn-match is positive; the candidate gets `b = 1`, `a = 2`, without a permutation by names |
+| C30 | The named actuals are written in the reverse order and have observable effects | The assignment map changes, but the effects happen once in the written order |
+| C31 | The fn template `int: x 1`, the candidate `int: y 2`, the other types coincide | The fn-match is positive; an admissible `p()` uses the default 2 of the candidate, `p(x := 3)` passes 3 into `y` |
+| C32 | Fn describes `int`, the candidate has a required `int` without a default; the actual is absent | The type form fits, but the concrete call is rejected by the ordinary choice; a hidden source does not rescue `required` |
+| C33 | The fn label `x`, the real name of the candidate `y`; the caller has only `x` | The fn label by itself creates no autofill for `y` |
+| C34 | The number of input positions or the presence/type of the result differs | The fn-match rejects the incompatible type form; an optional input does not disappear from the number of positions |
+| C35 | The bodies of two callables differ with compatible fn types | The fn-match does not compare the tree of the bodies and does not declare the behavior equal; the applicable tests stay a separate check |
+| C36 | An implementation is assembled from `PrioritiesTemplate` through `merge` in a DATA declaration, with ordinary CODE arguments | The stream is accepted through the namespace; a call of the chosen `lookup` uses its actual parent by the copy map; the scheme of comparing fn and an ordinary template is kept |
+
+The key observations B01–B08, B11–B15, B18–B21 and C01/C17 are checked for the supported native → native, native → interpreter, interpreter → native and interpreter → interpreter calls. The checks must observe the value, the type and the place of the write, not only one returned result.
+
 <a id="publication"></a>
 <a id="dynamic"></a>
 ## 12. Dynamic inputs and working state
@@ -1225,7 +1436,7 @@ Value storage at a declaration in the complete Structure, a working value of the
 <a id="binding-places"></a>
 ### Own place and caller's place
 
-The norm of 2026-11-19 ([the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), R01–R07). Name resolution in a call determines the source and the logical place. There are two kinds of places. Own place: a supplied actual argument, autofill or the former binding gives a value or a description into the place of the current activation. Caller's place: the name denotes an already existing local variable of the caller, with no intermediate working copy. In both cases the variable `x` has its ordinary type `T`; reading `x`, writing `x := value`, expressions with `x` and `@x` act on the selected logical place. The hidden pointer by which native passes the caller's place is a way of implementation: the type of `x` does not become a pointer, and writing `\x` instead of `x` is not required. For a reference variable its ordinary type remains its reference type; the additional level of the address of its cell is transport-only and is not added to the type.
+The norm of 2026-11-19 (the decisions [R01–R07](#binding-decisions)). Name resolution in a call determines the source and the logical place. There are two kinds of places. Own place: a supplied actual argument, autofill or the former binding gives a value or a description into the place of the current activation. Caller's place: the name denotes an already existing local variable of the caller, with no intermediate working copy. In both cases the variable `x` has its ordinary type `T`; reading `x`, writing `x := value`, expressions with `x` and `@x` act on the selected logical place. The hidden pointer by which native passes the caller's place is a way of implementation: the type of `x` does not become a pointer, and writing `\x` instead of `x` is not required. For a reference variable its ordinary type remains its reference type; the additional level of the address of its cell is transport-only and is not added to the type.
 
 There are three implicit ways, and they differ by the place of the write. [Autofill](#binding-autofill) gives a place of the callee declared without a value the value of the same-named local variable of the caller -- into its own place. The [transparent caller place](#binding-caller-place) binds a used external name that has no own declaration in force to the caller's local place. The [former binding](#binding-fallback) is kept in full, has the lowest priority relative to the two new ways and, as before, gives an own working value or description. Whether a name has an own declaration in force is decided by [declaration levels](#shadowing-levels); [two-way `private`](#private-binding) applies to all three ways. Implicit binding is applied after [declaration selection](#declaration-selection): it does not create a variant of selection, does not rescue a rejected one and does not restart the selection.
 
@@ -1295,7 +1506,7 @@ For a chain A → B → C, where A has `x`, B itself does not consume `x` and C 
 <a id="private-binding"></a>
 ### Receiver private: and dynamic binding
 
-Dynamic binding supplies a used external name from the permitted calling context instead of its lexical fallback. The common binding rules distinguish a transparent immediate-caller place from an own value supplied by the retained fallback. Explicit lexical paths such as `node\x` still select the graph directly; they are not dynamic substitution. The visible lexical declaration matters to the two-way `private` filter below, while an unmarked free name remains eligible for dynamic binding. This preserves explicit lexical access from the author's definition of 2026-11-17 under the revised binding order of 2026-11-19. Receiver `private:` forbids the implicit dynamic participation of the marked declaration and of the place corresponding to it in both directions (the norm of 2026-11-19, [the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), R05 and R06). The source side: a marked place of the caller automatically supplies neither its value nor its mutable place. The receiver side: a really visible marked declaration of the lexical context of the callee is not shadowed by a value or a place from the dynamic context, and a marked receiving place is not autofilled. The rule applies to [autofill](#binding-autofill), the [transparent caller place](#binding-caller-place) and the dynamic part of the [former binding](#binding-fallback). Therefore, before an external dynamic binding is accepted, it is established which lexical declaration is really visible and whether it is marked: checking only the source is not enough. This is a property of a particular declaration and its corresponding binding, not a ban on the name's spelling. A marked source is skipped, and the search continues in the ordinary order: a more distant permitted source of the same name remains available. The receiver-side protection concerns the selected visible declaration: a marked `x` of a distant ancestor does not close a new inner unmarked `x`. Before 2026-11-19 the rule was one-sided -- `private:` merely excluded a field from the sources; that wording is withdrawn.
+Dynamic binding supplies a used external name from the permitted calling context instead of its lexical fallback. The common binding rules distinguish a transparent immediate-caller place from an own value supplied by the retained fallback. Explicit lexical paths such as `node\x` still select the graph directly; they are not dynamic substitution. The visible lexical declaration matters to the two-way `private` filter below, while an unmarked free name remains eligible for dynamic binding. This preserves explicit lexical access from the author's definition of 2026-11-17 under the revised binding order of 2026-11-19. Receiver `private:` forbids the implicit dynamic participation of the marked declaration and of the place corresponding to it in both directions (the norm of 2026-11-19, the decisions [R05 and R06](#binding-decisions)). The source side: a marked place of the caller automatically supplies neither its value nor its mutable place. The receiver side: a really visible marked declaration of the lexical context of the callee is not shadowed by a value or a place from the dynamic context, and a marked receiving place is not autofilled. The rule applies to [autofill](#binding-autofill), the [transparent caller place](#binding-caller-place) and the dynamic part of the [former binding](#binding-fallback). Therefore, before an external dynamic binding is accepted, it is established which lexical declaration is really visible and whether it is marked: checking only the source is not enough. This is a property of a particular declaration and its corresponding binding, not a ban on the name's spelling. A marked source is skipped, and the search continues in the ordinary order: a more distant permitted source of the same name remains available. The receiver-side protection concerns the selected visible declaration: a marked `x` of a distant ancestor does not close a new inner unmarked `x`. Before 2026-11-19 the rule was one-sided -- `private:` merely excluded a field from the sources; that wording is withdrawn.
 
 The field remains directly visible from anywhere: an explicit path, `node` and ordinary lexical lookup remain available, and nested lexical code sees the field. Receivers are not executed in the graph, and the `private:` record lies there as it is written, so the path to the field goes through it: `S\private\field` (the author's clarification of 2026-11-18); binding does not straighten this record into `S\field`. The receiver introduces no access boundary, does not change sequential visibility, does not replace `const` and `immutable`, and prohibits neither explicitly passing the marked value as an argument nor explicitly filling a marked receiving place with a permitted actual argument. An explicitly passed value does not carry the history of the marked source onto its copies, and an unmarked place of the recipient does not become marked from this. A new inner declaration shadows an outer marked one in the ordinary lexical way ([declaration levels](#shadowing-levels)). Resolving the field through ordinary lexical lookup is not dynamic binding. Neither is a code's reading of a field of its own call data: with `D: private: int: x 5` the code `C` with the data `D` reads `x` as its own input place and gets 5, while what `C` calls does not get its `x` from that place by any of the implicit ways -- `private` forbids only dynamic binding (the author's clarification of 2026-11-17; in the clarification the data were given by the former form `call(D C)`, now the data are `parent(C)`).
 
@@ -1350,7 +1561,7 @@ In run, bare x and the source record of the declaration Run\run\private\x remain
 <a id="shadowing-levels"></a>
 ### Declaration levels and shadowing
 
-The author's rule (author decision; [the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), R16): a declaration at a nested level shadows an outer declaration of the same name; at one level there is nothing to shadow -- the parent one is used. The rule is applied through the owner of the declaration and the lexical scope: an available outer binding and an own declaration of the current level do not become one place merely because the names coincide.
+The author's rule (author decision; the decision [R16](#binding-decisions)): a declaration at a nested level shadows an outer declaration of the same name; at one level there is nothing to shadow -- the parent one is used. The rule is applied through the owner of the declaration and the lexical scope: an available outer binding and an own declaration of the current level do not become one place merely because the names coincide.
 
 Sequential visibility of variables and `const` is kept. Before an own declaration comes into force, the name is resolved in the ordinary way through the available parent and outer context; a declaration lower in the text or in another branch does not hinder an early use. A new declaration in a nested scope creates its own place and shadows the outer one: an inner `Text: x` above an outer `int: x` is an own place of type Text, not an attempt to write Text into the outer int cell. Repeating an own declaration at the same level works with the same place under the general contract of the receiver: the new RHS is evaluated and assigned, the absence of an RHS does not reset the existing value, and no second cell arises. After leaving the inner scope the former outer binding is visible again with its own place, write mode and `private` -- without publication of inner local places. The words "there is no own declaration" in the [order of binding](#binding-caller-place) refer to the declaration in force in the corresponding scope, not to a preliminary search for future declarations over the whole body.
 
@@ -1368,7 +1579,69 @@ Worker:
             required: x
 ~~~
 
-The caller of `Worker\work()` has no local x. The inner `int: x` creates a distinct place and shadows the outer x=5. It has no actual, ready value or initializer. Autofill takes its source from the immediate caller's permitted local context; entering an inline `if` does not create a new caller, so the enclosing local x=5 is not that source. The inner place therefore remains `uninit:int`, and the reached `required: x` refuses initialization. The outer place remains 5. This is the consequence of the supplied [Binding and Callables §§6.1, 7.2 and 7.4](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), not a separate rule that copies outer locals or eagerly executes defaults. With an explicit inner initializer, `int: x 9`, the check passes and the outer place still remains 5. These are required outcomes, not a report of executed tests.
+The caller of `Worker\work()` has no local x. The inner `int: x` creates a distinct place and shadows the outer x=5. It has no actual, ready value or initializer. Autofill takes its source from the immediate caller's permitted local context; entering an inline `if` does not create a new caller, so the enclosing local x=5 is not that source. The inner place therefore remains `uninit:int`, and the reached `required: x` refuses initialization. The outer place remains 5. This is the consequence of the rules of [autofill](#binding-autofill) and of [declaration levels](#shadowing-levels), not a separate rule that copies outer locals or eagerly executes defaults. With an explicit inner initializer, `int: x 9`, the check passes and the outer place still remains 5. These are required outcomes, not a report of executed tests.
+
+The decisions R01–R19 of the norm of 2026-11-19 and the required observations B01–B27 (binding, `private` and scopes) and C01–C36 (call, signatures and executors) are carried over below. The observations are requirements, not a statement that an implementation was run.
+
+<a id="binding-decisions"></a>
+#### Decisions R01–R19 of the norm of 2026-11-19
+
+| ID | Mandatory decision |
+| --- | --- |
+| R01 | The whole existing binding mechanism is kept; relative to the two new ways it has the lowest priority. |
+| R02 | Variant A is chosen: the former fallback keeps its own working value/description in the frame. It cannot be silently turned into an alias of the source. |
+| R03 | A declared but not initialized place of the callee may automatically get the value of the same-named variable of the caller's local context. |
+| R04 | A used external name without its own declaration in force may transparently denote the caller's local place. The hidden pointer belongs to the native implementation; the type and the record of the variable in LMX do not change. |
+| R05 | `private` acts in both directions for all kinds of implicit dynamic binding: a private source is not supplied implicitly; a visible private declaration of the receiver is not replaced dynamically. |
+| R06 | Explicit passing, ordinary nested lexical visibility and explicit paths are not forbidden through private. Write restrictions, including the applicable const/immutable, are kept. |
+| R07 | The former reachability through the chain A → B → C is kept even if B itself does not consume the name. |
+| R08 | `node` is kept. The removal of node and of the former lexical/dynamic mechanism proposed by the first requirement is cancelled. |
+| R09 | For the selected executable Structure C, its actual parent plays the role of data. The special word `data` and the separate data parameter of call are removed. |
+| R10 | R0 has no data: it is a procedural entry without arguments. No artificial self-binding data = code is created for it. |
+| R11 | `return` is described by a field of the data. Such a declaration assigns no result. In the code role `return` is the return receiver. `fncall` is removed. |
+| R12 | `call(code)` and `call(args code)` remain. Any Structure may be executed in the code role through `f()` or `f(args)`. |
+| R13 | `fn: name data` is kept: two arguments set the name and the data template of a named C-like signature. The common implements applies to it a separate rule: the number and ordered types of the inputs, the presence and type of the result. The names of the inputs and the tree of the implementation are not keys of this comparison. No executable implementation is created; sub is removed. |
+| R14 | Both arguments of fn are read in the data role: the first sets the name of the created signature, the second its data template. The expansion of arguments proper to the choice of a code-role call is not applied to fn. |
+| R15 | The choice of a signature uses only the explicit actuals or the fields of the single Structure passed without assignment. The readings are equal; more than one resulting variant is an error. Implicit binding does not choose a signature. |
+| R16 | A nested declaration shadows an outer same-named declaration. A one-level use does not create a new level of shadowing; the corresponding parent place/namespace is used. The owner of the place and the valid visibility count, not the presence of the same string anywhere in the body. |
+| R17 | catch adapts to the common rules of data representation and call, keeping the semantics of the handler. |
+| R18 | The graph stays the graph of the source forms. The records of modifiers and other receivers are kept by the existing rules; binding does not rewrite them into a separate semantic representation. |
+| R19 | An ordinary Structure explicitly used as a structural template requires a match to the whole tree it sets. A method field included into the template and its subtree do not vanish from the requirement only because the consumer needs one call. For a requirement without a method body a minimal separate template is used. |
+
+<a id="binding-observations"></a>
+#### Required observations B01–B27: binding, `private` and scopes
+
+| ID | Scenario | Expected result |
+| --- | --- | --- |
+| B01 | Caller `x = 5`, the callee has an empty declaration `x` and writes 9 | Autofill gives an own place; the caller stays 5 |
+| B02 | Caller `x = 5`, the callee uses `x` without an own declaration and writes 9 | The new transparent way changes the caller's `x` to 9 |
+| B03 | The value 5 is obtained by the former fallback; the callee writes 9 | The own copy is changed; the source stays 5 |
+| B04 | Compare the type of `x` in B01–B03 and the ordinary expressions with it | In all cases one type `T`; the transport pointer is not visible as `@T` |
+| B05 | Take `@x` in B01–B03 | B01/B03: the own place; B02: the real place of the caller |
+| B06 | The same variants with a reference variable and its reassignment | The transparent place changes the caller's reference; copies do not |
+| B07 | Caller `x` without initialization; a write through the transparent place | The caller sees the new value and the state initialized |
+| B08 | A nested call/another alias/cleanup observes the write of B02 | The change is visible at once; there is no copy-out on return |
+| B09 | The caller's source `x` is private; the receiving `x` admits autofill | This source is not used; without another admissible filling the place stays uninit |
+| B10 | The caller's source `x` is private; the callee uses a free `x` | This source is skipped in all implicit dynamic channels |
+| B11 | The visible lexical `x` of the callee is private = 7, the caller's public `x` = 11 | No dynamic substitution; the lexical 7 is used |
+| B12 | The receiving private `x` is empty, the caller's public `x` = 11 | Autofill is forbidden; the ordinary state without a value |
+| B13 | A private source is passed explicitly to an admissible input | The passing is allowed |
+| B14 | A private receiving input gets 20 explicitly | The explicit actual is allowed and acts by the ordinary contract |
+| B15 | A nested lexical part or an explicit path reads the private `x` | The access is kept; private does not become a general access control |
+| B16 | An inner own `x` shadows the outer private `x` | The ordinary lexical shadowing is allowed; there is no ban of the name `x` |
+| B17 | The nearest source is private, a permitted source above it | The search may continue; private is not a name barrier |
+| B18 | A const/immutable place is obtained by the transparent way or by an explicit path | An inadmissible write is rejected by the existing contract |
+| B19 | A → B → C; B does not consume the name | The former reachability is kept; the fallback copy of C does not write into A |
+| B20 | B has its own copy of `x` from A, C gets the place `B.x` | `B.x` is changed, the original `A.x` is kept |
+| B21 | B has an alias of `A.x`, C gets the place `B.x` | The address of `A.x` is kept without an intermediate copy |
+| B22 | An own default exists, the caller has a same-named local | The default is not replaced automatically; an explicit actual may replace it |
+| B23 | An unused computed default / a default replaced by an actual | It is not executed by a common input pass / it is not executed instead of the actual |
+| B24 | Outer `int x`, an inner declaration `Text x` with an RHS | Inside an own Text; after leaving, the outer int is unchanged |
+| B25 | A repeat of an own declaration at the same level without an RHS | No new cell and no zeroing of the earlier value |
+| B26 | A use of `x` before a later own declaration | The ordinary available outer resolution works; the future declaration does not block the whole body |
+| B27 | The graph contains `private`/`required` and other receiver records | Binding does not straighten or rewrite these records |
+
+For the control example of a new place in a nested block, add one separate control fixture after the exact derivation is established; do not replace it by an arbitrary expected number.
 
 <a id="required-receiver"></a>
 ### Receiver required: checking that a field is initialized
@@ -1377,7 +1650,7 @@ The caller of `Worker\work()` has no local x. The inner `int: x` creates a disti
 
 `required` may be written anywhere: all Structures are interchangeable, and it is not known in advance which one ends up in which role (the author's answer of 2026-11-16). There is no restriction on which declaration it stands in -- just as `private:` has none ([receiver private:](#private-binding)): `required: int: a` is the ordinary composition of declaration receivers that marks the declared field `a`; when a call executes it, no field named `required` arises, while in the graph the record lies as it is written. The check of an already visible field may also be written as a separate line -- `required: a`. There may be several arguments -- `required: a b c`, `required: int: a; int: b`, `required(int: a; int: b)`: the action needs one argument, and the receiver applies it to each in turn, in the written order (the author's clarification of 2026-11-18). All combinations are possible -- in `data` and in `code`, as a mark of a declaration and as a line with the name of a field -- and so is any number of checks of one variable: in `code` each runs on its own line and does not interfere with the others. These are different paths to one check, and neither needs a separate pass: on entry to a callable there are no initialization passes besides the supply of arguments, and the rest is executed when reached ([call frame](#call-frame-20261115)).
 
-`required` in the input data of a call is checked when the arguments are supplied -- the one action of the entry that passes over the input places anyway: if the place received neither a value of its declaration nor a supplied actual, it is an error, and no record of `code` is executed. [Autofill](#binding-autofill) does not make such an input pass the check: `required` in the input description takes part in [declaration selection](#declaration-selection), and implicit binding does not take part in selection (the norm of 2026-11-19, [the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), §9.7). A `required` form in `code` -- a marked declaration or the line `required: a` -- is checked on that same line, when execution reaches it: for a declaration after its ordinary action, the check of the type with an assignment, for the line with a name by the field found at that place under the general [visibility](#declaration-visibility) rules; the actual state of the place is checked, including after a permitted autofill.
+`required` in the input data of a call is checked when the arguments are supplied -- the one action of the entry that passes over the input places anyway: if the place received neither a value of its declaration nor a supplied actual, it is an error, and no record of `code` is executed. [Autofill](#binding-autofill) does not make such an input pass the check: `required` in the input description takes part in [declaration selection](#declaration-selection), and implicit binding does not take part in selection (the norm of 2026-11-19, [declaration selection](#declaration-selection)). A `required` form in `code` -- a marked declaration or the line `required: a` -- is checked on that same line, when execution reaches it: for a declaration after its ordinary action, the check of the type with an assignment, for the line with a name by the field found at that place under the general [visibility](#declaration-visibility) rules; the actual state of the place is checked, including after a permitted autofill.
 
 `required` does not change the visibility rules, and from this follows where it does not act. The mark belongs to its declaration and fires only where that declaration itself acts -- as an input place of a launch or as a reached record of code. It adds no condition to binding: the marked field remains visible and accessible under the general rules -- lexically, dynamically and by an explicit path -- and a callable that received it as a free name is not checked by this mark. The line `required: a` does not see a variable declared below it, nor a name of a branch after the branch is left: such a name is looked up in the ordinary way among the available outer and dynamic bindings. The check runs once; it does not affect later writes into the field.
 
@@ -1438,7 +1711,7 @@ C signatures are derived from actual calls. Different supplied argument sets yie
 <a id="binding-executors"></a>
 ### Binding in the executors
 
-The norm is one for the interpreter and native ([the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), §11–§12). A direct native → native call is kept where the selected implementation, types and binding are known. An autofilled value is lowered by the same parameter `T` as an explicit actual argument; the [transparent caller place](#binding-caller-place) -- by the hidden address of its cell; the [former binding](#binding-fallback) still gives an own place. A common C body may be shared between modes through adapters, but an adapter keeps the owner of the record and the behaviour of `@`. With identical explicit actuals the mode of the hidden input may differ because of the caller's context and `private`: a native entry conforms to the real contract or receives a description of the place; new user pointer types are not introduced.
+The norm is one for the interpreter and native. A direct native → native call is kept where the selected implementation, types and binding are known. An autofilled value is lowered by the same parameter `T` as an explicit actual argument; the [transparent caller place](#binding-caller-place) -- by the hidden address of its cell; the [former binding](#binding-fallback) still gives an own place. A common C body may be shared between modes through adapters, but an adapter keeps the owner of the record and the behaviour of `@`. With identical explicit actuals the mode of the hidden input may differ because of the caller's context and `private`: a native entry conforms to the real contract or receives a description of the place; new user pointer types are not introduced. The map of a public label to a position belongs to the common matching of actuals: with known data it is resolved when the call is prepared and needs no search of names in every native call; it does not reorder the effectful evaluation of actuals and does not replace the ordinary mechanism of hidden inputs. The C-likeness of `fn` means a positional type signature at the level of LMX, not a mandatory coincidence of all platform C ABIs or the absence of hidden service parameters.
 
 An ordinary native local variable has no arena header "type, value": its type cannot be read from the four bytes before the address. The type, the way of access, the initialization state and the applicable restrictions follow from the common representation of the place and the call contract. There are four combinations of executors -- native → native, native → interpreter, interpreter → native, interpreter → interpreter -- and in all of them `x` has one logical type `T`, and a permitted write changes the same logical place. For a target known only at execution, the existing access to the permitted local contexts applies: the raw C stack does not serve as a dictionary of names, and a static transitive closure of requirements is not introduced. Service C functions, the bridge and the `call` dispatcher do not substitute their own service local variables for the caller's context: the sources are determined by the program place of the call.
 
@@ -1573,7 +1846,7 @@ If the interpreter detects an error in an operation while executing a correctly 
 <a id="catch-common-model"></a>
 ### `catch` in the common model of data and call
 
-The norm of 2026-11-19 ([the requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), R17). The handler `catch` is described by the common model of inputs and the actual link: the code of the handler is read in the role of code, and its role of data is played by its `parent`, as for any executable code ([structural call](#call-receivers)). The payload `throw: Name(arguments)` is the explicitly supplied values; the handler's parameters accept them under the general rules of actual arguments. The other dependencies of the handler -- the names it uses but does not receive as payload -- are subject to the ordinary [binding](#binding-places) and [two-way `private`](#private-binding).
+The norm of 2026-11-19 (the decision [R17](#binding-decisions)). The handler `catch` is described by the common model of inputs and the actual link: the code of the handler is read in the role of code, and its role of data is played by its `parent`, as for any executable code ([structural call](#call-receivers)). The payload `throw: Name(arguments)` is the explicitly supplied values; the handler's parameters accept them under the general rules of actual arguments. The other dependencies of the handler -- the names it uses but does not receive as payload -- are subject to the ordinary [binding](#binding-places) and [two-way `private`](#private-binding).
 
 The semantics of the handler is preserved in full: the handler is selected by the failure name and by its scope; its body is not executed on the initial straight-line pass; nested and sibling scopes are distinguished; there are no two competing same-named `catch` at one level; continuation after the handler, the repeat call, `throws` and cleanup act as described in this chapter. `catch` does not vanish together with the withdrawn `sub` and does not turn into an ordinary function because the representation of inputs has become unified. The handler does not depend on the withdrawn forms -- the executable `fn` and `sub`, `fncall` and the separate substitution of data ([what is withdrawn](#removed-builtins)). The roles of its parts follow the handler's contract: that `fn` has entered the group of receivers with [the data role](#whole-arguments) does not itself redefine `catch`. The notation of the header `catch: Name (parameters)` is not changed by this norm.
 

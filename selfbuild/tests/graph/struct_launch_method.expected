@@ -5,7 +5,6 @@
         int: counter_n 2
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Own:
         int: n 5
@@ -31,6 +30,7 @@ int: seen ((main \ data) \ seen)
 int: own_n (((main \ data) \ Own) \ n)
 int: counter_n (((main \ data) \ Counter) \ n)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
     :=: ((shared \ Observed) \ own_n) own_n
     :=: ((shared \ Observed) \ counter_n) counter_n

@@ -7,7 +7,6 @@
         int: reordered_len 3
     end: Observed
 ---
-@: shared (data [] 0)
 fn: bump (int: v) int
     return: (v + 1)
 end: bump
@@ -42,6 +41,7 @@ int: nested ((main \ data) \ nested)
 int: only_used_len (length ((main \ data) \ OnlyUsed))
 int: reordered_len (length ((main \ data) \ Reordered))
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ reordered) reordered
     :=: ((shared \ Observed) \ defaulted) defaulted
     :=: ((shared \ Observed) \ nested) nested

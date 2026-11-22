@@ -4,7 +4,6 @@
         int: through 3
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Struct2: a b c
     Struct1: q w e r t
@@ -14,6 +13,7 @@ end: main
 int: first (length ((main \ data) \ [0]Struct1))
 int: through (length (((main \ data) \ [1]Struct1) \ Struct2))
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ first) first
     :=: ((shared \ Observed) \ through) through
 end: observe

@@ -6,7 +6,6 @@
         int: n_x 1
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     timeout:
         ms:
@@ -26,6 +25,7 @@ int: again ((((main \ data) \ timeout) \ ms) \ time)
 int: n_i (length ((main \ data) \ i))
 int: n_x (length ((main \ data) \ x))
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
     :=: ((shared \ Observed) \ again) again
     :=: ((shared \ Observed) \ n_i) n_i

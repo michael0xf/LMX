@@ -4,7 +4,6 @@
     Observed:
         int: seen 0
 )
-@: shared data[0]
 fn: callee () int
     x := 9
     return: x
@@ -13,5 +12,6 @@ fn: caller () int
     int: r callee()
     return: x * 100 + r
 sub: main ()
+    @: shared node[0]
     shared\Observed\seen := caller()
 main()

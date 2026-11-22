@@ -3,7 +3,6 @@
         int: seen 5
     end: Observed
 ---
-@: shared (data [] 0)
 fn: callee (int: v) int
     return: v
 end: callee
@@ -14,6 +13,7 @@ fn: f () int
     return: (callee x)
 end: f
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (f)
 end: main
 main:

@@ -6,16 +6,17 @@
         int: ticks 0
     end: Observed
 ---
-@: shared (data [] 0)
 fn: f (int: x; int: y 99) int (
     int: v 0
 )
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ x) x
     :=: ((shared \ Observed) \ v) v
     :=: ((shared \ Observed) \ y) y
     return: x
 end: f
 fn: tick () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ ticks) (((shared \ Observed) \ ticks) + 1)
     return: ((shared \ Observed) \ ticks)
 end: tick

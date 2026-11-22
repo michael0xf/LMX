@@ -19,7 +19,6 @@
         int: later_default 0
         int: data_len 0
 )
-@: shared data[0]
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: a (int: n) int (int: calls 0)
     data\calls := data\calls + 1
@@ -66,6 +65,7 @@ int: later_default tst()
 int: data_len length(main\data\Data)
 
 sub: observe ()
+    @: shared node[0]
     shared\Observed\named_literal := named_literal
     shared\Observed\named_call := named_call
     shared\Observed\paren_call := paren_call

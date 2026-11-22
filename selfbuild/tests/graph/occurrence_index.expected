@@ -4,7 +4,6 @@
         int: seen_in_code 3
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Holder:
         Model: a b
@@ -18,6 +17,7 @@ main:
 int: seen (length (((main \ data) \ Holder) \ [1]Model))
 int: seen_in_code ((main \ data) \ in_code)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
     :=: ((shared \ Observed) \ seen_in_code) seen_in_code
 end: observe

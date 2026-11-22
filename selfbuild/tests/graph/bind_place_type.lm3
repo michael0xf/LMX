@@ -4,7 +4,6 @@
     Observed:
         int: seen 0
 )
-@: shared data[0]
 fn: own (int: x) int
     return: typeof(@x)
 fn: free () int
@@ -20,5 +19,6 @@ fn: caller () int
     int: c middle()
     return: a * 10000 + b * 100 + c
 sub: main ()
+    @: shared node[0]
     shared\Observed\seen := caller()
 main()

@@ -9,7 +9,6 @@
         int: marker 9
     end: Second
 ---
-@: shared (data [] 0)
 Mark:
     int: marker 0
 end: Mark
@@ -17,6 +16,7 @@ fn: look (@: s Mark) int
     return: (s \ marker)
 end: look
 fn: c () int
+    @: shared (node [] 0)
     :=: selected (shared \ Second)
     return: (selected \ marker)
 end: c
@@ -26,11 +26,13 @@ fn: b () int
     return: ((before * 100) + r)
 end: b
 fn: a () int
+    @: shared (node [] 0)
     @: selected (shared \ First)
     int: rb (b)
     return: (((selected \ marker) * 10000) + rb)
 end: a
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (a)
 end: main
 main:

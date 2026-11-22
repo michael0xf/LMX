@@ -4,8 +4,8 @@
         int: r 0
     end: Observed
 ---
-@: shared (data [] 0)
 fn: tick () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
     return: 3
 end: tick
@@ -24,6 +24,7 @@ fn: g (@: s Model) int
     return: 70
 end: g
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) (g (h (tick)))
 end: main
 main:

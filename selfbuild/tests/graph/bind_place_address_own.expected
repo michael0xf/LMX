@@ -3,7 +3,6 @@
         int: seen 509
     end: Observed
 ---
-@: shared (data [] 0)
 fn: own (int: x) int
     @: p int (@ x)
     :=: x 9
@@ -15,6 +14,7 @@ fn: caller () int
     return: ((x * 100) + r)
 end: caller
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (caller)
 end: main
 main:

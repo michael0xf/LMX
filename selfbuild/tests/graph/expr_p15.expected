@@ -4,15 +4,16 @@
         int: reads 1
     end: Observed
 ---
-@: shared (data [] 0)
 int: EOF -1
 fn: read () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ reads) (((shared \ Observed) \ reads) + 1)
     return: (0 - 1)
 end: read
 sub: main () (
     int: c 3
 )
+    @: shared (node [] 0)
     :=: c (((read) != EOF))
     :=: ((shared \ Observed) \ c) c
 end: main

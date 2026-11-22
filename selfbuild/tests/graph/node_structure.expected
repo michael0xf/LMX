@@ -3,7 +3,6 @@
         int: seen 5
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     int: hits 4
     Bump: (:= (node \ hits) (hits + 1))
@@ -13,6 +12,7 @@ end: main
 main:
 int: seen ((main \ data) \ hits)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
 end: observe
 observe:

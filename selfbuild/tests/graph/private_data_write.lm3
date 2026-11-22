@@ -12,19 +12,22 @@
         int: library_source 0
         int: header_result 0
 )
-@: shared data[0]
 fn: CodePrivate () int
+    @: shared node[0]
     private: (int: x 20)
     x := 21
     return: x * 100 + shared\Library\read()
 fn: CodePublic () int
+    @: shared node[0]
     int: x 20
     x := 21
     return: x * 100 + shared\Library\read()
 fn: DataPrivate (private: (int: x 20)) int
+    @: shared node[0]
     x := 21
     return: x * 100 + shared\Library\read()
 sub: main ()
+    @: shared node[0]
     shared\Observed\private_result := CodePrivate()
     shared\Observed\public_result := CodePublic()
     shared\Observed\library_source := shared\Library\x

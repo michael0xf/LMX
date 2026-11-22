@@ -4,16 +4,18 @@
         int: r 0
     end: Observed
 ---
-@: shared (data [] 0)
 fn: tick () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
     return: 3
 end: tick
 fn: f (int: a) int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) a
     return: a
 end: f
 fn: f (int: a; int: b) int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) ((a * 10) + b)
     return: a
 end: f

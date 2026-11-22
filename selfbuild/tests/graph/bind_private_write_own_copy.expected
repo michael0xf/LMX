@@ -3,7 +3,6 @@
         int: seen 110797
     end: Observed
 ---
-@: shared (data [] 0)
 fn: relay () int
     int: x 11
     int: r (inner)
@@ -22,6 +21,7 @@ fn: outer () int
     return: ((got * 10) + x)
 end: outer
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (outer)
 end: main
 main:

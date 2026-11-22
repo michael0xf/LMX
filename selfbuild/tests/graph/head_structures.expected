@@ -5,7 +5,6 @@
         int: kept_value 3
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Table:
         Code: (:= (data \ x) ((data \ x) + 1))
@@ -30,6 +29,7 @@ int: self_value ((((main \ data) \ Table) \ Self) \ x)
 int: given_value ((((main \ data) \ Table) \ Data) \ x)
 int: kept_value ((((main \ data) \ Table) [] 3) \ value)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ self_value) self_value
     :=: ((shared \ Observed) \ given_value) given_value
     :=: ((shared \ Observed) \ kept_value) kept_value

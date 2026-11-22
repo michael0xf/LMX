@@ -4,7 +4,6 @@
         int: seen 0
         int: twice 0
 )
-@: shared data[0]
 # Code launched over data it was given is separated from that data too (R22, item 1; plan M11 5b): a record there whose
 # head is an ordinary Structure of the data launches it -- `Step(Inner)` and `Step(data := Inner)` run Step over Inner,
 # `Twice()` runs Twice over itself.
@@ -27,6 +26,7 @@ int: seen main\data\D\Inner\x
 int: twice main\data\D\Twice\k
 
 sub: observe ()
+    @: shared node[0]
     shared\Observed\seen := seen
     shared\Observed\twice := twice
 observe()

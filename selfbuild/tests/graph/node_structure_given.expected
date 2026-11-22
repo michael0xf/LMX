@@ -4,7 +4,6 @@
         int: kept 100
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     int: hits 4
     D:
@@ -18,6 +17,7 @@ main:
 int: seen ((main \ data) \ hits)
 int: kept (((main \ data) \ D) \ hits)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
     :=: ((shared \ Observed) \ kept) kept
 end: observe

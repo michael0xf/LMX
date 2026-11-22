@@ -3,7 +3,6 @@
         int: seen 0
     end: Observed
 ---
-@: shared (data [] 0)
 fn: work () int
     int: x
     return: x
@@ -14,6 +13,7 @@ fn: caller () int
     return: (work)
 end: caller
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (caller)
 end: main
 main:

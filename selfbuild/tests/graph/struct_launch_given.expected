@@ -4,7 +4,6 @@
         int: twice 2
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Code:
         Step: Inner
@@ -28,6 +27,7 @@ main:
 int: seen ((((main \ data) \ D) \ Inner) \ x)
 int: twice ((((main \ data) \ D) \ Twice) \ k)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) seen
     :=: ((shared \ Observed) \ twice) twice
 end: observe

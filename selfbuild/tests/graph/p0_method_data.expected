@@ -4,7 +4,6 @@
         int: stored 6
     end: Observed
 ---
-@: shared (data [] 0)
 fn: main () int (
     Outer:
         Inner:
@@ -20,6 +19,7 @@ end: main
 int: result (main)
 int: stored ((main \ data) \ result)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ result) result
     :=: ((shared \ Observed) \ stored) stored
 end: observe

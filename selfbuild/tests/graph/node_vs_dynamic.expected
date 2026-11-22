@@ -3,7 +3,6 @@
         int: r 2510
     end: Observed
 ---
-@: shared (data [] 0)
 int: x 10
 fn: probe () int
     return: ((x * 100) + (node \ x))
@@ -14,6 +13,7 @@ fn: caller () int
 end: caller
 int: r (caller)
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) r
 end: main
 main:

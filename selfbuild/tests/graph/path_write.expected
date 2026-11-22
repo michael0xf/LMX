@@ -6,7 +6,6 @@
         int: v2 42
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Box:
         int: hits 0
@@ -35,6 +34,7 @@ int: t ((main \ data) \ t)
 int: h (((main \ data) \ Box) \ hits)
 int: v2 ((((main \ data) \ Box) \ Inner) \ v)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ v1) v1
     :=: ((shared \ Observed) \ t) t
     :=: ((shared \ Observed) \ h) h

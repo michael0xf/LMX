@@ -5,7 +5,6 @@
         int: self_x 7
     end: Observed
 ---
-@: shared (data [] 0)
 sub: main () (
     Self:
         int: x 5
@@ -24,6 +23,7 @@ int: first ((main \ data) \ first)
 int: second ((main \ data) \ second)
 int: self_x (((main \ data) \ Self) \ x)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ first) first
     :=: ((shared \ Observed) \ second) second
     :=: ((shared \ Observed) \ self_x) self_x

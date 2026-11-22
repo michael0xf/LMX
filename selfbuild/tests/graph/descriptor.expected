@@ -5,7 +5,6 @@
         int: b 7
     end: Observed
 ---
-@: shared (data [] 0)
 fn: f1 (int: a; int: b 2) int
     return: ((a * 10) + b)
 end: f1
@@ -14,6 +13,7 @@ int: r (f1 5)
 int: v ((merge (f2 \ data) ((int q 3))) \ q)
 int: b ((f2 \ data) \ b)
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) r
     :=: ((shared \ Observed) \ v) v
     :=: ((shared \ Observed) \ b) b

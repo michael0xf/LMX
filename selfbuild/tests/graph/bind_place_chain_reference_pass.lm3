@@ -8,11 +8,11 @@
     Second:
         int: marker 9
 )
-@: shared data[0]
 @: Mark (int: marker 0)
 fn: look (@: s Mark) int
     return: s\marker
 fn: c () int
+    @: shared node[0]
     selected := shared\Second
     return: selected\marker
 fn: b () int
@@ -20,9 +20,11 @@ fn: b () int
     int: r c()
     return: before * 100 + r
 fn: a () int
+    @: shared node[0]
     @: selected shared\First
     int: rb b()
     return: selected\marker * 10000 + rb
 sub: main ()
+    @: shared node[0]
     shared\Observed\seen := a()
 main()

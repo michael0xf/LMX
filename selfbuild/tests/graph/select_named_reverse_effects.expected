@@ -4,12 +4,13 @@
         int: r 21
     end: Observed
 ---
-@: shared (data [] 0)
 fn: t1 () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) ((((shared \ Observed) \ seen) * 10) + 1)
     return: 1
 end: t1
 fn: t2 () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) ((((shared \ Observed) \ seen) * 10) + 2)
     return: 2
 end: t2
@@ -17,6 +18,7 @@ fn: f (int: a; int: b) int
     return: ((a * 10) + b)
 end: f
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ r) (f (:= b (t1)) (:= a (t2)))
 end: main
 main:

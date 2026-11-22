@@ -9,16 +9,18 @@
         int: marker 9
     end: Second
 ---
-@: shared (data [] 0)
 fn: replace () int
+    @: shared (node [] 0)
     :=: selected (shared \ Second)
     return: 0
 end: replace
 fn: keep (@: selected) int
+    @: shared (node [] 0)
     :=: selected (shared \ Second)
     return: 0
 end: keep
 fn: caller () int
+    @: shared (node [] 0)
     @: selected (shared \ First)
     int: k (keep)
     int: first (selected \ marker)
@@ -26,6 +28,7 @@ fn: caller () int
     return: ((first * 10) + (selected \ marker))
 end: caller
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (caller)
 end: main
 main:

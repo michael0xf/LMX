@@ -5,15 +5,17 @@
         int: seen 0
         int: r 0
 )
-@: shared data[0]
 fn: t1 () int
+    @: shared node[0]
     shared\Observed\seen := shared\Observed\seen * 10 + 1
     return: 1
 fn: t2 () int
+    @: shared node[0]
     shared\Observed\seen := shared\Observed\seen * 10 + 2
     return: 2
 fn: f (int: a; int: b) int
     return: a * 10 + b
 sub: main ()
+    @: shared node[0]
     shared\Observed\r := f(b := t1(); a := t2())
 main()

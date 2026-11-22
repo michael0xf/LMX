@@ -5,8 +5,8 @@
         int: unused 1
     end: Observed
 ---
-@: shared (data [] 0)
 fn: tick () int
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ ticks) (((shared \ Observed) \ ticks) + 1)
     return: 40
 end: tick
@@ -17,6 +17,7 @@ fn: idle (int: x) int
     return: 1
 end: idle
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (callee 3)
     :=: ((shared \ Observed) \ unused) (idle)
 end: main

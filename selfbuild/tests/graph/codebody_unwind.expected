@@ -4,8 +4,8 @@
         int: trace 21
     end: Observed
 ---
-@: shared (data [] 0)
 fn: ordered () int
+    @: shared (node [] 0)
     finally: (:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 1))
     finally: ((:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 2)))
     finally: (((:= ((shared \ Observed) \ trace) ((((shared \ Observed) \ trace) * 10) + 3))))
@@ -13,6 +13,7 @@ fn: ordered () int
 end: ordered
 int: result (ordered)
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ result) result
 end: main
 main:

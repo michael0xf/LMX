@@ -3,7 +3,6 @@
         int: seen 507
     end: Observed
 ---
-@: shared (data [] 0)
 fn: callee () int
     int: before x
     int: x 7
@@ -14,6 +13,7 @@ fn: f () int
     return: (callee)
 end: f
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ seen) (f)
 end: main
 main:

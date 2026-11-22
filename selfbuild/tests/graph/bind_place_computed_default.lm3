@@ -5,8 +5,8 @@
         int: seen 0
         int: unused 0
 )
-@: shared data[0]
 fn: tick () int
+    @: shared node[0]
     shared\Observed\ticks := shared\Observed\ticks + 1
     return: 40
 fn: callee (int: x tick()) int
@@ -14,6 +14,7 @@ fn: callee (int: x tick()) int
 fn: idle (int: x tick()) int
     return: 1
 sub: main ()
+    @: shared node[0]
     shared\Observed\seen := callee(3)
     shared\Observed\unused := idle()
 main()

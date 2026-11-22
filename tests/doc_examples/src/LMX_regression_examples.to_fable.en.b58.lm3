@@ -1,0 +1,18 @@
+Requests:
+    int: value
+    int: real_calls 0
+    return: int
+    real:
+        node\real_calls += 1
+        return: value * 2
+    proxy:
+        if: value < 0
+            return: 0
+        return: real()
+    demo:
+        node\real_calls := 0
+        @: request proxy
+        int: denied request(-4)
+        int: allowed request(6)
+        request := real
+        return: denied + allowed + request(-4)

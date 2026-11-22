@@ -1,0 +1,24 @@
+Rectangle:
+    int: width 0
+    int: height 0
+    return: int
+    area:
+        return: width * height
+    builder:
+        int: value
+        return: Rectangle
+        set_width:
+            node\width := value
+        set_height:
+            node\height := value
+        finish:
+            return: (copy(Rectangle))
+    ---
+    demo:
+        builder\set_width(3)
+        builder\set_height(4)
+        @: first builder\finish()
+        builder\set_width(5)
+        builder\set_height(2)
+        @: second builder\finish()
+        return: first\area() + second\area()

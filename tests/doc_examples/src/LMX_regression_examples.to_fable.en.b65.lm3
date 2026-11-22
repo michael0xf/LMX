@@ -1,0 +1,42 @@
+Badge:
+    int: value
+    return: int
+    render:
+        return: value
+
+Border:
+    int: value
+    @: badge
+    return: int
+    render:
+        return: value + badge\render()
+
+Day:
+    return: @
+    badge:
+        return: (merge(Badge; (int: value 3)))
+    border:
+        return: (merge(Border; (int: value 30)))
+
+Night:
+    return: @
+    badge:
+        return: (merge(Badge; (int: value 4)))
+    border:
+        return: (merge(Border; (int: value 40)))
+
+Screen:
+    @: factory
+    return: int
+    render:
+        @: badge factory\badge()
+        @: border factory\border()
+        return: border\render()
+    demo:
+        int: total render(factory := Day) + render(factory := Night)
+        @: first Day\badge()
+        @: second Day\badge()
+        first\value := 9
+        if: second\value != 3
+            return: -1
+        return: total

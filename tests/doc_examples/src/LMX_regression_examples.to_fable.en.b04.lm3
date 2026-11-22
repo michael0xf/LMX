@@ -1,0 +1,19 @@
+Actions:
+    change:
+        value += 3
+    transit:
+        change()
+    connected:
+        required: value
+        change()
+
+Checks:
+    return: int
+    through_fallback:
+        int: value 5
+        Actions\transit()
+        return: value
+    through_place:
+        int: value 5
+        Actions\connected()
+        return: value

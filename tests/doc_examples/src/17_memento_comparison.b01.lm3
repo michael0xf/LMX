@@ -1,0 +1,26 @@
+Editor:
+    int: value
+    int: state 0
+    return: int
+    set:
+        node\state := value
+    read:
+        return: state
+    history:
+        @: snapshot
+        return: Editor
+        save:
+            return: (copy(Editor))
+        restore:
+            node\state := snapshot\state
+    ---
+    demo:
+        set(5)
+        @: first history\save()
+        set(9)
+        @: second history\save()
+        set(13)
+        history\restore(snapshot := first)
+        int: low read()
+        history\restore(snapshot := second)
+        return: low * 10 + read()

@@ -1,0 +1,25 @@
+Packet:
+    int: payload
+    return: int
+    read:
+        return: payload
+    create:
+        return: Packet
+        small:
+            node\payload := 6
+            return: (copy(Packet))
+        large:
+            node\payload := 14
+            return: (copy(Packet))
+
+PacketClient:
+    @: product Packet
+    return: int
+    consume:
+        return: product\read() + 1
+    demo:
+        import: Packet
+        @: first create\small()
+        @: second create\large()
+        Packet\payload := 99
+        return: consume(first) + consume(second)

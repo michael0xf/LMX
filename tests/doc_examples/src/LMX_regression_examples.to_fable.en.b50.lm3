@@ -1,0 +1,29 @@
+Events:
+    int: value
+    int: last 0
+    int: total 0
+    @: first remember
+    @: second accumulate
+    int: deliveries 0
+    return: int
+    remember:
+        node\deliveries += 1
+        node\last := value
+    accumulate:
+        node\deliveries += 1
+        node\total += value
+    notify:
+        first()
+        second()
+    demo:
+        node\last := 0
+        node\total := 0
+        node\deliveries := 0
+        node\first := remember
+        node\second := accumulate
+        notify(-2)
+        notify(5)
+        int: subtotal node\total
+        node\second := remember
+        notify(7)
+        return: subtotal * 100 + node\last * 10 + node\total

@@ -1,0 +1,15 @@
+Configuration:
+    int: value 0
+    return: @
+    get:
+        return: Configuration
+
+SharedConfiguration:
+    return: int
+    demo:
+        @: first Configuration\get()
+        @: second Configuration\get()
+        first\value := 11
+        int: seen_from_second second\value
+        second\value := 4
+        return: seen_from_second * 10 + first\value

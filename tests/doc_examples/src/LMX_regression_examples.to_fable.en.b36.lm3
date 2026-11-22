@@ -1,0 +1,18 @@
+source:
+    int: reads 0
+    return: int
+    next:
+        node\reads += 1
+        return: node\reads
+
+sink:
+    int: x
+    int: scratch 100
+    return: int
+    inspect:
+        return: x * 100 + scratch
+
+demand:
+    return: int
+    demo:
+        return: sink\inspect(10 * scratch := source\next() + 3)

@@ -1,0 +1,16 @@
+sink:
+    int: x
+    int: scratch 100
+    return: int
+    inspect:
+        return: x * 100 + scratch
+
+expressions:
+    int: scratch 77
+    return: int
+    ungrouped:
+        int: result sink\inspect(2 + scratch := 3 * 4)
+        return: result * 100 + scratch
+    grouped:
+        int: result sink\inspect(2 + (scratch := 3) * 4)
+        return: result * 100 + scratch

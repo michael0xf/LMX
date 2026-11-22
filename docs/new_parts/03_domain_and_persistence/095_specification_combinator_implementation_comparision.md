@@ -26,6 +26,7 @@ SpecificationLibrary:
             return: int
             accepts:
                 return: node\first(value) && node\second(value)
+    ---
     Operators:
         copy: sys\OPERANDS_TEMPLATE
         return: @
@@ -86,7 +87,7 @@ LMX явно строит сохраняемый граф и выбирает в
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 369 | 21 |
+| LMX | 372 | 22 |
 | Python | 83 | 4 |
 | C# | 176 | 8 |
 

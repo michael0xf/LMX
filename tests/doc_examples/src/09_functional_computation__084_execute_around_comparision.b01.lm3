@@ -1,0 +1,43 @@
+Resource:
+    int: value 42
+
+Trace:
+    int: mode 0
+    int: events 0
+
+Acquire:
+    return: @
+    open:
+        throws:
+            ResourceFailure
+        Trace\events := Trace\events * 10 + 1
+        if: Trace\mode = 2
+            throw: ResourceFailure()
+        return: Resource
+
+Action:
+    @: resource
+    return: int
+    use:
+        throws:
+            ResourceFailure
+        Trace\events := Trace\events * 10 + 2
+        if: Trace\mode = 1
+            throw: ResourceFailure()
+        return: resource\value
+
+Release:
+    @: resource
+    close:
+        Trace\events := Trace\events * 10 + 3
+
+Example:
+    int: mode
+    return: int
+    run:
+        Trace\mode := mode
+        Trace\events := 0
+        int: value Around\use(Acquire\open; Release\close; Action\use)
+        return: value * 1000 + Trace\events
+        catch: ResourceFailure ()
+            return: -Trace\events

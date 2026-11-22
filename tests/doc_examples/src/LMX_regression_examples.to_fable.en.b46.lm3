@@ -1,0 +1,29 @@
+EvenSamples:
+    int: position 0
+    int: requests 0
+    return: int
+    next:
+        throws: Stop
+        node\requests += 1
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position - 1
+    demo:
+        node\position := 0
+        node\requests := 0
+        int: total 0
+        LoopTools\iterate: int: item EvenSamples\next()
+            item *= 2
+            total += item
+        return: total
+
+LoopTools:
+    @: iteration
+    @: body
+    iterate:
+        while: 1
+            iteration()
+            catch: Stop ()
+                break
+            body()

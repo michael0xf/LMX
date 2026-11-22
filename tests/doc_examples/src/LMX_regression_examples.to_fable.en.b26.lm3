@@ -1,0 +1,21 @@
+Presence:
+    int: value
+    return: int
+    is_set:
+        return: value != nil
+    require_value:
+        required: value
+        return: value
+
+PresenceProbe:
+    return: int
+    missing:
+        return: Presence\is_set()
+    zero:
+        return: Presence\is_set(value := 0)
+    autofilled:
+        int: value 7
+        return: Presence\is_set()
+    explicit_nil:
+        int: value 7
+        return: Presence\is_set(value := nil)

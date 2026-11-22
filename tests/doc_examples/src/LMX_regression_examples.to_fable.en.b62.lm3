@@ -1,0 +1,26 @@
+Cursor:
+    int: value
+    int: state 0
+    return: int
+    set:
+        node\state := value
+    read:
+        return: state
+    history:
+        @: snapshot
+        return: Cursor
+        save:
+            return: (copy(Cursor))
+        restore:
+            node\state := snapshot\state
+    ---
+    demo:
+        set(4)
+        @: first history\save()
+        set(8)
+        @: second history\save()
+        set(12)
+        history\restore(snapshot := second)
+        int: restored_second read()
+        history\restore(snapshot := first)
+        return: restored_second * 10 + read()

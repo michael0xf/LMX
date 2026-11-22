@@ -1,0 +1,16 @@
+fn: PairOperation (int: a; int: b; return: int)
+
+Candidate:
+    int: b
+    int: a
+    return: int
+    encode:
+        return: b * 10 + a
+
+SignatureProbe:
+    return: int
+    run:
+        @: selected PairOperation Candidate\encode
+        int: throughSignature selected(a := 2; b := 7)
+        int: directly Candidate\encode(a := 2; b := 7)
+        return: throughSignature * 100 + directly

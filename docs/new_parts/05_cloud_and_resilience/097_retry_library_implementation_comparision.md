@@ -39,6 +39,7 @@ RetryLibrary:
                 @: wait \right[1]
                 wait(pause)
                 pause *= 2
+        ---
         return: 503
 ```
 
@@ -110,7 +111,7 @@ namespace PatternHelpers {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 363 | 23 |
+| LMX | 366 | 24 |
 | Go | 276 | 14 |
 | C# | 420 | 20 |
 

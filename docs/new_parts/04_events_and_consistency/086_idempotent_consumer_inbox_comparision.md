@@ -24,6 +24,7 @@ InboxMessage:
     apply:
         if: db\tryInsert(subscriber; eventId)
             db\addBalance(delta)
+    ---
     receiveEvent:
         db\atomic(body := apply)
         broker\ack(eventId)
@@ -94,7 +95,7 @@ InboxMessage — единственный владелец обработчик�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 174 | 12 |
+| LMX | 177 | 13 |
 | Java | 337 | 14 |
 | Go | 405 | 17 |
 

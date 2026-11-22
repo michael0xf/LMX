@@ -1,0 +1,17 @@
+Arithmetic:
+    int: value
+    return: int
+    twice:
+        return: value * 2
+    plusOne:
+        return: value + 1
+
+ApplyProbe:
+    return: int
+    run:
+        import: Application
+        @: chosen Arithmetic\twice
+        int: first apply(chosen; 7)
+        chosen := Arithmetic\plusOne
+        int: second apply(chosen; 7)
+        return: first * 100 + second

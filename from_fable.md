@@ -116,7 +116,7 @@ R/tests/parser/current/expectations.json КАТАЛОГ` — 169 случаев;
 у строки `graph-check` вход — четырнадцатое поле.
 В строке отказа `graph-check` сверяет номер ответа только у интерпретатора (Р128).
 
-Свободные метки каталогов: `docs-index193`, `render-merge-75`, `render-grammar-17`.
+Свободные метки каталогов: `docs-index194`, `render-merge-75`, `render-grammar-17`.
 
 ## 4. Кто чем занят
 

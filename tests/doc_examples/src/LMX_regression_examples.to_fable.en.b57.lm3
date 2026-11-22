@@ -1,0 +1,21 @@
+Weight:
+    int: value
+    return: int
+    total:
+        return: value
+
+Bundle:
+    @: left
+    @: right
+    return: int
+    total:
+        return: left\total() + right\total()
+    demo:
+        @: a (merge(Weight; (int: value 1)))
+        @: b (merge(Weight; (int: value 4)))
+        @: c (merge(Weight; (int: value 6)))
+        c := parent(c\total)
+        @: inner (merge(Bundle; (@: left b; @: right c)))
+        @: tree (merge(Bundle; (@: left a; @: right inner)))
+        c\value := 100
+        return: tree\total()

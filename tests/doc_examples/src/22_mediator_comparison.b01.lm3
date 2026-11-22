@@ -1,0 +1,28 @@
+Room:
+    control:
+        int: enabled 0
+        toggle:
+            node\enabled := 1 - node\enabled
+            notify(event := 1)
+    ---
+    fan:
+        int: running 0
+        stop:
+            node\running := 0
+            notify(event := 2)
+    ---
+    int: event
+    notify:
+        if: event = 1
+            fan\running := control\enabled
+        if: event = 2
+            control\enabled := 0
+
+Demo:
+    return: int
+    run:
+        @: room (copy(Room))
+        room\control\toggle()
+        int: first room\fan\running
+        room\fan\stop()
+        return: first * 10 + room\control\enabled

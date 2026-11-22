@@ -1,0 +1,36 @@
+Nodes:
+    return: int
+    on_number:
+        throws: NoAction
+        throw: NoAction()
+    on_pair:
+        throws: NoAction
+        throw: NoAction()
+    Number:
+        int: value 3
+        return: int
+        accept:
+            throws: NoAction
+            return: on_number()
+    ---
+    Pair:
+        int: left 4
+        int: right 5
+        return: int
+        accept:
+            throws: NoAction
+            return: on_pair()
+
+Actions:
+    return: int
+    on_number:
+        return: value
+    on_pair:
+        return: left + right
+    demo:
+        int: result 0
+        result := Nodes\Number\accept()
+        result += Nodes\Pair\accept()
+        catch: NoAction ()
+            result := -1
+        return: result

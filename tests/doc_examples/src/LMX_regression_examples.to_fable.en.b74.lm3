@@ -1,0 +1,26 @@
+AdderPrototype:
+    int: saved 0
+    inputs:
+        int: x
+        return: int
+        add:
+            return: x + node\saved
+
+AdderFactory:
+    int: increment
+    return: @
+    create:
+        AdderPrototype\saved := increment
+        @: instance (copy(AdderPrototype))
+        return: instance\inputs\add
+
+ReturnedMethodProbe:
+    return: int
+    run:
+        @: plus5 AdderFactory\create(5)
+        @: plus9 AdderFactory\create(9)
+        AdderPrototype\saved := 99
+        int: saved 1000
+        int: a plus5(1)
+        int: b plus9(1)
+        return: a * 100 + b

@@ -1,0 +1,17 @@
+Addition:
+    int: x
+    int: y
+    return: int
+    add:
+        return: x + y
+
+Checks:
+    return: int
+    demo:
+        int: y 100
+        @: fiveContext (merge(Addition; (int: y 5)))
+        @: add5 fiveContext\add
+        int: omitted add5(1)
+        int: overridden add5(1; y := 25)
+        int: zero add5(1; y := 0)
+        return: omitted * 10000 + overridden * 100 + zero

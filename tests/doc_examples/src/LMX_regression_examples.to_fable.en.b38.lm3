@@ -1,0 +1,17 @@
+stream:
+    int: reads 0
+    return: int
+    next:
+        node\reads += 1
+        if: node\reads <= 3
+            return: node\reads * 5
+        return: -1
+
+scanning:
+    return: int
+    demo:
+        int: c 0
+        int: total 0
+        while: (c := stream\next()) != -1
+            total += c
+        return: total * 100 + stream\reads * 10 + (c = -1)

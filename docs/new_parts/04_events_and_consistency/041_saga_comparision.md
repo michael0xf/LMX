@@ -32,6 +32,7 @@ SagaMessage:
             else:
                 node\phase := 4
                 action := 4
+        ---
         if: kind = 2 && node\phase = 2
             if: ok
                 node\phase := 5
@@ -39,6 +40,7 @@ SagaMessage:
             else:
                 node\phase := 3
                 action := 3
+        ---
         if: kind = 3 && node\phase = 3 && ok
             node\phase := 4
             action := 4
@@ -112,7 +114,7 @@ SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 c
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 355 | 29 |
+| LMX | 361 | 31 |
 | Java | 452 | 18 |
 | Go | 359 | 14 |
 

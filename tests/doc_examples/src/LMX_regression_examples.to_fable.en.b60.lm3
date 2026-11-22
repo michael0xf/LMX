@@ -1,0 +1,25 @@
+Panel:
+    int: width 0
+    int: height 0
+    return: int
+    area:
+        return: width * height
+    builder:
+        int: value
+        return: Panel
+        set_width:
+            node\width := value
+        set_height:
+            node\height := value
+        finish:
+            return: (copy(Panel))
+    ---
+    demo:
+        builder\set_width(2)
+        builder\set_height(7)
+        @: first builder\finish()
+        builder\set_width(5)
+        builder\set_height(3)
+        @: second builder\finish()
+        builder\set_width(99)
+        return: first\area() + second\area()

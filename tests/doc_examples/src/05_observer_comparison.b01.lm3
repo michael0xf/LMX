@@ -1,0 +1,20 @@
+observer:
+    int: value
+    int: last 0
+    int: total 0
+    @: first remember
+    @: second accumulate
+    return: int
+    remember:
+        node\last := value
+    accumulate:
+        node\total += value
+    notify:
+        first()
+        second()
+    demo:
+        node\last := 0
+        node\total := 0
+        notify(3)
+        notify(8)
+        return: node\total

@@ -1,0 +1,23 @@
+bridge:
+    int: level
+    @: output
+    return: int
+    radio:
+        return: level * 2
+    speaker:
+        return: level * 3
+    basic:
+        return: output()
+    boost:
+        level += 1
+        return: output()
+    demo:
+        @: control basic
+        @: output radio
+        int: total control(4)
+        output := speaker
+        total += control(4)
+        control := boost
+        total += control(4)
+        output := radio
+        return: total + control(4)

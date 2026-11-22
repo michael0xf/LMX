@@ -29,6 +29,7 @@ Work:
             @: row rows[i]
             node\db\upsert(row\id; row\cents)
             i += 1
+    ---
     flush:
         node\db\atomic(body := writeAll)
         node\dirty\clear()
@@ -93,7 +94,7 @@ Python использует dict, C# Dictionary, LMX — переданную к
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 223 | 17 |
+| LMX | 226 | 18 |
 | Python | 233 | 11 |
 | C# | 339 | 14 |
 

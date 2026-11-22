@@ -1,0 +1,15 @@
+requests:
+    int: value
+    return: int
+    real:
+        return: value * 2
+    proxy:
+        if: value < 0
+            return: 0
+        return: real()
+    demo:
+        @: request proxy
+        int: denied request(-3)
+        int: allowed request(7)
+        request := real
+        return: denied + allowed + request(-3)

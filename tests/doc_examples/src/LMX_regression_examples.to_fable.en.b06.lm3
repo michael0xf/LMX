@@ -1,0 +1,26 @@
+Sink:
+    int: x
+    return: int
+    has_value:
+        return: x != nil
+
+PrivateSink:
+    private: int: x
+    return: int
+    has_value:
+        return: x != nil
+
+Checks:
+    return: int
+    private_source:
+        private: int: x 7
+        return: Sink\has_value()
+    explicit_private_source:
+        private: int: x 7
+        return: Sink\has_value(x := x)
+    private_receiver:
+        int: x 7
+        return: PrivateSink\has_value()
+    explicit_private_receiver:
+        int: x 7
+        return: PrivateSink\has_value(x := x)

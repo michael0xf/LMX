@@ -1,0 +1,24 @@
+chain:
+    int: value
+    @: first negative
+    @: second even
+    return: int
+    negative:
+        if: value < 0
+            return: 1
+        return: 0
+    even:
+        if: value % 2 = 0
+            return: 2
+        return: 0
+    dispatch:
+        int: result first()
+        if: result
+            return: result
+        return: second()
+    demo:
+        int: result dispatch(-2)
+        result += dispatch(4)
+        result += dispatch(3)
+        result += dispatch(-2; even; negative)
+        return: result

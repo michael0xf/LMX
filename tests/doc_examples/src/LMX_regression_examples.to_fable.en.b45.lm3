@@ -1,0 +1,34 @@
+Indicator:
+    int: command
+    int: fault 0
+    int: commanded 0
+    int: sensed 0
+    int: writes 0
+    int: reads 0
+    int: trace 0
+    return: int
+    set:
+        node\commanded := command
+        node\writes += 1
+        node\trace := node\trace * 10 + command
+        if: node\fault = 0
+            node\sensed := command
+        if: node\fault = 1
+            node\sensed := 0
+        if: node\fault = 2
+            node\sensed := 1
+        return: 1
+    observe:
+        node\reads += 1
+        node\trace := node\trace * 10 + 2
+        return: node\sensed
+
+Commissioning:
+    @: candidate
+    return: int
+    check:
+        int: on_ack candidate\set(command := 1)
+        int: on_seen candidate\observe()
+        int: off_ack candidate\set(command := 0)
+        int: off_seen candidate\observe()
+        return: on_ack = 1 && on_seen = 1 && off_ack = 1 && off_seen = 0

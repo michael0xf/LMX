@@ -1,0 +1,23 @@
+Host:
+    int: value 7
+    @: extension 0
+    @: addon
+    return: @
+    install:
+        node\extension := addon
+        return: addon
+    query:
+        return: node\extension
+
+Report:
+    @: target Host
+    return: int
+    render:
+        return: target\value * 2
+
+Demo:
+    return: int
+    run:
+        Host\install(addon := Report)
+        @: report Host\query()
+        return: report\render()

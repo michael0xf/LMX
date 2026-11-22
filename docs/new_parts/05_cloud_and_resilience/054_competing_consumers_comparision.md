@@ -34,6 +34,7 @@ WorkerMessage:
                 queueOwner\take()
             answer:
                 selfAddress\received
+    ---
     received:
         if: job = -1
             return
@@ -99,7 +100,7 @@ Worker не конкурируют за выполнение одного LMX Th
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 285 | 27 |
+| LMX | 288 | 28 |
 | Go | 233 | 9 |
 | C# | 445 | 11 |
 

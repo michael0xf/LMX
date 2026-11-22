@@ -1,0 +1,23 @@
+helpers:
+    @: fragment
+    int: n 900
+    return: int
+    evaluate:
+        return: sys\eval(fragment)
+
+origin_ops:
+    @: left
+    []: @ right
+    const: int: PASS_ARGS_AS_IS 1
+    const: int: PRIORITY sys\priority("+")
+    int: n 700
+    return: int
+    original:
+        return: helpers\evaluate(fragment := right[0])
+
+origin:
+    int: n
+    return: int
+    read:
+        import: origin_ops
+        return: (0 original n)

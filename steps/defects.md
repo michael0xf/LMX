@@ -11037,7 +11037,7 @@ Structure, использование ссылки целиком (аргуме�
 допускает кандидата по всей форме модели: в native эмитируется
 `lmx_implements_receiver_view(…, candidate, Model, Model, …)`. По норме допуск относителен
 Consumer'у: проверяются используемые пути ссылки в её видимом теле
-([implements](../docs/LMX_semantics.ru.md#three-argument-implements)); неиспользуемое поле у
+([implements](../docs/LMX_semantics.ru.md#three-argument-satisfies)); неиспользуемое поле у
 кандидата не требуется, читаемое — требуется, неизвестное покрытие не считается пустым.
 `CORE_L2_L3_v2.md` §9.3 описывает full-receiver как реализацию, не норму.
 

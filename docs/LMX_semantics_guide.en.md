@@ -67,9 +67,9 @@ already been performed. See [grammar §15](LMX_grammar.en.md#levels).
 |---|---|
 | Graph construction, known candidate | Applicable interface requirements are checked without executing the candidate body, initializers, or `test`. |
 | Build/test phase, after the clean graph and before C | Checks reached through the ordinary build/test receiver contracts execute; their checkers may call candidates. This is not recursive discovery of every nested DATA test. |
-| Reached interpreted call | The interpreter invokes standard `implements` for admission, including the checks required at that receiving site. Reused admission facts remain scoped to their operation/reception. |
-| Prepared native call | The prepared contract is used without an automatic runtime `implements` call. Required actual-value conversion checks retain their contract. |
-| Explicit `implements` | The written operation executes in both native and interpreted code. |
+| Reached interpreted call | The interpreter invokes standard `satisfies` for admission, including the checks required at that receiving site. Reused admission facts remain scoped to their operation/reception. |
+| Prepared native call | The prepared contract is used without an automatic runtime `satisfies` call. Required actual-value conversion checks retain their contract. |
+| Explicit `satisfies` | The written operation executes in both native and interpreted code. |
 | First required check returns `0` | That admission stops immediately; its remaining checks do not execute. |
 
 Known interface facts do not waive checks required at an actual receiving site. They also do not imply that
@@ -86,7 +86,7 @@ A reference to C stored in another container does not reparent C.
 
 copy and merge explicitly copy graph material and emit field streams. The receiving DATA context accepts these
 through its namespace; it is neither an implicit source nor an extra model. The source receiver remains in the
-graph. A named signature is declared as `fn: name data` and checked by ordered input types and result, while an
+graph. A named signature is declared as `name :: data` and checked by ordered input types and result, while an
 ordinary structural template requires its entire explicitly described tree. See
 [signatures](#fn-signature), [field streams](#field-streams), and [structural calls](#call-receivers).
 
@@ -177,7 +177,7 @@ elements. Reuse existing addressing; no reverse-index table or per-write mainten
 ## What the callable interface check proves
 
 An ordinary structural model requires every field and subtree explicitly written in that model. Additional fields
-in the candidate are allowed under ordinary implements; they do not become extra model requirements. A model
+in the candidate are allowed under ordinary satisfies; they do not become extra model requirements. A model
 that explicitly contains a lookup method requires that branch too. A minimal model containing only an input and
 return does not invent a lookup requirement.
 
@@ -188,7 +188,7 @@ required inputs, and throws still belong to the actual candidate and govern each
 For a used call interface, contracts with inputs (int: x; int: y 5) and (int: x) both permit `f(1)`, but the written
 call `f(1; y := 25)` requires the former. This call-use check does not replace full-tree checking when a structural
 model is explicitly supplied. User behavioral tests remain a separate admission stage.
-See [admission](LMX_semantics.en.md#admission) and [fn](#fn-signature).
+See [admission](LMX_semantics.en.md#admission) and [named signatures](#fn-signature).
 
 <a id="method-pointer"></a>
 ## A method name and a pointer to it
@@ -250,7 +250,7 @@ See [R0](LMX_semantics.en.md#root-entry).
 
 <a id="removed-builtins"></a>
 Removed built-in meanings are the special data name, a separate call-DATA parameter, fncall, sub, and executable
-fn. The word data can still be an ordinary user name or a role description. Reserved node remains the lexical
+fn. The former named signature receiver is also removed: `Name :: DATA` replaces it without a public `fn` alias. The word data can still be an ordinary user name or a role description. Reserved node remains the lexical
 operator: `node\x` starts in the lexical space above the selected method and stays fixed throughout its activation,
 including nested control bodies. It is not a general synonym for `parent(C)`, the current namespace, or the recipient
 of a copied field stream. Use an ordinary explicit path such as `D\x` when that is the intended graph source.
@@ -259,12 +259,12 @@ See [names and paths](LMX_semantics.en.md#fields).
 <a id="fn-signature"></a>
 ### Named fn signatures and ordinary templates
 
-`fn` has exactly two DATA arguments: the name to declare and the data-template Structure from which the signature is
-read. It introduces a constant name; it creates no executable body or native entry. `return` describes the result
-and is not an input. Omitting it describes a procedure.
+`Name :: DATA` is an ordinary expression-operand application. Its left occurrence is the declaration identifier, consumed without reading an existing value; its defined single-template form has one complete right DATA Structure. The declaration inspects that template's fields to describe the signature, without unwrapping the operand argument vector or executing nested forms.
+
+`Name :: A B` has two right arguments; `Name :: (A B)` has one whole right Structure. The declaration identifier on the left is not an unnamed Structure, so the [conditional RIGHT-only opening](LMX_semantics.en.md#operand-right-only-opening) does not apply. `::` opens no extra Frame and creates no automatic `end: Name` target. It introduces a constant signature name and creates no executable body or native entry. `return` describes the result and is not an input; omitting it describes a procedure. The term fn-match below retains its positional compatibility meaning, not a public receiver named `fn`.
 
 ~~~lmx
-fn: SumSignature (int: a; int: b; return: int)
+SumSignature :: (int: a; int: b; return: int)
 
 SumContext:
     int: lhs
@@ -295,7 +295,7 @@ The map does not rename the candidate or give its own formal names a second publ
 For mixed types, order matters:
 
 ~~~lmx
-fn: SelectSignature (int: count; []: char text; return: int)
+SelectSignature :: (int: count; []: char text; return: int)
 ~~~
 
 A candidate with inputs int then `Array<char>` can match even with different names. A candidate with `Array<char>`
@@ -311,7 +311,7 @@ PrioritiesTemplate:
     []: char name
     return: int
 
-fn: PrioritySignature PrioritiesTemplate
+PrioritySignature :: PrioritiesTemplate
 
 PriorityProvider:
     []: char query
@@ -323,7 +323,7 @@ PriorityProvider:
 ~~~
 
 PrioritySignature accepts lookup by its one `Array<char>` input and int result. In executable context,
-`priorityCall(name := "+")` maps name to the candidate's query. Ordinary implements with PrioritiesTemplate instead
+`priorityCall(name := "+")` maps name to the candidate's query. Ordinary satisfies with PrioritiesTemplate instead
 checks all of that model's named fields. If lookup and a subtree were explicitly added to the model, they would
 also be required; fn comparison does not silently erase them. The shown `PriorityProvider` has `query` rather than `name`, so a structural requirement for `name` is not satisfied merely by a positive fn-match. The template is never substituted for the selected method's parent.
 
@@ -336,10 +336,10 @@ PairData:
         int: x
         int: y
 
-fn: PairSignature PairData
+PairSignature :: PairData
 ~~~
 
-Both fn arguments are DATA, so CODE W/E does not expand its template or execute its nested forms.
+In `PairSignature :: PairData`, the left occurrence is the declaration identifier and the single right occurrence is the whole DATA template. Reading its input/result fields is not argument unwrapping. Ordinary-call CODE W/E does not expand that template or execute its nested forms.
 [Full contract](LMX_semantics.en.md#fn-signature).
 
 <a id="return-in-data"></a>
@@ -350,7 +350,7 @@ code does not create a `return`. Both `call` and an ordinary Structure call may 
 Structure launch has no result" is lifted together with `fncall`. `catch` is brought to the same model of data and
 call while keeping the semantics of the handler: it does not disappear together with `sub` and does not become an
 ordinary function.
-[`fn` signature](LMX_semantics.en.md#fn-signature), [`return` in data](LMX_semantics.en.md#return-in-data),
+[named signature](LMX_semantics.en.md#fn-signature), [`return` in data](LMX_semantics.en.md#return-in-data),
 [`catch`](LMX_semantics.en.md#catch-common-model).
 
 <a id="declaration-selection"></a>
@@ -393,7 +393,7 @@ The contract notation in the table is analytic: it is not a new grammar for decl
 | `S` is explicitly assigned to a formal | `f(a := S)` | W only, no E |
 | whole `C` fits `call(code)`, the fields of `C` fit `call(args code)` | `call(C)` | an ambiguity error |
 | the same `C` is explicitly supplied as `code` | `call(code := C)` | no expansion; hidden `args` creates no second form |
-| A named fn uses a nested data template | `fn: SignatureName DataTemplate` | Both arguments are DATA; CODE W/E does not apply |
+| A named signature uses a nested data template | `SignatureName :: DataTemplate` | Left declaration identifier and one whole right DATA template; field inspection is not operand unwrapping, and CODE W/E does not apply |
 
 [The table in the semantics](LMX_semantics.en.md#selection-examples).
 
@@ -812,7 +812,7 @@ error. A Structure declaration's name does not become assignable.
 Ordinary CODE W/E applies to the source arguments of all three receivers in every placement, including inside DATA. Arity is checked after ordinary selection:
 `merge(S)` is not forbidden by P0 merely because one source is written, since E may supply two or more admitted
 sources. If W and E both fit, the result is the usual ambiguity error; import has no hidden preference for W.
-Receivers that genuinely specify DATA arguments, such as named `fn`, keep their own contract; the receiving DATA context does not turn these three receivers' source arguments into that category.
+The ordinary named-signature expression `Name :: DATA` separately reads its one right template in the DATA role. This declaration contract does not turn the source arguments of import, copy or merge into DATA arguments merely because their output is accepted in a DATA context.
 
 ~~~lmx
 (a b) := (copy(Pair))
@@ -835,7 +835,7 @@ Library:
     int: counter 0
     Settings:
         int: width 2
-    fn: PrioritySignature ([]: char name; return: int)
+    PrioritySignature :: ([]: char name; return: int)
 
 Other:
     Tool:
@@ -846,7 +846,7 @@ Use:
 ~~~
 
 Use's namespace receives limit, Settings, PrioritySignature, and Tool. User Structure declarations are
-intrinsically constant without an explicit const. Fn declares a constant signature name under the same rule.
+intrinsically constant without an explicit const. `Name :: DATA` declares a constant signature name under the same rule.
 The mutable counter is not imported, and nested width/value are not lifted to the root. Root status follows the
 ordinary DATA rules, including modifiers; it is not restricted to direct physical children.
 
@@ -951,7 +951,7 @@ former binding gives an own copy.
 The scheme `a → int` in Message A and `a → String` in Message B is not
 LMX syntax. One method requiring `a` receives meaning from the current
 Message; B does not inherit A's conversions merely through delivery.
-A primitive `Foot → Meter` conversion does not establish `implements`
+A primitive `Foot → Meter` conversion does not establish `satisfies`
 for two arbitrary Structures. A call may need distinct routes for its
 `int → double` argument and `double → int` result, both available in that
 Message's context.
@@ -1047,13 +1047,13 @@ int_operand_template:
     return: int
 ~~~
 
-An ordinary implements check tests the written template; it does not add missing fields or install defaults.
+An ordinary satisfies check tests the written template; it does not add missing fields or install defaults.
 Explicit composition can build a descriptor first, for example a DATA structure with `merge(Base Additional)`,
 but that is a separate field-stream operation. Any method body explicitly included in a model is part of that
 model's requirement; extra implementation fields absent from the model are not.
 
 Fn remains a distinct positional contract. For example,
-`fn: PairSignature (@: first; []: @ rest; return: int)`
+`PairSignature :: (@: first; []: @ rest; return: int)`
 can match inputs named lhs/rhs by position. It does not establish operand discovery, for which the names left,
 right, `PASS_ARGS_AS_IS`, and `PRIORITY` are significant. Through such a fn reference, public labels map to positions;
 hidden binding still uses the real candidate's names and DATA.
@@ -1184,8 +1184,47 @@ their normal unescaped content; an empty exact identifier yields an empty Array.
 They do not invoke its body or register its name. Equal string contents give equal lookup behavior without
 requiring canonical-string address identity. The "+" query selects the addition priority, not a contextually
 guessed unary priority. Missing or ambiguous operands cause ordinary resolution errors, rather than a fictitious
-priority. The named signature is `fn: PrioritySignature ([]: char name; return: int)`, distinct from the ordinary
+priority. The named signature is `PrioritySignature :: ([]: char name; return: int)`, distinct from the ordinary
 PrioritiesTemplate explained [above](#fn-signature).
 
 The [operand observations](LMX_semantics.en.md#operand-observations) give the full acceptance matrix for these
 templates, argument modes, effects, priorities, strings, and signatures.
+
+<!-- receiver-integration-2026-11-22 -->
+<a id="general-receiver-guide"></a>
+## General receivers: values, records and callable factories
+
+The [receiver chapter](LMX_semantics.en.md#functional-receivers) and
+[public API](new_parts/LMX_Fn_Receivers/API.md) describe the complete library.
+One ordinary `fun` module exposes direct names through `import: fun`; the
+method still receives its actual parent's DATA.
+
+For an ordinary Structure S, `length(S)` and `S[i]` already provide the
+reference-sequence interface. A captured argument prefix and a List can be S
+itself. Creating an `items` field only to wrap this sequence is unnecessary.
+Dense primitive Arrays retain their physical representation and are not
+reinterpreted as pointer arrays.
+
+There are two useful result contracts. `apply` transports a typed value-record
+reference, and the caller reads that record according to its actual type.
+`partial`, `curry`, `flip` and composition factories return references to
+ordinary callable Structures whose result remains the precise R in their
+generated DATA. Returning a reference to a function does not turn that
+function's return requirement into `@`.
+
+The examples in [functional computation](new_parts/09_functional_computation/README.md)
+show Maybe/bind, a trampoline, bracket and partial application. Each changed
+example retains the old procedural LMX alongside the current primary listing;
+its archived code is excluded from the primary character count. General library
+dependencies are reported separately, so an import does not make their
+implementation cost disappear.
+
+The new name `satisfies` retains admission's previous direction and phases.
+`Name :: DATA` and `signatureTypes` construct signature descriptions with the same positional compatibility rule: input
+labels may differ, but count, order, complete requirements and the result must
+fit. The existing named-signature relationship with `call` is deliberately unchanged;
+all other uses accept either signature description. See [the equivalence rule](LMX_semantics.en.md#fn-forms-equivalent).
+
+The supplied source bodies require the explicitly listed kernel integration
+interfaces. Their acceptance cases are prepared tests, not a claim that LMX
+execution was performed during this documentation revision.

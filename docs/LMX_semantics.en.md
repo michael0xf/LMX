@@ -6,7 +6,7 @@
 
 **Both data and executable bodies are arrays**, represented by the same simple universal structures; every executable body is a complete abstract expression.
 
-**Typing is analytical, at the level of lexical branches.** The common admission mechanism checks a concrete Consumer's used interfaces, the whole tree of an explicitly selected structural template, or the ordered input/result types of a named `fn` requirement, as applicable. Additional behavioral checks (`test`) are explicitly stated by the receiving expression. Candidate values and checking expressions have their ordinary physical identities.
+**Typing is analytical, at the level of lexical branches.** The common admission mechanism checks a concrete Consumer's used interfaces, the whole tree of an explicitly selected structural template, or the ordered input/result types of a named signature requirement, as applicable. Additional behavioral checks (`test`) are explicitly stated by the receiving expression. Candidate values and checking expressions have their ordinary physical identities.
 
 LMX is also a grammar capable of representing both data in a complex, uniquely structured hierarchical and tabular form with intersecting sets and, in principle, any language. See the [complete grammar specification](LMX_grammar.en.md).
 
@@ -55,6 +55,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [34. Cryptographic values and providers](#crypto-values)
 - [35. Cryptographic operation contracts](#crypto-operations)
 - [36. Mutating debug API for an AI chat](#edit-api)
+- [37. General functional receivers and containers](#functional-receivers)
 
 <a id="scope"></a>
 ## 1. Language scope and execution modes
@@ -111,9 +112,9 @@ The L3 receiving expression defines the contract for consuming a constructed gra
 
 The walker executes the current binary graph rather than source text. The head of a written Frame is a word primitive: a cell with the pointer to the single reused string of its spelling; the walker recognizes the receiver by comparing the address of that string with the address of a language word's string (the author's decisions of 2026-11-08, which replaced the spelling codes of 2026-11-07) -- without a separate opcode in the graph, without numeric codes and without reading the bytes of spellings. Once the head is recognized, operands and data places are found by name through the service tables of the current traversal and then by graph addresses; those tables are kept nowhere outside a traversal. The translator consumes the same built graph and resolves the same head when generating code; completed `native` needs no name when invoked, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
 
-The head's name is not stored inside a Structure as a tag: the head is a field of the Lmx referring to a word primitive with the address of the single string of its spelling; the walker recognizes the receiver by that address and applies its contract to the argument Structure. The address of the spelling's string is the head's name itself, shared by all its uses; service operators and receivers (`for`, `=`, `**`, `fn`, `merge`) have no separate codes -- the same string addresses (the author's decision of 2026-11-08). A separate numeric operation code neither replaces this head nor establishes execution semantics; subsequent links remain physical. Compilation may use numeric codes as its own internal lowering labels, but they are not a required part of the L3 graph or another way to determine a receiver's meaning.
+The head's name is not stored inside a Structure as a tag: the head is a field of the Lmx referring to a word primitive with the address of the single string of its spelling; the walker recognizes the receiver by that address and applies its contract to the argument Structure. The address of the spelling's string is the head's name itself, shared by all its uses; service operators and receivers (`for`, `=`, `**`, `::`, `merge`) have no separate codes -- the same string addresses (the author's decision of 2026-11-08). A separate numeric operation code neither replaces this head nor establishes execution semantics; subsequent links remain physical. Compilation may use numeric codes as its own internal lowering labels, but they are not a required part of the L3 graph or another way to determine a receiver's meaning.
 
-The name of a callable Structure follows the same rule as every other name: the external namespace keys it by the address of an existing owning field, and it is not stored as an Lmx field. When constructing a result in L2, the resolved receiver gives the record the corresponding type code; this creates no second graph and does not replace classification of the written head. There is no executable `fn`: `fn` describes a signature and does not create a callable ([`fn` signature](#fn-signature), [what is withdrawn](#removed-builtins)); a record declared inside `data` remains an ordinary Structure, and data is not classified by its field names or apparent shape. Likewise, a graph Array remains a Structure with the common `Lmx` base, while the type code in its value record determines the Array variant and element type; arena ranges determine ownership, not type. Field access after head recognition uses addresses, without another lookup of field names.
+The name of a callable Structure follows the same rule as every other name: the external namespace keys it by the address of an existing owning field, and it is not stored as an Lmx field. When constructing a result in L2, the resolved receiver gives the record the corresponding type code; this creates no second graph and does not replace classification of the written head. There is no public `fn` receiver. The expression `Name :: DATA` describes a signature and does not create a callable ([named signature](#fn-signature), [what is withdrawn](#removed-builtins)); a record declared inside `data` remains an ordinary Structure, and data is not classified by its field names or apparent shape. Likewise, a graph Array remains a Structure with the common `Lmx` base, while the type code in its value record determines the Array variant and element type; arena ranges determine ownership, not type. Field access after head recognition uses addresses, without another lookup of field names.
 
 The simplest script-profile program is:
 
@@ -262,7 +263,7 @@ A Structure's initial field count and order follow construction and lexical orde
 
 A value description is an ordinary explicitly accessible Structure. A receiving expression obtains it through an argument or reference. It is not secretly attached to every primitive and is unnecessary for determining a physical type: the code in the value's record gives it. Names such as `class` and `class.range` denote a particular profile's data, not mandatory global language entities.
 
-The conversion table defines relations between primitive values and their descriptions, not between every pair of Structures or their names. Distinct Structures `A` and `B` share the physical `Lmx` representation -- a record with a type code ([L2 §3](L2_spec_en.md#value-record)); a name or field composition creates neither a separate physical type nor a one-element array. Whether `B` satisfies requirement `A` is determined by `implements` relative to the Consumer, not by a `B → A` conversion row. Obtaining or transferring a Structure reference likewise requires no converter for each model. Shared physical representation does not remove structural admission, qualifications, or the distinction between a Structure reference and a reference to a reference cell.
+The conversion table defines relations between primitive values and their descriptions, not between every pair of Structures or their names. Distinct Structures `A` and `B` share the physical `Lmx` representation -- a record with a type code ([L2 §3](L2_spec_en.md#value-record)); a name or field composition creates neither a separate physical type nor a one-element array. Whether `B` satisfies requirement `A` is determined by `satisfies` relative to the Consumer, not by a `B → A` conversion row. Obtaining or transferring a Structure reference likewise requires no converter for each model. Shared physical representation does not remove structural admission, qualifications, or the distinction between a Structure reference and a reference to a reference cell.
 
 A description separates its semantic contract from architecture binding. The contract defines meaning: count, integer, rational, profile-precision number, complex value, atom, address, opaque resource or absence of content. The binding defines width, signedness, range and target spelling. Equal representation does not imply equal contracts: `Boolean` and `int8` may share storage while admitting different values.
 
@@ -274,12 +275,12 @@ Descriptions are composed with ordinary `merge` under the common [occurrence-ord
 
 A converter is an explicitly selected receiving expression. Its key comes from explicit descriptions and their composition; there is no hidden search over pairs. Suitability checking does not run the converter; an action requiring conversion performs the selected call. A repeated declaration of a key in one Structure is read by the role ([the roles `data` and `code`](#data-code-roles)): in data it is one more occurrence of the name -- it neither replaces the former one nor writes into it, and after it the key is addressed only with the index of an occurrence ([names and paths](#fields)); in code a repeated declaration by a receiver writes into the already declared place after the type check and creates no second field. Composition writes a later operand's same-name key into the model's slot. If a table has several rows with one key, the table operation's own policy selects the row ([tables](#registries)).
 
-Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `implements` result.
+Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `satisfies` result.
 
 <a id="conversion-context"></a>
 ## 6. Message-local type bindings and conversion context
 
-Each executing Message has one context of type descriptions, symbolic bindings, and conversions. It consists of ordinary Structures and references explicitly supplied when the Message is built or reachable from them. Message creation, sending, and parenthood do not implicitly pass the parent's context. There is no built-in process-global registry, implicit type environment, or hidden converter search. The table of conversions that `implements` uses can be changed when a new L1 Thread is created (the author's words of 2026-11-18).
+Each executing Message has one context of type descriptions, symbolic bindings, and conversions. It consists of ordinary Structures and references explicitly supplied when the Message is built or reachable from them. Message creation, sending, and parenthood do not implicitly pass the parent's context. There is no built-in process-global registry, implicit type environment, or hidden converter search. The table of conversions that `satisfies` uses can be changed when a new L1 Thread is created (the author's words of 2026-11-18).
 
 ### Stable bindings and structural genericity
 
@@ -298,23 +299,23 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 <a id="admission"></a>
 ## 7. Used interface checking and test
 
-Candidate admission uses one mechanism: interface checking by directional `implements`, then the explicitly specified analytical checks (`test`) of the receiving expression where that admission contract requires them. Physical type codes identify representation but do not replace admission. Ordinary used-interface checking examines a concrete Consumer's actual demands; an explicit structural template requires its whole stated tree, and a named fn description selects the [positional signature rule](#fn-signature). These are branches of the same mechanism, not alternative type systems.
+Candidate admission uses one mechanism: interface checking by directional `satisfies`, then the explicitly specified analytical checks (`test`) of the receiving expression where that admission contract requires them. Physical type codes identify representation but do not replace admission. Ordinary used-interface checking examines a concrete Consumer's actual demands; an explicit structural template requires its whole stated tree, and a named fn description selects the [positional signature rule](#fn-signature). These are branches of the same mechanism, not alternative type systems.
 
-Clean-graph construction checks statically known candidates without running their bodies or computed initializers. Prepared native execution does not add automatic runtime `implements`; an explicit `implements` written in the program still executes. The interpreter uses the standard `implements` automatically at reached calls, not an independent validator, and does not pre-walk unexecuted branches. A reception retains its established correspondence for that reception's operations; a later traversal obtains its own information from the graph. Neither mechanism adds a persistent admission cache or automatic graph-write tracking. Prepared machine entries change only through [explicit compilation](#explicit-compilation).
+Clean-graph construction checks statically known candidates without running their bodies or computed initializers. Prepared native execution does not add automatic runtime `satisfies`; an explicit `satisfies` written in the program still executes. The interpreter uses the standard `satisfies` automatically at reached calls, not an independent validator, and does not pre-walk unexecuted branches. A reception retains its established correspondence for that reception's operations; a later traversal obtains its own information from the graph. Neither mechanism adds a persistent admission cache or automatic graph-write tracking. Prepared machine entries change only through [explicit compilation](#explicit-compilation).
 
 After the clean graph is constructed, the interpreter executes the build's required `test` receivers before the final C compilation step. The ordinary build and receiver contracts reach these tests; this is not a search that executes arbitrary `test` forms in nested DATA merely because they exist. A failed test prevents acceptance and compilation of that build. This test phase is distinct from constructing the graph and from speculatively executing argument/default/test code while enumerating call candidates. Dynamic reception and explicitly requested checks retain their ordinary reached-execution behavior. The checking expression and the candidate/helper calls it makes use ordinary dispatch; interpreter-led testing does not force every nested call onto the walker. No unspecified analysis of future values or behavior is added.
 
 <a id="analytical-tree"></a>
 ### Used interface checking
 
-<a id="three-argument-implements"></a>
-#### `implements(aVar, bVar, Consumer)`
+<a id="three-argument-satisfies"></a>
+#### `satisfies(aVar, bVar, Consumer)`
 
 `aVar` is the candidate, `bVar` the required role, and `Consumer` the concrete receiving expression. For a Consumer-derived used interface, its known accesses in visible branches determine the demanded paths; unused incidental fields are not promoted into that requirement. When an ordinary Structure is explicitly selected as a structural template, all of its stated tree is required, including explicitly included methods and their subtrees; a Consumer's immediate use does not erase them. Without Consumer, the stated requirements of `bVar` are checked rather than an empty access set. Extra candidate fields are allowed. A `fn` requirement instead uses the ordered type/result comparison described in [§11](#fn-signature). An unknown computed path is not reported as checked, and uncertainty alone does not establish an incompatibility; an error requires a guaranteed unsatisfiable requirement.
 
 A used path requires a corresponding candidate field and interface compatibility with its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; the declared result and declared exits must meet Consumer's requirement. This checks interface compatibility, not a future result's value. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
 
-Used interface checking executes none of the candidate, Consumer, method or converter and adds no analysis of future behavior. It establishes compatibility for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `data`, or `call`. Explicit structural reading, writing and taking addresses through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#implements), [L2 mechanisms](L2_spec_en.md)).
+Used interface checking executes none of the candidate, Consumer, method or converter and adds no analysis of future behavior. It establishes compatibility for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `data`, or `call`. Explicit structural reading, writing and taking addresses through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#satisfies), [L2 mechanisms](L2_spec_en.md)).
 
 <a id="correspondence-stability"></a>
 #### Preservation of established correspondence
@@ -441,7 +442,7 @@ Constructing a body description does not execute it. A named Structure is declar
 
 ### Head resolution and the role of the tail
 
-A receiver applies its declared contract to the written tail: it may declare a place, describe a signature, consume a code body, or produce a value or field stream. Frame syntax alone does not determine those roles. A name consumed as a name is not called: `catch: merge ()` supplies a failure name and parameter description, and `fn: SumSignature (int: a; int: b; return: int)` supplies a signature name and data template. Both use the common parser and resolution mechanism.
+A receiver applies its declared contract to the written tail: it may declare a place, describe a signature, consume a code body, or produce a value or field stream. Frame syntax alone does not determine those roles. A name consumed as a name is not called: `catch: merge ()` supplies a failure name and parameter description, and `SumSignature :: (int: a; int: b; return: int)` supplies a signature name and data template. Both use the common parser and resolution mechanism.
 
 <a id="resolved-head-consumption"></a>
 #### One model, one resolution, one consumption
@@ -490,7 +491,7 @@ Holder:
 
 An assignment updates resolved primitive or reference-variable places. Names of structural declarations are constant bindings and are not assignable variables: `Model := KnownStruct` is invalid when `Model` names a Structure. `@: ptr KnownStruct` declares a reference variable; `ptr := Other` can update it. `Model: KnownStruct` in DATA contains a reference atom without copying or reparenting `KnownStruct`; in CODE it calls `Model` ([colon declares](#colon-declares)).
 
-Input places and defaults belong to `parent(C)`; `args` in `call` is supplied argument material, not another formal-description part. The `return` field of DATA describes a result without assigning it. `fn: name data` creates a named signature description, not code. The removed separate DATA parameter, executable `fn`, `sub` and `fncall` have no current built-in meaning ([migration note](#removed-builtins)).
+Input places and defaults belong to `parent(C)`; `args` in `call` is supplied argument material, not another formal-description part. The `return` field of DATA describes a result without assigning it. `name :: data` creates a named signature description, not code. The removed separate DATA parameter, executable `fn`, `sub` and `fncall` have no current built-in meaning ([migration note](#removed-builtins)).
 
 <a id="receiver-args-only"></a>
 ### Declaring a place: a receiver and its arguments
@@ -583,7 +584,7 @@ Candidate conversion and admission follow the receiving contract; reference stor
 
 ### A signature is not executed
 
-A named `fn: name data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. Both arguments of `fn` are read in the data role, and its nested records only describe ([`fn` signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `@: p A`, admits a candidate through `implements(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
+A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. The identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `@: p A`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
 
 For structural `c`, `mytest(c)` passes its ordinary reference, while `mytest(@c)` explicitly obtains an address under the prefix-@ contract; these are not interchangeable arguments. No extra level is removed to fit a formal. This applies equally to a Structure, a pointer variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. A primitive value and a reference to its cell are not synonyms either. Passing and returning nonprimitives never use C by-value aggregates.
 
@@ -670,18 +671,43 @@ operand_template:
     const: int: PRIORITY
 ```
 
-All four named fields must be present in the candidate's DATA. `left` is a reference input and `right` an Array of references. `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `implements` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
+All four named fields must be present in the candidate's DATA. `left` is a reference input and `right` an Array of references. `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `satisfies` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
 
 The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@: left int`, `[]: @(int) right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
 
-A positional `fn` requirement remains a different check. For example, `fn: PairSignature (@: first; []: @ rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
+A positional `fn` requirement remains a different check. For example, `PairSignature :: (@: first; []: @ rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
 <a id="prepared-operands"></a>
 #### Prepared values: `PASS_ARGS_AS_IS 0`
 
 Expression analysis identifies the written left occurrence and the right occurrence sequence using groups and priorities. Needed occurrences are evaluated once. The reference to the left value is supplied to `left`, and references to the right values form `right` in source order. `(1 foo 2 3 4)` therefore supplies a reference to 1 and an Array of three references. `(foo 1 2 3 4)` has no written left actual and four right occurrences; the first right value is not moved into `left`. Omitted inputs, defaults and requiredness remain ordinary call rules. A present empty right Array differs from an omitted actual. The name of the operation and its constant properties are not included in the array of values, and the left value is not duplicated there.
 
-Each written container is one operand: `(foo A)` with an Array `A` gives one reference in `right`, and `(A foo B C)` gives one left and two right references. No general Array/string expansion is introduced. The ordinary single-Structure W/E rule keeps its defined call-selection scope. An operand has its own rule: when its `left` is an unnamed Structure and its single `right` argument is an unnamed Structure too, the parentheses on the right are opened and `right` receives all their content; a Structure returned from a function is not opened (the author's decisions of 2026-11-21 and 2026-11-22). `a foo b` cannot be textually replaced by `foo(a; b)`, because the second operator input is an Array of references.
+Each written container is one operand: `(foo A)` with an Array `A` gives one reference in `right`, and `(A foo B C)` gives one left and two right references. No general Array/string expansion is introduced. The ordinary single-Structure W/E rule keeps its defined call-selection scope. An operand opens exactly one outer level of its RIGHT container only when all three conditions hold: `left` is an unnamed Structure, `right` contains exactly one argument, and that argument is an unnamed Structure too. That argument's immediate contents become the elements of `right`. **`left` is not opened or changed**; its form is only a condition for this rule. The rule is applied once at operand-argument preparation, not repeatedly until no containers remain. It is not a P0 transformation. A Structure returned from a function is not opened merely because it is a Structure (the author's decisions of 2026-11-21 and 2026-11-22). `a foo b` cannot be textually replaced by `foo(a; b)`, because the second operator input is an Array of references.
+
+<a id="operand-right-only-opening"></a>
+#### The single conditional RHS opening
+
+This rule belongs to expression-operand argument preparation. It is distinct
+from short/compact receiver notation and from ordinary callable W/E selection.
+Before this one rule, every written container contributes one operand. No rule
+opens a sole Array, string or Structure merely because it is the sole argument.
+The source graph and P0 retain every written container in all cases.
+
+| Written expression | `left` delivered to the operand | Prepared `right` |
+| --- | --- | --- |
+| `name op (a b)` | the identifier/value `name`, unchanged | one Structure `(a b)` |
+| `(x y) op (a b)` | the whole unnamed Structure `(x y)` | two immediate elements `a`, `b` |
+| `(x y) op ((a b))` | the whole unnamed Structure `(x y)` | one inner Structure `(a b)`; no second opening |
+| `(x y) op (a b) (c d)` | the whole unnamed Structure `(x y)` | two Structures; the sole-right-argument condition is false |
+| `name op ()` | `name`, unchanged | one present empty Structure |
+| `(x y) op ()` | the whole unnamed Structure `(x y)` | an empty right vector after the one permitted opening |
+| `Name :: A B` | the declaration identifier `Name` | two right occurrences, `A` and `B` |
+| `Name :: (A B)` | the declaration identifier `Name` | one unnamed Structure; `Name` is not an unnamed Structure |
+
+These rows specify argument shape; each receiver still applies its own admission
+contract. In particular, a named-signature declaration does not silently accept
+every arbitrary sequence as a valid signature. Inspecting the fields of its one
+explicit DATA template is not unwrapping the operand argument vector.
 
 <a id="operand-storage"></a>
 References point at values of typed storage records, with the type code immediately before the value. A reference to a container addresses its typed descriptor. A dense `Array<T>` is not reinterpreted as `Array<@>`, and an untagged native temporary is not treated as an arena record by reading four bytes before its address. The common value-storage mechanism materializes a suitable record only when required, with ordinary lifetime.
@@ -749,7 +775,7 @@ The existing canonical-name representation and service name table supply the spe
 <a id="expression-priority"></a>
 ### `sys\priority`: a priority by string name
 
-The query's named signature is `fn: PrioritySignature ([]: char name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
+The query's named signature is `PrioritySignature :: ([]: char name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
 
 Names are matched by string content at this explicit lookup boundary. A separately created string with the same contents yields the same answer; ordinary resolved identifiers still use canonical addresses. `sys\priority(sys\name(foo))` performs no call of `foo`. The query reads its ready `PRIORITY`, registers nothing and evaluates no operand arguments. Missing, unsuitable or ambiguous operands produce ordinary resolution/contract diagnostics; no priority is invented. Discovery and query share the same description, not divergent registries. The placement of the receiver in `sys` does not limit the lookup to the field names of that service group. With a statically known name the translator may obtain the value beforehand; with a computed string name the ordinary lookup mechanism is used; the semantics and the result match the interpreter.
 
@@ -767,7 +793,7 @@ The checks are requirements, not a statement that an implementation was run. The
 | O01 | An ordinary method `foo` matches the template; mode `0`; the body sums `left` and the whole `right`; `(1 foo 2 3 4)` | The number `10` without registration |
 | O02 | The name resolves to an ordinary Structure, but the mandatory header is absent | The operand role does not arise merely from the fact that a Structure exists |
 | O03 | The needed arguments and the body of an ordinary operand increment counters | Each effect happens once in the given application |
-| O04 | Only a description by `fn` is presented instead of an executable candidate | It gets no body and does not become an implementation |
+| O04 | Only a signature description created by `Name :: DATA` is presented instead of an executable candidate | It gets no body and does not become an implementation |
 | O05 | Saving and loading an ordinary graph with a method and its DATA | The method, the links and the properties are saved; no separate registration is restored |
 | O06 | A statically known operator application in native code | An ordinary call of the same method with `left/right` and an ordinary result |
 | O07 | There is no `PRIORITY`, there is no `PASS_ARGS_AS_IS`, or a field gives no admissible constant value | A contract mismatch; no implicit defaults are added |
@@ -880,7 +906,7 @@ In the examples a result in quotes denotes the character content of an ordinary 
 | Q09 | PrioritySignature is compared with a method lookup that has one input query of type Array<char> and the result int | The signature matches regardless of the names query/lookup and of the body of the method |
 | Q10 | `priorityCall(name := "+")` through a reference with the requirement PrioritySignature to such a lookup | The actual is normalized into position 1 and goes to query; the data stay parent(lookup) |
 | Q11 | An ordinary PrioritiesTemplate explicitly contains the field lookup with a nested requirement | The structural check takes this field and the stated subtree into account; the fn rules are not applied to the template |
-| Q12 | The minimal PrioritiesTemplate of the `fn` signature section | It has only name and return; the absence of lookup in the template is not a requirement that the candidate has no additional fields |
+| Q12 | The minimal PrioritiesTemplate of the named signature section | It has only name and return; the absence of lookup in the template is not a requirement that the candidate has no additional fields |
 
 #### Arguments as is and `sys\eval`
 
@@ -907,7 +933,7 @@ For the two-input fixtures use `PairSignature` of the section on the template an
 
 | ID | Check | Expected result |
 | --- | --- | --- |
-| F01 | `fn: PairSignature (@: first; []: @ rest; return: int)` | A named signature, two inputs and a result; there is no body |
+| F01 | `PairSignature :: (@: first; []: @ rest; return: int)` | A named signature, two inputs and a result; there is no body |
 | F02 | A candidate `lhs: @`, `rhs: Array<@>`, the result `int`, another name/body | A match of the types by positions |
 | F03 | The inputs of the candidate go `Array<@>`, then `@` | A mismatch; named supply does not change the order of the types of the signature |
 | F04 | Another number/type of inputs or another result | The ordinary fn diagnostics; `return` is not counted as an input |
@@ -968,12 +994,12 @@ mechanism is introduced.
 <a id="compound-assign"></a>
 #### Compound assignments and the power
 
-The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `implements` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The associativity and precedence of `**` are Python's (the author's clarification of 2026-11-07): `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
+The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `satisfies` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The associativity and precedence of `**` are Python's (the author's clarification of 2026-11-07): `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
 
 <a id="group-assign"></a>
 #### Group positional assignment
 
-Author's decisions of 2026-11-10. The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, and a Structure as the head of a Frame before a colon is not introduced. All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. The left side is an unnamed Structure, and the unnamed Structure written on the right is the single `right` argument of the operand `:=`: the parentheses on the right are opened and `right` receives the values of the positions. When the left side is not an unnamed Structure, the parentheses on the right are not opened: `struct := (copy(args))` assigns one Structure to the reference `struct` (the author's decision of 2026-11-22). This is an assignment between unnamed Structures, the general case of assignment and not a special form (the author's decisions of 2026-11-16 and 2026-11-21). A Structure returned from a function is not opened: in `(a, b, c) := myFn()` the right side is one value ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). A field stream is written inside an explicit group, which is opened the same way: `(a b) := (copy(Pair))` assigns the two resulting fields by position; the bare stream `(a b) := copy(Pair)` is an error (the author's decision of 2026-11-21). The right side of a group assignment is one unnamed Structure written in parentheses, the form `() := ()`; several values written without the group are an error (the author's decision of 2026-11-21). In `(c b d a) := (a b c d)`, starting from a=1, b=2, c=3, d=4, the final values are c=1, b=2, d=3, a=4. All RHS values precede the first write; this promises no rollback of effects already produced while computing them. The names of the right-hand fields do not change the positional correspondence.
+Author's decisions of 2026-11-10. The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, and a Structure as the head of a Frame before a colon is not introduced. All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. The left side is an unnamed Structure and remains whole. The unnamed Structure written on the right is the sole `right` argument of `:=`, so exactly its one outer level is opened and its immediate positions populate `right`; the left container is not opened. When the left side is not an unnamed Structure, the parentheses on the right are not opened: `struct := (copy(args))` assigns one Structure to the reference `struct` (the author's decision of 2026-11-22). This is an assignment between unnamed Structures, the general case of assignment and not a special form (the author's decisions of 2026-11-16 and 2026-11-21). A Structure returned from a function is not opened: in `(a, b, c) := myFn()` the right side is one value ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). A field stream is written inside an explicit group, which is opened the same way: `(a b) := (copy(Pair))` assigns the two resulting fields by position; the bare stream `(a b) := copy(Pair)` is an error (the author's decision of 2026-11-21). The right side of a group assignment is one unnamed Structure written in parentheses, the form `() := ()`; several values written without the group are an error (the author's decision of 2026-11-21). In `(c b d a) := (a b c d)`, starting from a=1, b=2, c=3, d=4, the final values are c=1, b=2, d=3, a=4. All RHS values precede the first write; this promises no rollback of effects already produced while computing them. The names of the right-hand fields do not change the positional correspondence.
 
 <a id="qualification"></a>
 ## 10. const, immutable and independent
@@ -1017,12 +1043,12 @@ A callable description is data with the common visibility and occurrence-selecti
 
 Program files form no categories of a main file and parts: a message is a Structure, and included files join the program graph. Declaration order for variables and `const`, and bidirectional visibility for named Structures and callables, follow the resulting lexical tree. Comparing line offsets in separate source documents does not define visibility.
 
-A signature describes inputs and the result; it is not an executable body ([`fn` signature](#fn-signature)). A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. The formals are declared by receivers -- `int: arg default`, `@: arg Template`; a structural form does not declare a formal variable: in the data role it is a declaration of a Structure (this is how, for example, a structural result is written in the `return` field), and the former synonymy of the two descriptions of a formal in a signature -- by a structural form and by a receiver -- is withdrawn ([the roles `data` and `code`](#data-code-roles)). Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
+A signature describes inputs and the result; it is not an executable body ([named signature](#fn-signature)). A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. The formals are declared by receivers -- `int: arg default`, `@: arg Template`; a structural form does not declare a formal variable: in the data role it is a declaration of a Structure (this is how, for example, a structural result is written in the `return` field), and the former synonymy of the two descriptions of a formal in a signature -- by a structural form and by a receiver -- is withdrawn ([the roles `data` and `code`](#data-code-roles)). Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
 
 <a id="method-parts"></a>
 ### Parts of a callable Structure
 
-The input places, requirements and defaults of executable C belong to actual `parent(C)`; its return description is the `return` field of that DATA. C itself is the code. `args` on call is actual supplied material, not a separate part of a function. `fn: name data` creates a named positional requirement and no implementation. Different supplied argument sets can produce different native signatures, while hidden service parameters do not become fn input positions. Catch retains its handler role with the same general input and actual-parent representation ([catch](#catch-common-model)).
+The input places, requirements and defaults of executable C belong to actual `parent(C)`; its return description is the `return` field of that DATA. C itself is the code. `args` on call is actual supplied material, not a separate part of a function. `name :: data` creates a named positional requirement and no implementation. Different supplied argument sets can produce different native signatures, while hidden service parameters do not become fn input positions. Catch retains its handler role with the same general input and actual-parent representation ([catch](#catch-common-model)).
 
 Repeated physical DATA declarations retain distinct occurrences and may require indexed selection. Reached CODE receiver declarations at one level instead update the existing logical place. `call(C)` chooses C itself: it selects neither a child code field nor a child data field. These distinctions follow ordinary role and namespace rules rather than a separate call lookup.
 
@@ -1123,17 +1149,46 @@ R0 is an ordinary C method with a local pointer to the R0 graph. The interpreter
 <a id="removed-builtins"></a>
 #### What is withdrawn by the norm of 2026-11-19
 
-Withdrawn (the norm of 2026-11-19): the special meaning of the name `data` -- the reserved name of an explicit reference to the data of a launch, the path `data\…` and the record `data := …`; the separate data parameter of `call`; the built-in `fncall` and `sub`; the executable form of `fn`. The word "data" remains the name of a role and an ordinary user name under the general rules; for `data`, `sub` and `fncall` the withdrawn built-in meaning is distinguished from an explicitly declared ordinary user name. `node` remains a reserved operation.
+Withdrawn (the norm of 2026-11-19): the special meaning of the name `data` -- the reserved name of an explicit reference to the data of a launch, the path `data\…` and the record `data := …`; the separate data parameter of `call`; the built-in `fncall` and `sub`; the executable form of `fn`. The former named signature receiver is also removed: its declaration is now the ordinary expression `Name :: DATA`, with no public `fn` alias. The word "data" remains the name of a role and an ordinary user name under the general rules; for `data`, `sub` and `fncall` the withdrawn built-in meaning is distinguished from an explicitly declared ordinary user name. `node` remains a reserved operation.
 
 Historical migration note: in current `call(D C)`, D is the actual-argument Structure, not substitute DATA; `C(D)` likewise supplies an actual. `call(C)` uses parent(C), not C as its own DATA. The older three-argument call and fncall families are withdrawn. Executable fn/sub declarations are replaced by ordinary structural data/code relationships and return descriptions in the actual parent. A former `data\x` path must be replaced with an explicit path to the intended Structure; `node\x` is appropriate only when the intended target is that established lexical context. The ordinary name data and the retained reserved operation node must not be conflated.
 
 <a id="fn-signature"></a>
-#### Named signature: `fn: name data`
+#### Named signature declaration: `name :: data`
 
-`fn` takes exactly two arguments, both in the DATA role: a name atom and an ordinary Structure supplying its data template. It creates a constant named description of a positional call signature, with no executable body or native entry. That name can be reused as a requirement and imported by the [root-constant rule](#import-receiver). W/E selection for CODE actuals does not expand the two arguments of `fn`.
+`name :: data` is the named-signature use of the ordinary expression operand
+`::`. It follows the general LMX operand header, ready-priority, grouping and
+raw-occurrence contracts; it is not a separate short-form or compact-call
+syntax. The declaration consumes the left occurrence as an identifier to
+declare, without resolving or assigning an existing place. Its defined
+single-template form takes **one** right DATA description, whose fields describe
+the signature without executing its initializers or an executable body.
+
+`Name :: A B` has two right arguments, while `Name :: (A B)` has one argument
+that is an unnamed Structure. These are different expression inputs. The
+left identifier is not an unnamed Structure, so the [single conditional RHS
+opening](#operand-right-only-opening) does not apply. A reference such as
+`Name :: DataTemplate` supplies one right occurrence as well. Reading that
+template's fields under the declaration contract does not flatten the operand
+arguments or change their written grouping. The signature contract determines
+admission; a parser must not invent an equivalence between the two spellings.
+
+The lexer recognizes `::` as one operand token before `:`. The common expression
+parse and the standard operand contract with the ready priority and with the
+transfer of the needed raw forms are used, preserving the graph and the groups. No
+separate grammar of the signature, no special short or parenthesized form and no
+automatic `end` by the left name are introduced: `::` by itself opens no Frame. The
+new notation changes the form of the declaration, not the order of the formals,
+their full requirements, the constant property of the name, its export or the
+existing contract of `call`.
+
+The result is the same constant named positional description as before, with
+no body or native entry, and its name remains importable under the ordinary
+root-constant rule. The former named receiver is removed without an alias. The term fn-match below names the unchanged positional compatibility rule; it does not name a public receiver.
+The existing relationship of a named signature with `call` is unchanged.
 
 ```lmx
-fn: SumSignature (int: a; int: b; return: int)
+SumSignature :: (int: a; int: b; return: int)
 
 SumContext:
     int: a
@@ -1145,7 +1200,7 @@ SumContext:
 @: sumPtr SumSignature SumContext\sum
 ```
 
-The three arguments of `@` are the reference name, signature requirement and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same `fn` requirement: the common admission applies the positional comparison to the new callable.
+The three arguments of `@` are the reference name, signature requirement and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same signature requirement: the common admission applies the positional comparison to the new callable.
 
 Input positions are the data template's ordinary declared input places in order. `return` describes a result and is not an input; a nested user Structure is not automatically a formal, and an Array is one input regardless of element count. No `return` means a procedural signature. A structured result uses ordinary DATA notation:
 
@@ -1156,13 +1211,13 @@ PairData:
         int: x
         int: y
 
-fn: PairSignature PairData
+PairSignature :: PairData
 ```
 
-<a id="fn-implements"></a>
-#### The positional branch of `implements`
+<a id="fn-satisfies"></a>
+#### The positional branch of `satisfies`
 
-The common `implements` has a distinct rule for a resolved `fn` requirement. It extracts the ordered input types and presence/type of the result from the named description, obtains the candidate `C`'s corresponding contract from its actual `parent(C)`, and compares corresponding positions. Input count and order matter; optional/defaulted inputs remain positions. Types include the actual LMX requirements for typed references, Array elements and structural results, not just C sizes or raw tags. The compatibility rules of the types themselves stay common: `fn` changes the way the parts of a contract are chosen and matched; it adds no second set of primitive types and no converters of its own, and the fact that a separate call would succeed by converting its actuals gives no right to permute or skip the declared positions of the signature.
+The common `satisfies` has a distinct rule for a resolved signature requirement. It extracts the ordered input types and presence/type of the result from the named description, obtains the candidate `C`'s corresponding contract from its actual `parent(C)`, and compares corresponding positions. Input count and order matter; optional/defaulted inputs remain positions. Types include the actual LMX requirements for typed references, Array elements and structural results, not just C sizes or raw tags. The compatibility rules of the types themselves stay common: `fn` changes the way the parts of a contract are chosen and matched; it adds no second set of primitive types and no converters of its own, and the fact that a separate call would succeed by converting its actuals gives no right to permute or skip the declared positions of the signature.
 
 Formal names, initializer values and implementation-body trees are not fn-match criteria. Candidate positions are never rearranged to match names. Hidden native arguments, dynamically bound free names and CODE locals are not additional explicit positions. The comparison executes no body or initializer and creates no second parser or admission engine. It does not substitute the template for `parent(C)`.
 
@@ -1179,22 +1234,22 @@ Priorities:
     lookup:
         return: sys\priority(name)
 
-fn: PrioritySignature PrioritiesTemplate
+PrioritySignature :: PrioritiesTemplate
 @: priorities_data PrioritiesTemplate Priorities
 @: priority_fn PrioritySignature Priorities\lookup
 ```
 
-`implements(Priorities, PrioritiesTemplate)` checks all of the minimal template, which has no `lookup` requirement. Choosing the whole `Priorities` as a structural model includes `lookup` and its stated subtree. `PrioritySignature` instead checks the selected callable's ordered input types and result; `name` need not physically occur inside `lookup`. Neither a `return` field nor a name ending in “Signature” turns an ordinary Structure into `fn`.
+`satisfies(Priorities, PrioritiesTemplate)` checks all of the minimal template, which has no `lookup` requirement. Choosing the whole `Priorities` as a structural model includes `lookup` and its stated subtree. `PrioritySignature` instead checks the selected callable's ordered input types and result; `name` need not physically occur inside `lookup`. Neither a `return` field nor a name ending in “Signature” turns an ordinary Structure into a positional signature description.
 
 The same composition can be written `PrioritiesMerged: merge(PrioritiesTemplate (lookup: return: sys\priority(name)))`. This ordinarily declares `PrioritiesMerged`; `merge` consumes its sources as standard CODE arguments and supplies its fields through the namespace. The bare `PrioritiesTemplate` reference and the anonymous Structure are values, not calls of those Structures. The contents of the group retain their ordinary contracts. In particular, supplying the Structure containing `lookup` does not execute that method or its `sys\priority` call. Copying preserves the selected method's actual lexical/DATA links through the common map; acceptance of a stream is not arbitrary reparenting.
 
 <a id="fn-public-labels"></a>
 #### Public labels and the candidate's own contract
 
-On a call through a reference constrained by `fn`, the signature's formal names are the public labels of explicit actuals. Normal positional/named mapping first identifies a signature position; that position maps to the candidate input at the same index. The candidate's own names are used by direct calls and are not fallback aliases of the public interface. Actual expressions still evaluate once in written order, not in position order. Declaration-form actuals use that same external map without changing the preserved form's internal name ([declaration arguments](#declaration-arguments)).
+On a call through a reference constrained by a signature, the signature's formal names are the public labels of explicit actuals. Normal positional/named mapping first identifies a signature position; that position maps to the candidate input at the same index. The candidate's own names are used by direct calls and are not fallback aliases of the public interface. Actual expressions still evaluate once in written order, not in position order. Declaration-form actuals use that same external map without changing the preserved form's internal name ([declaration arguments](#declaration-arguments)).
 
 ```lmx
-fn: SelectSignature (int: count; []: char text; return: int)
+SelectSignature :: (int: count; []: char text; return: int)
 
 First:
     int: n
@@ -1215,7 +1270,7 @@ Reordered:
 
 In CODE, `chosen(text := "x"; count := 3)` maps text to position 2 (`s`) and count to position 1 (`n`), and returns 3. Direct `First\select(s := "x"; n := 3)` is also valid. Direct `Reordered\select(count := 3; text := "x")` can be valid, but assigning that callable to `chosen` fails: `[Array<char>, int]` does not match `[int, Array<char>]`. If both types were `int`, renamed or swapped labels would not change the positional map: public `a=1, b=2` still reaches candidate positions 1 and 2.
 
-Fn-match extracts a type shape; it transfers no defaults, requiredness, throws or execution policy from the template. `fn: StepSignature (int: step 1)` describes one int input and no result, but its 1 does not become a default of the candidate. A compatible candidate with a required input can reject an omitted actual despite positive fn-match; hidden autofill cannot rescue it during selection. After explicit supply, implicit binding uses the candidate's real names, declarations and private marks, not the fn labels. A positive signature comparison never proves identical algorithms or admissibility of every future actual set.
+Fn-match extracts a type shape; it transfers no defaults, requiredness, throws or execution policy from the template. `StepSignature :: (int: step 1)` describes one int input and no result, but its 1 does not become a default of the candidate. A compatible candidate with a required input can reject an omitted actual despite positive fn-match; hidden autofill cannot rescue it during selection. After explicit supply, implicit binding uses the candidate's real names, declarations and private marks, not the fn labels. A positive signature comparison never proves identical algorithms or admissibility of every future actual set.
 
 <a id="return-in-data"></a>
 #### `return` in data
@@ -1232,7 +1287,7 @@ The positional counter follows one rule. Naming the formal at the current positi
 <a id="declaration-arguments"></a>
 #### Preserve a supplied declaration
 
-A **place-declaration receiver** supplied as an argument in a CODE argument context is read as DATA. The argument is the declaration itself, and transmission alone executes no initializer. If its corresponding declaration is found in the receiving DATA, the supplied form replaces that declaration **in this call's namespace**, not by storing its precomputed value and not by changing source DATA. The resolved head's contract distinguishes a declaration receiver from an ordinary call; this rule applies to `int(item expression)` as well as `int: item expression`, and is not a special case for example names. The general phrase «all declarations among the arguments are read as DATA» is not the rule: it would confuse a place-declaration receiver with a structural form that would declare a Structure in another role. Reading an argument as DATA is a property of place-declaration receivers and of `fn`, each by its own declared contract; it does not turn the receivers into one category, introduces no new group of receivers and changes neither another call of the language nor the direct call of an ordinary callable.
+A **place-declaration receiver** supplied as an argument in a CODE argument context is read as DATA. The argument is the declaration itself, and transmission alone executes no initializer. If its corresponding declaration is found in the receiving DATA, the supplied form replaces that declaration **in this call's namespace**, not by storing its precomputed value and not by changing source DATA. The resolved head's contract distinguishes a declaration receiver from an ordinary call; this rule applies to `int(item expression)` as well as `int: item expression`, and is not a special case for example names. The general phrase «all declarations among the arguments are read as DATA» is not the rule: it would confuse a place-declaration receiver with a structural form that would declare a Structure in another role. Place-declaration receivers read their declaration arguments as DATA under their own contracts. Separately, the ordinary expression `Name :: DATA` consumes a left declaration identifier and one whole right DATA template. Inspecting that template's fields is not unwrapping the operand argument vector. These contracts introduce no new group of receivers and change neither another call of the language nor the direct call of an ordinary callable.
 
 | Actual form | Mapping | Preserved material |
 | --- | --- | --- |
@@ -1318,7 +1373,7 @@ These are the criteria of agreement of the normative text and of the future chec
 | I05 | A const declaration under a modifier is root by the common rules of data | It is imported by the common rule, without a separate requirement on the physical parent |
 | I06 | The imported name coincided with another declaration | The ordinary redeclaration applies |
 | I07 | A user Structure is imported | Its content and its original parent are kept |
-| I08 | `fn` creates a root constant name of a signature | The name is imported by the common norm; there is no separate ban on names created by a receiver |
+| I08 | `Name :: DATA` creates a root constant signature name | The name is imported by the common norm; there is no separate ban on names created by a receiver |
 | I09 | `import: Library` from the example of the model, the named signature and the implementation | `PrioritiesTemplate`, `PrioritySignature` and `Priorities` are imported; `selected` and the nested fields are not imported; the parent of `lookup` stays `Priorities` |
 | F01 | An fn requirement and a candidate have the same parameter types in the same order but different names | The fn match is admitted with a compatible result; the body tree is not compared |
 | F02 | The different parameter types of the candidate are permuted although the names coincide with fn | The fn match is rejected: names do not permute the parameters of the candidate |
@@ -1348,7 +1403,7 @@ P0 preserves `f(a b)` as two written fields and `f((a b))` as one group. They ca
 | Receiver/contract | Argument reading | Single-Structure expansion |
 | --- | --- | --- |
 | Ordinary callable; CODE-consuming receiver such as `call` | CODE, subject to each argument's declared consuming role | Ordinary W/E selection |
-| Level receiver `L2`; `required`, `private`, `const`, `immutable`, `independent`; `fn: name data` | DATA | Preserve written arguments; no W/E |
+| Level receiver `L2`; `required`, `private`, `const`, `immutable`, `independent`; `name :: data` | DATA | Preserve written arguments; no W/E |
 | `import`, `copy`, `merge` in any placement | Standard CODE | Ordinary W/E over the admitted source sequence |
 | Place-declaration receiver supplied as a CODE actual | DATA declaration form | Preserve and map it under [declaration-argument rules](#declaration-arguments) |
 
@@ -1407,14 +1462,14 @@ An input marked `required` with no actual and no own initializer rejects the can
 | S is assigned to a formal | `f(a := S)` | Only W |
 | Whole C fits `call(code)`; fields fit `call(args code)` | `call(C)` | Ambiguity |
 | Same C explicitly names its receiver formal | `call(code := C)` | No E; required args prevents the other form |
-| Fn has a nested Structure in its template | `fn: SignatureName DataTemplate` | Two DATA arguments, no CODE W/E |
+| A named signature uses a nested Structure in its template | `SignatureName :: DataTemplate` | Left declaration identifier and one whole right DATA template; no CODE W/E or operand unwrapping |
 | Group collects a copy stream | `f((copy(A)))` | One written Structure, then ordinary W/E |
 | Group explicitly assigned to a formal | `f(arg0 := (copy(A)))` | Whole Structure, no E |
 | One written S exposes two admitted structural sources | `merge(S)` in any placement | Ordinary CODE E can meet merge's minimum of two sources |
 
 The `h(Arg)` case does not mean E requires multiple inputs. Conversely `h((5))` consumed by a numeric formal is ordinary group-as-expression behavior, not a global unwrapping rule. A declaration exposed by E is preserved under the declaration-argument contract; its ready primitive value remains obtainable without executing an invented initializer.
 
-For a one-input receiver such as `length`, `parent`, `return`, or a suitable `sys` query, a Structure is passed whole only when W is the uniquely admitted reading. A one-field Structure can also fit E and cause ambiguity. A DATA consumer such as `fn` does not enter this CODE selection algorithm. Arity of `copy`, `merge` and `import` is checked on the admitted **input sources**, never on the number of fields they output.
+For a one-input receiver such as `length`, `parent`, `return`, or a suitable `sys` query, a Structure is passed whole only when W is the uniquely admitted reading. A one-field Structure can also fit E and cause ambiguity. The one DATA template of the expression `Name :: DATA` does not enter this ordinary-call CODE selection algorithm; its left identifier is consumed as the declaration name. Arity of `copy`, `merge` and `import` is checked on the admitted **input sources**, never on the number of fields they output.
 
 <a id="structure-result"></a>
 A call's result may be a Structure with several fields, described by a nested return block in its DATA, for example return with `int: x`, `int: y`, and `int: z`. Return describes no shared mutable result cell. A Structure returned from a function is one value: a group assignment does not open it (the author's decision of 2026-11-21; [group assignment](#group-assign)). Result-expression construction and ordinary receiving places follow their existing contract; transfer by return itself neither copies a returned reference nor creates a second container. A return tail `return: 1 2 3` supplies the described result fields in order. No separate `fm` receiver is introduced. An explicitly grouped copy result uses `return: (copy(A))` when one Structure is required.
@@ -1433,8 +1488,8 @@ A returned reference preserves its exact target identity. Constructing a result,
 | C03 | Two `C` occurrences with different parents and a common native implementation | Each uses its own actual data |
 | C04 | The reference `ExistingCode` is placed inside `NewContainer` | The parent of `ExistingCode` is not changed by itself |
 | C05 | R0 is started without arguments | There is no data and no artificial `D = C`; an ordinary procedural execution |
-| C06 | `fn: SumSignature SumData` with `return` in `SumData` and `fn: StepSignature StepData` without `return` | The names of the created signatures are given by the first argument; two kinds of contracts are described by one `fn`, no implementation is created |
-| C07 | `@: sumPtr SumSignature SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` given by the first argument of `fn` and checks the callable with its parent, not the fields inside the code |
+| C06 | `SumSignature :: SumData` with `return` in `SumData` and `StepSignature :: StepData` without `return` | The created signature names stand to the left of `::`; the same declaration describes functions and procedures, with no implementation is created |
+| C07 | `@: sumPtr SumSignature SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` declared by the left identifier of `SumSignature :: DATA` and checks the callable with its parent, not the fields inside the code |
 | C08 | All the examples of the table of required selection examples | The results match the table; hidden inputs do not change the choice |
 | C09 | W is chosen with a whole Structure | At execution one structural actual is kept without expansion |
 | C10 | E is chosen with one or several fields | The chosen map is used; there is no repeated expansion |
@@ -1447,9 +1502,9 @@ A returned reference preserves its exact target identity. Constructing a result,
 | C17 | One explicit contract, but different hidden copy/place bindings | The chosen native entry/adapter keeps the real mode of the place |
 | C18 | A runtime call without a suitable native entry | The existing admissible path works, without hidden compilation |
 | C19 | Copy/merge and the saving of the graph of a callable | The real parent, sharing and records are kept; a stack address does not become a portable value |
-| C20 | Only a data template is passed to `fn`, without a separate name | Refusal by the two-argument contract of `fn`; the name is not derived from the first input field of the template |
-| C21 | One declared `SumSignature` is used by name in the requirements of two callable references | The created description is reused; `fn` creates no implementation of these references |
-| C22 | The structural result of `PairSignature` from the section on the named signature | `return` and the fields of the result belong to the data template; `fn` has no outer arguments of the result and no body |
+| C20 | A named signature is written without a declaration identifier before `::` | Refusal: the identifier is required and is never inferred from the first input field of the DATA template |
+| C21 | One declared `SumSignature` is used by name in the requirements of two callable references | The created description is reused; The signature declaration creates no implementation of these references |
+| C22 | The structural result of `PairSignature` from the section on the named signature | `return` and the fields of the result belong to the data template; the right-hand DATA contains the result description and has no executable body |
 | C23 | `Priorities` is compared with the minimal `PrioritiesTemplate` | The whole tree of the minimal template is checked; an additional `lookup` of the candidate does not make it incompatible |
 | C24 | A candidate without `lookup` is compared with the ordinary template `Priorities` | Refusal of the structural check: `lookup` and its subtree are included in the explicitly given requirement |
 | C25 | Fn `[int, Array<char>] → int`, a candidate with the same types and other names | The fn-match is positive; the names are not keys of the comparison |
@@ -1640,8 +1695,8 @@ The decisions R01–R19 of the norm of 2026-11-19 and the required observations 
 | R10 | R0 has no data: it is a procedural entry without arguments. No artificial self-binding data = code is created for it. |
 | R11 | `return` is described by a field of the data. Such a declaration assigns no result. In the code role `return` is the return receiver. `fncall` is removed. |
 | R12 | `call(code)` and `call(args code)` remain. Any Structure may be executed in the code role through `f()` or `f(args)`. |
-| R13 | `fn: name data` is kept: two arguments set the name and the data template of a named C-like signature. The common implements applies to it a separate rule: the number and ordered types of the inputs, the presence and type of the result. The names of the inputs and the tree of the implementation are not keys of this comparison. No executable implementation is created; sub is removed. |
-| R14 | Both arguments of fn are read in the data role: the first sets the name of the created signature, the second its data template. The expansion of arguments proper to the choice of a code-role call is not applied to fn. |
+| R13 | `name :: data` supplies the constant name and DATA template of a named positional signature; it fully replaces the former named declaration. The common satisfies applies to it a separate rule: the number and ordered types of the inputs, the presence and type of the result. The names of the inputs and the tree of the implementation are not keys of this comparison. No executable implementation is created; sub is removed. |
+| R14 | In `Name :: DATA`, the left identifier declares the constant signature name and the complete right-hand description is read as DATA. Ordinary CODE argument W/E expansion is not applied to this description. |
 | R15 | The choice of a signature uses only the explicit actuals or the fields of the single Structure passed without assignment. The readings are equal; more than one resulting variant is an error. Implicit binding does not choose a signature. |
 | R16 | A nested declaration shadows an outer same-named declaration. A one-level use does not create a new level of shadowing; the corresponding parent place/namespace is used. The owner of the place and the valid visibility count, not the presence of the same string anywhere in the body. |
 | R17 | catch adapts to the common rules of data representation and call, keeping the semantics of the handler. |
@@ -1746,7 +1801,7 @@ Re-declaring a name at the same level introduces no additional C variable but re
 
 Execution of mutable code follows [explicit compilation and the endturn boundary](#explicit-compilation). A mandatory code snapshot at entry is cancelled; selected local namespace values/descriptions remain independent. There is still no initializer-execution phase at entry.
 
-C signatures are derived from actual calls. Different supplied argument sets yield different signatures; the full description of the data does not itself become every C entry's parameter list. The [`fn` signature](#fn-signature) describes a call contract, not an executable implementation. Ordinary Structures and methods share body and frame compilation; the data of a call are the `parent` of the executed Structure ([structural call](#call-receivers)), and the root entry R0 has no data ([R0](#root-entry)).
+C signatures are derived from actual calls. Different supplied argument sets yield different signatures; the full description of the data does not itself become every C entry's parameter list. The [named signature](#fn-signature) describes a call contract, not an executable implementation. Ordinary Structures and methods share body and frame compilation; the data of a call are the `parent` of the executed Structure ([structural call](#call-receivers)), and the root entry R0 has no data ([R0](#root-entry)).
 
 <a id="binding-executors"></a>
 ### Binding in the executors
@@ -1888,7 +1943,7 @@ If the interpreter detects an error in an operation while executing a correctly 
 
 The norm of 2026-11-19 (the decision [R17](#binding-decisions)). The handler `catch` is described by the common model of inputs and the actual link: the code of the handler is read in the role of code, and its role of data is played by its `parent`, as for any executable code ([structural call](#call-receivers)). The payload `throw: Name(arguments)` is the explicitly supplied values; the handler's parameters accept them under the general rules of actual arguments. The other dependencies of the handler -- the names it uses but does not receive as payload -- are subject to the ordinary [binding](#binding-places) and [two-way `private`](#private-binding).
 
-The semantics of the handler is preserved in full: the handler is selected by the failure name and by its scope; its body is not executed on the initial straight-line pass; nested and sibling scopes are distinguished; there are no two competing same-named `catch` at one level; continuation after the handler, the repeat call, `throws` and cleanup act as described in this chapter. `catch` does not vanish together with the withdrawn `sub` and does not turn into an ordinary function because the representation of inputs has become unified. The handler does not depend on the withdrawn forms -- the executable `fn` and `sub`, `fncall` and the separate substitution of data ([what is withdrawn](#removed-builtins)). The roles of its parts follow the handler's contract: that `fn` has entered the group of receivers with [the data role](#whole-arguments) does not itself redefine `catch`. The notation of the header `catch: Name (parameters)` is not changed by this norm.
+The semantics of the handler is preserved in full: the handler is selected by the failure name and by its scope; its body is not executed on the initial straight-line pass; nested and sibling scopes are distinguished; there are no two competing same-named `catch` at one level; continuation after the handler, the repeat call, `throws` and cleanup act as described in this chapter. `catch` does not vanish together with the withdrawn `sub` and does not turn into an ordinary function because the representation of inputs has become unified. The handler does not depend on the withdrawn forms -- the executable `fn` and `sub`, `fncall` and the separate substitution of data ([what is withdrawn](#removed-builtins)). The roles of its parts follow the handler's contract. The separate named-signature expression `Name :: DATA` reads one whole right template in [the DATA role](#whole-arguments); that contract does not redefine `catch`, create a public `fn` receiver or open the signature's operand arguments. The notation of the header `catch: Name (parameters)` is not changed by this norm.
 
 The following example isolates catch placement. Each anonymous block has its own RetryGreeting handler before its call, and the outer run block has a SkipGreeting handler after the blocks. The two RetryGreeting handlers are in different scopes and do not compete.
 
@@ -1998,6 +2053,14 @@ Array arithmetic and comparisons are elementwise by default. Element operations 
 `scan` is a prefix reduction: inclusive sum of `[1,2,3,4]` gives `[1,3,6,10]`. Inclusive or exclusive behavior is explicitly selected. `map` applies an expression to elements; a pure variant permits vectorization and parallel evaluation preserving the result. Effects need explicit ordering; the default profile expects pure mapping.
 
 `filter` selects elements by a Boolean predicate and normally materializes a new Array. Copies, materialization and all results retain Message ownership boundaries.
+
+The sequential record-sequence functions in the [functional receiver library](#functional-receivers)
+are explicitly supplied ordinary methods. Their `map` and `filter` names do not
+silently replace this numeric profile or reinterpret dense Arrays. When both
+profiles are visible, use a qualified reference such as `fun\const\map`; the same
+ordinary resolution rule distinguishes `fun\const\contract` from tensor contraction.
+The library's `scanl` includes its explicit seed and therefore differs from the
+inclusive `scan` example above.
 
 <a id="mathematics"></a>
 ## 19. Numeric operations, purity and contexts
@@ -2161,7 +2224,7 @@ These are the verifiable differences of the model. For the CODE cases the source
 | I03 | `import(A Producer())` in CODE | Producer is called once; the filter of const declarations is kept |
 | I04 | The same record in DATA | Producer is called on consumption of the source by the same CODE algorithm; the source record is kept |
 | I05 | The Library/Other/Use example of the `import` section | limit, Settings, Tool are imported; counter and the nested fields are not imported separately |
-| I06 | A root const name is created by fn or found under a modifier | The admission is determined by the common root DATA rule |
+| I06 | A root const name is created by the `::` declaration or found under a modifier | The admission is determined by the common root DATA rule |
 | I07 | A method is imported | Its original parent and original references are kept |
 | I08 | The sources of import give the same name | Ordinary redeclaration, without merge-overlay |
 | I09 | A nested `f(import(A B))` | f receives the stream; no hidden additional import into the caller namespace |
@@ -2182,7 +2245,7 @@ Module linking resolves explicitly selected operations and construction recipes 
 <a id="import-receiver"></a>
 ### `import`: root constant declarations by reference
 
-`import` accepts one or more sources and always consumes them as standard CODE arguments, whether its record occurs in DATA or CODE. It selects only declarations that ordinary call-DATA rules treat as **root-level constants**. An ordinary user Structure declaration is intrinsically constant even without explicit `const`, because the Structure's name is not an assignable variable. A root constant name created by `fn` is eligible too; the receiver word `fn` is not thereby imported. Root status uses the common declarative/modifier rules, not only immediate physical parenthood.
+`import` accepts one or more sources and always consumes them as standard CODE arguments, whether its record occurs in DATA or CODE. It selects only declarations that ordinary call-DATA rules treat as **root-level constants**. An ordinary user Structure declaration is intrinsically constant even without explicit `const`, because the Structure's name is not an assignable variable. A root constant name created by `name :: signature` is eligible too; the declaration operator is not thereby imported. Root status uses the common declarative/modifier rules, not only immediate physical parenthood.
 
 Ordinary mutable primitive/reference places are not imported. Nested names are not lifted merely because their enclosing Structure is imported. Import retains references to original declarations, their identity, contents and physical parents. Importing a method therefore preserves its original DATA and lexical context; it does not make the importing Structure its parent. A constant Structure name does not make every field immutable.
 
@@ -2211,7 +2274,7 @@ Library:
     PrioritiesTemplate:
         []: char name
         return: int
-    fn: PrioritySignature PrioritiesTemplate
+    PrioritySignature :: PrioritiesTemplate
     Priorities:
         []: char name
         return: int
@@ -2226,7 +2289,7 @@ Use:
 end: Use
 ~~~
 
-In the namespace of `Use` three root constant names are added: `PrioritiesTemplate`, `PrioritySignature` and `Priorities`. The ordinary reference variable `selected` is not imported; `name`, `return` and `lookup` are not lifted from the nested `Priorities` into the root of `Use`. Import does not change `parent`: the data for `Priorities\lookup` are still in `Priorities`. `PrioritiesTemplate` is an ordinary minimal structural model without `lookup`; `PrioritySignature` is the named call description created by `fn` on its basis. The three-argument form `@: selected PrioritySignature Priorities\lookup` explicitly separates the name of the reference, the requirement and the actual callable; it is not rewritten as `@: selected PrioritySignature` as if the two-argument form had chosen an implementation: by the general rule `@: p Model` first refers to `Model` itself.
+In the namespace of `Use` three root constant names are added: `PrioritiesTemplate`, `PrioritySignature` and `Priorities`. The ordinary reference variable `selected` is not imported; `name`, `return` and `lookup` are not lifted from the nested `Priorities` into the root of `Use`. Import does not change `parent`: the data for `Priorities\lookup` are still in `Priorities`. `PrioritiesTemplate` is an ordinary minimal structural model without `lookup`; `PrioritySignature` is the named call description created by `name :: signature` on its basis. The three-argument form `@: selected PrioritySignature Priorities\lookup` explicitly separates the name of the reference, the requirement and the actual callable; it is not rewritten as `@: selected PrioritySignature` as if the two-argument form had chosen an implementation: by the general rule `@: p Model` first refers to `Model` itself.
 
 `import(A Producer())` calls Producer once when import is actually consumed and selects eligible declarations from that result as well as A. This holds even when the import record occurs in DATA; P0 and inspection of its source record do not execute it. Bare source references and anonymous source Structures are not themselves calls. Calls or initializers inside an anonymous Structure still follow their ordinary consuming contracts; import adds no blanket suppression or eager traversal. Multiple computed sources retain ordinary left-to-right evaluation and are not repeated during candidate selection. Ordinary CODE W/E applies in every placement: a sole library of Structures may fit both whole-library and expanded-source readings and be ambiguous. Import has no hidden preference for W. Its source record and written argument boundaries remain intact.
 
@@ -2290,7 +2353,7 @@ Creating an `lmx_message` or `lmx_thread` places in its own arena only the data 
 
 An executing Message has FIFO mail and at most one active turn at a time. A turn consumes at most one admitted input. Different Messages may execute concurrently. An empty mailbox does not finish a background task: its mechanism keeps checking mail according to its execution mode until a stopping condition.
 
-During a turn, one L3 Message executes on exactly one OS thread; transfer to another worker is allowed only between turns. An L3 Thread has no execution mode: each call's path is set by the callable occurrence's descriptor -- with a native address the call executes natively, without one the body (the graph's op tree) is executed by the interpreter -- L2 code with the same checks as L3 code ([§1](#scope)). One call never runs both paths for one Message: the dispatcher does not retry a call through the other path after a failure and does not override the path set by the descriptor from the body or from a previous dispatch result. Choosing the path neither copies the method nor creates a second concurrent executor; the dispatcher never runs `implements` or other receiving expressions on its own.
+During a turn, one L3 Message executes on exactly one OS thread; transfer to another worker is allowed only between turns. An L3 Thread has no execution mode: each call's path is set by the callable occurrence's descriptor -- with a native address the call executes natively, without one the body (the graph's op tree) is executed by the interpreter -- L2 code with the same checks as L3 code ([§1](#scope)). One call never runs both paths for one Message: the dispatcher does not retry a call through the other path after a failure and does not override the path set by the descriptor from the body or from a previous dispatch result. Choosing the path neither copies the method nor creates a second concurrent executor; the dispatcher never runs `satisfies` or other receiving expressions on its own.
 
 One arena has one writing lane. A Message's handler, local management, scheduler and service state are mutated on its own lane. A foreign sender neither appends itself to the owner's ready list nor modifies its application data. Mail admission and designated single-cell control protocols belong to the Message mechanism and grant no general access to foreign memory.
 
@@ -2359,7 +2422,7 @@ Each `ask` executes the selected callable once. One source result is distributed
 
 Pending replies belong to the sender and are stored separately from the recipient's callable API and inbox. Each wait is associated with its original Message and prepared destinations; concurrent instances of one `post` differ by their source messages, not a source-level name. Formed arguments, the send timestamp, and delivery state remain associated with the original letter. Entries are serviced on the sender's single execution lane, and their references obey ordinary ownership and lifetime rules: an expired stack frame cannot become a handler environment. The ordinary LMX machine selects and executes the addressed call; mail carries its formed request and result; the sender keeps waits and result routes. These responsibilities create neither a second program graph nor another mailbox.
 
-The same `implements`, mandatory tests, conversions, signatures, and declared exits as a local call apply before sending. Every route “source callable result → receiving `answer` place” is admitted during preparation, not selected by a new listener search when the result arrives. Value-dependent conversions execute at actual consumption. Pre-call incompatibility is not misreported as a `throw` from a method that never ran. Conversion context belongs to the concrete Message and is explicitly available under [§6](#conversion-context); ordinary admission does not authorize opening a protected graph branch. Transport does not extend an expired activation's lifetime merely by retaining a reference.
+The same `satisfies`, mandatory tests, conversions, signatures, and declared exits as a local call apply before sending. Every route “source callable result → receiving `answer` place” is admitted during preparation, not selected by a new listener search when the result arrives. Value-dependent conversions execute at actual consumption. Pre-call incompatibility is not misreported as a `throw` from a method that never ran. Conversion context belongs to the concrete Message and is explicitly available under [§6](#conversion-context); ordinary admission does not authorize opening a protected graph branch. Transport does not extend an expired activation's lifetime merely by retaining a reference.
 
 ### Events and time
 
@@ -2369,7 +2432,7 @@ An undelivered source request invokes its bound `undelivered` with the original 
 
 ### Nested descriptions and the shared mail mechanism
 
-In data the form `timeout: ms: int: time 500` declares a Structure `timeout`, in it a Structure `ms`, in it a field `time` with requirement `int` and value 500 ([declaring a place](#receiver-args-only)); the data path is `timeout\ms\time`, with no `int` field; in code the same form is a call of `timeout` ([the roles `data` and `code`](#data-code-roles)). An incoming formal with the same structural requirement uses ordinary `implements` and argument binding at any nesting depth, locally and through `post`. Handler-supplied `time` differs from the configured `timeout\ms\time`; there is no separate duration type system.
+In data the form `timeout: ms: int: time 500` declares a Structure `timeout`, in it a Structure `ms`, in it a field `time` with requirement `int` and value 500 ([declaring a place](#receiver-args-only)); the data path is `timeout\ms\time`, with no `int` field; in code the same form is a call of `timeout` ([the roles `data` and `code`](#data-code-roles)). An incoming formal with the same structural requirement uses ordinary `satisfies` and argument binding at any nesting depth, locally and through `post`. Handler-supplied `time` differs from the configured `timeout\ms\time`; there is no separate duration type system.
 
 `post`, `send`, and `receive` use one inbox, one set of publication/ownership rules, and one call engine. The public `send`/`receive` forms (`sendMessage`/`receiveMessage` before the renaming of 2026-11-10), address-filtered iterator, all-available-mail option, and `0` end marker remain. One letter cannot be consumed twice by manual and protocol paths; receiving a letter as data does not itself execute its contents. An incoming call runs on the recipient's lane, while `answer` and outcome handlers run on the sender's lane. Both Thread modes (with and without an OS thread), the ordinary lifecycle up to user `success := 1`, final outbound publication, and existing supervision/stopping remain; `post` adds no second entry loop, inbox, or timer thread. No second loop, GUI entry point, global dispatcher, or OS thread for every `post` is required; supported native/walker and stepped/threaded modes must agree observably. There is no `send → post → send` cycle; this does not constrain future optimization of the common mail machinery. A final send before `success := 1` is published under the existing turn rules; no OS thread per participant is required.
 
@@ -2433,7 +2496,7 @@ Mix has three distinct roles: source-mark overlay, document placement tree and c
 <a id="worldwide"></a>
 ## 30. WorldWideMix: addresses, cells and navigation
 
-WorldWideMix defines a placement tree: where a cell is situated. The LMX graph defines a value: its fields and what an expression consumes. These trees meet in a cell but are not identical: address `3.17.4` is not field path `file\close`, and `implements` does not number Mix neighbours.
+WorldWideMix defines a placement tree: where a cell is situated. The LMX graph defines a value: its fields and what an expression consumes. These trees meet in a cell but are not identical: address `3.17.4` is not field path `file\close`, and `satisfies` does not number Mix neighbours.
 
 An address is a sequence of nonnegative integers from root to cell. Neither an individual branch's depth nor index magnitude has a language-defined finite ceiling; implementations must check actual resource limits rather than overflow their representation. Leading textual zeros do not change meaning: `03.17` equals `3.17`. A prefix addresses a subtree; shortening the path reaches an ancestor.
 
@@ -2687,7 +2750,7 @@ insert:
 end: insert
 ```
 
-This illustrates the application request, parsed through ordinary Frames. The inserted Structure has input `x`, result `int`, and executable child `apply`; it can be called as `PlusOne\apply(1)`. A named `fn: name data` would describe a signature only. The source's last ordinary block closes at EOF. Blank physical lines may appear only where full block closure is intended.
+This illustrates the application request, parsed through ordinary Frames. The inserted Structure has input `x`, result `int`, and executable child `apply`; it can be called as `PlusOne\apply(1)`. A named `name :: data` would describe a signature only. The source's last ordinary block closes at EOF. Blank physical lines may appear only where full block closure is intended.
 
 <a id="edit-api-copy"></a>
 ### Copy a prepared Structure
@@ -2801,3 +2864,601 @@ If an application form conflicts with the current general LMX contract, resolve 
 ### Non-goals
 
 No mandatory IDE, arbitrary editing of active machine instructions, global pause of all Threads, transfer of RAM addresses between machines, automatic undo, second persistent graph, or provider-specific command language is implied.
+
+<a id="functional-receivers"></a>
+## 37. General functional receivers and containers
+
+**Edition of 22 November 2026.** All supplied receiver and container algorithms
+belong to one current kernel. They are not optional or independently versioned
+libraries. The accompanying LMX bodies and integration contracts are inputs to
+the kernel implementation; this edition does not claim that these sources have
+already run on the target kernel.
+
+### Direct names in the single current kernel
+
+The kernel makes `curry`, `partial`, `map`, `bind`, `bracket` and all other
+catalogued operations directly available in its ordinary namespace. Application
+code does not need `import: fun`. The source grouping `fun\const` is the internal
+root of their constant export declarations, not a separately loaded library or
+a version selector. Kernel preparation includes these declarations by the
+existing constant-namespace mechanism; no new receiver registry is introduced.
+The actual callable owners and DATA remain unchanged. Explicit qualification,
+when needed for a collision, follows the real source path through `const`.
+Other named groups in the examples may still use structural import to expose
+names; this is namespace composition, not loading a different kernel version.
+
+LMX is dynamic. Requirements and signature descriptions may be constructed and
+examined at runtime, and arbitrary runtime Structures use the ordinary call and
+admission rules. These receivers introduce no requirement for a statically known
+class layout, a fixed arity chosen when the language implementation is built,
+or a static generic specialization. Where native translation is requested it
+must implement the same dynamic language contract. Publication-only source
+checks are not evidence that an LMX compiler or runtime has executed the code.
+
+Public names follow established operations where their actions agree:
+`curry`, `uncurry`, `flip`, `foldl`, `scanl`, `zipWith`, `traverse`, `memoize`,
+`partial` and `bracket`. `runUntil` and `retryCall` keep their distinct meanings
+beside the existing control receivers. A name does not import another language's
+evaluation model: `foldl` here is sequential and strict, `bracket` promises the
+specified synchronous cleanup, and Message remains the concurrency boundary.
+
+### Structures are already reference sequences
+
+Every Structure is directly usable as an Array of `@` entries under the ordinary
+index and length operations. A vector of argument records, captured prefix,
+list, selected fields or accumulated results therefore uses that Structure
+itself. No compulsory `items` object, per-element `{value: @}` box, new List
+physical type or second storage vector is introduced. An empty Structure is a
+valid empty sequence.
+
+A dense Array of primitives is still its existing physical representation. It
+must not be reinterpreted as `void**`. A generic API that explicitly accepts
+record sequences receives a Structure or Array of references to the existing
+typed records. An explicit adapter can materialize primitive element records
+when such an Array needs to enter that API. Payload types remain unrestricted.
+
+The `record` operand captures a stable reference to the prepared value record.
+`(x record)` has a present empty right-argument vector. For a primitive it
+retains the value needed after the producing activation; for a reference value
+it preserves the referenced object's identity. It creates no replacement
+`int` representation and cannot retain a dangling native local address.
+Physical type codes, indexes, lengths, state flags and predicates may use
+`int`; this does not restrict transported values or callable arguments to `int`.
+
+The number 2 in `zip` and `zipWith` and the permutation of the first two arguments
+of `flip` follow the action itself and are not a limit of the arity of an arbitrary
+function. The number of inputs and the size of a capture are always taken from the
+description and the data.
+
+### Exact signatures and record-returning operations
+
+Factories such as `curry`, `partial`, `uncurry`, `flip`, `compose` and `identity`
+construct ordinary callable Structures with the exact resulting argument and
+result requirements. The factory returning `@` does not change the constructed
+callable's result into `@`. A complete captured prefix yields a delayed nullary
+callable, including when the target is a procedure. A function-valued result is
+the final result, not an instruction to continue currying indefinitely.
+
+`apply` and the explicitly record-based collection/container API transport a
+result as a pointer to its typed record. Reading a primitive uses the existing
+dereference/consumption rules. A procedure result is an explicit void outcome;
+it is distinct from a null reference, an empty sequence and an uninitialized
+primitive. No absent uninit payload may be read in order to infer its type.
+
+The generic call boundary retains the normal admission, conversions, DATA,
+ownership, call selection and declared-exit checks. Its implementation bridges
+do not make arbitrary raw pointers callable. Generic helpers that cannot have a
+different static throws list for every target expose the documented
+`FxCallFailure` envelope containing the original failure name and payload.
+Generated wrappers that preserve an exact target contract restore its original
+declared exits through the ordinary generated call path or the specified narrow
+rethrow bridge. The two error contracts must not be silently conflated.
+
+<a id="fn-forms-equivalent"></a>
+### Interchangeability of the two signature descriptions
+
+The existing relationship of the named signature form with `call` is unchanged.
+Every other use treats the named DATA description and the type-token form as
+interchangeable descriptions of the same signature kind. This includes storage,
+passing, return, `satisfies`, `signature`, construction of adapters and receiving
+a callable against either description. It is not a conversion between two
+incompatible function types and needs no new wrapper around the target.
+
+Both forms use the existing positional signature rule: compare the number and
+order of input requirements, their complete type descriptions, the presence of
+a result and its complete requirement. Formal variable names do not determine
+compatibility. Defaults and the executable body do not become signature
+identity. A model nested in an input type keeps its own structural requirements;
+ignoring formal parameter labels does not discard the names inside that model.
+
+Written public parameter names retain the current named-actual-to-position map.
+Synthetic labels such as `p0` are local presentation labels, not extra type
+identity. A named callable with different parameter names still matches by the
+existing positional rule. Neither form becomes executable merely by describing
+a signature, and existing named-signature/call dispatch is not altered.
+
+The type-token form uses the standard operand contract. In the chosen form
+`R signatureTypes T0 T1 ...`, the left token is the result requirement and the right tokens
+are the ordered input requirements. The actual builder can also be called by
+its qualified ordinary reference with explicit `left` and `right` arguments.
+The named declaration is now written `Name :: DATA`; this completely replaces
+the former declaration receiver. The standard type-token constructor and this
+named declaration use the same normalized descriptor builder. The type-token constructor is named `signatureTypes`; no public `fn`
+receiver or compatibility alias remains. `signature(operation := C)` instead
+reflects an existing callable. A raw anonymous type vector does not silently
+choose its first or last element as the result requirement. A declaration does not become assignment to an existing Name.
+
+An initialized integer token denotes the type code in its payload. An
+`uninit:T` token denotes T from its code without reading nonexistent value
+bytes. Full descriptors preserve reference models, Array element requirements
+and nested callable signatures. Canonical void means no result; `@`, `uninit:@`,
+null and void are not aliases.
+
+### Containers
+
+Maybe uses `present` plus a value-record reference. Result uses `ok` plus a
+value-record or reason-record reference. Their flags encode the selected case,
+not the payload type. `none()` skips a continuation without reading a value;
+`some` can hold a zero, a reference, a Structure, a callable or any other admitted
+value record. Result's `err` is an ordinary container value, distinct from
+throwing `FxCallFailure`.
+
+List is the ordinary reference sequence described above. Bounce stores either
+`done` with a result record or `more` with a nullary callable. `trampoline`
+repeatedly invokes one saved continuation until completion. The continuation
+may itself have captured any finite argument set using `partial`; no fixed
+one-int argument slot is built into Bounce. None of these containers introduces
+a scheduler or shares an arena with another Message implicitly.
+
+### Receiver catalog
+
+The following table is exhaustive for this revision. Source declarations and
+the [public API](new_parts/LMX_Fn_Receivers/API.md) specify argument order,
+failure policy and the documented boundaries of each operation.
+
+| Receiver | Contract | Source |
+| --- | --- | --- |
+| `types` | physical field type codes; []:int by language contract | [reflection.lmx](new_parts/LMX_Fn_Receivers/src/reflection.lmx) |
+| `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signature` | ordinary positional signature description | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `signatureTypes` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](new_parts/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `curry` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `apply` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](new_parts/LMX_Fn_Receivers/src/generic_runtime.lmx) |
+| `partial` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `uncurry` | explicit full target contract and stage failures, callable result preserved | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `flip` | swap first two positions of N>=2 with full input types | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `compose` | inner arbitrary arity; outer consumes its one result; exact final R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `pipe` | compose(second; first), exact callable signature | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `identity` | typed T -> T for any valid value type | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `map` | each record admitted as actual callback type, result record vector | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `filter` | typed values; ordinary int truth predicate | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `foldl` | left fold over any accumulator/item/result records | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `zip` | pairs of typed records, min length | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `zipWith` | arbitrary binary callback types, result records | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `scanl` | seeded scan, n+1 records; accumulator type not hardwired | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `bind` | Maybe of any typed record; next gets actual payload value | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `traverse` | Maybe of direct Structure record vector; stop at first absence | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `memoize` | any arity/R; explicit key-vector equality, Message-local linear cache | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `fix` | F(self;T0..Tn)->R becomes T0..Tn->R | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `select` | physical selection in direct Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `omit` | physical omissions in direct Structure/Array<@> | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `rename` | one graph copy then canonical field names updated | [reflection_bridges.lmx](new_parts/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
+| `reorder` | full checked permutation, any field value types | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `project` | one shared graph copy of selected fields | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `defaults` | merge(fallback; source), existing presence including uninit wins | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `diff` | identity-vector patch, not deep payload equality | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `patch` | prevalidated identity-vector patch in fresh container | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `bindFields` | DATA defaults through merge; residual input positions not removed | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `derive` | ordinary merge composition | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `transpose` | rectangular Structure of row values; no fixed dimensions | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `groupBy` | typed keys and explicit equality, stable group/member order | [collections.lmx](new_parts/LMX_Fn_Receivers/src/collections.lmx) |
+| `lazy` | typed nullary thunk, first successful result cached | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `force` | nullary call returning typed result record; direct thunk() keeps R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `once` | any arity/R; first success reused, failure permits retry | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `repeat` | count calls with arbitrary typed actual vector; result records | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `runUntil` | record state; step then predicate, no fixed payload type | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `retryCall` | finite attempts, declared failures retained in FxCallFailure envelope | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `bracket` | any resource/result; finally release; arbitrary extra action inputs | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `recover` | exact signature; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `adapter` | arbitrary external/internal arity, explicit new exact contract | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `permute` | arbitrary N, reorder interface and actuals together | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `overload` | explicit pure predicates, exactly one branch, full external signature | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `predicate` | same arbitrary inputs; normalize ordinary int Boolean output | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `guard` | same exact signature with precondition over all actuals | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `trace` | arbitrary signature, events retain typed args/result/void distinction | [generic_wrappers.lmx](new_parts/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `contract` | same signature, pre(args), post(args,result) or post(args) for void | [generic_combinators.lmx](new_parts/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `composeData` | merge actual parent DATA with explicit data overlay | [structures.lmx](new_parts/LMX_Fn_Receivers/src/structures.lmx) |
+| `record` | prepared postfix capture; pointer to typed record, no value dereference | [generic_functions.lmx](new_parts/LMX_Fn_Receivers/src/generic_functions.lmx) |
+| `some` | Maybe present with any typed value record, including null | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `none` | Maybe absence, distinct from present empty/null value | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `ok` | Result success carrying any typed value record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `err` | Result failure carrying any typed reason record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `bindResult` | typed Result success chain, failure kept | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `list` | bare Structure/Array<@>, shallow copied record vector | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `flatMap` | List bind, no artificial list.items box | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `done` | terminal Bounce with result record | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `more` | suspended nullary callable, arbitrary captures via partial | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+| `trampoline` | iterate Bounce until done, never execute callable final result | [containers.lmx](new_parts/LMX_Fn_Receivers/src/containers.lmx) |
+
+### Construction, source rules and verification
+
+P0 keeps all written containers. The current operand rule remains in force:
+only the specified pair of written anonymous Structures triggers the special
+opening of the single right group. A Structure returned by a function is not
+opened by this rule. Ordinary method W/E selection remains separate. The
+receiver library must follow the current rules rather than reinstating the
+older transferred package's broader spreading proposal.
+
+Capture and generated source keep actual parents, private state and the normal
+lifetime rules. Code generation must respect blank-line root termination and
+explicit tail cutters. Compilation stays explicit; a copied or rebuilt callable
+does not inherit an incompatible native entry. Reusable shapes may be shared
+only when their type, ownership, state and effect contracts remain valid.
+
+The [kernel integration](kernel-implementation.en.md#receiver-kernel-integration) specifies
+the rename, bridge implementation, generality matrix and signature interchangeability
+checks. The [package acceptance cases](new_parts/LMX_Fn_Receivers/tests/ACCEPTANCE.md)
+are required execution checks, not claims of completed runtime tests.
+
+<a id="adapter-behavior"></a>
+### Behavior of adapters and callable factories
+
+Factories and adapters that rebuild a callable preserve the behavior of an ordinary
+call of the callable they stand in for. This is a norm for the adapters, not a new
+restriction of the language: the matching of signatures by types alone does not mean
+that the behavior of a call is preserved. The present adapters declare the residual
+inputs `required`/`private` and give every intermediate stage of `uncurry` the
+result `@`; this is a limit of the present adapters, not a rule of LMX. Until the
+cases of the observation tables below are executed on the kernel, the preservation
+of every aspect of the interface is not declared.
+
+Signature compatibility still compares the number and order of the full input
+requirements, the presence of a result and its full requirement. Names of formal
+parameters, defaults, requiredness, throws and the executable body do not become the
+identity of a signature, and `satisfies` must not reject compatible type
+descriptions only because their defaults differ. An adapter that preserves the input
+behavior of a particular F needs more than such a signature: it needs access to the
+**real declarations and call rules of the chosen F** — its own defaults,
+`required`/`private`, the correspondence of positions, the names used for implicit
+binding and the origin of computed descriptions. These are data of the existing
+graph and call, not a new kind of function.
+
+Defaults are not taken from an arbitrary named signature template: a template does
+not replace the rules of the actual candidate. In a call through a named requirement
+the public names of actuals are mapped to positions by the earlier rules, and
+permitted autofill uses the candidate's own names and declarations, not the
+arbitrary `pN` of a generator. `Name :: DATA` and `signatureTypes` remain
+descriptions of one signature kind; no public `fn` returns; the existing
+relationship of a named signature with `call` is not rewritten.
+
+For unchanged positions the behavior of the original input is preserved. For
+`partial` this applies to the residual positions with the already accepted prefix;
+`flip` and `permute` carry the type, the positional correspondence and the policy of
+the corresponding declaration together. Names of the public interface come from the
+declared contract of the adapter; they must not accidentally replace the names by
+which the original F performs implicit binding. The order and distinctions of
+binding ([autofill](#binding-autofill), [caller place](#binding-caller-place),
+[`private`](#private-binding)) are kept:
+1. An explicit actual fills the chosen place and suppresses the original initializer. Its incompatibility is not cured by substituting a default.
+2. If the actual is absent, the own ready value or the description of a computed default remains. A same-name variable of the caller does not replace it.
+3. If there is no initializer of its own, ordinary autofill from the permitted context of the current call is allowed.
+4. `private` of the source and of the actually visible receiving declaration filters implicit binding in both directions; explicit passing is preserved.
+5. If no permitted filling exists, `uninit:T` remains; the mere existence of an optional input does not mean that reading its value is mandatory.
+
+Absence of an actual is not an explicit `0`, `nil`, a null reference or an empty
+Structure, and not a record `uninit:T`. A dummy value must not be passed in place of
+absence: it would suppress the default of its own or change the choice of the
+candidate. A `required` input without an actual and without its own applicable
+default still rejects the call at selection; hidden autofill does not save it. A
+`required` input with its own default is handled by the ordinary mechanism. A
+reached `required` in CODE checks the current place at the moment of execution.
+These checks are not merged into a new obligatoriness of all parameters.
+
+Computed defaults are not executed when an adapter is built, when a signature is
+reflected, when `satisfies` is checked or when an unused branch is prepared, and
+they are not turned into eager snapshots. If the original F does not read an
+optional field, the common wrapper does not read it either merely to form a vector.
+The origin of a default is kept: its lexical references, `node`, the actual DATA and
+access to the other places of the same target activation; copying the text of the
+initializer into a new DATA is not enough. Required case: F has inputs `x` and `y`,
+the default of `y` depends on `x`; `partial(F; prefix := (5))` with `y` omitted uses
+the accepted `x = 5` and the original meaning of the default. Removing `x` from the
+public residual list does not remove it from the target activation and does not make
+the default read a same-name variable of the factory. Ordinary declaration actuals
+keep their form and namespace substitution where the original callable allows it;
+they are not reduced to a payload computed in advance. A ready typed prefix of
+`partial` keeps its present contract: a primitive is accepted by value, a reference
+keeps its target; this is not a reason to copy targets deeply or to execute a stored
+declaration beyond ordinary acceptance.
+
+The service `state`, `engine`, `record`, temporary pointers and counters of an
+adapter remain protected from accidental dynamic binding; the problem is not solved
+by removing `private` from all fields — the service dependencies of an adapter are
+separated from the policy of the user's input. Autofill uses the permitted context
+of the current call, not the context of the creation of the factory and not the
+accidental locals of the internal engine; for two calls of one adapter from
+different permitted contexts the binding corresponds to these two calls. The
+difference between an own place and the transparent place of the caller is kept in
+the documented contract of a particular adapter: filling a declared input does not
+turn into an alias of the caller, and a chosen transparent binding does not turn
+into a copy written back on exit. For an identical empty `partial` the reference is
+the direct F; a wrapper with its own sequence of calls defines the binding point
+explicitly and applies the ordinary rules of the chain. This does not require
+skipping the intermediate call B in A → B → C: if B only passes the name and formed
+no transparent link, the ordinary fallback of C may give its own copy rather than
+the place of A, and such a chain is not passed off as identical to a direct call.
+`private` is not bypassed, and the lifetime is not extended by the mere presence of
+a reference: if a deferred description depends on an ended activation, the existing
+rules of admissibility and capture apply, and a dangling pointer is not masked by
+hidden deep copying of an arbitrary graph. The requirements of all possible
+descendants are not collected statically, and no global snapshot of the environment
+is created.
+
+For a constructor that is given only types and has no original F, defaults and the
+origin of names are not invented: its own inputs are built by ordinary declarations
+with an explicitly given policy. Requirements that follow from the meaning of an
+operation are expressed by its ordinary contract, not by a universal rule
+`required`/`private` for any generated callable. `partial(F; prefix := ())` may be
+reduced to F if that satisfies the declared interface and the observable contract;
+this does not replace the correction for a non-empty prefix and for the other
+factories.
+
+<a id="adapter-wrappers"></a>
+#### Own behavior of wrappers
+
+`once`, `trace` and `guard` are not required to coincide in all effects with the
+bare F: these operations have a meaning of their own. What is preserved is the
+behavior of the inputs, except for the actions that directly make up the contract of
+the operation. The common wrapper must not impose additional reads.
+
+| Operation | What is preserved | Permitted own actions |
+| --- | --- | --- |
+| `partial(F; empty prefix)` | Ordinary admission, omissions, defaults, binding and result of F under the corresponding mapping of actuals | An additional start of F/of a default at construction is not permitted |
+| `partial` with a non-empty prefix | The semantics of the residual inputs in the target activation with the prefix already accepted | Acceptance of the explicit prefix at creation; independent subsequent calls |
+| `flip`/`permute` | The policy of every permuted position, the result, the exits and the links | The declared permutation of positions |
+| `once` | Ordinary preparation of the explicitly written actuals at every call; the first successful result and a retry after a failure | On a cache hit F is not executed; unrequested omitted defaults are not forced by the common wrapper |
+| `guard`/`contract` | Inputs are not read before the predicate/body needs them; reads and substitutions are consistent | The predicate may itself consume an argument, call its default and reject the call; post may consume the result |
+| `trace` | Observation does not automatically require evaluating all omitted defaults | Explicit actions of the sink, ordinary enter/return/leave-without-result; its errors keep the declared policy |
+| `memoize` | Absence is not mixed with zero/nil; a failure of F is not cached | The computation of the key and `sameKey` are their own observation; the values they demand may be computed |
+| `compose`/`pipe`, `recover`, `predicate`, `fix` | The policy of the corresponding outer/residual inputs of the chosen operation | Their declared composition, the handler, the transformation of the result or the binding of self |
+
+For `trace` the hidden premise that `event.args` is always a complete, previously
+computed vector is removed. For previously supported, fully prepared actuals the
+availability of the values is kept. For omissions and deferred descriptions the
+presence and the state are represented explicitly by ordinary structures or by
+another already existing way; the construction of an event does not itself execute a
+default. If a sink deliberately requests a value that has not been computed yet, its
+action and its lifetime are described and checked separately. A passive sink does
+not force a default.
+
+For `memoize` the exact policy of the key is fixed before implementation: from which
+positions/states it is built, when it reads the values and when it fixes the key.
+`sameKey` is checked on omitted/default/autofill values. A cache hit for different
+accepted values only because nothing is explicitly passed in either call is not
+declared; the reading of the key is not declared "free", and the existing policy is
+not changed accidentally during the call of F.
+
+All clients of the changed builder and transport are checked, including `curry`,
+`adapter`, `overload`, `repeat`, `retryCall`. Each keeps its own documented
+contract: for example `curry` accepts inputs stage by stage and `retryCall` repeats
+a call with the provided snapshot. The requirement "without adapter limits" does not
+mean removing the meaning of staging, caching, an explicit contract or a snapshot.
+
+<a id="uncurry-contract"></a>
+#### `uncurry` without an artificial `Ti → @`
+
+`uncurry(curried; contract; failures)` is preserved. The explicit flat `contract`
+sets the number N of input positions, their full requirements and the final R/void;
+`failures` sets the permitted named exits of the stages. The ordinary chain may come
+from `curry` or be built by the user. For N > 0 exactly N stages are executed. For N
+= 0 the original nullary callable is called once. For N = 1 one call is executed. If
+the final R is a callable or a Structure, it is returned as the result: no extra
+step is executed, and the stopping condition "while the result is callable" is
+forbidden. The factory does not run the stages, does not try them on dummy arguments
+and does not compute defaults in order to learn the next function. The user is not
+required to bring all intermediate results to `@` or to wrap every stage by hand.
+
+Instead of an unconditional table `Ti → @` the actual description of the current
+stage is used. Where it is known in advance without execution, it is kept in full.
+Where the next stage depends on a value/branch, the ordinary analysis continues
+after the actual result of the previous call is obtained. The check of the input and
+of the result is made by the ordinary rules of LMX: no separate static covariance,
+no unconditional erasure of the model to `@` and no prohibition of narrower results
+are added; the full requirement is checked — the callable signature, the structural
+model, the element type and the qualifiers where they enter the ordinary admission.
+A pointer to a typed record of the result and the payload of a callable/Structure
+are not mixed: the internal transport may use `@` as a reference to a record, but
+this does not make the declared result type of all stages equal to `@`; the exact
+model of the result is kept until the ordinary acceptance and the next call. A case
+that the ordinary admission of the present kernel already accepts is kept and
+covered by a regression; no extra conversion is added for it.
+
+At a call of the result U: the ordinary preparation of actuals, selection and
+context of the call are kept; for N = 0 one ordinary nullary call is made and the
+result is returned by R/void; otherwise for every stage i from 0 to N−1 the actual
+contract of the current callable is obtained without executing its body, the unary
+call is checked and prepared by the ordinary mechanism and the callable is called
+with the actual corresponding to position i; on the last stage the actual result is
+returned by the final R/void, otherwise the actual result becomes the next stage,
+its full description is kept and its admissibility is checked when the next call is
+really reached. If an intermediate result cannot be used as the next stage, an
+ordinary refusal is obtained at that point and the later bodies are not executed. If
+an intermediate call ended with a declared failure, its name and payload are kept
+and are not turned into an error of an allegedly static type. For N > 0 the contract
+of a unary chain remains; support for a more exact result does not mean an arbitrary
+replacement of one unary stage by a multi-input function.
+
+A flat call of U has the ordinary order of preparation of its explicitly written
+actuals. Equality of the effects of a flat call and of a separately written nested
+chain is not promised if they evaluate argument expressions at different moments;
+for the comparison of the stages themselves already prepared values are used, and
+the order of evaluation of the outer actuals is checked separately. The deferred
+defaults and the binding of U obey the behavior of adapters above: a late default is
+not moved into an eager preparation to make it easier to build `stages`.
+
+<a id="adapter-architecture"></a>
+#### Architecture and efficiency of adapters
+
+One ordinary analyzer and call mechanism is used. A generated callable remains an
+ordinary owner → DATA → CODE with a real `parent`; the state is kept by ordinary
+structures in the permitted arena of the Message. Every Structure is already a
+sequence of `@`; no compulsory `items` box is added around it. No second executable
+graph, permanent copy of a namespace, global table of a closure environment or
+hidden publication of locals into the graph is created. The service information of
+the current activation and of the transport is permitted by the existing model; it
+does not become a second representation of the whole program.
+
+The generated text is not reparsed at every call. If the chosen native call and its
+contract are already prepared, the direct path and the existing tables are used.
+Dynamic checking remains where the really reached call requires it; no universal
+walk over all signatures is added at every native step. Compilation is explicit: a
+foreign native entry is not assigned to a new ABI, automatic recompilation is not
+declared, and no arbitrary invalidation is added outside the existing rules of graph
+edits and `endturn`. The behavior after the permitted graph changes is checked
+exactly on the boundary provided by the language.
+
+After the semantic acceptance the direct F, an empty and a non-empty `partial`,
+`once` on a miss and on a hit, and `uncurry` on already prepared values are
+compared; the numbers of reads, calls and allocations and the time are measured at
+equal work. Correctness is not replaced by a gain on one test, and a new compulsory
+universal vector is not built into the direct native path if the existing transport
+does without it.
+
+<a id="adapter-observations"></a>
+#### Observations of adapters (A01–A20)
+
+The following records define the observations. They are drawn up as programs of the
+current LMX syntax with a log of effects, identities of references and states of
+places, not only the final `return`, and are run in the supported combinations
+interpreter→interpreter, interpreter→native, native→interpreter and native→native;
+native methods must really be executed where the native path is declared, and a
+silent transfer of the whole test to the interpreter does not count as coverage.
+
+| ID | Case | Required observation |
+| --- | --- | --- |
+| A01 | F has its own `x = 7`, the caller has a same-name `x = 50`; F() and an empty partial | Both use 7; the name p0 does not change the rule |
+| A02 | In A01 pass 0 explicitly; separately admissible nil/a null reference/an empty Structure of suitable types | An explicit pass is distinct from absence and suppresses the default; an incompatible actual is not replaced by the default |
+| A03 | required without an initializer, the actual is absent, the caller has a same-name value | Ordinary refusal at selection; autofill does not save required |
+| A04 | required with its own default; separately a reached CODE required after ordinary filling | Both cases follow their normative moments of checking; the default is not executed merely to enumerate candidates |
+| A05 | An optional `uninit:T` that the chosen branch of F does not read | The adapter adds no early refusal or read of the payload |
+| A06 | A computed default writes an event; build the adapter, obtain the signature, check satisfies, call a branch without reading | None of these actions starts an unrequested initializer |
+| A07 | The same default is really read; then an explicit actual; then an independent next call | The number and order of evaluations match the reference ordinary call; the actual suppresses the default; local writes do not spoil future defaults |
+| A08 | One adapter is called from two contexts with different permitted same-name locals | Autofill takes the current permitted source, not the creation environment and not the service pN |
+| A09 | private separately on the source, on the receiving declaration, on both; then explicit passing | Both sides of the filter and the admissibility of explicit passing are kept; service locals do not become sources |
+| A10 | An own input obtained by autofill and changed; separately a transparent binding is chosen; separately a forwarding chain | An own input does not change the caller; an actually chosen transparent link keeps the immediate write without copy-out; the ordinary fallback does not turn into an alias. For an empty identical partial the reference is the direct F, for other wrappers their explicitly described binding point |
+| A11 | F(x; y), the default of y depends on x; partial accepts x = 5, y is omitted | The default sees the accepted prefix and the correct DATA/lexical context |
+| A12 | A default uses node/a nested Structure; several adapters of one F | The original links, the independence of activations and the permitted identity of references are kept |
+| A13 | A call through a named requirement with labels different from F's own names; then a type-based variant | Explicit actuals map by position; implicit filling uses the real candidate; fn-match does not carry over the template default |
+| A14 | A permitted declaration actual and an initializer with a counter | The form/namespace substitution and the moment of execution are kept; there is no early evaluation in the vector capture |
+| A15 | An unknown name, a duplicate, excess actuals, a single Structure, an explicitly named Structure | Selection, W/E and the checks before effects are kept; the internal transport does not open a ready structure again |
+| A16 | `once`: miss, failure, retry, success, hit; on a hit an explicitly written effectful actual and separately an omitted computed default | Explicit actuals are prepared as usual; the first success is cached; F is not started on a hit; an unrequested default is not forced |
+| A17 | `guard` reads only the first input; the second is a computed default that F does not reach | The predicate has its own ordinary effects; the second input is not read by the common wrapper |
+| A18 | `trace` with a passive sink and an omitted computed default | Logging does not force the default; the event distinguishes absence/non-evaluation from a ready value |
+| A19 | `memoize`: coinciding and different accepted values, omission against explicit 0, different autofill contexts, failure of F | The result matches the explicitly described key policy; there is no false hit on the mere absence of actuals; a failure is not cached |
+| A20 | Mixed types, an array, a Structure, a callable, a void result; an empty/full/too long prefix; flip/permute | No int specialization or fixed arity; the full binding remains a deferred nullary callable; a wrong prefix does not call F |
+
+<a id="uncurry-observations"></a>
+#### Observations of `uncurry` (B01–B11)
+
+| ID | Case | Required observation |
+| --- | --- | --- |
+| B01 | Create an uncurry for stages with counters/errors in the body | No stage is executed at construction |
+| B02 | An intermediate result is declared as an exact callable signature | The chain passes an ordinary admissible call without a mandatory conversion of the result to @ |
+| B03 | An intermediate result is a Structure with a model, suitable for the next unary call | The model/parent are kept; the ordinary admission applies |
+| B04 | Different input values return different compatible next callables | The next stage is determined by the actual result; there is no binding to the first branch seen |
+| B05 | N = 0, 1, 2 and an arity larger than all demonstration ones; heterogeneous Ti | The number of calls corresponds to N/the zero case; there is no fixed ceiling |
+| B06 | The final R is a callable; separately a Structure, a primitive and void | The real R/void is returned; the final callable is not executed by an extra step |
+| B07 | An intermediate result is unusable for the next call; an incompatible input or final R | An ordinary refusal at the point reached; later bodies are not executed, types are not erased |
+| B08 | A declared failure at each position, different payloads; separately an implicit failure | The name/payload and the ordinary handling are kept; a system failure is not hidden as a user Result |
+| B09 | Ready actuals for comparison with a manual chain; separately actual expressions with effects | The stages coincide for ready values; flat expressions are evaluated in the ordinary order of a flat call |
+| B10 | A chain from `curry` and an independent user chain | Both use one ordinary mechanism; no private mark "created by our library" is needed |
+| B11 | The obtained stage outlives the creation of the wrapper; a native/walker transition; a permitted graph change | There is no reference to a finished C-stack local; the ordinary lifetime and the boundaries of validity of compiled entries apply |
+
+Separately the regressions of the common parser/operand handler are kept: an
+anonymous left plus one anonymous right argument opens one outer level **only on the
+right**; the left is whole, P0 removes nothing and there is no recursive opening.
+`Name :: (A B)` keeps one right template; W/E of an ordinary callable remains its
+own rule.
+
+The work on the adapters is complete only when the mandatory observations A and B
+are confirmed on the real kernel, the ordinary signatures and the named-call
+relationships are unchanged, and the user is not required to add actuals, to erase
+intermediate models to `@` or to wrap the stages by hand in order to bypass a defect
+of an adapter. A report states the paths and symbols of the correction, the
+executable cases with their run commands, the result of each mode, the log of
+significant effects and, separately, the checks that are not yet executed. The
+documentation about the removal of the limitations is updated from the results
+actually confirmed. A check of the text, the assembly of a file or the presence of
+assertions is not given out as a runtime pass.
+
+<a id="receiver-acceptance"></a>
+### Acceptance of the receiver library
+
+Mandatory two-way checks of the two signature descriptions:
+1. A callable with a named description is accepted by a requirement obtained from type tokens.
+2. A callable with a description from tokens is accepted by an equivalent named signature.
+3. Different names of the inputs with the same order of types give the same result of admission.
+4. A permutation of unequal T0/T1, a change of N or of R gives an ordinary refusal.
+5. A nullary function, a procedure without a result, a Structure result and a callable result are checked separately.
+6. The writing, passing and returning of both forms and the application of `curry`, `partial`, `uncurry`, `flip` to both are checked.
+7. The old observations of a named signature with `call` are kept literally in their meaning; the new type entry does not change them.
+
+Acceptance runs the interpreter, explicit native compilation and mixed transitions.
+It covers mixed types, strings, Structures, arrays, callables, nullary functions,
+procedures, the empty and the full prefix, large arities without a limit in the
+algorithm, independence of captured states, a wrong arity before the call of the
+target and the lifetime of the result after the factory has finished. For
+collections different types of element, accumulator and result are needed, an empty
+Structure, unequal lengths in `zip`, an empty string as a present value, `none`
+against `some(0)`, a failed Result and an arbitrary payload. `transpose` is checked
+on an empty, a rectangular and a ragged matrix; `diff` and `patch` check exactly the
+identities of records; `rename` checks the absence of a name, an empty name, repeats
+and one copy map.
+
+For `bracket` success, acquire failure, action failure, release failure and a joint
+action/release failure are checked under the documented policy. `retry`, `once`,
+`lazy` and `memoize` create no new Thread. Work between threads stays through
+Message and the existing HTTP transport; one cannot wait for one's own future reply
+in a blocked current turn. The static check of the package and the consistency of
+the published figures are counted separately from the execution of the language: the
+LMX sources of the package were not run on the kernel, and a check of the text, the
+assembly of a file or the presence of assertions is not given out as a runtime
+result.
+
+The actual parent defines DATA and `private` acts in both directions of binding;
+direct indexing of a Structure keeps the ordinary restrictions of access, graph
+changes and lifetime. For a group assignment of the fields of a returned value the
+result is saved first and the explicit `(copy(result))` is used. The generator of
+LMX text takes into account that a blank line completes vertical forms to the root
+and writes the necessary `---`.
+
+<a id="receiver-name-sources"></a>
+### Sources of the names
+
+Earlier project names of the operations were replaced by names of established
+analogues:
+
+| Earlier project name | Name in this edition | Basis |
+| --- | --- | --- |
+| lambda | `curry` | Conversion of a multi-parameter function into a chain of unary ones; the name of the action is curry |
+| fold | `foldl` | Explicitly the left fold, as Haskell foldl |
+| scan | `scanl` | Left accumulating fold with an initial state, as Haskell scanl |
+| memo | `memoize` | Memoization of a function, as clojure.core/memoize |
+| around | `bracket` | Acquire/release/action, as Control.Exception.bracket |
+| named description | `Name :: signature` | The complete new notation of a named signature; the earlier declaration receiver is removed |
+
+`partial`, `uncurry`, `flip`, `zipWith` and `traverse` keep the familiar names of
+their actions. `runUntil` and `retryCall` are separated from the control receivers
+`until` and `retry`.
+
+The names of the receivers were chosen by established analogues: [Haskell
+Prelude](https://downloads.haskell.org/ghc/7.8.1-rc2/docs/html/libraries/haskell2010-1.1.1.1/Prelude.html),
+[Control.Exception.bracket](https://downloads.haskell.org/~ghc/9.14.1.20260916/docs/libraries/base-4.22.1.0/Control-Exception.html),
+[Clojure
+memoize](https://clojure.github.io/clojure/clojure.core-api.html#clojure.core/memoize),
+[Python
+functools.partial](https://docs.python.org/3/library/functools.html#functools.partial).
+The coincidence of a name does not promise the laziness of Haskell, asynchronous
+masking of exceptions or other properties of a foreign runtime; the differences from
+the full contracts of the control languages are stated in [the catalog of
+receivers](new_parts/RECEIVERS.md).

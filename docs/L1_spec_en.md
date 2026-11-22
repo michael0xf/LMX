@@ -5,7 +5,7 @@ L1 is the generated intermediate representation used to lower the kernel to C99.
 <a id="scope"></a>
 ## 1. Scope
 
-`l1trans` lowers `.lm1` to one C99 translation unit. L1 itself does not define arenas, `implements`, or graph visibility as language operations. The kernel library implements them explicitly. The self-build target is L3 with L2 insertions; L1 remains intermediate.
+`l1trans` lowers `.lm1` to one C99 translation unit. L1 itself does not define arenas, `satisfies`, or graph visibility as language operations. The kernel library implements them explicitly. The self-build target is L3 with L2 insertions; L1 remains intermediate.
 
 <a id="translator"></a>
 ## 2. Translator
@@ -80,7 +80,7 @@ Lmx and variable-size typed storage; separate List growth and embedded capacity 
 <a id="root-close"></a>
 ### 9.1. R0
 
-R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `fn` only describes a signature is decided by the derivation of the edition of 2026-11-21: the record R0 executes is read as code, and a Structure is declared by a description of data whose body the launch names ([question and derivation](../LMX_blog/q/unit-root-roles-answered-20261121.md)). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
+R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `Name :: DATA` describes a signature without an executable body is decided by the derivation of the edition of 2026-11-21: the record R0 executes is read as code, and a Structure is declared by a description of data whose body the launch names ([question and derivation](../LMX_blog/q/unit-root-roles-answered-20261121.md)). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
 
 <a id="mailbox"></a>
 ## 10. Mailbox
@@ -141,9 +141,9 @@ when the receiver's ordinary contract demands it. Calls from test and converters
 native-to-native calls may still go directly through C without graph packaging.
 [Full contract and named arguments](LMX_semantics.en.md#call-receivers).
 
-The result (`return` in data), the `fn` signature, declaration selection, binding (autofill, the transparent caller
+The result (`return` in data), the named signature, declaration selection, binding (autofill, the transparent caller
 place, the former binding) and `catch` are defined in L2 §11: [`return` in data](L2_spec_en.md#return-in-data),
-[the `fn` signature](L2_spec_en.md#fn-signature), [declaration selection](L2_spec_en.md#declaration-selection),
+[the named signature](L2_spec_en.md#fn-signature), [declaration selection](L2_spec_en.md#declaration-selection),
 [binding](L2_spec_en.md#binding-places), [`catch`](L2_spec_en.md#catch-common-model).
 L1 repeats only what the C projection needs.
 
@@ -295,8 +295,8 @@ R0's fields. sys\fromLmx restores the clean graph and ready ABI-compatible binar
 a same-platform restart by module/entry name, without retranslating.
 External tables are not automatically attached to an arbitrary S.
 
-<a id="implements"></a>
-## 15. implements
+<a id="satisfies"></a>
+## 15. satisfies
 
 An established correspondence maps required model fields to the candidate's actual physical fields, including differing
 field order. It belongs to the reception or traversal that obtained it and is retained for those reads, address-taking
@@ -308,7 +308,7 @@ replaces the former one nor writes into it, and a name with two or more occurren
 an occurrence (the author's decision of 2026-11-11, [L3](LMX_semantics.en.md#fields)); “last occurrence” selection is
 not part of the new contract. `s\[N]field` with zero-based `N` addresses the Nth occurrence of the name -- a form of the
 data that declares that name -- not an Array element. The map holds no runtime names and does not itself keep the graph
-alive. See [L2 §14](L2_spec_en.md#implements).
+alive. See [L2 §14](L2_spec_en.md#satisfies).
 
 <a id="gc"></a>
 ## 16. Collection
@@ -368,3 +368,15 @@ L1 lowers C arithmetic, logic, bitwise operations, `++/--`, and ordinary control
 ## 23. Synchronization
 
 L1 does not define the structural `synchronized` receiver. The kernel uses explicit machine and foreign atomic operations; `volatile` is not atomicity. The `synchronized` contract belongs to [L2](L2_spec_en.md#lowlevel-sync).
+
+<!-- receiver-integration-2026-11-22 -->
+<a id="receiver-library-l1-boundary"></a>
+## Boundary for the new L3 receiver library
+
+The new functional receivers remain L3/library algorithms over ordinary graph
+records and calls. Their L1 lowering does not introduce special lambda,
+container or curry opcodes, a second program graph or native program fields.
+Where explicitly compiled, generated callables lower to real methods with
+their established typed ABI. `satisfies` is the current name of the admission
+mechanism. See [L2 integration](L2_spec_en.md#functional-receiver-abi) and the
+[kernel integration](kernel-implementation.en.md#receiver-kernel-integration).

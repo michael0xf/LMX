@@ -27,12 +27,13 @@
 - [25. Surface-form EBNF](#ebnf)
 - [26. Structural-result EBNF](#normal-form)
 - [27. Original literal-boundary examples](#fixtures)
+- [28. Receiver-library syntax, 22 November 2026](#receiver-library-syntax)
 
 <a id="scope"></a>
 
 ## 1. Scope and sources
 
-This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The accepted author clarifications through 2026-11-21 govern this revision. The field-stream rule makes `import`, `copy`, and `merge` consume ordinary CODE arguments everywhere, including when a DATA context accepts their results ([composition](LMX_semantics.en.md#composition)). The full source representation, including terminal typed leaves with zero payload for uninit, and ordinary replacement of graph fragments are stated in [program representation](LMX_semantics.en.md#program-representation) and [graph assignment](LMX_semantics.en.md#graph-fragment-assignment). [Source comparison](source-comparison.en.md) records provenance. Extracts attributed to the former `Lingvamyxa_spec.txt` illustrate unchanged lexical rules or are explicitly historical; they do not establish an alternative current language.
+This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The accepted author clarifications through 2026-11-22 govern this revision. The field-stream rule makes `import`, `copy`, and `merge` consume ordinary CODE arguments everywhere, including when a DATA context accepts their results ([composition](LMX_semantics.en.md#composition)). The full source representation, including terminal typed leaves with zero payload for uninit, and ordinary replacement of graph fragments are stated in [program representation](LMX_semantics.en.md#program-representation) and [graph assignment](LMX_semantics.en.md#graph-fragment-assignment). [Source comparison](source-comparison.en.md) records provenance. Extracts attributed to the former `Lingvamyxa_spec.txt` illustrate unchanged lexical rules or are explicitly historical; they do not establish an alternative current language.
 
 <a id="structure"></a>
 
@@ -44,9 +45,9 @@ A grammar rule is universal within its domain: a name, type, nesting level, or t
 
 P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container. The clean graph fully reflects the written source. All receivers remain as written; terminal primitive leaves are included in their direct `{type value}` representation at the address held by the Lmx cell. An uninitialized leaf contains only its type code and zero value bytes. Computations, transformations, and DATA acceptance of emitted fields occur in the namespace; they do not evaluate or expand receivers away in the source graph. Explicit graph assignment can replace those written fragments under the [semantics](LMX_semantics.en.md#graph-fragment-assignment). The typed-leaf representation licenses no eager computation of a nonterminal RHS.
 
-The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
+The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `if:`, `int:`, `[]:`, and user heads use the same form. Named signature declarations use the ordinary expression operand `::`, described below; it is not another colon-Frame form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
-`fn: name data` has two DATA arguments: a name atom and a Structure describing an ordered input-type signature and, when present, a `return` result. For example, `fn: SumSignature (int: a; int: b; return: int)` creates a named signature description, not executable code. A selected callable is an ordinary Structure `C`, and its actual `parent(C)` supplies DATA. `sub`, executable `fn`, `fncall`, and a separately supplied call-data parameter are withdrawn. `catch` retains its handler contract under this common data/call model. P0 preserves every written receiver and group; it does not resolve a signature, prepare a namespace, or execute initializers. Qualified helper heads such as `sys\check(S)` and `sys\translate(S)` use ordinary paths and Frames. See [named signatures](LMX_semantics.en.md#fn-signature) and [structural calls](LMX_semantics.en.md#call-receivers).
+`name :: data` uses the ordinary expression operand `::` to declare a signature. The left occurrence is the declaration identifier and the defined single-template form receives one complete DATA description on the right. The right side describes ordered input types and, when present, a `return` result. The left identifier is consumed as a name to declare, not resolved as an existing value. `::` is recognized as one operator token before the single colon. Common expression rules form its operands: `Name :: A B` has two right arguments; `Name :: (A B)` has one Structure argument. The single-colon Frame rule is unchanged, and neither short-form nor compact-call argument interpretation is substituted for the expression contract. This is the only current named-signature spelling; the former named receiver is removed without an alias. For example, `SumSignature :: (int: a; int: b; return: int)` creates a named signature description, not executable code. A selected callable is an ordinary Structure `C`, and its actual `parent(C)` supplies DATA. `sub`, executable `fn`, `fncall`, and a separately supplied call-data parameter are withdrawn. `catch` retains its handler contract under this common data/call model. P0 preserves every written receiver and group; it does not resolve a signature, prepare a namespace, or execute initializers. Qualified helper heads such as `sys\check(S)` and `sys\translate(S)` use ordinary paths and Frames. See [named signatures](LMX_semantics.en.md#fn-signature) and [structural calls](LMX_semantics.en.md#call-receivers).
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
@@ -253,7 +254,7 @@ Sources: §§4.0–4.3.
 
 Horizontal whitespace and commas separate fields of the current tail. A single physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. A blank physical line is the separate full-block boundary defined in [§15](#levels). Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
-The two-field `int: i 5` and three-field `@: ptr Model Other` are ordinary Frames. P0 assigns no special field roles based on their head names. `@: ptr Model: Other` instead contains atom `ptr` and nested Frame `Model: Other`; it is not the flat three-argument requirement/candidate form. The receiver contract and the consuming DATA or CODE role determine subsequent meaning. The named signature form is equally ordinary: declare `fn: SumSignature (int: a; int: b; return: int)`, then use `@: sumPtr SumSignature SumContext\sum`. The second field names the requirement and the third names the candidate. A Structure call can provide a value where its actual DATA declares a compatible `return`. `i: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` remain ordinary nested Frames but do not declare places named `i`, `new_var`, or `ptr`: place receivers enumerate their own arguments. In DATA, `ms: int: time` declares Structure `ms` containing the terminal primitive declaration `time`. `call: args code` has two positional fields, with no separate DATA argument. See [roles](LMX_semantics.en.md#data-code-roles) and [place declarations](LMX_semantics.en.md#receiver-args-only).
+The two-field `int: i 5` and three-field `@: ptr Model Other` are ordinary Frames. P0 assigns no special field roles based on their head names. `@: ptr Model: Other` instead contains atom `ptr` and nested Frame `Model: Other`; it is not the flat three-argument requirement/candidate form. The receiver contract and the consuming DATA or CODE role determine subsequent meaning. The named signature form preserves its declaration contract: write `SumSignature :: (int: a; int: b; return: int)`, then use `@: sumPtr SumSignature SumContext\sum`. The second field names the requirement and the third names the candidate. A Structure call can provide a value where its actual DATA declares a compatible `return`. `i: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` remain ordinary nested Frames but do not declare places named `i`, `new_var`, or `ptr`: place receivers enumerate their own arguments. In DATA, `ms: int: time` declares Structure `ms` containing the terminal primitive declaration `time`. `call: args code` has two positional fields, with no separate DATA argument. See [roles](LMX_semantics.en.md#data-code-roles) and [place declarations](LMX_semantics.en.md#receiver-args-only).
 
 The same frames describe field-stream receivers. `import` has one or more admitted sources, `copy` exactly one, and `merge` at least two. All three read their source arguments as CODE, regardless of where the receiver is written. The common translator/consumer algorithm performs ordinary W/E selection and then checks admitted source arity. P0 must therefore not reject `merge(S)` merely for one written Structure: E may supply multiple sources. In DATA, `Struct: merge(A B)` is an ordinary declaration of `Struct`, with a receiver in its body. Its namespace consumes the result; `Struct` is not an implicit source or model. Several such operations retain their written order and separate operation maps.
 
@@ -507,7 +508,7 @@ D:
 
 Anonymous sibling sections at the same level require a visible marker: without a smaller level between them, indentation does not show their boundary. A dotted line or `---` materializes **its own** level K, not the level of the last inline head. When children at K + 1 follow, the marker opens an anonymous Structure at K; the same marker may close the preceding section and open the next. It is not a call and carries no arguments ([§16](#markers)).
 
-A body-level `return` does not become a universal tail cutter by spelling; terminal `return` closes its own executable definition in the position described in [§17](#close). A tail cutter does not close unmatched brackets (`(`, `[` or `{`); a closing bracket without an opening one is a parse error ([§14](#bounded)). The source excerpt below with `fn: outer () (int)` is taken from the former specification: the executable `fn` and `sub` are withdrawn by the norm of 2026-11-19 ([what is withdrawn](LMX_semantics.en.md#removed-builtins)); it remains an illustration of levels, not the current way to write a signature.
+A body-level `return` does not become a universal tail cutter by spelling; terminal `return` closes its own executable definition in the position described in [§17](#close). A tail cutter does not close unmatched brackets (`(`, `[` or `{`); a closing bracket without an opening one is a parse error ([§14](#bounded)). The adapted example below uses ordinary executable Structures to illustrate levels; named signatures are descriptions written with `::`.
 
 ### Brackets, literals, and empty lines
 
@@ -554,6 +555,18 @@ The first block needs no additional trailer. By contrast, omitting that blank li
 
 Compare the Factory of the guide with the equivalent variant with `---` in which both return operations are also written `return: (copy(Product))`: when only the ways of completion differ, the structure of the graph and the behavior must be kept. If the kernel is available, `Demo\run()` must return `32`; the products kept after `small` and `large` must read `10` and `20`. Behavioral tests complement the check of the tree and do not replace it.
 
+**Current-syntax adaptation** of the level example from `Lingvamyxa_spec.txt`, 3428–3432.
+
+````text
+OuterData:
+    int: a 1
+    return: int
+    inner:
+        return: a + 1
+    outer:
+        return: inner(a)
+````
+
 **Correct consecutive transitions** — `Lingvamyxa_spec.txt`, 3085–3088.
 
 ````text
@@ -571,16 +584,6 @@ ShortForm1: 1
     .                               # trailer of previous + head of next anonymous Structure
     . . body2                       # body
     .                               # trailer
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3428–3432.
-
-````text
-fn: outer () (int)
-    fn: inner (int: a) (int)
-        return: a + 1
-    int: a 1
-return: inner(a)
 ````
 
 <a id="markers"></a>
@@ -632,17 +635,20 @@ Sources: §§4.6, 7.5, 8.1–8.4, 15.
 
 `end: target` is a checked structural close. Its argument is a literal target, not an evaluated expression. The receiver supplies admitted targets: normally its head name and the canonical name from a `name` argument or name position. The name must be one admitted atom; exact spelling is compared as an atom value. With no valid name, the head is used. The close-target table may admit string/operator atoms as well as executable identifiers.
 
-`end: matrix` closes `[]: matrix`, not `end: [] matrix`. A named signature uses the ordinary declaration form `fn: SignatureName DataTemplate`; its admitted name target follows the same receiver-supplied close rules. `end: fn` can close an open `fn` form where valid. Closure may cross open implicit levels but never synthesize a missing bounded delimiter. A named Frame may also end by an admitted level cut, a blank-line full boundary, or EOF. Bare `end` and `end <target>` are forbidden.
+`end: matrix` closes `[]: matrix`, not `end: [] matrix`. The expression operand in `SignatureName :: DataTemplate` does not itself open a colon Frame or introduce a special `end: SignatureName` target. Its right occurrences obey the ordinary expression, grouping and source-level boundaries. An explicitly written named Frame inside its description retains only its own ordinary close rules; a left identifier does not turn the operator application into that Frame. Closure may cross open implicit levels but never synthesize a missing bounded delimiter. A named Frame may also end by an admitted level cut, a blank-line full boundary, or EOF. Bare `end` and `end <target>` are forbidden.
 
-`return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at the opening level of a named executable Structure, including any ordinary Structure (there are no executable `fn`/`sub`), appends a return to its body and closes its Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body: an anonymous body closed by `until:` is an inline postcondition loop in the enclosing activation, and a named Frame closed by `until:` declares, in data, an ordinary named Structure whose executable body is that loop — declaring it does not run it; only an explicit call does — by the receiver `call` or, in code, by a form whose head is this Structure; in code the same Frame is a call of its head: the selected Structure is executed, its data are its `parent`, and the tail of the form is the actual arguments, which the common declaration selection accepts ([choosing the declaration](LMX_semantics.en.md#declaration-selection)); it is an error when the head names neither a callable nor a Structure ([semantics](LMX_semantics.en.md#data-code-roles)). No construct requires any of these trailers: they are P0 boundaries, not a condition of declaration. A named Structure closed by an ordinary level cut is declared the same way, by a form of data ([L3 §9](LMX_semantics.en.md#construction)); reaching the end of the code of a named Structure does not create `return`: no return is synthesized there ([`return` in data](LMX_semantics.en.md#return-in-data)). Their spelling alone does not make these words universal tail cutters. The source excerpt below with `fn: square (int(x)) (int)` is taken from the former specification: the executable `fn` and `sub` are withdrawn by the norm of 2026-11-19 ([what is withdrawn](LMX_semantics.en.md#removed-builtins)); it remains an illustration of the terminal `return`, not the current way to write a signature.
+`return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at the opening level of a named executable Structure, including any ordinary Structure (there are no executable `fn`/`sub`), appends a return to its body and closes its Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body: an anonymous body closed by `until:` is an inline postcondition loop in the enclosing activation, and a named Frame closed by `until:` declares, in data, an ordinary named Structure whose executable body is that loop — declaring it does not run it; only an explicit call does — by the receiver `call` or, in code, by a form whose head is this Structure; in code the same Frame is a call of its head: the selected Structure is executed, its data are its `parent`, and the tail of the form is the actual arguments, which the common declaration selection accepts ([choosing the declaration](LMX_semantics.en.md#declaration-selection)); it is an error when the head names neither a callable nor a Structure ([semantics](LMX_semantics.en.md#data-code-roles)). No construct requires any of these trailers: they are P0 boundaries, not a condition of declaration. A named Structure closed by an ordinary level cut is declared the same way, by a form of data ([L3 §9](LMX_semantics.en.md#construction)); reaching the end of the code of a named Structure does not create `return`: no return is synthesized there ([`return` in data](LMX_semantics.en.md#return-in-data)). Their spelling alone does not make these words universal tail cutters. The adapted example below uses an ordinary callable to illustrate terminal return; a signature declaration written with `::` has no executable body.
 
 When identical targets occur at different levels, the closing line’s level participates: a parent-level close selects the parent target and cuts its open tail; an inner-level close selects the inner target. Ambiguous, invisible, or positionally invalid targets are rejected. `end:` in an ordinary body position is not executable and is rejected by close validation unless a profile explicitly defines another non-runtime meaning.
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6622–6623.
+**Current-syntax adaptation** of the terminal-return example from `Lingvamyxa_spec.txt`, 6622–6623.
 
 ````text
-fn: square (int(x)) (int)
-return: x * x
+SquareData:
+    int: x
+    return: int
+    square:
+    return: x * x
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 6393–6398.
@@ -755,6 +761,14 @@ P0 does not reduce active entries to one flat table of winning values. A rendere
 Sources: §§4.2.2, 4.7, 6.1–6.4, 20.3.
 
 Operator symbols are not bare identifiers. P0 splits compact unquoted spellings such as `a+b*c==d` into ordinary fields and operator tokens. Exact identifiers are not split. An operator field is not by itself a named head and requires no colon.
+
+`::` is one ordinary expression-operator token, recognized before a single `:`. It
+keeps the written left identifier and complete right-hand signature description
+in the common graph. P0 does not turn it into nested colon Frames, look up the
+left name, open the description as actual call arguments, or execute its fields.
+The signature consumer applies its declaration contract through the common operand mechanism after parsing, including the ordinary raw-occurrence mode and a ready priority. The
+single-colon Frame grammar and ordinary expression/group boundaries remain in
+force; `::` is not an assignment with a different spelling.
 
 The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~`; postfixes `++`, `--`; infixes `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; and the index suffix. Writing a prefix adjacent to its operand is style, not a mandatory P0 boundary.
 
@@ -999,6 +1013,8 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
     // or is completed by level rules. A blank physical line is a distinct
     // full boundary at virtual level -1, not ordinary newline composition.
     // Operator-token consumption is deferred to a later consumer.
+    // The token :: keeps its left identifier and right DATA fields; it is
+    // not two colon_frame_body separators and does not unwrap a group.
 
     argument_list       ::= bounded_item_sequence
 
@@ -1165,3 +1181,34 @@ These preserved lexical examples illustrate literal boundaries. They do not over
     ====
     end: doc
 ````
+
+<a id="receiver-library-syntax"></a>
+
+## 28. Receiver-library syntax, 22 November 2026
+
+The general receiver library adds no new delimiters, node kind, argument
+parser or P0 unwrapping. Its direct names resolve through the existing namespace
+from the single current kernel. The current spelling of the admission receiver is
+`satisfies`; it has the existing receiver argument structure.
+
+Both signature-description forms describe the same signature kind. The type-token operand is
+consumed through the standard `OPERANDS_TEMPLATE`; the named declaration
+`Name :: DATA` retains its existing DATA contract and its current relationship
+with `call`. All other uses accept both descriptions interchangeably. Parameter
+labels do not alter positional type compatibility. Dispatch on the resolved
+receiver's contract follows structural parsing and does not change written
+boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `signatureTypes` is another entry to the same signature kind.
+
+The sole operand-opening rule has three simultaneous conditions: `left` is
+an unnamed Structure, `right` has exactly one argument, and that argument is
+an unnamed Structure. Only that RIGHT container loses one outer level when
+preparing the operand arguments. `left` remains whole, the rule is not repeated,
+and P0 never performs this operation. With `Name :: (...)`, the identifier on
+the left does not satisfy the condition, so the right Structure remains one
+argument. Ordinary callable W/E selection has a separate defined scope.
+
+Generated LMX must preserve written anonymous groups, the current operand rule,
+blank-line root termination and explicit tail cutters. A reference sequence is
+already a Structure; it needs no additional grammar for a List container.
+See the complete [receiver contract](LMX_semantics.en.md#functional-receivers)
+and the [signature interchangeability rule](LMX_semantics.en.md#fn-forms-equivalent).

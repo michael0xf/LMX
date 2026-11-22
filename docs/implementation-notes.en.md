@@ -35,8 +35,8 @@ called a namespace image, descriptor cache, or execution metadata.
 |---|---|---|
 | Graph and namespace | All written receivers stay in the source graph; computations/transforms happen in namespace; only terminal primitives use direct `{type value}` representation | Replacing receiver records with computed fields, saved resolution graphs, persistent expression results |
 | Structural call | Execute selected C; DATA is its actual parent; call takes code or args/code; R0 has neither DATA nor user actuals | Separate data parameter, data=code launch convention, fncall, special data name |
-| Named fn | Exactly `fn: name data`, both arguments DATA; creates a constant positional signature description | Unnamed fn templates, executable fn/sub, a signature that silently becomes an implementation |
-| Requirement matching | Full explicitly described tree for an ordinary model; ordered input count/types plus result for fn inside common implements | Matching fn by input names/body, treating ordinary templates as reduced call signatures |
+| Named signature | Ordinary expression `name :: data`, with a left declaration identifier and one complete right DATA template; creates a constant positional signature description without operand unwrapping | Omitting the left declaration identifier, executable fn/sub, a signature that silently becomes an implementation |
+| Requirement matching | Full explicitly described tree for an ordinary model; ordered input count/types plus result for fn inside common satisfies | Matching fn by input names/body, treating ordinary templates as reduced call signatures |
 | Explicit actuals | Equal W/E candidates, retained actual map, no implicit-source selection, source-order effects | Whole/expanded preference, hidden rescue of required inputs, repeated expansion/execution |
 | Binding | Own actual/autofill value; transparent caller place; retained fallback own value/description | One mode used for every external name, alias-to-copy or copy-to-alias substitutions |
 | Private and scope | Private source excluded and visible private receiver protected; explicit/lexical access retained; sequential locals and real nested shadowing | Source-only private checks, global name barriers, whole-body future-local masking |
@@ -127,8 +127,8 @@ context as another source, and separate operations do not share an implicit comb
 The interpreter consumes the current source graph under the ordinary role and namespace rules;
 it does not depend on saved translator preparation. Construction establishes known candidate
 interface facts without executing bodies, initializers, or `test`. Reached interpreted calls
-invoke standard `implements`; prepared native calls use their prepared contracts without an
-automatic runtime `implements`. An explicitly written `implements` executes in either path.
+invoke standard `satisfies`; prepared native calls use their prepared contracts without an
+automatic runtime `satisfies`. An explicitly written `satisfies` executes in either path.
 Reused admission facts remain within their established operation/reception scope, not a second
 persistent namespace or admission store.
 Candidate selection does not speculatively run assignments/defaults/converters/tests once per
@@ -142,7 +142,7 @@ No phase means that every later primitive write or graph edit reruns all checks.
 
 For ordinary explicit structural models, the entire specified tree is a requirement. Where the
 established receiving contract is relative to a particular Consumer, its ordinary projected
-requirements remain. Fn adds the accepted positional-signature rule inside the common implements
+requirements remain. A signature requirement selects the accepted positional-signature rule inside the common satisfies
 engine; it does not replace structural matching, invent a second admission system, or overlay the
 candidate's DATA/defaults.
 
@@ -183,7 +183,7 @@ receiving execution's root place; the associated body uses that same place and d
 initializer merely to read it. A fresh independent call still has independent locals, and a real
 nested scope still shadows normally.
 
-Import filters the ordinary root const declarations, including user Structures and constant fn
+Import filters the ordinary root const declarations, including user Structures and constant
 signature names; it retains their source identity and parent. Nested import supplies its enclosing
 consumer without a second hidden import into the caller. Copy takes exactly one admitted source,
 merge at least two; all three always use ordinary CODE arguments, even inside DATA. Bare
@@ -220,6 +220,8 @@ with their original live context for sys\eval. The method returns its normal dec
 type. Discovery, expression use, and sys\priority share its description, with no sys\operand
 registration. sys\name consumes an identifier spelling and returns a normal char Array without
 resolving or executing the named entity. Prefix dereference remains dereference, not eval.
+
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
 
 <a id="open-design"></a>
 ## 5. Derived review cases and the resolved physical-layout decision
@@ -304,7 +306,7 @@ Mix has a local root and still needs its terminator. A final ordinary block can 
 with or without a final LF. These rules describe the common functionality to check, not a mandate
 to rewrite a conforming parser.
 
-Documentation checks for this packet cover the agreement of declarations/call forms, named fn,
+Documentation checks for this packet cover the agreement of declarations/call forms, named signatures,
 parent versus lexical node, binding/write owners, source roles and stream/group boundaries,
 operand properties/results, and the preservation of memory/ABI/ownership contracts. The active
 files use included relative references; repository journals and old witness paths below are plain
@@ -317,12 +319,12 @@ The appendices preserve dated reports from the supplied baseline for provenance.
 spellings, internal function names, provisional expected values, commands, checksums, and reported
 limits are historical evidence only. In particular, their executable fn/sub, fncall, separate
 data arguments, self-data R0, one-source merge, automatic container results, a DATA argument
-mode for import/copy/merge, old operand ABI,
+mode for import/copy/merge, old operand ABI, P0 group removal, or unconditional single-Structure/Array operand spreading,
 type-by-region, load-dirty, flush, graph-rewriting, working execution graphs, static DATA copies,
 materialized namespace/program copies, nested/preallocated uninit cells, and stable
 raw payload addresses across graph-field replacement are **superseded** by the active
 specifications. “Current”, “today”, “OPEN”, “PASS”, and publication language inside a receipt refer
-to its original date, never the 2026-11-21 target or a newly examined checkout.
+to its original date, never the current target or a newly examined checkout. Historical observations of group removal below describe defects, not a competing rule. The active operand rule opens only the RIGHT outer group once when LEFT is an unnamed Structure and the sole RIGHT argument is another unnamed Structure; LEFT is never opened by that rule and P0 preserves both written groups.
 
 
 <details>
@@ -444,7 +446,7 @@ an out-of-bounds index gives 7 with effects=1. Private67 triple/204 AFTER includ
 Whole bootstrap quick: genuine G1/G2, nine smoke rows each; fixedpoint13/verify717; G2 graph68 triple/84 AFTER/mutation24.
 Normal render/docs checks380 passed:35/14/27/44/615, links and LF27563 before staging.
 Record380 (original reference: `../steps/witnesses/m11-slot-contract-20261114/notes.md`).
-Deep Structure `implements`,
+Deep Structure `satisfies`,
 static M11.7 checks, full M11 and M13/M14 remain OPEN.
 
 **Previous state, 2026-11-14, slice 378: acceptance passed.** Common root frame/block0,
@@ -511,7 +513,7 @@ remain open. In particular, typed machine-pointer cells, `Array<@T>`,
 common `void **` graph-slot access, and full inter-arena copying require
 verification. A positive test of one cell does not establish every
 generator route, native/walker parity, or safety after freeing the source
-arena. `implements` builds address correspondence from actually required
+arena. `satisfies` builds address correspondence from actually required
 fields; a numeric position alone is not its contract. Current failures
 and checks are in the current kernel gate (original reference: `../next_core_tasks_v3.md`).
 
@@ -706,7 +708,7 @@ of the third:
   field a formal of its name and of its kind's class, every other formal
   with a built default -- the fields are the arguments; otherwise the
   ordinary positional reading stands; when the Structure also fits the
-  first formal, a Structure formal, by the first part of `implements` at
+  first formal, a Structure formal, by the first part of `satisfies` at
   translation, as the author instructed on 2026-11-08, with every other
   formal defaulted, both readings apply and ce01c206 refuses the call as
   ambiguous ("the Structure given to k is its argument q and its
@@ -873,7 +875,7 @@ G2 render35/14, fresh docs-check01 and final indexed01 PASS; links/LF28270/28273
 Full acceptance of the common bridge and M11/M13/M14 is not claimed.
 
 **Previous state, 2026-11-14, slice393 -- an operation-local SourceReader for source interface; bounded code acceptance/docs-check PASS.**
-The common implements worker receives the selected Source's name/fact through a reader borrowed by the current operation (§3.5).
+The common satisfies worker receives the selected Source's name/fact through a reader borrowed by the current operation (§3.5).
 The full literal35-row/15-column projection of `primitive.description` is separate from physical `Fact.type` and ABI;
 equal C spellings do not unify source contracts. All33 cell-row identity controls passed in private L2 native/forced
 with root0/1. The qualifier chain is retained; references/Array give UNKNOWN without reading payloads.
@@ -1245,7 +1247,7 @@ cell behind `uninit:int` included); the correspondences are set before reference
 reaches the result's place in any field order (`R\a := 9` → `\R\p` = 9, sources intact; a mutant without this step gives
 5). A field `name: @x` of an anonymous Structure is a new reference place. A root statement `name: value` with an
 unknown name defines the place by its value (`lmx_graph_define`, both consumers):
-`pack: merge(mytest\args; (a: int: 5)); mytest(pack)` = 35. The interface descriptor `fn: f2 (int: b 7) int` is built
+`pack: merge(mytest\args; (a: int: 5)); mytest(pack)` = 35. The interface descriptor `f2 :: (int: b 7) int` is built
 with its `args` and `return` parts and an addressable empty `var`, without a body; it is no callable. Copying written
 names and callables (with their lexical ancestors) and matching the `fn`/`return` parts in `merge(f1; f2)` (a question
 to the author) remain open. 58 graph-check runs × interp/native/forced passed.
@@ -1775,7 +1777,7 @@ it is a call of `Name`, in data a declaration of a Structure with the form of th
 not executed there; a pointer variable holds the result, `@: name merge(...)` (the executor's reading --
 closed questions (original reference: `../LMX_blog/q/colon-declares-answered-20261111.md`), P4). The words of the
 state `var` and `body` and the names of the formals in the contracts of the receivers `fn` and `sub` are called
-`data` and `code` (the clean graph reads these names since slice 354). The admission `implements` is performed by one
+`data` and `code` (the clean graph reads these names since slice 354). The admission `satisfies` is performed by one
 pass when the graph is built; calls of the
 admission at run time stay only for the cases of the
 document (original reference: `../steps/implements-runtime-cases-20261111.md`). slice 372 removes the former
@@ -1847,3 +1849,37 @@ of a named head at the root and over self; the private checks and remaining limi
 of this document and in §6.1. The working frontend reads the former names and order and does not execute the launch by name (step 8).
 
 </details>
+
+<!-- receiver-integration-2026-11-22 -->
+<a id="receiver-migration-20261122"></a>
+## Receiver migration and source status, 22 November 2026
+
+The receiver formerly spelled `implements` is now `satisfies`, with the same
+admission semantics. Earlier implementation receipts and old exported symbol
+spellings identify historical builds; they are not evidence that the present
+kernel rename or the new receiver package has been applied.
+
+The [kernel integration](kernel-implementation.en.md#receiver-kernel-integration),
+[public API](new_parts/LMX_Fn_Receivers/API.md) and
+[normative receiver chapter](LMX_semantics.en.md#functional-receivers) document
+the complete generic library. Old int-specific examples are retained as
+procedural or legacy material. They are not the current generic implementation
+and do not enter the primary comparison count.
+
+Source bodies that call the specified FxKernel provider depend on its actual
+implementation. A static BODY/BODY_WITH_BRIDGE label is not a runtime receipt.
+The provider must preserve ordinary function types, full requirements, actual
+parents, arena lifetime and declared failures. No native field, second working
+graph or new List representation is introduced. Structures already serve as
+reference sequences.
+
+Both signature-description forms are interchangeable outside the preserved existing relationship
+of named signatures and call. The type-token constructor is another entry to the same
+signature kind; it is not Haskell `::`, an automatic execution of fn or a reason
+to alter ordinary named-argument binding.
+
+Historical algorithms stay preserved; only the notation of the named declaration
+in them is updated to `Name :: signature`, so byte-for-byte preservation is
+judged after this explicitly stated normalization. The former declaration form
+is not kept as a second notation anywhere in the active documents, sources, text
+generators, checks or preserved procedural variants.

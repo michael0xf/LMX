@@ -92,7 +92,7 @@ declaration or store (`@: Model b o`; a store into `@: Model r`) admitted by the
 used paths of that reference in its visible body, or by Model's whole shape?
 
 **Answer (no author question needed; the norm is explicit).** Consumer-relative
-used paths: [three-argument implements](../docs/LMX_semantics.en.md#three-argument-implements)
+used paths: [three-argument implements](../docs/LMX_semantics.en.md#three-argument-satisfies)
 and L2 §implements. A genuinely known-thin Consumer admits a candidate lacking
 unused fields; a field the Consumer reads is required. The full-receiver
 behaviour described in `CORE_L2_L3_v2.md` §9.3 is Implementation, not authority.

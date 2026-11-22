@@ -20,7 +20,7 @@ Accepted earlier contracts are retained except where these rules explicitly chan
 A callable is an ordinary selected executable Structure C. Its actual parent performs the DATA
 role. `call(code)` and `call(args code)`, as well as ordinary `C()` and `C(args)`, use the common
 selection, reception, binding, execution, and result mechanism. R0 is a procedural entry without
-DATA or user arguments. `fn: name data` declares a named positional signature, not an executable
+DATA or user arguments. `name :: data` declares a named positional signature, not an executable
 implementation. The special data name, separate data call parameter, `fncall`, and `sub` are
 removed; `node` remains lexical.
 
@@ -54,7 +54,7 @@ mail, and scheduling remain the existing execution mechanisms, not additional pr
    automatically published into source data.
 2. **Record identity and record type are distinct.** An arena address identifies an object; its
    physical type is read from its record. Address ranges establish ownership, not type. A model's
-   compatibility is established by `implements`, not by inventing one physical type per model.
+   compatibility is established by `satisfies`, not by inventing one physical type per model.
 3. **Stable values and canonical names.** Issued record addresses and canonical identifier strings
    do not move. A spelling has one process-local canonical string address; resolved identifiers
    compare those pointers. A native local may use ordinary machine storage and is not thereby a
@@ -186,7 +186,7 @@ effects. Simple mode keeps stable addresses and does not collect.
 | Text and canonical strings | Character storage under the existing ownership and string rules |
 | Address-to-name rows, capacity, call/native tables, ownership indexes | Existing service data, not hidden user fields or alternative program representations |
 
-There is no physical executable-fn/sub category. `fn` creates a named requirement interpreted by
+There is no physical executable-fn/sub category. `Name :: DATA` creates a named signature requirement interpreted by
 the common requirement mechanism, while executable C remains an ordinary selected Structure.
 Source roles are not inferred from a special code-memory region or from a resemblance of fields.
 An already published ordinary Structure cannot become immutable in place merely by relabeling it.
@@ -410,12 +410,9 @@ name-sensitive operand header.
 Mode 0 prepares the needed values once: left is a reference to the left value, right is an Array
 of references to right values in source order. `(1 foo 2 3 4)` has one left and three right values;
 `(foo 1 2 3 4)` omits left and has four right values. The ordinary call contract decides whether
-that omission is allowed. A container is one operand, and a dense numeric Array is never cast to
-Array<@>. An operand has one opening of its own: when its `left` is an unnamed Structure and its single
-`right` argument is an unnamed Structure too, the parentheses on the right are opened and `right`
-receives all their content; a Structure returned from a function is not opened (author's decisions,
-2026-11-21 and 2026-11-22). Prefix application does not shift the first right value into left or add a
-has-left flag.
+that omission is allowed. A container is one operand except for the conditional rule below; a dense numeric Array is never cast to Array<@>. Prefix application does not shift the first right value into left or add a has-left flag.
+
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
 
 Operand references point to genuine typed values/descriptors, with the tag immediately before
 the value. Untagged native temporaries use the ordinary result/storage bridge when a typed record
@@ -443,7 +440,7 @@ the normal parser rule. `sys\priority(name)` resolves the string's content under
 visibility and operand description as expression analysis, and returns its ordinary int priority
 without running the body. Equal contents work at different string addresses; unknown/ambiguous
 operands fail normally. `sys\priority("+")` denotes addition's priority, not an arbitrary unary
-role. The descriptive contract is `fn: PrioritySignature ([]: char name; return: int)`.
+role. The descriptive contract is `PrioritySignature :: ([]: char name; return: int)`.
 
 ### 3.4. Callables and namespace
 
@@ -474,13 +471,13 @@ values; there is no fncall or separate result channel in the call surface.
 <a id="fn-signature"></a>
 ### Named positional signatures
 
-`fn: name data` reads exactly two DATA arguments. The name becomes a constant signature name;
+`name :: data` is an ordinary expression-operand application with a left declaration identifier and one complete right DATA template. The name becomes a constant signature name;
 the data template supplies the ordered explicit input types and optional result description.
 Return is not an input, an Array is one input, and a nested user Structure is not automatically a
-formal. Fn produces no body or native implementation and does not use CODE W/E expansion.
+formal. The declaration produces no body or native implementation and does not use ordinary-call CODE W/E expansion. Inspecting the fields of its one right template is not operand unwrapping; its left identifier does not satisfy the unnamed-Structure condition.
 
 ```lmx
-fn: SumSignature (int: a; int: b; return: int)
+SumSignature :: (int: a; int: b; return: int)
 
 SumContext:
     int: first
@@ -493,7 +490,7 @@ SumContext:
 ```
 
 `sumPtr(a := 2; b := 3)` supplies positions 1 and 2 to first and second. A direct
-`SumContext\sum(first := 2; second := 3)` uses the candidate's own names. The common implements
+`SumContext\sum(first := 2; second := 3)` uses the candidate's own names. The common satisfies
 engine compares fn requirements by ordered LMX input count/types and result presence/type,
 using the selected candidate's parent contract. It does not compare names, defaults, or body
 trees, and does not reorder differently typed candidate positions to make names agree. Hidden
@@ -510,7 +507,7 @@ separating requirement and implementation uses `@: p Requirement Candidate`.
 An ordinary explicit structural model instead requires its entire specified tree, including
 written method subtrees; additional candidate fields are allowed under the common rules.
 Neither the name “Signature” nor a return field silently changes that rule into fn matching.
-These are two requirement rules inside one implements mechanism, not separate parsers/validators.
+These are two requirement rules inside one satisfies mechanism, not separate parsers/validators.
 
 <a id="declaration-selection"></a>
 ### Explicit-only selection and actual effects
@@ -524,7 +521,7 @@ than one is ambiguity even for two readings of the same declaration. Never selec
 prefer an arity, or re-expand the chosen actuals during execution.
 
 Ordinary name/position matching, duplicates, excess inputs, own defaults, requiredness, and
-applicable implements checks determine admission. Required inputs cannot be rescued by hidden
+applicable satisfies checks determine admission. Required inputs cannot be rescued by hidden
 caller values during selection. Optional inputs of the selected call may later autofill. Naming
 the current positional formal keeps the counter enabled; naming another position disables it,
 after which all further actuals must be named. No speculative assignments/defaults/test are
@@ -634,7 +631,7 @@ default descriptions are not evaluated merely to classify them. A raw declaratio
 misrepresented as its ready result, and a named signature is not misclassified as an implementation.
 
 The existing operation-local source reader can provide names and requirement facts to common
-implements traversal. Keep source interface identity distinct from physical type/cell/ABI. Equal
+satisfies traversal. Keep source interface identity distinct from physical type/cell/ABI. Equal
 C spellings or sizes do not unify language requirements; unproved evidence stays unproved rather
 than turning into a positive result. C-door source spelling is one role projection of an actual
 C declaration, not proof inferred from an arbitrary `c.` prefix. Querying a candidate does not
@@ -684,10 +681,10 @@ its logical names look like immediate physical children.
 
 Namespace mappings and local places belong to the actual traversal/call. Construction, expression,
 copy, and traversal-correspondence tables live for the operation that needs them and are destroyed
-on its exits. Reused facts owned by `implements` remain scoped to the established operation or
+on its exits. Reused facts owned by `satisfies` remain scoped to the established operation or
 reception; they are not a new permanent namespace, all-environments cache, or arena resolution registry.
 The selected W/E map remains until the chosen call is executed; it is not recomputed with another
-reading. An implements correspondence maps required model fields to physical candidate fields,
+reading. An satisfies correspondence maps required model fields to physical candidate fields,
 including reordered layouts, for the reads, addresses, and explicit writes it serves. The next
 independent traversal rebuilds its correspondence from the graph. An ordinary explicit model
 uses its full described tree; a fn requirement uses the positional rule of §3.4.
@@ -701,9 +698,9 @@ field requirement merely because that slot once contained a different value.
 
 `sys\check`, `sys\checkL3`, and `sys\translate` reuse the necessary common builder/checker parts.
 Checking executes neither arbitrary user initializers nor `test`. Construction establishes known
-candidate interface facts; reached interpreter calls invoke standard `implements`, including the
+candidate interface facts; reached interpreter calls invoke standard `satisfies`, including the
 required receiving checks and its scoped correspondence. Prepared native calls do not automatically invoke
-runtime `implements`; an explicitly written `implements` executes in either path. Actual-value
+runtime `satisfies`; an explicitly written `satisfies` executes in either path. Actual-value
 conversion/range checks remain in force. A separate post-clean-graph, pre-C build/test phase runs
 checks reached through ordinary build/test receiver contracts, without a recursive DATA-test scan.
 Neither phase introduces blanket rechecking after every primitive write or graph mutation.
@@ -753,8 +750,7 @@ it into an unrestricted ordinary function. Tests and converters use common call/
 
 The kernel may intern its recognized language words first and keep their canonical pointers as
 constants, for example `lmx_word_if`. These are the same identifier strings used by every other
-word; they are not opcodes or a special representation. The active contracts include call, fn
-for named signatures, import, copy, merge, declarations, modifiers, control, and sys operations.
+word; they are not opcodes or a special representation. The active contracts include call, the expression operand `::` for named signatures, import, copy, merge, declarations, modifiers, control, and sys operations. There is no public `fn` receiver or compatible alias.
 There is no special data name, executable fn/sub family, fncall, or operand-registration word.
 Ordinary user names allowed by general rules do not regain an obsolete built-in meaning.
 
@@ -817,7 +813,7 @@ is retained.
 
 Import selects const declarations considered roots by the source's ordinary DATA rules.
 User Structure declarations are constant without an explicit const; root constant signature names
-created by fn are eligible. Ordinary mutable places are excluded. Nested fields do not separately
+created by the `::` declaration are eligible. Ordinary mutable places are excluded. Nested fields do not separately
 rise to the receiving root, and modifier forms do not impose an extra immediate-parent filter.
 The declared name is imported, not the receiver name that declares it. Contents, identity, and
 original parent are preserved. Duplicate imported names use ordinary redeclaration, not merge
@@ -879,7 +875,7 @@ corresponding copied owners through their operation map. Every source import/cop
 in place; direct source-path reads and serialization expose that written record, not its result.
 
 For group assignment, `(a b) := (copy(Pair))` consumes result fields positionally: the right side is one
-unnamed Structure in parentheses, the form `() := ()`; several values without the group are an error, the stream is
+unnamed Structure in parentheses, the form `() := ()`. Only that outer RHS group is opened once; the LHS group stays whole and its fields are read as targets by assignment itself. Nested RHS groups remain nested. Several values without the group are an error, the stream is
 written inside the group, the bare stream `(a b) := copy(Pair)` is an error, and a Structure
 returned from a function is not opened (author's decision, 2026-11-21). Obtain all RHS
 values before the first target write; detect count mismatch before that write. RHS names do not
@@ -932,7 +928,7 @@ binary-module/entry identifiers, and L1/C source paths. Existing call tables sto
 to the selected executable occurrence; Lmx has no native header field. Explicit compilation
 registers that binding without injecting a `native` field into the source Structure or catch.
 An explicitly written ordinary user field named native retains only its ordinary field meaning;
-`sys\native(S)` queries the service table. A named fn requirement creates no implementation
+`sys\native(S)` queries the service table. A named signature requirement creates no implementation
 entry. Machine addresses are bindings of the current process, not portable saved addresses.
 
 A known native-to-native call may be emitted directly in C with actual values and necessary
@@ -959,7 +955,7 @@ to sizeof does not suppress an argument effect already required by the foreign-c
 Literal `c.sizeof` retains the C operator role and its C99 evaluation rules, including applicable
 variably modified types. Target `os` selection occurs before semantic processing of unselected
 branches; those branches contribute no name resolution, dependencies, checks, or generated code.
-It does not require equal branch interfaces or a second implements mechanism.
+It does not require equal branch interfaces or a second satisfies mechanism.
 
 An eligible machine L2 function may expose its direct C-compatible entry with explicit arguments,
 without an Lmx root, Message, prepared graph, hidden shared unit, or singleton. This uses the same
@@ -1000,10 +996,10 @@ or metadata with another required purpose must be retained for that purpose.
 | `LmxOp`, `LMX_WALK_OP_*`, generated numeric operation/selectors as a second program | Walk the common source Lmx graph; temporary expression analysis is scoped (§3.3) |
 | Type-by-address ranges, typed pool classification, per-type chunks | Type from record code; intervals only for ownership; one arena record stream (§2) |
 | Embedded VoidArray, inline capacity, header native | Flat header, common dynamic storage, existing capacity and call tables (§3.1) |
-| Persistent arena-wide implements/resolution maps | Correspondence retained only by the reception/traversal needing it (§5.2) |
+| Persistent arena-wide satisfies/resolution maps | Correspondence retained only by the reception/traversal needing it (§5.2) |
 | `LmxCodeLink`, reset-only `lmx_code_*`, `reset_gen`, `code_uses`, invalidation | Explicit compilation and endturn (§6.5); keep unrelated GC references |
 | Loaded/dirty frame rows, flush, automatic copy-back | Own places or immediate transparent caller aliases, with no graph publication (§6.3–6.6) |
-| Executable fn/sub object constructors, fncall, separate data parameter | Ordinary selected Structure, actual parent DATA, named fn requirement (§3.4) |
+| Executable fn/sub object constructors, fncall, separate data parameter | Ordinary selected Structure, actual parent DATA, named positional signature requirement (§3.4) |
 | Operand registration, old single args-array operand ABI, universal reference result | Structural method header, left/right, explicit mode/priority, ordinary result (§3.3.1) |
 | One-source merge and automatic outer result container | Copy for one admitted source; stream outputs and explicit grouping (§6.4) |
 | Expansion of DATA source receivers into stored fields | Namespace-only consumption, with every written receiver preserved (§1a, §6.4) |
@@ -1068,7 +1064,7 @@ only checks actually run. Historical receipts do not prove this edition's behavi
 | Records and storage | Initialized value layout and alignment; code-only uninit with zero payload; explicit graph-fragment replacement; no stable raw payload promise across replacement; no type-by-range lookup; dense numeric Array and native-local distinctions |
 | Source graph | Full source including primitive leaves and every receiver/group; namespace processing preserves it; ordinary explicit graph assignment can replace receiver fragments; executable updates use the existing compile/endturn boundary |
 | Parser closure | Empty/whitespace-only physical lines close to local root; comments/literals/Mix/pairs/EOF/source coordinates retain their contracts |
-| Calls and fn | Actual parent, no-data R0, no executable fn/sub/fncall; named two-argument fn; positional type comparison distinct from full structural models |
+| Calls and signatures | Actual parent, no-data R0, no executable fn/sub/fncall; `Name :: DATA` has one left declaration identifier and one intact right template; positional type comparison remains distinct from full structural models |
 | Selection | All applicable W/E pairs counted; no hidden rescue of required inputs; selected map reused; named-position counter and once-only actual effects |
 | Binding/private | Own autofill, caller alias, fallback copy, source/receiver private, A→B→C transit, shadowing, immediate initialization-state writes |
 | Declaration arguments | Matched-name replacement, absent-inner-name positional form, outer named supply, repeated root execution, body using the same established place |
@@ -1095,3 +1091,91 @@ implementation checks must use that rule rather than the superseded reserved-cel
 Report an author question only for a genuine
 contradiction between applicable current requirements, with the conflicting clauses and a
 minimal distinguishing case.
+
+<!-- receiver-integration-2026-11-22 -->
+<a id="receiver-kernel-integration"></a>
+## General receiver integration, 22 November 2026
+
+This section integrates
+the rename to satisfies and the [general receiver sources](new_parts/LMX_Fn_Receivers/LMX_Receivers.lmx).
+High-level algorithms remain LMX. The provider interfaces are a narrow entry to
+shared mechanisms, not one native primitive per higher-order operation.
+
+The rename concerns the common mechanism of admitting a candidate by its
+requirements. The direction candidate → requirement, `Consumer`, the composition
+of the checked tree, the positional branch for checking signatures, the
+construction of the field correspondence and the lifetime of that correspondence
+are kept. Update the name resolution of the receiver, its export, declarations
+and calls in kernel sources, diagnostics, generated fixtures, specifications,
+anchors and links; where the actual internal kernel symbols keep the old stem of
+the name, bring them to the new name or explicitly limit the old stem to the
+internal ABI of the migration. The ordinary English word `implements` and the
+Java/TypeScript keyword are not the name of an LMX receiver and are not renamed.
+Documentation uses `satisfies(aVar, bVar, Consumer)` and keeps the earlier
+possibility of a call described by the contract without `Consumer`. The rename
+adds no arbitrary new return type, no accidental boolean result and no runtime
+trial call of the candidate, and does not change the existing behavior of
+refusal. No second checking engine, no new global table of correspondences and
+no extra checks at every prepared native access are added. The previous spelling
+is not declared a second permanent public name; if the real migration of sources
+needs temporary compatibility, it is formalized explicitly as a transitional
+entry to the same receiver and afterwards the absence of old calls is verified;
+this is not a reason to keep two semantics.
+
+Use the common signature extractor and descriptor builder for both `Name :: DATA`
+and the type-token constructor `signatureTypes`. Skip formal variable labels for compatibility; retain full
+nested type requirements, semantic order and exact result/void. Preserve the
+current named-signature/call relationship. All other operations must accept either
+description, including storage, argument transport, admission and adapters.
+
+The source provider contracts cover signature extraction, type normalization,
+DATA construction, ordinary callable construction, call outcome capture,
+rethrow of an allowed exit, canonical field-name reading and writing. Locate
+and reuse the existing algorithms before adding a public entry. Do not invent a
+second name table, persistent arena-wide admission cache or hidden target
+execution while extracting metadata.
+
+Construct real owner/DATA/CODE links, required/private generated inputs and
+private captured state. The initial target retains its original owner and
+dynamic binding contract. Captured primitive records survive the creating
+activation; captured references preserve identity. The vector of records is
+already a Structure/Array<@>, with no compulsory wrapper or second vector.
+
+The absence of a documented public entry does not prove that the repository
+lacks an internal algorithm: find the existing working mechanisms and give them
+a minimal interface. `map`, `curry`, `memoize`, Maybe and the other supplied
+algorithms enter the kernel exactly as the shown general LMX implementations;
+the narrow integration entries must not hide these algorithms behind an opaque
+stub or replace the dynamic contract by static specialization. A generated
+callable has a real owner → DATA → CODE chain and correct private references to
+its state, uses ordinary admission, conversions and call rules, and never takes
+a native entry from an incompatible prototype. Native compilation is explicit; a
+ready typed function may become a real native method without a compulsory
+universal array at every following direct call.
+
+The generated inputs of an adapter follow the target contract of [Behavior of
+adapters and callable factories](LMX_semantics.en.md#adapter-behavior): where
+the original callable exists, its own defaults, `required`/`private` and
+autofill are kept, and `uncurry` takes the exact description of every stage. The
+present generation of `required`/`private` inputs and of intermediate results
+`Ti → @` is a limit of the present adapters, not a rule of the language; until
+the observations A01–A20 and B01–B11 are executed on the kernel, the
+preservation of every aspect of the interface is not declared.
+
+Generic record APIs expose FxCallFailure with the target's original declared
+failure and payload. Exact-signature generated wrappers may restore that exit
+only where their generated throws contract includes it. Do not catch internal
+provider failures as user data, fabricate a wildcard throws rule or silently
+erase a procedure into an @-returning function.
+
+Optimize repeated construction only after preserving observation: share
+compatible immutable shapes, avoid reparsing identical text where a standard
+graph constructor suffices, preserve copy maps and actual parents, and keep
+per-instance state independent. Compilation stays explicit. The interpreter,
+native path and both transitions must pass the same acceptance cases.
+
+The [source acceptance matrix](new_parts/LMX_Fn_Receivers/tests/ACCEPTANCE.md)
+includes mixed payload types, arbitrary finite arity, void, nullary functions,
+full/empty partial prefixes, callable final results, field-name edge cases and
+both directions of fn equivalence. Static publication checks are separate from
+running those cases on the kernel.

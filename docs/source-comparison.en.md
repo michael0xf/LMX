@@ -35,6 +35,8 @@ A blank physical line outside shielded content completes the whole current block
 creating a field or return. These rules supersede any historical P0 unwrapping or level-0-only empty-line
 annotation. See [empty bodies](LMX_grammar.en.md#empty-colon) and [source levels](LMX_grammar.en.md#levels).
 
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+
 All receivers remain as written in the source graph, with terminal primitive declarations represented directly
 as `{type value}` at the addresses held by Structure cells. These leaves are part of the complete literal source.
 The semantics also fixes code-only zero-payload [uninit](LMX_semantics.en.md#uninit-zero-payload) and ordinary graph-fragment replacement, including executable receiver structures ([graph assignment](LMX_semantics.en.md#graph-fragment-assignment));
@@ -48,3 +50,21 @@ Reported source SHA-256 values:
 |---|---|
 | lingvamyxa | d4bb1e70c9d660b185ec084ed4c636ce75bc08dd100786c754401017cade221c |
 | L1 | bdb1a6411a47f1cfc9721c1ff002a001cb7fd19cd087ce15fb398f085cc71b53 |
+
+<!-- receiver-integration-2026-11-22 -->
+<a id="receiver-source-forms"></a>
+## Additional receiver forms
+
+| Form or concept | Role |
+| --- | --- |
+| `satisfies` | Current spelling of ordinary directional admission, with unchanged Consumer and positional signature-matching rules |
+| `Name :: DATA` | Existing named signature description; its relationship with call is unchanged |
+| Type-token `signatureTypes` operand | The same signature kind through the standard operand contract; interchangeable in other uses |
+| `import: fun` then `curry`, `partial`, `map`, etc. | Ordinary direct receiver names referring to their actual owners |
+| A Structure used as an argument/result vector | The existing Array<@> storage, without an items wrapper |
+| `(value record)` | A reference to a prepared typed value record with ordinary lifetime rules |
+| Maybe / Result / Bounce | Ordinary library Structures over record references and explicit tags |
+
+See the [complete receiver chapter](LMX_semantics.en.md#functional-receivers)
+and the [kernel integration](kernel-implementation.en.md#receiver-kernel-integration) for contracts,
+implementation links and acceptance conditions.

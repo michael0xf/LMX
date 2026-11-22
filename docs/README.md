@@ -1,7 +1,8 @@
 # Lingvamyxa — English documentation for Fable review
 
 > **Repository note.** This directory holds the edition of 2026-11-21 in the layout of the author's packet
-> (it lay in `new_parts/newdocs/` and was removed there as a duplicate on the author's order of 2026-11-21).
+> (it lay in `new_parts/newdocs/` and was removed there as a duplicate on the author's order of 2026-11-21)
+> with the author's edition of 2026-11-22 merged into it ([plan](../next_core_tasks_v3.md#docs-20261122)).
 > The texts are verbatim; only link targets required by the placement
 > were adapted: [CORE.md](../CORE.md) and the [developer instruction](../L2_L3_CODING_INSTRUCTION.md) stand in
 > the repository root. In this repository the semantics and the grammar are generated from
@@ -12,7 +13,13 @@
 > [plan](../next_core_tasks_v3.md#docs-20261121)). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not
 > part of the packet and is kept as it was.
 
-**Review edition: 2026-11-21.**
+**Review edition: 2026-11-22.**
+
+This edition integrates the requested
+receiver rename, general functional library, containers and signature interchangeability.
+The existing relationship of named signatures with call is preserved. Earlier repository
+build receipts remain historical; the new source package requires its specified
+kernel integration before runtime acceptance.
 
 This is a self-contained documentation packet. Read and review the files as they
 are arranged in this archive; no repository documentation build, generated mirror,
@@ -24,6 +31,8 @@ accepted supplement of the author is carried into them. Among the latest rules:
 wherever their receiver records occur. An anonymous Structure is not itself a
 call, but its contents can contain calls and initializers with their ordinary
 contracts.
+
+An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
 
 The clean graph is the complete literal source representation, including terminal
 primitive leaves as `{type value}` at addresses referenced by Structure cells.
@@ -49,6 +58,9 @@ static DATA replica, or namespace-shaped program copy does not.
 
 | Document | Purpose |
 | --- | --- |
+| [Kernel integration of the receivers](kernel-implementation.en.md#receiver-kernel-integration) | satisfies rename, direct receivers, generic containers, signature equivalence and source links |
+| [Receiver guide](new_parts/RECEIVERS.md) | Complete catalog and value-record/callable distinction |
+| [Receiver sources and API](new_parts/LMX_Fn_Receivers/README.md) | Transferred and generalized source package |
 | [CORE.md](../CORE.md) | Architecture map and the relationships among the contracts |
 | [LMX_grammar.en.md](LMX_grammar.en.md) | Structural parsing, levels, Frames, grouping, and source boundaries |
 | [LMX_semantics.en.md](LMX_semantics.en.md) | Normative language semantics |
@@ -75,8 +87,10 @@ names the place of each subject.
 
 | Subject | Where it is specified |
 | --- | --- |
+| New generic receivers, containers and direct names | [receiver chapter](LMX_semantics.en.md#functional-receivers), [kernel integration](kernel-implementation.en.md#receiver-kernel-integration) |
+| Interchangeable signature forms, preserved named-signature/call behavior | [equivalence](LMX_semantics.en.md#fn-forms-equivalent) |
 | Complete program graph, binary of compiled methods, zero-payload `uninit`, graph assignment | [program representation](LMX_semantics.en.md#program-representation), [`uninit`](LMX_semantics.en.md#uninit-zero-payload), [graph assignment](LMX_semantics.en.md#graph-fragment-assignment), [required observations](LMX_semantics.en.md#regression-obligations) |
-| Callable Structures, actual parent as DATA, named `fn` signatures, selection, binding places, two-way `private` | [binding places](LMX_semantics.en.md#binding-places), [decisions R01–R19](LMX_semantics.en.md#binding-decisions), observations [B01–B27](LMX_semantics.en.md#binding-observations) and [C01–C36](LMX_semantics.en.md#callable-observations) |
+| Callable Structures, actual parent as DATA, named `Name :: DATA` signatures, selection, binding places, two-way `private` | [binding places](LMX_semantics.en.md#binding-places), [decisions R01–R19](LMX_semantics.en.md#binding-decisions), observations [B01–B27](LMX_semantics.en.md#binding-observations) and [C01–C36](LMX_semantics.en.md#callable-observations) |
 | Declaration arguments and `import` | [declaration arguments](LMX_semantics.en.md#declaration-arguments), [`import`](LMX_semantics.en.md#import-receiver), [required observations](LMX_semantics.en.md#declaration-observations) |
 | Blank-line block termination | [blank physical line and its observations](LMX_grammar.en.md#levels), [guide](LMX_semantics_guide.en.md#blank-line-blocks) |
 | Operand methods, prepared and raw modes, `sys` helpers, priorities | [operands](LMX_semantics.en.md#operand-receiver), [observations O01–F10](LMX_semantics.en.md#operand-observations) |
@@ -88,8 +102,9 @@ names the place of each subject.
 | Thread/Message transport: `post`, reply waits, `send` and `receive` | [chapter 28](LMX_semantics.en.md#thread-message-api), [observations T01–T26](LMX_semantics.en.md#thread-message-observations) |
 
 The field-stream rules supersede the earlier DATA-argument variants of `import`,
-`copy` and `merge`. This does not change the DATA-argument contracts of `fn` or
-modifiers. Earlier wording quoted to explain a migration does not establish an
+`copy` and `merge`. Signature declarations still inspect the complete DATA template supplied as one
+right argument of the ordinary `Name :: DATA` operand; modifier DATA contracts are
+unchanged. Earlier wording quoted to explain a migration does not establish an
 alternative current syntax.
 
 `L2_L3_CODING_INSTRUCTION.md` was supplied in Russian and is English in this

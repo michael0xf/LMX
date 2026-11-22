@@ -13,11 +13,11 @@ Verdicts: **conforms**, **differs**, **not expressible** (the form is refused or
 those of the [plan](../../../next_core_tasks_v3.md#docs-20261121). «decided by opus» marks a reading derived from
 the norm during the map; fable confirmed the readings of A2.
 
-Requirements: [binding](../../../docs/tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) (B-TZ),
-[declaration arguments](../../../docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) (D-TZ),
-[streams](../../../docs/tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) (S-TZ),
-[author clarification](../../../docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) (U),
-[blank line](../../../docs/tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) (L-TZ).
+Requirements: [binding](../../../docs/LMX_semantics.en.md#binding-decisions) (B-TZ),
+[declaration arguments](../../../docs/LMX_semantics.en.md#declaration-arguments) (D-TZ),
+[streams](../../../docs/LMX_semantics.en.md#field-stream-observations) (S-TZ),
+[author clarification](../../../docs/LMX_semantics.en.md#no-working-graph) (U),
+[blank line](../../../docs/LMX_grammar.en.md#automaton) (L-TZ).
 Code: [lmx_graph.lm2](../../../selfbuild/src/l2src/lmx_graph.lm2),
 [lmx_graph_run.lm2](../../../selfbuild/src/l2src/lmx_graph_run.lm2),
 [p0_parser.lm2](../../../selfbuild/src/l2src/p0_parser.lm2).

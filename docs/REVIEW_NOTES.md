@@ -1,6 +1,6 @@
 # Fable review notes — English documentation revision
 
-Date: 2026-11-21.
+Date: 2026-11-22.
 
 ## 1. Review surface
 
@@ -115,15 +115,15 @@ that representation under an alternative name.
 | --- | --- | --- |
 | Callable structure | Ordinary C executes with its actual parent as DATA; call has code or args/code; R0 has no DATA/user actuals | Semantics, L2, kernel, CORE, guide |
 | Result | return in DATA is a result description; return in CODE returns a value; no synthesized return | Semantics, L2, guide |
-| Named fn | fn: name data has two DATA arguments and creates a constant positional signature description | Semantics, grammar, L2, guide |
-| Structural versus fn matching | A structural template checks its required tree; fn checks ordered input types/count and result contract | Semantics, L2, kernel, CORE |
+| Named signature | name :: data consumes a declaration identifier and the complete right-hand DATA; it creates a constant positional signature description | Semantics, grammar, L2, guide |
+| Structural versus fn matching | A structural template checks its required tree; positional signature matching checks ordered input types/count and result contract | Semantics, L2, kernel, CORE |
 | Selection | W/E are equal candidates; explicit actuals only; selected mapping is not expanded again | Semantics, L2, guide |
 | Binding | Own actual/default/autofill places; transparent caller place; former own-copy fallback; derived uninit for the specified inline local | Semantics, L2, kernel, CORE |
-| Admission stages | Nonexecuting construction checks; explicit pre-C build tests; interpreted reached-call implements; prepared native contract; explicit implements in either path | Semantics, guide, kernel, CORE |
+| Admission stages | Nonexecuting construction checks; explicit pre-C build tests; interpreted reached-call satisfies; prepared native contract; explicit satisfies in either path | Semantics, guide, kernel, CORE |
 | Private | Both source and visible lexical receiving place filter implicit dynamic binding; explicit access remains ordinary | Semantics, guide, kernel |
 | Declaration actuals | Retained DATA form; matching declaration replaced in namespace; unmatched inner name remains one positional Structure | Semantics, guide, kernel |
 | Iterate behavior | Step repeatedly executes the retained declaration; body sees the same receiving local without a second initializer call | Guide, semantics, coding instruction |
-| Operands | Ordinary method resolution, left/right, mandatory PASS_ARGS_AS_IS and PRIORITY, ordinary declared result | Semantics, grammar, L2, guide |
+| Operands | Ordinary method resolution, left/right, mandatory PASS_ARGS_AS_IS and PRIORITY, ordinary declared result. Only RIGHT opens once when LEFT is a written unnamed Structure and the sole RIGHT argument is another written unnamed Structure; LEFT stays whole, P0 does not open groups, callable W/E stays separate | Semantics, grammar, L2, guide |
 | Raw expression arguments | Original occurrence/context, explicit sys eval, no hidden evaluation by dereference, no permanent graph cache | Semantics, guide, kernel |
 | Expression order | Demand dependencies, per-evaluation effect count, normal C ordering plus the specified exponentiation rule | Semantics, grammar, coding instruction |
 | Sys name/priority | Identifier spelling without value lookup; priority from the available operand's ordinary properties | Semantics, L2, guide |
@@ -246,3 +246,24 @@ Markdown/example checks validate document structure and internal consistency.
 They are not parser execution, native/interpreter conformance, transport results,
 or a new compiler bootstrap. Historical receipts remain historical; none is
 reported as a newly executed test.
+
+## Receiver and statistics revision, 22 November 2026
+
+The new revision renames the LMX receiver to satisfies in primary specifications,
+active examples and links. Foreign-language keywords and ordinary English verbs
+remain unchanged. The exact receiver semantics is retained.
+
+All new receivers and containers are documented in the primary semantics and
+their linked API. Their code lives in new_parts/LMX_Fn_Receivers; their requirements are
+in the receiver chapter of the semantics book and the kernel integration section. General implementations accept typed records and use Structures
+directly as Array<@>. Service int counters/typecodes are distinguished from
+payload specializations.
+
+Both signature-description forms share the existing positional signature rule; the author
+explicitly preserves the current named-signature/call relationship. No new parser,
+recursive Structure spreading or native global program fields are introduced.
+
+Changed functional listings keep their procedural predecessors inline. Current
+statistics exclude those archives and count shared library dependencies
+separately. The receiver sources have static checks and prepared runtime
+acceptance cases; target-kernel execution is not claimed.

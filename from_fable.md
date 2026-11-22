@@ -17,10 +17,10 @@
 - Жетон конвейера: у opus — шаг 21.5, выбор объявления у вызовов; подготовка в `O/tz-20261121/step-21-5/`.
 - При приёмке шага 21.2 найдены две самопроверки ядра, красные с 2026-11-18, и запущен полный набор —
   раздел 6.
-- У автора открыты три вопроса, работу они не держат:
+- У автора открыты два вопроса, работу они не держат:
   [числовой контракт целых](LMX_blog/q/current/integer-arithmetic-contract-20261118.md);
-  [одно место слева от `:=` при группе справа](LMX_blog/q/current/operand-single-argument-consequences-20261121.md);
-  [`return: значение` после вложенного блока](LMX_blog/q/current/terminal-return-after-nested-block-20261122.md).
+  [одно место слева от `:=` при группе справа](LMX_blog/q/current/operand-single-argument-consequences-20261121.md).
+  Вопрос о `return: значение` после вложенного блока снят выводом из документов автора (Р134).
   Вопросы о корне единицы и о записи `for` закрыты редакцией.
 - Неотслеживаемые файлы, которых не добавлять никогда: `steps/handoff/m11-step5b-inventory-appendix-20261111.md`
   и `steps/witnesses/used-scope-20261020/reference-producer117.patch`.
@@ -59,7 +59,7 @@
 граница блока, шаг 21.3 — код sonnet
 ([свидетельство](steps/witnesses/blank-line-block-border-20261121/notes.md)); точка входа фикстуры,
 шаг 21.6 — код sonnet ([свидетельство](steps/witnesses/fixture-entry-20261122/notes.md)); решения
-исполнителя Р110–Р132; решения автора об операнде и групповом присваивании — `LMX_blog/2026-11-21.md`.
+исполнителя Р110–Р134; решения автора об операнде и групповом присваивании — `LMX_blog/2026-11-21.md`.
 
 Свидетельства срезов с кодом:
 [скан снят](steps/witnesses/one-graph-entry-scan-removed-20261118/notes.md),
@@ -114,7 +114,7 @@ R/tests/parser/current/expectations.json КАТАЛОГ` — 169 случаев;
 у строки `graph-check` вход — четырнадцатое поле.
 В строке отказа `graph-check` сверяет номер ответа только у интерпретатора (Р128).
 
-Свободные метки каталогов: `docs-index185`, `render-merge-71`, `render-grammar-14`.
+Свободные метки каталогов: `docs-index187`, `render-merge-71`, `render-grammar-14`.
 
 ## 4. Кто чем занят
 

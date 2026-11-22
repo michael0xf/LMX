@@ -260,10 +260,10 @@ Mode `PASS_ARGS_AS_IS 1` passes original occurrences for explicit evaluation thr
 
 The LMX listings are identical to the individual comparison files. They are aligned with the current rules and the author’s clarifications. Execution and review status for the other languages is recorded in each comparison file. The Excel and PDF figures were calculated from these same listings.
 
-[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
 
-[O]: ../TZ/to_fable_operands_arguments_priorities.md
+[O]: ../tasks/to_fable_operands_arguments_priorities.md
 
 [S]: ../LMX_semantics.en.md#merge-two-forms

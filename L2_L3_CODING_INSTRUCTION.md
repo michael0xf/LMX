@@ -97,7 +97,7 @@ level-completion mechanism, corresponding to the conceptual `-1` boundary
 where a source `---` cannot itself be written. Several consecutive blank lines
 are harmless.
 
-Apply the exact [blank-line requirements](docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md)
+Apply the exact [blank-line requirements](docs/tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md)
 and the [grammar](docs/LMX_grammar.en.md), including paired delimiters, Mix documents,
 EOF, and protected text. A blank line does not invent a matching closing bracket
 or silently repair malformed bounded syntax.
@@ -285,7 +285,7 @@ head's declaration contract supplies the distinction; no hardcoded list of
 `iterate`, `iteration`, `item`, or primitive receiver names is needed.
 
 The complete examples and named-order cases are in the
-[declaration/import requirements](docs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+[declaration/import requirements](docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
 
 ## 8. Binding places and two-way private
 
@@ -494,7 +494,7 @@ edit watchers, automatic native invalidation, or hidden compilation. Keep the
 physical storage and ordinary copy/collection machinery that the current
 contracts still require.
 
-Implement the [author's uninit clarification](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md):
+Implement the [author's uninit clarification](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md):
 `uninit:T` is its code only, with zero payload. No T cell or complete inner T
 record is preallocated. `struct\novalue := 5` replaces `{uninit:int}` by `{int 5}`
 at the addressed graph field. Remove tests that require in-place tag changes or
@@ -599,5 +599,6 @@ green.
 
 The English packet is the current review edition. The accidentally supplied
 Russian grammar is excluded at the author's request; a complete Russian edition
-can follow after the English review. Existing requirements remain under TZ as
-the change record, while Old_TZ is maintained as part of the documentation.
+can follow after the English review. The requirements and supplements already
+issued are kept as task documents in `docs/tasks/`; their content is carried
+into the documentation, which alone is the norm.

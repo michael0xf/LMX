@@ -26,7 +26,7 @@ Names are not normalized; Python omits optional type annotations. Each language 
 
 ## Documentation and verification
 
-Normative links now target [docs](../README.md): [binding](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), [declarations and import](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md), [block boundaries](../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md), [operands](../TZ/to_fable_operands_arguments_priorities.md), and [import/copy/merge streams](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+Normative links now target [docs](../README.md): [binding](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md), [declarations and import](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md), [block boundaries](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md), [operands](../tasks/to_fable_operands_arguments_priorities.md), and [import/copy/merge streams](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 
 Import, copy and merge use standard CODE arguments in every placement. Copy accepts one admitted source; merge accepts two or more. Their field streams are explicitly grouped where one structural result is needed. The receiving context is not an implicit merge source. Written receivers remain in the graph and results are accepted through the namespace. The examples and counts apply these rules.
 
@@ -71,7 +71,7 @@ The LMX application uses **159** non-whitespace characters against Python’s **
 
 The LMX model provides physical value types, descriptions of admissible values, a conversion context, and structural compatibility checks through `implements`. A shared physical representation of structures does not remove requirements on the fields and operations actually used. Contracts can differ even when representations coincide: admissible ranges and usage matter alongside cell size.
 
-It is therefore accurate to say that compact notation coexists with typing and checkable contracts. Some data and call targets are selected dynamically. The interpreter applies the common admission mechanism at reached calls; prepared native execution has no additional automatic runtime `implements` layer. Explicitly written checks execute on either path. See [value descriptions](../LMX_semantics.en.md#descriptions), [the type and conversion context](../LMX_semantics.en.md#conversion-context), [used-interface checking](../LMX_semantics.en.md#admission), and [the binding and signature contract](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
+It is therefore accurate to say that compact notation coexists with typing and checkable contracts. Some data and call targets are selected dynamically. The interpreter applies the common admission mechanism at reached calls; prepared native execution has no additional automatic runtime `implements` layer. Explicitly written checks execute on either path. See [value descriptions](../LMX_semantics.en.md#descriptions), [the type and conversion context](../LMX_semantics.en.md#conversion-context), [used-interface checking](../LMX_semantics.en.md#admission), and [the binding and signature contract](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
 
 ## Actors, low-level operations and two execution paths
 

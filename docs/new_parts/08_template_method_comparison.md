@@ -323,6 +323,6 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 - [Refactoring.Guru — Template Method](https://refactoring.guru/design-patterns/template-method)
 - [Refactoring.Guru — Template Method in Rust, conceptual example](https://refactoring.guru/design-patterns/template-method/rust/example)
 
-[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md

@@ -2,8 +2,8 @@
 
 **Status:** applied documentation requirement, reconciled through 2026-11-21.
 The current [construction](../LMX_semantics.en.md#construction),
-[declaration arguments](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-and [binding rules](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) govern this note.
+[declaration arguments](LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
+and [binding rules](LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) govern this note.
 
 The program remains one complete source graph. Receivers, declarations, executable assignments, written groups,
 and field order are preserved as written. Computations and transformations occur exclusively in the namespace.
@@ -28,7 +28,7 @@ i: `findValue()` is an ordinary structural form, not assignment.
 An uninitialized graph leaf is the code `uninit:int` alone, with zero value bytes. It contains no hidden
 preallocated int cell or nested record. Initializing the execution-local i leaves that source leaf unchanged;
 an explicit graph assignment to `M\i` replaces its selected fragment with the supplied `{int value}`.
-No stable raw payload address across that replacement is promised. [Author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+No stable raw payload address across that replacement is promised. [Author clarification](LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 A direct source path such as `M\i` addresses the corresponding graph record; it does not evaluate a stored call or
 read a hidden activation cache. A computed namespace input obtains its value on demand through the common
@@ -43,7 +43,7 @@ for execution again. This creates no source-code field or new physical parent. T
 
 Same-level CODE redeclaration uses the existing place and does not clear it when no new RHS is supplied.
 A nested declaration shadows an outer one with a distinct place. DATA duplicates are physical occurrences,
-addressed by `S\[N]field`. In [binding §7.4](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md)'s exact
+addressed by `S\[N]field`. In [binding §7.4](LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md)'s exact
 inline case, the new no-RHS local is `uninit:int`: the inline scope is not a new callable caller, and the stated
 actual caller has no x to supply. The outer x = 5 stays unchanged; a reached required check refuses the absence.
 This follows from the existing caller-source rule without an additional initialization mechanism.

@@ -39,7 +39,7 @@
 - **Приёмка примеров:** [регрессионный набор для Fable](LMX_regression_examples.to_fable.en.md).
 - **Результат проверки:** [отчёт о согласованности и исправлениях](LMX_consistency_review.ru.md).
 - **Нормативная документация:** [карта docs](../README.md) и [заметки о редакции](../REVIEW_NOTES.md).
-- **Последнее уточнение автора:** [uninit и явное присваивание в граф](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md); проверка [G13](LMX_regression_examples.to_fable.en.md#uninit-graph).
+- **Последнее уточнение автора:** [uninit и явное присваивание в граф](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md); проверка [G13](LMX_regression_examples.to_fable.en.md#uninit-graph).
 
 Для таблиц с устойчивым выравниванием открывайте XLSX или PDF. Дата в имени `LMX_Comparison_2026-11-20.*` сохранена: эта пара относится к примерам 1–9.
 
@@ -178,10 +178,10 @@
 [S]: ../LMX_semantics.en.md
 [L2]: ../L2_spec_en.md
 [G]: ../LMX_grammar.en.md
-[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[E]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
-[O]: ../TZ/to_fable_operands_arguments_priorities.md
+[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[E]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[O]: ../tasks/to_fable_operands_arguments_priorities.md
 [M]: ../LMX_semantics.en.md#composition
 
-[F]: ../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[F]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md

@@ -73,7 +73,7 @@ leaf has zero payload and no reserved T cell; supplying an initialized value ins
 The API does not promise a stable raw payload address across replacement. This is separate from
 the stable Structure descriptor and Array-element descriptor/index contracts above. Assignments to
 ordinary execution locals do not publish into the source graph.
-[Author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+[Author clarification](LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 The complete source graph includes those primitive leaves and every receiver as written. The same ordinary
 graph-assignment mechanism can replace `for`, `if`, `merge`, `copy`, `import`, their arguments, and other
@@ -182,4 +182,4 @@ The interface is ready only when all four operations act on a real application, 
 <a id="sources"></a>
 ## 25. Basis
 
-[Grammar](../LMX_grammar.en.md), [L3 semantics](../LMX_semantics.en.md), [L2 mechanisms](../L2_spec_en.md), and the [field-stream requirements](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). An approved general language rule governs when an older application example differs.
+[Grammar](../LMX_grammar.en.md), [L3 semantics](../LMX_semantics.en.md), [L2 mechanisms](../L2_spec_en.md), and the [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). An approved general language rule governs when an older application example differs.

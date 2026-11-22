@@ -46,7 +46,7 @@ sys:
 
 `PASS_ARGS_AS_IS 0` requests references to prepared values. `PRIORITY priority("+")` inside `sys` uses the precedence of built-in addition. The mandatory fields remain present in the operand’s effective DATA: ordinary `copy` supplies them through the namespace. The source graph retains the written `copy` record.
 
-The template has no `return`: the result belongs to the concrete operation, which declares `return: int` in `operands`. No result declaration is replaced by another. `example` separately describes its own methods’ result in its own DATA. [Operand contract](../TZ/to_fable_operands_arguments_priorities.md) · [Field streams](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+The template has no `return`: the result belongs to the concrete operation, which declares `return: int` in `operands`. No result declaration is replaced by another. `example` separately describes its own methods’ result in its own DATA. [Operand contract](../tasks/to_fable_operands_arguments_priorities.md) · [Field streams](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 
 The formula remains recognizable. Seeing the two additions requires no translation of nested constructors into arithmetic notation. The language’s common expression mechanism provides parsing and execution; the user supplies the new operand’s body and uses its ordinary name.
 
@@ -146,7 +146,7 @@ The shared expression mechanism handles parsing, argument preparation, and opera
 
 This fits the intent behind LMX: to derive different capabilities from a small number of shared mechanisms. In this example, an ordinary method, its DATA, name resolution, and the expression mechanism together provide a user-defined operand. To read an expression that uses this operand, it is enough to see the formula itself.
 
-The contract also provides for `PASS_ARGS_AS_IS 1`: this mode allows the operation to receive the original argument occurrences and explicitly evaluate them through `sys\eval`. The addition shown uses mode `0`. Both modes are described by the same mandatory field; precedence remains a separate property. Extending the capabilities in this way preserves the operation’s visible contract. [Rules for the two modes](../TZ/to_fable_operands_arguments_priorities.md).
+The contract also provides for `PASS_ARGS_AS_IS 1`: this mode allows the operation to receive the original argument occurrences and explicitly evaluate them through `sys\eval`. The addition shown uses mode `0`. Both modes are described by the same mandatory field; precedence remains a separate property. Extending the capabilities in this way preserves the operation’s visible contract. [Rules for the two modes](../tasks/to_fable_operands_arguments_priorities.md).
 
 ## Brevity, Clarity, and Substance
 
@@ -166,7 +166,7 @@ The shorter version continues to explain the language’s intent: a shared mecha
 ## References
 
 - [Interpreter: complete examples in eight languages and the counting method](23_interpreter_comparison.md).
-- [Operands, arguments, and precedence: revision 6](../TZ/to_fable_operands_arguments_priorities.md).
-- [Binding, DATA, and structural calls](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
+- [Operands, arguments, and precedence: revision 6](../tasks/to_fable_operands_arguments_priorities.md).
+- [Binding, DATA, and structural calls](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
 - [General overview of the language comparison](about_languages_comparision.en.md).
 - [Python Language Reference: Lambdas](https://docs.python.org/3/reference/expressions.html#lambda).

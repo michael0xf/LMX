@@ -32,7 +32,7 @@ Address-taking selects that place's real storage and does not extend its lifetim
 An uninitialized graph leaf has no T-value storage to address: `uninit:T` is its type code alone,
 with `sizeof(value) = 0`. `struct\novalue := 5` replaces that graph fragment with `{int 5}`;
 it does not retag or preserve an already allocated raw T cell. Frame-local assignment still
-leaves the source graph unchanged. [Latest author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+leaves the source graph unchanged. [Latest author clarification](LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 Reserved node remains lexical; it is not a synonym for a dynamically selected namespace or the current stream
 recipient. Explicit `@Structure` is a numeric address, not a request for a copied descriptor.
 
@@ -45,4 +45,4 @@ The former argument-to-own-field promotion, load/cache/dirty publication, shared
 are withdrawn. Message publication and explicit graph mutations keep their own contracts. Import and DATA
 acceptance of copy/merge streams do not mutate the clean source graph. All three receivers always consume ordinary CODE arguments, including in DATA placement; this does not call bare references or anonymous Structures.
 [Current frame contract](../LMX_semantics.en.md#call-frame-20261115),
-[field-stream requirements](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+[field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).

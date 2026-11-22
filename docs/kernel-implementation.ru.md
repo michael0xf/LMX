@@ -9,12 +9,12 @@
 
 Языковые контракты — это [семантика](LMX_semantics.ru.md), [грамматика](LMX_grammar.ru.md) и
 [спецификация L2](L2_spec_ru.md). Обязательными требованиями к изменениям, включёнными сюда, являются
-[связывание и callables](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-[аргументы объявлений](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-[пустые физические строки](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
-[операнды и выражения](TZ/to_fable_operands_arguments_priorities.md) и
-[потоки полей](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). Более позднее
-[авторское уточнение](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) имеет приоритет в вопросах
+[связывание и callables](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+[аргументы объявлений](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
+[пустые физические строки](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
+[операнды и выражения](tasks/to_fable_operands_arguments_priorities.md) и
+[потоки полей](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md). Более позднее
+[авторское уточнение](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) имеет приоритет в вопросах
 полного представления источника, модели программы из графа и бинарного кода методов, R0, uninit без полезной нагрузки и
 обычная замена фрагмента графа. Требования к потокам полей от 2026-11-21 с последней авторской поправкой о том, что
 import/copy/merge всегда принимают обычные аргументы CODE, главенствуют над конфликтующими более ранними примерами
@@ -85,7 +85,7 @@ R0 компилируется как обычный метод C с локаль
    Известные нативные вызовы могут оставаться прямыми вызовами C.
 10. **Наблюдаемое поведение управляет оптимизацией.** Типы, выбранные места, состояние инициализации, эффекты,
     лексические связи, приватность и время жизни должны согласовываться во всех сочетаниях native/walker. Авторское
-    [уточнение по uninit](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) решает P01 и заменяет
+    [уточнение по uninit](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) решает P01 и заменяет
     прежние описания с зарезервированной ячейкой и перетегированием при первой записи.
 
 <a id="contract"></a>
@@ -317,7 +317,7 @@ parent. Отсутствие или несколько вхождений при
 смена метки типа у заранее выделенной ячейки T по тому же адресу, и она не обещает стабильного адреса сырой полезной
 нагрузки через замену. Последующий поиск этого поля видит новый фрагмент и его тип `int`.
 
-Это следует из [уточнения автора](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) и
+Это следует из [уточнения автора](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) и
 [представления в L2](L2_spec_ru.md#uninit-record-control). Прежний вопрос сохраняется как решённое решение:
 [якорь](implementation-notes.ru.md#uninit-layout-conflict). Стабильные дескрипторы Structure и ссылки на элементы Array
 по дескриптору и индексу — независимые контракты; они не превращают отсутствующий примитив в выделенное хранилище

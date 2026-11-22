@@ -91,7 +91,7 @@ R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: 
 ## 11. Local call frame
 
 The norm of 2026-11-19 (binding and callables) was accepted by the author in the
-[TZ](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) and is in force in the edition of 2026-11-21; its
+[TZ](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) and is in force in the edition of 2026-11-21; its
 application is recorded in the [plan](../next_core_tasks_v3.md#docs-20261121). This section states the new norm in the
 same words as [L2 §11](L2_spec_en.md#call).
 
@@ -167,7 +167,7 @@ graph record `S\private\field` is not flattened into `S\field`. Use the common b
 checks on direct reads. The walker reads the original `private` receiver in the clean graph; the compiler emits the
 appropriate binding/hidden-argument logic from that same source. A second graph of private marks or access flags in the
 binary is forbidden, including one presented as a prepared runtime representation.
-[Author example](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#private-without-marked-graph);
+[Author example](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#private-without-marked-graph);
 [full contract](LMX_semantics.en.md#private-binding).
 
 <a id="call-frame-20261115"></a>
@@ -199,7 +199,7 @@ fields remain and are selected by `S\[n]x`. An explicit path is not restricted b
 order of a bare name. A read through a path executes nothing; the RHS is executed when its code statement is reached.
 
 <a id="inline-declaration-control"></a>
-One case remains with the executor's reading ([TZ §7.4](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+One case remains with the executor's reading ([TZ §7.4](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
 [Р106](../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
 where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
 between the caller's local context and the callee's place at the call, while an inline scope stays within the same

@@ -148,7 +148,7 @@ A parent bounds two child tasks to its scope and waits for both even after a fai
 - [Go — Pipelines and cancellation](https://go.dev/blog/pipelines) — Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.
 - [Erlang — Supervision principles](https://www.erlang.org/doc/system/sup_princ.html) — Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.
 
-**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+**Норма LMX:** [CORE](../../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md), [уточнение 21 ноября](../../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
 

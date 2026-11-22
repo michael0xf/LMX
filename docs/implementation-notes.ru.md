@@ -12,16 +12,16 @@
 <a id="binding-callables-20261119"></a>
 ## Принятая модель по состоянию на 2026-11-21
 
-Шесть включённых требований составляют [связывание и callable](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-[аргументы объявлений и import](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-[закрытие по пустой физической строке](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
-[операнды и выражения](TZ/to_fable_operands_arguments_priorities.md), и
-[потоки полей import/copy/merge](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), а также более позднее
-[уточнение автора](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md), которое имеет приоритет для
+Шесть включённых требований составляют [связывание и callable](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+[аргументы объявлений и import](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
+[закрытие по пустой физической строке](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
+[операнды и выражения](tasks/to_fable_operands_arguments_priorities.md), и
+[потоки полей import/copy/merge](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), а также более позднее
+[уточнение автора](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md), которое имеет приоритет для
 uninit при нулевом размере значения, присваивания в граф, полного источника и модели программы из графа и двоичного кода
 методов. Исправление для потоков полей делает так, что все три ресивера потребляют обычные аргументы CODE в каждом
 месте, включая DATA; общий W/E применяется везде. Оно заменяет прежнюю таблицу источников DATA→DATA/CODE→CODE. Последние
-требования к потокам полей уточняют более ранние примеры import и композиции. Ранее принятые требования в Old_TZ
+требования к потокам полей уточняют более ранние примеры import и композиции. Ранее принятые дополнения
 включены как базовый материал, а не как новый ожидающий план.
 
 Полная программа состоит из исходного графа и двоичного файла, содержащего скомпилированные native-методы. `parent` и
@@ -263,7 +263,7 @@ DATA, читается по контракту того принимающего
 <a id="uninit-layout-conflict"></a>
 ### 5.3. P01 — решено: uninit не имеет нагрузки значения; присваивание графа заменяет фрагменты
 
-[Уточнение автора от 2026-11-21](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) заменяет обе прежние
+[Уточнение автора от 2026-11-21](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) заменяет обе прежние
 альтернативы. `uninit:T` — это только код типа; `sizeof(value) = 0`. Нет ни пары внешнего/внутреннего T, ни одного тега,
 за которым идёт зарезервированное хранилище T. Именованное объявление без значения остаётся именованным исходным листом
 и не выделяет своего будущего значения.

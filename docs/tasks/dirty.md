@@ -19,7 +19,7 @@ No separate uneditable code representation or restricted graph-mutation protocol
 An ordinary supplied actual suppresses its initializer. An unused computed input does not execute, and entry
 has no general initializer pass. A supplied place-declaration form remains DATA and preserves its initializer
 for later execution; its root declaration can supplement the receiving execution's namespace under the
-[declaration-argument contract](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+[declaration-argument contract](LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
 
 Variables/const become visible sequentially; user Structure/callable declarations retain bidirectional visibility.
 Bare x and `@x` select the bound logical place. Explicit actuals, autofill, and the preserved fallback produce own
@@ -54,7 +54,7 @@ slot's former field requirement. Named `S\x := value` follows the target field's
 contract and replaces the selected graph fragment. A subsequent access to that structural place observes the
 new fragment; references to the previous fragment are not automatically retargeted. `uninit:T` has zero payload,
 so replacing it with `{T value}` cannot preserve a preexisting T-cell address. Frame-local writes remain local.
-[Author clarification](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+[Author clarification](LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 ## 3. What publication still means
 

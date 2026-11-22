@@ -1,7 +1,7 @@
 # Composition and graph-copying requirements
 
 **Status:** applied documentation requirement, reconciled with the 2026-11-21
-[field-stream requirements](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+[field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 The [composition contract](../LMX_semantics.en.md#composition) and
 [L2 copying mechanics](../L2_spec_en.md#copy-merge) define implementation behavior.
 This note records required behavior rather than a report that a build passes it.

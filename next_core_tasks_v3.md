@@ -28,24 +28,24 @@ Full-suite нужен при широком влиянии, общей регр�
 [грамматика](docs/LMX_grammar.en.md), [семантика](docs/LMX_semantics.en.md),
 [руководство](docs/LMX_semantics_guide.en.md), [L2](docs/L2_spec_en.md),
 [ядро](docs/kernel-implementation.en.md), [заметки о реализации](docs/implementation-notes.en.md),
-[сравнение источников](docs/source-comparison.en.md), требования автора в `docs/TZ/` и принятые дополнения в
-`docs/Old_TZ/`. Требования:
+[сравнение источников](docs/source-comparison.en.md), требования автора и принятые дополнения в
+`docs/tasks/`. Требования:
 
-- [уточнение автора 2026-11-21](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) —
+- [уточнение автора 2026-11-21](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) —
   высший приоритет: программа — полный граф и бинарник нативных методов, рабочего графа нет ни под каким
   именем; R0 — обычный C-метод с локальным указателем на граф, интерпретатор тоже идёт через бинарный R0;
   `uninit:T` — один код типа без нагрузки; присваивание в граф заменяет фрагмент;
-- [связывание и вызываемые](docs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) — структурный вызов,
+- [связывание и вызываемые](docs/tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) — структурный вызов,
   `parent(C)` в роли данных, именованная сигнатура `fn: name data`, выбор W/E, места связывания, двусторонний
   `private`;
-- [аргументы-объявления и import](docs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) —
+- [аргументы-объявления и import](docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) —
   ресивер объявления, поданный аргументом, сохраняется формой; `import` берёт корневые const-объявления;
-- [пустая строка](docs/TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) — пустая физическая строка
+- [пустая строка](docs/tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) — пустая физическая строка
   завершает весь текущий блок;
-- [операнды, аргументы и приоритеты](docs/TZ/to_fable_operands_arguments_priorities.md), редакция 6 — операнд
+- [операнды, аргументы и приоритеты](docs/tasks/to_fable_operands_arguments_priorities.md), редакция 6 — операнд
   есть обычный метод со структурным шаблоном данных; `sys\eval`, `sys\name`, `sys\priority`;
   `sys\operand` снят;
-- [потоки import, copy и merge](docs/TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md),
+- [потоки import, copy и merge](docs/tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md),
   редакция 2 — аргументы трёх ресиверов всегда читаются как код, результат — поток полей, одна Structure
   получается только явной группой.
 
@@ -719,7 +719,7 @@ Structure; раскрытие — попытка найти другие сиг�
    потребляющего ресивера, конкретное вхождение исполняется один раз за вычисление, пропущенная ветвь не
    исполняется: `1 + v := 2 + 3` даёт 6 и присваивает 5, запись кода `v := 2 - 3` присваивает −1 (решение
    автора и ТЗ 2026-11-18, [журнал](LMX_blog/2026-11-18.md#c-priorities),
-   [ТЗ](docs/TZ/to_fable_operands_arguments_priorities.md), Р94; прежнее правило о высоком приоритете
+   [ТЗ](docs/tasks/to_fable_operands_arguments_priorities.md), Р94; прежнее правило о высоком приоритете
    присваивания внутри выражения, Р83 и Р84, снято); присваивание, встроенное в выражение аргумента, пишет в
    `data` вызываемого и отдельным аргументом не становится; объявление `int: i 5` в выражении — обычное
    объявление с приоритетом присваивания, а поданное аргументом заводит имя в кадре вызываемого или
@@ -4458,7 +4458,7 @@ native→native C-вызов на границе не отказывает, а �
 голое `nil` там, где пишется значение; `int: x nil` — то же место, что `int: x`; (2) сравнение с `nil` в обоих
 исполнителях; (3) присваивание в поле графа, которое держит `uninit:T` или `uninit:ref`, заменяет фрагмент:
 ячейка Structure начинает ссылаться на новую запись значения, прежний адрес не обещается
-([уточнение](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#frame-and-graph-assignment);
+([уточнение](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#frame-and-graph-assignment);
 прежняя формулировка «меняет тип записи, адрес значения остаётся прежним» снята; сегодня: чистый граф —
 ячейки видов 3, 8 и 9 остаются после записи, дамп печатает `int: a` после `a := 9`); (4) `sys\toLmx` выводит место без значения как `int: x`, после присваивания — со
 значением, значение вне объявления — `nil: T`; (5) пины, закрепляющие старое правило (typeof, struct_index,
@@ -4474,7 +4474,7 @@ uninit_reference_* и другие), переводятся по описи; (6)
 обычными типизированными обращениями, не копированием байтов. При восьмибайтовых указателях: `int` — 8 байт,
 `double`, `size_t`, ссылка — шаг 16, дескриптор — шаг 32. Место под самый большой вид значения не резервируется.
 `uninit:T` — один код типа, размер значения ноль: ни ячейки T, ни вложенной записи T за кодом нет
-([уточнение](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#uninit-zero-payload));
+([уточнение](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#uninit-zero-payload));
 прежняя формулировка «код, затем полная запись T» снята.
 
 **Что есть сейчас** (замеры на G2 среза410, [запись исследования](steps/witnesses/typed-value-research-20261116/notes.md)).
@@ -5169,8 +5169,8 @@ Gate включает generated-source checks, [цикл документаци�
 
 Только после принятого §8. Контракт —
 [семантика](docs/LMX_semantics.en.md#thread-message-api) и
-[матрица T01–T26](docs/Old_TZ/threadMessageAPI.en.md);
-[миграция](docs/Old_TZ/threadMessageAPI_migration.en.md) хранит детали.
+[матрица T01–T26](docs/tasks/threadMessageAPI.en.md);
+[миграция](docs/tasks/threadMessageAPI_migration.en.md) хранит детали.
 
 1. **S8a.1:** `post`, `send` и `receive` используют одну
    существующую mail enqueue/take, ownership, admission и вызов; без
@@ -5197,7 +5197,7 @@ Gate включает generated-source checks, [цикл документаци�
 | T23–T26 | Публикация при финальном send, native/walker-паритет, явная множественность без сканирования чужих методов, отсутствие синтетического ACK для `sub`. |
 
 Детальные исходные программы и точные ожидаемые результаты остаются в
-[матрице T01–T26](docs/Old_TZ/threadMessageAPI.en.md); не заменять её
+[матрице T01–T26](docs/tasks/threadMessageAPI.en.md); не заменять её
 одними счётчиками. Мутанты двойного исполнения/взятия, публикации `answer`
 как метода, раннего timeout и удаления позднего ответа должны падать.
 
@@ -5205,11 +5205,11 @@ Gate включает generated-source checks, [цикл документаци�
 ## Binding callables 2026-11-19 — связывание и вызываемые
 
 Норму задаёт ТЗ автора
-[LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](docs/TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md)
+[LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](docs/tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md)
 (ред. 2, решения R01–R18); само ТЗ не правится. Автор пересмотрел его после
 версии, по которой написан этот раздел: именованная сигнатура `fn: name data`
 (R13 и R14 переписаны, R19 новое, §8 ТЗ, строки приёмки C20–C36); действует
-текст `docs/TZ/`, а раздел читается вместе с
+текст `docs/tasks/`, а раздел читается вместе с
 [редакцией 2026-11-21](#docs-20261121). Транслятор, интерпретатор
 чистого графа, ядро, примеры и тесты исполняют эту норму не целиком: сверка
 шага 1 прогнала пробы по строкам приёмки B01–B27 и C01–C19, и часть строк

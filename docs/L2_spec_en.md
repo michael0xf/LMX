@@ -14,13 +14,13 @@ is referred to the author with the competing rules and a minimal differing examp
 merge always consume ordinary CODE arguments, including when written inside DATA; their common
 W/E argument algorithm applies everywhere. This supersedes the earlier role-dependent source
 reading. This edition incorporates the accepted
-[binding and callables](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
-[declaration arguments](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
-[blank physical line](TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
-[operand and expression](TZ/to_fable_operands_arguments_priorities.md), and
-[import/copy/merge field-stream](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md)
+[binding and callables](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+[declaration arguments](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),
+[blank physical line](tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md),
+[operand and expression](tasks/to_fable_operands_arguments_priorities.md), and
+[import/copy/merge field-stream](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md)
 requirements. The field-stream revision controls any conflicting earlier composition example. The later
-[author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) resolves P01:
+[author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) resolves P01:
 `uninit:T` has a type code and zero payload, graph assignment replaces fragments, and the full literal
 source graph includes both all written receivers and direct primitive leaves.
 
@@ -36,7 +36,7 @@ with a local pointer to its R0 graph, also when the program is interpreted. Ther
 graph, hidden execution copy, expanded callable/data graph, or materialized namespace version.
 Transient frame/register values and ordinary traversal maps remain execution state and do not
 form another program graph. Explicit copy/merge results are normal requested values.
-[Author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+[Author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 <a id="lmx"></a>
 ## 2. The `Lmx` structure
@@ -197,7 +197,7 @@ initialization is distinct from truthiness and from the input `required` selecti
 <a id="uninit-record-control"></a>
 ### 3.1. P01 resolved — a type code without a value
 
-**[Author clarification, 2026-11-21](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).** An uninitialized record has no value payload and reserves no
+**[Author clarification, 2026-11-21](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).** An uninitialized record has no value payload and reserves no
 T cell. The former nested outer/inner record, preallocated T storage and stable value-cell retagging
 requirements are superseded. The clean graph fully and literally represents the written source,
 including terminal primitives in their own `{type value}` encoding; for an uninitialized leaf that
@@ -508,7 +508,7 @@ the graph record `S\private\field` is not flattened into `S\field`. Use the comm
 or checks on direct reads. The walker reads the original `private` receiver in the clean graph;
 the compiler emits the appropriate binding/hidden-argument logic from that same source. A second
 graph of private marks or access flags in the binary is forbidden, including one presented as a
-prepared runtime representation. [Author example](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#private-without-marked-graph);
+prepared runtime representation. [Author example](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md#private-without-marked-graph);
 [full contract](LMX_semantics.en.md#private-binding).
 
 <a id="call-frame-20261115"></a>
@@ -1083,7 +1083,7 @@ The machine profile retains grouping, arithmetic, comparisons, logic, bitwise op
 a colon form declares or calls under its role. Overflow and raw indexing follow the machine
 contract, not L3 guarantees. `a[i][j]` addresses a rectangular multidimensional Array;
 `a[i]\[j]` follows a reference to a separate Array, while `s\[N]field` selects a source name
-occurrence. [Common expression requirements](TZ/to_fable_operands_arguments_priorities.md).
+occurrence. [Common expression requirements](tasks/to_fable_operands_arguments_priorities.md).
 
 <a id="lowlevel-sync"></a>
 ## 22. synchronized

@@ -120,7 +120,7 @@ payload waiting for its first assignment. The executing call can initialize its
 own local x without changing that source leaf. An explicit graph assignment
 `S\x := 5` instead replaces the selected `{uninit:int}` fragment by `{int 5}`.
 This replacement does not promise an unchanged raw payload address. The same
-distinction applies to other T; absence is not a zero value. [Author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+distinction applies to other T; absence is not a zero value. [Author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 <a id="header-receivers"></a>
 ## Header and service tables
@@ -204,7 +204,7 @@ not through a special pointer-call rule.
 <a id="native-structures"></a>
 ## Native and interpreter frames
 
-The rules below consolidate the [binding and callable requirements](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
+The rules below consolidate the [binding and callable requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md),
 including the named positional fn clarification. The interpreter, native paths, and their bridges must preserve the
 same logical places and effects. Documentation examples specify acceptance behavior; they do not establish which
 parts a particular repository build already implements.
@@ -557,7 +557,7 @@ by the general order, to the caller's place. [Examples in the semantics](LMX_sem
 <a id="shadowing-levels"></a>
 ### Shadowing of levels
 
-The author's rule in the [binding requirements §7.1](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) is:
+The author's rule in the [binding requirements §7.1](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) is:
 
 > A declaration at a nested level shadows the outer declaration of the same name. At one level there is nothing to
 > shadow; the parent one is used.
@@ -572,7 +572,7 @@ declaration is resolved in the ordinary way through the outer context.
 [Shadowing of levels](LMX_semantics.en.md#shadowing-levels).
 
 <a id="inline-declaration-control"></a>
-The [binding requirement §7.4](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) asks for this derivation:
+The [binding requirement §7.4](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) asks for this derivation:
 the current frame has outer x = 5; a nested inline block declares a new int: x with no RHS/default; there is no
 new callable invocation and the actual caller has no x. The new inner place is `uninit:int`. A lexical inline
 scope does not become a new caller for autofill, so the outer local 5 is not implicitly copied into the new
@@ -684,7 +684,7 @@ A first body := ... followed by an unnamed actual is rejected. A present empty b
 
 Through a fn-typed reference the same public-name → position → candidate-place map applies. It selects the
 receiving place without changing the declaration's internal name or prematurely evaluating its RHS.
-[Normative declaration-argument requirements](TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+[Normative declaration-argument requirements](tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
 
 <a id="binding-executors"></a>
 Mandatory copying of executable code at entry is withdrawn, including the former copy of only
@@ -704,7 +704,7 @@ Local frames are not published. Load-dirty, the shared direct-access cache, and 
 explicit writes are observed through actual aliases in execution order.
 [Agreed norm](LMX_semantics.en.md#call-frame-20261115),
 [executors](LMX_semantics.en.md#binding-executors),
-[binding and callable requirements](TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
+[binding and callable requirements](tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md).
 
 <a id="flush-receiver-contract"></a>
 <a id="direct-access-cache"></a>
@@ -886,7 +886,7 @@ deeply copy the used graph and preserve the corresponding copied owners through 
 Grouping either stream supplies a distinct container with its own cells; it neither performs another deep
 copy nor becomes the lexical owner of the received methods.
 [Composition](LMX_semantics.en.md#composition),
-[field-stream requirements](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
+[field-stream requirements](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 
 <a id="factory-result"></a>
 ## A returned method and a copied product
@@ -970,7 +970,7 @@ a declared failure goes to `catch`. Timeout starts at actual dispatch:
 a 500 ms threshold may yield an observed 512 ms while its threshold field
 remains 500. A late reply is not automatically discarded. The full contract
 and T01–T26 matrix are in the [semantics](LMX_semantics.en.md#thread-message-api)
-and the [transport acceptance matrix](Old_TZ/threadMessageAPI.en.md).
+and the [transport acceptance matrix](tasks/threadMessageAPI.en.md).
 
 <a id="tables-and-registries"></a>
 ## Tables and providers as data
@@ -1187,5 +1187,5 @@ guessed unary priority. Missing or ambiguous operands cause ordinary resolution 
 priority. The named signature is `fn: PrioritySignature ([]: char name; return: int)`, distinct from the ordinary
 PrioritiesTemplate explained [above](#fn-signature).
 
-[Operand requirements](TZ/to_fable_operands_arguments_priorities.md) give the full acceptance matrix for these
+[Operand requirements](tasks/to_fable_operands_arguments_priorities.md) give the full acceptance matrix for these
 templates, argument modes, effects, priorities, strings, and signatures.

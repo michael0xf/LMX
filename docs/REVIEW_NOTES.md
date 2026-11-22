@@ -10,7 +10,7 @@ author clarification added during this review. The English primary
 documents are the current review edition. The Russian grammar accidentally
 included in the upload has been excluded at the author's request.
 
-The developer instruction and Old_TZ/dirty.md have been translated into English
+The developer instruction and the supplement `dirty.md` have been translated into English
 while being reconciled with the current rules. The other accepted supplements
 have been edited as part of the documentation, not treated as unapplied work.
 
@@ -35,7 +35,7 @@ calls. An anonymous Structure can nevertheless contain calls or computed
 declarations. Their normal contracts determine when they execute. Grouping is
 neither a universal quotation nor a request to execute every initializer early.
 
-The corresponding [stream requirement](TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md)
+The corresponding [stream requirement](tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md)
 has been updated to revision 2. Old tables and cases claiming that a source
 Producer() cannot call merely because merge/import was written in DATA have
 been replaced.
@@ -82,7 +82,7 @@ structure remains available as written and can be replaced through ordinary grap
 assignment; this includes executable `for`/`if` and `merge`/`copy`/`import` forms.
 When executable edits require recompilation, the existing compile/endturn restart
 boundary applies. No second executable representation or special restricted
-graph-editing protocol is introduced. The [new author note](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+graph-editing protocol is introduced. The [new author note](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
 records these decisions and overrides contrary earlier wording.
 
 ### 2.5 The complete program is the graph and compiled methods
@@ -212,7 +212,7 @@ The [resolved record](implementation-notes.en.md#uninit-layout-conflict) retains
 the old anchor for links. Structure-descriptor stability and Array-element
 descriptor/index references are separate contracts. P01 requires no further
 author question, and its implementation oracle now follows the
-[latest author clarification](TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
+[latest author clarification](tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md).
 
 ## 6. Validation scope
 

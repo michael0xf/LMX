@@ -3,7 +3,7 @@
 Дата: 2026-11-18. Задавал исполнитель (сессия fable_pc). Статус: **закрыт ответом автора 2026-11-18**.
 
 Источники: сообщение автора и файл ТЗ, [журнал](../2026-11-18.md#tz-operands-arguments-priorities);
-[ТЗ](../../docs/TZ/to_fable_operands_arguments_priorities.md).
+[ТЗ](../../docs/tasks/to_fable_operands_arguments_priorities.md).
 
 ## Запись
 

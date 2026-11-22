@@ -9,9 +9,8 @@
 This is the architecture map for the standalone English documentation packet. The
 [L2 specification](docs/L2_spec_en.md), [L3 semantics](docs/LMX_semantics.en.md),
 [grammar](docs/LMX_grammar.en.md), and [kernel implementation contract](docs/kernel-implementation.en.md)
-define the detailed contracts. The accepted requirements in [TZ](docs/README.md#requirements)
-are integrated into these documents. [Old_TZ](docs/README.md#accepted-supplements)
-contains maintained supplements that were already part of the documented model.
+define the detailed contracts. The accepted requirements and supplements are
+integrated into these documents.
 
 This map describes the required architecture. Repository checkpoints, binary hashes,
 and old PASS/OPEN receipts are not evidence of the implementation state of this
@@ -75,7 +74,7 @@ A runtime operation can allocate the values and graph nodes required for its
 result. This does not replace its source record. An explicit permitted graph
 assignment replaces the graph fragment at its selected structural place; an
 assignment to an activation's own local does not publish that local into the
-source graph. The author's [latest clarification](docs/TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
+source graph. The author's [latest clarification](docs/tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md)
 makes this distinction explicit.
 
 A Structure is an ordered collection of fields holding references to values.
@@ -318,7 +317,7 @@ missing fields by merely being checked.
 ### 4.3 Declaration-form actuals
 
 A receiver declaration passed as an actual is read as DATA and retained as a
-form, according to the [declaration-argument supplement](docs/TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
+form, according to the [declaration-argument supplement](docs/tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md).
 It is not eagerly reduced to its initializer value.
 
 If its name matches an input declaration, it replaces the selected declaration
@@ -522,7 +521,7 @@ One executor runs a turn for a Message identity. Successful finalization publish
 prepared mail and child reservations; failure discards unpublished work without
 rolling back earlier explicit graph changes. Stop requests, success, cleanup,
 waiting, delivery, and entry counts remain distinct under the
-[Thread/Message API](docs/Old_TZ/threadMessageAPI.en.md).
+[Thread/Message API](docs/tasks/threadMessageAPI.en.md).
 
 `Thread.parent` and `Thread.children` define supervision. They are not
 `Lmx.parent` and do not create lexical visibility. A parent settles direct
@@ -551,8 +550,8 @@ LMX type and write destination.
 There is no load-dirty publication cycle, flush receiver, copy-back of own
 locals, automatic executable-tree copy, automatic graph-edit invalidation,
 or implicit compilation on a failed native lookup. The current
-[activation supplement](docs/Old_TZ/dirty.md) and
-[editing API](docs/Old_TZ/mutating_debug_API.en.md) define the detailed boundary.
+[activation supplement](docs/tasks/dirty.md) and
+[editing API](docs/tasks/mutating_debug_API.en.md) define the detailed boundary.
 
 `sys\compile` explicitly checks/prepares the selected graph, runs its required
 build/test phase, translates through L1/C, invokes the host toolchain, and installs
@@ -612,5 +611,4 @@ was performed.
 | Worked examples | [LMX_semantics_guide.en.md](docs/LMX_semantics_guide.en.md) |
 | Developer work and focused acceptance | [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md) |
 | Implementation provenance and historical distinctions | [implementation-notes.en.md](docs/implementation-notes.en.md) |
-| Applied supplements | [Old_TZ](docs/README.md#accepted-supplements) |
 | Requirements and acceptance notes | [README.md](docs/README.md), [REVIEW_NOTES.md](docs/REVIEW_NOTES.md) |

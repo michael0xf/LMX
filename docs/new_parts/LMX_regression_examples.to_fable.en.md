@@ -32,12 +32,12 @@ The normative model is the supplied `docs/` packet, including its five integrate
 
 | Code used below | Document / package path | Role |
 |---|---|---|
-| O / OPERAND | [to_fable_operands_arguments_priorities.md](../TZ/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
-| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
-| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
-| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
-| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
-| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
+| O / OPERAND | [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md), revision 6, updated 20 November | Structural operand discovery, prepared/raw inputs, priorities, assignments, `sys\eval`, names |
+| B / BIND | [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | Binding places, two-way private, actual parent, ordinary call, named `fn` requirements |
+| M / STREAM | [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md), revision 2 | Ordinary CODE sources in every placement; streams, explicit grouping, one-source copy and multi-source merge |
+| BLANK | [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | Blank-line block completion by the common parser |
+| D / DECL | [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | Declaration arguments and their repeated execution; const-root import; fn label mapping |
+| UNINIT | [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | Code-only `uninit:T`, zero value payload, local writes versus explicit graph-fragment replacement |
 | P1 / DP1 | [LMX_Design_Patterns.en.md](LMX_Design_Patterns.en.md) | Current examples 1–9 and explanatory corrections |
 | P2 / DP2 | [LMX_Design_Patterns10-18.en.md](LMX_Design_Patterns10-18.en.md) | Current examples 10–18 |
 | P3 / DP3 | [LMX_Design_Patterns19-23.en.md](LMX_Design_Patterns19-23.en.md) | Current examples 19–23, updated 21 November |
@@ -2917,20 +2917,20 @@ These SHA-256 values identify the bundled normative documents used for this revi
 | [implementation-notes.en.md](../implementation-notes.en.md) | `a8891acb7e4636c33a8c9c798121fd3f38154074adea26efa641330aa0c01e70` |
 | [kernel-implementation.en.md](../kernel-implementation.en.md) | `ee49134e1c41dd675fe8f37b3049c01a5faa4fc2a6a4a7a88eb8d121a6d3c2b5` |
 | [source-comparison.en.md](../source-comparison.en.md) | `0f97c42f17912ce4c5bf88eef2a5114943a27717d36b2602f1eb34d9d36b2b91` |
-| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
-| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
-| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
-| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
-| [to_fable_operands_arguments_priorities.md](../TZ/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
-| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
+| [LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md](../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md) | `8b6476a7b32d4e72065f21c5075fef2f6a846a81f4a2d4130e32b9ad0ee55099` |
+| [LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md](../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md) | `cfb0dafcfc7d0f86339946e88b55b4d78b58cf22d64bc6c478d0b0683074b33f` |
+| [LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md](../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md) | `48c8a29ace16ca79ae2b5b4c6b85f8dca5b61a4dfee9bb41d19987e540f90992` |
+| [LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md](../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md) | `5e0c901ca192d7d4196877f9f5d1c73e8b465f28096ea040523f169a3ede9f19` |
+| [to_fable_operands_arguments_priorities.md](../tasks/to_fable_operands_arguments_priorities.md) | `ed8926c864b52f528d4339f3c66e3e7b84cee13645054091894f3113f2e880a6` |
+| [LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md](../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md) | `9d8b836eec0497eae2eb14099a0383553012dd9b658da8d686df75686938dd6e` |
 
 <!-- Relative source links for the package layout. -->
-[O]: ../TZ/to_fable_operands_arguments_priorities.md
-[OPERAND]: ../TZ/to_fable_operands_arguments_priorities.md
-[B]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[BIND]: ../TZ/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
-[D]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
-[DECL]: ../TZ/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[O]: ../tasks/to_fable_operands_arguments_priorities.md
+[OPERAND]: ../tasks/to_fable_operands_arguments_priorities.md
+[B]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[BIND]: ../tasks/LMX_Fable_TZ_Binding_and_Callables_v2_2026-11-19.md
+[D]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
+[DECL]: ../tasks/LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md
 [P1]: LMX_Design_Patterns.en.md
 [DP1]: LMX_Design_Patterns.en.md
 [P2]: LMX_Design_Patterns10-18.en.md
@@ -2945,7 +2945,7 @@ These SHA-256 values identify the bundled normative documents used for this revi
 [GUIDE]: ../LMX_semantics_guide.en.md
 [CORE]: ../../CORE.md
 [CODING]: ../../L2_L3_CODING_INSTRUCTION.md
-[STREAM]: ../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
-[M]: ../TZ/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
-[BLANK]: ../TZ/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
-[UNINIT]: ../TZ/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md
+[STREAM]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[M]: ../tasks/LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md
+[BLANK]: ../tasks/LMX_Fable_TZ_Blank_Line_Block_Terminator_2026-11-20.md
+[UNINIT]: ../tasks/LMX_Author_Clarification_Uninit_Graph_Assignment_2026-11-21.md

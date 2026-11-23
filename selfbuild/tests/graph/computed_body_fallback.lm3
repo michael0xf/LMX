@@ -5,7 +5,6 @@
         int: result 0
         int: outside 0
 )
-@: shared data[0]
 int: k 5
 fn: local (int: value) int
     return: value + 100
@@ -27,10 +26,10 @@ fn: outer () int (
     fn: local prepared; return: before * 100 + local((k))
 end: outer
 int: result outer()
-int: outside data\k
 
 sub: main ()
+    @: shared node[0]
     shared\Observed\k := node\k
     shared\Observed\result := result
-    shared\Observed\outside := outside
+    shared\Observed\outside := node\k
 main()

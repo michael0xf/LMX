@@ -1,0 +1,73 @@
+# The type context (step 23.4, Р155): five compositions over one model differ -- M@[], M[]@,
+# uninit:M@, M@@, M[] -- from one another, from M@ and from M; two models are two requirements by identity, not by
+# structure; the refusals: a constructor over uninit:T, an unknown constructor, an immutable variant as the operand, a
+# reserved or never given code, an address that is no Structure of the arena. Answer 7; another number names the check
+# that failed.
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_compositions_check () int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: codes int c.calloc(7U, c.sizeof(c.int))
+    @: m1 c.Lmx 0
+    @: m2 c.Lmx 0
+    int: model1 0
+    int: i 0
+    int: j 0
+    if: arena = 0 || codes = 0 || c.lmx_arena_open(arena) != 0
+        return: 100
+    m1 := c.lmx_node_new_owned(arena)
+    m2 := c.lmx_node_new_owned(arena)
+    if: m1 = 0 || m2 = 0
+        return: 101
+    model1 := c.lmx_types_intern_model(arena, m1)
+    if: model1 < c.LMX_TYPE_TYPES_BASE || c.lmx_types_intern_model(arena, m1) != model1
+        return: 41
+    if: c.lmx_types_ctor(model1) != c.LMX_TYPE_CTOR_MODEL || c.lmx_types_model(model1) != m1
+        return: 42
+    # Two empty Structures: equal in structure, two requirements.
+    if: c.lmx_types_intern_model(arena, m2) = model1 || c.lmx_types_intern_model(arena, m2) = 0
+        return: 43
+    codes[0] := model1
+    codes[1] := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, model1)
+    codes[2] := c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, codes[1])
+    codes[3] := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, model1))
+    codes[4] := c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, codes[1])
+    codes[5] := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, codes[1])
+    codes[6] := c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, model1)
+    while: i < 7
+        if: codes[i] < c.LMX_TYPE_TYPES_BASE
+            return: 44
+        j := i + 1
+        while: j < 7
+            if: codes[i] = codes[j]
+                return: 45
+            j := j + 1
+        ---
+        i := i + 1
+    ---
+    if: c.lmx_types_model(codes[1]) != 0 || c.lmx_types_operand(codes[2]) != codes[1]
+        return: 46
+    # Refusals.
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, codes[4]) != 0
+        return: 51
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, codes[4]) != 0
+        return: 51
+    if: c.lmx_types_intern(9, c.LMX_TYPE_INT) != 0 || c.lmx_types_intern(c.LMX_TYPE_CTOR_MODEL, c.LMX_TYPE_INT) != 0
+        return: 52
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, 0 - c.LMX_TYPE_INT) != 0
+        return: 53
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, c.LMX_TYPE_RESERVED_4) != 0
+        return: 54
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, c.LMX_TYPE_TYPES_BASE + 100000) != 0
+        return: 55
+    if: c.lmx_types_known(c.LMX_TYPE_RESERVED_12) != 0 || c.lmx_types_known(c.LMX_TYPE_TYPES_BASE + 100000) != 0
+        return: 56
+    if: c.lmx_types_intern_model(arena, (cast: (@: c.Lmx) arena)) != 0
+        return: 57
+    if: c.lmx_arena_release(arena) != 0
+        return: 102
+    c.free((cast: (@: void) arena))
+    c.free((cast: (@: void) codes))
+    return: 7

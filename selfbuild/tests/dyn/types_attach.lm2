@@ -1,0 +1,45 @@
+# The type context (step 23.4, Р155): a model of a donor arena and a type built over it keep their
+# codes when the donor is attached to another arena, and stay after the emptied donor is released; they leave with the
+# receiving arena. Answer 7; another number names the check that failed.
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_attach_check () int
+    @: a c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: b c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: ctx c.LmxTypes c.lmx_types_context()
+    @: m c.Lmx 0
+    int: model 0
+    int: pointer 0
+    size_t: removed 0U
+    if: a = 0 || b = 0 || ctx = 0 || c.lmx_arena_open(a) != 0 || c.lmx_arena_open(b) != 0
+        return: 100
+    m := c.lmx_node_new_owned(b)
+    model := c.lmx_types_intern_model(b, m)
+    pointer := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, model)
+    if: m = 0 || model = 0 || pointer = 0
+        return: 61
+    if: b\type_rows_count != 2U || a\type_rows_count != 0U
+        return: 62
+    if: c.lmx_arena_attach(a, b) != 0
+        return: 63
+    if: a\type_rows_count != 2U || b\type_rows_count != 0U || b\type_rows != 0U
+        return: 64
+    if: c.lmx_types_known(model) = 0 || c.lmx_types_known(pointer) = 0 || c.lmx_types_model(model) != m
+        return: 65
+    # The model is the receiver's now: asked through it, the same code.
+    if: c.lmx_types_intern_model(a, m) != model
+        return: 66
+    removed := ctx\rows_removed
+    if: c.lmx_arena_release(b) != 0
+        return: 101
+    if: c.lmx_types_known(model) = 0 || c.lmx_types_known(pointer) = 0 || ctx\rows_removed != removed
+        return: 67
+    if: c.lmx_arena_release(a) != 0
+        return: 102
+    if: c.lmx_types_known(model) != 0 || c.lmx_types_known(pointer) != 0 || ctx\rows_removed != removed + 2U
+        return: 68
+    c.free((cast: (@: void) a))
+    c.free((cast: (@: void) b))
+    return: 7

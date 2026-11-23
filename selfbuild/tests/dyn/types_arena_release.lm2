@@ -1,0 +1,55 @@
+# The type context (step 23.4, Р155, the destruction of an arena): a loop of 100 passes, each a temporary
+# arena with a model M, the types M@ and uninit:M@, released at the end of the pass. Each release removes the three
+# rows; the live rows stay at their count; the codes only grow and are never given again; the indexes do not grow.
+# The counters: +3 codes, +3 removed rows, 0 live rows per pass. Answer 7; another number names the check that failed.
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_release_check () int
+    @: ctx c.LmxTypes c.lmx_types_context()
+    @: arena c.LmxArena 0
+    @: m c.Lmx 0
+    size_t: live 0U
+    size_t: removed 0U
+    size_t: index_cap 0U
+    int: next 0
+    int: last 0
+    int: model 0
+    int: pointer 0
+    int: uninit 0
+    int: pass 0
+    if: ctx = 0
+        return: 100
+    live := ctx\rows_live
+    removed := ctx\rows_removed
+    index_cap := ctx\index_cap
+    next := ctx\next_code
+    last := next - 1
+    while: pass < 100
+        arena := (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+        if: arena = 0 || c.lmx_arena_open(arena) != 0
+            return: 101
+        m := c.lmx_node_new_owned(arena)
+        model := c.lmx_types_intern_model(arena, m)
+        pointer := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, model)
+        uninit := c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, pointer)
+        if: m = 0 || model = 0 || pointer = 0 || uninit = 0
+            return: 81
+        if: model <= last || ctx\rows_live != live + 3U || arena\type_rows_count != 3U
+            return: 82
+        if: c.lmx_arena_release(arena) != 0
+            return: 102
+        c.free((cast: (@: void) arena))
+        if: c.lmx_types_known(model) != 0 || c.lmx_types_known(pointer) != 0 || c.lmx_types_known(uninit) != 0
+            return: 83
+        if: ctx\rows_live != live
+            return: 84
+        last := uninit
+        pass := pass + 1
+    ---
+    if: ctx\rows_removed != removed + 300U || ctx\next_code != next + 300
+        return: 85
+    if: ctx\index_cap != index_cap
+        return: 86
+    return: 7

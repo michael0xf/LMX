@@ -1,6 +1,9 @@
 # Scalar fields stand as values in every BODY, without an implicit call or
 # input capture. Formed operator expressions still run their operands.
 # наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
+# Each capture of the graph value runs in a root sub called at its place, which writes `node\calls` to
+# `shared\Observed` at that moment; `@calls` is a discarded address. A bare `return` or `break` on its own
+# line is the subject of the separate row flow_bare_return_ends_body.
 (
     Observed:
         int: calls 0
@@ -8,7 +11,6 @@
         int: after_effect 0
         int: after_call 0
 )
-@: shared data[0]
 int: calls 0
 fn: effect () int
     node\calls := node\calls + 1
@@ -18,25 +20,28 @@ sub: quiet () ()
 sub: hold () ()
     unknown_inside
     quiet
-    return
-    break
+sub: snap_before_effect ()
+    @: shared node[0]
+    shared\Observed\before_effect := node\calls
+sub: snap_after_effect ()
+    @: shared node[0]
+    shared\Observed\after_effect := node\calls
+sub: snap_after_call ()
+    @: shared node[0]
+    shared\Observed\after_call := node\calls
 unknown_outside
 quiet
-return
-break
 @: Bag (missing_a; quiet)
 Bag
-@(data\calls)
+@calls
 hold()
-int: before_effect data\calls
+snap_before_effect()
 +(effect() + 1)
-int: after_effect data\calls
+snap_after_effect()
 quiet()
-int: after_call data\calls
+snap_after_call()
 
 sub: main ()
+    @: shared node[0]
     shared\Observed\calls := node\calls
-    shared\Observed\before_effect := before_effect
-    shared\Observed\after_effect := after_effect
-    shared\Observed\after_call := after_call
 main()

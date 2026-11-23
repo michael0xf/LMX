@@ -9,7 +9,6 @@
         int: after_bare 0
         int: after_put 0
 )
-@: shared data[0]
 int: hits 4
 sub: bare (int: v)
     hits := v
@@ -18,10 +17,10 @@ sub: put (int: v)
 bare(5)
 int: after_bare hits
 put(9)
-int: after_put data\hits
 
 sub: main ()
+    @: shared node[0]
     shared\Observed\hits := node\hits
     shared\Observed\after_bare := after_bare
-    shared\Observed\after_put := after_put
+    shared\Observed\after_put := node\hits
 main()

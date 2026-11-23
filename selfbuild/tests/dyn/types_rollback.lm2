@@ -1,0 +1,69 @@
+# The type context (step 23.4, Р155): a construction in an arena takes a checkpoint, makes types and is refused. The
+# rollback takes back exactly the models it made in that arena and the types over them. It keeps a model made before
+# the checkpoint, a type made after it over that model, a type over fixed codes only, and a model another arena made
+# after the checkpoint (the rows of another lane). The numbers stay used, so getting the type again gives a new code;
+# a mark that is no checkpoint, or no arena, is refused. Answer 7; another number names the check that failed.
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_rollback_check () int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: other c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: ctx c.LmxTypes c.lmx_types_context()
+    @: m0 c.Lmx 0
+    @: m c.Lmx 0
+    @: mo c.Lmx 0
+    int: before 0
+    int: mark 0
+    int: model 0
+    int: pointer 0
+    int: over_before 0
+    int: fixed 0
+    int: elsewhere 0
+    int: again 0
+    size_t: removed 0U
+    if: arena = 0 || other = 0 || ctx = 0 || c.lmx_arena_open(arena) != 0 || c.lmx_arena_open(other) != 0
+        return: 100
+    m0 := c.lmx_node_new_owned(arena)
+    m := c.lmx_node_new_owned(arena)
+    mo := c.lmx_node_new_owned(other)
+    before := c.lmx_types_intern_model(arena, m0)
+    mark := c.lmx_types_checkpoint()
+    if: m0 = 0 || m = 0 || mo = 0 || before = 0 || mark <= before
+        return: 71
+    model := c.lmx_types_intern_model(arena, m)
+    pointer := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, model)
+    over_before := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, before)
+    fixed := c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, c.LMX_TYPE_GRAPH_INT_REF)
+    fixed := c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, fixed)
+    elsewhere := c.lmx_types_intern_model(other, mo)
+    if: model < mark || pointer < mark || over_before < mark || fixed = 0 || elsewhere < mark
+        return: 72
+    removed := ctx\rows_removed
+    if: c.lmx_types_rollback(arena, mark) != 0
+        return: 73
+    if: c.lmx_types_known(model) != 0 || c.lmx_types_known(pointer) != 0
+        return: 74
+    if: c.lmx_types_known(before) = 0 || c.lmx_types_intern_model(arena, m0) != before
+        return: 75
+    if: c.lmx_types_known(over_before) = 0 || c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, before) != over_before
+        return: 76
+    if: c.lmx_types_known(fixed) = 0 || c.lmx_types_known(elsewhere) = 0
+        return: 77
+    if: ctx\rows_removed != removed + 2U || arena\type_rows_count != 2U || other\type_rows_count != 1U
+        return: 78
+    again := c.lmx_types_intern_model(arena, m)
+    if: again = 0 || again = model || again <= elsewhere
+        return: 79
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, again) = pointer
+        return: 80
+    if: c.lmx_types_rollback(arena, c.LMX_TYPE_TYPES_BASE - 1) != 1 || c.lmx_types_rollback(0, mark) != 1
+        return: 81
+    if: c.lmx_types_rollback(arena, c.lmx_types_checkpoint() + 1) != 1
+        return: 82
+    if: c.lmx_arena_release(arena) != 0 || c.lmx_arena_release(other) != 0
+        return: 101
+    c.free((cast: (@: void) arena))
+    c.free((cast: (@: void) other))
+    return: 7

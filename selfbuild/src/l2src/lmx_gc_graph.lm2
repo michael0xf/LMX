@@ -10,7 +10,8 @@
 # header declares and this module reads directly) are in the kernel's headers; the arena's acts
 # (lmx_range_pool, lmx_range_cell_chunk, lmx_arena_drop, lmx_arena_impl_prune), the pools' (lmx_pool_is_sealed,
 # lmx_pool_chunk_head, lmx_chunk_data, lmx_chunk_cells), the values' (lmx_charptr_value_known), the source names'
-# (lmx_source_names_mark) and the C library's are the kernel's C functions, called through the C door.
+# (lmx_source_names_mark), the type context's (lmx_types_arena_next) and the C library's are the kernel's C functions,
+# called through the C door.
 predef: "l2src/lmx_gc.h.lm1"
 predef: "l2src/lmx_arena_blocks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -20,6 +21,7 @@ predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 
@@ -541,12 +543,31 @@ fn: lmx_gc_mark_execution (@: arena c.LmxArena; unsigned: gen) int
         roots := (cast: (@: c.LmxExecutionRoots) roots\prior)
     return: status
 
+# The models of the arena's type rows are roots (Р155: model rows are strong): marked like any value reached, so no
+# pass retires the block of a model whose code a row holds. One comparison in an arena without models.
+fn: lmx_gc_mark_types (@: arena c.LmxArena; unsigned: gen) int
+    @: model void 0
+    size_t: at 0U
+    if: arena\type_rows_count = 0U
+        return: c.LMX_GC_OK
+    at := c.lmx_types_arena_next(arena, 0U, @ model)
+    while: at != 0U
+        if: lmx_gc_mark_value(arena, model, gen, 0) != c.LMX_GC_OK
+            return: c.LMX_GC_PARTIAL
+        at := c.lmx_types_arena_next(arena, at, @ model)
+    ---
+    return: c.LMX_GC_OK
+end: lmx_gc_mark_types
+
 fn: lmx_gc_sweep (@: arena c.LmxArena; unsigned: gen) int
     @: block c.LmxArenaBlock 0
     @: next c.LmxArenaBlock 0
     if: arena = 0 || gen = 0U
         return: c.LMX_GC_INVALID
     if: lmx_gc_mark_execution(arena, gen) != c.LMX_GC_OK
+        return: c.LMX_GC_PARTIAL
+    # Before the implements fixpoint, which reads what is already live.
+    if: lmx_gc_mark_types(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_PARTIAL
     if: lmx_gc_mark_impl(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_PARTIAL

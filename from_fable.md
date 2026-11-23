@@ -101,14 +101,19 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-s33-tool02/lmxtool-tool.exe` | 46581c62 |
-| hosted frontend | `S/fable-s33-feh01/l2trans.exe` | 00f091ee |
-| runtime | `S/fable-s33-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
-| Graph | `S/fable-s33-graph02/graph_trans-prod.exe` | 95eec970 |
-| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, 2de148c9 |
-| tool для проверки документов | тот же `S/fable-s33-tool02/lmxtool-tool.exe` | 46581c62 |
+| tool | `S/fable-kw-tool02/lmxtool-tool.exe` | a133ce51 |
+| hosted frontend | `S/fable-kw-feh01/l2trans.exe` | e4826536 |
+| runtime | `S/fable-kw-rt02` | driver.o a081a985, driver-observe.o 0db8716a |
+| Graph | `S/fable-kw-graph02/graph_trans-prod.exe` | a04cc2ec |
+| манифест исходников | `selfbuild/inputs.sha256` | 1638 файлов, 2eeec13f |
+| tool для проверки документов | тот же `S/fable-kw-tool02/lmxtool-tool.exe` | a133ce51 |
 
-Сейчас действует набор шага 23.3 (`fable-s33-*`): все четыре компонента собраны мной из итоговых исходников
+Сейчас действует набор ядерного окна 2026-11-23 (`fable-kw-*`): контекст типов, починка автозаполнения и 26
+переписанных программ. Все четыре компонента собраны мной из итоговых исходников набором шага 23.3, по одному
+шагу под сторожем фиксируемой памяти; runtime новый — меняются модули ядра. Набор `fable-s33-*` остаётся в стадии
+как база.
+
+Прежде действовал набор шага 23.3 (`fable-s33-*`): все четыре компонента собраны мной из итоговых исходников
 набором части разбора шага 21.7, по одному шагу под сторожем фиксируемой памяти, шаг frontend — отдельным
 процессом; runtime побайтно равен прежнему. Набор `fable-p7-*` остаётся в стадии как база.
 

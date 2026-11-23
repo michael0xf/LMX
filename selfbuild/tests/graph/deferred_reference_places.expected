@@ -8,7 +8,6 @@
         int: ignored_initializers 0
     end: Observed
 ---
-@: shared (data [] 0)
 int: calls 0
 fn: touch () int
     :=: (node \ calls) ((node \ calls) + 1)
@@ -59,13 +58,13 @@ int: self_seen (Self \ seen)
 int: given_seen (D \ seen)
 int: structure_seen (D \ sseen)
 int: callable_seen (D2 \ seen)
-int: ignored_initializers (data \ calls)
 sub: observe ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ self_seen) self_seen
     :=: ((shared \ Observed) \ given_seen) given_seen
     :=: ((shared \ Observed) \ structure_seen) structure_seen
     :=: ((shared \ Observed) \ callable_seen) callable_seen
     :=: ((shared \ Observed) \ calls) calls
-    :=: ((shared \ Observed) \ ignored_initializers) ignored_initializers
+    :=: ((shared \ Observed) \ ignored_initializers) (node \ calls)
 end: observe
 observe:

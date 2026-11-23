@@ -19,12 +19,18 @@ predef: "l2src/lmx_arena.h.lm1"
 # (a Structure or a callable), 5 a pointer to an int, 6 a pointer to a Structure or a method, 7 an untyped reference
 # (the value the index of a Structure reads), 8 and 9 a pointer to an int and to an Lmx declared without an address.
 fn: lmx_l3_type (@: arena c.LmxArena; @: address void) int
+    @: pool c.LmxPool 0
     int: kind 0
     int: type 0
     if: arena = 0 || address = 0
         return: 0
-    kind := c.lmx_range_classify(arena, address)
-    type := c.lmx_range_type_of(arena, address)
+    # One bisection of the index gives both the kind and the code of the region (Р155): lmx_range_classify and
+    # lmx_range_type_of each made their own through lmx_range_cell_pool.
+    pool := c.lmx_range_cell_pool(arena, address)
+    if: pool = 0
+        return: 0
+    kind := (cast: (int) pool\kind)
+    type := (cast: (int) pool\type)
     if: kind = c.LMX_KIND_STRUCT
         return: 4
     if: kind != c.LMX_KIND_PRIMITIVE

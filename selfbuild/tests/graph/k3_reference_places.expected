@@ -9,7 +9,6 @@
         int: seen_zero 1
     end: Observed
 ---
-@: sink (data [] 0)
 int: n 5
 sub: build () (
     Box:
@@ -20,6 +19,7 @@ sub: build () (
 end: build
 build:
 sub: main ()
+    @: sink (node [] 0)
     :=: ((sink \ Observed) \ plain) ((build \ data) \ h)
     :=: ((sink \ Observed) \ typed) (@ n)
     :=: ((sink \ Observed) \ zero) ((build \ data) \ h)

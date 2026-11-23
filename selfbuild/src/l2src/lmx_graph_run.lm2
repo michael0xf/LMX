@@ -9248,6 +9248,7 @@ fn: lmx_graph_place_without_value (@: g c.LmxGraph; @: raw void) int
 fn: lmx_graph_work_autofill (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: row c.LmxGraphWork; @: name char; @: raw void; @: written void; @: status int) int
     @: active c.LmxActivation frame\activation
     @: source c.LmxGraphWork 0
+    @: cell void 0
     int: expected lmx_graph_own_kind(g, raw)
     status[0] := 0
     if: active = 0 || active\parent = 0 || active\parent\frame = 0
@@ -9266,7 +9267,14 @@ fn: lmx_graph_work_autofill (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: row c
         return: 0
     if: expected != 0 && lmx_graph_own_kind(g, (cast: (@: void) source\cell)) != expected
         return: 0
-    status[0] := lmx_graph_work_snapshot(g, row, (cast: (@: void) source\cell))
+    # The source is loaded, so its value is current: a place declared without a value keeps its pointer cell after it
+    # is written (lmx_graph_place_store_int writes the int behind it), and the snapshot takes that int, as
+    # lmx_graph_invoke_data_value reads an actual. The dereference goes with the pointer once a written place is a cell
+    # of its value (the book #uninit-zero-payload).
+    cell := (cast: (@: void) source\cell)
+    if: c.lmx_graph_kind(g, cell) = 3
+        cell := c.lmx_arena_pointer_void_read(cell)
+    status[0] := lmx_graph_work_snapshot(g, row, cell)
     return: 1
 
 # The number of names a reached line `required: a b` checks (the book #required-receiver): all its arguments are

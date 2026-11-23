@@ -1,0 +1,70 @@
+# The type context (step 23.4, Р155): the same type gives the same code twice; the codes the
+# kernel already has keep their numbers (alias rows); a depth of 17 pointers over int is 17 distinct codes, each the
+# pointer of the one below, and a second derivation gives the same 17. Answer 7; another number names the check that
+# failed.
+predef: "l2src/lmx_types.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_codes_check () int
+    @: depth int c.calloc(18U, c.sizeof(c.int))
+    int: i 0
+    int: j 0
+    int: t 0
+    if: depth = 0
+        return: 100
+    # Today's codes under their own numbers.
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, c.LMX_TYPE_INT) != c.LMX_TYPE_ARRAY_OF_INT
+        return: 11
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, c.LMX_TYPE_INT) != c.LMX_TYPE_GRAPH_INT_REF
+        return: 12
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, c.LMX_TYPE_GRAPH_LMX_REF) != c.LMX_TYPE_STRUCT
+        return: 13
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, c.LMX_TYPE_INT) != c.LMX_TYPE_UNINIT_INT
+        return: 14
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, c.LMX_TYPE_GRAPH_INT_REF) != c.LMX_TYPE_UNINIT_GRAPH_INT_REF
+        return: 15
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_UNINIT, c.LMX_TYPE_GRAPH_LMX_REF) != c.LMX_TYPE_UNINIT_GRAPH_LMX_REF
+        return: 16
+    # A type the kernel does not have, twice: one new code, its constructor and operand.
+    t := c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, c.LMX_TYPE_GRAPH_INT_REF)
+    if: t < c.LMX_TYPE_TYPES_BASE
+        return: 21
+    if: c.lmx_types_intern(c.LMX_TYPE_CTOR_ARRAY, c.LMX_TYPE_GRAPH_INT_REF) != t
+        return: 22
+    if: c.lmx_types_ctor(t) != c.LMX_TYPE_CTOR_ARRAY || c.lmx_types_operand(t) != c.LMX_TYPE_GRAPH_INT_REF
+        return: 23
+    if: c.lmx_types_known(t) = 0 || c.lmx_types_known(0 - t) = 0
+        return: 24
+    # Depth 17.
+    depth[0] := c.LMX_TYPE_INT
+    i := 1
+    while: i <= 17
+        depth[i] := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, depth[i - 1])
+        if: depth[i] = 0 || c.lmx_types_ctor(depth[i]) != c.LMX_TYPE_CTOR_POINTER
+            return: 31
+        if: c.lmx_types_operand(depth[i]) != depth[i - 1]
+            return: 32
+        i := i + 1
+    ---
+    if: depth[1] != c.LMX_TYPE_GRAPH_INT_REF
+        return: 33
+    i := 1
+    while: i <= 17
+        j := i + 1
+        while: j <= 17
+            if: depth[i] = depth[j]
+                return: 34
+            j := j + 1
+        ---
+        i := i + 1
+    ---
+    i := 1
+    t := c.LMX_TYPE_INT
+    while: i <= 17
+        t := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, t)
+        if: t != depth[i]
+            return: 35
+        i := i + 1
+    ---
+    c.free((cast: (@: void) depth))
+    return: 7

@@ -3,7 +3,6 @@
         int: before 1
     end: Observed
 ---
-@: shared (data [] 0)
 int: calls 1
 fn: touch () int
     :=: (node \ calls) ((node \ calls) + 1)
@@ -14,6 +13,10 @@ Holder:
 end: Holder
 int: before 0
 :=: before 1
-:=: ((shared \ Observed) \ before) before
-int: observed (length (Holder \ p))
-:=: before 2
+sub: main ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ before) before
+    int: observed (length (Holder \ p))
+    :=: before 2
+end: main
+main:

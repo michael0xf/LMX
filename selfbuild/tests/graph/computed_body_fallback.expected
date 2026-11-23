@@ -5,7 +5,6 @@
         int: outside 8
     end: Observed
 ---
-@: shared (data [] 0)
 int: k 8
 fn: local (int: value) int
     return: (value + 100)
@@ -29,10 +28,10 @@ fn: outer () int (
     return: ((before * 100) + (local (k)))
 end: outer
 int: result (outer)
-int: outside (data \ k)
 sub: main ()
+    @: shared (node [] 0)
     :=: ((shared \ Observed) \ k) (node \ k)
     :=: ((shared \ Observed) \ result) result
-    :=: ((shared \ Observed) \ outside) outside
+    :=: ((shared \ Observed) \ outside) (node \ k)
 end: main
 main:

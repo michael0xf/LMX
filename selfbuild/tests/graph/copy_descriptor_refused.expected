@@ -6,19 +6,22 @@
         int: before 0
     end: Observed
 ---
-@: shared (data [] 0)
 fn: leaf () int (
     int: count 0
 )
     :=: count (count + 1)
     return: count
 end: leaf
-:=: ((shared \ Observed) \ first) (leaf)
-:=: ((shared \ Observed) \ second) (leaf)
-:=: ((shared \ Observed) \ third) (leaf)
-@:
-    descriptor
-    merge: leaf
-end: @
-:=: ((shared \ Observed) \ before) ((descriptor \ data) \ count)
-int: rejected (descriptor)
+sub: main ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ first) (leaf)
+    :=: ((shared \ Observed) \ second) (leaf)
+    :=: ((shared \ Observed) \ third) (leaf)
+    @:
+        descriptor
+        merge: leaf
+    end: @
+    :=: ((shared \ Observed) \ before) ((descriptor \ data) \ count)
+    int: rejected (descriptor)
+end: main
+main:

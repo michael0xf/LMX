@@ -1,0 +1,13 @@
+# Entry Main: D's x is declared without a value; `D\x := 9` replaces that graph fragment with `{int 9}`
+# (#frame-and-graph-assignment), so C's input x over D has its own ready value 9 (#binding-places). D\seen 9;
+# the dump prints `int: x 9`. Red until a place without a value carries no payload and a path write gives it
+# one (#uninit-zero-payload): the kernel keeps the declaration form, and C's x has no value (answer 5).
+D:
+    int: x
+    int: seen 0
+    C:
+        node\seen := x
+---
+Main:
+    D\x := 9
+    D\C()

@@ -1,9 +1,13 @@
 # data is a part of the callable with its two formals a and b (the book; the parts of fn): length(data) answers 2.
+# The root's sub main observes it: it names the root by `node[0]` (a method declared at the root starts in the
+# root) and writes the answer of f to `shared\Observed\seen`.
 (
     Observed:
         int: seen 0
 )
-@: shared data[0]
 fn: f (int: a 1; int: b 2) int
     return: length(data)
-shared\Observed\seen := f()
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := f()
+main()

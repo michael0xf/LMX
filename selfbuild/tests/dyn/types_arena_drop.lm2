@@ -1,0 +1,56 @@
+# The type context (step 23.4, Р155, the destruction of an arena): a revert that takes back the blocks of a
+# model removes the types over it, and a model made afterwards -- possibly at the same address -- gets a new code; a
+# revert of later blocks of another pool keeps it; a collection pass with no other root keeps a model a row holds
+# (model rows are strong) and its code. Answer 7; another number names the check that failed.
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+include: "<stdlib.h>"
+
+fn: ty_drop_check () int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: other c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: mark c.LmxArenaBlock 0
+    @: m c.Lmx 0
+    int: model 0
+    int: pointer 0
+    int: later 0
+    if: arena = 0 || other = 0 || c.lmx_arena_open(arena) != 0 || c.lmx_arena_open(other) != 0
+        return: 100
+    # A revert to the empty arena drops every block, the model's among them.
+    mark := c.lmx_arena_mark(arena)
+    m := c.lmx_node_new_owned(arena)
+    model := c.lmx_types_intern_model(arena, m)
+    pointer := c.lmx_types_intern(c.LMX_TYPE_CTOR_POINTER, model)
+    if: m = 0 || model = 0 || pointer = 0 || arena\type_rows_count != 2U
+        return: 91
+    if: c.lmx_arena_revert(arena, mark) != 0
+        return: 92
+    if: c.lmx_types_known(model) != 0 || c.lmx_types_known(pointer) != 0 || arena\type_rows_count != 0U
+        return: 93
+    m := c.lmx_node_new_owned(arena)
+    later := c.lmx_types_intern_model(arena, m)
+    if: m = 0 || later = 0 || later <= pointer
+        return: 94
+    # A pass that marks nothing else: the row's model and its code stay.
+    m := c.lmx_node_new_owned(other)
+    model := c.lmx_types_intern_model(other, m)
+    if: m = 0 || model = 0
+        return: 95
+    # A revert of later blocks of another pool leaves the model's row: a drop removes only the rows in its block.
+    mark := c.lmx_arena_mark(other)
+    if: c.lmx_arena_take(other, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) = 0
+        return: 98
+    if: c.lmx_arena_mark(other) = mark
+        return: 98
+    if: c.lmx_arena_revert(other, mark) != 0 || c.lmx_types_known(model) = 0 || other\type_rows_count != 1U
+        return: 99
+    if: c.lmx_gc_sweep(other, c.lmx_arena_generation_next(other)) != c.LMX_GC_OK
+        return: 96
+    if: c.lmx_types_known(model) = 0 || c.lmx_range_classify(other, (cast: (@: void) m)) != c.LMX_KIND_STRUCT
+        return: 97
+    if: c.lmx_arena_release(arena) != 0 || c.lmx_arena_release(other) != 0
+        return: 101
+    c.free((cast: (@: void) arena))
+    c.free((cast: (@: void) other))
+    return: 7

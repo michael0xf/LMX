@@ -1,9 +1,10 @@
 # A computed field read through a path executes its written declaration (#call-frame-20261115); a number is not a Structure value, so length refuses it.
+# The reads run in the root's sub main, which names the root by `node[0]`; `before` and `Holder` are the root's
+# places, denoted transparently (#binding-caller-place).
 (
     Observed:
         int: before 0
 )
-@: shared data[0]
 int: calls 0
 fn: touch () int
     node\calls := node\calls + 1
@@ -11,6 +12,9 @@ fn: touch () int
 @: Holder (int: p touch())
 int: before 0
 before := 1
-shared\Observed\before := before
-int: observed length(Holder\p)
-before := 2
+sub: main ()
+    @: shared node[0]
+    shared\Observed\before := before
+    int: observed length(Holder\p)
+    before := 2
+main()

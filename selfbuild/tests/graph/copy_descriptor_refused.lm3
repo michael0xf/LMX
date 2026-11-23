@@ -1,5 +1,7 @@
 # A call's local write does not change the callee's data: each leaf() starts from count 0 (the book «Локальное
 # присваивание не меняет умолчание следующих вызовов»); the merged copy is no callable: its call refuses 5.
+# The calls, the merged copy and its call run in the root's sub main, which names the root by `node[0]` and
+# writes each count to `shared\Observed`.
 (
     Observed:
         int: first 0
@@ -7,13 +9,15 @@
         int: third 0
         int: before 0
 )
-@: shared data[0]
 fn: leaf () int (int: count 0)
     count := count + 1
     return: count
-shared\Observed\first := leaf()
-shared\Observed\second := leaf()
-shared\Observed\third := leaf()
-@: descriptor merge(leaf)
-shared\Observed\before := descriptor\data\count
-int: rejected descriptor()
+sub: main ()
+    @: shared node[0]
+    shared\Observed\first := leaf()
+    shared\Observed\second := leaf()
+    shared\Observed\third := leaf()
+    @: descriptor merge(leaf)
+    shared\Observed\before := descriptor\data\count
+    int: rejected descriptor()
+main()

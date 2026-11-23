@@ -4,7 +4,6 @@
         int: published 5
     end: Observed
 ---
-@: sink (data [] 0)
 fn: five () int
     return: 5
 end: five
@@ -21,6 +20,7 @@ build:
 int: seen (((build \ data) \ Computed) \ y)
 int: published (((build \ data) \ Computed) \ x)
 sub: main ()
+    @: sink (node [] 0)
     :=: ((sink \ Observed) \ seen) (node \ seen)
     :=: ((sink \ Observed) \ published) (node \ published)
 end: main

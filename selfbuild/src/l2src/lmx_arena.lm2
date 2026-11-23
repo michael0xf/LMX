@@ -26,6 +26,7 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
 include: "<stdlib.h>"
@@ -108,6 +109,9 @@ fn: lmx_arena_open (@: arena c.LmxArena) int
     arena\activation := 0
     arena\call_places := 0
     arena\execution_roots := 0
+    # The type rows of its models (lmx_types.lm2, Р155): none in a new arena.
+    arena\type_rows := 0U
+    arena\type_rows_count := 0U
     return: 0
 end: lmx_arena_open
 
@@ -262,6 +266,10 @@ fn: lmx_arena_drop (@: arena c.LmxArena; @: block c.LmxArenaBlock) int
     hi := lo + (cast: (size_t) block\n)
     if: hi < lo
         return: 1
+    # The types whose model lies in this block leave with it (Р155): a revert takes back a model, and no later model at
+    # the same address inherits its code. One comparison in an arena without models.
+    if: arena\type_rows_count != 0U && block\base != 0 && block\n != 0U
+        c.lmx_types_forget(arena, block\base, (cast: (@: void) hi), 0)
     # All owners detach through this operation, before any disposer runs.
     # A chunk's record and payload are separate blocks. Either one leaving
     # unlinks that chunk, so an old pool never keeps a freed head/tail.
@@ -753,6 +761,9 @@ fn: lmx_arena_attach (@: arena c.LmxArena; @: other c.LmxArena) int
     other\impl := 0
     other\impl_len := 0U
     other\impl_cap := 0U
+    # The donor's type rows follow its models (Р155): their codes do not change.
+    if: other\type_rows_count != 0U
+        c.lmx_types_attach(arena, other)
     return: c.lmx_arena_blocks_move_all(@ arena\blocks, @ other\blocks)
 end: lmx_arena_attach
 
@@ -766,6 +777,9 @@ fn: lmx_arena_release (@: arena c.LmxArena) int
     int: status 0
     if: arena = 0
         return: 1
+    # The types whose models this arena holds leave with it (Р155); their numbers are never given again.
+    if: arena\type_rows_count != 0U
+        c.lmx_types_forget(arena, 0, 0, 1)
     status := c.lmx_arena_blocks_dispose_all(@ arena\blocks)
     arena\arrays := 0
     # The code links of every interval go with the index (design 4.4): C heap, never a block of the list above.

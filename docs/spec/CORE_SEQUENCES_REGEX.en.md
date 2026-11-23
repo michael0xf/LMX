@@ -28,13 +28,20 @@ The common TYPE-role normalizer accepts a valid code, a symbolic type atom, an u
 | `T[]: destination Source` | Named place initialized from a suitable existing value |
 | `@: p` / `T@: p` | Uninitialized universal/typed reference |
 | `T@: p 0` | Initialized null reference; distinct from uninit |
+| `int@: 65536` | One unnamed reference-to-int value given by address 65536; no place is declared |
 | `@x` | Address of the actual place x under the selected level's address contract |
 | `x@` | Pointer type constructed from x in TYPE role |
 | `@(name)` / `[](name)` | Ordinary compact declarations, equivalent to `@: name` / `[]: name` |
 
 A sole declaration identifier is consumed as a NAME before lookup; a sole square group supplies anonymous data. A NAME followed by a square group supplies the explicit initializer. An existing same-named value cannot change this classification. The generic receiver path determines argument roles before attaching an initializer group as if it were an index. There is no whitespace-specific array parser.
 
-A typed anonymous constructor requires its square group. `T[]: copy(S)` is not an alternative anonymous constructor. `@[]: [S]` holds one reference to S; `@[]: [copy(S)]` receives the explicitly emitted fields. A type expression performs no copy, initializer execution, or compilation.
+The first argument distinguishes a named place from an unnamed value for references as well as arrays.
+`int@: p` declares a place; `int@: 65536` constructs a reference value from the address. There are no unnamed
+variables. This is the ordinary NAME/VALUE distinction, not a separate declaration or parser rule.
+
+A typed anonymous array constructor requires its square group. `T[]: copy(S)` is not an alternative anonymous
+constructor. `@[]: [S]` holds one reference to S; `@[]: [copy(S)]` receives the explicitly emitted fields.
+A type expression performs no copy, initializer execution, or compilation.
 
 A written empty suffix `T[]` constructs a type. A suffix containing a written index expression uses indexing, even when that expression later produces an empty stream: `a[()]` and `a[copy(empty)]` do not become type constructors. Original groups and postfix occurrences remain in the source graph.
 

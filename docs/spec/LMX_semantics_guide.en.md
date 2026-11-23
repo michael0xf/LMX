@@ -593,8 +593,7 @@ shadowing rules, without an added initialization pass or another author decision
 
 A normal independent call has a fresh namespace. Its input descriptions come from the actual parent of the selected
 code Structure; actuals and code locals are accepted by the common mechanism. Root declaration discovery uses the ordinary DATA/CODE and modifier rules and adds no fields to the source graph. Required `import`, `copy`, and `merge` contributions are consumed through their ordinary CODE-argument algorithm in the namespace; this explicit source processing is not arbitrary traversal or eager execution of all DATA contents. An ordinary actual fills
-the corresponding logical place and suppresses its initializer. A declaration-receiver actual instead preserves
-and substitutes its declaration form as described [below](#declaration-arguments).
+the corresponding logical place and suppresses its initializer. A declaration-receiver actual instead preserves its declaration form and supplies it as one Structure, as described [below](#declaration-arguments).
 
 There is no eager initializer pass. An unused computed DATA input does not run. When its selected namespace place
 is first needed, the common mechanism evaluates the stored initializer and retains the value in that activation's
@@ -623,18 +622,17 @@ For a computed namespace input int: x `next()`, `@x` obtains its value and the l
 ### Passing a declaration form for repeated execution
 
 A place-declaration receiver supplied in a CODE argument context is read as DATA. Passing it preserves the written
-form without running its initializer. It is distinct from an ordinary `Producer()` or Producer: tail call, whose head
+form without running its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. It is distinct from an ordinary `Producer()` or Producer: tail call, whose head
 is not a place-declaration receiver and which remains a call in CODE.
 
 | Supplied form | Matching rule | Accepted material |
 |---|---|---|
-| Its declared name exists in receiving DATA | Ordinary name/position match | The declaration replaces the matching description in this call namespace |
-| Its declared name is absent | One Structure at the current position | The whole form, with its internal name unchanged |
+| A declaration written as a positional actual | One Structure at the current position, whatever name it declares | The whole form, with its internal name unchanged |
 | An outer name := form is present | Outer name selects the formal | The form on the RHS keeps its own internal name |
 
-For inputs a then b, `g(int: b producer())` targets b without evaluating producer during supply. For inputs iteration
-then body with no item, the first argument below is one Structure for iteration; item is not an unknown named
-actual and does not disable the positional counter.
+For inputs a then b, `g(int: b producer())` supplies the declaration to a, the first position; the name b inside it does not address the input b,
+and producer is not evaluated during supply. For inputs iteration then body, the first argument below is one Structure for iteration whether or
+not an input item exists; item is not an unknown named actual and does not disable the positional counter.
 
 ~~~lmx
 cycles:

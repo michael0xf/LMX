@@ -271,12 +271,11 @@ form rather than executing its initializer just to pass a value.
 
 | Situation | Required handling |
 | --- | --- |
-| The declaration's name matches an input in DATA | Replace the selected declaration description in this call's namespace |
-| The inner declared name is absent from DATA | Pass the entire form in its current position as one Structure |
+| A declaration is written as a positional actual | Pass the entire form in its current position as one Structure, whatever name it declares; do not look the name up among the inputs |
 | An outer `name := ...` names the actual | Use that outer destination; retain the form's own inner name |
 
-The inner name in `int: item numbers\next()` is not automatically an unknown
-named actual when the receiving inputs are iteration and body.
+The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. The inner name in `int: item numbers\next()` is neither an unknown
+named actual nor a reason to search the receiving inputs: the form goes into `iteration`, and the following unnamed block goes into `body`.
 
 The passed root declaration logically supplements the executing code's root
 namespace. Physical source parents are not rewritten; no fields are inserted

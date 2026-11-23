@@ -42,7 +42,7 @@ called a namespace image, descriptor cache, or execution metadata.
 | Explicit actuals | Equal W/E candidates, retained actual map, no implicit-source selection, source-order effects | Whole/expanded preference, hidden rescue of required inputs, repeated expansion/execution |
 | Binding | Own actual/autofill value; transparent caller place; retained fallback own value/description | One mode used for every external name, alias-to-copy or copy-to-alias substitutions |
 | Private and scope | Private source excluded and visible private receiver protected; explicit/lexical access retained; sequential locals and real nested shadowing | Source-only private checks, global name barriers, whole-body future-local masking |
-| Declaration arguments | Preserve declaration form without initializer execution; match known names, otherwise one positional Structure; repeated execution updates the receiving root place | Passing only initializer values, treating an absent inner name as an unknown named actual, fresh item per body invocation |
+| Declaration arguments | Preserve declaration form without initializer execution; one positional Structure whatever name it declares, or the RHS of an explicit `name :=`; repeated execution updates the receiving root place | Passing only initializer values, looking the declared name up among the receiving inputs, treating the inner name as an unknown named actual, fresh item per body invocation |
 | Import/copy/merge | Ordinary CODE arguments everywhere; common W/E; import 1+, copy 1, merge 2+ admitted sources; output fields consumed by namespace | DATA-argument mode, const-filtered copy, one-source merge, implicit destination as model, automatic outer result container |
 | User operands | Ordinary method with left/right and explicit constant PASS_ARGS_AS_IS/PRIORITY; ordinary result; shared eval for raw occurrences | sys\operand registration, one args Array, universal reference result, implicit mode/priority |
 | Parser closure | Blank physical line invokes common complete close at local document root; protected content/pairs/Mix retain their rules | Ignoring a physical blank inside an intended continuing block or inventing a separate grammar subsystem |
@@ -177,9 +177,8 @@ Naming the current positional formal keeps the positional counter; naming anothe
 The target map never reorders effects. The selected W/E reading remains fixed through execution,
 and a supplied Structure is not expanded a second time after W has been selected.
 
-A place-declaration actual is DATA material. A matching internal declaration name replaces the
-receiving description. An absent internal name supplies the whole form positionally. An explicit
-outer name chooses the formal independently of the declaration's internal name. None of those
+A place-declaration actual is DATA material. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. Its internal declaration name is not looked up among the receiving inputs: the whole form is supplied positionally as one Structure. An explicit
+outer name chooses the formal independently of the declaration's internal name. Neither of those
 transfers runs its initializer. Executing the saved form later establishes or updates the
 receiving execution's root place; the associated body uses that same place and does not run the
 initializer merely to read it. A fresh independent call still has independent locals, and a real

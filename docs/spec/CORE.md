@@ -41,8 +41,9 @@ runtime mechanisms rather than another representation of the program.
 
 One parser builds the complete written receiver–arguments structure. Interpretation
 and translation then apply the consumer's role and contract. A bare reference, a
-call Frame, a declaration receiver, and an operator position are distinguished by
-that common model. There is no parser branch for each receiver name and no
+call Frame, a declaration receiver, and an operator position are told apart by the consumer's role and the contract of the resolved
+head, not by the parser: a call and the declaration of a Structure are one record, and `Producer()` calls in the role of CODE and declares a
+Structure in the role of DATA. There is no parser branch for each receiver name and no
 independent expression parser.
 
 The walker recognizes a simple word head through its canonical name and the existing
@@ -319,11 +320,10 @@ missing fields by merely being checked.
 
 A receiver declaration passed as an actual is read as DATA and retained as a
 form, according to the [declaration-argument rule](LMX_semantics.en.md#declaration-arguments).
-It is not eagerly reduced to its initializer value.
+It is not eagerly reduced to its initializer value. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual.
 
-If its name matches an input declaration, it replaces the selected declaration
-description in the receiving namespace. If its inner name is absent from DATA,
-the whole form occupies the current positional argument. An outer named actual
+The name it declares is not looked up among the receiving inputs: the whole form occupies the current positional
+argument as one Structure, and the ordinary assignment to the variable of that position is attempted. An outer named actual
 selects its destination without renaming the declaration inside the supplied form.
 
 Its root-level contributions participate through the ordinary namespace mechanism

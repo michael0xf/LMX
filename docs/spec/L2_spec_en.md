@@ -527,14 +527,13 @@ the resulting callable, without treating a bare reference as an implicit call.
 ### Declaration receivers supplied as arguments
 
 A place-declaration receiver supplied in a CODE argument context is read as DATA. The received
-material is its written declaration, not the result of evaluating its initializer. This distinction
+material is its written declaration, not the result of evaluating its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. This distinction
 follows the resolved head's declaring contract, not a list of names or a second parser.
 
 | Supplied form | Matching and namespace effect |
 |---|---|
-| Its declared name is an input name in the receiving data | Match under the ordinary name/position rules; replace that input's description in this call namespace with the supplied declaration. |
-| Its internal declared name is absent from the receiving data | Supply the whole declaration as one Structure at the current position; the internal name is not an unknown named actual. |
-| An outer `name := declaration` names the actual | The outer assignment chooses the receiving formal; the declaration retains its own internal name. |
+| A declaration written as a positional actual | It takes the current position as one Structure, whatever name it declares; the declared name is not looked up among the receiving inputs, and the ordinary assignment to the variable of that position is attempted under that variable's ordinary admission. |
+| An outer `name := declaration` names the actual | The outer assignment chooses the receiving formal by the ordinary rule of named actuals; the declaration retains its own internal name. |
 
 Naming the formal at its current position keeps the positional counter active. Naming another
 position disables it, after which every later actual must be named. The same rule applies through
@@ -543,9 +542,10 @@ name or execute its initializer.
 
 For example, with receiving inputs `iteration` and `body`,
 `iterate(int: item numbers\next(); (item *= 2))` supplies the declaration to `iteration` and the
-body Structure to `body`. If the receiving data instead has an input named `b`,
-`g(int: b producer())` selects that input by the ordinary matching rule rather than unconditionally
-selecting the first position. Neither transfer runs `next()` or `producer()`.
+body Structure to `body`. With inputs `a`, then `b`, `g(int: b producer())` supplies the declaration at
+the first position, to `a`: the name `b` inside it does not address the input `b`, while
+`g(b := int(b producer()))` addresses `b` by the ordinary named actual. Neither transfer runs
+`next()` or `producer()`.
 
 Executing the accepted declaration form extends the root namespace of the receiving execution.
 The first reached execution establishes its typed place; later executions update that same place

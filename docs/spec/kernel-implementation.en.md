@@ -593,10 +593,7 @@ an existing value when RHS is absent. Leaving the inner scope restores the outer
 
 <a id="declaration-arguments"></a>
 A place-declaration receiver supplied in CODE arguments is read as DATA and preserves the form,
-without running its initializer. If its declared name matches a receiving DATA input, it replaces
-that description in the current namespace under ordinary name/position matching. If its internal
-name is absent there, the whole declaration is one Structure at the current position; it is not
-an unknown named actual. An outer `formal := declaration` chooses the formal while preserving
+without running its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. The name it declares is not looked up among the receiving inputs: the whole declaration is one Structure at the current position, and the ordinary assignment to the variable of that position is attempted under its ordinary admission; it is not an unknown named actual. An outer `formal := declaration` chooses the formal while preserving
 the inner name. The same public-name/position map applies through fn interfaces.
 
 Executing the accepted form logically supplements the receiving execution's root namespace. Its
@@ -1073,7 +1070,7 @@ only checks actually run. Historical receipts do not prove this edition's behavi
 | Calls and signatures | Actual parent, no-data R0, no executable fn/sub/fncall; `Name :: DATA` has one left declaration identifier and one intact right template; positional type comparison remains distinct from full structural models |
 | Selection | All applicable W/E pairs counted; no hidden rescue of required inputs; selected map reused; named-position counter and once-only actual effects |
 | Binding/private | Own autofill, caller alias, fallback copy, source/receiver private, A→B→C transit, shadowing, immediate initialization-state writes |
-| Declaration arguments | Matched-name replacement, absent-inner-name positional form, outer named supply, repeated root execution, body using the same established place |
+| Declaration arguments | Positional one-Structure form whatever name it declares, outer named supply, repeated root execution, body using the same established place |
 | Import/copy/merge | Ordinary CODE arguments everywhere, admitted arities, constant-root import, stream/group distinction, no implicit destination source, independent maps, shared targets/cycles/lexical links |
 | Operands | Structural discovery, mandatory constant properties, left/right transport, normal results, raw-context eval, no hidden call on dereference |
 | Expression effects | Demand dependencies, low-priority assignment, C-relative precedence and asymmetric power, short-circuit skipping, one effect per occurrence/evaluation |

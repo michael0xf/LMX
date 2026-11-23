@@ -1,0 +1,38 @@
+FxLambdaStages:
+    private:
+        @: operation
+        @: info
+        @: prefix
+    return: @
+    build:
+        throws:
+            FxArity
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: inputs info\inputTypes
+        private: int: n length(inputs)
+        private: int: k length(prefix)
+        if: k > n
+            throw: FxArity()
+        private: int: count 0
+        if: k < n
+            count := 1
+        private: @: ownInputs FxSlice\slice(inputs; k; count)
+        private: @: ownResult info\resultType
+        private: @: engine FxForwardEngine\run
+        private: @: failures info\throws
+        if: k + 1 < n
+            ownResult := FxKernel\normalizeType(token := FxTypeTokens\reference[0])
+            engine := FxLambdaMiddleEngine\run
+            failures := FxFailures\union(failures; FxStageFailures\names())
+        private: @: contract FxSignatures\make(ownInputs; ownResult)
+        private: @: state (copy(FxCurryState))
+        state\target := operation
+        state\info := info
+        state\prefix := prefix
+        state\stageBuilder := FxLambdaStages\build
+        private: @: policy FxSourcePolicy\make(operation; FxIndices\make(k; count); FxIndices\make(0; k); prefix; FxIndices\make(k + count; n - k - count))
+        return: FxWrap\make(contract; engine; state; failures; policy)

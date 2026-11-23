@@ -10,15 +10,15 @@ FxPartial:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
-        private: @: inputs info\inputTypes
-        private: int: n length(inputs)
+        private: int: n length(info\inputTypes)
         private: int: k length(prefix)
         if: k > n
             throw: FxArity()
-        private: @: captured FxCapturePrefix\capture(inputs; prefix)
-        private: @: remaining FxSlice\slice(inputs; k; n - k)
+        private: @: captured FxCapturePrefix\capture(info\inputTypes; prefix)
+        private: @: remaining FxSlice\slice(info\inputTypes; k; n - k)
         private: @: contract FxSignatures\make(remaining; info\resultType)
-        private: @: state FxNewState\make(operation; info; captured)
-        private: []: char body FxTargetCallText\build(n; k; 0; info\hasResult)
-        return: FxBuild\make(contract; body; state; info\throws)
+        private: @: policy FxPrefixPolicy\make(operation; captured)
+        return: FxWrap\make(contract; FxForwardEngine\run; (copy(())); info\throws; policy)

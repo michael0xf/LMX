@@ -1,0 +1,20 @@
+FxLambdaMiddleEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws:
+            FxArity
+            FxCallFailure
+            FxIndex
+            FxKernelFailure
+            FxRecordArity
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: int: k length(state\prefix)
+        private: @: value FxFrameRead\read(frame; 0)
+        private: @: captured FxCaptureOne\capture(state\info\inputTypes[k]; value)
+        private: @: next FxAppend\append(state\prefix; FxOne\make(captured))
+        return: state\stageBuilder(operation := state\target; info := state\info; prefix := next)

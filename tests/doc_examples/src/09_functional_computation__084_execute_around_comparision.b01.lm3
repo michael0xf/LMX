@@ -42,13 +42,15 @@ Example:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
+            ReceiverIndex
+            SequenceSize
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Acquire\open; Release\close; Action\use)
         return: value * 1000 + Trace\events
         catch: FxCallFailure (@: outcome)
-            []: char actual outcome\failure
-            []: char expected sys\name(ResourceFailure)
+            char[]: actual outcome\failure
+            char[]: expected sys\name(ResourceFailure)
             sys\assert(length(actual) = length(expected))
             int: i 0
             while: i < length(actual)

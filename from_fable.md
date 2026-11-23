@@ -101,14 +101,18 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-p157-tool02/lmxtool-tool.exe` | 3e1e31da |
+| tool | `S/fable-s37a-tool02/lmxtool-tool.exe` | 998d9a2b |
 | hosted frontend | `S/fable-p157-feh01/l2trans.exe` | 14e02a70 |
 | runtime | `S/fable-p157-rt02` | driver.o 760bb272, driver-observe.o 16dc4144 |
-| Graph | `S/fable-p157-graph02/graph_trans-prod.exe` | b1cad4ce |
-| манифест исходников | `selfbuild/inputs.sha256` | 1650 файлов, 04e8b218 |
-| tool для проверки документов | тот же `S/fable-p157-tool02/lmxtool-tool.exe` | 3e1e31da |
+| Graph | `S/fable-s37a-graph02/graph_trans-prod.exe` | 8acbb0eb |
+| манифест исходников | `selfbuild/inputs.sha256` | 1651 файл, e165b8f3 |
+| tool для проверки документов | тот же `S/fable-s37a-tool02/lmxtool-tool.exe` | 998d9a2b |
 
-Сейчас действует набор среза-удаления шага 21.9 (`fable-p157-*`): имя переданного объявления среди входов не
+Сейчас действует набор первого среза шага 23.7: tool и Graph — `fable-s37a-*` (команда перевода записей и
+печать узлов с позициями и признаками), frontend и runtime — `fable-p157-*`: их исходники срез не трогал, и они
+не пересобирались.
+
+Прежде действовал набор среза-удаления шага 21.9 (`fable-p157-*`): имя переданного объявления среди входов не
 ищется. Все четыре компонента собраны мной из итоговых исходников набором второго среза шага 23.6, по одной
 сборке на машине. Набор `fable-s36b-*` остаётся в стадии как база.
 

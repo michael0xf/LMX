@@ -22,6 +22,7 @@ predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/l2_graph_build.h.lm1"
+predef: "l2src/l2_graph_retype.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>"
 include: "<stdlib.h>"
@@ -2214,7 +2215,196 @@ fn: lm_graph_p0_open (const: (@: path char); @@: out_document c.LmP0Document) in
     out_document[0] := doc
 return: 0
 
-fn: lm_graph_p0_file (const: (@: path char); int: lowered) int
+# ---- `p0 FILE [lower-types] [flags|nodes]`: the tree with what the ordinary print hides ------------------------------------
+# The ordinary print shows a node's kind, its text and its field count, and a few of its flags as words before the kind.
+# `flags` adds to every line of that print, after the text ` ##`, the flags of the node in [] and the flags of its Frame or
+# trailer in {}; `nodes` adds the position of the node before them: its offset and length in bytes and its line and column
+# (`@12+4 3:5`). Everything before ` ##` is the ordinary line byte for byte, so a case of the parser suite can pin a flag
+# the ordinary print cannot show (the separator after a field, the colon of a Frame, the mark of a postfix) and a position.
+
+# The name of one flag of a node (table 0), of a Frame (1) or of a trailer (2); the bit is 2 to the power index. 0 when the
+# table has no flag at that bit.
+fn: lm_graph_flag_name (int: flagset; int: index) const: @: char
+    if: flagset = 0
+        if: index = 0
+            return: "INACTIVE"
+        if: index = 1
+            return: "MIX"
+        if: index = 2
+            return: "SKIP"
+        if: index = 3
+            return: "SEP"
+        if: index = 4
+            return: "DOCUMENT"
+        if: index = 5
+            return: "STRMARK"
+        if: index = 6
+            return: "SQUARE"
+        if: index = 7
+            return: "POSTFIX"
+        ---
+    if: flagset = 1
+        if: index = 0
+            return: "COLON"
+        if: index = 1
+            return: "COMPACT"
+        if: index = 2
+            return: "INLINE"
+        if: index = 3
+            return: "SEPCLOSED"
+        if: index = 4
+            return: "DELIMCLOSED"
+        if: index = 5
+            return: "ASSIGN"
+        if: index = 6
+            return: "SOLE"
+        ---
+    if: flagset = 2
+        if: index = 0
+            return: "CUTTER"
+        if: index = 1
+            return: "COLON"
+        if: index = 2
+            return: "DELIMCLOSED"
+        if: index = 3
+            return: "SOLE"
+        ---
+    return: 0
+
+# ` [A B]` or ` {A B}`: the names of the set bits, an unknown bit as `?` and its value; nothing when no bit is set.
+sub: lm_graph_flags_text (@: out c.FILE; unsigned: flags; int: flagset; int: open; int: close)
+    unsigned: bit 1U
+    int: index 0
+    int: first 1
+    @: name char 0
+    if: flags = 0U
+        return
+    c.fputc(32, out)
+    c.fputc(open, out)
+    while: index < 32
+        if: (flags & bit) != 0U
+            if: first = 0
+                c.fputc(32, out)
+            name := (cast: (@: char) lm_graph_flag_name(flagset, index))
+            if: name != 0
+                c.fputs(name, out)
+            else:
+                c.fprintf(out, "?%u", bit)
+            ---
+            first := 0
+        bit := bit * 2U
+        index := index + 1
+    ---
+    c.fputc(close, out)
+return
+
+# The tail of a line of the print: ` ##` and, by mode, the position and the flags. mode 1 is `flags`, 2 is `nodes`.
+sub: lm_graph_nodes_tail (@: out c.FILE; @: item c.LmP0Node; unsigned: own; int: flagset; int: mode)
+    c.fputs(" ##", out)
+    if: mode = 2 && item != 0
+        c.fprintf(out, " @%zu+%zu %zu:%zu", (cast: (size_t) item\span\offset), (cast: (size_t) item\span\length), (cast: (size_t) item\span\line), (cast: (size_t) item\span\column))
+    if: item != 0
+        lm_graph_flags_text(out, (cast: (unsigned) item\flags), 0, 91, 93)
+    lm_graph_flags_text(out, own, flagset, 123, 125)
+    c.fputc(10, out)
+return
+
+sub: lm_graph_nodes_indent (@: out c.FILE; size_t: indent)
+    size_t: i 0U
+    while: i < indent
+        c.fputs("  ", out)
+        i := i + 1U
+    ---
+return
+
+sub: lm_graph_nodes_text (@: out c.FILE; @: text c.LmP0Text)
+    c.fputc(34, out)
+    if: text != 0
+        c.fwrite((cast: (@: void) text\data), 1U, (cast: (size_t) text\length), out)
+    c.fputc(34, out)
+return
+
+# The words the ordinary print puts before the kind of a node.
+sub: lm_graph_nodes_prefix (@: out c.FILE; @: item c.LmP0Node)
+    if: (item\flags & c.LM_P0_NODE_INACTIVE) != 0U
+        c.fputs("Inactive ", out)
+    if: (item\flags & c.LM_P0_NODE_MIX) != 0U
+        c.fputs("MIX ", out)
+        if: (item\flags & c.LM_P0_NODE_STRING_MARK) != 0U
+            c.fprintf(out, "at %zu ", (cast: (size_t) item\atom_char))
+        ---
+    if: (item\flags & c.LM_P0_NODE_POSITIONAL_SKIP) != 0U
+        c.fputs("PositionalSkip ", out)
+    if: (item\flags & c.LM_P0_NODE_SQUARE) != 0U
+        c.fputs("Square ", out)
+    if: (item\flags & c.LM_P0_NODE_POSTFIX) != 0U
+        c.fputs("Postfix ", out)
+    ---
+return
+
+sub: lm_graph_nodes_structure (@: out c.FILE; @: structure c.LmP0Structure; size_t: indent; int: mode)
+    @: field c.LmP0Field 0
+    if: structure != 0
+        field := (cast: (@: c.LmP0Field) structure\first_field)
+    while: field != 0
+        lm_graph_nodes_node(out, (cast: (@: c.LmP0Node) field\value), indent, mode)
+        field := (cast: (@: c.LmP0Field) field\next)
+    ---
+return
+
+sub: lm_graph_nodes_trailer (@: out c.FILE; @: trailer c.LmP0Trailer; size_t: indent; int: mode)
+    if: trailer = 0
+        return
+    lm_graph_nodes_indent(out, indent)
+    if: (trailer\flags & c.LM_P0_TRAILER_TAIL_CUTTER) != 0U
+        c.fputs("Tail cutter trailer spelling=", out)
+    else:
+        c.fputs("Trailer spelling=", out)
+    ---
+    lm_graph_nodes_text(out, (cast: (@: c.LmP0Text) trailer\spelling))
+    c.fprintf(out, " fields=%zu", (cast: (size_t) trailer\body\field_count))
+    lm_graph_nodes_tail(out, 0, (cast: (unsigned) trailer\flags), 2, mode)
+    lm_graph_nodes_structure(out, (cast: (@: c.LmP0Structure) trailer\body), indent + 1U, mode)
+return
+
+# One node, its fields and its trailer, in the order of the ordinary print: the line, the fields, the trailer.
+sub: lm_graph_nodes_node (@: out c.FILE; @: item c.LmP0Node; size_t: indent; int: mode)
+    @: frame c.LmP0Frame 0
+    @: structure c.LmP0Structure 0
+    if: item = 0
+        return
+    lm_graph_nodes_indent(out, indent)
+    lm_graph_nodes_prefix(out, item)
+    if: item\kind = c.LM_P0_NODE_STRUCTURE
+        structure := (cast: (@: c.LmP0Structure) item\as\structure)
+        c.fprintf(out, "%s fields=%zu", c.lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) item\kind)), (cast: (size_t) structure\field_count))
+        lm_graph_nodes_tail(out, item, 0U, 0, mode)
+        lm_graph_nodes_structure(out, structure, indent + 1U, mode)
+        lm_graph_nodes_trailer(out, (cast: (@: c.LmP0Trailer) structure\trailer), indent + 1U, mode)
+        return
+    if: item\kind = c.LM_P0_NODE_FRAME
+        frame := (cast: (@: c.LmP0Frame) item\as\frame)
+        c.fprintf(out, "%s head=", c.lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) item\kind)))
+        lm_graph_nodes_text(out, (cast: (@: c.LmP0Text) frame\head))
+        c.fprintf(out, " body=%s fields=%zu", c.lm_p0_node_kind_class_name(c.LM_P0_NODE_STRUCTURE), (cast: (size_t) frame\body\field_count))
+        lm_graph_nodes_tail(out, item, (cast: (unsigned) frame\flags), 1, mode)
+        lm_graph_nodes_structure(out, (cast: (@: c.LmP0Structure) frame\body), indent + 1U, mode)
+        lm_graph_nodes_trailer(out, (cast: (@: c.LmP0Trailer) frame\trailer), indent + 1U, mode)
+        return
+    if: item\kind = c.LM_P0_NODE_ATOM || item\kind = c.LM_P0_NODE_DISABLED
+        c.fprintf(out, "%s ", c.lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) item\kind)))
+        lm_graph_nodes_text(out, (cast: (@: c.LmP0Text) item\as\atom))
+        lm_graph_nodes_tail(out, item, 0U, 0, mode)
+        if: item\kind = c.LM_P0_NODE_ATOM
+            lm_graph_nodes_structure(out, (cast: (@: c.LmP0Structure) item\marks), indent + 1U, mode)
+        return
+    c.fprintf(out, "%s kind=%zu", c.lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) item\kind)), (cast: (size_t) item\kind))
+    lm_graph_nodes_tail(out, item, 0U, 0, mode)
+return
+
+# `p0 FILE [lower-types] [flags|nodes]`: the tree of a file, read by P0 (and, with lower-types, lowered by the pass of
+# the typed notation). Without flags and nodes the print is the parser's own, byte for byte.
+fn: lm_graph_p0_file (const: (@: path char); int: lowered; int: mode) int
     @: doc c.LmP0Document 0
     @: dump char 0
     @: diag c.LmP0Diagnostic 0
@@ -2226,6 +2416,10 @@ fn: lm_graph_p0_file (const: (@: path char); int: lowered) int
             c.fprintf(c.stderr, "P0 parse error %d at %zu:%zu: %s\n", (cast: (int) (diag\code)), (cast: (size_t) (diag\line)), (cast: (size_t) (diag\column)), (cast: (@: char) (diag\message)))
         c.lm_p0_document_destroy(doc)
         return: 2
+    if: mode != 0
+        lm_graph_nodes_node(c.stdout, (cast: (@: c.LmP0Node) c.lm_p0_document_root(doc)), 0U, mode)
+        c.lm_p0_document_destroy(doc)
+        return: 0
     dump := c.lm_p0_dump_alloc(doc)
     if: dump != 0
         c.fputs(dump, c.stdout)
@@ -2233,6 +2427,26 @@ fn: lm_graph_p0_file (const: (@: path char); int: lowered) int
     ---
     c.lm_p0_document_destroy(doc)
 return: 0
+
+# The words after the file of the p0 command: lower-types, flags and nodes, each at most once and in any order; anything
+# else is a usage error (2).
+fn: lm_graph_p0_command (@@: args char; int: n) int
+    int: lowered 0
+    int: mode 0
+    int: i 3
+    while: i < n
+        if: c.strcmp(args[i], "lower-types") = 0
+            lowered := 1
+        if: c.strcmp(args[i], "flags") = 0
+            mode := 1
+        if: c.strcmp(args[i], "nodes") = 0
+            mode := 2
+        if: c.strcmp(args[i], "lower-types") != 0 && c.strcmp(args[i], "flags") != 0 && c.strcmp(args[i], "nodes") != 0
+            c.fputs("graph_trans: p0 takes FILE [lower-types] [flags|nodes]\n", c.stderr)
+            return: 2
+        i := i + 1
+    ---
+    return: lm_graph_p0_file(args[2], lowered, mode)
 
 # M8 observes a written sole anonymous group without changing its boundary or
 # guessing its head's semantic role. Mix payload is counted separately.
@@ -2760,7 +2974,7 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     return: (cast: (int) (fails != 0))
 end: lm_graph_method_mutation
 
-# The tool's commands: run, emit, emit-check, p0, intern, mutation, method-mutation. args[0] is the program, args[1]
+# The tool's commands: run, emit, emit-check, p0, retype, groups, intern, mutation, method-mutation. args[0] is the program, args[1]
 # the command. The exit: 0 done, else the answer; 2 for a usage error.
 fn: lm_graph_main (@@: args char; int: n) int
     int: forced 0
@@ -2790,7 +3004,9 @@ fn: lm_graph_main (@@: args char; int: n) int
             return: 2
         return: lm_graph_run_file(args[2], runs, entry)
     if: n >= 3 && c.strcmp(args[1], "p0") = 0
-        return: lm_graph_p0_file(args[2], (cast: (int) (n >= 4 && c.strcmp(args[3], "lower-types") = 0)))
+        return: lm_graph_p0_command(args, n)
+    if: n >= 3 && c.strcmp(args[1], "retype") = 0
+        return: lm_graph_retype_main(args, n)
     if: n = 5 && c.strcmp(args[1], "groups") = 0
         return: lm_graph_groups_list(args[2], args[3], args[4])
     if: n >= 5 && (c.strcmp(args[1], "emit") = 0 || c.strcmp(args[1], "emit-check") = 0)
@@ -2815,7 +3031,7 @@ fn: lm_graph_main (@@: args char; int: n) int
         if: runs < 1
             return: 2
         return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs, entry)
-    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE [lower-types] | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
+    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE [lower-types] [flags|nodes] | retype --dry|--write ROOT LIST [REPORT] | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
 

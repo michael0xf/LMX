@@ -1752,7 +1752,7 @@ fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_
     @: actual char 0
     @: expected_diag char 0
     @: diagnostic char c.calloc(96U, 1U)
-    @@: words char c.calloc(3U, sizeof(@: char))
+    @@: words char c.calloc(5U, sizeof(@: char))
     @: detail int c.calloc(1U, sizeof(c.int))
     size_t: actual_count 0U
     size_t: diag_count 0U
@@ -1783,8 +1783,15 @@ fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_
         words[0] := "p0"
         words[1] := source
         if: dj_property(json, count, row, "lower_types", @ first, @ after) = 1
-            words[2] := "lower-types"
-            word_count := 3
+            words[word_count] := "lower-types"
+            word_count := word_count + 1
+        # The print of the flags a case pins ("flags") and, with the positions, of the nodes ("nodes"): graph_trans p0 FILE ... flags|nodes.
+        if: dj_property(json, count, row, "flags", @ first, @ after) = 1
+            words[word_count] := "flags"
+            word_count := word_count + 1
+        if: dj_property(json, count, row, "nodes", @ first, @ after) = 1
+            words[word_count] := "nodes"
+            word_count := word_count + 1
         ok := (cast: (int) (run_self(graph, words, word_count, dir, stdout_path, stderr_path, 15000U, detail) = 0))
         if: detail[0] != expected_exit
             ok := 0

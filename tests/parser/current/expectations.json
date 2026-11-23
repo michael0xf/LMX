@@ -2617,5 +2617,106 @@
     "exit": 0,
     "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the third field is the result `int`: nothing to lower; the formals have `@` as a head",
     "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=2\n      frame head=\"@\" body=structure fields=2\n        atom \"a\"\n        atom \"int\"\n      frame head=\"@\" body=structure fields=2\n        atom \"b\"\n        atom \"int\"\n    atom \"int\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"a\"\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a01_flags_separator.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a, the print of the flags: the comma after `int` is a separator mark of that field (SEP); the colon head is a colon Frame (COLON) whose body starts on its line (INLINE)",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"@\" body=structure fields=4 ## {COLON INLINE}\n    atom \"q\" ##\n    atom \"int\" ## [SEP]\n    atom \"\\\" ##\n    atom \"pp\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a02_nodes_positions.lmx",
+    "nodes": true,
+    "exit": 0,
+    "authority": "Step 23.7a, the print of the positions: the root spans the whole source from 0:0; a Frame from its head to the end of its line; an atom its own bytes (offset and length) and its line and column from 1",
+    "stdout_exact": "structure fields=1 ## @0+14 0:0\n  frame head=\"@\" body=structure fields=4 ## @0+13 1:1 {COLON INLINE}\n    atom \"q\" ## @3+1 1:4\n    atom \"int\" ## @5+3 1:6 [SEP]\n    atom \"\\\" ## @10+1 1:11\n    atom \"pp\" ## @11+2 1:12\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a03_flags_assign.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: the operator `:=` is a Frame of its left side with the assignment flag (ASSIGN), no colon; its body is on the head's line (INLINE)",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=1 ## {INLINE ASSIGN}\n    atom \"5\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a04_flags_separator_closed.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: a semicolon closes the inline body of the Frame before it (SEPCLOSED) and marks its last field (SEP); the Frame after it is closed by the group",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"fn\" body=structure fields=3 ## {COLON INLINE}\n    atom \"f\" ##\n    structure fields=2 ##\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE SEPCLOSED}\n        atom \"a\" ##\n        atom \"int\" ## [SEP]\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE}\n        atom \"b\" ##\n        atom \"int\" ##\n    atom \"int\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a05_flags_tail_cutter.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: the closing line `end: f` is a trailer that cuts the tail (CUTTER) and has a colon (COLON), printed after the fields of its Frame",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"fn\" body=structure fields=4 ## {COLON INLINE}\n    atom \"f\" ##\n    structure fields=0 ##\n    atom \"int\" ##\n    structure fields=1 ##\n      frame head=\"return\" body=structure fields=1 ## {COLON INLINE}\n        atom \"0\" ##\n    Tail cutter trailer spelling=\"end\" fields=1 ## {CUTTER COLON}\n      atom \"f\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a06_nodes_positions_lines.lmx",
+    "nodes": true,
+    "exit": 0,
+    "authority": "Step 23.7a: the positions over three lines (the offsets count the line ends); the structure of a body begins where its first field begins",
+    "stdout_exact": "structure fields=1 ## @0+34 0:0\n  frame head=\"fn\" body=structure fields=4 ## @0+12 1:1 {COLON INLINE}\n    atom \"f\" ## @4+1 1:5\n    structure fields=0 ## @6+2 1:7\n    atom \"int\" ## @9+3 1:10\n    structure fields=1 ## @17+9 2:5\n      frame head=\"return\" body=structure fields=1 ## @17+9 2:5 {COLON INLINE}\n        atom \"0\" ## @25+1 2:13\n    Tail cutter trailer spelling=\"end\" fields=1 ## {CUTTER COLON}\n      atom \"f\" ## @32+1 3:6\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a07_flags_square_group.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: a group in square brackets at a field start is a Structure with the square flag (SQUARE), which the ordinary print shows as the word Square",
+    "stdout_exact": "structure fields=1 ##\n  Square structure fields=3 ## [SQUARE]\n    atom \"1\" ##\n    atom \"2\" ##\n    atom \"3\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a08_flags_postfix.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: the `@` written against the word before it is an atom of its own with the postfix flag (POSTFIX), which the ordinary print shows as the word Postfix",
+    "stdout_exact": "structure fields=4 ##\n  atom \"a\" ##\n  atom \"int\" ##\n  Postfix atom \"@\" ## [POSTFIX]\n  atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a09_flags_compact.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: a head with its fields in parentheses is a compact Frame (COMPACT), no colon; the semicolon marks the field before it (SEP)",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"f\" body=structure fields=2 ## {COMPACT}\n    atom \"x\" ## [SEP]\n    atom \"y\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a13_flags_inactive.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: a line begun with `%` is an inactive node of the kind disabled that keeps the text after the marker and the spaces unread (INACTIVE), which the ordinary print shows as the word Inactive",
+    "stdout_exact": "structure fields=1 ##\n  Inactive disabled \"@: x int\" ## [INACTIVE]\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a14_flags_mark.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a: a mark in braces is a Structure of the mix kind (MIX) whose fields are those of a document of its own (DOCUMENT); the ordinary print shows the first as the word MIX",
+    "stdout_exact": "structure fields=3 ##\n  atom \"a\" ##\n  MIX structure fields=1 ## [MIX]\n    atom \"x\" ## [DOCUMENT]\n  atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a10_flags_lowered_place.lmx",
+    "lower_types": true,
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a, with the pass of 23.6: the typed place `int@: q, \\pp` is lowered to the tree P0 builds for `@: q int, \\pp`, and the flags are those of the old text -- the separator mark moved from the name to the type",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"@\" body=structure fields=4 ## {COLON INLINE}\n    atom \"q\" ##\n    atom \"int\" ## [SEP]\n    atom \"\\\" ##\n    atom \"pp\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a11_flags_lowered_sizeof_bare.lmx",
+    "lower_types": true,
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a, with the pass of 23.6 and 23.6b: `char@` and the bare `@@` in sizeof are lowered to `@: char` and `@@: void`, with the flags of the old text",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"size_t\" body=structure fields=4 ## {COLON INLINE}\n    atom \"n\" ##\n    frame head=\"sizeof\" body=structure fields=1 ## {COMPACT}\n      frame head=\"@\" body=structure fields=1 ## {COLON INLINE}\n        atom \"char\" ##\n    atom \"+\" ##\n    frame head=\"sizeof\" body=structure fields=1 ## {COMPACT}\n      frame head=\"@@\" body=structure fields=1 ## {COLON INLINE}\n        atom \"void\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/t237_a12_flags_lowered_cast_result.lmx",
+    "lower_types": true,
+    "flags": true,
+    "exit": 0,
+    "authority": "Step 23.7a, with the pass of 23.6b: the bare `@` as a result and as a cast type are lowered to `@: void`, the formal `int@: p` to `@: p int`, with the flags of the old text",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"fn\" body=structure fields=4 ## {COLON INLINE}\n    atom \"f\" ##\n    structure fields=1 ##\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE}\n        atom \"p\" ##\n        atom \"int\" ##\n    frame head=\"@\" body=structure fields=1 ## {COLON INLINE}\n      atom \"void\" ##\n    structure fields=1 ##\n      frame head=\"return\" body=structure fields=1 ## {COLON INLINE}\n        structure fields=1 ##\n          frame head=\"cast\" body=structure fields=2 ## {COLON INLINE}\n            structure fields=1 ##\n              frame head=\"@\" body=structure fields=1 ## {COLON INLINE}\n                atom \"void\" ##\n            atom \"p\" ##\n"
   }
 ]

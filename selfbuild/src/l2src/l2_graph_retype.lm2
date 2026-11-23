@@ -1,0 +1,648 @@
+# The translation of the records of the old notation of a reference into the typed notation (step 23.7 of the plan, the
+# translation of the sources of L2): `@: name T value` becomes `T@: name value`, `@: name void` becomes `@: name`, and in the
+# places of a type (the type of a cast, of sizeof, of const, the result of a function) `@: T` becomes `T@` and `@: void`
+# becomes `@`. The rules are those of the ledger (R152, item 3) and the table of the census of the sources
+# (step-23-7/census_forms.py); the typed notation is read by the pass of step 23.6 (lm_p0_lower_types), which lowers it to
+# the tree P0 builds for the old notation, so the translation keeps every tree.
+#
+# A TRANSITIONAL command of the graph tool, in a module of its own so that it goes with one file and the line that calls it
+# (src/l2src/l2_graph_tool.lm2) when the sources, the tests and the L1 text are translated:
+#
+#     graph_trans retype --dry|--write ROOT LIST [REPORT]
+#
+# LIST names the files of ROOT, one relative path a line. Each file is read by P0 (no pass), the walk finds the records of
+# the old notation by the place they stand in (the same rules as the census, so the totals can be compared) and builds the
+# text with the records replaced: the bytes between two records are copied as they are. --dry writes nothing but the
+# REPORT (the standard output without it); --write writes the files whose text changed. A record whose layout is not the
+# plain one (a line break, a comment or any other text between its words, a position that does not point at its text) is
+# not translated and is reported with the reason; the command never guesses.
+#
+# The REPORT has a line for every record of the old notation:
+#     REC <file> <line>:<column> <place> <form> edit|keep:<reason>
+# and after each edit the old text and the new one:
+#     EDIT <file> <line>:<column> <old text> => <new text>
+# and, last,
+#     FILE-ERROR <file> <reason>   (a file that cannot be read or translated: nothing of it is written)
+#     TOTAL files <n> records <n> edits <n> kept <n> errors <n>
+#
+# A machine module (L2 section 20) with its own header (l2src/l2_graph_retype.h.lm1): built by `lmxtool build-graph`
+# (bld_graph, tools/build.lm2) before the graph tool's module; its export is lm_graph_retype_main.
+predef: "l1src/p0.h.lm1"
+predef: "l1src/parser.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>"
+include: "<stdlib.h>"
+include: "<string.h>"
+
+# The state of one file, in two arrays so that no record of the module is needed. The numbers (st, size_t):
+#   0 the length of the output text   1 its capacity   2 the offset in the source up to which the output holds the text
+#   3 the length of the source        4 the edits      5 the failure (0 none, 1 no memory, 2 an edit out of order)
+#   6 the records seen                7 the records kept
+# and the pointers (p, char): 0 the source, 1 the output text, 2 the path of the file as the list names it.
+
+# The place of a record, as the walk passes it from the parent: 0 a place (anything not named below), 1 a formal of a
+# function or a sub, 2 the result of a function, 3 the type of a cast, 4 the type of sizeof, 5 the operand of const;
+# 6 and 7 are tags of a group, not of a record: 6 the formals of a function, 7 the group of a cast.
+fn: lm_rt_place_name (int: place) const: @: char
+    if: place = 1
+        return: "formal"
+    if: place = 2
+        return: "result"
+    if: place = 3
+        return: "cast"
+    if: place = 4
+        return: "sizeof"
+    if: place = 5
+        return: "const"
+    return: "place"
+
+# The form of a record, the second word of the census table: 0 empty, 1 operand void, 2 operand type, 3 operand path,
+# 4 operand group, 5 operand other, 6 name only, 7 place other, 8 name void, 9 name void value, 10 name group-type,
+# 11 name group-type value, 12 name T-sep ambiguous, 13 name T, 14 name T value.
+fn: lm_rt_form_name (int: form) const: @: char
+    if: form = 0
+        return: "empty"
+    if: form = 1
+        return: "operand void"
+    if: form = 2
+        return: "operand type"
+    if: form = 3
+        return: "operand path"
+    if: form = 4
+        return: "operand group"
+    if: form = 5
+        return: "operand other"
+    if: form = 6
+        return: "name only"
+    if: form = 8
+        return: "name void"
+    if: form = 9
+        return: "name void value"
+    if: form = 10
+        return: "name group-type"
+    if: form = 11
+        return: "name group-type value"
+    if: form = 12
+        return: "name T-sep ambiguous (path type or dereference value)"
+    if: form = 13
+        return: "name T"
+    if: form = 14
+        return: "name T value"
+    return: "place other"
+
+# Why a record that is not edited is kept: the code of the reason, by the form (the codes 1 to 4 are set by the checks of
+# the text of the record).
+fn: lm_rt_keep_code (int: form) int
+    if: form = 9
+        return: 10
+    if: form = 6
+        return: 11
+    if: form = 12
+        return: 12
+    if: form = 10 || form = 11
+        return: 13
+    return: 14
+
+fn: lm_rt_reason_name (int: reason) const: @: char
+    if: reason = 1
+        return: "no colon (a compact head)"
+    if: reason = 2
+        return: "the head is not followed by a colon"
+    if: reason = 3
+        return: "position or text of the type"
+    if: reason = 4
+        return: "position or text of the name and the type"
+    if: reason = 10
+        return: "waits for step 23.8"
+    if: reason = 11
+        return: "no type"
+    if: reason = 12
+        return: "a path as the type"
+    if: reason = 13
+        return: "a group as the type"
+    return: "form not in the rules"
+
+# The text of an atom is exactly the string s.
+fn: lm_rt_atom_is (@: item c.LmP0Node; const: (@: s char)) int
+    @: text c.LmP0Text 0
+    if: item = 0 || item\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    text := (cast: (@: c.LmP0Text) item\as\atom)
+    return: (cast: (int) (text\length = c.strlen(s) && c.memcmp((cast: (@: void) text\data), (cast: (@: void) s), (cast: (size_t) text\length)) = 0))
+
+# A word: an atom that starts with a letter, an underscore or a backtick (the census' word); not the separator.
+fn: lm_rt_atom_is_word (@: item c.LmP0Node) int
+    @: text c.LmP0Text 0
+    @: data char 0
+    if: item = 0 || item\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    text := (cast: (@: c.LmP0Text) item\as\atom)
+    if: text\length = 0U
+        return: 0
+    data := (cast: (@: char) text\data)
+    return: (cast: (int) ((data[0] >= 65 && data[0] <= 90) || (data[0] >= 97 && data[0] <= 122) || data[0] = 95 || data[0] = 96))
+
+# The i-th field of a structure, or 0.
+fn: lm_rt_nth (@: structure c.LmP0Structure; size_t: i) @: c.LmP0Node
+    @: field c.LmP0Field 0
+    size_t: k 0U
+    if: structure = 0
+        return: 0
+    field := (cast: (@: c.LmP0Field) structure\first_field)
+    while: field != 0 && k < i
+        field := (cast: (@: c.LmP0Field) field\next)
+        k := k + 1U
+    ---
+    if: field = 0
+        return: 0
+    return: (cast: (@: c.LmP0Node) field\value)
+
+# What the head of a Frame is for the walk: 1 fn or sub, 2 sizeof, 3 const, 4 cast, 5 a run of `@` (a record of the old
+# notation), 0 any other.
+fn: lm_rt_head_kind (@: frame c.LmP0Frame) int
+    @: head c.LmP0Text (cast: (@: c.LmP0Text) frame\head)
+    @: data char (cast: (@: char) head\data)
+    size_t: i 0U
+    if: head\length = 0U
+        return: 0
+    while: i < head\length && data[i] = 64
+        i := i + 1U
+    ---
+    if: i = head\length
+        return: 5
+    if: (head\length = 2U && c.memcmp((cast: (@: void) data), (cast: (@: void) "fn"), 2U) = 0) || (head\length = 3U && c.memcmp((cast: (@: void) data), (cast: (@: void) "sub"), 3U) = 0)
+        return: 1
+    if: head\length = 6U && c.memcmp((cast: (@: void) data), (cast: (@: void) "sizeof"), 6U) = 0
+        return: 2
+    if: head\length = 5U && c.memcmp((cast: (@: void) data), (cast: (@: void) "const"), 5U) = 0
+        return: 3
+    if: head\length = 4U && c.memcmp((cast: (@: void) data), (cast: (@: void) "cast"), 4U) = 0
+        return: 4
+    return: 0
+
+# The place of a child of a Frame whose head is of kind head_kind and which itself stands in place; child_kind is 1 for a
+# structure and 2 for a frame.
+fn: lm_rt_child_place (int: head_kind; int: place; size_t: index; int: child_kind) int
+    if: head_kind = 1
+        if: index = 1U && child_kind = 1
+            return: 6
+        if: index >= 2U && child_kind = 2
+            return: 2
+        ---
+        return: 0
+    if: head_kind = 2 && child_kind = 2
+        return: 4
+    if: head_kind = 3
+        if: child_kind = 2
+            return: 5
+        if: child_kind = 1 && place = 1
+            return: 6
+        ---
+        return: 0
+    if: head_kind = 4 && child_kind = 1
+        return: 7
+    return: 0
+
+# ---- the output text ---------------------------------------------------------------------------------------------------
+
+# Bytes to the end of the output text. 0, or 1 when there is no memory (the failure is kept).
+fn: lm_rt_put (@: st size_t; @@: p char; const: (@: bytes char); size_t: count) int
+    size_t: need st[0] + count + 1U
+    size_t: cap 0U
+    @: grown char 0
+    if: st[5] != 0U
+        return: 1
+    if: need > st[1]
+        cap := st[1] * 2U
+        if: cap < need
+            cap := need + 4096U
+        ---
+        grown := (cast: (@: char) c.realloc((cast: (@: void) p[1]), cap))
+        if: grown = 0
+            st[5] := 1U
+            return: 1
+        p[1] := grown
+        st[1] := cap
+    ---
+    c.memcpy((cast: (@: void) (p[1] + st[0])), (cast: (@: void) bytes), count)
+    st[0] := st[0] + count
+    return: 0
+
+# An edit begins at the source offset start: the text between the last edit and start is copied. 1 when start is before
+# the end of the last edit or past the source (the failure 2 is kept).
+fn: lm_rt_begin (@: st size_t; @@: p char; size_t: start) int
+    if: start < st[2] || start > st[3]
+        st[5] := 2U
+        return: 1
+    if: lm_rt_put(st, p, p[0] + st[2], start - st[2]) != 0
+        return: 1
+    st[2] := start
+    return: 0
+
+# n times the character `@`.
+sub: lm_rt_put_at (@: st size_t; @@: p char; size_t: n)
+    size_t: i 0U
+    while: i < n
+        lm_rt_put(st, p, "@", 1U)
+        i := i + 1U
+    ---
+return
+
+# ---- the record -----------------------------------------------------------------------------------------------------------
+
+# Only spaces and tabs in the source between the offsets from and to.
+fn: lm_rt_gap_plain (@@: p char; size_t: from; size_t: to) int
+    @: src char p[0]
+    size_t: i from
+    while: i < to
+        if: src[i] != 32 && src[i] != 9
+            return: 0
+        i := i + 1U
+    ---
+    return: 1
+
+# The offset where an atom ends, or 0 when its text is not the text of the source at its span (an atom is never empty).
+fn: lm_rt_atom_end (@: st size_t; @@: p char; @: item c.LmP0Node) size_t
+    @: text c.LmP0Text (cast: (@: c.LmP0Text) item\as\atom)
+    size_t: at (cast: (size_t) item\span\offset)
+    size_t: span_bytes (cast: (size_t) item\span\length)
+    if: item\kind != c.LM_P0_NODE_ATOM || span_bytes = 0U || span_bytes != (cast: (size_t) text\length) || at + span_bytes > st[3]
+        return: 0U
+    if: c.memcmp((cast: (@: void) (p[0] + at)), (cast: (@: void) text\data), span_bytes) != 0
+        return: 0U
+    return: at + span_bytes
+
+# One line of the report for a record: edit when reason is 0, else keep and the reason.
+sub: lm_rt_report (@: report c.FILE; @@: p char; @: item c.LmP0Node; int: place; int: form; int: reason)
+    if: reason = 0
+        c.fprintf(report, "REC\t%s\t%zu:%zu\t%s\t%s\tedit\n", p[2], (cast: (size_t) item\span\line), (cast: (size_t) item\span\column), lm_rt_place_name(place), lm_rt_form_name(form))
+    else:
+        c.fprintf(report, "REC\t%s\t%zu:%zu\t%s\t%s\tkeep:%s\n", p[2], (cast: (size_t) item\span\line), (cast: (size_t) item\span\column), lm_rt_place_name(place), lm_rt_form_name(form), lm_rt_reason_name(reason))
+    ---
+return
+
+# The classification of a record by its fields, as the census does: the form (see lm_rt_form_name) and, in kind, how the
+# rules edit it: 0 not at all, 1 the type of an operand (T@), 2 void as an operand (@), 3 a name and a type (T@: name),
+# 4 a name and void (the name). The fields: n of them, the first three c0, c1, c2.
+fn: lm_rt_form (int: operand; size_t: n; @: c0 c.LmP0Node; @: c1 c.LmP0Node; @: c2 c.LmP0Node) int
+    int: form 7
+    if: n = 0U
+        return: 0
+    if: c0 = 0 || (n >= 2U && c1 = 0)
+        return: 7
+    if: operand != 0
+        form := 5
+        if: n = 1U && lm_rt_atom_is(c0, "void") != 0
+            form := 1
+        if: form = 5 && n = 1U && lm_rt_atom_is_word(c0) != 0
+            form := 2
+        if: form = 5 && n >= 2U && lm_rt_atom_is_word(c0) != 0 && lm_rt_atom_is(c1, "\\") != 0
+            form := 3
+        if: form = 5 && n = 1U && c0\kind = c.LM_P0_NODE_STRUCTURE
+            form := 4
+        ---
+        return: form
+    if: n = 1U
+        return: 6
+    if: c0\kind != c.LM_P0_NODE_ATOM
+        return: 7
+    if: lm_rt_atom_is(c1, "void") != 0
+        form := 9
+        if: n = 2U
+            form := 8
+        ---
+        return: form
+    if: c1\kind = c.LM_P0_NODE_STRUCTURE
+        form := 11
+        if: n = 2U
+            form := 10
+        ---
+        return: form
+    if: lm_rt_atom_is_word(c1) != 0
+        form := 14
+        if: n = 2U
+            form := 13
+        if: n >= 3U && lm_rt_atom_is(c2, "\\") != 0
+            form := 12
+        ---
+    ---
+    return: form
+
+# A record of the old notation: the Frame item, its head a run of `@`, standing in place. It is classified as the census
+# does (the place and the form are the two words of the census table), and edited when it is of a form the rules name and
+# its text is the plain one.
+sub: lm_rt_record (@: report c.FILE; @: st size_t; @@: p char; @: item c.LmP0Node; @: frame c.LmP0Frame; int: place)
+    @: body c.LmP0Structure (cast: (@: c.LmP0Structure) frame\body)
+    @: head c.LmP0Text (cast: (@: c.LmP0Text) frame\head)
+    @: c0 c.LmP0Node lm_rt_nth(body, 0U)
+    @: c1 c.LmP0Node lm_rt_nth(body, 1U)
+    @: c2 c.LmP0Node lm_rt_nth(body, 2U)
+    @: src char p[0]
+    size_t: n (cast: (size_t) body\field_count)
+    size_t: k (cast: (size_t) head\length)
+    size_t: hs (cast: (size_t) item\span\offset)
+    size_t: ns 0U
+    size_t: ne 0U
+    size_t: ts 0U
+    size_t: te 0U
+    size_t: out_start 0U
+    int: form 0
+    int: kind 0
+    int: reason 0
+    st[6] := st[6] + 1U
+    form := lm_rt_form((cast: (int) (place >= 2 && place <= 5)), n, c0, c1, c2)
+    # how the rules edit the form
+    if: form = 1
+        kind := 2
+    if: form = 2
+        kind := 1
+    if: form = 13 || form = 14
+        kind := 3
+    if: form = 12 && (c1\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+        kind := 3
+    if: form = 8
+        kind := 4
+    ---
+    if: kind = 0
+        reason := lm_rt_keep_code(form)
+    if: kind != 0 && (frame\flags & c.LM_P0_FRAME_COLON) = 0U
+        kind := 0
+        reason := 1
+    if: kind != 0 && (hs + k + 1U >= st[3] || src[hs + k] != 58)
+        kind := 0
+        reason := 2
+    ---
+    # the words of the record: where they are and that they are the plain text, one space or tab between them
+    if: kind = 1 || kind = 2
+        ts := (cast: (size_t) c0\span\offset)
+        te := lm_rt_atom_end(st, p, c0)
+        if: te = 0U || ts < hs + k + 1U || lm_rt_gap_plain(p, hs + k + 1U, ts) = 0
+            kind := 0
+            reason := 3
+        ---
+    if: kind = 3 || kind = 4
+        ns := (cast: (size_t) c0\span\offset)
+        ne := lm_rt_atom_end(st, p, c0)
+        ts := (cast: (size_t) c1\span\offset)
+        te := lm_rt_atom_end(st, p, c1)
+        if: ne = 0U || te = 0U || ns < hs + k + 1U || ts <= ne || lm_rt_gap_plain(p, hs + k + 1U, ns) = 0 || lm_rt_gap_plain(p, ne, ts) = 0
+            kind := 0
+            reason := 4
+        ---
+    ---
+    if: kind = 0
+        st[7] := st[7] + 1U
+        lm_rt_report(report, p, item, place, form, reason)
+        return
+    # the edit: from the start of the record to the end of its type (the value, if any, stays as it is)
+    if: lm_rt_begin(st, p, hs) != 0
+        return
+    out_start := st[0]
+    if: kind = 1
+        lm_rt_put(st, p, src + ts, te - ts)
+        lm_rt_put_at(st, p, k)
+    if: kind = 2
+        lm_rt_put_at(st, p, k)
+    if: kind = 3
+        lm_rt_put(st, p, src + ts, te - ts)
+        lm_rt_put_at(st, p, k)
+        lm_rt_put(st, p, ": ", 2U)
+        lm_rt_put(st, p, src + ns, ne - ns)
+    if: kind = 4
+        lm_rt_put(st, p, src + hs, ne - hs)
+    ---
+    st[2] := te
+    st[4] := st[4] + 1U
+    lm_rt_report(report, p, item, place, form, 0)
+    c.fprintf(report, "EDIT\t%s\t%zu:%zu\t%.*s\t=>\t%.*s\n", p[2], (cast: (size_t) item\span\line), (cast: (size_t) item\span\column), (cast: (int) (te - hs)), src + hs, (cast: (int) (st[0] - out_start)), p[1] + out_start)
+return
+
+# ---- the walk ---------------------------------------------------------------------------------------------------------------
+
+# The fields of a structure standing in place (6 the formals of a function, 7 the group of a cast, else none of those).
+sub: lm_rt_walk_structure (@: report c.FILE; @: st size_t; @@: p char; @: body c.LmP0Structure; int: place)
+    @: field c.LmP0Field 0
+    int: child_place 0
+    if: body = 0
+        return
+    if: place = 6
+        child_place := 1
+    if: place = 7 && body\field_count = 1U
+        child_place := 3
+    ---
+    field := (cast: (@: c.LmP0Field) body\first_field)
+    while: field != 0 && st[5] = 0U
+        lm_rt_walk(report, st, p, (cast: (@: c.LmP0Node) field\value), child_place)
+        field := (cast: (@: c.LmP0Field) field\next)
+    ---
+return
+
+sub: lm_rt_walk (@: report c.FILE; @: st size_t; @@: p char; @: item c.LmP0Node; int: place)
+    @: frame c.LmP0Frame 0
+    @: body c.LmP0Structure 0
+    @: trailer c.LmP0Trailer 0
+    @: field c.LmP0Field 0
+    @: child c.LmP0Node 0
+    size_t: i 0U
+    int: head_kind 0
+    int: child_place 0
+    if: item = 0 || (item\flags & c.LM_P0_NODE_INACTIVE) != 0U
+        return
+    if: item\kind = c.LM_P0_NODE_FRAME
+        frame := (cast: (@: c.LmP0Frame) item\as\frame)
+        body := (cast: (@: c.LmP0Structure) frame\body)
+        trailer := (cast: (@: c.LmP0Trailer) frame\trailer)
+        head_kind := lm_rt_head_kind(frame)
+        if: head_kind = 5
+            lm_rt_record(report, st, p, item, frame, place)
+        ---
+        if: body != 0
+            field := (cast: (@: c.LmP0Field) body\first_field)
+        while: field != 0 && st[5] = 0U
+            child := (cast: (@: c.LmP0Node) field\value)
+            if: child != 0
+                child_place := 0
+                if: child\kind = c.LM_P0_NODE_FRAME
+                    child_place := lm_rt_child_place(head_kind, place, i, 2)
+                if: child\kind = c.LM_P0_NODE_STRUCTURE
+                    child_place := lm_rt_child_place(head_kind, place, i, 1)
+                ---
+                lm_rt_walk(report, st, p, child, child_place)
+            ---
+            field := (cast: (@: c.LmP0Field) field\next)
+            i := i + 1U
+        ---
+        if: trailer != 0 && trailer\body != 0
+            lm_rt_walk_structure(report, st, p, (cast: (@: c.LmP0Structure) trailer\body), 0)
+        return
+    if: item\kind = c.LM_P0_NODE_STRUCTURE
+        body := (cast: (@: c.LmP0Structure) item\as\structure)
+        trailer := (cast: (@: c.LmP0Trailer) body\trailer)
+        lm_rt_walk_structure(report, st, p, body, place)
+        if: trailer != 0 && trailer\body != 0
+            lm_rt_walk_structure(report, st, p, (cast: (@: c.LmP0Structure) trailer\body), 0)
+        ---
+    ---
+return
+
+# ---- a file and the list --------------------------------------------------------------------------------------------------
+
+# The whole text of a file, NUL-terminated, and its length; 0 when it cannot be read.
+fn: lm_rt_read (const: (@: path char); @: count size_t) @: char
+    @: file c.FILE c.fopen(path, "rb")
+    c.LmP0FileScratch: scratch
+    @: text char 0
+    size_t: got 0U
+    count[0] := 0U
+    if: file = 0
+        return: 0
+    if: c.fseek(file, 0, c.SEEK_END) != 0
+        c.fclose(file)
+        return: 0
+    scratch\file_size := c.ftell(file)
+    if: scratch\file_size < 0 || c.fseek(file, 0, c.SEEK_SET) != 0
+        c.fclose(file)
+        return: 0
+    count[0] := (cast: (size_t) scratch\file_size)
+    text := (cast: (@: char) c.malloc(count[0] + 1U))
+    if: text != 0
+        got := c.fread(text, 1U, count[0], file)
+        if: got != count[0]
+            c.free(text)
+            text := 0
+        ---
+    ---
+    c.fclose(file)
+    if: text != 0
+        text[count[0]] := (cast: (char) 0)
+    return: text
+
+# One file: parse, walk, and with write != 0 write the text when it changed. 0, or 1 when the file is not translated
+# (FILE-ERROR in the report); the totals go into the array totals (records, edits, kept).
+fn: lm_rt_file (@: report c.FILE; const: (@: full char); @: rel char; int: write; @: totals size_t) int
+    @: doc c.LmP0Document 0
+    @: st size_t c.calloc(8U, c.sizeof(c.size_t))
+    @@: p char c.calloc(3U, sizeof(@: char))
+    @: out c.FILE 0
+    size_t: span_bytes 0U
+    int: failed 0
+    if: st = 0 || p = 0
+        return: 1
+    if: c.lm_p0_parse_file(full, @ doc) != 0
+        if: doc != 0
+            c.lm_p0_document_destroy(doc)
+        c.fprintf(report, "FILE-ERROR\t%s\tP0 does not read the file\n", rel)
+        c.free(st)
+        c.free(p)
+        return: 1
+    p[0] := (cast: (@: char) doc\source)
+    p[2] := rel
+    st[3] := (cast: (size_t) doc\source_length)
+    st[1] := st[3] + 4096U
+    p[1] := (cast: (@: char) c.malloc(st[1]))
+    if: p[1] = 0
+        failed := 1
+        st[5] := 1U
+    ---
+    if: failed = 0
+        lm_rt_walk(report, st, p, (cast: (@: c.LmP0Node) c.lm_p0_document_root(doc)), 0)
+        if: st[5] = 0U && st[4] != 0U
+            # the rest of the source after the last edit
+            failed := lm_rt_put(st, p, p[0] + st[2], st[3] - st[2])
+        ---
+    ---
+    if: st[5] != 0U
+        failed := 1
+        if: st[5] = 2U
+            c.fprintf(report, "FILE-ERROR\t%s\tan edit lies before the end of the last one\n", rel)
+        else:
+            c.fprintf(report, "FILE-ERROR\t%s\tno memory\n", rel)
+        ---
+    ---
+    if: failed = 0 && write != 0 && st[4] != 0U
+        out := c.fopen(full, "wb")
+        if: out = 0
+            c.fprintf(report, "FILE-ERROR\t%s\tcannot be written\n", rel)
+            failed := 1
+        else:
+            span_bytes := c.fwrite((cast: (@: void) p[1]), 1U, st[0], out)
+            if: span_bytes != st[0] || c.fclose(out) != 0
+                c.fprintf(report, "FILE-ERROR\t%s\twrite failed\n", rel)
+                failed := 1
+            ---
+        ---
+    ---
+    if: failed = 0
+        totals[0] := totals[0] + st[6]
+        totals[1] := totals[1] + st[4]
+        totals[2] := totals[2] + st[7]
+    ---
+    c.lm_p0_document_destroy(doc)
+    if: p[1] != 0
+        c.free(p[1])
+    c.free(p)
+    c.free(st)
+    return: failed
+
+# graph_trans retype --dry|--write ROOT LIST [REPORT]. The exit: 0 done, 1 some file was not translated, 2 usage.
+fn: lm_graph_retype_main (@@: args char; int: n) int
+    @: text char 0
+    @: full char 0
+    @: report c.FILE 0
+    @: totals size_t c.calloc(4U, c.sizeof(c.size_t))
+    size_t: span_bytes 0U
+    size_t: root_length 0U
+    size_t: at 0U
+    size_t: start 0U
+    size_t: stop 0U
+    int: write 0
+    int: errors 0
+    if: totals = 0
+        return: 2
+    if: n < 5 || (c.strcmp(args[2], "--dry") != 0 && c.strcmp(args[2], "--write") != 0)
+        c.fputs("graph_trans: retype takes --dry|--write ROOT LIST [REPORT]\n", c.stderr)
+        return: 2
+    write := (cast: (int) (c.strcmp(args[2], "--write") = 0))
+    root_length := c.strlen(args[3])
+    text := lm_rt_read(args[4], @ span_bytes)
+    if: text = 0
+        c.fprintf(c.stderr, "retype: cannot read the list %s\n", args[4])
+        return: 2
+    report := c.stdout
+    if: n >= 6
+        report := c.fopen(args[5], "wb")
+        if: report = 0
+            c.fprintf(c.stderr, "retype: cannot write the report %s\n", args[5])
+            return: 2
+        ---
+    ---
+    while: at < span_bytes
+        start := at
+        while: at < span_bytes && text[at] != 10 && text[at] != 13
+            at := at + 1U
+        stop := at
+        if: at < span_bytes && text[at] = 13
+            at := at + 1U
+        if: at < span_bytes && text[at] = 10
+            at := at + 1U
+        text[stop] := (cast: (char) 0)
+        if: stop > start && text[start] != 35
+            totals[3] := totals[3] + 1U
+            full := (cast: (@: char) c.malloc(root_length + 1U + stop - start + 1U))
+            if: full = 0
+                errors := errors + 1
+            else:
+                c.memcpy((cast: (@: void) full), (cast: (@: void) args[3]), root_length)
+                full[root_length] := (cast: (char) 47)
+                c.memcpy((cast: (@: void) (full + root_length + 1U)), (cast: (@: void) (text + start)), stop - start + 1U)
+                errors := errors + lm_rt_file(report, full, text + start, write, totals)
+                c.free(full)
+            ---
+        ---
+    ---
+    c.fprintf(report, "TOTAL\tfiles %zu\trecords %zu\tedits %zu\tkept %zu\terrors %d\n", totals[3], totals[0], totals[1], totals[2], errors)
+    if: report != c.stdout
+        c.fclose(report)
+    c.free(text)
+    c.free(totals)
+    return: (cast: (int) (errors != 0))

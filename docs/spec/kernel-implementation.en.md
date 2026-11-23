@@ -239,9 +239,9 @@ not an invented global store.
 
 | Field, in order | L2 type | Meaning |
 |---|---|---|
-| `parent` | `@: parent Lmx` | Actual structural parent, zero at a graph root |
+| `parent` | `Lmx@: parent` | Actual structural parent, zero at a graph root |
 | `length` | `size_t: length` | Structure field count or Array element count |
-| `storage` | `@: storage void` | Address of element storage |
+| `storage` | `@: storage` | Address of element storage |
 
 There is no embedded VoidArray, native field, or capacity in the header. A reference points to the
 header start, preceded by the record's type code. Structure and Array<@> store `void *` slots and
@@ -274,7 +274,7 @@ The result has no native/capacity fields. The address of S.parent may numericall
 extends lifetime nor transfers ownership.
 
 `@x` addresses the selected logical place: the current activation's own cell or a transparent
-caller place. `@(D\x)` addresses an explicitly selected ready graph field. If that source field
+caller place. `(@D\x)` addresses an explicitly selected ready graph field. If that source field
 contains computed declaration `int: x getValue()`, the path addresses the declaration record and
 does not execute getValue. By contrast, addressing an own computed input obtains the value under
 its normal consumption rule and uses its local result cell. `node` is the lexical operation; it
@@ -440,7 +440,7 @@ the normal parser rule. `sys\priority(name)` resolves the string's content under
 visibility and operand description as expression analysis, and returns its ordinary int priority
 without running the body. Equal contents work at different string addresses; unknown/ambiguous
 operands fail normally. `sys\priority("+")` denotes addition's priority, not an arbitrary unary
-role. The descriptive contract is `PrioritySignature :: ([]: char name; return: int)`.
+role. The descriptive contract is `PrioritySignature :: (char[]: name; return: int)`.
 
 ### 3.4. Callables and namespace
 
@@ -486,7 +486,7 @@ SumContext:
     sum:
         return: first + second
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ```
 
 `sumPtr(a := 2; b := 3)` supplies positions 1 and 2 to first and second. A direct
@@ -1022,7 +1022,7 @@ then `D\x := 9`. The declared input x gives the call an own place:
 | After `D\x := 9` | 2 | 9 |
 | After return | Activation ended | 9 |
 
-`@x` addresses the local column; `@(D\x)` the source column. Return does not copy 2 into D.
+`@x` addresses the local column; `(@D\x)` the source column. Return does not copy 2 into D.
 The explicit D\x assignment replaces that field's graph fragment; the table records the value found by
 each subsequent lookup, not a promise that a raw pointer to the previous fragment now denotes the replacement.
 The same observed starting number can arise through different binding modes:

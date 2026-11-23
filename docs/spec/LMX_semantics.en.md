@@ -500,7 +500,7 @@ A place with a requirement is declared by the receiver's own argument form: `int
 
 The composed form `name: receiver: value` does not declare a variable named by the outer head. In DATA, `timeout: ms: int: time 500` declares timeout containing ms containing the primitive time; its path is `timeout\ms\time`. In CODE the same outer form calls timeout. Likewise `i: int: 5` in DATA is a Structure i containing the receiver form, not an int variable i; in CODE it applies i and is invalid if i is a noncallable numeric place. Declaring a primitive or reference is done with its receiver, not by replacing that receiver's parent. `:=` assigns an existing place; it does not declare one.
 
-A bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement and the candidate are written flat, `@: ptr Model 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
+A bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement is in the typed head, `Model@: ptr 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
 
 Two-field `int: x 5` declares place `x` with an `int` requirement and value `5`: in data it creates the place, in code it is a call of the receiver -- a check of the type with an assignment to the local namespace place `x` ([the roles `data` and `code`](#data-code-roles)). Unary `int: x` describes place `x` with an `int` requirement and no invented initial value: a first definition creates the place; with an already known `x` the same form in code checks its compatibility by ordinary admission without a new write or second field, and in data it stays one more occurrence of the name, which is addressed only with the index of an occurrence after that. An uninitialized graph place contains only the distinct type code `uninit:int`, with `sizeof(value) = 0`, not a reserved int cell, numeric zero or an external initialization mark; every primitive has such a type, alike in code, data and a signature, where it distinguishes a formal without a default `int: q` from the default `int: q 0`: such a formal is not mandatory -- an input without a value, to which no value is supplied, does not make the call refuse: it is filled by [autofill](#binding-autofill), and where that is inapplicable it holds this type (the author's decision of 2026-11-16), and the receiver [`required`](#required-receiver) checks that a given field is initialized; [explicit graph assignment](#graph-fragment-assignment) (`D\a := 5`) replaces the fragment at that structural place: `{uninit_int}` becomes `{int 5}`. It does not retag a preallocated T cell, require in-place expansion, or preserve a raw payload address across replacement ([L2 §3.1](L2_spec_en.md#uninit-record-control)). An assignment to a local of the call -- `a := 5` for a formal that received no value -- writes into the place of the call: the graph does not change and the data are not published. The absence of a value is written as a value of that separate type: `nil: T` (`nil: int`; any other primitive type in place of `int`), and simply `nil` where possible. `int: var` declares a variable without initialization, and a separate type exists for that; it was introduced for passing arguments and stays needed with `required`. A variable can be compared with `nil` by its absence state; no numeric sentinel or imaginary value bytes are introduced. The graph holds nothing but Structures and primitives: a primitive is the declaration of its type with a value or with the absence of a value, and everything else is written as Structures. The null pointer stays `0` where that is possible; a pointer declared without a value (`@: ptr`) is not zero and is written with the same `nil` (the author's decision of 2026-11-17). Every receiver that used to be written without arguments in the place of a type has a one-argument form: `int: i` is written instead of `i: int` (the author's decision of 2026-11-10). With `i` already declared, `int: i` in code is not an error but a check that the type conforms: repeated declarations are allowed. The one-argument form given the primitive itself instead of a name, `int: 54554878477838734`, returns the number in an expression or throws a failure that `catch` receives. In a signature these forms describe a formal, and a written value supplies a default when an actual argument is absent; describing a formal does not execute it as a body. This is one mechanism for primitives, references, Structures, and callables, with no parser branch for a receiver's name. The constructed source graph fixes its physical slots until an explicit graph operation changes them. Logical namespace places and bare-name visibility follow sequential declarations, lexical scopes and explicit receiver-stream consumption; reaching a branch does not append a hidden slot to the source `Lmx`.
 
@@ -514,7 +514,7 @@ In evaluation position, a bare identifier enters the same resolution flow but do
 <a id="colon-declares"></a>
 In DATA, an ordinary `Name: tail` declares a Structure whose content is that tail. `Struct1: Struct2` contains one reference atom to the existing Struct2: it neither makes the two names equal nor copies or expands Struct2's fields. Its parent is unchanged, so a path such as `Struct1\Struct2\a` reaches the original target. In `Struct1: (Struct2 a b c)` the written group remains one anonymous Structure; its own a and the a reached through Struct2 are different fields. Cyclic references such as `A: B` and `B: A` are not infinitely expanded. An unresolved atom remains a word.
 
-A structural name is a constant binding. `Struct1 := Struct2` does not reassign it. A mutable reference is instead declared by `@: ptr Model`, may explicitly receive null by `@: ptr Model 0`, and is later updated by `ptr := Other`. The atom's physical slot remains accessible by ordinary indexed graph operations; that does not make its bare name an assignable variable. Repeating a DATA declaration preserves another occurrence and requires ordinary occurrence selection. In CODE the corresponding `Name: tail` or `Name(args)` is a call, not a declaration or assignment. Reference passing does not reparent its target or capture its caller.
+A structural name is a constant binding. `Struct1 := Struct2` does not reassign it. A mutable reference is instead declared by `@: ptr Model`, may explicitly receive null by `@: ptr 0`, and is later updated by `ptr := Other`. The atom's physical slot remains accessible by ordinary indexed graph operations; that does not make its bare name an assignable variable. Repeating a DATA declaration preserves another occurrence and requires ordinary occurrence selection. In CODE the corresponding `Name: tail` or `Name(args)` is a call, not a declaration or assignment. Reference passing does not reparent its target or capture its caller.
 
 In data a structural form declares a Structure, and its tail is the content: `A(int: x 1)` and `A: int: x 1` declare `A` with a field `x`. Empty `A()` and `A:` declare a Structure without fields. `A: ()` declares `A` with one empty anonymous Structure inside it, and `A: (int: x 1)` declares `A` with an anonymous Structure inside it that has the field `x`: P0 does not unwrap a sole Structure in a tail ([values](#values)). Bare `A` reads a reference to an already selected ordinary Structure. If `A` is already declared at this level, a repeated structural form, including an empty one, is a repeated declaration, not an assignment: one more occurrence of the name `A`, which is addressed only with the index of an occurrence after that; in data no call of the former `A` results. Executable code has no description of a Structure -- such a form there is a call of its head; a distinct scope arises on a call of a Structure -- by an explicit `call` or by a form `A()`. Inline `if`/`for` operators remain in the same activation. Named Structures and callables are visible in both directions; variables, including const, are visible sequentially from their initial declaration in their scope and below. Root data inputs are available to executing code; namespace preparation neither exposes future code locals nor evaluates initializers ([visibility](#declaration-visibility), [call frames](#call-frame-20261115)). A form with a path in its head, `Outer\Model()` or `Outer\Model:`, is in code a call of what stands at that path; bare `Outer\Model` reads its reference without calling. To execute the selected ordinary Structure, use `call: Outer\Model` or, in code, the form `Outer\Model()`.
 
@@ -578,13 +578,13 @@ The `@:` receiver takes the place name as its first field; both a new place and 
 <a id="method-reference-assignment"></a>
 A method reference is assigned through `@`, which comes first: `@: ptr method`. The first argument `ptr` is a place-name atom; the second, `method`, is an atom denoting the method value. **A bare atom is not a call**, so neither `ptr` nor `method` is invoked here. The `@` receiver consumes these arguments under its two-field contract: the first definition creates a reference place; on an already declared place, in code a new value is assigned to that same place after admission, while in data a repeated declaration stays one more occurrence of the name ([names and paths](#fields)). Likewise, `@: ptr 0` supplies an explicit null candidate. In contrast, `ptr(args)` or `ptr: args` explicitly applies a callable to arguments; if `ptr` holds a reference to an ordinary Structure, the same forms launch it by the launch forms of a Structure ([structural forms](#forms-declare-or-call)). The form `ptr: @: method` is not an assignment, whatever `ptr` is: in code it is a call of `ptr`, in data a declaration of a Structure `ptr` ([the roles `data` and `code`](#data-code-roles)); an `@` in the nested argument does not change that, and assignment uses `@: ptr method`.
 
-Unary `@ptr` selects the address of the variable cell ptr, distinct from its stored target reference; it is not the assignment `@: ptr method` and does not replace the stored method reference with its cell address. An explicitly supplied argument, an autofilled value and a value of the former binding (the fallback) have their own local activation cells: `@x` addresses the same local variable that bare `x` reads and writes. Where the selected level admits dereferencing this numeric address, after a local `x := 9`, reading `\(@x)` yields `9`; writing through that address changes its own cell, not the binding's source ([own place](#binding-places), [autofill](#binding-autofill), [former binding](#binding-fallback)). If the name is bound as a transparent caller place ([caller's place](#binding-caller-place)), then `x`, `x := 9` and `@x` act on that place at once: `@x` is the address of the caller's place, and the write is visible to the caller without copying back. An external place is addressed explicitly, for example `@(node\x)`. Taking an address does not extend cell lifetime; an object reference and the variable cell holding it are distinct.
+Unary `@ptr` selects the address of the variable cell ptr, distinct from its stored target reference; it is not the assignment `@: ptr method` and does not replace the stored method reference with its cell address. An explicitly supplied argument, an autofilled value and a value of the former binding (the fallback) have their own local activation cells: `@x` addresses the same local variable that bare `x` reads and writes. Where the selected level admits dereferencing this numeric address, after a local `x := 9`, reading `\(@x)` yields `9`; writing through that address changes its own cell, not the binding's source ([own place](#binding-places), [autofill](#binding-autofill), [former binding](#binding-fallback)). If the name is bound as a transparent caller place ([caller's place](#binding-caller-place)), then `x`, `x := 9` and `@x` act on that place at once: `@x` is the address of the caller's place, and the write is visible to the caller without copying back. An external place is addressed explicitly, for example `(@node\x)`. Taking an address does not extend cell lifetime; an object reference and the variable cell holding it are distinct.
 
 Candidate conversion and admission follow the receiving contract; reference storage changes only after successful reception. Ordinary Structure and method values already travel by reference: `@: ptr Struct` retains that ordinary reference without invoking `Struct`. Prefix `@Struct` explicitly obtains its numeric address, as in `int: value 1 + @Struct` where numeric addresses are admitted by the profile; it is not required to pass `Struct` and does not suppress an operator role. Prefix `@x` on a variable selects the real logical variable cell chosen by binding, including the caller's cell for a transparent binding. It must not accidentally address only the object stored in a reference variable or an ABI transport box. Machine-address operations retain the applicable [L2 contract](L2_spec_en.md#lowlevel-address). Taking an address extends no lifetime, and dereference `\` follows an admitted address/reference without executing code.
 
 ### A signature is not executed
 
-A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. The identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `@: p A`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
+A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. The identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `A@: p`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
 
 For structural `c`, `mytest(c)` passes its ordinary reference, while `mytest(@c)` explicitly obtains an address under the prefix-@ contract; these are not interchangeable arguments. No extra level is removed to fit a formal. This applies equally to a Structure, a pointer variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. A primitive value and a reference to its cell are not synonyms either. Passing and returning nonprimitives never use C by-value aggregates.
 
@@ -666,16 +666,16 @@ The ordinary structural header requirement is:
 ```lmx
 operand_template:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
 
 All four named fields must be present in the candidate's DATA. `left` is a reference input and `right` an Array of references. `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `satisfies` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
 
-The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@: left int`, `[]: @(int) right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
+The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `int@: left`, `int@[]: right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
 
-A positional `fn` requirement remains a different check. For example, `PairSignature :: (@: first; []: @ rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
+A positional callable-signature requirement remains a different check. For example, `PairSignature :: (@: first; @[]: rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
 <a id="prepared-operands"></a>
 #### Prepared values: `PASS_ARGS_AS_IS 0`
@@ -716,8 +716,8 @@ The method returns its ordinary declared value: `return: int` produces an intege
 
 ```lmx
 operands:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -739,7 +739,7 @@ The required results are 7 for `Example\calculate(2)`, 13 for `Example\calculate
 <a id="raw-operands"></a>
 #### Original occurrences: `PASS_ARGS_AS_IS 1`
 
-The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `[]: @ right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
+The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `@[]: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
 
 <a id="expression-eval"></a>
 `sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a stored callable reference remains a reference unless the form calls it. `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
@@ -751,7 +751,7 @@ The raw version of `add` uses this DATA and body:
 ```lmx
 raw_operands:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -775,7 +775,7 @@ The existing canonical-name representation and service name table supply the spe
 <a id="expression-priority"></a>
 ### `sys\priority`: a priority by string name
 
-The query's named signature is `PrioritySignature :: ([]: char name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
+The query's named signature is `PrioritySignature :: (char[]: name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
 
 Names are matched by string content at this explicit lookup boundary. A separately created string with the same contents yields the same answer; ordinary resolved identifiers still use canonical addresses. `sys\priority(sys\name(foo))` performs no call of `foo`. The query reads its ready `PRIORITY`, registers nothing and evaluates no operand arguments. Missing, unsuitable or ambiguous operands produce ordinary resolution/contract diagnostics; no priority is invented. Discovery and query share the same description, not divergent registries. The placement of the receiver in `sys` does not limit the lookup to the field names of that service group. With a statically known name the translator may obtain the value beforehand; with a computed string name the ordinary lookup mechanism is used; the semantics and the result match the interpreter.
 
@@ -933,7 +933,7 @@ For the two-input fixtures use `PairSignature` of the section on the template an
 
 | ID | Check | Expected result |
 | --- | --- | --- |
-| F01 | `PairSignature :: (@: first; []: @ rest; return: int)` | A named signature, two inputs and a result; there is no body |
+| F01 | `PairSignature :: (@: first; @[]: rest; return: int)` | A named signature, two inputs and a result; there is no body |
 | F02 | A candidate `lhs: @`, `rhs: Array<@>`, the result `int`, another name/body | A match of the types by positions |
 | F03 | The inputs of the candidate go `Array<@>`, then `@` | A mismatch; named supply does not change the order of the types of the signature |
 | F04 | Another number/type of inputs or another result | The ordinary fn diagnostics; `return` is not counted as an input |
@@ -1197,7 +1197,7 @@ SumContext:
     sum:
         return: a + b
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ```
 
 The three arguments of `@` are the reference name, signature requirement and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same signature requirement: the common admission applies the positional comparison to the new callable.
@@ -1225,18 +1225,18 @@ An ordinary Structure used explicitly as a structural model instead requires its
 
 ```lmx
 PrioritiesTemplate:
-    []: char name
+    char[]: name
     return: int
 
 Priorities:
-    []: char name
+    char[]: name
     return: int
     lookup:
         return: sys\priority(name)
 
 PrioritySignature :: PrioritiesTemplate
-@: priorities_data PrioritiesTemplate Priorities
-@: priority_fn PrioritySignature Priorities\lookup
+PrioritiesTemplate@: priorities_data Priorities
+PrioritySignature@: priority_fn Priorities\lookup
 ```
 
 `satisfies(Priorities, PrioritiesTemplate)` checks all of the minimal template, which has no `lookup` requirement. Choosing the whole `Priorities` as a structural model includes `lookup` and its stated subtree. `PrioritySignature` instead checks the selected callable's ordered input types and result; `name` need not physically occur inside `lookup`. Neither a `return` field nor a name ending in “Signature” turns an ordinary Structure into a positional signature description.
@@ -1249,23 +1249,23 @@ The same composition can be written `PrioritiesMerged: merge(PrioritiesTemplate 
 On a call through a reference constrained by a signature, the signature's formal names are the public labels of explicit actuals. Normal positional/named mapping first identifies a signature position; that position maps to the candidate input at the same index. The candidate's own names are used by direct calls and are not fallback aliases of the public interface. Actual expressions still evaluate once in written order, not in position order. Declaration-form actuals use that same external map without changing the preserved form's internal name ([declaration arguments](#declaration-arguments)).
 
 ```lmx
-SelectSignature :: (int: count; []: char text; return: int)
+SelectSignature :: (int: count; char[]: text; return: int)
 
 First:
     int: n
-    []: char s
+    char[]: s
     return: int
     select:
         return: n
 
 Reordered:
-    []: char text
+    char[]: text
     int: count
     return: int
     select:
         return: count
 
-@: chosen SelectSignature First\select
+SelectSignature@: chosen First\select
 ```
 
 In CODE, `chosen(text := "x"; count := 3)` maps text to position 2 (`s`) and count to position 1 (`n`), and returns 3. Direct `First\select(s := "x"; n := 3)` is also valid. Direct `Reordered\select(count := 3; text := "x")` can be valid, but assigning that callable to `chosen` fails: `[Array<char>, int]` does not match `[int, Array<char>]`. If both types were `int`, renamed or swapped labels would not change the positional map: public `a=1, b=2` still reaches candidate positions 1 and 2.
@@ -1489,7 +1489,7 @@ A returned reference preserves its exact target identity. Constructing a result,
 | C04 | The reference `ExistingCode` is placed inside `NewContainer` | The parent of `ExistingCode` is not changed by itself |
 | C05 | R0 is started without arguments | There is no data and no artificial `D = C`; an ordinary procedural execution |
 | C06 | `SumSignature :: SumData` with `return` in `SumData` and `StepSignature :: StepData` without `return` | The created signature names stand to the left of `::`; the same declaration describes functions and procedures, with no implementation is created |
-| C07 | `@: sumPtr SumSignature SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` declared by the left identifier of `SumSignature :: DATA` and checks the callable with its parent, not the fields inside the code |
+| C07 | `SumSignature@: sumPtr SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` declared by the left identifier of `SumSignature :: DATA` and checks the callable with its parent, not the fields inside the code |
 | C08 | All the examples of the table of required selection examples | The results match the table; hidden inputs do not change the choice |
 | C09 | W is chosen with a whole Structure | At execution one structural actual is kept without expansion |
 | C10 | E is chosen with one or several fields | The chosen map is used; there is no repeated expansion |
@@ -1795,7 +1795,7 @@ Reading a computed declaration by an explicit path executes nothing. This supers
 A computed declaration is executed by a call, and by it alone: a call prepares its namespace from the root declarations of its data and executes the written expression when it refers to its local place by a bare name ([call frame](#call-frame-20261115)). That work of the call stays as it was: there is no general initialization, a call prepares a place on a concrete access (the author's confirmation). It has nothing to do with a read by an explicit path. Therefore `sys\toLmx` prints the records as they are written, and a write by an explicit path changes the graph itself -- with no hidden calls and no cache of results. The print of a graph comes down to the print of Structures and of primitive values already recorded in the arena with their type: by a path the receivers come back as Structures.
 
 <a id="computed-field-address"></a>
-Taking the address of a local place also obtains a computed value: for input `int: x next()`, `@x` runs next() and gives the ordinary local int cell's address. `@(D\field)`, where `int: field getValue()` is written in the data `D`, addresses the record of the declaration, not the result of getValue(): an explicit path executes nothing (the author's decision of 2026-11-17, [explicit path](#path-reads-no-execution); it withdraws the former rule of 2026-11-15 under which the result was addressed). A ready place is addressed directly; place lifetime remains ordinary. `@f()` was a research example, not a separate implementation task or a request for a C-like prohibition. The author's clarifications.
+Taking the address of a local place also obtains a computed value: for input `int: x next()`, `@x` runs next() and gives the ordinary local int cell's address. `(@D\field)`, where `int: field getValue()` is written in the data `D`, addresses the record of the declaration, not the result of getValue(): an explicit path executes nothing (the author's decision of 2026-11-17, [explicit path](#path-reads-no-execution); it withdraws the former rule of 2026-11-15 under which the result was addressed). A ready place is addressed directly; place lifetime remains ordinary. `@f()` was a research example, not a separate implementation task or a request for a C-like prohibition. The author's clarifications.
 
 Re-declaring a name at the same level introduces no additional C variable but retains the other actions: `int: x bump()` evaluates bump(), performs ordinary admission, and assigns the existing x. A declaration of the same name at a nested level creates its own place and shadows the outer one ([declaration levels](#shadowing-levels); the former wording -- any re-declaration of an already visible name writes into the former cell -- is narrowed by the norm of 2026-11-19 to one level). A new branch name is visible from its declaration at its level and below, not outside. Two declarations in data remain two physical occurrences, `S\[0]x` and `S\[1]x`; `S\x` is ambiguous. Sequential visibility of variables and const removes the old early bare-name access to a future local. Reading a written computed declaration through an explicit path does not execute it; the RHS is executed when its code statement is reached. There are no separate exceptions or hidden computation cache.
 
@@ -2272,16 +2272,16 @@ The same holds for a model, a named signature and an implementation in one libra
 ~~~lmx
 Library:
     PrioritiesTemplate:
-        []: char name
+        char[]: name
         return: int
     PrioritySignature :: PrioritiesTemplate
     Priorities:
-        []: char name
+        char[]: name
         return: int
         lookup:
             return: sys\priority(name)
     end: Priorities
-    @: selected PrioritySignature Priorities\lookup
+    PrioritySignature@: selected Priorities\lookup
 end: Library
 
 Use:
@@ -3018,7 +3018,7 @@ failure policy and the documented boundaries of each operation.
 
 | Receiver | Contract | Source |
 | --- | --- | --- |
-| `types` | physical field type codes; []:int by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `types` | physical field type codes; int[] by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signatureTypes` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |

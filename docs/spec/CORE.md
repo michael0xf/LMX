@@ -269,7 +269,7 @@ Frame invokes its resolved head in CODE; the corresponding structural form
 declares in DATA. A failed call is not reclassified as an assignment.
 
 A place declaration is written by its receiver, for example `int: i 5`,
-`@: ptr`, `@: ptr Model`, or `@: ptr Model candidate`. The outer-head form
+`@: ptr`, `@: ptr Model`, or `Model@: ptr candidate`. The outer-head form
 `i: int: 5` does not declare the primitive place i. Ordinary structural
 declarations do not become assignments to their names.
 
@@ -294,7 +294,7 @@ SumContext:
     sum:
         return: a + b
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ~~~
 
 A subsequent `sumPtr(first := 2; second := 3)` maps the public signature names
@@ -379,7 +379,7 @@ input contract and constant properties:
 ~~~lmx
 operand_template:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ~~~

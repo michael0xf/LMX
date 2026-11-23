@@ -211,7 +211,7 @@ referenced objects. The transparent caller place is the caller's place itself ([
 `x := 0` changes the selected place: the own place of the frame writes neither to the graph nor to the caller, the transparent caller
 place writes to it at once; `D\x := 0` changes the source graph of the data.
 For computed input `int: x next()`, @x obtains the value and the local cell's address.
-With `@(D\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
+With `(@D\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
 getValue()'s result: an explicit path executes nothing (the author's decision of 2026-11-17; the former rule is withdrawn).
 A ready place is addressed directly.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
@@ -330,15 +330,15 @@ L1 retains the target platform's C99 representation and numeric semantics. An L1
 
 | L1 | C99 |
 | --- | --- |
-| `@: p int` | `int *p` |
-| `@@: pp char` | `char **pp` |
-| `p: @x` | `p = &x` |
+| `int@: p` | `int *p` |
+| `char@@: pp` | `char **pp` |
+| `p := @x` | `p = &x` |
 | `\p` | `*p` |
-| `\p: value` | `(*p) = value` |
+| `\p := value` | `(*p) = value` |
 | `p\field` | `p->field` |
-| `a[i]: value` | `a[i] = value` |
+| `a[i] := value` | `a[i] = value` |
 
-The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: @(char p)` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
+The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: char@: p` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
 
 L2 indexing, including `array[-1]` and any finite adjacent-index chain, lowers to an offset calculation
 without length/sign/arena checks. L3 uses its own Array-descriptor-reference type with index and one

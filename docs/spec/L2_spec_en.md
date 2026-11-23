@@ -35,7 +35,9 @@ form another program graph. Explicit copy/merge results are normal requested val
 ## 2. The `Lmx` structure
 
 Structures and Arrays share a flat `parent/length/storage` header, without native, capacity,
-or an embedded VoidArray. In L2 order: `@: parent Lmx`, `size_t: length`, `@: storage void`.
+or an embedded VoidArray. In L2 order: `Lmx@: parent`, `size_t: length`, `@: storage`.
+These are `Lmx *`, `size_t`, and `void *`; the typed requirement is in the head,
+not an initializer naming a type.
 A reference points to the header's start; the code of the record's type stands in the four bytes
 before it ([§3](#value-record)). Structure and Array<@> store void* elements and are fully
 interchangeable in indexing, named paths, admission, copying, and execution.
@@ -104,9 +106,9 @@ selects the current launch's data (the parent of the executed Structure), includ
 
 ```text
 (
-    @@: parent Lmx
-    @: length size_t
-    @@: storage void
+    Lmx@@: parent
+    size_t@: length
+    @@: storage
 )
 ```
 
@@ -374,7 +376,7 @@ SumContext:
     sum:
         return: first + second
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ```
 
 The three arguments of `@` are the reference name, the named requirement, and the candidate.
@@ -590,7 +592,7 @@ referenced objects. The transparent caller place is the caller's place itself ([
 `x := 0` changes the selected place: the own place of the frame writes neither to the graph nor to the caller, the transparent caller
 place writes to it at once; `D\x := 0` changes the source graph of the data.
 For computed input `int: x next()`, @x obtains the value and the local cell's address.
-With `@(D\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
+With `(@D\field)` and source `int: field getValue()`, the record of the declaration is addressed, not
 getValue()'s result: an explicit path executes nothing (the author's decision of 2026-11-17; the former rule is withdrawn).
 A ready place is addressed directly.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
@@ -910,7 +912,7 @@ DATA is required. Structural declaration names themselves are not mutable refere
 
 In `@: ptr method`, the `@` receiver comes first, while `ptr` and `method` are bare atoms: an atom is not a call. The form therefore assigns a reference to `ptr` under the `@` contract even when `ptr` already contains a callable; `ptr(args)` invokes it. Unary `@ptr` separately obtains the reference cell's numeric address; it does not return its stored method reference or change ptr's declared reference type. Numeric address use and dereferencing follow the selected level's machine-address contract. The detailed rules of these forms are in [L3](LMX_semantics.en.md#ordinary-var) and [method-reference assignment](LMX_semantics.en.md#method-reference-assignment); the special name `data` is removed ([what is removed](LMX_semantics.en.md#removed-builtins)).
 
-For a namespace variable, unary `@x` addresses the selected logical place: the current call's real local cell or, for the transparent caller place, the caller's real place ([§11](#binding-caller-place)); taking the address is not a write and does not extend lifetime. For computed input `int: x next()`, `@x` obtains its value and the address of its ordinary local int cell. When `D\x` selects a ready source-graph place, `@(D\x)` retains that place's own address. When the data retains computed declaration `int: field getValue()`, `@(D\field)` addresses the record of the declaration and getValue() is not executed: an explicit path executes nothing (the author's decision of 2026-11-17). Explicit `D\field := ...` changes the source field. No automatic transfer connects the local place and the graph. [Common rule](LMX_semantics.en.md#computed-field-address).
+For a namespace variable, unary `@x` addresses the selected logical place: the current call's real local cell or, for the transparent caller place, the caller's real place ([§11](#binding-caller-place)); taking the address is not a write and does not extend lifetime. For computed input `int: x next()`, `@x` obtains its value and the address of its ordinary local int cell. When `D\x` selects a ready source-graph place, `(@D\x)` retains that place's own address. When the data retains computed declaration `int: field getValue()`, `(@D\field)` addresses the record of the declaration and getValue() is not executed: an explicit path executes nothing (the author's decision of 2026-11-17). Explicit `D\field := ...` changes the source field. No automatic transfer connects the local place and the graph. [Common rule](LMX_semantics.en.md#computed-field-address).
 
 In the existing native path, `emit_call_result_value` declares typed `l2_tN`, and `emit_dyn_tail_value` passes `&l2_tN` as the result destination. Reuse this place when taking the address, without another call, a second cell, or a special allocation for `@`. The walker uses the ordinary addressable result cell. The existing place's ordinary lifetime rules apply.
 
@@ -984,7 +986,7 @@ is the selected method's actual parent, checked against an ordinary structural h
 ```lmx
 operand_template:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
@@ -1061,7 +1063,7 @@ remains one Array in a call.
 
 `sys\priority(name)` consumes a character Array's content and returns the selected available
 operand's ordinary int priority, without executing its body or operand arguments. Its descriptive
-signature is `PrioritySignature :: ([]: char name; return: int)`. It uses the same visibility and
+signature is `PrioritySignature :: (char[]: name; return: int)`. It uses the same visibility and
 properties as expression analysis, rather than restricting lookup to fields of sys. Equal string
 contents give equal lookup behavior even at different addresses; canonical identifier comparisons
 remain pointer comparisons after this explicit name-resolution boundary. Unknown or ambiguous

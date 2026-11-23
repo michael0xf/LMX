@@ -254,7 +254,7 @@ active examples and links. Foreign-language keywords and ordinary English verbs
 remain unchanged. The exact receiver semantics is retained.
 
 All new receivers and containers are documented in the primary semantics and
-their linked API. Their code lives in new_parts/LMX_Fn_Receivers; their requirements are
+their linked API. Their code lives in patterns/LMX_Fn_Receivers; their requirements are
 in the receiver chapter of the semantics book and the kernel integration section. General implementations accept typed records and use Structures
 directly as Array<@>. Service int counters/typecodes are distinguished from
 payload specializations.

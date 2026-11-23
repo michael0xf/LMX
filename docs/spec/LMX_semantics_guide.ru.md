@@ -272,7 +272,7 @@ SumContext:
     sum:
         return: lhs + rhs
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ~~~
 
 Три поля `@` — это имя ссылки, требование и фактический кандидат. Сокращённая форма `@: p Model` вместо этого сначала
@@ -295,7 +295,7 @@ SumContext\sum(rhs := 3; lhs := 2)
 Для смешанных типов порядок важен:
 
 ~~~lmx
-SelectSignature :: (int: count; []: char text; return: int)
+SelectSignature :: (int: count; char[]: text; return: int)
 ~~~
 
 Кандидат с входами int, затем `Array<char>`, может совпасть даже при других именах. Кандидат с `Array<char>`, затем int,
@@ -309,18 +309,18 @@ SelectSignature :: (int: count; []: char text; return: int)
 
 ~~~lmx
 PrioritiesTemplate:
-    []: char name
+    char[]: name
     return: int
 
 PrioritySignature :: PrioritiesTemplate
 
 PriorityProvider:
-    []: char query
+    char[]: query
     return: int
     lookup:
         return: sys\priority(query)
 
-@: priorityCall PrioritySignature PriorityProvider\lookup
+PrioritySignature@: priorityCall PriorityProvider\lookup
 ~~~
 
 PrioritySignature принимает lookup по его единственному входу `Array<char>` и результату int. В исполняемом контексте
@@ -602,7 +602,7 @@ Structure CODE; фактические аргументы и локальные 
 графа по обычным ограничениям типа и записи. Последующий доступ к этому структурному полю видит новый фрагмент; ссылка
 на прежний фрагмент автоматически не перенаправляется.
 
-Для вычисляемого входа namespace int: x `next()` `@x` получает значение и адрес локальной ячейки. Напротив, @(`D\field`)
+Для вычисляемого входа namespace int: x `next()` `@x` получает значение и адрес локальной ячейки. Напротив, `@D\field`
 с источником int: field `getValue()` адресует исходную запись объявления, а не результат `getValue()`. Терминальные
 примитивные места уже являются прямыми типизированными значениями. Взятие адреса никогда не продлевает срок жизни.
 
@@ -833,7 +833,7 @@ Library:
     int: counter 0
     Settings:
         int: width 2
-    PrioritySignature :: ([]: char name; return: int)
+    PrioritySignature :: (char[]: name; return: int)
 
 Other:
     Tool:
@@ -1024,7 +1024,7 @@ c содержит EOF. `while(c := getchar() != EOF)` устроен иначе
 ~~~lmx
 operand_template:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ~~~
@@ -1040,8 +1040,8 @@ operand_template:
 
 ~~~lmx
 int_operand_template:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
     return: int
@@ -1052,7 +1052,7 @@ int_operand_template:
 но это отдельная операция над потоком полей. Любое тело метода, явно включённое в модель, входит в требование этой
 модели; дополнительные поля реализации, отсутствующие в модели, в него не входят.
 
-Fn остаётся отдельным позиционным контрактом. Например, `PairSignature :: (@: first; []: @ rest; return: int)` может
+Fn остаётся отдельным позиционным контрактом. Например, `PairSignature :: (@: first; @[]: rest; return: int)` может
 сопоставить входы с именами lhs/rhs по позиции. Он не задаёт обнаружение операндов, для которого важны имена left,
 right, `PASS_ARGS_AS_IS` и `PRIORITY`. Через такую ссылку fn публичные метки соответствуют позициям; скрытое связывание
 по-прежнему использует имена и DATA реального кандидата.
@@ -1079,8 +1079,8 @@ right, `PASS_ARGS_AS_IS` и `PRIORITY`. Через такую ссылку fn п
 
 ~~~lmx
 operands:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1115,12 +1115,12 @@ Example:
 
 Сырой режим использует те же правила группировки, но передаёт исходные вхождения без их вычисления. Это могут быть
 имена, литералы, вызовы, присваивания или группы. Поэтому общий сырой код использует неограниченные ссылки, а не
-`@: left int` как обещание, что невычисленная Structure в конце концов станет int.
+`int@: left` как обещание, что невычисленная Structure в конце концов станет int.
 
 ~~~lmx
 raw_operands:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1184,7 +1184,7 @@ int: address 1 + @SomeStructure
 `PRIORITY`. Они не вызывают его тело и не регистрируют его имя. Одинаковое содержимое строк даёт одинаковое поведение
 поиска и не требует тождества адресов канонических строк. Запрос "+" выбирает приоритет сложения, а не унарный
 приоритет, угаданный по контексту. Отсутствующие или неоднозначные операнды дают обычные ошибки разрешения, а не
-выдуманный приоритет. Именованная сигнатура — `PrioritySignature :: ([]: char name; return: int)`, отличная от обычного
+выдуманный приоритет. Именованная сигнатура — `PrioritySignature :: (char[]: name; return: int)`, отличная от обычного
 PrioritiesTemplate, описанного [выше](#fn-signature).
 
 [Наблюдения для операндов](LMX_semantics.ru.md#operand-observations) дают полную матрицу приёмки для этих шаблонов,

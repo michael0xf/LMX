@@ -273,7 +273,7 @@ SumContext:
     sum:
         return: lhs + rhs
 
-@: sumPtr SumSignature SumContext\sum
+SumSignature@: sumPtr SumContext\sum
 ~~~
 
 The three fields of `@` are the reference name, requirement, and actual candidate. The shorthand `@: p Model` instead
@@ -295,7 +295,7 @@ The map does not rename the candidate or give its own formal names a second publ
 For mixed types, order matters:
 
 ~~~lmx
-SelectSignature :: (int: count; []: char text; return: int)
+SelectSignature :: (int: count; char[]: text; return: int)
 ~~~
 
 A candidate with inputs int then `Array<char>` can match even with different names. A candidate with `Array<char>`
@@ -308,18 +308,18 @@ The contrast with an ordinary minimal model is explicit:
 
 ~~~lmx
 PrioritiesTemplate:
-    []: char name
+    char[]: name
     return: int
 
 PrioritySignature :: PrioritiesTemplate
 
 PriorityProvider:
-    []: char query
+    char[]: query
     return: int
     lookup:
         return: sys\priority(query)
 
-@: priorityCall PrioritySignature PriorityProvider\lookup
+PrioritySignature@: priorityCall PriorityProvider\lookup
 ~~~
 
 PrioritySignature accepts lookup by its one `Array<char>` input and int result. In executable context,
@@ -608,7 +608,7 @@ the fragment at the addressed graph place under the normal type and write restri
 that structural field sees the new fragment; a reference to the previous fragment is not automatically retargeted.
 
 For a computed namespace input int: x `next()`, `@x` obtains its value and the local cell's address. By contrast,
-@(`D\field`) with source int: field `getValue()` addresses the original declaration record, not the result of
+`@D\field` with source int: field `getValue()` addresses the original declaration record, not the result of
 `getValue()`. Terminal primitive places are already direct typed values. Address-taking never extends lifetime.
 
 <a id="declaration-arguments"></a>
@@ -835,7 +835,7 @@ Library:
     int: counter 0
     Settings:
         int: width 2
-    PrioritySignature :: ([]: char name; return: int)
+    PrioritySignature :: (char[]: name; return: int)
 
 Other:
     Tool:
@@ -1025,7 +1025,7 @@ DATA matches the explicit structural header:
 ~~~lmx
 operand_template:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ~~~
@@ -1040,8 +1040,8 @@ A numeric specialization can require int targets and an int result:
 
 ~~~lmx
 int_operand_template:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
     return: int
@@ -1053,7 +1053,7 @@ but that is a separate field-stream operation. Any method body explicitly includ
 model's requirement; extra implementation fields absent from the model are not.
 
 Fn remains a distinct positional contract. For example,
-`PairSignature :: (@: first; []: @ rest; return: int)`
+`PairSignature :: (@: first; @[]: rest; return: int)`
 can match inputs named lhs/rhs by position. It does not establish operand discovery, for which the names left,
 right, `PASS_ARGS_AS_IS`, and `PRIORITY` are significant. Through such a fn reference, public labels map to positions;
 hidden binding still uses the real candidate's names and DATA.
@@ -1079,8 +1079,8 @@ The complete prepared-value example is:
 
 ~~~lmx
 operands:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1115,12 +1115,12 @@ would instead return a reference with no hidden extra dereference. The logical r
 
 Raw mode uses the same grouping rules but supplies original occurrences without evaluating them. They may be
 names, literals, calls, assignments, or groups. General raw code therefore uses unconstrained references, not
-`@: left int` as a promise that an unevaluated Structure will eventually become int.
+`int@: left` as a promise that an unevaluated Structure will eventually become int.
 
 ~~~lmx
 raw_operands:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1184,7 +1184,7 @@ their normal unescaped content; an empty exact identifier yields an empty Array.
 They do not invoke its body or register its name. Equal string contents give equal lookup behavior without
 requiring canonical-string address identity. The "+" query selects the addition priority, not a contextually
 guessed unary priority. Missing or ambiguous operands cause ordinary resolution errors, rather than a fictitious
-priority. The named signature is `PrioritySignature :: ([]: char name; return: int)`, distinct from the ordinary
+priority. The named signature is `PrioritySignature :: (char[]: name; return: int)`, distinct from the ordinary
 PrioritiesTemplate explained [above](#fn-signature).
 
 The [operand observations](LMX_semantics.en.md#operand-observations) give the full acceptance matrix for these

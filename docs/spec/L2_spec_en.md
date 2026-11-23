@@ -527,25 +527,30 @@ the resulting callable, without treating a bare reference as an implicit call.
 ### Declaration receivers supplied as arguments
 
 A place-declaration receiver supplied in a CODE argument context is read as DATA. The received
-material is its written declaration, not the result of evaluating its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. This distinction
-follows the resolved head's declaring contract, not a list of names or a second parser.
+material is its written declaration as an ordinary Structure, not a call executed during passing
+or the result of evaluating its initializer. This distinction follows the resolved head's declaring
+contract, not a list of names or a second parser.
 
-| Supplied form | Matching and namespace effect |
+| Supplied form | Destination and retained material |
 |---|---|
-| A declaration written as a positional actual | It takes the current position as one Structure, whatever name it declares; the declared name is not looked up among the receiving inputs, and the ordinary assignment to the variable of that position is attempted under that variable's ordinary admission. |
-| An outer `name := declaration` names the actual | The outer assignment chooses the receiving formal by the ordinary rule of named actuals; the declaration retains its own internal name. |
+| No outer named assignment | Supply the declaration Structure at the current positional input under ordinary admission, regardless of its internal name. |
+| An outer `name := declaration` names the actual | The outer assignment chooses the receiving formal; supply the declaration Structure under that formal's ordinary admission and retain its own internal name. |
 
-Naming the formal at its current position keeps the positional counter active. Naming another
-position disables it, after which every later actual must be named. The same rule applies through
-a signature interface's public-name-to-position map; that map does not rewrite a declaration's internal
-name or execute its initializer.
+No receiving input is selected by looking up the declaration's internal name, including when it
+coincides with an input name. Native lowering and interpreter reception have no found-name/absent-name
+branch for that name. An explicit outer label naming the formal at its current position keeps the
+positional counter active. Naming another position disables it, after which every later actual
+must be named. Only that outer label uses a signature interface's public-name-to-position map;
+the declaration's internal name is neither rewritten nor used as an actual label. The ordinary
+W/E algorithm is unchanged; this rule adds no unwrapping or initializer execution.
 
 For example, with receiving inputs `iteration` and `body`,
 `iterate(int: item numbers\next(); (item *= 2))` supplies the declaration to `iteration` and the
-body Structure to `body`. With inputs `a`, then `b`, `g(int: b producer())` supplies the declaration at
-the first position, to `a`: the name `b` inside it does not address the input `b`, while
-`g(b := int(b producer()))` addresses `b` by the ordinary named actual. Neither transfer runs
-`next()` or `producer()`.
+body Structure to `body`. If the receiving data instead has an input named `b`,
+that coincidence does not select it. For example, with reference inputs `a`, then `b`,
+`g(int: b producer(); ())` supplies the declaration to `a` and the empty Structure to `b`.
+`g(b := int: a producer())` explicitly supplies the declaration to `b`, retaining its internal
+name `a`. Neither transfer runs `next()` or `producer()`.
 
 Executing the accepted declaration form extends the root namespace of the receiving execution.
 The first reached execution establishes its typed place; later executions update that same place
@@ -557,6 +562,11 @@ not the library method's parent. The namespace relationship neither reparents th
 nor copies their fields into the source code. Truly nested scopes keep ordinary shadowing, and a
 new independent receiving call has its own context. There is no frame publication, copy-out, or
 implicit lifetime extension.
+
+The associated body's other source-context places remain live. In an accumulating `demo`,
+`total += item` writes the existing `demo` place `total` and reads the receiving execution's
+established `item`. This uses the existing associated-body context, not a fresh fallback copy
+of total or a new closure representation.
 
 Ordinary `Producer()` or `Producer: argument` remains a CODE call when Producer is not a
 place-declaration receiver. Receiving an ordinary reference to a Structure does not publish all

@@ -1875,7 +1875,7 @@ Callable — просто Structure: ресивер запуска не выби
 
 Таблица не отменяет выбор чтения единственного структурного фактического аргумента: `C(A)` может принять `A` целиком или выбрать передачу её полей — это определяет [выбор объявления](#declaration-selection). Равенство эффекта разных записей проверяется при одинаковых выбранных фактических аргументах, а не произвольной текстовой подстановкой: при одних и тех же выбранных `A` запись по имени и `call(A C)` — один вызов.
 
-Для `args` действуют обычные позиционная и именованная подача, порядок вычисления, проверка формы вызова, допуск и передача целой Structure. Уже полученные значения не вычисляются повторно. Поданная форма объявления места сохраняет свой контракт DATA и при передаче не сводится к вычисленному значению. Поданный фактический аргумент заменяет соответствующее описание места в свежем namespace; исходные данные и код не меняются, входного исполнения инициализаторов нет. Интерпретатор направляет вызов по имени, вызов через указатель и обе явные формы `call` в один механизм связывания, допуска, кадра, исполнения и передачи результата; второго исполнительного пути для обработчика `catch` или явного ресивера нет. Достигнутые вызовы из test и преобразователей используют тот же путь. Служебные C-функции, мост и диспетчер `call` не подменяют контекст вызывающего своими служебными локалами: источники языка определяет программное место вызова. Уточнение автора 2026-11-15 о том, что `args` передаёт значения, а не описывает входы, сохраняет силу.
+Для `args` действуют обычные позиционная и именованная подача, порядок вычисления, проверка формы вызова, допуск и передача целой Structure. Уже полученные значения не вычисляются повторно. Поданное объявление сохраняет свой контракт Structure данных и при передаче не сводится к результату своего инициализатора. Принимающее место выбирается позицией или явным внешним именем фактического аргумента, но не внутренним именем объявления. Поданный фактический аргумент заполняет это выбранное место в свежем namespace; исходные данные и код не меняются, входного исполнения инициализаторов нет. Интерпретатор направляет вызов по имени, вызов через указатель и обе явные формы `call` в один механизм связывания, допуска, кадра, исполнения и передачи результата; второго исполнительного пути для обработчика `catch` или явного ресивера нет. Достигнутые вызовы из test и преобразователей используют тот же путь. Служебные C-функции, мост и диспетчер `call` не подменяют контекст вызывающего своими служебными локалами: источники языка определяет программное место вызова. Уточнение автора 2026-11-15 о том, что `args` передаёт значения, а не описывает входы, сохраняет силу.
 
 Callable — просто Structure (решение автора 2026-11-16). Особого правила для вызываемого у ресивера запуска нет: он не выбирает часть внутри поданной Structure. В `call` можно передать любую Structure (уточнение автора 2026-11-16): исполняется поданный объект по его фактическим полям и общим правилам; запрета, автоматического выбора тела и особого порядка для вызываемого нет, а что при этом наблюдается — следствие общих механизмов, отдельной нормой не закрепляемое.
 
@@ -2034,22 +2034,48 @@ SelectSignature@: chosen First\select
 Счётчик позиций следует одному правилу. Именование формального на текущей позиции по-прежнему считается позиционным и оставляет счётчик активным. Именование другой позиции отключает его; все последующие фактические аргументы должны быть именованными. Он никогда не перезапускается. Неизвестные явные имена, повторная подстановка и лишние фактические аргументы являются ошибками. Разделяйте именованные фактические аргументы символом `;`: `f(a := 1; b := 2)` поставляет два фактических аргумента; запятая не обязательно завершает правую часть первого присваивания.
 
 <a id="declaration-arguments"></a>
-#### Сохранение поставленного объявления
+#### Поставленное объявление — это Structure данных
 
-**Ресивер объявления места**, поставленный как аргумент в контексте аргументов CODE, читается как DATA. Аргумент — это само объявление, и одна лишь передача не выполняет инициализатора. Это и есть вся особенность правила: поставленное объявление читается как Structure данных (DATA) и не исполняется как вызов; всё остальное — обычная подача фактического аргумента. Имя, которое объявляет поставленное объявление, среди принимающих входов не ищется. Объявление — просто одна Structure: как любой другой позиционный фактический аргумент, оно занимает текущую позицию, и делается обычная попытка присвоить его переменной этой позиции по обычному допуску этой переменной. Адресата по имени выбирает только стандартная запись `name := value`, правая часть которой может быть Structure, объявлением или любым другим значением. Запись вызова и запись объявления Structure — одна запись: `Producer()` в роли CODE вызывает, а в роли DATA объявляет Structure, и разбор их не различает. Ресивер объявления места отличается от обычного вызова контрактом разрешённой головной части и ролью места, где стоит запись. Безымянная Structure среди аргументов не вызов: она передаётся как есть и передачей ничего не исполняет. Это правило относится к `int(item expression)` так же, как и к `int: item expression`, и не является частным случаем для имён из примеров. Общая фраза «все объявления среди аргументов читаются как DATA» правилом не является: она смешала бы ресивер объявления места со структурной формой, которая в другой роли объявляла бы Structure. Ресиверы объявления места читают свои аргументы объявления как DATA по своим собственным контрактам. Отдельно обычное выражение `Name :: DATA` потребляет левый идентификатор объявления и один целый правый шаблон DATA. Просмотр полей этого шаблона не является раскрытием вектора аргументов операнда. Эти контракты не вводят новой группы ресиверов и не меняют ни другие вызовы языка, ни прямой вызов обычного callable.
+**Объявление, переданное как аргумент, — это Structure данных (DATA); его передача не исполняет его как вызов.** Поставленным значением является полная форма объявления. Её инициализатор остаётся записанным материалом, пока эту форму не исполнят или не потребят по её контракту. Это относится и к `int(item expression)`, и к `int: item expression`. Обычный фактический аргумент `Producer()` по-прежнему вызов и следует обычному контракту аргументов CODE.
 
-| Форма фактического аргумента | Отображение | Сохраняемый материал |
+Записанная форма вызова и записанная форма объявления Structure — одна запись: `Producer()` в роли CODE вызывает, а в роли DATA объявляет Structure, и разбор их не различает. Какая операция выполняется, решает контракт разрешённой головы и роль места, где стоит запись. Безымянная Structure среди аргументов не вызов: она передаётся как есть, и передача ничего из неё не исполняет.
+
+Принимающая переменная выбирается теми же правилами позиции и явного имени, что и для любого другого аргумента. **Имя, объявленное внутри поставленной формы, среди принимающих DATA или интерфейса не ищется никогда.** Оно остаётся частью этой формы и описывает, что объявление сделает при исполнении. Существует ли принимающая переменная с таким же именем, на отображение аргументов не влияет.
+
+| Поставленный аргумент | Принимающая переменная | Поставленный материал |
 | --- | --- | --- |
-| Объявление, записанное позиционным фактическим аргументом | Оно занимает текущую позицию как одна Structure, какое бы имя ни объявляло; делается обычная попытка присвоить его переменной этой позиции | Ссылка на эту форму; её внутреннее имя остаётся внутри неё |
-| Записано внешнее `formal := declaration` | Внешнее присваивание выбирает назначение по обычному правилу именованных фактических аргументов | Объявление остаётся значением правой части со своим внутренним именем |
+| Безымянная форма объявления | Следующая позиция, выбранная обычным счётчиком позиций | Полная Structure данных, допущенная по требованию этой переменной |
+| `name := declaration` | Переменная, выбранная обычным внешним именем `name` | Полная Structure объявления справа, с неизменённым внутренним именем |
+| `name := S` или `name := value` | Переменная, выбранная тем же обычным внешним именем | Поставленная Structure или иное значение по контракту этой переменной |
 
-Таким образом, при входах `a`, затем `b`, `g(int: b producer())` подаёт объявление на первую позицию, в `a`: имя `b` внутри него вход `b` не адресует, а `producer()` не предвычисляется. `g(b := int(b producer()))` адресует `b` обычным именованным фактическим аргументом; принимает ли переменная объявление, решает её обычный допуск, и вход-примитив, например `int`, не принимает Structure объявления как значение — с именем или без него. При входах `iteration`, затем `body`, объявление `int: item numbers\next()` идёт одной Structure в `iteration`; его внутреннее имя не является ни именованным фактическим аргументом, ни причиной отключить счётчик позиций, а следующий безымянный блок идёт в `body`. `iteration := int(item numbers\next())` явно выбирает `iteration` независимо от внутреннего имени. Если для объявления не осталось позиции, это лишний фактический аргумент обычного [выбора](#declaration-selection): кандидат не допускается, и вызов отвергается до исполнения какого-либо аргумента.
+Выбрав принимающую позицию, вызов делает обычную попытку присвоить поставленную Structure этой переменной по обычному допуску. Он не выбирает другую переменную, заглядывая внутрь объявления, не подставляет вместо Structure результат инициализатора и не исполняет объявление, чтобы подогнать несовместимый аргумент. Если принимающей позиции нет или допуск не пройден, действует обычная ошибка вызова. Особого синтаксиса именования для объявлений нет: `name := ...` называет фактический аргумент независимо от вида значения справа.
 
-Корневое объявление принятой формы логически дополняет корень **namespace CODE принимающего выполнения**. Каждое достигнутое выполнение этой формы повторяет её инициализатор и объявляет или обновляет то же корневое место по обычным правилам повторного объявления на том же уровне. Сохранённая форма и её последнее вычисленное значение различны: результат не заменяет исполняемую форму. Подготовка, передача и непотреблённые формы не выполняются раньше потребности.
+Для получателя со входами-ссылками `a`, затем `b`, вызов `g(int: b producer())` подаёт Structure объявления в **`a`**, хотя принимающий вход с именем `b` существует. Его внутреннее имя по-прежнему `b`; `producer()` не выполнялся. Следующий безымянный аргумент нормально использует следующую позицию. Чтобы поместить ту же форму в `b`, пишут `g(b := int: b producer())`. Внешнее имя выбирает `b`; смена внутреннего имени на `item` меняет сохраняемое объявление, но не выбранную принимающую переменную. Через ссылку, ограниченную сигнатурой, отображение «публичная метка → позиция» использует только обычное внешнее имя фактического аргумента.
 
-Ассоциированное переданное тело использует установленное место напрямую. Оно не создаёт новой вычисленной копии и не повторяет инициализатор только оттого, что в него вошли или его прочитали. Физическим родителем тела остаётся исходная Structure аргумента; логическое дополнение корня не меняет ни этого родителя, ни исходный граф CODE. Настоящие вложенные области видимости сохраняют затенение. Независимые принимающие вызовы сохраняют независимые контексты, и ни передача формы, ни удержание ссылки не продлевают время жизни завершённого Frame.
+Приём Structure объявления и её исполнение — отдельные действия. Получатель может сохранить ссылку и явно вызвать её позже. Каждое достигнутое исполнение принятой формы объявления повторяет её инициализатор и объявляет или обновляет своё место по обычным правилам повторного объявления на том же уровне. В установленном контракте объявления и связанного тела это объявление логически дополняет корень namespace CODE **принимающего выполнения**. Оно не добавляет поля в исходный граф DATA или CODE. Сохранённая форма и её последнее вычисленное значение остаются различными.
+
+Связанное переданное тело использует установленное место объявления напрямую и сохраняет существующие живые места своего поставленного исходного контекста. Вход в это тело не делает ни ещё одной копии объявленного item, ни повтора его инициализатора. В примере ниже `item` — место, установленное `iteration()`, а `total` — существующее локальное место активного вызова `numbers\demo()`. Обновление `total` сразу обновляет это место; это не новая fallback-копия при каждом выполнении тела. Это существующий контракт связанного тела, а не новый объект-замыкание, не изменение несвязанных обычных вызовов и не новый граф источника. Физическим родителем тела остаётся исходная Structure аргумента. Настоящие вложенные объявления сохраняют обычное затенение, а удержание формы не продлевает время жизни завершённой активации.
+
+Следующий полный пример — пример, поставленный автором, сохранённый как написан:
 
 ```lmx
+numbers:
+    int: position 0
+    return: int
+    next:
+        throws: Stop
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position
+    demo:
+        node\position := 0
+        int: total 0
+        cycles\iterate: int: item numbers\next()
+            item *= 2
+            total += item
+        return: total
+
 cycles:
     @: iteration
     @: body
@@ -2059,35 +2085,32 @@ cycles:
             catch: Stop ()
                 break
             body()
-
-use:
-    import: cycles
-    run:
-        iterate: int: item numbers\next()
-            item *= 2
-
-use\run()
 ```
 
-Здесь `numbers` — итератор, доступный из внешнего контекста и разрешаемый по обычному контексту и исходным структурным связям; его метод `next()` выдаёт целые числа или бросает `Stop`. Состояние позиции хранится в `numbers`; библиотечный `iterate` его не создаёт. [Import](#import-receiver) предоставляет константное объявление Structure `iterate`; `iteration` и `body` — обычные входы-ссылки, и они остаются в фактическом DATA `cycles`. Первый фактический аргумент сохраняет форму объявления в `iteration`; второй — связанное с ним тело. `iteration()` продвигает итератор и устанавливает/обновляет `item`; `body()` изменяет то же самое место. Его физический родитель — записанная Structure аргументов, содержащая форму объявления, а не библиотечное определение `cycles\iterate`.
+Рассматриваемый вызов — `numbers\demo()`. И `numbers\next`, и `numbers\demo` используют описание результата `return: int` своих фактических DATA, `numbers`. `node\position` явно адресует устойчивую позицию в этой Structure; каждый demo сбрасывает её в ноль. Более поздняя декларация `cycles` доступна по обычной двусторонней видимости именованных Structure.
 
-| Итерация | Шаг | Тело |
-| --- | --- | --- |
-| 1 | Один вызов `next()` выдаёт 10; `item` становится 10 | То же место становится 20 |
-| 2 | Один вызов `next()` выдаёт 20; то же место становится 20 | То же место становится 40 |
-| Конец | Один вызов `next()` бросает `Stop` | Не выполняется |
+Первый фактический аргумент `cycles\iterate` — Structure объявления `int: item numbers\next()`. Он по позиции идёт в `iteration`. Второй фактический аргумент — связанное тело, содержащее `item *= 2` и `total += item`; он по позиции идёт в `body`. Поиска `item` в `cycles` не происходит. Имена `iteration` и `body` не выбирают никакой части внутри обоих аргументов: их переменные-ссылки получают две полные поставленные Structure.
 
-Есть три вызова `next()` и два выполнения тела. Чтение `item` не добавляет вызовов. Конструкция catch охватывает весь свой блок цикла, включая `body()`, по обычным правилам обработчиков.
+`iteration()` явно исполняет сохранённое объявление. Он один раз вызывает `numbers\next()` и устанавливает или обновляет `item`. Затем `body()` удваивает тот же `item` и прибавляет его к исходному локальному для demo `total`. Сама передача объявления, вход в тело или чтение `item` не добавляют вызова итератора.
 
-Именованная форма `iterate(body := (item *= 2); iteration := int(item numbers\next()))` передаёт обе Structure, не выполняя тело до шага. `iterate(iteration := int(item numbers\next()); (item *= 2))` оставляет позиционный счётчик активным после своего первого фактического аргумента. `iterate(body := (); iteration := int(item numbers\next()))` передаёт присутствующее пустое тело, а не опущенное.
+| Попытка | Результат `next()` | `item` после тела | Локальный для demo `total` |
+| --- | --- | ---: | ---: |
+| 1 | Позиция становится 1; возвращается 1 | 2 | 2 |
+| 2 | Позиция становится 2; возвращается 2 | 4 | 6 |
+| 3 | Позиция становится 3; возвращается 3 | 6 | 12 |
+| 4 | Позиция уже равна 3; бросается `Stop` до увеличения | Тело пропускается | 12 |
 
-Это правило не публикует все поля каждой обычной ссылки на Structure как локалы корня. Обычный фактический аргумент `Producer()` остаётся вызовом CODE, а простая передача `p := S` не выполняет весь `S` и не дополняет корень каждым полем.
+Требуемое наблюдение: **`numbers\demo()` возвращает 12, при четырёх вызовах `numbers\next`, трёх выполнениях тела и конечном `numbers\position = 3`**. `catch: Stop ()` охватывает вызов `iteration()` в своём блоке цикла; `break` завершает цикл. Ни один `Stop` с этого пути не выходит наружу. Это заданные наблюдения, а не отчёт о том, что среда исполнения выполнила пример.
+
+Явный именованный эквивалент может использовать `iteration := int(item numbers\next())` и `body := (item *= 2; total += item)` по тому же контракту связанного тела. Именование принимающей переменной на её текущей позиции сохраняет обычный позиционный счётчик; именование другой позиции отключает дальнейшую позиционную подачу. Внутреннее имя объявления `item` на этот счётчик не влияет. Присутствующее пустое тело по-прежнему отличается от опущенного аргумента.
+
+Это правило не исполняет каждую поставленную Structure и не публикует все её поля как локалы. Обычный фактический аргумент `Producer()` остаётся вызовом CODE; простая передача `p := S` передаёт значение, выбранное этим внешним фактическим аргументом. Общие правила группировки P0 и выбора вызова целой Structure остаются без изменений.
 
 #### Вычисление, приём и значения по умолчанию
 
 Проверки формы вызова, доступные до выполнения эффектов, идут первыми: неизвестное явное имя формального параметра в `f(x := touch())` не запускает `touch()`. Сопоставление кандидатов не должно выполнять аргумент отдельно для каждого возможного объявления. Необходимые места приёма существуют раньше выражений, которые их используют. Вычисленные фактические аргументы выполняются один раз в записанном порядке, и каждый принимается раньше следующего; ошибка останавливает последующие фактические аргументы и предотвращает вход в тело. Фактические объявления DATA сохраняют свою форму вместо немедленного выполнения их правой части. Выбранные отображения сохраняются на протяжении всего выполнения.
 
-Переданный фактический аргумент заменяет соответствующее описание источника namespace и подавляет исходный инициализатор. Ноль — переданное значение; явный `nil` и опущение различаются. Несовместимое значение не заменяется значением по умолчанию. Без фактического аргумента остаётся собственное готовое значение выбранного кандидата или вычисляемое значение по умолчанию; локалы вызывающего не могут его заменить. Вычисляемые значения по умолчанию не выполняются ни при построении графа, ни в общем проходе по всей точке входа: неиспользуемое не выполняется. Опущенный вход без инициализатора может получить разрешённое автозаполнение после выбора, иначе он остаётся `uninit:T`. Вход `required` участвует в выборе, а достигнутый CODE `required` проверяет фактическое место в этой точке. Локальные записи не меняют ни значений по умолчанию будущих вызовов, ни объявлений в исходном тексте.
+Выбранная принимающая переменная получает допущенный фактический аргумент в namespace вызова, подавляя собственный исходный инициализатор. Фактический аргумент-объявление остаётся поданной Structure; его внутреннее имя не перенаправляет это присваивание. Ноль — переданное значение; явный `nil` и опущение различаются. Несовместимое значение не заменяется значением по умолчанию. Без фактического аргумента остаётся собственное готовое значение выбранного кандидата или вычисляемое значение по умолчанию; локалы вызывающего не могут его заменить. Вычисляемые значения по умолчанию не выполняются ни при построении графа, ни в общем проходе по всей точке входа: неиспользуемое не выполняется. Опущенный вход без инициализатора может получить разрешённое автозаполнение после выбора, иначе он остаётся `uninit:T`. Вход `required` участвует в выборе, а достигнутый CODE `required` проверяет фактическое место в этой точке. Локальные записи не меняют ни значений по умолчанию будущих вызовов, ни объявлений в исходном тексте.
 
 <a id="declaration-observations"></a>
 #### Требуемые наблюдения A01–G01: аргументы-объявления, import и метки fn
@@ -2098,22 +2121,25 @@ use\run()
 |---|---|---|
 | A01 | Ресивер объявления передан в аргументах CODE | Он читается как DATA; сохраняется форма объявления |
 | A02 | Принимающий код ещё не потребил и не исполнил форму | Initializer не запущен только из-за передачи |
-| A03 | Первый формал — iteration; объявление `int: item …` подано позиционно, есть ли `item` среди входов или нет | Целая форма занимает позицию iteration как одна Structure; внутреннее имя не выключает счётчик |
-| A04 | Входы a, b; подано `g(int: b producer())` | Объявление занимает первую позицию, в a, как одна Structure; вход b внутренним именем не адресуется, producer передачей не вычисляется |
-| A05 | Явное `iteration := int(item …)` | Адресат — iteration; внутреннее имя item сохранено |
-| A06 | Внешнее `name := …` назвало формал на его собственной позиции | Позиционный счётчик продолжает работать |
-| A07 | Внешнее `name := …` на другой позиции, далее безымянный actual | Сохраняется отказ по порядку подачи |
+| A03 | Первая принимающая позиция — `iteration`; подано безымянное `int: item …` | Полная Structure объявления идёт в `iteration` по позиции; поиска `item` не выполняется |
+| A04 | Входы-ссылки: `a`, затем `b`; первый фактический аргумент — `int: b producer()` | Structure объявления присваивается `a` по позиции, хотя `b` существует; инициализатор при подаче не выполняется |
+| A05 | Явное `iteration := int(item …)` | Обычное внешнее имя фактического аргумента выбирает `iteration`; внутреннее имя `item` остаётся частью поданной Structure |
+| A06 | Явное внешнее имя фактического аргумента выбирает текущую позицию | Позиционный счётчик продолжает работать; внутреннее имя объявления таким именованием никогда не считается |
+| A07 | Явное внешнее имя фактического аргумента выбирает другую позицию, далее следует безымянный фактический аргумент | Сохраняется отказ по обычному порядку подачи |
 | A08 | Body, затем iteration переданы явно по именам | Подача допустима; порядок исполнения определяется кодом iterate |
 | A09 | Первое исполнение принятой формы | Создаётся типизированное корневое место item текущего выполнения |
 | A10 | Повторное исполнение принятой формы | Повторно выполняется RHS и обновляется то же место |
 | A11 | Два чтения item после одного шага | Не вызывают next повторно |
 | A12 | Body изменяет item | Меняется полученное место, без отдельной вычисляемой копии и copy-out |
-| A13 | Полная трасса 10, 20, Stop | Next вызван три раза; тело дважды получает элемент и удваивает его |
+| A13 | Полный пример `numbers\demo()` | `next` вызван четыре раза, тело выполнено три раза, исходный локальный `total` demo становится 12, и результат равен 12 |
 | A14 | Имена iteration/body/item заменены на advance/action/value | Смысл сохраняется, если соответствующие употребления переименованы |
 | A15 | В body есть настоящий вложенный уровень с новым item и явным RHS | Действует обычное затенение; корневое дополнение не выпрямляет уровни |
 | A16 | `Producer()` в аргументах CODE; Producer — обычный callable, не ресивер объявления места | Остаётся вызовом: решают контракт разрешённой головы и роль CODE у места, а не разбор; это правило не переводит его в DATA |
 | A17 | Безымянная или обычная Structure передана обычным значением | Это не вызов, она передаётся как есть; её получение само по себе не исполняет всё содержимое и не публикует все поля в корень |
 | A18 | Независимые выполнения принимающего кода | Не получают общее изменяемое item из исходного графа |
+| A19 | Переименовать только внутреннее имя поданного объявления, в том числе в имя существующего формала | Выбранная принимающая позиция и позиционный счётчик не меняются |
+| A20 | Выбранная принимающая переменная отвергает поданную Structure объявления | Обычный допуск не проходит; переотображения по имени и исполнения инициализатора ради другого значения аргумента нет |
+| A21 | Связанное тело в полном примере выполняет `total += item` | Оно записывает существующее живое место `total` метода `numbers\demo`, а не свежую fallback-копию; `item` — место, установленное `iteration()` |
 | I01 | `import: cycles` в data вызываемого test | Импортируется константное объявление iterate; переменные iteration и body остаются в cycles и продолжают задавать входы метода |
 | I02 | Корневое const-объявление примитива или ссылки | Импортируется по тому же общему правилу |
 | I03 | Корневое объявление обычной переменной | Не импортируется |
@@ -2172,7 +2198,7 @@ Calc:
 int: r Calc\mytest(merge(Defaults (int: a 5)))
 ```
 
-В контексте CODE merge объединяет два своих источника и передаёт получившиеся поля `c=3`, `a=5` как поток аргументов вызова; `r` равно 35 при единственном подходящем совпадении. Это явная композиция, а не автозаполнение и не изменение исходных значений по умолчанию. Добавление внешней группы создаст одну Structure до обычного выбора W/E.
+В контексте CODE merge объединяет два своих источника и передаёт получившиеся поля `c=3`, `a=5` в этом порядке как поток аргументов вызова. Они занимают первую и вторую принимающие позиции соответственно; `r` равно 35 при единственном подходящем совпадении. Это явная композиция, а не автозаполнение и не изменение исходных значений по умолчанию. Добавление внешней группы создаст одну Structure до обычного выбора W/E.
 
 Анонимная группа, используемая как самостоятельный оператор CODE, выполняется на месте: `(tick())` вызывает `tick`, `(2 + 2)` вычисляет и отбрасывает результат, `(a b c)` читает имена, а `()` ничего не делает. На позиции значения или аргумента её потребитель определяет, является ли она выражением, DATA или явно принятым телом кода. Это общее правило сохраняет как записанные границы контейнеров, так и обычное выполнение управляющего тела.
 
@@ -2182,7 +2208,7 @@ int: r Calc\mytest(merge(Defaults (int: a 5)))
 Этот алгоритм применяется к обычным вызываемым и к ресиверам, аргументы которых являются CODE. Контракты вроде `f(int a; required int b)` ниже являются аналитической записью объявлений входов, а не новой грамматикой исходного текста. Перекрывающиеся видимые объявления порождают ошибку в вызове, который допускает более одного кандидата; native-варианты уже выбранного языкового вызова не являются дополнительными объявлениями языка.
 
 1. Разрешить имя/ссылку вызываемого и его видимые объявления обычным образом. Если у ссылки-ресивера есть требование fn, установить её позиционное совпадение типов и отображение публичных меток по правилам [fn](#fn-signature).
-2. Образовать кандидатов **(видимое объявление, чтение W или E, отображение фактических аргументов в формальные)** из явно переданного материала. W сохраняет записанные значения. E дополнительно рассматривается только для ровно одного фактического аргумента Structure или ссылки на одну Structure, которая не передана присваиванием конкретному формальному параметру. E раскрывает непосредственные поля один раз и сохраняет их объявленные имена при обычном отображении. Форма объявления места — это одна позиционная Structure либо правая часть явного `name := …` по [аргументам объявления](#declaration-arguments). Чтение E для неё не рассматривается: форма подаётся целиком, и её имя не ищется.
+2. Образовать кандидатов **(видимое объявление, чтение W или E, отображение фактических аргументов в формальные)** из явно переданного материала. W сохраняет записанные значения. E дополнительно рассматривается только для ровно одного фактического аргумента Structure или ссылки на одну Structure, которая не передана присваиванием конкретному формальному параметру. E раскрывает непосредственные поля один раз по обычным правилам целой Structure. Формы объявления используют обычное позиционное отображение или явное отображение по внешнему имени из [аргументов объявления](#declaration-arguments); имя внутри такой формы никогда не выбирает её принимающую переменную.
 3. Проверить порядок позиционных и именованных аргументов, известные имена, дубликаты, лишние фактические аргументы, собственные значения по умолчанию кандидата и обязательность входов. Явный `formal := S` не имеет E. Отсутствующие необязательные входы остаются позициями; опущение не то же самое, что явный `nil` или ноль.
 4. Применить общий допуск интерфейса, включая его позиционную ветку fn, там, где это требуется. Обычная явная структурная модель сохраняет всё заявленное дерево целиком. Сопоставление не выполняет пользовательские значения по умолчанию, присваивания, преобразователи или тесты отдельно для каждого кандидата. Проверки, доступные до эффектов аргументов, выполняются первыми; уже полученные значения не пересчитываются для E или другого кандидата. Обычные фазы преобразования и тестов сохраняют [контракт допуска](#admission).
 5. Подсчитать **все** допущенные кандидаты. Нет ни одного — отказ; ровно один выбирает полное объявление/чтение/отображение; больше одного — неоднозначность, включая два чтения одного и того же объявления. Предпочтения по целому значению, арности, порядку обхода или скрытому входу нет.
@@ -2343,7 +2369,7 @@ The selected Structure C is executed in CODE; its actual parent supplies DATA. A
 
 The table does not cancel the choice of the reading of a single structural actual argument: `C(A)` may take `A` whole or choose to pass its fields -- this is determined by the [declaration selection](#declaration-selection). The equality of the effect of different records is checked with the same selected actual arguments, not by arbitrary textual substitution: with the same selected `A`, a by-name record and `call(A C)` are one call.
 
-For `args` the ordinary positional and named supply, evaluation order, call-shape checks, admission, and whole-Structure argument passing apply. Values already obtained are not evaluated again. A supplied place-declaration form keeps its DATA contract and is not reduced to a computed value during transmission. A supplied actual replaces the corresponding place description in a fresh namespace; the source data and code are unchanged, and entry executes no initializers. The interpreter sends a by-name call, a call through a pointer and both explicit forms of `call` through one mechanism for binding, admission, frame, execution and result transfer; there is no second execution path for a `catch` handler or an explicit receiver. Reached calls from test and converters use that path too. Service C functions, the bridge and the `call` dispatcher do not substitute their own service locals for the caller's context: the sources of the language are determined by the program place of the call. The author's clarification of 2026-11-15 that `args` supplies values and does not describe inputs remains in force.
+For `args` the ordinary positional and named supply, evaluation order, call-shape checks, admission, and whole-Structure argument passing apply. Values already obtained are not evaluated again. A supplied declaration keeps its data-Structure contract and is not reduced to its initializer's result during transmission. Its receiving place is chosen by position or an explicit outer actual name, never its internal declaration name. A supplied actual fills that selected place in a fresh namespace; the source data and code are unchanged, and entry executes no initializers. The interpreter sends a by-name call, a call through a pointer and both explicit forms of `call` through one mechanism for binding, admission, frame, execution and result transfer; there is no second execution path for a `catch` handler or an explicit receiver. Reached calls from test and converters use that path too. Service C functions, the bridge and the `call` dispatcher do not substitute their own service locals for the caller's context: the sources of the language are determined by the program place of the call. The author's clarification of 2026-11-15 that `args` supplies values and does not describe inputs remains in force.
 
 A callable is just a Structure (the author's decision of 2026-11-16). The launch receiver has no special rule for a callable: it does not select a part inside the Structure it is given. Any Structure may be given to `call` (the author's clarification of 2026-11-16): the given object is executed by its actual fields under the general rules; there is no prohibition, no automatic selection of the body and no special order for a callable, and what is observed is a consequence of the general mechanisms, not fixed as a separate norm.
 
@@ -2525,22 +2551,48 @@ A standalone actual `a := value` selects formal `a` and supplies the RHS under i
 The positional counter follows one rule. Naming the formal at the current position still counts as positional and leaves the counter active. Naming a different position disables it; all subsequent actuals must be named. It never restarts. Unknown explicit names, duplicate supply and excess actuals are errors. Separate named actuals with `;`: `f(a := 1; b := 2)` supplies two actuals; a comma does not necessarily terminate the first assignment's RHS.
 
 <a id="declaration-arguments"></a>
-#### Preserve a supplied declaration
+#### A supplied declaration is a data Structure
 
-A **place-declaration receiver** supplied as an argument in a CODE argument context is read as DATA. The argument is the declaration itself, and transmission alone executes no initializer. That is the whole special part of the rule: a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. The name declared inside a supplied declaration is not looked up among the receiving inputs. The declaration is simply one Structure: like any other positional actual it takes the current position, and the ordinary assignment to the variable of that position is attempted under that variable's ordinary admission. A destination is chosen by name only through the standard `name := value`, whose right side may be a Structure, a declaration, or any other value. The written record of a call and of the declaration of a Structure is one record: `Producer()` calls in the role of CODE and declares a Structure in the role of DATA, and the parse does not tell the two apart. A declaration receiver differs from an ordinary call by the contract of the resolved head and by the role of the place where the record stands. An anonymous Structure among the arguments is not a call: it is passed as it is, and the passing executes nothing of it. This rule applies to `int(item expression)` as well as `int: item expression`, and is not a special case for example names. The general phrase «all declarations among the arguments are read as DATA» is not the rule: it would confuse a place-declaration receiver with a structural form that would declare a Structure in another role. Place-declaration receivers read their declaration arguments as DATA under their own contracts. Separately, the ordinary expression `Name :: DATA` consumes a left declaration identifier and one whole right DATA template. Inspecting that template's fields is not unwrapping the operand argument vector. These contracts introduce no new group of receivers and change neither another call of the language nor the direct call of an ordinary callable.
+**A declaration passed as an argument is a data Structure; passing it does not execute it as a call.** The complete declaration form is the supplied value. Its initializer remains written material until that form is actually executed or consumed under its contract. This also applies to `int(item expression)` and `int: item expression`. An ordinary `Producer()` actual is still a call and follows the ordinary CODE argument contract.
 
-| Actual form | Mapping | Preserved material |
+The written record of a call and of the declaration of a Structure is one record: `Producer()` calls in the role of CODE and declares a Structure in the role of DATA, and the parse does not tell the two apart. Which operation is performed is decided by the contract of the resolved head and by the role of the place where the record stands. An anonymous Structure among the arguments is not a call: it is passed as it is, and the passing executes nothing of it.
+
+The receiving variable is chosen by the same positional and explicit-name rules as for any other argument. **The name declared inside the supplied form is never searched for in the receiving DATA or interface.** It remains part of that form and describes what the declaration will do when executed. Whether a same-named receiving variable happens to exist changes nothing about argument mapping.
+
+| Supplied argument | Receiving variable | Supplied material |
 | --- | --- | --- |
-| A declaration written as a positional actual | It takes the current position as one Structure, whatever name it declares; the ordinary assignment to the variable of that position is attempted | A reference to that form; its internal name remains inside it |
-| An external `formal := declaration` is written | The external assignment chooses the destination by the ordinary rule of named actuals | The declaration remains the RHS value, with its own internal name |
+| An unnamed declaration form | The next position selected by the ordinary positional counter | The complete data Structure, admitted against that variable's requirement |
+| `name := declaration` | The variable selected by the ordinary outer name `name` | The complete declaration Structure on the right, with its internal name unchanged |
+| `name := S` or `name := value` | The variable selected by the same ordinary outer name | The supplied Structure or other value under that variable's contract |
 
-Thus with inputs `a`, then `b`, `g(int: b producer())` supplies the declaration at the first position, to `a`: the name `b` inside it does not address the input `b`, and `producer()` is not precomputed. `g(b := int(b producer()))` addresses `b` by the ordinary named actual; whether the variable takes the declaration is decided by its ordinary admission, and a primitive input such as `int` admits no declaration Structure as its value, named or not. With inputs `iteration`, then `body`, a declaration `int: item numbers\next()` goes as one Structure into `iteration`; its internal name is neither a named actual nor a reason to switch the position counter off, and the following unnamed block goes into `body`. `iteration := int(item numbers\next())` explicitly chooses `iteration` regardless of the internal name. If no position is left for the declaration, it is an excess actual of the ordinary [selection](#declaration-selection): the candidate is not admitted, and the call is refused before any argument runs.
+After selecting a receiving position, the call attempts the ordinary assignment/admission of the supplied Structure to that variable. It does not select a different variable by looking inside the declaration, substitute the initializer's result for the Structure, or execute the declaration to make an incompatible argument fit. If no receiving position exists or admission fails, the ordinary call error applies. There is no special naming syntax for declarations: `name := ...` names the actual regardless of the kind of value on its right.
 
-The accepted form's root declaration logically supplements the root of the **receiving execution's** CODE namespace. Each reached execution of that form repeats its initializer and declares or updates the same root place under ordinary same-level redeclaration rules. The preserved form and its most recent computed value are distinct: a result does not replace the executable form. Preparation, passing and unconsumed forms do not run ahead of demand.
+For a receiver with reference inputs `a`, then `b`, `g(int: b producer())` supplies the declaration Structure to **`a`**, even though a receiving input named `b` exists. Its internal name is still `b`; `producer()` has not run. A following unnamed argument uses the next position normally. To put that same form into `b`, write `g(b := int: b producer())`. The outer name selects `b`; changing the internal name to `item` changes the retained declaration, not the selected receiving variable. Through a signature-constrained reference, only the ordinary outer actual name uses the public-label-to-position map.
 
-An associated passed body uses that established place directly. It does not create a new computed copy or repeat the initializer just by entering or reading it. The body's physical parent remains the original argument Structure; logical root supplementation changes neither that parent nor the source CODE graph. Genuine nested scopes retain shadowing. Independent receiving invocations keep independent contexts, and neither form passing nor retaining a reference extends a finished frame's lifetime.
+Receiving a declaration Structure and executing it are separate actions. The receiver can retain the reference and explicitly invoke it later. Each reached execution of an accepted declaration form repeats its initializer and declares or updates its place under the ordinary same-level redeclaration rules. In the established declaration-and-associated-body contract, that declaration logically supplements the root of the **receiving execution's** CODE namespace. It does not add a field to the source DATA or CODE graph. The retained form and its most recent computed value remain distinct.
+
+The associated passed body uses the established declaration place directly and retains the existing live places of its supplied source context. Entering that body neither makes another copy of the declared item nor repeats its initializer. In the example below, `item` is the place established by `iteration()`, and `total` is the existing local place of the active `numbers\demo()` call. Updating `total` updates that place immediately; it is not a new fallback copy in each body execution. This is the existing associated-body contract, not a new closure object, a change to unrelated ordinary calls, or a new source graph. The body's physical parent remains the original argument Structure. True nested declarations retain ordinary shadowing, and retaining the form does not extend a finished activation's lifetime.
+
+The following complete example is the author's supplied example, preserved as written:
 
 ```lmx
+numbers:
+    int: position 0
+    return: int
+    next:
+        throws: Stop
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position
+    demo:
+        node\position := 0
+        int: total 0
+        cycles\iterate: int: item numbers\next()
+            item *= 2
+            total += item
+        return: total
+
 cycles:
     @: iteration
     @: body
@@ -2550,35 +2602,32 @@ cycles:
             catch: Stop ()
                 break
             body()
-
-use:
-    import: cycles
-    run:
-        iterate: int: item numbers\next()
-            item *= 2
-
-use\run()
 ```
 
-Here `numbers` is an iterator available from the outer context and resolved by the ordinary context and the source structural links; its `next()` yields integers or throws `Stop`. The position state lives in `numbers`; the library `iterate` creates none. [Import](#import-receiver) exposes the constant Structure declaration `iterate`; `iteration` and `body` are ordinary reference inputs and remain in the actual DATA `cycles`. The first actual preserves the declaration form in `iteration`; the second is the associated body. `iteration()` advances the iterator and establishes/updates `item`; `body()` changes that very place. Its physical parent is the written argument Structure containing the declaration form, not the library definition `cycles\iterate`.
+The call under examination is `numbers\demo()`. Both `numbers\next` and `numbers\demo` use the result description `return: int` of their actual DATA, `numbers`. `node\position` explicitly addresses the persistent position in that Structure; each demo resets it to zero. The later declaration of `cycles` is available under the ordinary bidirectional visibility of named Structures.
 
-| Iteration | Step | Body |
-| --- | --- | --- |
-| 1 | One `next()` yields 10; `item` becomes 10 | Same place becomes 20 |
-| 2 | One `next()` yields 20; same place becomes 20 | Same place becomes 40 |
-| End | One `next()` throws `Stop` | Not executed |
+The first actual of `cycles\iterate` is the declaration Structure `int: item numbers\next()`. It goes by position to `iteration`. The second actual is the associated body containing `item *= 2` and `total += item`; it goes by position to `body`. No search for `item` in `cycles` occurs. The names `iteration` and `body` select no part inside either argument: their reference variables receive the two complete supplied Structures.
 
-There are three `next()` calls and two body executions. Reading `item` adds no calls. The catch covers its whole loop block, including `body()`, under the ordinary handler rules.
+`iteration()` explicitly executes the retained declaration. It calls `numbers\next()` once and establishes or updates `item`. `body()` then doubles that same `item` and adds it to the original demo-local `total`. Merely passing the declaration, entering the body, or reading `item` adds no iterator call.
 
-The named form `iterate(body := (item *= 2); iteration := int(item numbers\next()))` supplies both Structures without running the body before the step. `iterate(iteration := int(item numbers\next()); (item *= 2))` leaves the positional counter active after its first actual. `iterate(body := (); iteration := int(item numbers\next()))` supplies a present empty body, not an omitted one.
+| Attempt | `next()` outcome | `item` after the body | Demo-local `total` |
+| --- | --- | ---: | ---: |
+| 1 | Position becomes 1; returns 1 | 2 | 2 |
+| 2 | Position becomes 2; returns 2 | 4 | 6 |
+| 3 | Position becomes 3; returns 3 | 6 | 12 |
+| 4 | Position is already 3; throws `Stop` before incrementing | Body is skipped | 12 |
 
-This rule does not publish all fields of every ordinary Structure reference as root locals. An ordinary `Producer()` actual remains a CODE call, and merely passing `p := S` does not execute all of `S` or supplement the root with every field.
+The required observation is **`numbers\demo()` returns 12, with four calls of `numbers\next`, three body executions, and final `numbers\position = 3`**. `catch: Stop ()` covers the call to `iteration()` in its loop block; `break` ends the loop. No `Stop` escapes from that path. These are specified observations, not a report that a runtime has executed the example.
+
+The explicitly named equivalent can use `iteration := int(item numbers\next())` and `body := (item *= 2; total += item)` under the same associated-body contract. Naming a receiving variable at its current position preserves the ordinary positional counter; naming another position disables subsequent positional supply. The internal declaration name `item` has no effect on that counter. A present empty body remains different from an omitted argument.
+
+This rule does not execute every supplied Structure or publish all its fields as locals. An ordinary `Producer()` actual remains a CODE call; merely passing `p := S` passes the value selected by that outer actual. The common P0 grouping and whole-Structure call-selection rules remain unchanged.
 
 #### Evaluation, reception and defaults
 
 Call-shape checks available before effects run first: an unknown explicit formal name in `f(x := touch())` does not run `touch()`. Candidate matching must not execute the argument separately for each possible declaration. Necessary receiving places exist before expressions that use them. Evaluated actuals run once in written order and each is received before the next; a failure stops later actuals and prevents body entry. DATA declaration actuals preserve their form instead of eagerly running their RHS. Selected mappings are retained through execution.
 
-A supplied actual replaces the corresponding namespace source description and suppresses that original initializer. Zero is a supplied value; explicit `nil` and omission differ. An incompatible value is not replaced by a default. Without an actual, the chosen candidate's own ready value or computed default remains; caller locals cannot replace it. Computed defaults execute neither at graph construction nor in an entry-wide pass: an unused one does not run. An omitted input with no initializer may receive permitted autofill after selection, otherwise it remains `uninit:T`. Input `required` participates in selection, while a reached CODE `required` checks the actual place at that point. Local writes change neither future calls' defaults nor source declarations.
+The selected receiving variable receives the admitted actual in the call namespace, suppressing its own original initializer. A declaration actual remains the supplied Structure; its internal name does not redirect this assignment. Zero is a supplied value; explicit `nil` and omission differ. An incompatible value is not replaced by a default. Without an actual, the chosen candidate's own ready value or computed default remains; caller locals cannot replace it. Computed defaults execute neither at graph construction nor in an entry-wide pass: an unused one does not run. An omitted input with no initializer may receive permitted autofill after selection, otherwise it remains `uninit:T`. Input `required` participates in selection, while a reached CODE `required` checks the actual place at that point. Local writes change neither future calls' defaults nor source declarations.
 
 <a id="declaration-observations"></a>
 #### Required observations A01–G01: declaration arguments, import and fn labels
@@ -2589,22 +2638,25 @@ These are the criteria of agreement of the normative text and of the future chec
 | --- | --- | --- |
 | A01 | A place-declaration receiver is passed in CODE arguments | It is read as DATA; the declaration form is preserved |
 | A02 | The receiving code has not yet consumed or executed the form | The initializer is not run merely because of the passing |
-| A03 | The first formal is `iteration`; the declaration `int: item …` is supplied positionally, whether or not `item` is among the inputs | The whole form takes the position of `iteration` as one Structure; the internal name does not switch the counter off |
-| A04 | Inputs `a`, `b`; `g(int: b producer())` is supplied | The declaration takes the first position, to `a`, as one Structure; the input `b` is not addressed by the internal name, and `producer` is not computed by the passing |
-| A05 | Explicit `iteration := int(item …)` | The addressee is `iteration`; the internal name `item` is kept |
-| A06 | An external `name := …` names the formal at its own position | The positional counter keeps working |
-| A07 | An external `name := …` at another position, then an unnamed actual | The refusal by the order of supply is kept |
+| A03 | The first receiving position is `iteration`; an unnamed `int: item …` is supplied | The complete declaration Structure goes to `iteration` by position; no lookup of `item` is performed |
+| A04 | Reference inputs are `a`, then `b`; the first actual is `int: b producer()` | The declaration Structure is assigned to `a` by position, even though `b` exists; the initializer is not executed during supply |
+| A05 | Explicit `iteration := int(item …)` | The ordinary outer actual name selects `iteration`; the internal name `item` remains part of the supplied Structure |
+| A06 | An explicit outer actual name selects the current position | The positional counter keeps working; an internal declaration name never counts as such naming |
+| A07 | An explicit outer actual name selects another position, then an unnamed actual follows | The refusal by the ordinary order of supply is kept |
 | A08 | `body`, then `iteration` are supplied explicitly by names | The supply is admissible; the order of execution is determined by the code of `iterate` |
 | A09 | The first execution of the accepted form | The typed root place `item` of the current execution is created |
 | A10 | A repeated execution of the accepted form | The RHS is executed again and the same place is updated |
 | A11 | Two reads of `item` after one step | They do not call `next` again |
 | A12 | `body` changes `item` | The obtained place changes, without a separate computed copy and copy-out |
-| A13 | The full trace 10, 20, `Stop` | `next` is called three times; the body twice gets an element and doubles it |
+| A13 | The complete `numbers\demo()` example | `next` is called four times, the body runs three times, the original demo-local `total` becomes 12, and the result is 12 |
 | A14 | The names `iteration`/`body`/`item` are replaced by `advance`/`action`/`value` | The meaning is kept if the corresponding uses are renamed |
 | A15 | `body` has a genuine nested level with a new `item` and an explicit RHS | The ordinary shadowing acts; the root supplement does not straighten the levels |
 | A16 | `Producer()` in CODE arguments; `Producer` is an ordinary callable, not a place-declaration receiver | It stays a call: the contract of its resolved head and the CODE role of the place decide, not the parse; this rule does not translate it into DATA |
 | A17 | An anonymous Structure or an ordinary Structure is passed as an ordinary value | It is not a call and is passed as it is; its reception does not by itself execute all its content and does not publish all fields into the root |
 | A18 | Independent executions of the receiving code | They do not get a common mutable `item` from the source graph |
+| A19 | Rename only the internal name of a supplied declaration, including to an existing formal name | The selected receiving position and positional counter are unchanged |
+| A20 | The selected receiving variable rejects the supplied declaration Structure | Ordinary admission fails; there is no name-based remapping or execution of the initializer to obtain another argument value |
+| A21 | The associated body executes `total += item` in the complete example | It writes the existing live `total` place of `numbers\demo`, not a fresh fallback copy; `item` is the place established by `iteration()` |
 | I01 | `import: cycles` in the data of the called `test` | The constant declaration `iterate` is imported; the variables `iteration` and `body` stay in `cycles` and keep setting the inputs of the method |
 | I02 | A root const declaration of a primitive or a reference | It is imported by the same common rule |
 | I03 | A root declaration of an ordinary variable | It is not imported |
@@ -2663,7 +2715,7 @@ Calc:
 int: r Calc\mytest(merge(Defaults (int: a 5)))
 ```
 
-In a CODE context the merge combines its two sources and supplies the resulting fields `c=3`, `a=5` as the call's argument stream; `r` is 35 under the unique matching. This is explicit composition, not autofill or modification of the source defaults. Adding an outer group would create one Structure before normal W/E selection.
+In a CODE context the merge combines its two sources and supplies the resulting fields `c=3`, `a=5` in that order as the call's argument stream. They occupy the first and second receiving positions, respectively; `r` is 35 under the unique matching. This is explicit composition, not autofill or modification of the source defaults. Adding an outer group would create one Structure before normal W/E selection.
 
 An anonymous group used as a standalone CODE statement executes in place: `(tick())` calls `tick`, `(2 + 2)` evaluates and discards the result, `(a b c)` reads names, and `()` does nothing. At a value or argument position its consumer determines whether it is an expression, DATA, or an explicitly accepted code body. This common rule preserves both written container boundaries and ordinary control-body execution.
 
@@ -2673,7 +2725,7 @@ An anonymous group used as a standalone CODE statement executes in place: `(tick
 This algorithm applies to ordinary callables and receivers whose arguments are CODE. Contracts such as `f(int a; required int b)` below are analytical notation for input declarations, not new source grammar. Overlapping visible declarations produce an error at a call that admits more than one candidate; native variants of an already chosen language call are not extra language declarations.
 
 1. Resolve the callable name/reference and its visible declarations normally. If the receiving reference has an fn requirement, establish its positional type match and public-label map under [fn](#fn-signature).
-2. Form candidates **(visible declaration, reading W or E, actual-to-formal map)** from explicitly supplied material. W keeps the written values. E is additionally considered only for exactly one Structure actual or reference to one that was not supplied by assignment to a specific formal. E exposes immediate fields once and preserves their declaration names under ordinary mapping. A place-declaration form is one positional Structure actual, or the right side of an explicit `name := …`, under [declaration arguments](#declaration-arguments). The E reading is not considered for it: the form is supplied whole, and its name is not looked up.
+2. Form candidates **(visible declaration, reading W or E, actual-to-formal map)** from explicitly supplied material. W keeps the written values. E is additionally considered only for exactly one Structure actual or reference to one that was not supplied by assignment to a specific formal. E exposes immediate fields once under the ordinary whole-Structure rules. Declaration forms use the ordinary positional or explicit outer-name mapping of [declaration arguments](#declaration-arguments); a name inside such a form never selects its receiving variable.
 3. Check positional/named ordering, known names, duplicates, excess actuals, the candidate's own defaults and input requiredness. Explicit `formal := S` has no E. Absent optional inputs remain positions; omission is not the same as an explicit `nil` or zero.
 4. Apply the common interface admission, including its positional fn branch where that is the requirement. An ordinary explicit structural model keeps its whole stated tree. Matching does not execute user defaults, assignments, converters or tests separately for each candidate. Checks available before argument effects occur first; already obtained values are not recomputed for E or another candidate. Ordinary conversion and test phases retain the [admission contract](#admission).
 5. Count **all** admitted candidates. None refuses; exactly one selects the complete declaration/reading/map; more than one is ambiguity, including two readings of the same declaration. There is no whole-value, arity, traversal-order or hidden-input preference.
@@ -3013,7 +3065,7 @@ G\g()
 <a id="call-frame-20261115"></a>
 ### Кадр вызова без обратной публикации — решение 2026-11-15
 
-Входные места вызова описываются данными — `parent(C)` исполняемой Structure `C`; `args` в `call` и хвост формы `C(args)` подают им фактические значения по [общему контракту вызова](#call-receivers). В решении 2026-11-15 это записано для `fn`, `sub` и `catch` с одним входом `data` и для `call(D, C)`; эти формы снимаются нормой 2026-11-19 ([что снято](#removed-builtins)), правила кадра сохраняются. Каждый самостоятельный вызов вызываемого создаёт собственный namespace и локальные места. Исполнение принятой формы объявления и связанного с ней тела использует установленные места этого принимающего исполнения по [§11](#declaration-arguments); оно не создаёт свежего изолированного элемента и не перезапускает инициализатор при каждом входе в тело. Позиционные и именованные фактические аргументы отображаются на описание входа. Поданный фактический аргумент заменяет соответствующее описание namespace и подавляет исходный инициализатор. Фактический аргумент в виде объявления сохраняет саму форму замены; исполнение этой принятой формы позже следует её собственному контракту исполнения при достижении. Вход в вызов не исполняет инициализаторы пропущенных полей.
+Входные места вызова описываются данными — `parent(C)` исполняемой Structure `C`; `args` в `call` и хвост формы `C(args)` подают им фактические значения по [общему контракту вызова](#call-receivers). В решении 2026-11-15 это записано для `fn`, `sub` и `catch` с одним входом `data` и для `call(D, C)`; эти формы снимаются нормой 2026-11-19 ([что снято](#removed-builtins)), правила кадра сохраняются. Каждый самостоятельный вызов вызываемого создаёт собственный namespace и локальные места. Исполнение принятой формы объявления и связанного с ней тела использует установленные места этого принимающего исполнения по [§11](#declaration-arguments); оно не создаёт свежего изолированного элемента и не перезапускает инициализатор при каждом входе в тело. Позиционные фактические аргументы и явные внешние имена выбирают принимающие входные переменные по обычному отображению. Допущенный фактический аргумент заполняет это выбранное место и подавляет его исходный инициализатор. Фактический аргумент в виде объявления — это сохранённая Structure, поданная на позицию, выбранную обычным отображением; его внутреннее имя не выбирает и не заменяет одноимённое объявление входа. Исполнение этой принятой формы позже следует её контракту исполнения при достижении. Вход в вызов не исполняет инициализаторы пропущенных полей.
 
 Подготовка namespace собирает объявления в корнях `data` и `code`, включая поля, поданные явными `import`, `copy` и `merge`, когда их контракты требуют потребления. Эти ресиверы всегда потребляют стандартные исходные аргументы CODE; это отделено от немедленного исполнения вычисляемых инициализаторов мест, которое подготовка не выполняет. Общего обхода лексических ветвей и рёбер ссылок графа не существует. Собственные места кода, отсутствующие во входных данных, принадлежат этому вызову и в исходные данные не дописываются. Сбор мест не отменяет последовательной видимости переменных и `const`. В графе ничего не заполняется автоматически: [автозаполнение](#binding-autofill) заполняет собственное место кадра и не пишет в граф.
 
@@ -3349,7 +3401,7 @@ Failure of input requiredness is a call-admission refusal; failure of a reached 
 <a id="call-frame-20261115"></a>
 ### Call frames without write-back — decision of 2026-11-15
 
-The input places of a call are described by the data -- `parent(C)` of the executed Structure `C`; `args` in `call` and the tail of the form `C(args)` supply actual values to them under the [common call contract](#call-receivers). In the decision of 2026-11-15 this is written for `fn`, `sub` and `catch` with one input `data` and for `call(D, C)`; these forms are withdrawn by the norm of 2026-11-19 ([what is withdrawn](#removed-builtins)), the frame rules are kept. Every independent callable invocation creates its own namespace and local places. Executing an accepted declaration form and its associated body uses the established places of that receiving execution under [§11](#declaration-arguments); it does not create a fresh isolated item or rerun an initializer at every body entry. Positional and named actuals map to the input description. A supplied actual replaces the corresponding namespace description and suppresses that original initializer. A declaration-form actual preserves the replacement form itself; executing that accepted form later follows its own reached-execution contract. Call entry does not execute initializers of omitted fields.
+The input places of a call are described by the data -- `parent(C)` of the executed Structure `C`; `args` in `call` and the tail of the form `C(args)` supply actual values to them under the [common call contract](#call-receivers). In the decision of 2026-11-15 this is written for `fn`, `sub` and `catch` with one input `data` and for `call(D, C)`; these forms are withdrawn by the norm of 2026-11-19 ([what is withdrawn](#removed-builtins)), the frame rules are kept. Every independent callable invocation creates its own namespace and local places. Executing an accepted declaration form and its associated body uses the established places of that receiving execution under [§11](#declaration-arguments); it does not create a fresh isolated item or rerun an initializer at every body entry. Positional actuals and explicit outer names select receiving input variables by the ordinary map. An admitted actual fills that selected place and suppresses its original initializer. A declaration-form actual is the retained Structure supplied to the position selected by ordinary mapping; its internal name neither selects nor replaces a same-named input declaration. Executing that accepted form later follows its reached-execution contract. Call entry does not execute initializers of omitted fields.
 
 Namespace preparation collects declarations at the roots of `data` and `code`, including the fields supplied by explicit `import`, `copy` and `merge` when their contracts require consumption. These receivers always consume standard CODE source arguments; this is separate from eager execution of computed place initializers, which preparation does not perform. There is no general traversal of lexical branches or graph reference edges. Code's own places absent from the input data belong to this call and are not appended to source data. Collecting places does not override sequential visibility of variables and `const`. Nothing is auto-filled in the graph: [autofill](#binding-autofill) fills the own place of the frame and does not write into the graph.
 
@@ -3531,6 +3583,11 @@ without compilation, endturn alone promises no native refresh. [Full contract](#
 [RU]
 `throws` перечисляет имена возможных восстанавливаемых выходов выражения, а не типы исключений. Вызывающее выражение должно предоставить `catch` для каждого такого имени либо объявить его в собственном `throws`. Вызов без одного из этих способов обработки отвергается. Условие обнаружения отказа задаётся обычным `if`; модульный `guard` не является оператором обработки отказов.
 
+<a id="shared-throws"></a>
+Конечный список отказов можно записать один раз и переиспользовать через `throws: copy(SharedFailures)`. Это обычная [композиция потока полей](#composition): `copy` подаёт поля списка в описание `throws`, а записанный ресивер остаётся в исходном графе. Он не создаёт нового механизма отказов и не меняет P0 или группировку операндов. `throws: SharedFailures`, напротив, содержит одну ссылку, а `throws: (copy(SharedFailures))` строит одну вложенную Structure; ни одна из этих записей не является указанием развернуть этот контейнер в имена отказов.
+
+Используйте имя источника, отличное от принимающего `throws`, либо квалифицируйте его явно. Для списка, хранящегося в `Steps\throws`, в каждом потребителе пишите `throws: copy(Steps\throws)`. Неквалифицированный `throws` разрешается обычными правилами namespace, а не как особая ссылка на список родителя. Совместное использование списка не наследует `catch` и не снимает обязательства вызывающего. Вызываемое может сознательно передавать свои объявленные отказы наружу; полный пример обработки должен показывать и вызывающего, который их обрабатывает. Имя, обработанное на каждом соответствующем пути, не нужно повторять во внешнем списке только потому, что его объявляет вызываемое; обработчик, который перебрасывает, либо иной непокрытый путь сохраняют обычное обязательство.
+
 `throw: Name(arguments)` вычисляет явную полезную нагрузку и покидает текущую активацию по правилам [выходов](#exits), не возвращая объявленный результат. Параметры выбранного `catch: Name (...)` принимают нагрузку. Повторный вызов из обработчика начинает новую активацию сначала и не возобновляет брошенный кадр.
 
 `catch` — точка приёма в блоке вызывающего выражения, не обычная вложенная вызываемая Structure ([`catch` в общей модели](#catch-common-model)). При первом прямом проходе её тело пропускается. После доставки соответствующего отказа тело выполняется, затем исполнение продолжается с операторов после этого `catch`. Поэтому обработчик, поставленный до вызова, повторно вводит выполнение в последующий участок; обработчик после вызова продолжает за собой. Участок ограничен следующим `catch` того же блока или концом блока. Обработчик действует на все вызовы своего блока, включая вызовы из вложенных в него операторных блоков (`if`, `while`, `for`, анонимный `---`): обработчик, как именованные Structure и вызываемые, виден во всём своём блоке в обе стороны. Блок-сосед им не покрывается. Это двусторонняя видимость имени callable, а не всех мест данных. Переменные, включая `const` и переменные с указателем на метод, видны последовательно; имена именованных Structure и callable — в обе стороны по [общему правилу видимости](#declaration-visibility).
@@ -3551,13 +3608,15 @@ without compilation, endturn alone promises no native refresh. [Full contract](#
 Следующий пример изолирует размещение catch. Каждый анонимный блок имеет собственный обработчик RetryGreeting перед своим вызовом, а внешний блок run имеет обработчик SkipGreeting после блоков. Два обработчика RetryGreeting находятся в разных областях и не конкурируют.
 
 ```lmx
+GreetingFailures:
+    RetryGreeting
+    SkipGreeting
+
 Greeting:
     int: value
     return: int
     checkedGreeting:
-        throws:
-            RetryGreeting
-            SkipGreeting
+        throws: copy(GreetingFailures)
         if: value = 0
             throw: RetryGreeting()
         if: value < 0
@@ -3589,6 +3648,11 @@ Hello:
 [EN]
 `throws` lists names of an expression's possible recoverable exits, not exception types. The caller must provide a `catch` for each name or include it in its own `throws`. A call without either treatment is rejected. Failure detection uses ordinary `if`; module `guard` is not a failure-handling operator.
 
+<a id="shared-throws"></a>
+A finite failure list may be written once and reused with `throws: copy(SharedFailures)`. This is ordinary [field-stream composition](#composition): `copy` supplies the list's fields to the `throws` description, while the written receiver remains in the source graph. It neither creates a new failure mechanism nor changes P0 or operand grouping. `throws: SharedFailures` instead contains one reference, and `throws: (copy(SharedFailures))` constructs one nested Structure; neither spelling is an instruction to flatten that container into failure names.
+
+Use a source name distinct from the receiving `throws`, or qualify it explicitly. For a list stored in `Steps\throws`, write `throws: copy(Steps\throws)` in each consumer. An unqualified `throws` is resolved by the ordinary namespace rules, not a special reference to a parent's list. Sharing a list does not inherit a `catch` or suppress the caller's obligations. A callable may deliberately pass its declared failures outward; a complete handling example must also show the caller that handles them. A name handled on every relevant path need not be repeated in the outward list merely because a callee declares it; a handler that rethrows or another uncovered path retains the ordinary obligation.
+
 `throw: Name(arguments)` evaluates an explicit payload and leaves the current activation under the [exit rules](#exits), without returning its declared result. The selected `catch: Name (...)` parameters receive the payload. A handler's repeat call begins a new activation from the start and does not resume the abandoned frame.
 
 `catch` is a landing pad in the caller's block, not an ordinary nested callable Structure ([`catch` in the common model](#catch-common-model)). Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end. The handler covers every call of its block, including calls made from statement blocks nested inside it (`if`, `while`, `for`, an anonymous `---`): a handler, like named Structures and callables, is visible throughout its block in both directions. A sibling block is not covered. This is bidirectional visibility of a callable name, not of all data places. Variables, including `const` and variables holding method pointers, are visible sequentially; names of named Structures and callables are visible in both directions under the [common visibility rule](#declaration-visibility).
@@ -3609,13 +3673,15 @@ The semantics of the handler is preserved in full: the handler is selected by th
 The following example isolates catch placement. Each anonymous block has its own RetryGreeting handler before its call, and the outer run block has a SkipGreeting handler after the blocks. The two RetryGreeting handlers are in different scopes and do not compete.
 
 ```lmx
+GreetingFailures:
+    RetryGreeting
+    SkipGreeting
+
 Greeting:
     int: value
     return: int
     checkedGreeting:
-        throws:
-            RetryGreeting
-            SkipGreeting
+        throws: copy(GreetingFailures)
         if: value = 0
             throw: RetryGreeting()
         if: value < 0
@@ -3758,13 +3824,13 @@ An Array copy has separate backing; passing a reference does not itself create i
 
 `reduce` и включающий/исключающий `scan` сохраняют свои явно выбранные числовые контракты. Обычные ресиверы `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `flatMap`, `traverse`, `groupBy` и `transpose` теперь принимают плотные Array и Structure через один универсальный путь доступа `@`. Их обратные вызовы выполняются последовательно слева направо в одном Message, сохраняя эффекты, значения по умолчанию и отказы. Чистые арифметические и числовые профили могут оптимизироваться, лишь сохраняя собственные наблюдаемые свойства. `scanl` включает начальное значение и все накопленные значения; он отличается от включающего числового примера `scan`.
 
-Новые прямые ресиверы — `range`, `slice`, `reverse`, `concat`, `compress`, `any`, `all`, `index`, `count`, `replaceRange`, `splice`, `append`, `insert` и `deleteAt`. Существующие `select/omit/reorder/project` используют тот же доступ по фактическому типу. Нового вида контейнера, неявного spread и `toArray` не требуется. [Полные контракты и правила мутации](CORE_SEQUENCES_REGEX.ru.md#sequences), [тела на LMX](patterns/LMX_Fn_Receivers/SEQUENCES_IMPLEMENTATION.md) и [корневая спецификация последовательностей](CORE_SEQUENCES_REGEX.ru.md#sequences-details) определяют результаты, алиасы, границы и ошибки. Квалифицированные ссылки разрешают подлинные коллизии имён; они не сводят дело к источникам только из записей.
+Новые прямые ресиверы — `range`, `slice`, `reverse`, `concat`, `compress`, `any`, `all`, `index`, `count`, `replaceRange`, `splice`, `append`, `insert` и `deleteAt`. `replaceRange` возвращает ту же изменённую цель; `splice` выполняет замену диапазона и возвращает удалённые элементы в отдельном поверхностном контейнере. Текстовый `replace` сохраняет свой отдельный контракт результата. Существующие `select/omit/reorder/project` используют тот же доступ по фактическому типу. Нового вида контейнера, неявного spread и `toArray` не требуется. [Полные контракты и правила мутации](CORE_SEQUENCES_REGEX.ru.md#sequences), [тела на LMX](patterns/LMX_Fn_Receivers/SEQUENCES_IMPLEMENTATION.md) и [корневая спецификация последовательностей](CORE_SEQUENCES_REGEX.ru.md#sequences-details) определяют результаты, алиасы, границы и ошибки. Квалифицированные ссылки разрешают подлинные коллизии имён; они не сводят дело к источникам только из записей.
 [EN]
 Array arithmetic and comparisons are elementwise. `*` is elementwise multiplication; `matmul`, `dot`, tensor `contract`, and `outer` are separate operations. Two sequence inputs must have equal lengths. Array/scalar operations evaluate the scalar once and preserve operand order. Both dense and reference-array inputs use the actual element type, never a numeric interpretation of pointer bits. When every sequence input is dense, dense R is produced only when the scalar contract already establishes complete R; otherwise the result is `@[]`. A Structure input also yields `@[]`. No first-element probe, truncation, singleton broadcasting, implicit float promotion, or inferred shape is added. See [the exact arithmetic profile](CORE_SEQUENCES_REGEX.en.md#expressions).
 
 `reduce` and inclusive/exclusive `scan` retain their explicitly selected numeric contracts. The ordinary `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `flatMap`, `traverse`, `groupBy`, and `transpose` receivers now accept dense Arrays and Structures through one universal @ access path. Their callbacks run sequentially, left to right, in one Message, preserving effects, defaults, and failures. Pure arithmetic/numeric profiles may optimize only while preserving their own observables. `scanl` includes the seed and all accumulated values; it differs from the inclusive numeric scan example.
 
-New direct receivers are `range`, `slice`, `reverse`, `concat`, `compress`, `any`, `all`, `index`, `count`, `replaceRange`, `splice`, `append`, `insert`, and `deleteAt`. Existing `select/omit/reorder/project` use the same actual-type access. No new container kind, implicit spread, or `toArray` is required. [Complete contracts and mutation rules](CORE_SEQUENCES_REGEX.en.md#sequences), [LMX bodies](patterns/LMX_Fn_Receivers/SEQUENCES_IMPLEMENTATION.md), and [root sequence specification](CORE_SEQUENCES_REGEX.en.md#sequences-details) govern results, aliases, bounds, and errors. Qualified references resolve genuine name collisions; they are not a restriction to record-only sources.
+New direct receivers are `range`, `slice`, `reverse`, `concat`, `compress`, `any`, `all`, `index`, `count`, `replaceRange`, `splice`, `append`, `insert`, and `deleteAt`. `replaceRange` returns the same changed target; `splice` performs the range replacement and returns the removed elements in a separate shallow container. Text `replace` retains its separate result contract. Existing `select/omit/reorder/project` use the same actual-type access. No new container kind, implicit spread, or `toArray` is required. [Complete contracts and mutation rules](CORE_SEQUENCES_REGEX.en.md#sequences), [LMX bodies](patterns/LMX_Fn_Receivers/SEQUENCES_IMPLEMENTATION.md), and [root sequence specification](CORE_SEQUENCES_REGEX.en.md#sequences-details) govern results, aliases, bounds, and errors. Qualified references resolve genuine name collisions; they are not a restriction to record-only sources.
 @@ mathematics | Числовые операции, чистота и контексты | Numeric operations, purity and contexts | 6.6–6.6.13
 [RU]
 Числовые имена и операторы разрешаются в доступные конструкторы, явные описания и вызываемые операции. Семейства включают машинные целые и вещественные, `bigint`, `real`, `decimal`; это не обязательный закрытый список типов языка. GMP, MPFR и decNumber — возможные реализации, не исходная онтология L3. Преобразования задают диапазон, точность и округление по [контракту описаний](#descriptions).
@@ -4125,7 +4191,7 @@ Use:
     import: Library Other
 ```
 
-Чтение DATA у Use открывает `limit`, `Settings` и `Tool`; counter не открывается, и width/value по отдельности не поднимаются. Граф Use по-прежнему содержит `import: Library Other`. Аналогично, импорт циклов в [пример с аргументом-объявлением](#declaration-arguments) открывает его константное объявление iterate, оставляя iteration/body входами в циклах.
+Чтение DATA у Use открывает `limit`, `Settings` и `Tool`; counter не открывается, и width/value по отдельности не поднимаются. Граф Use по-прежнему содержит `import: Library Other`. Так же `import: cycles` открывает константное объявление `iterate`, оставляя `iteration` и `body` входами в `cycles`. [Пример аргумента-объявления](#declaration-arguments) вместо этого использует квалифицированный вызов `cycles\iterate` напрямую и import не требует.
 
 <a id="import-model-signature"></a>
 То же относится к модели, именованной сигнатуре и реализации в одной библиотеке:
@@ -4197,7 +4263,7 @@ Use:
     import: Library Other
 ```
 
-The DATA reading of Use exposes `limit`, `Settings` and `Tool`; it does not expose counter or separately lift width/value. The graph of Use still contains `import: Library Other`. Similarly, importing cycles in [the declaration-argument example](#declaration-arguments) exposes its constant iterate declaration while leaving iteration/body as inputs in cycles.
+The DATA reading of Use exposes `limit`, `Settings` and `Tool`; it does not expose counter or separately lift width/value. The graph of Use still contains `import: Library Other`. Likewise, `import: cycles` exposes its constant `iterate` declaration while leaving `iteration` and `body` as inputs in `cycles`. The [declaration-argument example](#declaration-arguments) instead uses the qualified call `cycles\iterate` directly and requires no import.
 
 <a id="import-model-signature"></a>
 The same holds for a model, a named signature and an implementation in one library:
@@ -5445,7 +5511,7 @@ P0 сохраняет все записанные контейнеры. Дейс
 
 Отсутствие актуала — это не явные `0`, `nil`, нулевая ссылка или пустая Structure и не запись `uninit:T`. Нельзя передавать фиктивное значение вместо отсутствия: оно подавит собственное значение по умолчанию или изменит выбор кандидата. Вход `required` без актуала и без собственного применимого значения по умолчанию по-прежнему отклоняет вызов на стадии выбора; скрытое автозаполнение его не спасает. `required` со своим значением по умолчанию рассматривается обычным механизмом. Достигнутый `required` в CODE проверяет текущее место в момент исполнения. Эти проверки не сливаются в новую обязательность всех параметров.
 
-При построении адаптера, отражении сигнатуры, проверке `satisfies` и подготовке неиспользуемой ветви вычисляемые значения по умолчанию не исполняются и не превращаются в нетерпеливые снимки. Если исходный F не читает необязательное поле, общая обвязка тоже не читает его только ради формирования вектора. Происхождение значения по умолчанию сохраняется: его лексические ссылки, `node`, фактический DATA и доступ к остальным местам той же целевой активации; простого копирования текста initializer в новый DATA недостаточно. Обязательный случай: у F входы `x` и `y`, значение по умолчанию `y` зависит от `x`; `partial(F; prefix := (5))` при пропущенном `y` использует принятый `x = 5` и исходный смысл значения по умолчанию. Удаление `x` из публичного остаточного списка не удаляет его из целевой активации и не заставляет значение по умолчанию читать одноимённую переменную фабрики. Обычные декларационные актуалы сохраняют форму и дополнение корня, где это допускает исходное вызываемое; их не сводят к заранее вычисленной нагрузке. Уже готовый типизированный префикс `partial` сохраняет свой нынешний договор: примитив принимается по значению, ссылка сохраняет цель; это не основание глубоко копировать цели или исполнять сохранённое объявление сверх обычного приёма.
+При построении адаптера, отражении сигнатуры, проверке `satisfies` и подготовке неиспользуемой ветви вычисляемые значения по умолчанию не исполняются и не превращаются в нетерпеливые снимки. Если исходный F не читает необязательное поле, общая обвязка тоже не читает его только ради формирования вектора. Происхождение значения по умолчанию сохраняется: его лексические ссылки, `node`, фактический DATA и доступ к остальным местам той же целевой активации; простого копирования текста initializer в новый DATA недостаточно. Обязательный случай: у F входы `x` и `y`, значение по умолчанию `y` зависит от `x`; `partial(F; prefix := (5))` при пропущенном `y` использует принятый `x = 5` и исходный смысл значения по умолчанию. Удаление `x` из публичного остаточного списка не удаляет его из целевой активации и не заставляет значение по умолчанию читать одноимённую переменную фабрики. Обычные декларационные актуалы сохраняют форму и подстановку namespace, где это допускает исходное вызываемое; их не сводят к заранее вычисленной нагрузке. Уже готовый типизированный префикс `partial` сохраняет свой нынешний договор: примитив принимается по значению, ссылка сохраняет цель; это не основание глубоко копировать цели или исполнять сохранённое объявление сверх обычного приёма.
 
 Служебные `state`, `engine`, `record`, временные указатели и счётчики адаптера остаются защищёнными от случайного динамического связывания; проблема не решается массовым снятием `private` со всех полей — служебные зависимости адаптера отделяются от политики пользовательского входа. Автозаполнение использует разрешённый контекст текущего вызова, а не контекст создания фабрики и не случайные locals внутреннего engine; для двух вызовов одного адаптера из разных разрешённых контекстов связывание соответствует этим двум вызовам. Различие собственного места и прозрачного места вызывающего сохраняется в документированном договоре конкретного адаптера: заполнение объявленного входа не превращается в alias вызывающего, а выбранное прозрачное связывание не превращается в копию с записью обратно при выходе. Для тождественного пустого `partial` эталон — прямой F; обёртка со своей последовательностью вызовов явно определяет точку связывания и применяет обычные правила цепочки. Это не требование пропустить промежуточный вызов B в A → B → C: если B только передаёт имя и не сформировал прозрачной связи, обычный fallback C может дать собственную копию, а не место A, и такую цепочку не выдают за тождественную прямому вызову. `private` не обходится, а время жизни не продлевается наличием ссылки: если отложенное описание зависит от закончившейся активации, применяются существующие правила допустимости и захвата, а висячий указатель не маскируется скрытым глубоким копированием произвольного графа. Требования всех возможных потомков не собираются статически, глобальный снимок окружения не заводится.
 
@@ -5513,7 +5579,7 @@ P0 сохраняет все записанные контейнеры. Дейс
 | A11 | F(x; y), default y зависит от x; partial принимает x = 5, y пропущен | Default видит принятый prefix и правильный DATA/лексический контекст |
 | A12 | Default использует node/вложенную структуру; несколько адаптеров одного F | Сохраняются исходные связи, независимость активаций и допустимая идентичность ссылок |
 | A13 | Вызов через именованное требование с метками, отличными от собственных имён F; затем типовой вариант | Явные actuals отображаются по позиции; неявное заполнение использует реальный кандидат; fn-match не переносит template-default |
-| A14 | Допустимый декларационный actual и initializer со счётчиком | Форма, её дополнение корня и момент исполнения сохранены; раннего вычисления в vector capture нет |
+| A14 | Допустимый декларационный actual и initializer со счётчиком | Полная Structure, обычное отображение по позиции или внешнему имени и момент исполнения сохранены; переотображения по внутреннему имени и раннего вычисления инициализатора в vector capture нет |
 | A15 | Неизвестное имя, дубликат, избыток actuals, одиночная Structure, явно именованная Structure | Сохраняются выбор, W/E и проверки до эффектов; внутренний транспорт повторно не раскрывает готовую структуру |
 | A16 | `once`: miss, failure, повтор, success, hit; на hit явно написан effectful actual и отдельно omitted computed default | Явные actuals готовятся обычно; первый успех кешируется; F на hit не запускается; невостребованный default не форсируется |
 | A17 | `guard` читает только первый вход; второй — computed default, до которого F не доходит | Предикат имеет свои обычные эффекты; второй вход не читается общей обвязкой |
@@ -5976,7 +6042,7 @@ the default of `y` depends on `x`; `partial(F; prefix := (5))` with `y` omitted 
 the accepted `x = 5` and the original meaning of the default. Removing `x` from the
 public residual list does not remove it from the target activation and does not make
 the default read a same-name variable of the factory. Ordinary declaration actuals
-keep their form and root supplementation where the original callable allows it;
+keep their form and namespace substitution where the original callable allows it;
 they are not reduced to a payload computed in advance. A ready typed prefix of
 `partial` keeps its present contract: a primitive is accepted by value, a reference
 keeps its target; this is not a reason to copy targets deeply or to execute a stored
@@ -6160,7 +6226,7 @@ silent transfer of the whole test to the interpreter does not count as coverage.
 | A11 | F(x; y), the default of y depends on x; partial accepts x = 5, y is omitted | The default sees the accepted prefix and the correct DATA/lexical context |
 | A12 | A default uses node/a nested Structure; several adapters of one F | The original links, the independence of activations and the permitted identity of references are kept |
 | A13 | A call through a named requirement with labels different from F's own names; then a type-based variant | Explicit actuals map by position; implicit filling uses the real candidate; fn-match does not carry over the template default |
-| A14 | A permitted declaration actual and an initializer with a counter | The form, its root supplementation and the moment of execution are kept; there is no early evaluation in the vector capture |
+| A14 | A permitted declaration actual and an initializer with a counter | The complete Structure, ordinary positional/outer-name mapping and moment of execution are kept; there is no internal-name remapping or early initializer evaluation in the vector capture |
 | A15 | An unknown name, a duplicate, excess actuals, a single Structure, an explicitly named Structure | Selection, W/E and the checks before effects are kept; the internal transport does not open a ready structure again |
 | A16 | `once`: miss, failure, retry, success, hit; on a hit an explicitly written effectful actual and separately an omitted computed default | Explicit actuals are prepared as usual; the first success is cached; F is not started on a hit; an unrequested default is not forced |
 | A17 | `guard` reads only the first input; the second is a computed default that F does not reach | The predicate has its own ordinary effects; the second input is not read by the common wrapper |

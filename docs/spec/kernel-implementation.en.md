@@ -593,8 +593,15 @@ an existing value when RHS is absent. Leaving the inner scope restores the outer
 
 <a id="declaration-arguments"></a>
 A place-declaration receiver supplied in CODE arguments is read as DATA and preserves the form,
-without running its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. The name it declares is not looked up among the receiving inputs: the whole declaration is one Structure at the current position, and the ordinary assignment to the variable of that position is attempted under its ordinary admission; it is not an unknown named actual. An outer `formal := declaration` chooses the formal while preserving
-the inner name. The same public-name/position map applies through fn interfaces.
+not as a call to execute while passing the argument. The declaration is an ordinary Structure
+actual, not its initializer's computed value. Without an outer named assignment it is supplied
+at the current positional input under ordinary admission. An outer `formal := declaration`
+selects that formal and supplies the same whole form. The internal declared name is never
+looked up among receiving inputs, even if it matches one, and does not redirect positional
+supply or replace another input's description by name. Only the written outer actual label uses
+the public-name/position map through fn interfaces. Interpreter reception and native lowering
+have no found-name/absent-name branch for the declaration's internal name. Ordinary W/E selection
+and the common parser are unchanged; passing the DATA form executes no initializer.
 
 Executing the accepted form logically supplements the receiving execution's root namespace. Its
 first reached execution establishes its typed place; subsequent executions reevaluate its RHS
@@ -602,7 +609,11 @@ and update that same root place. The stored form stays callable again. An associ
 the same original argument Structure uses the established place rather than creating a computed
 copy or evaluating its initializer merely on entry/read. The body's physical parent remains the
 source argument Structure, not the library method. Truly nested scopes still shadow normally,
-and independent receiving calls do not share mutable locals through the source graph.
+and independent receiving calls do not share mutable locals through the source graph. The
+associated body also retains its original active source-context places: in a demo that accumulates
+`total += item`, `item` is the established receiving-root place and `total` is the live place of
+that demo. The body does not replace total with a generic fallback copy or a new closure; the
+existing associated-body context and its lifetime rules carry these two bindings.
 
 This rule is determined by the resolved declaring head. Ordinary `Producer()` and
 `Producer: argument` remain CODE calls when Producer is not a place-declaration receiver.
@@ -1070,7 +1081,7 @@ only checks actually run. Historical receipts do not prove this edition's behavi
 | Calls and signatures | Actual parent, no-data R0, no executable fn/sub/fncall; `Name :: DATA` has one left declaration identifier and one intact right template; positional type comparison remains distinct from full structural models |
 | Selection | All applicable W/E pairs counted; no hidden rescue of required inputs; selected map reused; named-position counter and once-only actual effects |
 | Binding/private | Own autofill, caller alias, fallback copy, source/receiver private, A→B→C transit, shadowing, immediate initialization-state writes |
-| Declaration arguments | Positional one-Structure form whatever name it declares, outer named supply, repeated root execution, body using the same established place |
+| Declaration arguments | DATA form retained without execution; positional supply regardless of internal-name coincidence; outer named supply; ordinary admission; repeated root execution; body using the established item and its live source-context total |
 | Import/copy/merge | Ordinary CODE arguments everywhere, admitted arities, constant-root import, stream/group distinction, no implicit destination source, independent maps, shared targets/cycles/lexical links |
 | Operands | Structural discovery, mandatory constant properties, left/right transport, normal results, raw-context eval, no hidden call on dereference |
 | Expression effects | Demand dependencies, low-priority assignment, C-relative precedence and asymmetric power, short-circuit skipping, one effect per occurrence/evaluation |

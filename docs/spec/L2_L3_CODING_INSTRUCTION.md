@@ -267,25 +267,33 @@ must then be named. The cursor does not restart later.
 ## 7. Passed declaration receivers
 
 A declaration receiver passed as an actual in CODE is read as DATA. Retain the
-form rather than executing its initializer just to pass a value.
+form as an ordinary Structure; do not execute it as a call or run its initializer
+just to pass a value.
 
 | Situation | Required handling |
 | --- | --- |
-| A declaration is written as a positional actual | Pass the entire form in its current position as one Structure, whatever name it declares; do not look the name up among the inputs |
-| An outer `name := ...` names the actual | Use that outer destination; retain the form's own inner name |
+| No outer named assignment | Pass the declaration Structure to the current positional input under ordinary admission |
+| An outer `name := ...` names the actual | Use that outer destination and its ordinary admission; retain the form's own inner name |
 
-The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. The inner name in `int: item numbers\next()` is neither an unknown
-named actual nor a reason to search the receiving inputs: the form goes into `iteration`, and the following unnamed block goes into `body`.
+Never look up the inner name in the receiving DATA/interface, even when it
+coincides with an input name. There is no matched-name/absent-name branch in
+either interpreter reception or native lowering. Only an explicit outer label
+selects a named formal and affects the named/positional cursor. The ordinary
+W/E algorithm, parser and typed-leaf representation are unchanged.
 
-The passed root declaration logically supplements the executing code's root
-namespace. Physical source parents are not rewritten; no fields are inserted
-into source code. Each reached invocation of the retained declaration executes
+When the accepted declaration is executed, its root declaration logically
+supplements the executing code's root namespace. Physical source parents are not
+rewritten; no fields are inserted into source code. Each reached invocation of the retained declaration executes
 it again. The first creates the receiving local, and later executions update
 the same place by the normal repeated-declaration rule.
 
 The associated body uses that receiving place. Entering the body must not
 construct another independent item or evaluate the iterator initializer again.
 Real nested scopes inside the supplied form retain their normal shadowing.
+The associated body's source-context places remain live: `total += item` in
+an accumulating demo writes that demo's `total`, while `item` belongs to the
+receiving iteration execution. Use the existing associated-body context;
+do not replace total with a generic fallback copy or introduce a new closure.
 
 Do not extend this rule to every ordinary call-shaped Frame or every Structure
 reference. `Producer()` in CODE remains a call of Producer. Resolution of the
@@ -570,7 +578,7 @@ A minimal acceptance set covers:
 | Parser | Written groups, blank-line/root closure, paired delimiters, preserved source forms |
 | Selection | W/E ambiguity, named cursor, no speculative effects, no hidden-input selection |
 | Binding | Own values, transparent cells, fallback copies, both sides of private, lifetimes |
-| Declaration actuals | Positional unknown inner names, named replacement, repeated step, body sees same local |
+| Declaration actuals | Retained DATA form without eager execution; positional supply even when the inner name matches an input; explicit outer named supply; ordinary admission; repeated step; body sees the receiving item and live source-context total |
 | Signatures | Positional types, public fn names, candidate names/defaults, whole-tree templates |
 | Streams | Input count versus output count, grouping, empty output, no destination model |
 | Graph copying | Aliases, cycles, parents, per-operation maps, admitted retained branches |

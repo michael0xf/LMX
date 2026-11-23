@@ -34,9 +34,10 @@ int: y makeValue()
 ~~~
 
 Preparation does not move `makeValue()` before `mark()`. The declaration executes when reached in CODE, or obtains
-its value when the DATA contract demands it. A supplied ordinary actual suppresses the corresponding initializer;
-a supplied declaration form preserves the form under the separate contract explained
-[below](#declaration-arguments). See [call frames](LMX_semantics.en.md#call-frame-20261115).
+its value when the DATA contract demands it. A supplied actual suppresses the selected receiving place's
+initializer. A declaration supplied as an argument is a DATA Structure: ordinary argument mapping supplies that
+Structure without calling it, as explained [below](#declaration-arguments).
+See [call frames](LMX_semantics.en.md#call-frame-20261115).
 
 <a id="blank-line-blocks"></a>
 ## Blank lines are full block boundaries
@@ -593,7 +594,9 @@ shadowing rules, without an added initialization pass or another author decision
 
 A normal independent call has a fresh namespace. Its input descriptions come from the actual parent of the selected
 code Structure; actuals and code locals are accepted by the common mechanism. Root declaration discovery uses the ordinary DATA/CODE and modifier rules and adds no fields to the source graph. Required `import`, `copy`, and `merge` contributions are consumed through their ordinary CODE-argument algorithm in the namespace; this explicit source processing is not arbitrary traversal or eager execution of all DATA contents. An ordinary actual fills
-the corresponding logical place and suppresses its initializer. A declaration-receiver actual instead preserves its declaration form and supplies it as one Structure, as described [below](#declaration-arguments).
+the corresponding logical place and suppresses its initializer. A declaration-form actual follows the same
+receiving-place rule: the supplied value is the preserved DATA Structure, whose internal name is not a receiving
+argument name. Supplying it does not call it or execute its initializer, as described [below](#declaration-arguments).
 
 There is no eager initializer pass. An unused computed DATA input does not run. When its selected namespace place
 is first needed, the common mechanism evaluates the stored initializer and retains the value in that activation's
@@ -619,22 +622,51 @@ For a computed namespace input int: x `next()`, `@x` obtains its value and the l
 `getValue()`. Terminal primitive places are already direct typed values. Address-taking never extends lifetime.
 
 <a id="declaration-arguments"></a>
-### Passing a declaration form for repeated execution
+### A declaration argument is a DATA Structure
 
-A place-declaration receiver supplied in a CODE argument context is read as DATA. Passing it preserves the written
-form without running its initializer. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. It is distinct from an ordinary `Producer()` or Producer: tail call, whose head
-is not a place-declaration receiver and which remains a call in CODE.
+A declaration supplied as an argument is read as a DATA Structure. It is supplied, not called: transmission
+does not execute the declaration or its initializer. An ordinary `Producer()` actual remains a CODE call; this
+distinction follows the resolved receiver contract and introduces no second parser.
 
-| Supplied form | Matching rule | Accepted material |
+After that distinction, ordinary argument mapping applies. The internal name of the declaration is never
+searched among the receiving inputs. An unnamed declaration goes to the current positional receiving variable
+as one structural argument, subject to that variable's ordinary admission rules. A named supply uses the usual
+outer `name := value` form, whether the value is a declaration, another Structure, or another admitted value.
+
+| Supplied form | Receiving place | Supplied material |
 |---|---|---|
-| A declaration written as a positional actual | One Structure at the current position, whatever name it declares | The whole form, with its internal name unchanged |
-| An outer name := form is present | Outer name selects the formal | The form on the RHS keeps its own internal name |
+| An unnamed declaration argument | The current positional variable | The whole declaration Structure |
+| `formal := declaration` | The variable selected by the outer name `formal` | The same declaration Structure |
+| A declaration's internal name happens to equal a receiving name | No change to either rule above | The internal name remains part of the declaration |
 
-For inputs a then b, `g(int: b producer())` supplies the declaration to a, the first position; the name b inside it does not address the input b,
-and producer is not evaluated during supply. For inputs iteration then body, the first argument below is one Structure for iteration whether or
-not an input item exists; item is not an unknown named actual and does not disable the positional counter.
+For inputs `a` then `b`, `g(int: b producer())` supplies the declaration Structure to `a`, even though a receiving
+`b` exists. It does not run `producer()` or switch to named supply. To select `b`, write
+`g(b := int: item producer())`; the receiving variable is `b`, and the declaration still declares `item` when
+executed. Renaming `item` does not change the receiving variable. If the selected variable cannot admit this
+Structure, ordinary admission refuses it; there is no retry based on the declaration's internal name and no
+automatic substitution of the initializer's result. A receiving `int` variable is not turned into a Structure
+receiver merely by a coinciding name.
+
+The following complete example was supplied by the author to clarify the rule:
 
 ~~~lmx
+numbers:
+    int: position 0
+    return: int
+    next:
+        throws: Stop
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position
+    demo:
+        node\position := 0
+        int: total 0
+        cycles\iterate: int: item numbers\next()
+            item *= 2
+            total += item
+        return: total
+
 cycles:
     @: iteration
     @: body
@@ -644,53 +676,53 @@ cycles:
             catch: Stop ()
                 break
             body()
-
-use:
-    import: cycles
-    run:
-        iterate: int: item numbers\next()
-            item *= 2
-
-use\run()
 ~~~
 
-Here numbers is an available external iterator whose `next()` returns an integer or throws Stop. Its position lives
-in that iterator. Import exposes constant iterate, an intrinsically constant user Structure; the mutable
-iteration/body inputs stay in its original parent cycles.
+The call to `cycles\iterate` supplies two Structures positionally. The first, `int: item numbers\next()`, goes to
+`iteration`; the following indented body goes to `body`. No lookup of `item` in `cycles` selects this mapping.
+The iterator is fully defined here: `node\position` is its persistent graph field, while `total` is a live local
+place of `numbers\demo`.
 
-iteration retains the accepted declaration form. Each reached `iteration()` executes it again. The first execution
-establishes item at the root of the receiving execution; later executions update that same place by ordinary
-same-level redeclaration. This logically supplements the receiving CODE root in its namespace; it does not add
-fields to that source CODE, reparent the form, or replace the stored form with the last value.
+`iteration` retains the declaration Structure. Each reached `iteration()` executes it again, calls
+`numbers\next()` once, and establishes or updates `item` by ordinary same-level declaration rules. This logically
+supplements the receiving execution's CODE namespace; it adds no field to the source CODE, reparents no form,
+and does not replace the stored declaration with its last result.
 
-The supplied body physically belongs to the original argument Structure containing the item declaration, not to
-the library definition. `body()` reads and changes the established receiving item without a new isolated item or
-an extra `next()` call. True nested scopes inside either form still shadow normally. Independent receiving
-executions have their own contexts, and saving a form does not extend an expired activation's lifetime.
+The associated body uses that established `item` place and the existing `total` place of its supplied source
+context, `numbers\demo`. `item *= 2` changes the current item, and `total += item` changes that original live
+total. Entering `body()` creates neither a separate item nor a fallback copy of total. Its physical parent is
+still the written argument Structure. This is the established associated-body/source-context contract; it does
+not add a closure object or change fallback binding for unrelated ordinary calls. True nested declarations
+still shadow normally, independent receiving executions have independent contexts, and retaining a form does
+not extend an expired activation's lifetime.
 
-| Iteration | Step | Body |
-|---|---|---|
-| First | `next()` returns 10; item becomes 10 | Same item becomes 20 |
-| Second | `next()` returns 20; same item becomes 20 | Same item becomes 40 |
-| End | `next()` throws Stop | Body is skipped |
+For a CODE call `numbers\demo()`, the expected trace is:
 
-There are three next calls and two body calls. The catch scope covers the whole loop iteration, including body,
-under the existing handler rules.
+| Iteration | Step | Associated body | `total` afterwards |
+|---|---|---|---:|
+| First | `next()` advances position to 1; item becomes 1 | Item becomes 2 | 2 |
+| Second | `next()` advances position to 2; item becomes 2 | Item becomes 4 | 6 |
+| Third | `next()` advances position to 3; item becomes 3 | Item becomes 6 | 12 |
+| End | `next()` throws Stop before another increment | Body is skipped | 12 |
 
-The equivalent named supply, in CODE with iterate available, is:
+There are four `next()` calls and three body calls; `demo` returns 12 and the iterator position remains 3.
+Passing the declaration causes no extra `next()` call. The covering `catch: Stop` handles the terminating call
+under the ordinary loop-block handler rules. These are expected observations from the specification, not a
+claim that a language runtime was executed here.
+
+Ordinary explicit names can select the same two arguments. For example, in the same active demo context:
 
 ~~~lmx
-iterate(body := (item *= 2); iteration := int(item numbers\next()))
+cycles\iterate(
+    iteration := int(item numbers\next());
+    body := (item *= 2; total += item))
 ~~~
 
-It supplies body first but does not execute it before the step; iterate controls subsequent execution.
-Both actuals are named after the first out-of-position name disables the counter.
-`iterate(iteration := int(item numbers\next()); (item *= 2))` keeps the counter enabled after the on-position name.
-A first body := ... followed by an unnamed actual is rejected. A present empty body () is one Structure, not a skip.
-
-Through a fn-typed reference the same public-name → position → candidate-place map applies. It selects the
-receiving place without changing the declaration's internal name or prematurely evaluating its RHS.
-[Declaration arguments](LMX_semantics.en.md#declaration-arguments).
+The outer names are `iteration` and `body`; `item` stays inside its declaration. The normal named/positional
+counter is unchanged: naming the current position keeps it active, whereas naming another position requires
+later actuals to be named. A present empty body `()` is one Structure, not a skip. Through a signature-constrained
+reference, an explicit outer public name follows the ordinary public-name → position → candidate-place map;
+the declaration's internal name does not participate. [Full rule](LMX_semantics.en.md#declaration-arguments).
 
 <a id="binding-executors"></a>
 Mandatory copying of executable code at entry is withdrawn, including the former copy of only
@@ -1218,6 +1250,21 @@ ordinary callable Structures whose result remains the precise R in their
 generated DATA. Returning a reference to a function does not turn that
 function's return requirement into `@`.
 
+`trampoline` also returns a typed value-record reference. For an integer final
+value, `@: result trampoline(first)` followed by `int: answer \result` makes
+the two steps explicit. The compact `int: answer \trampoline(first)` has the
+same meaning: the call binds more tightly than prefix dereference. The leading
+`\` reads the returned record; it is not a root-namespace qualifier or an
+instruction to call the saved final value again.
+
+Declared failures are handled by a covering `catch` or forwarded through the
+caller's own `throws`. Repeated finite lists can use ordinary field-stream
+composition, for example `throws: copy(Steps\throws)` with an explicit source
+path. Sharing the list does not install a handler. The [failure chapter](LMX_semantics.en.md#shared-throws)
+shows list reuse together with actual handlers; the [package API](patterns/LMX_Fn_Receivers/API.md#ошибки)
+separates declared failures from implicit failures and explains the generic
+`FxCallFailure` boundary.
+
 The examples in [functional computation](patterns/09_functional_computation/README.md)
 show Maybe/bind, a trampoline, bracket and partial application. Each changed
 example retains the old procedural LMX alongside the current primary listing;
@@ -1248,7 +1295,7 @@ int[]: values [1 2 3]
 Here Positive\run is an ordinary predicate declared by the example's caller. Found is Maybe, not an index sentinel. Values has dense int storage; selection retains that storage profile. `[]: pending` is uninitialized, while `int[]: []` is a ready empty value. `int@[]` and `int[]@` differ. Use `@node\x`, not the compact declaration `@(node\x)`, for the address of a graph field. [Full examples and contracts](CORE_SEQUENCES_REGEX.en.md).
 
 ```lmx
-matches(utf8Text("AB-09"); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+wholeMatch(utf8Text("AB-09"); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
 ```
 
-The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and matches tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.
+The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and wholeMatch tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.

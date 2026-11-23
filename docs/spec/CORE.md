@@ -320,18 +320,29 @@ missing fields by merely being checked.
 
 A receiver declaration passed as an actual is read as DATA and retained as a
 form, according to the [declaration-argument rule](LMX_semantics.en.md#declaration-arguments).
-It is not eagerly reduced to its initializer value. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual.
+It is an ordinary Structure actual, not a call executed during passing or a form
+eagerly reduced to its initializer value.
 
-The name it declares is not looked up among the receiving inputs: the whole form occupies the current positional
-argument as one Structure, and the ordinary assignment to the variable of that position is attempted. An outer named actual
-selects its destination without renaming the declaration inside the supplied form.
+Without an outer named assignment, the declaration is supplied to the current
+positional input under ordinary admission. An outer `formal := declaration`
+selects that formal and supplies the whole declaration under its ordinary contract.
+The internal declared name is never searched among receiving inputs, even on a
+name coincidence; it neither selects another formal nor redirects positional
+supply. Only an explicit outer label names a destination. Interpreter reception
+and native lowering use this same rule without a found-name/absent-name branch.
+The ordinary W/E algorithm and written form boundaries remain unchanged.
 
-Its root-level contributions participate through the ordinary namespace mechanism
-without changing physical source parents or copying fields into the written graph.
+When the accepted form is executed, its root-level declaration participates through
+the ordinary namespace mechanism without changing physical source parents or copying
+fields into the written graph.
 Executing the supplied form creates or updates its declared local place. Repeated
 execution repeats its initializer as specified, enabling the user `iterate`
 example. The associated body uses that same place and does not execute the
 iterator initializer a second time merely by being entered.
+Its other source-context places remain live: an accumulating demo's `total += item`
+writes that demo's `total`, while `item` is the established place in the receiving
+iteration execution. This is the existing associated-body relation, not a generic
+fallback copy of total or a new closure representation.
 
 An ordinary structural Frame in CODE remains a call. The exception for a passed
 declaration receiver is not a blanket rule turning calls into unevaluated DATA.
@@ -593,8 +604,9 @@ establish all of those contracts.
 For field streams, check source preservation, separate input/output counts,
 ordinary W/E, empty output, explicit grouping, per-operation sharing, and the
 absence of destination-as-model behavior. For declaration actuals, check retained
-forms, repeated execution, namespace contribution, and body access to the created
-local.
+DATA forms without execution during passing, positional supply despite an inner-name
+coincidence, explicit outer labels, ordinary admission, repeated execution, namespace
+contribution, and body access to both the created item and live source-context total.
 
 A full self-build remains a separate implementation acceptance: supported
 L3/L2 sources produce G1, then G1 produces G2, with actual source/toolchain/

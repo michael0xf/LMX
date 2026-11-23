@@ -42,7 +42,7 @@ called a namespace image, descriptor cache, or execution metadata.
 | Explicit actuals | Equal W/E candidates, retained actual map, no implicit-source selection, source-order effects | Whole/expanded preference, hidden rescue of required inputs, repeated expansion/execution |
 | Binding | Own actual/autofill value; transparent caller place; retained fallback own value/description | One mode used for every external name, alias-to-copy or copy-to-alias substitutions |
 | Private and scope | Private source excluded and visible private receiver protected; explicit/lexical access retained; sequential locals and real nested shadowing | Source-only private checks, global name barriers, whole-body future-local masking |
-| Declaration arguments | Preserve declaration form without initializer execution; one positional Structure whatever name it declares, or the RHS of an explicit `name :=`; repeated execution updates the receiving root place | Passing only initializer values, looking the declared name up among the receiving inputs, treating the inner name as an unknown named actual, fresh item per body invocation |
+| Declaration arguments | Preserve the complete DATA declaration without initializer execution; ordinary positional mapping or explicit outer named supply only; never match the internal declaration name; repeated execution updates the receiving execution's place | Passing only initializer values, treating an absent inner name as an unknown named actual, fresh item per body invocation |
 | Import/copy/merge | Ordinary CODE arguments everywhere; common W/E; import 1+, copy 1, merge 2+ admitted sources; output fields consumed by namespace | DATA-argument mode, const-filtered copy, one-source merge, implicit destination as model, automatic outer result container |
 | User operands | Ordinary method with left/right and explicit constant PASS_ARGS_AS_IS/PRIORITY; ordinary result; shared eval for raw occurrences | sys\operand registration, one args Array, universal reference result, implicit mode/priority |
 | Parser closure | Blank physical line invokes common complete close at local document root; protected content/pairs/Mix retain their rules | Ignoring a physical blank inside an intended continuing block or inventing a separate grammar subsystem |
@@ -177,12 +177,19 @@ Naming the current positional formal keeps the positional counter; naming anothe
 The target map never reorders effects. The selected W/E reading remains fixed through execution,
 and a supplied Structure is not expanded a second time after W has been selected.
 
-A place-declaration actual is DATA material. The only special part of the rule is that a supplied declaration is a DATA Structure and is not executed as a call; everything else is the ordinary supply of an actual. Its internal declaration name is not looked up among the receiving inputs: the whole form is supplied positionally as one Structure. An explicit
-outer name chooses the formal independently of the declaration's internal name. Neither of those
-transfers runs its initializer. Executing the saved form later establishes or updates the
-receiving execution's root place; the associated body uses that same place and does not run the
-initializer merely to read it. A fresh independent call still has independent locals, and a real
-nested scope still shadows normally.
+A declaration supplied as an actual is a DATA Structure, not a call to execute during
+argument transmission. An unnamed declaration occupies the current positional slot and is
+received by that variable under ordinary admission. Its internal name is never searched in
+the receiving DATA, even when an input happens to have the same spelling. Only an explicit
+outer `name := value` selects a destination by name; the value can be a declaration, another
+Structure or any other admissible value. The declaration's own name remains inside the value.
+Transmission does not run its initializer or replace the form with the initializer's result.
+Executing the accepted form later, as `iteration()` does, establishes or updates the receiving
+execution's root place. Its associated body uses that place directly and retains its original
+live context: in the numbers/demo example, `item` is the receiving place and `total` is the
+existing local of demo. A fresh independent receiving execution has independent places, and
+a real nested scope still shadows normally. This changes neither structural parents nor
+the ordinary dynamic-binding rules for unrelated calls.
 
 Import filters the ordinary root const declarations, including user Structures and constant
 signature names; it retains their source identity and parent. Nested import supplies its enclosing

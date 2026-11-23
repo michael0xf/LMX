@@ -16,10 +16,7 @@ FxMore:
     private: @: thunk
     return: @
     more:
-        throws:
-            FxArity
-            FxKernelFailure
-            FxTypeToken
+        throws: FxArity FxKernelFailure FxTypeToken
         private: @: shape FxKernel\signature(subject := thunk)
         if: length(shape\inputTypes) != 0
             throw: FxArity()
@@ -31,10 +28,7 @@ FxTrampoline:
     private: FxBounce@: current
     return: @
     trampoline:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: empty (copy(()))
         while: current\done = 0
             private: @: record FxApply\apply(current\next; empty)

@@ -1,12 +1,140 @@
+FxThrows:
+    adapter:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    call:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+    capture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    fixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    lazyfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxLazyCycle
+        FxRecordArity
+        FxTypeToken
+    mutation:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    mutationfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    permutation:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    predicate:
+        FxCallFailure
+        FxKernelFailure
+        FxPredicate
+        FxTypeToken
+        ReceiverIndex
+    rangefixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        SequenceSize
+        SequenceStep
+    recordcall:
+        FxCallFailure
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    reorder:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    retry:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    selection:
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequence:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequencefixture:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceElement
+        SequenceSize
+        SequenceStep
+    snapshot:
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    traversal:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+
 FxTry:
     private:
         @: operation
         @: args
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         private: @: info FxKernel\signature(subject := operation)
         return: FxKernel\attempt(operation; args; info\throws)
 
@@ -16,10 +144,7 @@ FxApply:
         @: args
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: outcome FxTry\attempt(operation := operation; args := args)
         if: outcome\ok = 0
             throw: FxCallFailure(outcome)

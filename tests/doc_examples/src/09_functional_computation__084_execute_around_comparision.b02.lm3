@@ -1,3 +1,15 @@
+Around:
+    @: acquire
+    @: release
+    @: action
+    return: int
+    use:
+        throws: ResourceFailure
+        @: resource acquire()
+        finally:
+            release(resource := resource)
+        return: action(resource := resource)
+
 Resource:
     int: value 42
 
@@ -8,8 +20,7 @@ Trace:
 Acquire:
     return: @
     open:
-        throws:
-            ResourceFailure
+        throws: ResourceFailure
         Trace\events := Trace\events * 10 + 1
         if: Trace\mode = 2
             throw: ResourceFailure()
@@ -19,8 +30,7 @@ Action:
     @: resource
     return: int
     use:
-        throws:
-            ResourceFailure
+        throws: ResourceFailure
         Trace\events := Trace\events * 10 + 2
         if: Trace\mode = 1
             throw: ResourceFailure()

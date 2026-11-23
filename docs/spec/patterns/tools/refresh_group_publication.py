@@ -6,6 +6,7 @@ own generators. Tiny syntax alternatives remain prose, not duplicate code.
 """
 from pathlib import Path
 import json,re
+from throws_metrics import measure_throws
 ROOT=Path(__file__).resolve().parents[1]
 LANG={'LMX':('lmx','lm3','lmx'),'Java':('java','java','java'),'Go':('go','go','go'),'Python':('python','py','python'),'C#':('csharp','cs','csharp'),'Erlang':('erlang','erl','erlang'),'Rust':('rust','rs','rust'),'TypeScript':('typescript','ts','typescript')}
 def order(p):return(p.get('paired_with',p['id']),p.get('kind')=='implementation',p['id'])
@@ -24,9 +25,17 @@ def main():
   for p in sorted(group['patterns'],key=order):
    scope='Реализация библиотеки' if p.get('kind')=='implementation' else 'Использование библиотеки' if p.get('implementation_ids') else {'core':'Ядро сценария','protocol':'Протокол и порты','executable':'Самостоятельный пример'}.get(p['scope'],p['scope'])
    out=[f"# {p['id']:03d}. {p['name']}",p['summary_ru'],related(p,by,'ru'),'## Общий сценарий',p['scenario_ru'],'**Ожидаемое наблюдение:** '+p['expected_ru'],'**Граница сравнения:** '+scope+'. '+p['limits_ru']]
-   if p.get('implementation_ids'):out+=['LMX вызывает операции единого ядра. Иностранные клиенты используют настоящие средства языка или установленную библиотеку; показанные рядом самостоятельные реализации в них не импортируются.']
-   if p.get('kind')=='implementation':out+=['Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.']
+   if p.get('implementation_ids'):
+    if p.get('comparison_level')=='shared_implementation_client':
+     out+=['Все клиенты этой узкой пары используют полностью показанный общий компонент из связанной строки реализации. Он учитывается один раз отдельно; асинхронный библиотечный клиент имеет собственный договор.']
+    else:
+     out+=['LMX использует существующие средства ядра или явно названную компактную группу, определённую в связанном сравнении реализации. Иностранные клиенты используют настоящие средства языка или установленную библиотеку.']
+   if p.get('kind')=='implementation':
+    shared=any(by[i].get('comparison_level')=='shared_implementation_client' for i in p.get('usage_ids',[]) if i in by)
+    out+=['Это полная общая реализация для связанных клиентов всех трёх языков; её стоимость считается один раз отдельно и в суммарной цене компонента.' if shared else 'Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.']
    sizes=[]
+   supplemental=measure_throws(next(l['code'] for l in p['listings'] if l['language']=='LMX'),ROOT)['without_complex_throws_characters']
+   if p.get('comparison_level')=='shared_implementation_client':scope='Клиент общего компонента'
    for l in p['listings']:
     code=l['code'].strip()+'\n';folder,ext,fence=LANG[l['language']]
     source=f"examples/{folder}/{p['id']:03d}_{p['slug']}.{ext}"
@@ -34,13 +43,14 @@ def main():
     out += ['## '+l['language'],f'```{fence}\n{code}```',l.get('notes_ru',''),f'[Отдельный листинг]({source})']
     sizes.append(metric(code))
    out += ['## Разбор LMX',p['lmx_notes_ru'],'## Сопоставление',p['comparison_ru']]
+   if p.get('extended_comparison'):out+=['## Отдельный расширенный договор','[Обобщённая или асинхронная пара 23-Nov]('+p['extended_comparison']+'). Она сохраняется отдельно и не включается в размер этой основной строки.']
    if p.get('minor_alternatives_note_ru'):out += ['### Небольшие варианты записи',p['minor_alternatives_note_ru']]
    if p.get('post_scope_note_ru'):out += ['### Асинхронная граница',p['post_scope_note_ru']]
-   out += ['## Объём показанного исходника','| Язык | Непробельные символы | Непустые строки |\n| --- | ---: | ---: |\n'+'\n'.join(f"| {l['language']} | {m[0]} | {m[1]} |" for l,m in zip(p['listings'],sizes)),'Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).','## English explanation',p['summary_en'],related(p,by,'en'),'**Scenario.** '+p['scenario_en'],'**Expected observation.** '+p['expected_en'],'**LMX.** '+p['lmx_notes_en'],'**Comparison.** '+p['comparison_en'],'**Scope and limitations.** '+p['limits_en']]
+   out += ['## Объём показанного исходника','| Язык | Непробельные символы | Непустые строки | Без сложного Throws |\n| --- | ---: | ---: | ---: |\n'+'\n'.join(f"| {l['language']} | {m[0]} | {m[1]} | {supplemental if l['language']=='LMX' else '—'} |" for l,m in zip(p['listings'],sizes)),'Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).','Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.','## English explanation',p['summary_en'],related(p,by,'en'),'**Scenario.** '+p['scenario_en'],'**Expected observation.** '+p['expected_en'],'**LMX.** '+p['lmx_notes_en'],'**Comparison.** '+p['comparison_en'],'**Scope and limitations.** '+p['limits_en']]
    if p.get('post_scope_note_en'):out += [p['post_scope_note_en']]
    out += ['### Dependencies and execution boundaries','\n'.join('- **'+l['language']+':** '+l.get('notes_en','') for l in p['listings']),'## Источники / Sources','\n'.join(f"- [{s['title']}]({s['url']}) — {s.get('why_ru',s.get('note_ru','Официальный контракт.'))}" for s in p['sources']),'**Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).','## Проверка','Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).']
    (directory/link(p)).write_text('\n\n'.join(x for x in out if x)+'\n')
-   rows.append('| '+f"{p['id']:03d}"+' | '+f"[{p['name']}]({link(p)})"+' | '+' | '.join(f'{m[0]} / {m[1]}' for m in sizes)+' | '+scope+' |')
+   rows.append('| '+f"{p['id']:03d}"+' | '+f"[{p['name']}]({link(p)})"+' | '+' | '.join(f'{m[0]} / {m[1]}' for m in sizes)+' | '+scope+' | '+str(supplemental)+' |')
    count+=1
   # Catalog prose is generated from the same semantic records, without code.
   for lang in ['ru','en']:
@@ -53,6 +63,9 @@ def main():
   lines=cmp.read_text().splitlines();positions=[i for i,l in enumerate(lines) if re.match(r'^\|\s*\d+\s*\|',l)]
   assert len(positions)==len(rows),(directory,len(positions),len(rows))
   for pos,row in zip(positions,rows):lines[pos]=row
+  lines=[l[:-1]+' Без сложного Throws |' if l.startswith('| ID |') and 'Без сложного Throws' not in l else l for l in lines]
+  header=next((i for i,l in enumerate(lines) if l.startswith('| ID |')),None)
+  if header is not None:lines[header+1]='| ---: | --- | ---: | ---: | ---: | --- | ---: |'
   cmp.write_text('\n'.join(lines).replace('Дата редакции: 2026-11-22','Дата редакции: 2026-11-23')+'\n')
   readme=directory/'README.md';s=readme.read_text()
   if '## Редакция 23 ноября 2026' not in s:

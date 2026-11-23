@@ -2,8 +2,8 @@
 
 Эти файлы сравнивают реализации функций на LMX и Haskell. Сравнительные модули
 Haskell не импортируются прикладными примерами: там используются настоящие
-средства языка, base и monad-loops. В LMX соответствующие функции входят в
-предлагаемое ядро и вызываются напрямую.
+средства языка, base и monad-loops. В LMX используются кратчайшие полноценные решения: прямые вызовы ядра либо
+локальные определения, полностью включённые в соответствующий пример.
 
 | Сравнение | Функция или механизм |
 |---|---|
@@ -11,7 +11,7 @@ Haskell не импортируются прикладными примерам�
 | [H03](h03_capture_comparision.md) | partial, захват аргументов |
 | [H06](h06_pipe_comparision.md) | compose/pipe, порядок композиции |
 | [H07](h07_evaluation_modes_comparision.md) | lazy/once, повторное вычисление, защита рекурсии и сбой |
-| [H09](h09_iterator_comparision.md) | iterateUntilStop и настоящий whileJust_ |
+| [H09](h09_iterator_comparision.md) | короткий Cycles, whileJust_ и отдельный адаптер отказов |
 | [R01](r01_derive_comparision.md) | derive и обновление записи |
 | [V02](v02_character_range_comparision.md) | between и включённые границы |
 

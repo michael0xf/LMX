@@ -32,19 +32,39 @@
           "language": "LMX",
           "code": "Sources:\n    return: int\n    first:\n        return: 5\n    second:\n        return: 7\n\nClient:\n    @: read\n    return: int\n    execute:\n        return: read() * 2\n    demo:\n        return: execute(read := Sources\\first) + execute(read := Sources\\second)\n",
           "notes_ru": "Вызов Client\\demo(). Именованный actual read явно задаёт зависимость; это не неявное автодозаполнение и не скрытый registry.",
-          "notes_en": "Call Client\\demo(). The named actual read explicitly supplies a dependency; this is neither implicit autofill nor a hidden registry."
+          "notes_en": "Call Client\\demo(). The named actual read explicitly supplies a dependency; this is neither implicit autofill nor a hidden registry.",
+          "metrics": {
+            "characters": 163,
+            "nonblank_lines": 13,
+            "utf8_bytes": 252,
+            "sha256": "ca56abb0e6b98216f45a3ab6da613f0830c3e5b8701617a40327eda829c32bf6",
+            "without_complex_throws_characters": 163,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "import java.util.function.IntSupplier;\nclass Example {\n    static class Client {\n        final IntSupplier read;\n        Client(IntSupplier read) { this.read = read; }\n        int execute() { return read.getAsInt() * 2; }\n    }\n    static int demo() { return new Client(() -> 5).execute() + new Client(() -> 7).execute(); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 246,
+            "nonblank_lines": 9,
+            "utf8_bytes": 326,
+            "sha256": "a3a799dd9620f0b968419cfd2c744137e62f1f8e5456fb14418577971714ae2f"
+          }
         },
         {
           "language": "Python",
           "code": "class Client:\n    def __init__(self, read):\n        self.read = read\n    def execute(self):\n        return self.read() * 2\n\ndef demo():\n    return Client(lambda: 5).execute() + Client(lambda: 7).execute()\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 154,
+            "nonblank_lines": 7,
+            "utf8_bytes": 205,
+            "sha256": "644bcae76116cf021b934d9ae6c6f7620c1fab1108a6709b9ab45ea71603932c"
+          }
         }
       ],
       "sources": [
@@ -78,19 +98,39 @@
           "language": "LMX",
           "code": "Services:\n    return: int\n    answer:\n        return: 42\n    fallback:\n        return: 0\n\nLocator:\n    int: key\n    return: @\n    resolve:\n        if: key = 1\n            return: Services\\answer\n        return: Services\\fallback\n\nClient:\n    @: locator Locator\n    return: int\n    demo:\n        @: service locator\\resolve(key := 1)\n        return: service()\n",
           "notes_ru": "Вызов Client\\demo(). Locator — пользовательская Structure, явно доступная через DATA. Он не создаёт встроенного process-global namespace.",
-          "notes_en": "Call Client\\demo(). Locator is a user Structure explicitly available through DATA, not a built-in process-global namespace."
+          "notes_en": "Call Client\\demo(). Locator is a user Structure explicitly available through DATA, not a built-in process-global namespace.",
+          "metrics": {
+            "characters": 223,
+            "nonblank_lines": 19,
+            "utf8_bytes": 358,
+            "sha256": "de3603e71fed649a32d6402eab4a8948eb5cdb8574f2772204876c181d708209",
+            "without_complex_throws_characters": 223,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "import java.util.function.IntSupplier;\nclass Example {\n    static class Locator {\n        IntSupplier resolve(int key) { return key == 1 ? () -> 42 : () -> 0; }\n    }\n    static int client(Locator locator) { return locator.resolve(1).getAsInt(); }\n    static int demo() { return client(new Locator()); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 238,
+            "nonblank_lines": 8,
+            "utf8_bytes": 306,
+            "sha256": "467656c692bb0a2b97605211f243403e1a98de406be76698c4e4acab32bd9e10"
+          }
         },
         {
           "language": "Python",
           "code": "class Locator:\n    def resolve(self, key):\n        return (lambda: 42) if key == 1 else (lambda: 0)\n\ndef client(locator):\n    return locator.resolve(1)()\n\ndef demo():\n    return client(Locator())\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 151,
+            "nonblank_lines": 7,
+            "utf8_bytes": 196,
+            "sha256": "62ab0ffa8c2fa221c5e3db1d1ad2bb4e069277221c5fa1a123036b29eadfed71"
+          }
         }
       ],
       "sources": [
@@ -124,19 +164,39 @@
           "language": "LMX",
           "code": "Silent:\n    int: value\n    write:\n        return\n\nClient:\n    int: value\n    @: log Silent\\write\n    return: int\n    execute:\n        log(value := value)\n        return: value\n    demo:\n        return: execute(value := 10)\n",
           "notes_ru": "Вызов Client\\demo(). Silent\\write — существующий метод-процедура; initialized null-reference 0 или uninit вместо него не подставляются.",
-          "notes_en": "Call Client\\demo(). Silent\\write is an existing procedure; neither initialized null 0 nor uninit substitutes for it."
+          "notes_en": "Call Client\\demo(). Silent\\write is an existing procedure; neither initialized null 0 nor uninit substitutes for it.",
+          "metrics": {
+            "characters": 138,
+            "nonblank_lines": 13,
+            "utf8_bytes": 223,
+            "sha256": "9dea4a65cc02cf7f43f5004fcd127de253109d5b76dc95b3a867c103e8751f2b",
+            "without_complex_throws_characters": 138,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "import java.util.function.IntConsumer;\nclass Example {\n    static final IntConsumer SILENT = value -> {};\n    static int execute(int value, IntConsumer log) {\n        log.accept(value);\n        return value;\n    }\n    static int demo() { return execute(10, SILENT); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 205,
+            "nonblank_lines": 9,
+            "utf8_bytes": 270,
+            "sha256": "f915461c7ec1f2f45900751a53963b1d8e80beb162ea6eef23782efa8676799d"
+          }
         },
         {
           "language": "Python",
           "code": "def silent(value):\n    pass\n\ndef execute(value, log=silent):\n    log(value)\n    return value\n\ndef demo():\n    return execute(10)\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 98,
+            "nonblank_lines": 7,
+            "utf8_bytes": 129,
+            "sha256": "ee0d56879b6190342cdcf4cfdc7be9c5e7647ef700a1b300d84634401b3540cb"
+          }
         }
       ],
       "sources": [
@@ -170,19 +230,39 @@
           "language": "LMX",
           "code": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n",
           "notes_ru": "Вызов Demo\\run(). Pool принадлежит одному Message и обслуживает последовательные запросы. Для конкурентных клиентов take/give вызываются почтовым протоколом владельца, а не чужими прямыми записями в free.",
-          "notes_en": "Call Demo\\run(). Pool belongs to one Message and handles requests serially. Concurrent clients use the owner’s Message protocol for take/give rather than writing free directly."
+          "notes_en": "Call Demo\\run(). Pool belongs to one Message and handles requests serially. Concurrent clients use the owner’s Message protocol for take/give rather than writing free directly.",
+          "metrics": {
+            "characters": 266,
+            "nonblank_lines": 22,
+            "utf8_bytes": 442,
+            "sha256": "47528a9c9ed541a5703c3fa42186e0c5bfba0b96c859f979efdc554aa8bf72ab",
+            "without_complex_throws_characters": 266,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    static class Resource { final int id = 7; }\n    static class Pool {\n        Resource free = new Resource();\n        Resource take() { Resource result = free; free = null; return result; }\n        void give(Resource item) { free = item; }\n    }\n    static int demo() {\n        Pool pool = new Pool(); Resource first = pool.take();\n        Resource busy = pool.take(); pool.give(first);\n        Resource again = pool.take();\n        return first == again && busy == null ? 1 : 0;\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 350,
+            "nonblank_lines": 14,
+            "utf8_bytes": 506,
+            "sha256": "0bc15254487729ae203391c4f515c687645d8b8e36202210b5fcfa20d11b8f3b"
+          }
         },
         {
           "language": "Python",
           "code": "class Resource:\n    id = 7\n\nclass Pool:\n    def __init__(self):\n        self.free = Resource()\n    def take(self):\n        result, self.free = self.free, None\n        return result\n    def give(self, item):\n        self.free = item\n\ndef demo():\n    pool = Pool()\n    first, busy = pool.take(), pool.take()\n    pool.give(first)\n    again = pool.take()\n    return int(first is again and busy is None)\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 280,
+            "nonblank_lines": 16,
+            "utf8_bytes": 399,
+            "sha256": "7e80ebb03d5e0feb2db096d3edd761812b82c8d26ec456ca9f10a62e24b42622"
+          }
         }
       ],
       "sources": [
@@ -218,19 +298,39 @@
           "language": "LMX",
           "code": "Small:\n    int: cost 5\n\nLarge:\n    int: cost 9\n\nFactory:\n    int: kind\n    return: @\n    create:\n        if: kind = 0\n            return: (copy(Small))\n        return: (copy(Large))\n\nDemo:\n    return: int\n    run:\n        @: a Factory\\create(kind := 0)\n        @: b Factory\\create(kind := 1)\n        return: a\\cost + b\\cost\n",
           "notes_ru": "Вызов Demo\\run(). Явная группа собирает поля copy в один новый продукт. У продукта нет метода, поэтому отдельные слоты группирующего контейнера не создают неоднозначности владельца состояния.",
-          "notes_en": "Call Demo\\run(). The explicit group collects copy’s fields into one new product. The product has no method, so grouping slots introduce no method-owner ambiguity."
+          "notes_en": "Call Demo\\run(). The explicit group collects copy’s fields into one new product. The product has no method, so grouping slots introduce no method-owner ambiguity.",
+          "metrics": {
+            "characters": 201,
+            "nonblank_lines": 17,
+            "utf8_bytes": 324,
+            "sha256": "7dfc258cf84c02e2355b97a441a0fb64fcfb74dabe1a906b4ca3ace77aebe04b",
+            "without_complex_throws_characters": 201,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    record Product(int cost) {}\n    static Product create(int kind) { return new Product(kind == 0 ? 5 : 9); }\n    static int demo() { return create(0).cost() + create(1).cost(); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 155,
+            "nonblank_lines": 5,
+            "utf8_bytes": 199,
+            "sha256": "207fb95e7271080b703936e81dabd7d867df487b5805b29f30ff961a17952fae"
+          }
         },
         {
           "language": "Python",
           "code": "class Product:\n    def __init__(self, cost):\n        self.cost = cost\n\ndef create(kind):\n    return Product(5 if kind == 0 else 9)\n\ndef demo():\n    return create(0).cost + create(1).cost\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 141,
+            "nonblank_lines": 7,
+            "utf8_bytes": 187,
+            "sha256": "c4633a60128ee7fd01d33aa9ac4f63eba93e4767690f23e0317cee8c2576547f"
+          }
         }
       ],
       "sources": [
@@ -264,19 +364,39 @@
           "language": "LMX",
           "code": "First:\n    int: value 0\n\nSecond:\n    int: value 0\n\nRegistry:\n    int: key\n    return: @\n    get:\n        if: key = 0\n            return: First\n        return: Second\n\nDemo:\n    return: int\n    run:\n        First\\value := 0\n        Second\\value := 0\n        @: a Registry\\get(key := 0)\n        @: b Registry\\get(key := 0)\n        @: c Registry\\get(key := 1)\n        a\\value := 7\n        return: b\\value * 10 + c\\value\n",
           "notes_ru": "Вызов Demo\\run(). Область уникальности — конкретный Registry в одном Message; копия графа или другой Message может иметь свой набор.",
-          "notes_en": "Call Demo\\run(). Uniqueness is scoped to one Registry in one Message; copied graphs or other Messages can have another set."
+          "notes_en": "Call Demo\\run(). Uniqueness is scoped to one Registry in one Message; copied graphs or other Messages can have another set.",
+          "metrics": {
+            "characters": 246,
+            "nonblank_lines": 21,
+            "utf8_bytes": 417,
+            "sha256": "937e1dc4ef46b10d010c2fcd3cb246c229216f06a92d35e548da32174ce8155d",
+            "without_complex_throws_characters": 246,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    static class Settings { int value; }\n    static class Registry {\n        final Settings first = new Settings(), second = new Settings();\n        Settings get(int key) { return key == 0 ? first : second; }\n    }\n    static int demo() {\n        Registry r = new Registry();\n        Settings a = r.get(0), b = r.get(0), c = r.get(1);\n        a.value = 7;\n        return b.value * 10 + c.value;\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 283,
+            "nonblank_lines": 13,
+            "utf8_bytes": 419,
+            "sha256": "78da904322ebbd098247f0d483dd86f31152d22547126eab19946e1b9bcac21c"
+          }
         },
         {
           "language": "Python",
           "code": "class Settings:\n    def __init__(self):\n        self.value = 0\n\nclass Registry:\n    def __init__(self):\n        self.first, self.second = Settings(), Settings()\n    def get(self, key):\n        return self.first if key == 0 else self.second\n\ndef demo():\n    registry = Registry()\n    a, b, c = registry.get(0), registry.get(0), registry.get(1)\n    a.value = 7\n    return b.value * 10 + c.value\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 291,
+            "nonblank_lines": 13,
+            "utf8_bytes": 393,
+            "sha256": "4980464e0830d406cd4a9e13b82fce2c8fb0151b80a9dd36abb46c96908bcdb6"
+          }
         }
       ],
       "sources": [
@@ -310,19 +430,39 @@
           "language": "LMX",
           "code": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
           "notes_ru": "Вызов Check\\demo(). Используется непустой структурный шаблон с именованной ветвью auditable. Совершенно пустая Structure не различала бы наличие метки.",
-          "notes_en": "Call Check\\demo(). A nonempty structural requirement contains a named auditable branch. An entirely empty Structure would not distinguish the marker."
+          "notes_en": "Call Check\\demo(). A nonempty structural requirement contains a named auditable branch. An entirely empty Structure would not distinguish the marker.",
+          "metrics": {
+            "characters": 175,
+            "nonblank_lines": 13,
+            "utf8_bytes": 252,
+            "sha256": "87073e884a126dfee65be9a16ec47a3786f884780dee23581845371670cc0941",
+            "without_complex_throws_characters": 175,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    interface Auditable {}\n    static class Marked implements Auditable {}\n    static class Unmarked { int value = 7; }\n    static int accepts(Object item) { return item instanceof Auditable ? 1 : 0; }\n    static int demo() { return accepts(new Marked()) * 10 + accepts(new Unmarked()); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 238,
+            "nonblank_lines": 7,
+            "utf8_bytes": 307,
+            "sha256": "74f37866b3c58485fe4cba31dff7d37c6a6d21fcc8080aa5316180536e0c2f51"
+          }
         },
         {
           "language": "Python",
           "code": "class Auditable:\n    pass\n\nclass Marked(Auditable):\n    pass\n\nclass Unmarked:\n    value = 7\n\ndef accepts(item):\n    return int(isinstance(item, Auditable))\n\ndef demo():\n    return accepts(Marked()) * 10 + accepts(Unmarked())\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 177,
+            "nonblank_lines": 10,
+            "utf8_bytes": 225,
+            "sha256": "a999ac5f4608c141f4d4f43d185379b5d560bb080da75db370667542c5d0a88c"
+          }
         }
       ],
       "sources": [
@@ -358,19 +498,39 @@
           "language": "LMX",
           "code": "Options:\n    copy: sys\\OPERANDS_TEMPLATE\n    int: count 0\n    int: price 0\n    return: @\n    withCount:\n        @: target \\left\n        target\\count := \\right[0]\n        return: target\n    withPrice:\n        @: target \\left\n        target\\price := \\right[0]\n        return: target\n\nDemo:\n    return: int\n    run:\n        import: Options\n        @: options (Options withCount 3) withPrice 7\n        return: options\\count * options\\price\n",
           "notes_ru": "Вызов Demo\\run(). sys\\OPERANDS_TEMPLATE — предоставленный шаблон ядра из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.",
-          "notes_en": "Call Demo\\run(). sys\\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left."
+          "notes_en": "Call Demo\\run(). sys\\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left.",
+          "metrics": {
+            "characters": 285,
+            "nonblank_lines": 19,
+            "utf8_bytes": 436,
+            "sha256": "36b082e5272e1b05d9f01c7c1e70366b20da7429a2277043bb60117ec051df9e",
+            "without_complex_throws_characters": 285,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    static class Options {\n        int count, price;\n        Options withCount(int value) { count = value; return this; }\n        Options withPrice(int value) { price = value; return this; }\n        int total() { return count * price; }\n    }\n    static int demo() { return new Options().withCount(3).withPrice(7).total(); }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 251,
+            "nonblank_lines": 9,
+            "utf8_bytes": 343,
+            "sha256": "df816f0d2c167cf4a76e895b935be8dee87498d012a00001b2f9ed73cc7f2fa1"
+          }
         },
         {
           "language": "Python",
           "code": "class Options:\n    def with_count(self, value):\n        self.count = value\n        return self\n    def with_price(self, value):\n        self.price = value\n        return self\n    def total(self):\n        return self.count * self.price\n\ndef demo():\n    return Options().with_count(3).with_price(7).total()\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 220,
+            "nonblank_lines": 11,
+            "utf8_bytes": 305,
+            "sha256": "9f2188a1de9656b2b7197ce823efa0ddb3cdca25e57758fdc3f732934075ec2a"
+          }
         }
       ],
       "sources": [
@@ -404,19 +564,39 @@
           "language": "LMX",
           "code": "TypeData:\n    int: damage 2\n\nFirst:\n    @: kind TypeData\n\nSecond:\n    @: kind TypeData\n\nOperations:\n    @: item\n    return: int\n    damage:\n        return: item\\kind\\damage\n    demo:\n        TypeData\\damage := 2\n        int: before damage(item := First)\n        TypeData\\damage := 3\n        return: before * 10 + damage(item := Second)\n",
           "notes_ru": "Вызов Operations\\demo(). TypeData — пользовательский доменный объект, не физический type code записи и не замена typeof.",
-          "notes_en": "Call Operations\\demo(). TypeData is a domain object, not a physical record type code or replacement for typeof."
+          "notes_en": "Call Operations\\demo(). TypeData is a domain object, not a physical record type code or replacement for typeof.",
+          "metrics": {
+            "characters": 225,
+            "nonblank_lines": 16,
+            "utf8_bytes": 336,
+            "sha256": "3970d32887b7692fbc4759071165fd4ad23d2b2e88186eb911637f769c4c4dd4",
+            "without_complex_throws_characters": 225,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    static class TypeData { int damage = 2; }\n    record Item(TypeData kind) {}\n    static int damage(Item item) { return item.kind().damage; }\n    static int demo() {\n        TypeData kind = new TypeData();\n        Item first = new Item(kind), second = new Item(kind);\n        int before = damage(first); kind.damage = 3;\n        return before * 10 + damage(second);\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 283,
+            "nonblank_lines": 11,
+            "utf8_bytes": 392,
+            "sha256": "ff8c948a626ebe70e52df7f949c30df91b5bca9a2e96053c270b268b0e6bd9d8"
+          }
         },
         {
           "language": "Python",
           "code": "class TypeData:\n    def __init__(self, damage):\n        self.damage = damage\n\nclass Item:\n    def __init__(self, kind):\n        self.kind = kind\n\ndef damage(item):\n    return item.kind.damage\n\ndef demo():\n    kind = TypeData(2)\n    first, second = Item(kind), Item(kind)\n    before = damage(first)\n    kind.damage = 3\n    return before * 10 + damage(second)\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 265,
+            "nonblank_lines": 14,
+            "utf8_bytes": 358,
+            "sha256": "92aea933811a71231bfc5a7d00ddd4943ac76aad241a705a771902be5f375696"
+          }
         }
       ],
       "sources": [
@@ -450,19 +630,39 @@
           "language": "LMX",
           "code": "Host:\n    int: value 7\n    @: extension 0\n    @: addon\n    return: @\n    install:\n        node\\extension := addon\n        return: addon\n    query:\n        return: node\\extension\n\nReport:\n    @: target Host\n    return: int\n    render:\n        return: target\\value * 2\n\nDemo:\n    return: int\n    run:\n        Host\\install(addon := Report)\n        @: report Host\\query()\n        return: report\\render()\n",
           "notes_ru": "Вызов Demo\\run(). Report хранит явную ссылку target; запись ссылки в Host не делает Host parent для Report\\render.",
-          "notes_en": "Call Demo\\run(). Report has an explicit target reference; storing it in Host does not make Host the parent of Report\\render."
+          "notes_en": "Call Demo\\run(). Report has an explicit target reference; storing it in Host does not make Host the parent of Report\\render.",
+          "metrics": {
+            "characters": 255,
+            "nonblank_lines": 21,
+            "utf8_bytes": 400,
+            "sha256": "5cecfa56f9da2141d73d9dfb86508c96991a6a036f9dffe90cc249933b2de876",
+            "without_complex_throws_characters": 255,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "class Example {\n    static class Host {\n        int value = 7; Report extension;\n        void install(Report addon) { extension = addon; }\n        Report query() { return extension; }\n    }\n    record Report(Host target) { int render() { return target.value * 2; } }\n    static int demo() {\n        Host host = new Host(); host.install(new Report(host));\n        return host.query().render();\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
-          "notes_en": "Call Example.demo(); main and printing are excluded."
+          "notes_en": "Call Example.demo(); main and printing are excluded.",
+          "metrics": {
+            "characters": 285,
+            "nonblank_lines": 12,
+            "utf8_bytes": 401,
+            "sha256": "1b01e6f41a19c8aadf16df2dbe73efc3374dcd51ab80658172db3d3b44d0e04f"
+          }
         },
         {
           "language": "Python",
           "code": "class Host:\n    def __init__(self):\n        self.value, self.extension = 7, None\n    def install(self, addon):\n        self.extension = addon\n    def query(self):\n        return self.extension\n\nclass Report:\n    def __init__(self, target):\n        self.target = target\n    def render(self):\n        return self.target.value * 2\n\ndef demo():\n    host = Host()\n    host.install(Report(host))\n    return host.query().render()\n",
           "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
-          "notes_en": "Call demo(); all shown classes and functions are counted."
+          "notes_en": "Call demo(); all shown classes and functions are counted.",
+          "metrics": {
+            "characters": 308,
+            "nonblank_lines": 16,
+            "utf8_bytes": 423,
+            "sha256": "67a04ea3b538988d4cb221fb0e2f98c9f7b681183df15a7619765e1334a0ff17"
+          }
         }
       ],
       "sources": [

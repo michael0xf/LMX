@@ -26,16 +26,16 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 The main metric counts non-whitespace characters in each main application program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns. The separate explanatory kernel template in Interpreter is excluded; its application-side copy line is counted.
 
-| Language | Total non-whitespace characters, 19–23 | Relative to LMX |
-|---|---:|---:|
-| LMX | 1389 | 1.00× |
-| Python | 1627 | 1.17× |
-| Java | 1970 | 1.42× |
-| C++ | 1778 | 1.28× |
-| C# | 2144 | 1.54× |
-| TypeScript | 1957 | 1.41× |
-| Go | 1848 | 1.33× |
-| Rust | 2165 | 1.56× |
+| Language | Total non-whitespace characters, 19–23 | Relative to LMX | LMX without complex Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 1345 | 1.00× | 1345 |
+| Python | 1627 | 1.21× | — |
+| Java | 1970 | 1.46× | — |
+| C++ | 1778 | 1.32× | — |
+| C# | 2144 | 1.59× | — |
+| TypeScript | 1957 | 1.46× | — |
+| Go | 1848 | 1.37× | — |
+| Rust | 2165 | 1.61× | — |
 
 ## 19. Singleton
 
@@ -87,18 +87,14 @@ Frame:
         return: value + button\render()
 
 Light:
+    int: theme 1
     return: @
     button:
-        return: derive(Button; (int: value 1))
+        return: derive(Button; (int: value theme))
     frame:
-        return: derive(Frame; (int: value 10))
+        return: derive(Frame; (int: value theme * 10))
 
-Dark:
-    return: @
-    button:
-        return: derive(Button; (int: value 2))
-    frame:
-        return: derive(Frame; (int: value 20))
+Dark: merge(Light; (int: theme 2))
 
 Client:
     @: factory
@@ -119,7 +115,7 @@ Client\render(factory := Light) obtains button 1 and frame 10; Frame.render call
 
 Two configuration families and two product roles; the selected factory and the consumer’s workflow keep the family consistent. Products share a representation and differ in configuration, so this scenario needs no LightButton/DarkButton subclasses. No language here forbids a caller from deliberately mixing families. This does not compare GUI libraries or automatic proofs of compatibility. C++ expresses the factory interface with two function pointers, preserving the same runtime choice of family.
 
-**LMX: 458** non-whitespace characters. [Eight-language comparison](20_abstract_factory_comparison.md).
+**LMX: 414** non-whitespace characters. [Eight-language comparison](20_abstract_factory_comparison.md).
 
 [Refactoring.Guru — Abstract Factory](https://refactoring.guru/design-patterns/abstract-factory) · [Refactoring.Guru — Abstract Factory in Python](https://refactoring.guru/design-patterns/abstract-factory/python/example)
 

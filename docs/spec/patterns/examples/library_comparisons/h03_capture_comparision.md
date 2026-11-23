@@ -37,13 +37,15 @@ FxPartial:
 Complete canonical source files for the entry and its LMX dependencies:
 
 - [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
+- [coreStandardText.lmx](../../LMX_Fn_Receivers/src/coreStandardText.lmx)
 - [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 - [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
 - [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
+- [sequences_mutation.lmx](../../LMX_Fn_Receivers/src/sequences_mutation.lmx)
 
-The reachable roots are: `FxIndices`, `FxInputPolicy`, `FxOwnPolicy`, `FxBuild`, `FxCaptureFailures`, `FxCaptureState`, `FxRecordOperands`, `FxThrows`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxConcat`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxTypeTokens`, `FxCaptureOne`, `FxCapturePrefix`, `FxFrameAttempt`, `FxFrameApply`, `FxForwardEngine`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxPrefixPolicy`, `FxEngineState`, `FxSameText`, `FxFailureFilter`, `FxAppend`, `FxFailures`, `FxStageFailures`, `FxWrap`, `FxPartial`.
+The reachable roots are: `FxIndices`, `FxInputPolicy`, `FxOwnPolicy`, `FxBuild`, `FxCaptureFailures`, `FxCaptureState`, `FxRecordOperands`, `FxThrows`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxConcat`, `FxSeqAdmit`, `FxSeqBounds`, `FxSeqReplaceRange`, `FxSeqAppend`, `FxSeqReverse`, `FxFormatInt`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxTypeTokens`, `FxCaptureOne`, `FxCapturePrefix`, `FxFrameAttempt`, `FxFrameApply`, `FxForwardEngine`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxPrefixPolicy`, `FxEngineState`, `FxUnitRange`, `FxSameText`, `FxFailureFilter`, `FxAppend`, `FxFailures`, `FxStageFailures`, `FxWrap`, `FxPartial`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -90,11 +92,15 @@ capture binary first = \second -> binary first second
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: |
-| LMX entry definitions shown above | 533 | 17 | 713 |
-| All reachable LMX source roots, counted once | 11963 | 627 | 18427 |
-| Complete Haskell comparison module | 699 | 17 | 847 |
+| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: | ---: |
+| LMX entry definitions shown above | 533 | 533 | 17 | 713 |
+| All reachable LMX source roots, counted once | 14935 | 13843 | 742 | 22792 |
+| Complete Haskell comparison module | 699 | — | 17 | 847 |
+
+The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+
+На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 
 These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 

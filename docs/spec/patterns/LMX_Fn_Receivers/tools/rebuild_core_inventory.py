@@ -11,6 +11,9 @@ SPEC = PACKAGE.parents[1]
 
 def family(row):
     src = row['source']
+    if 'coreStandard' in src:
+        suffix = Path(src).stem.removeprefix('coreStandard')
+        return {'Functional':'Finite sequence and set conveniences', 'Objects':'Optional values, results and physical field lookup', 'Lisp':'Association lists, properties and operand adaptation', 'Text':'Literal text processing and integer rendering', 'Numeric':'Numeric reductions, selection and exact integers'}[suffix]
     if '/regex/' in src:
         return 'Text patterns and matching'
     if 'corePerlExamples' in src or 'coreJuliaExamples' in src:
@@ -39,7 +42,7 @@ def main():
         groups[family(row)].append(row)
     lines = [
         '# Direct functions for the current LMX core', '',
-        'Edition: **23 November 2026**, based on the newly uploaded `spec.tar.gz`.', '',
+        'Edition: **23 November 2026**, based on `23-Nov-2026.tar.gz`, with short examples restored from `22-Nov-2026-3.tar.gz`.', '',
         f'This is the common integration inventory of **{len(catalog)} public callable/operand names**. '
         'It is generated from the same [catalog](patterns/LMX_Fn_Receivers/catalog.json) as '
         '[the constant exports](patterns/LMX_Fn_Receivers/src/public.lmx). '
@@ -64,6 +67,7 @@ def main():
         'ordering and lifecycle behavior. It does not claim to reproduce every unrelated API of '
         'a larger package such as `scala.util.Using` or a retry framework. Application fixtures '
         '(for example, integer halving or a Money record) do not specialize the core helper.', '',
+        'The [standard-library review](patterns/LMX_Fn_Receivers/CORE_STANDARD_REVIEW_20261123.md) links the implemented functional, object, Lisp, text and numeric families, their explicit profiles and acceptance cases.', '',
         '## Message and asynchronous execution', '',
         'A mutable asynchronous algorithm runs in its owning `Message` and uses the existing '
         '[post/reply transport](LMX_semantics.en.md#thread-message-api), including the HTTP profile. '

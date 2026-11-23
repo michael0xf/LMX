@@ -308,11 +308,9 @@
         0,
         16
       ],
-      "lmx": "Square:\n    int: value\n    return: int\n    square:\n        return: value * value\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: map(xs; Square\\square)\n",
+      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        return: xs * xs\n",
       "foreign": "example(xs) = [x * x for x in xs]\n",
-      "core_functions": [
-        "map"
-      ],
+      "core_functions": [],
       "foreign_dependencies": [
         "Base.Generator",
         "Base.collect"
@@ -321,7 +319,7 @@
         "https://docs.julialang.org/en/v1/manual/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "В Julia выбран естественный comprehension. LMX использует общий map; упаковка результатов в @-записи не подменяется плотным int[] в подсчёте.",
+      "notes_ru": "Чистое поэлементное умножение — уже существующее Expression. Оно даёт новый плотный int[]; результат сравнивается по значениям. Отдельный callback Square не требуется.",
       "source_files": {
         "lmx": "source/lmx/J05.lm3",
         "foreign": "source/julia/J05.jl"
@@ -330,9 +328,7 @@
         "lmx": "Example\\run",
         "foreign": "example"
       },
-      "implementation_links": {
-        "map": "library_comparisons/JI01_comparision.md"
-      },
+      "implementation_links": {},
       "semantic_cases": [
         {
           "inputs": [
@@ -374,10 +370,10 @@
         1,
         5
       ],
-      "lmx": "Odd:\n    int: value\n    return: int\n    accepts:\n        return: value % 2 != 0\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: filter(xs; Odd\\accepts)\n",
+      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxThrows\\mutation) FxShape\n        return: compress(xs; xs % 2 != 0)\n",
       "foreign": "example(xs) = filter(isodd, xs)\n",
       "core_functions": [
-        "filter"
+        "compress"
       ],
       "foreign_dependencies": [
         "Base.filter",
@@ -387,7 +383,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "",
+      "notes_ru": "Готовая поэлементная маска сохраняет прежний отбор чистого предиката, порядок и профиль. Отрицательные нечётные имеют ненулевой остаток независимо от его знака.",
       "source_files": {
         "lmx": "source/lmx/J06.lm3",
         "foreign": "source/julia/J06.jl"
@@ -397,7 +393,7 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "filter": "library_comparisons/JI01_comparision.md"
+        "compress": "library_comparisons/JI02_comparision.md"
       },
       "semantic_cases": [
         {
@@ -651,11 +647,9 @@
         29,
         42
       ],
-      "lmx": "Combine:\n    int: x\n    int: y\n    return: int\n    combine:\n        return: 2 * x + y * y\n\nExample:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: zipWith(left; right; Combine\\combine)\n",
+      "lmx": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        return: 2 * left + right * right\n",
       "foreign": "example(left, right) = 2 .* left .+ right .* right\n",
-      "core_functions": [
-        "zipWith"
-      ],
+      "core_functions": [],
       "foreign_dependencies": [
         "Base.broadcast"
       ],
@@ -664,7 +658,7 @@
         "https://docs.julialang.org/en/v1/base/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "Общий домен — равные длины. За его пределами zipWith обрезает до короткого входа, а broadcast имеет собственное расширение размерностей; эти возможности не названы тождественными.",
+      "notes_ru": "В обеих сторонах используется поэлементная арифметика существующего языка. Общий домен — одинаковые длины, целые без переполнения и чистые операции. Материализованный результат сохраняет порядок; отдельный Combine/zipWith не нужен.",
       "source_files": {
         "lmx": "source/lmx/J10.lm3",
         "foreign": "source/julia/J10.jl"
@@ -673,9 +667,7 @@
         "lmx": "Example\\run",
         "foreign": "example"
       },
-      "implementation_links": {
-        "zipWith": "library_comparisons/JI01_comparision.md"
-      },
+      "implementation_links": {},
       "semantic_cases": [
         {
           "inputs": [
@@ -1028,7 +1020,7 @@
     },
     {
       "id": "J16",
-      "title": "Количество выполнений предиката",
+      "title": "Количество чётных элементов",
       "category": "Подсчёт",
       "contract": "Посчитать чётные элементы; ноль и отрицательные чётные учитываются. Исходный массив сохраняется.",
       "inputs": {
@@ -1041,11 +1033,9 @@
         ]
       },
       "expected": 3,
-      "lmx": "Even:\n    int: value\n    return: int\n    accepts:\n        return: value % 2 = 0\n\nExample:\n    int[]: xs\n    return: int\n    run:\n        throws: copy(FxThrows\\predicate)\n        return: count(xs; Even\\accepts)\n",
+      "lmx": "Example:\n    int[]: xs\n    return: int\n    run:\n        return: (+ 0 copy(xs % 2 = 0))\n",
       "foreign": "example(xs) = count(iseven, xs)\n",
-      "core_functions": [
-        "count"
-      ],
+      "core_functions": [],
       "foreign_dependencies": [
         "Base.count",
         "Base.iseven"
@@ -1054,7 +1044,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "",
+      "notes_ru": "Поэлементное сравнение даёт маску int 0/1; общий вариативный + складывает её поля вместе с начальным 0. Это тот же счёт чистого предиката, без отдельного тела Even.",
       "source_files": {
         "lmx": "source/lmx/J16.lm3",
         "foreign": "source/julia/J16.jl"
@@ -1063,9 +1053,7 @@
         "lmx": "Example\\run",
         "foreign": "example"
       },
-      "implementation_links": {
-        "count": "library_comparisons/JI01_comparision.md"
-      },
+      "implementation_links": {},
       "semantic_cases": [
         {
           "inputs": [
@@ -1385,7 +1373,7 @@
           "id": "c"
         }
       ],
-      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        if: first\\key < second\\key\n            return: -1\n        if: first\\key > second\\key\n            return: 1\n        return: 0\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        return: sort(items; Order\\compare)\n",
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\key > second\\key) - (first\\key < second\\key)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        return: sort(items; Order\\compare)\n",
       "foreign": "example(items) = sort(items; by=item -> item.key)\n",
       "core_functions": [
         "sort"
@@ -1397,7 +1385,7 @@
         "https://docs.julialang.org/en/v1/base/sort/"
       ],
       "alternatives": [],
-      "notes_ru": "Устойчивость наблюдается по id, поэтому поле id присутствует и во входе, и в ожидаемом результате. Используется общий FxSort из corePerlExamples; нового Julia-специфичного ресивера нет.",
+      "notes_ru": "Компаратор вычитает два результата сравнения int 0/1, а не сами ключи: переполнения разности ключей нет. id наблюдает устойчивость; все поля сохраняются. Используется общий FxSort.",
       "source_files": {
         "lmx": "source/lmx/J20.lm3",
         "foreign": "source/julia/J20.jl"
@@ -1517,10 +1505,10 @@
         "text": "AB-09 x2!"
       },
       "expected": "092",
-      "lmx": "Digit:\n    char: value\n    return: int\n    accepts:\n        return: value >= '0' && value <= '9'\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: \\filter(text; Digit\\accepts)\n",
+      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxThrows\\mutation) FxShape\n        return: \\compress(text; (text >= '0') * (text <= '9'))\n",
       "foreign": "example(text) = filter(c -> '0' <= c <= '9', text)\n",
       "core_functions": [
-        "filter"
+        "compress"
       ],
       "foreign_dependencies": [
         "Base.filter"
@@ -1530,7 +1518,7 @@
         "https://docs.julialang.org/en/v1/base/strings/"
       ],
       "alternatives": [],
-      "notes_ru": "LMX char[] и Julia String имеют разные физические представления. Здесь сравнивается последовательность ASCII-символов; результат LMX остаётся char[], поскольку filter сохраняет плотный профиль.",
+      "notes_ru": "Две поэлементные маски int 0/1 умножаются; compress оставляет ровно ASCII-цифры и сохраняет плотный char[]. Профиль сравнения ограничен ASCII, без обещания Unicode-категорий.",
       "source_files": {
         "lmx": "source/lmx/J22.lm3",
         "foreign": "source/julia/J22.jl"
@@ -1540,7 +1528,7 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "filter": "library_comparisons/JI01_comparision.md"
+        "compress": "library_comparisons/JI02_comparision.md"
       },
       "semantic_cases": [
         {

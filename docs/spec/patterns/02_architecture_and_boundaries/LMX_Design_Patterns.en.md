@@ -77,25 +77,25 @@ Explicit recipients make the example deterministic; a subscription catalog can l
 
 Independent transformations are connected in an ordered data flow.
 
-**Separate implementation comparison:** [093. Pipe — generic implementation](093_pipe_implementation_comparision.md)
+**Separate implementation comparison:** [093. Pipe — implementation](093_pipe_implementation_comparision.md)
 
 **Scenario:** For one item -3, normalize its sign, double it, then add 1.
 
 **Observation:** 7; intermediate values are 3 and 6.
 
-LMX uses its direct generic core composition, Java its real andThen method, and Go ordinary calls. Implementation093 is a separate implementation comparison, not a dependency of the foreign usage examples.
+The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
 
-### 093. [Pipe — generic implementation](093_pipe_implementation_comparision.md)
+### 093. [Pipe — implementation](093_pipe_implementation_comparision.md)
 
-Implement generic ordered function composition without an int-only adapter.
+Implement the imported sequential handoff through a stage list.
 
 **Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
-**Scenario:** Compose A→B and B→C to A→C, evaluate first then second exactly once, and relay failures without executing the second stage after first-stage failure.
+**Scenario:** Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.
 
-**Observation:** The int fixture returns7; a heterogeneous string→length→Boolean fixture also works; a failure in the first stage skips the second.
+**Observation:** For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.
 
-All three implementations retain callable references and explicitly compose ordinary calls. LMX preserves its exact source input policy and declared failure set through the shared adapter mechanism. Java and Go use static generic parameters.
+The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.
 
 ### 014. [Blackboard](014_blackboard_comparision.md)
 

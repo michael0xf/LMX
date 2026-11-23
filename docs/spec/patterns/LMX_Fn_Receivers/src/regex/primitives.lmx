@@ -75,13 +75,10 @@ RxLiteralProbe:
     return: int
     probe:
         private: @: text RxTextBuild\make(payload\text; source\profile)
-        if: length(text\units) > length(source\units) - position
+        int[]: unitSource source\units
+        int[]: unitPart text\units
+        if: FxUnitRange\equal(position) = 0
             return: -1
-        private: int: i 0
-        while: i < length(text\units)
-            if: source\units[position + i] != text\units[i]
-                return: -1
-            i += 1
         return: position + length(text\units)
 
 RxClassConfig:

@@ -14,6 +14,7 @@ cell calculations and page rendering remain separate validation tasks.
 from __future__ import annotations
 
 import argparse
+from throws_metrics import measure_throws
 import codecs
 import csv
 import hashlib
@@ -201,7 +202,7 @@ def audit(root: Path) -> dict:
                 continue
             all_ids.append(identifier)
             record_kind=pattern.get('kind','pattern')
-            record_layer='implementation' if record_kind=='implementation' else 'usage' if pattern.get('implementation_ids') else 'scenario'
+            record_layer='implementation' if record_kind=='implementation' else 'shared_implementation_client' if pattern.get('comparison_level')=='shared_implementation_client' else 'usage' if pattern.get('implementation_ids') else 'scenario'
             if record_kind=='implementation':
                 implementation_ids.append(identifier)
                 if pattern.get('paired_with') not in range(1,91): fail(json_file,f'ID {identifier}: invalid paired_with')
@@ -294,6 +295,8 @@ def audit(root: Path) -> dict:
                     continue
                 normalized = canonical_code(code)
                 counts = metrics(normalized)
+                if language == 'LMX':
+                    counts['without_complex_throws_characters'] = measure_throws(normalized, root)['without_complex_throws_characters']
                 variants = pattern.get('variants', {}).get(language, {})
                 if variants:
                     eligible=pattern.get('eligible_variants',{}).get(language,list(variants))
@@ -337,7 +340,7 @@ def audit(root: Path) -> dict:
                     if found_code != normalized:
                         fail(markdown_path, f"ID {identifier}/{language}: fenced code differs from the canonical source")
                 if markdown_text is not None:
-                    expected_line = f"| {language} | {counts['nonwhitespace_characters']} | {counts['nonblank_lines']} |"
+                    expected_line = f"| {language} | {counts['nonwhitespace_characters']} | {counts['nonblank_lines']} | {counts.get('without_complex_throws_characters','—')} |"
                     if expected_line not in markdown_text.splitlines():
                         fail(markdown_path, f"ID {identifier}/{language}: missing or stale source-size table row")
                     source_link = source_path.relative_to(directory).as_posix()
@@ -346,6 +349,7 @@ def audit(root: Path) -> dict:
                 csv_row[f"{language}_characters"] = str(counts["nonwhitespace_characters"])
                 csv_row[f"{language}_nonblank_lines"] = str(counts["nonblank_lines"])
                 csv_row[f"{language}_utf8_bytes"] = str(counts["utf8_bytes"])
+            csv_row['LMX_without_complex_throws_characters']=str(measured['LMX']['without_complex_throws_characters'])
             expected_csv.append(csv_row)
             pattern_reports.append({"id": identifier, "name": pattern.get("name"),"kind":record_kind,"layer":record_layer, "source": markdown_name, "metrics": measured})
 
@@ -353,8 +357,8 @@ def audit(root: Path) -> dict:
                 cells = comparison_rows.get(identifier)
                 if cells is None:
                     fail(comparison_path, f"Missing group table row for ID {identifier}")
-                elif len(cells) != 6:
-                    fail(comparison_path, f"ID {identifier}: expected 6 table cells, found {len(cells)}")
+                elif len(cells) != 7:
+                    fail(comparison_path, f"ID {identifier}: expected 7 table cells, found {len(cells)}")
                 else:
                     if f"]({markdown_name})" not in cells[1]:
                         fail(comparison_path, f"ID {identifier}: wrong source Markdown link")
@@ -364,9 +368,11 @@ def audit(root: Path) -> dict:
                             expected_value = f"{value['nonwhitespace_characters']} / {value['nonblank_lines']}"
                             if cells[offset] != expected_value:
                                 fail(comparison_path, f"ID {identifier}/{language}: table says {cells[offset]!r}, expected {expected_value!r}")
-                    scope_label = {'implementation':'Реализация библиотеки','usage':'Использование библиотеки'}.get(record_layer,SCOPES_RU.get(pattern.get("scope")))
+                    scope_label = {'implementation':'Реализация библиотеки','usage':'Использование библиотеки','shared_implementation_client':'Клиент общего компонента'}.get(record_layer,SCOPES_RU.get(pattern.get("scope")))
                     if identifier == 84 and pattern.get('primary_variant', {}).get('LMX') in ('local_callbacks', 'shared_trace'):
                         scope_label = 'Клиент + локальный helper'
+                    if cells[6] != str(measured['LMX']['without_complex_throws_characters']):
+                        fail(comparison_path, f"ID {identifier}: stale supplementary Throws count")
                     if scope_label is not None and cells[5] != scope_label:
                         fail(comparison_path, f"ID {identifier}: unexpected scope label {cells[5]!r}")
 
@@ -386,7 +392,7 @@ def audit(root: Path) -> dict:
                 fail(csv_path, "CSV is missing its UTF-8 BOM")
             reader = csv.DictReader(io.StringIO(csv_bytes.decode("utf-8-sig"), newline=""))
             header = reader.fieldnames or []
-            required_header = ["id", "pattern", "scope","kind","layer"] + [f"{l}_characters" for l in language_order] + [f"{l}_nonblank_lines" for l in language_order] + ["source"]
+            required_header = ["id", "pattern", "scope","kind","layer"] + [f"{l}_characters" for l in language_order] + [f"{l}_nonblank_lines" for l in language_order] + ["LMX_without_complex_throws_characters","source"]
             optional_header = {f"{l}_utf8_bytes" for l in language_order}
             if [h for h in header if h not in optional_header] != required_header:
                 fail(csv_path, f"Unexpected CSV header: {header}")

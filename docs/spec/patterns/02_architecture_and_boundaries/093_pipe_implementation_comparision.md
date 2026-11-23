@@ -1,145 +1,121 @@
-# 093. Pipe — generic implementation
+# 093. Pipe — implementation
 
-Реализовать обобщённую последовательную композицию без привязки к int.
+Реализовать импортируемую последовательную передачу значения по списку стадий.
 
 **Примеры использования:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
 ## Общий сценарий
 
-Скомпоновать A→B и B→C в A→C; вызвать этапы по одному разу и не выполнять второй при отказе первого.
+Получить начальный int и упорядоченный список callable int→int. Применить каждый один раз; при пустом списке вернуть исходное значение.
 
-**Ожидаемое наблюдение:** Пример с int возвращает7; string→length→Boolean тоже допустим; отказ первого этапа пропускает второй.
+**Ожидаемое наблюдение:** Для -3 и стадий normalize,double,offset результаты 3,6,7; пустой список сохраняет -3.
 
-**Граница сравнения:** Реализация библиотеки. Это последовательная композиция, не stream scheduler. Асинхронные адресованные вызовы уже обеспечивает post; потоки внутри pipe изменили бы его договор. Общие adapter bridges учитываются как зависимости.
+**Граница сравнения:** Реализация библиотеки. Показана прикладная библиотека для int, а не асинхронный stream framework. Политика ошибок, отмена и многопоточность не добавлены. Все три реализации используют только базовые вызовы и циклы; native/LMX исполнение здесь не заявлено.
 
 Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.
 
 ## LMX
 
 ```lmx
-FxCompositionState:
-    @: outer 0
-    @: inner 0
-
-FxCompositionEngine:
-    private:
-        @: state
-        @: frame
-    return: @
-    run:
-        throws: copy(FxThrows\call)
-        private: @: middle FxFrameApply\apply(frame)
-        return: FxApply\apply(state\outer; FxOne\make(middle))
-
-FxCompose:
-    private:
-        @: outer
-        @: inner
-    return: @
-    compose:
-        throws: copy(FxThrows\adapter)
-        private: @: a FxKernel\signature(subject := outer)
-        private: @: b FxKernel\signature(subject := inner)
-        if: length(a\inputTypes) != 1 || b\hasResult = 0
-            throw: FxArity()
-        private: @: contract FxSignatures\make(b\inputTypes; a\resultType)
-        private: @: state (copy(FxCompositionState))
-        state\outer := outer
-        state\inner := inner
-        private: @: failures FxFailures\union(a\throws; b\throws)
-        return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
-
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
+PipeLibrary:
+    copy: sys\OPERANDS_TEMPLATE
+    return: int
     pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)
+        int: value \left
+        int: i 0
+        while: i < length(right)
+            @: stage \right[i]
+            value := stage(value)
+            i += 1
+        return: value
 ```
 
-Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.
+copy: sys\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \left получает подготовленное значение; \right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.
 
 [Отдельный листинг](examples/lmx/093_pipe_implementation.lm3)
 
 ## Java
 
 ```java
-import java.util.Objects;
-import java.util.function.Function;
+package examplelib;
+import java.util.function.IntUnaryOperator;
 public final class Pipe {
-    private Pipe() {}
-    public static <A,B,C> Function<A,C> pipe(
-        Function<? super A,? extends B> first,
-        Function<? super B,? extends C> second) {
-        Objects.requireNonNull(first); Objects.requireNonNull(second);
-        return value -> second.apply(first.apply(value));
+    public static int apply(int value, IntUnaryOperator... stages) {
+        for (IntUnaryOperator stage : stages) value = stage.applyAsInt(value);
+        return value;
     }
 }
 ```
 
-Самостоятельная реализация generic композиции; не вызывает andThen и не импортируется клиентом013. Исключения передаются вызывающему.
+Полный examplelib/Pipe.java. IntUnaryOperator задаёт только контракт вызова; обход реализован здесь.
 
 [Отдельный листинг](examples/java/093_pipe_implementation.java)
 
 ## Go
 
 ```go
-package pipecomparison
-func Pipe[A,B,C any](first func(A) B, second func(B) C) func(A) C {
-    if first == nil || second == nil { panic("nil pipeline stage") }
-    return func(value A) C { return second(first(value)) }
+package pipe
+func Apply(value int, stages ...func(int) int) int {
+    for _, stage := range stages { value = stage(value) }
+    return value
 }
 ```
 
-Самостоятельная generic композиция двух стадий; любое конечное число строится повторной композицией. panic стадии не скрывается.
+Полный pipe/pipe.go в модуле example; Apply не использует готовую функцию конвейера.
 
 [Отдельный листинг](examples/go/093_pipe_implementation.go)
 
 ## Разбор LMX
 
-Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.
+copy: sys\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \left получает подготовленное значение; \right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.
 
 ## Сопоставление
 
-Все три реализации хранят callable и явно компонуют обычные вызовы. LMX сохраняет исходные inputs и declared failures через общий адаптер; Java/Go используют generic-типы.
+В LMX общий исполнитель формирует right, а библиотека явно выполняет обход. Java использует int-specialized functional interface, Go — обычные функции и variadic slice. Ни один вариант не импортирует готовый Pipe или готовый pipeline/fold для реализации самого Pipe. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/093_pipe_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.
+
+## Отдельный расширенный договор
+
+[Обобщённая или асинхронная пара 23-Nov](extended_comparisons/093_pipe_implementation_generalized_comparision.md). Она сохраняется отдельно и не включается в размер этой основной строки.
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 839 | 37 |
-| Java | 308 | 11 |
-| Go | 178 | 5 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 145 | 11 | 145 |
+| Java | 215 | 8 | — |
+| Go | 111 | 5 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+
 ## English explanation
 
-Implement generic ordered function composition without an int-only adapter.
+Implement the imported sequential handoff through a stage list.
 
 **Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
-**Scenario.** Compose A→B and B→C to A→C, evaluate first then second exactly once, and relay failures without executing the second stage after first-stage failure.
+**Scenario.** Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.
 
-**Expected observation.** The int fixture returns7; a heterogeneous string→length→Boolean fixture also works; a failure in the first stage skips the second.
+**Expected observation.** For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.
 
-**LMX.** Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete.
+**LMX.** copy: sys\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \left reads the prepared value; \right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.
 
-**Comparison.** All three implementations retain callable references and explicitly compose ordinary calls. LMX preserves its exact source input policy and declared failure set through the shared adapter mechanism. Java and Go use static generic parameters.
+**Comparison.** The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.
 
-**Scope and limitations.** This is sequential composition, not a stream scheduler. Existing post already provides asynchronous addressed calls; adding threads inside pipe would change its ordered value contract. Core adapter bridges are shared dependencies, not omitted pipe algorithms.
+**Scope and limitations.** This is an int application library, not an asynchronous stream framework. Error policy, cancellation, and concurrency are not added. All implementations use basic calls and loops; no native or LMX execution is claimed.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete.
-- **Java:** Standalone generic composition; it neither calls andThen nor is imported by013. Exceptions propagate to the caller.
-- **Go:** Standalone generic two-stage composition; repeated composition handles any finite chain. Stage panics are not hidden.
+- **LMX:** copy: sys\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \left reads the prepared value; \right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.
+- **Java:** Complete examplelib/Pipe.java. IntUnaryOperator supplies the call contract only; iteration is implemented here.
+- **Go:** Complete pipe/pipe.go in module example; Apply uses no ready pipeline function.
 
 ## Источники / Sources
 
-- [Java Function composition](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/function/Function.html) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
+- [Gregor Hohpe and Bobby Woolf — Pipes and Filters](https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html) — Независимые стадии и соединяющие каналы.
+- [Oracle — IntUnaryOperator](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/IntUnaryOperator.html) — Контракт int→int и прямой applyAsInt.
+- [Go specification — variadic parameters](https://go.dev/ref/spec#Passing_arguments_to_..._parameters) — Передача вариадического списка как slice и его порядок.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 

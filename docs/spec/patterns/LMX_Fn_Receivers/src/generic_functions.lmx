@@ -80,28 +80,10 @@ FxDecimal:
     private: int: number
     return: char[]
     decimal:
-        throws: FxIndex
+        throws: copy(FxThrows\selection)
         if: number < 0
             throw: FxIndex()
-        private: char[]: digits "0123456789"
-        private: char[]: reversed []
-        private: int: used 0
-        private: int: rest number
-        while: 1
-            sys\resize(reversed; used + 1)
-            reversed[used] := digits[rest % 10]
-            used += 1
-            rest := rest / 10
-            if: rest = 0
-                break
-        ---
-        private: char[]: out []
-        sys\resize(out; used)
-        private: int: i 0
-        while: i < used
-            out[i] := reversed[used - i - 1]
-            i += 1
-        return: out
+        return: FxFormatInt\formatInt(number)
 
 # Для сгенерированных публичных имён используется только ASCII p + digits.
 # Отдельное точное имя пригодится клиентам строителя для произвольных labels.

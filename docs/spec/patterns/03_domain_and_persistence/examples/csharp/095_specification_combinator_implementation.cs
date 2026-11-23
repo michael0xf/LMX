@@ -1,16 +1,8 @@
 using System;
-using System.Collections.Generic;
-public static class PredicateSet {
-    public static Func<T,bool> AllOf<T>(IEnumerable<Func<T,bool>> predicates) {
-        ArgumentNullException.ThrowIfNull(predicates);
-        var checks = new List<Func<T,bool>>();
-        foreach (var predicate in predicates) {
-            ArgumentNullException.ThrowIfNull(predicate);
-            checks.Add(predicate);
+namespace ExampleLib {
+    public static class Specification {
+        public static Func<int,bool> Both(Func<int,bool> left, Func<int,bool> right) {
+            return value => left(value) && right(value);
         }
-        return value => {
-            foreach (var predicate in checks) if (!predicate(value)) return false;
-            return true;
-        };
     }
 }

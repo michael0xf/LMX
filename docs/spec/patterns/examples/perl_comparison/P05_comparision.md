@@ -4,7 +4,7 @@
 
 Вернуть два булевых int: существует ли отрицательный элемент; все ли элементы меньше 10. На пустом списке результат [0,1].
 
-
+Одно тело Below читает динамический threshold текущего вызова; any/all сохраняют своё короткое замыкание. Число не захватывается в отдельную closure-структуру.
 
 ## Вход и ожидаемый результат
 
@@ -27,10 +27,12 @@
 
 ## Размер выбранного варианта
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 357 | 250 | 16 |
-| Perl | 166 | 123 | 7 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 318 | 213 | 213 | 14 |
+| Perl | 166 | 123 | 123 | 7 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
 
@@ -39,24 +41,21 @@
 [Исходник](source/lmx/P05.lm3).
 
 ```lmx
-Negative:
+Below:
     int: value
     return: int
-    run:
-        return: value < 0
-
-BelowTen:
-    int: value
-    return: int
-    run:
-        return: value < 10
+    test:
+        return: value < threshold
 
 Example:
     int[]: items
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxPredicate FxTypeToken ReceiverIndex
-        return: (any(items; Negative\run); all(items; BelowTen\run))
+        throws: copy(FxThrows\predicate)
+        int: threshold 0
+        int: negative any(items; Below\test)
+        threshold := 10
+        return: (negative; all(items; Below\test))
 ```
 
 ## Perl

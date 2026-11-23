@@ -6,10 +6,10 @@
 
 Сохраняются add5, add100, переменная saved=1000, повторный вызов add5 и весь результат 6101006. Только способ построения двух closures заменён на общий поэтапный adapter. Haskell использует собственное каррированное применение, Scala — Function2.curried. Самописные generic-компоненты 099 показаны отдельно и не импортируются в этих клиентах; дополнительная универсальность LMX не объявляется тождественной по реализации.
 
-| Допустимый LMX-клиент | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| [core_curry](examples/lmx/085_currying.lm3) | 292 | 23 |
-| [core](examples/lmx/variants/085_currying_core.lm3) | 308 | 22 |
+| Допустимый LMX-клиент | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| [core_curry](examples/lmx/085_currying.lm3) | 236 | 15 | 223 |
+| [core](examples/lmx/variants/085_currying_core.lm3) | 252 | 14 | 239 |
 
 ## Полные дополнительные тела
 
@@ -101,16 +101,18 @@ FxLambda:
 
 ## Стоимость общих зависимостей
 
-Полное транзитивное множество curry: **12576** непробельных символов / **654** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **1791** символов / **73** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.
+Полное транзитивное множество curry: **13482** непробельных символов / **690** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **1791** символов / **73** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.
 
-| Дополнительное определение | Источник | Символы | Строки |
-| --- | --- | ---: | ---: |
-| `FxCurryState` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 53 | 5 |
-| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 9 |
-| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 178 | 7 |
-| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 369 | 12 |
-| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 920 | 32 |
-| `FxOne` | [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx) | 97 | 8 |
+| Дополнительное определение | Источник | Символы | Строки | Без сложного Throws |
+| --- | --- | ---: | ---: | ---: |
+| `FxCurryState` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 53 | 5 | 53 |
+| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 9 | 141 |
+| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 178 | 7 | 178 |
+| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 369 | 12 | 369 |
+| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 920 | 32 | 920 |
+| `FxOne` | [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx) | 97 | 8 | 97 |
+
+Дополнительный подсчёт без сложного Throws: полное множество 12383, дополнительно к partial 1758. Ссылки и первый аргумент банков учтены; реальные контракты не сокращаются.
 
 ## Проверка
 

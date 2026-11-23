@@ -1,6 +1,6 @@
 # 084. Execute Around
 
-Переданные acquire/action/release исполняются вокруг защищённого использования ресурса. Основной LMX включает короткий локальный helper целиком; общий bracket сохранён как текущий вариант.
+Переданные acquire/action/release исполняются вокруг защищённого использования ресурса. Основной кратчайший клиент использует общий bracket; полный короткий авторский Around из22-Nov сохранён отдельным подходом.
 
 **Сравнения реализаций:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md). Это ссылки для чтения, не импорты самописных модулей в контрольные usage-клиенты.
 
@@ -26,56 +26,49 @@ Resource:
 Trace:
     int: mode 0
     int: events 0
-
-Acquire:
-    return: @
-    open:
+    eval:
+        Trace\events := events * 10 + x
+    code:
         throws: ResourceFailure
-        Trace\events := Trace\events * 10 + 1
-        if: Trace\mode = 2
+        eval()
+        if: Trace\mode = mode
             throw: ResourceFailure()
+    end: code
+    Acquire:
+        return: @
+        open:
+            throws: ResourceFailure
+            int: x 1
+            code(2)
         return: Resource
-
-Action:
-    @: resource
-    return: int
-    use:
-        throws: ResourceFailure
-        Trace\events := Trace\events * 10 + 2
-        if: Trace\mode = 1
-            throw: ResourceFailure()
+    Action:
+        @: resource
+        return: int
+        use:
+            throws: ResourceFailure
+            int: x 2
+            code(1)
         return: resource\value
-
-Release:
-    @: resource
-    close:
-        Trace\events := Trace\events * 10 + 3
-
-Example:
-    int: mode
-    return: int
-    run:
-        throws:
-            FxTypeToken
-            FxKernelFailure
-            ReceiverIndex
-            SequenceSize
-        Trace\mode := mode
-        Trace\events := 0
-        int: value \bracket(Acquire\open; Release\close; Action\use)
-        return: value * 1000 + Trace\events
-        catch: FxCallFailure (@: outcome)
-            char[]: actual outcome\failure
-            char[]: expected sys\name(ResourceFailure)
-            sys\assert(length(actual) = length(expected))
-            int: i 0
-            while: i < length(actual)
-                sys\assert(actual[i] = expected[i])
-                i += 1
-            return: -Trace\events
+    Release:
+        @: resource
+        close:
+            int: x 3
+            eval()
+        end: close
+    Example:
+        int: mode
+        return: int
+        run:
+            throws: copy(FxThrows\sequence)
+            Trace\mode := mode
+            Trace\events := 0
+            int: value \bracket(Acquire\open; Release\close; Action\use)
+            return: value * 1000 + Trace\events
+            catch: FxCallFailure (@: error)
+                return: -Trace\events
 ```
 
-Основной вариант вызывает встроенный bracket и обрабатывает FxCallFailure с проверкой исходного ResourceFailure. Самостоятельный Around оставлен только как отдельный процедурный подход и целиком показан ниже.
+В этом закрытом наборе Acquire/Action объявляют только ResourceFailure, Release не объявляет отказов. FxApply оборачивает только объявленные отказы своего target, а инфраструктурные отказы bracket идут отдельно. Поэтому здесь FxCallFailure означает именно ResourceFailure; проверка его имени и повторный throw не нужны. Payload принимается обычным @-параметром error, чтобы сохранить арность handler. FxCallFailure полностью обработан и не повторяется в outward throws. Общий клиент с произвольными callbacks обязан анализировать свой набор отказов. Доказательство: review/084_failure_boundary.md.
 
 [Исходник](examples/lmx/084_execute_around.lm3)
 
@@ -83,16 +76,18 @@ Example:
 
 ```haskell
 module ExecuteAroundExample where
-import Control.Exception (IOException, bracket, try)
+import Control.Exception (Exception, bracket, throwIO, try)
 import Data.IORef (newIORef, modifyIORef', readIORef)
 
 newtype Resource = Resource Int
+data ResourceFailure = ResourceFailure deriving Show
+instance Exception ResourceFailure
 
 run :: Int -> IO Int
 run mode = do
   events <- newIORef 0
   let note n = modifyIORef' events (\x -> x * 10 + n)
-      failure = ioError (userError "ResourceFailure")
+      failure = throwIO ResourceFailure
       acquire = do
         note 1
         if mode == 2 then failure else pure (Resource 42)
@@ -100,12 +95,12 @@ run mode = do
         note 2
         if mode == 1 then failure else pure value
       release _ = note 3
-  result <- try (bracket acquire release action) :: IO (Either IOException Int)
+  result <- try (bracket acquire release action) :: IO (Either ResourceFailure Int)
   logValue <- readIORef events
   pure (either (const (-logValue)) (\value -> value * 1000 + logValue) result)
 ```
 
-Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.
+Control.Exception.bracket и try; собственный тип ResourceFailure. try ловит только его, как Scala catch и основной LMX catch; все прочие исключения проходят наружу. Ручной проверки текста нет.
 
 [Исходник](examples/haskell/084_execute_around.hs)
 
@@ -208,33 +203,37 @@ Trace:
                 return: -Trace\events
 ```
 
-Самостоятельная композиция acquire/action/release через локальный Around и динамическое связывание. Это иной подход с прикладным контрактом; helper показан целиком, но не подменяет встроенный bracket в основном usage-сравнении.
+Полный авторский Around с непосредственным ResourceFailure и общим кодом Trace из 22-Nov сохранён как принципиально другой подход; весь helper входит в709 символов.
 
 [Исходник альтернативы](examples/lmx/variants/084_execute_around_local_callbacks.lm3)
 
 ## Подсчёт
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 802 | 48 |
-| Haskell | 566 | 19 |
-| Scala | 521 | 27 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 586 | 45 | 586 |
+| Haskell | 642 | 21 | — |
+| Scala | 521 | 27 | — |
 
 Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
 
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
+
 ## Удалённые малозначимые повторы
 
-Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
+Восстановлен основной короткий Around из 22-Nov. Общие Trace\eval и Trace\code написаны один раз. Варианты, отличающиеся только дублированием этого тела, исключены; второй подход — общий bracket.
 
 ## Семантические границы
 
 Общие наблюдения проверяют ошибку получения и действия. В 098 дополнительно описаны ошибка освобождения и остановка. Haskell маскирует асинхронные исключения при организации/освобождении ресурса; Scala объединяет два исключения по приоритету; LMX использует штатные finally и владение Message. Разные политики ошибок указаны явно.
 
+LMX ловит оболочку только замкнутого набора {ResourceFailure}; Haskell и Scala ловят собственный ResourceFailure. Проверки текста нет ни на одной стороне. FxKernelFailure/FxTypeToken/ReceiverIndex/SequenceSize и implicit failures не превращаются в ResourceFailure и проходят наружу. См. [доказательство и границы](review/084_failure_boundary.md).
+
 [Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
 
 ## English explanation
 
-Supplied acquire/action/release callbacks surround protected resource use. The shortest LMX includes its local helper in full; generic bracket remains a current alternative.
+Supplied acquire/action/release callbacks surround protected resource use. The shortest complete client uses core bracket; the full short author Around from22-Nov is retained as a distinct approach.
 
 **Scenario.** The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. Use core bracket, Haskell Control.Exception.bracket, or Scala Using.resource; each releases only an acquired resource and the client observes the failure and log.
 

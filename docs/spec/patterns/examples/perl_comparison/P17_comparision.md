@@ -4,7 +4,7 @@
 
 Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.
 
-Perl собирает список встроенным /g; LMX использует итератор Stop. Обе стороны явно материализуют один и тот же конечный результат.
+Perl собирает список встроенным /g. LMX материализует источник Stop общим collect, затем читает тексты общим map; оба результата конечны и упорядочены. Нулевое/пустое значение не используется как признак завершения. Общий collect сохраняет остальные объявленные отказы источника в FxCallFailure; фактический пример сравнивает успешные ASCII-входы.
 
 ## Вход и ожидаемый результат
 
@@ -25,10 +25,12 @@ Perl собирает список встроенным /g; LMX использу
 
 ## Размер выбранного варианта
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 517 | 343 | 15 |
-| Perl | 99 | 75 | 6 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 238 | 193 | 148 | 6 |
+| Perl | 99 | 75 | 75 | 6 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
 
@@ -41,17 +43,8 @@ Example:
     char[]: text
     return: @
     run:
-        throws: FxRecordArity PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        @: next eachMatch(byteText(text); (asciiLetter atLeast 1))
-        @[]: result []
-        while: 1
-            @: found next()
-            catch: Stop ()
-                break
-            int: at length(result)
-            sys\resize(result; at + 1)
-            result[at] := (matchedText(found) record)
-        return: result
+        throws: copy(FxThrows\sequencefixture) PatternArgument PatternEncoding PatternPosition
+        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedText)
 ```
 
 ## Perl
@@ -71,6 +64,8 @@ sub example {
 
 - eachMatch: [PI07](library_comparisons/PI07_comparision.md)
 - matchedText: [PI07](library_comparisons/PI07_comparision.md)
+- collect: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx); [транзитивные зависимости](library_comparisons/shared_dependencies.lmx). Отдельная Perl-пара этой операции не написана.
+- map: [PI01](library_comparisons/PI01_comparision.md)
 
 Штатные средства Perl: regex /g in list context.
 

@@ -10,10 +10,12 @@ LMX регистрирует finally до acquire и охраняет cleanup у
 
 ## Размер
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 784 | 526 | 24 |
-| Perl | 637 | 454 | 23 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 462 | 316 | 316 | 16 |
+| Perl | 637 | 454 | 454 | 23 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 ## LMX
 
@@ -29,21 +31,13 @@ FxAround:
     return: @
     around:
         throws: copy(FxThrows\traversal)
-        private: @: empty (copy(()))
         private: @: resourceArgs (copy(()))
         sys\resize(resourceArgs; 1)
-        private: @: acquired (copy(FxOutcome))
+        resourceArgs[0] := FxApply\apply(acquire; ())
         finally:
-            if: acquired\ok != 0
-                resourceArgs[0] := acquired\value
-                FxApply\apply(release; resourceArgs)
+            FxApply\apply(release; resourceArgs)
         ---
-        acquired := FxTry\attempt(acquire; empty)
-        if: acquired\ok = 0
-            throw: FxCallFailure(acquired)
-        resourceArgs[0] := acquired\value
-        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
-        return: FxApply\apply(action; actionArgs)
+        return: FxApply\apply(action; FxAppend\append(resourceArgs; arguments))
 ```
 
 ## Perl

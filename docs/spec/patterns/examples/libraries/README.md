@@ -21,9 +21,9 @@ representation (the legacy module name does not restrict its type variables).
 
 The LMX `Application`, `ProceduralCapture` and `EvaluationModes` files preserve
 explicit scenario mechanisms and evaluation fixtures. Generic core implementations
-are linked by the comparison documents; the small former Cycles/CharacterRange
-files now point to their single canonical core definitions instead of duplicating
-bodies. The per-scenario fixture type (such as Int for arithmetic) does not limit
+are linked by the comparison documents; Cycles preserves the complete short loop used by H09; CharacterRange points
+to its canonical core definition. The envelope-based iterateUntilStop adapter
+is explicitly a separate failure contract, not a requirement of H09. The per-scenario fixture type (such as Int for arithmetic) does not limit
 the generic apply, partial or lazy receiver.
 
 `Lazy.hs` implements zero-input lazyIO and generic onceIO with arbitrary input/result types. It includes owner checking, cycle detection and async-exception-safe state

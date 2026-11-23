@@ -1,0 +1,20 @@
+Probe:
+    int: calls 0
+    Test:
+        int: value
+        return: int
+        run:
+            Probe\calls += 1
+            return: value > 0
+
+Example:
+    int[]: items
+    return: @
+    run:
+        throws: copy(FxThrows\predicate)
+        Probe\calls := 0
+        int: a any(items; Probe\Test\run)
+        int: ac Probe\calls
+        Probe\calls := 0
+        int: b all(items; Probe\Test\run)
+        return: (a; ac; b; Probe\calls)

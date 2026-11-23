@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+from rebuild import production, metrics, public_roots, closure
 
 def lmx_checks(text):
     errors=[];stack=[];last=None;quote=None;escaped=False
@@ -17,7 +18,7 @@ def lmx_checks(text):
         if "\t" in line: errors.append(f"{n}: tab")
         indent=len(line)-len(line.lstrip())
         if indent%4: errors.append(f"{n}: indentation {indent}")
-        if last is not None and indent<last-4 and line.strip()!="---":
+        if last is not None and indent<last-4 and line.strip()!="---" and not line.lstrip().startswith("end:"):
             errors.append(f"{n}: multi-level decrease {last}->{indent} without cutter")
         last=indent
         for c in line:
@@ -65,6 +66,44 @@ def main():
         source_rows.append({"id":ex["id"],"lmx_status":"NOT_RUN","limited_source_status":"PASS" if not errors else "FAIL","errors":errors,"perl_imports":imports,"lmx_sha256":hashlib.sha256(lmx.encode()).hexdigest(),"foreign_sha256":hashlib.sha256(perl.encode()).hexdigest()})
         client_rows.append({"id":ex["id"],"syntax":"PASS" if not compiled.returncode else "FAIL","cases":outcomes})
         failures.extend(f"{ex['id']}: {e}" for e in errors)
+    available=production(); aliases=public_roots(available)
+    dependencies=json.loads((ROOT/"validation/implementation_dependencies.json").read_text())
+    current_stats=json.loads((ROOT/"statistics.json").read_text())
+    by_stats={(r['id'],r['language']):r for r in current_stats['rows']}
+    dependency_checks=[]
+    for definition in dependencies['definitions']:
+        name=definition['name']
+        okay=name in available and hashlib.sha256(available[name]['code'].encode()).hexdigest()==definition['sha256']
+        if not okay:failures.append('shared production source drift: '+name)
+        dependency_checks.append({'name':name,'status':'PASS' if okay else 'FAIL'})
+    for ex in data['examples']:
+        for name, source in ex['core_sources'].items():
+            if aliases.get(name)!=source['root']:failures.append(ex['id']+': wrong canonical source '+name)
+            if source['root'] not in available:failures.append(ex['id']+': missing canonical source '+name)
+        for alt in ex.get('alternatives',[]):
+            if alt['language']=='LMX':
+                failures.extend(ex['id']+' alternative: '+error for error in lmx_checks(alt['code']))
+                if metrics(alt['code'])['nonwhitespace']<metrics(ex['lmx'])['nonwhitespace']:
+                    failures.append(ex['id']+': shorter complete alternative was not selected')
+    md_entries=[]
+    for item in data['examples']+data['implementations']:
+        folder=ROOT/'library_comparisons' if item['id'].startswith('PI') else ROOT
+        md=(folder/(item['id']+'_comparision.md')).read_text()
+        md_ok=all('```'+language+'\n'+item[key]+'```' in md for language,key in [('lmx','lmx'),('perl','foreign')])
+        if not md_ok:failures.append(item['id']+': Markdown source block mismatch')
+        md_entries.append({'id':item['id'],'json_md_source_statistics':'PASS' if md_ok else 'FAIL'})
+        for language,key in [('LMX','lmx'),('Perl','foreign')]:
+            for field,value in metrics(item[key]).items():
+                if by_stats[item['id'],language][field]!=value:failures.append(item['id']+': stale metric '+field)
+    primary={name for item in data['implementations'] for source in item.get('lmx_extract',[]) for name in source['roots']}
+    all_names={row['name'] for row in dependencies['definitions']}
+    shared_names=all_names-primary
+    expected_shared='\n'.join(available[name]['code'] for name in sorted(shared_names))
+    actual_shared=(ROOT/'library_comparisons/shared_dependencies.lmx').read_text()
+    if actual_shared!=expected_shared:failures.append('shared dependencies source is stale')
+    failures.extend('shared dependencies: '+error for error in lmx_checks(actual_shared))
+    shared_report={'status':'PASS' if not failures else 'FAIL','checks':dependency_checks,'unique_definitions':len(all_names),'unpaired_functions':dependencies['unpaired_functions'],'shared_source_matches':actual_shared==expected_shared,'runtime':'NOT_RUN'}
+    (ROOT/'validation/dependency_source_checks.json').write_text(json.dumps(shared_report,ensure_ascii=False,indent=2)+'\n')
     coverage=json.loads((ROOT/"validation/library_coverage.json").read_text())
     failures.extend("uncovered core: "+n for n in coverage["missing"])
     implementation_sources=[]
@@ -92,8 +131,9 @@ def main():
     if implementation_run.stderr:
         failures.append("implementation diagnostics: "+implementation_run.stderr.strip())
     result={"runtime":runtime.stdout,"status":"PASS" if not failures else "FAIL","executed_cases":sum(len(r["cases"]) for r in client_rows),"implementation_executed_checks":implementation_checks,"clients":client_rows,"failures":failures,"lmx":"NOT_RUN"}
+    (ROOT/"validation/final_consistency.json").write_text(json.dumps({"status":result["status"],"checked_comparisons":len(md_entries),"checked_primary_source_files":len(md_entries)*2,"shared_source_files":1,"entries":md_entries,"dependency_definitions_checked":len(all_names),"errors":failures,"review":"Current canonical roots, source/JSON/MD/count consistency, named end syntax, complete alternative selection and transitive shared dependencies checked. LMX binding/types/lifetime remain runtime acceptance requirements.","lmx_execution":"NOT_RUN"},ensure_ascii=False,indent=2)+"\n")
     (ROOT/"validation/client_tests.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n")
-    (ROOT/"validation/source_checks.json").write_text(json.dumps({"scope":"Brackets, indentation, cutters, obsolete forms, source equality, allowed client imports; not full parsing/name/type/runtime proof.","lmx_runtime_executed":False,"rows":source_rows},ensure_ascii=False,indent=2)+"\n")
+    (ROOT/"validation/source_checks.json").write_text(json.dumps({"scope":"Brackets, indentation, fences/named end cutters, obsolete forms, source equality, allowed client imports; not full parsing/name/type/runtime proof.","lmx_runtime_executed":False,"rows":source_rows},ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"runtime":runtime.stdout,"cases":result["executed_cases"],"implementation_checks":implementation_checks,"status":result["status"],"failures":failures},ensure_ascii=False))
     return bool(failures)
 

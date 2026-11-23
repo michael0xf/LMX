@@ -44,7 +44,7 @@ trampoline(done(record)) returns that result record without invoking a continuat
 
 ### [084. Execute Around](084_execute_around_comparision.md)
 
-Supplied acquire/action/release callbacks surround protected resource use. The shortest LMX includes its local helper in full; generic bracket remains a current alternative.
+Supplied acquire/action/release callbacks surround protected resource use. The shortest complete client uses core bracket; the full short author Around from22-Nov is retained as a distinct approach.
 
 The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. Use core bracket, Haskell Control.Exception.bracket, or Scala Using.resource; each releases only an acquired resource and the client observes the failure and log.
 
@@ -54,7 +54,7 @@ run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure r
 
 Generic acquire/action/release: the resource, payload result and extra arguments are not tied to int.
 
-Implement the complete single-resource bracket contract: acquire once; action once; release once after successful acquisition on success, declared failure or supported orderly interruption; preserve arbitrary result/void. LMX preallocates cleanup actuals and registers outcome-guarded finally before acquiring, Haskell uses mask/restore, Scala preserves dual failures using Using-style severity and suppression.
+Implement the complete single-resource bracket contract: acquire once; action once; release once after successful acquisition on success, declared failure or supported orderly interruption; preserve arbitrary result/void. LMX preallocates cleanup actuals, stores the successful acquisition in the ready cell and registers finally before preparing the action. Haskell uses mask/restore; Scala preserves dual failures using Using-style severity and suppression.
 
 Success: log 123 and the action result. Body failure: log 123 and propagation. Acquisition failure: log 1 and no release. The adjacent client encodes these cases as 42123, −123 and −1.
 

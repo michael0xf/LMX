@@ -131,9 +131,10 @@ FxRetry:
 # carries its eventual result. No second asynchronous bracket engine is needed.
 # Merely posting work from action and returning does NOT extend resource lifetime.
 # A timeout is not cancellation. Ordinary stop exits run registered finally blocks.
-# Cleanup is registered before acquisition and guarded by its successful outcome.
-# Transfer of a successful acquired value through FxKernel remains the ordinary
-# provider ownership/lifetime contract; this source adds no atomic/mask primitive.
+# Allocate the cleanup argument vector before acquisition. Its one @[] slot is
+# filled by an ordinary reference store, which has no admission/allocation step.
+# Register finally after successful acquisition, as in the ordinary Around
+# example. Provider return/lifetime rules add no atomic/mask primitive.
 # Abrupt host-process death cannot be repaired by a language cleanup handler.
 FxAround:
     private:
@@ -144,21 +145,13 @@ FxAround:
     return: @
     around:
         throws: copy(FxThrows\traversal)
-        private: @: empty (copy(()))
         private: @: resourceArgs (copy(()))
         sys\resize(resourceArgs; 1)
-        private: @: acquired (copy(FxOutcome))
+        resourceArgs[0] := FxApply\apply(acquire; ())
         finally:
-            if: acquired\ok != 0
-                resourceArgs[0] := acquired\value
-                FxApply\apply(release; resourceArgs)
+            FxApply\apply(release; resourceArgs)
         ---
-        acquired := FxTry\attempt(acquire; empty)
-        if: acquired\ok = 0
-            throw: FxCallFailure(acquired)
-        resourceArgs[0] := acquired\value
-        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
-        return: FxApply\apply(action; actionArgs)
+        return: FxApply\apply(action; FxAppend\append(resourceArgs; arguments))
 
 FxRecoverState:
     @: operation 0

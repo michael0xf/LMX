@@ -1,16 +1,8 @@
-RetryPolicy:
-    @: outcome
-    return: int
-    unavailable:
-        if: outcome\ok = 0
-            return: 0
-        return: \outcome\value = 503
-
 RetryMessage:
-    @: worker
-    @: clock
-    @: sink
-    return: @
+    @: request
+    @: delay
+    return: int
     run:
-        throws: FxIndex
-        return: retryPost(worker\run; RetryPolicy\unavailable; 3; clock\elapsed; 1; 2; 1000; sink\complete)
+        throws: Attempts
+        import: RetryLibrary
+        return: request retry 3 delay

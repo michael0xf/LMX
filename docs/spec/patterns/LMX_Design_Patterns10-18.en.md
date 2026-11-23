@@ -26,19 +26,19 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 The main metric counts non-whitespace characters in each complete displayed program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns.
 
-| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 |
-| Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 |
-| Composite | 296 | 295 | 480 | 453 | 469 | 499 | 312 | 379 |
-| Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 |
-| Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 |
-| Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 |
-| Prototype | 180 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
-| Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 |
-| Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 |
-| **Total** | **2248** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
-| **Total / LMX** | 1.000× | 1.179× | 1.750× | 1.311× | 1.578× | 1.536× | 1.399× | 1.459× |
+| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust | LMX without complex Throws |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 | 152 |
+| Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 | 295 |
+| Composite | 296 | 295 | 480 | 453 | 469 | 499 | 312 | 379 | 296 |
+| Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 | 191 |
+| Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 | 170 |
+| Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 | 355 |
+| Prototype | 180 | 209 | 280 | 165 | 273 | 219 | 199 | 225 | 180 |
+| Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 | 333 |
+| Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 | 276 |
+| **Total** | **2248** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** | **2248** |
+| **Total / LMX** | 1.000× | 1.179× | 1.750× | 1.311× | 1.578× | 1.536× | 1.399× | 1.459× | — |
 
 ## 10. State
 

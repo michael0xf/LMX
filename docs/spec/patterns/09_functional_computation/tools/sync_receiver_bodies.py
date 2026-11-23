@@ -3,10 +3,16 @@
 from pathlib import Path
 import re,json,hashlib
 ROOT=Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0,str(ROOT.parent/'tools'))
+from throws_metrics import measure_throws
 LIB=ROOT.parent/'LMX_Fn_Receivers'
 SELECT={91:['FxMaybe','FxSome','FxNone','FxBind'],92:['FxBounce','FxDone','FxMore','FxTrampoline'],98:['FxAround'],99:['FxPartial']}
 def canon(s):return s.strip()+'\n'
-def metrics(s):return {'characters':sum(not c.isspace() for c in s),'lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode())}
+THROWS_DETAILS={}
+def metrics(s):
+ detail=measure_throws(s,ROOT.parent);THROWS_DETAILS[hashlib.sha256(s.encode()).hexdigest()]=detail
+ return {'characters':sum(not c.isspace() for c in s),'lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'without_complex_throws_characters':detail['without_complex_throws_characters'],'complex_throws_removed_characters':detail['removed_characters']}
 def blocks():
  found={}
  for path in sorted((LIB/'src').glob('*.lmx')):
@@ -67,13 +73,14 @@ def main():
  alias_paths=[p for p in (LIB/'src').glob('*.lmx') if re.search(r'^fun:\s*$',p.read_text(),re.M)]
  report['public_bundle']=[{'source':p.relative_to(LIB).as_posix(),**metrics(p.read_text()),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in alias_paths]
  (ROOT/'patterns.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+ report['throws_metrics_by_source_sha256']=THROWS_DETAILS
  (ROOT/'implementation_dependencies.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
- lines=['# Стоимость общих зависимостей функциональных примеров','Редакция 2026-11-23. Текущие общие тела ядра 091/092/098/099 извлечены непосредственно из [пакета ресиверов](../LMX_Fn_Receivers/README.md). Пример использования не оплачивает библиотеку при каждом обращении; сама библиотека также не объявляется бесплатной.','## Что входит в числа','Первичная таблица сравнения содержит клиент или собственное тело компонента. Эта таблица добавляет транзитивно вызываемые LMX-определения. Каждое определение считается целиком один раз внутри своей строки: Unicode-символы без пробелов и непустые строки; комментарии внутри определения включены. Между строками общие определения пересекаются, поэтому складывать столбец зависимостей без устранения повторов нельзя.','| ID | Основное тело, символы / строки | Общие LMX-зависимости, символы / строки | Сумма внутри компонента |\n| ---: | ---: | ---: | ---: |']
+ lines=['# Стоимость общих зависимостей функциональных примеров','Редакция 2026-11-23. Текущие общие тела ядра 091/092/098/099 извлечены непосредственно из [пакета ресиверов](../LMX_Fn_Receivers/README.md). Пример использования не оплачивает библиотеку при каждом обращении; сама библиотека также не объявляется бесплатной.','## Что входит в числа','Первичная таблица сравнения содержит клиент или собственное тело компонента. Эта таблица добавляет транзитивно вызываемые LMX-определения. Каждое определение считается целиком один раз внутри своей строки: Unicode-символы без пробелов и непустые строки; комментарии внутри определения включены. Между строками общие определения пересекаются, поэтому складывать столбец зависимостей без устранения повторов нельзя.','| ID | Основное тело, символы / строки | Общие LMX-зависимости, символы / строки | Сумма внутри компонента | Без сложного Throws: тело + зависимости |\n| ---: | ---: | ---: | ---: | ---: |']
  for rec in report['components']:
   a=rec['primary'];b=rec['shared']
-  lines[-1]+=f"\n| {rec['id']:03d} | {a['characters']} / {a['lines']} | {b['characters']} / {b['lines']} | {a['characters']+b['characters']} / {a['lines']+b['lines']} |"
+  lines[-1]+=f"\n| {rec['id']:03d} | {a['characters']} / {a['lines']} | {b['characters']} / {b['lines']} | {a['characters']+b['characters']} / {a['lines']+b['lines']} | {a['without_complex_throws_characters']} + {b['without_complex_throws_characters']} |"
  total=report['unique_required_total']
- lines+=['Все перечисленные реализации, включая companion curry для 085, с устранением повторов: **'+str(total['characters'])+' непробельных символов / '+str(total['lines'])+' непустых строк**. Это исходники выбранного набора определений, не размер бинарника или всего runtime.','## Публичный набор имён']
+ lines+=['Все перечисленные реализации, включая companion curry для 085, с устранением повторов: **'+str(total['characters'])+' непробельных символов / '+str(total['lines'])+' непустых строк**. Это исходники выбранного набора определений, не размер бинарника или всего runtime.','Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.','Дополнительная цена всего уникального множества без сложного Throws: **'+str(total['without_complex_throws_characters'])+'** символов.','## Публичный набор имён']
  if report['public_bundle']:
   for a in report['public_bundle']:lines.append(f"- [{a['source']}](../LMX_Fn_Receivers/{a['source']}): {a['characters']} символов / {a['lines']} строк. Общая таблица открывает все публичные имена; её следует считать один раз при загрузке полного набора.")
  else:lines.append('Публичный alias bundle должен быть синхронизирован перед окончательной публикацией; повторно запустить этот инструмент после его добавления.')

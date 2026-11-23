@@ -4,7 +4,7 @@
 
 Каждую максимальную последовательность ASCII-цифр заменить таким же количеством звёздочек. Длина строки и прочие символы сохраняются; callback вызывается один раз на выбранное совпадение.
 
-Здесь ширина совпадения — часть задачи, поэтому более короткая замена каждого числа единственным символом была бы другой программой.
+Ширина берётся из готового диапазона Match в byteText: повторного копирования matchedText не нужно. repeatText формирует ровно столько звёздочек, а replace вызывает Mask один раз на совпадение.
 
 ## Вход и ожидаемый результат
 
@@ -21,10 +21,12 @@
 
 ## Размер выбранного варианта
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 652 | 474 | 19 |
-| Perl | 114 | 88 | 6 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 374 | 287 | 242 | 12 |
+| Perl | 114 | 88 | 88 | 6 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
 
@@ -37,21 +39,14 @@ Mask:
     Match@: matched
     return: char[]
     make:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        char[]: text matchedText(matched)
-        char[]: result []
-        sys\resize(result; length(text))
-        int: i 0
-        while: i < length(text)
-            result[i] := '*'
-            i += 1
-        return: result
+        throws: copy(FxThrows\sequence)
+        return: repeatText("*"; matched\end - matched\begin)
 
 Example:
     char[]: text
     return: char[]
     run:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
+        throws: copy(FxThrows\sequence) PatternArgument PatternEncoding PatternPosition
         return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)
 ```
 
@@ -71,7 +66,7 @@ sub example {
 ## Отдельные реализации
 
 - replace: [PI07](library_comparisons/PI07_comparision.md)
-- matchedText: [PI07](library_comparisons/PI07_comparision.md)
+- repeatText: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardText.lmx); [транзитивные зависимости](library_comparisons/shared_dependencies.lmx). Отдельная Perl-пара этой операции не написана.
 
 Штатные средства Perl: s///ger, string repetition x.
 

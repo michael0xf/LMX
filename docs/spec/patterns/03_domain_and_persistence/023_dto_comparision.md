@@ -21,13 +21,10 @@ Export:
     @: account
     return: @
     dto:
-        @: result (copy(AccountDto))
-        result\id := account\id
-        result\cents := account\cents
-        return: result
+        return: (merge(AccountDto; (int: id account\id; int: cents account\cents)))
 ```
 
-AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake.
+AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake. Сокращение 23-Nov: One merge initializes both independent DTO fields; the source account is not returned.
 
 [Отдельный листинг](examples/lmx/023_dto.lm3)
 
@@ -63,7 +60,7 @@ public static class Export {
 
 ## Разбор LMX
 
-AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake.
+AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake. Сокращение 23-Nov: One merge initializes both independent DTO fields; the source account is not returned.
 
 ## Сопоставление
 
@@ -71,13 +68,15 @@ AccountDto — independent-шаблон двух готовых примитив
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 155 | 11 |
-| Python | 145 | 7 |
-| C# | 197 | 5 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 136 | 8 | 136 |
+| Python | 145 | 7 | — |
+| C# | 197 | 5 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 

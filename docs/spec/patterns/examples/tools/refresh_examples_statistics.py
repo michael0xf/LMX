@@ -6,10 +6,14 @@ import csv
 import hashlib
 import json
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATTERNS = ROOT.parent
 EDITION = '2026-11-23'
+sys.path.insert(0, str(PATTERNS/'tools'))
+from throws_metrics import measure_throws
+SUITES = {'julia':'julia_comparison', 'perl':'perl_comparison', 'sbcl':'SBCL_comparison'}
 
 def normalize(code):
     return code.replace('\r\n','\n').replace('\r','\n').strip()+'\n'
@@ -21,6 +25,11 @@ def metric(code):
             'nonblank_lines':sum(bool(x.strip()) for x in code.splitlines()),
             'utf8_bytes':len(code.encode()),
             'sha256':hashlib.sha256(code.encode()).hexdigest()}
+
+def lmx_metric(code):
+    result = metric(code)
+    result['without_complex_throws_characters'] = measure_throws(normalize(code), PATTERNS)['without_complex_throws_characters']
+    return result
 
 def write_json(path, value):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -45,34 +54,39 @@ def main():
         examples.append({'suite':'haskell','id':ident,'title':details.get('title',ident),
             'foreign_language':'Haskell','comparison_status':status,
             'lmx_source':item['file'],'foreign_source':'haskell/Analogies.hs',
-            'lmx':metric(code),'foreign':metric(foreign) if foreign.strip() else None,
+            'lmx':lmx_metric(code),'foreign':metric(foreign) if foreign.strip() else None,
             'ratio':metric(foreign)['characters']/metric(code)['characters'] if status=='complete_pair' else None,
             'contract':details.get('contract_notes',''),
             'source_symbols':details.get('source_symbols',[]),
             'runtime':{'LMX':'NOT_RUN','Haskell':'NOT_RUN'}})
     assert len(examples)==24 and len({x['id'] for x in examples})==24
-    for suite in ('julia','perl'):
-        directory=ROOT/(suite+'_comparison')
+    for suite, directory_name in SUITES.items():
+        directory=ROOT/directory_name
         data=json.loads((directory/'examples.json').read_text())
         assert len(data['examples'])>=24, suite
         assert len({x['id'] for x in data['examples']})==len(data['examples']),suite
         for item in data['examples']:
-            lm=metric(item['lmx']);fm=metric(item['foreign'])
+            lm=lmx_metric(item['lmx']);fm=metric(item['foreign'])
+            status=item.get('comparison_status','complete_pair')
+            files=item.get('source_files',{}) if isinstance(item.get('source_files'),dict) else {}
             examples.append({'suite':suite,'id':item['id'],'title':item['title'],
-                'foreign_language':data['foreign_language'],'comparison_status':'complete_pair',
-                'lmx_source':f'{suite}_comparison/source/lmx/{item["id"]}.lm3',
-                'foreign_source':f'{suite}_comparison/source/{suite}/{item["id"]}.'+('jl' if suite=='julia' else 'pl'),
-                'lmx':lm,'foreign':fm,'ratio':fm['characters']/lm['characters'],
+                'foreign_language':data['foreign_language'],'comparison_status':status,
+                'lmx_source':directory_name+'/'+files.get('lmx',f'source/lmx/{item["id"]}.lm3'),
+                'foreign_source':directory_name+'/'+files.get('foreign',f'source/{suite}/{item["id"]}.'+('jl' if suite=='julia' else 'pl')),
+                'lmx':lm,'foreign':fm,'ratio':fm['characters']/lm['characters'] if status=='complete_pair' else None,
                 'category':item.get('category',''),'contract':item['contract'],
                 'core_functions':item.get('core_functions',[]),
                 'foreign_dependencies':item.get('foreign_dependencies',[]),
                 'sources':item.get('sources',[]),
-                'alternatives':[{k:v for k,v in a.items() if k!='code'}|{'metrics':metric(a['code'])} for a in item.get('alternatives',[])],
+                'alternatives':[{k:v for k,v in a.items() if k!='code'}|{'metrics':lmx_metric(a['code'])} for a in item.get('alternatives',[])],
                 'runtime':{'LMX':'NOT_RUN',data['foreign_language']:'see suite validation'}})
-        for item in data.get('implementations',[]):
+        impl_data = data
+        if (directory/'implementation_data.json').exists():
+            impl_data = json.loads((directory/'implementation_data.json').read_text())
+        for item in impl_data.get('implementations',[]):
             implementations.append({'suite':suite,'id':item['id'],'title':item['title'],
                 'foreign_language':data['foreign_language'],'core_functions':item.get('core_functions',[]),
-                'lmx':metric(item['lmx']),'foreign':metric(item['foreign']),
+                'lmx':lmx_metric(item['lmx']),'foreign':metric(item['foreign']),
                 'contract':item['contract'],'sources':item.get('sources',[]),
                 'source_files':item.get('source_files',[]),'comparison_scope':'implementation_only',
                 'dependencies':item.get('implementation_dependencies',item.get('dependencies',[])),
@@ -97,12 +111,12 @@ def main():
         bodies={lang:'\n'.join(code for label,code in blocks if label==lang) for lang in ('lmx','haskell')}
         implementations.append({'suite':'haskell','id':'R01','title':'derive / record composition',
             'foreign_language':'Haskell','core_functions':['derive'],
-            'lmx':metric(bodies['lmx']),'foreign':metric(bodies['haskell']),
+            'lmx':lmx_metric(bodies['lmx']),'foreign':metric(bodies['haskell']),
             'comparison_file':'library_comparisons/r01_derive_comparision.md',
             'comparison_scope':'implementation_only','imported_by_clients':False,
             'contract':'Exact explicitly delimited comparison bodies, including the stated host representation boundary.'})
     summaries=[]
-    for suite in ('haskell','julia','perl'):
+    for suite in ('haskell',*SUITES):
         rows=[x for x in examples if x['suite']==suite]
         pairs=[x for x in rows if x['comparison_status']=='complete_pair']
         lm=sum(x['lmx']['characters'] for x in pairs)
@@ -113,16 +127,19 @@ def main():
             'lmx_only':sum(x['comparison_status']=='lmx_only' for x in rows),
             'all_lmx_characters':sum(x['lmx']['characters'] for x in rows),
             'paired_lmx_characters':lm,'paired_foreign_characters':fm,
+            'paired_lmx_without_complex_throws_characters':sum(x['lmx']['without_complex_throws_characters'] for x in pairs),
+            'all_lmx_without_complex_throws_characters':sum(x['lmx']['without_complex_throws_characters'] for x in rows),
             'paired_ratio':fm/lm if lm else None,
             'implementation_comparisons':sum(x['suite']==suite for x in implementations)})
     inventory=[]
     for path in sorted(ROOT.rglob('*')):
-        if not path.is_file() or path.suffix not in ('.lm3','.lmx','.hs','.jl','.pl','.pm'):continue
+        if not path.is_file() or path.suffix not in ('.lm3','.lmx','.hs','.jl','.pl','.pm','.lisp','.cl'):continue
         if '__pycache__' in path.parts:continue
         rel=path.relative_to(ROOT).as_posix()
         layer='implementation' if ('libraries/' in rel or 'library_comparisons/' in rel or '/implementation/' in rel) else 'source_or_fixture'
-        inventory.append({'file':rel,'layer':layer,'metrics':metric(path.read_text())})
+        inventory.append({'file':rel,'layer':layer,'metrics':lmx_metric(path.read_text()) if path.suffix in ('.lm3','.lmx') else metric(path.read_text())})
     result={'edition':EDITION,'metric':'nonwhitespace Unicode codepoints, nonblank lines, LF normalized; comments included within the declared source boundary',
+        'without_complex_throws_method':'Keep every header, first written Throws argument and complete copy reference. Measure referenced definitions once in their existing source/dependency boundary; do not modify the source.',
         'ratio':'foreign / LMX; computed only for complete pairs; ratios from different suites are not a language ranking',
         'counts':{'lmx_examples':len(examples),'complete_pairs':sum(x['complete_pairs'] for x in summaries),
                   'implementation_comparisons':len(implementations),'source_files':len(inventory)},
@@ -133,38 +150,40 @@ def main():
     write_json(ROOT/'STATISTICS.json',result)
     write_json(ROOT/'SOURCE_INVENTORY.json',{'edition':EDITION,'files':inventory,'sum_is_not_application_size':True})
     with (ROOT/'STATISTICS.csv').open('w',newline='') as out:
-        writer=csv.writer(out);writer.writerow(['suite','id','title','status','LMX_characters','foreign_language','foreign_characters','foreign_per_LMX','LMX_nonblank_lines','foreign_nonblank_lines'])
-        for x in examples:writer.writerow([x['suite'],x['id'],x['title'],x['comparison_status'],x['lmx']['characters'],x['foreign_language'],x['foreign']['characters'] if x['foreign'] else '',x['ratio'] if x['ratio'] is not None else '',x['lmx']['nonblank_lines'],x['foreign']['nonblank_lines'] if x['foreign'] else ''])
+        writer=csv.writer(out);writer.writerow(['suite','id','title','status','LMX_characters','без сложного Throws','foreign_language','foreign_characters','foreign_per_LMX','LMX_nonblank_lines','foreign_nonblank_lines'])
+        for x in examples:writer.writerow([x['suite'],x['id'],x['title'],x['comparison_status'],x['lmx']['characters'],x['lmx']['without_complex_throws_characters'],x['foreign_language'],x['foreign']['characters'] if x['foreign'] else '',x['ratio'] if x['ratio'] is not None else '',x['lmx']['nonblank_lines'],x['foreign']['nonblank_lines'] if x['foreign'] else ''])
     with (ROOT/'IMPLEMENTATIONS.csv').open('w',newline='') as out:
-        writer=csv.writer(out);writer.writerow(['suite','id','title','LMX_characters','foreign_language','foreign_characters','scope'])
-        for x in implementations:writer.writerow([x['suite'],x['id'],x['title'],x['lmx']['characters'],x['foreign_language'],x['foreign']['characters'],x['comparison_scope']])
+        writer=csv.writer(out);writer.writerow(['suite','id','title','LMX_characters','без сложного Throws','foreign_language','foreign_characters','scope'])
+        for x in implementations:writer.writerow([x['suite'],x['id'],x['title'],x['lmx']['characters'],x['lmx']['without_complex_throws_characters'],x['foreign_language'],x['foreign']['characters'],x['comparison_scope']])
     lines=['# Статистика всей директории examples','',f'Редакция **{EDITION}**. Подсчёт строится из текущих исходников, а не прежних PDF или таблиц.','',
         '## Сопоставимые наборы','',
-        '| Набор | Сценариев LMX | Полных пар | Поясняющих аналогий | Только LMX | LMX в полных парах | Контроль в полных парах | Контроль / LMX |',
-        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+        '| Набор | Сценариев LMX | Полных пар | Поясняющих аналогий | Только LMX | LMX в полных парах | без сложного Throws | Контроль в полных парах | Контроль / LMX |',
+        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
     for x in summaries:
         ratio=f'{x["paired_ratio"]:.3f}' if x['paired_ratio'] is not None else '—'
-        lines.append(f'| {x["foreign_language"]} | {x["examples"]} | {x["complete_pairs"]} | {x["related_analogies"]} | {x["lmx_only"]} | {x["paired_lmx_characters"]} | {x["paired_foreign_characters"]} | {ratio} |')
+        lines.append(f'| {x["foreign_language"]} | {x["examples"]} | {x["complete_pairs"]} | {x["related_analogies"]} | {x["lmx_only"]} | {x["paired_lmx_characters"]} | {x["paired_lmx_without_complex_throws_characters"]} | {x["paired_foreign_characters"]} | {ratio} |')
     lines.extend(['','Директория содержит '+str(len(examples))+' сценария LMX. Существующие 24 исходника сохранены. '
-        'Два новых набора подобраны под характерные задачи Julia и Perl. Их разные составы не дают '
+        'Отдельные наборы подобраны под характерные задачи Julia, Perl и Common Lisp/SBCL. Их разные составы не дают '
         'основания строить общий рейтинг языков. Неполная аналогия не считается нулевым размером '
         'другого языка и не участвует в отношениях.','',
         '## Основные листинги','',
-        '| Набор / ID | Сценарий | Статус | LMX: символы / строки | Контроль: символы / строки | Контроль / LMX |',
-        '| --- | --- | --- | ---: | ---: | ---: |'])
+        '| Набор / ID | Сценарий | Статус | LMX: символы / строки | без сложного Throws | Контроль: символы / строки | Контроль / LMX |',
+        '| --- | --- | --- | ---: | ---: | ---: | ---: |'])
     statuses={'complete_pair':'Полная пара','related_analogy':'Поясняющая аналогия','lmx_only':'Только LMX'}
     for x in examples:
         fm=f'{x["foreign"]["characters"]} / {x["foreign"]["nonblank_lines"]}' if x['foreign'] else '—'
         ratio=f'{x["ratio"]:.3f}' if x['ratio'] is not None else '—'
         title=x['title'].replace('|',r'\|')
-        lines.append(f'| [{x["suite"]} / {x["id"]}]({x["lmx_source"]}) | {title} | {statuses[x["comparison_status"]]} | {x["lmx"]["characters"]} / {x["lmx"]["nonblank_lines"]} | {fm} | {ratio} |')
+        lines.append(f'| [{x["suite"]} / {x["id"]}]({x["lmx_source"]}) | {title} | {statuses[x["comparison_status"]]} | {x["lmx"]["characters"]} / {x["lmx"]["nonblank_lines"]} | {x["lmx"]["without_complex_throws_characters"]} | {fm} | {ratio} |')
     lines.extend(['','## Сравнения реализаций','',
         'Эти размеры не прибавляются к каждому клиенту. Общие зависимости LMX могут встречаться '
         'в нескольких замыканиях; складывать строки этой таблицы как размер одного приложения нельзя. '
         'Клиенты контрольных языков не импортируют сравнительные модули.','',
-        '| Набор / ID | Операции | LMX: символы / строки | Контроль: символы / строки |','| --- | --- | ---: | ---: |'])
-    for x in implementations:lines.append(f'| {x["suite"]} / {x["id"]} | {x["title"].replace("|", " / ")} | {x["lmx"]["characters"]} / {x["lmx"]["nonblank_lines"]} | {x["foreign"]["characters"]} / {x["foreign"]["nonblank_lines"]} |')
+        '| Набор / ID | Операции | LMX: символы / строки | без сложного Throws | Контроль: символы / строки |','| --- | --- | ---: | ---: | ---: |'])
+    for x in implementations:lines.append(f'| {x["suite"]} / {x["id"]} | {x["title"].replace("|", " / ")} | {x["lmx"]["characters"]} / {x["lmx"]["nonblank_lines"]} | {x["lmx"]["without_complex_throws_characters"]} | {x["foreign"]["characters"]} / {x["foreign"]["nonblank_lines"]} |')
     lines.extend(['','## Метод и воспроизведение','',
+        'На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют точный контракт без повторения деклараций. Сокращать эти записи ради размера не хочется.', '',
+        'Колонка **«без сложного Throws»** сохраняет заголовок и первый написанный аргумент каждого списка, а также все ссылки `copy(...)`. Только аргументы после первого исключаются из дополнительного подсчёта. Сам список тоже учитывается, один раз в его исходной границе кода. Исходники не меняются; основные отношения размеров считаются по полному коду.', '',
         'Основная метрика — непробельные Unicode-символы, включая комментарии внутри явно выбранного '
         'листинга; вторая — непустые строки. Переводы строк нормализуются в LF, внешние пустые строки '
         'удаляются, добавляется один завершающий LF. JSON дополнительно хранит символы с пробелами, '
@@ -175,7 +194,7 @@ def main():
         'по явно указанному общему договору. Полные альтернативы сохраняются только при другом '
         'подходе. Код, убирающий обязательные эффекты, поля или проверки, не выбирается ради краткости.', '',
         'Исходные наборы: [Haskell coverage](haskell/comparison_index.json), '
-        '[Julia](julia_comparison/examples.json), [Perl](perl_comparison/examples.json). '
+        '[Julia](julia_comparison/examples.json), [Perl](perl_comparison/examples.json), [SBCL](SBCL_comparison/examples.json). '
         'Артефакты: [JSON](STATISTICS.json), [CSV](STATISTICS.csv), [XLSX](STATISTICS.xlsx), '
         '[PDF](STATISTICS.pdf), [реестр всех исходников](SOURCE_INVENTORY.json).', '',
         'Команды из корня spec: `python3 patterns/examples/tools/refresh_examples_statistics.py`, '

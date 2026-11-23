@@ -1,6 +1,6 @@
 # Прямые публичные ресиверы и Expression-операнды
 
-Редакция 2026-11-23. Сохранены все 115 вызовных имён загруженного комплекта и добавлены 8 функций из сравнений реализаций. Всего 123 уникальных публичных имён lowerCamelCase.
+Редакция 2026-11-23. Сохранены все 123 вызовных имён загруженного комплекта 23-Nov и добавлены 89 функций по сопоставлению операторов и стандартных библиотек, включая случаи вне примеров. Всего 212 уникальных публичных имён lowerCamelCase.
 
 Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.
 `BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.
@@ -132,6 +132,95 @@
 | 121 | `iterateUntilStop` | новое | `iterateUntilStop(iteration; body)` | [src/coreComparisonExamples.lmx](src/coreComparisonExamples.lmx) | BODY_WITH_BRIDGE |
 | 122 | `sort` | новое | `sort(items; compare)` | [src/corePerlExamples.lmx](src/corePerlExamples.lmx) | BODY_WITH_BRIDGE |
 | 123 | `unique` | новое | `unique(items; same)` | [src/corePerlExamples.lmx](src/corePerlExamples.lmx) | BODY_WITH_BRIDGE |
+| 124 | `take` | новое | `take(items; count)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 125 | `drop` | новое | `drop(items; count)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 126 | `splitAt` | новое | `splitAt(items; count)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 127 | `takeWhile` | новое | `takeWhile(items; accepts)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 128 | `dropWhile` | новое | `dropWhile(items; accepts)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 129 | `span` | новое | `span(items; accepts)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 130 | `partition` | новое | `partition(items; accepts)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 131 | `enumerate` | новое | `enumerate(items; start=0)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 132 | `windows` | новое | `windows(items; width=2; step=1; partial=0)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 133 | `chunks` | новое | `chunks(items; size; strict=0)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 134 | `intersperse` | новое | `intersperse(items; separatorRecord)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 135 | `intercalate` | новое | `intercalate(parts; separator)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 136 | `unzip` | новое | `unzip(pairs)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 137 | `foldr` | новое | `foldr(items; seedRecord; step)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 138 | `scanr` | новое | `scanr(items; seedRecord; step)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 139 | `filterMap` | новое | `filterMap(items; transform)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 140 | `mapWhile` | новое | `mapWhile(items; transform)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 141 | `findMap` | новое | `findMap(items; transform)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 142 | `mapAccumL` | новое | `mapAccumL(items; seedRecord; step)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 143 | `mapAccumR` | новое | `mapAccumR(items; seedRecord; step)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 144 | `groupAdjacent` | новое | `groupAdjacent(items; keyOf; sameKey)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 145 | `replicate` | новое | `replicate(valueRecord; count)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 146 | `cycle` | новое | `cycle(items; count)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 147 | `starmap` | новое | `starmap(rows; operation)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 148 | `zipLongest` | новое | `zipLongest(first; second; fillRecord)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 149 | `collect` | новое | `collect(next; limit=-1)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 150 | `includes` | новое | `includes(items; valueRecord; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 151 | `adjoin` | новое | `adjoin(items; valueRecord; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 152 | `union` | новое | `union(first; second; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 153 | `intersection` | новое | `intersection(first; second; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 154 | `difference` | новое | `difference(first; second; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 155 | `symmetricDifference` | новое | `symmetricDifference(first; second; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 156 | `isSubset` | новое | `isSubset(first; second; same)` | [src/coreStandardFunctional.lmx](src/coreStandardFunctional.lmx) | BODY_WITH_BRIDGE |
+| 157 | `mapOption` | новое | `mapOption(input; transform)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 158 | `filterOption` | новое | `filterOption(input; accepts)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 159 | `orElse` | новое | `orElse(input; fallback)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 160 | `orElseGet` | новое | `orElseGet(input; fallback)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 161 | `orElseOption` | новое | `orElseOption(input; fallback)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 162 | `foldOption` | новое | `foldOption(input; whenEmpty; whenPresent)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 163 | `flattenOption` | новое | `flattenOption(input)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 164 | `mapResult` | новое | `mapResult(input; transform)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 165 | `mapErr` | новое | `mapErr(input; transform)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 166 | `orElseResult` | новое | `orElseResult(input; fallback)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 167 | `foldResult` | новое | `foldResult(input; onError; onSuccess)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 168 | `attempt` | новое | `attempt(operation; args=())` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 169 | `tap` | новое | `tap(value; action)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 170 | `findField` | новое | `findField(source; label; occurrence)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 171 | `hasField` | новое | `hasField(source; label; occurrence)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 172 | `getField` | новое | `getField(source; label; occurrence)` | [src/coreStandardObjects.lmx](src/coreStandardObjects.lmx) | BODY_WITH_BRIDGE |
+| 173 | `assoc` | новое | `assoc(rows; key; same; keyIndex=0)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 174 | `pairlis` | новое | `pairlis(keys; values; tail=())` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 175 | `getProperty` | новое | `getProperty(properties; key; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 176 | `setProperty` | новое | `setProperty(properties; key; value; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 177 | `removeProperty` | новое | `removeProperty(properties; key; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 178 | `getProperties` | новое | `getProperties(properties; indicators; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 179 | `asOperand` | новое | `asOperand(operation; priority)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 180 | `mismatch` | новое | `mismatch(first; second; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 181 | `searchSequence` | новое | `searchSequence(items; pattern; same; start=0)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 182 | `substitute` | новое | `substitute(items; oldValue; newValue; same)` | [src/coreStandardLisp.lmx](src/coreStandardLisp.lmx) | BODY_WITH_BRIDGE |
+| 183 | `indexOf` | новое | `indexOf(text; part; start=0)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY |
+| 184 | `lastIndexOf` | новое | `lastIndexOf(text; part; start=length(text))` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY |
+| 185 | `compareText` | новое | `compareText(first; second)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 186 | `trim` | новое | `trim(text; chars=" \t\r\n\v\f")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 187 | `trimStart` | новое | `trimStart(text; chars=" \t\r\n\v\f")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 188 | `trimEnd` | новое | `trimEnd(text; chars=" \t\r\n\v\f")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 189 | `repeatText` | новое | `repeatText(text; count)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 190 | `padLeft` | новое | `padLeft(text; width; fill=" ")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 191 | `padRight` | новое | `padRight(text; width; fill=" ")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 192 | `translate` | новое | `translate(text; from; to)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 193 | `join` | новое | `join(parts; separator="")` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 194 | `formatInt` | новое | `formatInt(value; base=10)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 195 | `parseInt` | новое | `parseInt(text; base=10)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY |
+| 196 | `removePrefix` | новое | `removePrefix(text; affix)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 197 | `removeSuffix` | новое | `removeSuffix(text; affix)` | [src/coreStandardText.lmx](src/coreStandardText.lmx) | BODY_WITH_BRIDGE |
+| 198 | `sum` | новое | `sum(items; initial=(0 record))` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 199 | `product` | новое | `product(items; initial=(1 record))` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 200 | `minimum` | новое | `minimum(items)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY_WITH_BRIDGE |
+| 201 | `maximum` | новое | `maximum(items)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY_WITH_BRIDGE |
+| 202 | `argMin` | новое | `argMin(items)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY_WITH_BRIDGE |
+| 203 | `argMax` | новое | `argMax(items)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY_WITH_BRIDGE |
+| 204 | `extrema` | новое | `extrema(items)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY_WITH_BRIDGE |
+| 205 | `min` | новое | `min(first; second)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 206 | `max` | новое | `max(first; second)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 207 | `minMax` | новое | `minMax(first; second)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 208 | `clamp` | новое | `clamp(value; lower; upper)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 209 | `sign` | новое | `sign(value)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 210 | `gcd` | новое | `gcd(first; second)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 211 | `lcm` | новое | `lcm(first; second)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
+| 212 | `divMod` | новое | `divMod(dividend; divisor)` | [src/coreStandardNumeric.lmx](src/coreStandardNumeric.lmx) | BODY |
 
 ## Области применения
 
@@ -258,6 +347,95 @@
 - **iterateUntilStop** — execute accepted declaration DATA and associated body in their receiving activation; source Stop terminates, other declared exits retain name/payload in FxCallFailure; requires AE01.
 - **sort** — stable nonmutating generic merge sort; three-way int comparator; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input.
 - **unique** — stable first-occurrence uniqueness with explicit typed equality predicate; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input.
+- **take** — Fresh prefix; count is clamped to 0..length..
+- **drop** — Fresh suffix after a clamped count..
+- **splitAt** — Both slices use one clamped cut; source remains unchanged..
+- **takeWhile** — Longest true prefix; predicate runs once per visited item, including first rejection..
+- **dropWhile** — Suffix begins with first rejected item; no later predicates are evaluated..
+- **span** — One prefix scan supplies both parts, without reevaluating an effectful predicate..
+- **partition** — Stable two-way partition with exactly one predicate call per item..
+- **enumerate** — Indices are admitted to the current int type from exact arithmetic; no wrapping index is accepted..
+- **windows** — Positive width/step; full windows by default. partial permits one last nonempty short window. No suffix after a window reaches the end..
+- **chunks** — Nonoverlapping chunks, final short chunk permitted unless strict; invalid size fails before iteration..
+- **intersperse** — Insert an admitted separator between items; empty and singleton inputs do not admit an unused separator..
+- **intercalate** — Separate sequence parts and concatenate; empty parts returns a fresh empty sequence of separator profile..
+- **unzip** — Reverse the existing zip FxPair protocol; empty input returns two fresh empty record Arrays..
+- **foldr** — Strict finite right fold; step(item,accumulator), right-to-left callback order..
+- **scanr** — Right scan includes the seed at the final position; right-to-left callbacks..
+- **filterMap** — Map to Maybe and keep present values, preserving zero/empty/reference values..
+- **mapWhile** — Map to Maybe; stop at first none, without calling later items..
+- **findMap** — Return the first present callback result; return none when all are absent..
+- **mapAccumL** — step(state,item) returns FxPair(next state,output); callbacks left-to-right..
+- **mapAccumR** — Same stateful transform, callbacks right-to-left, outputs at original positions..
+- **groupAdjacent** — Consecutive equal-key runs; keyOf once per item and sameKey once per adjacent pair..
+- **replicate** — Finite copies of one ready value record; negative count gives empty; reference values retain one target..
+- **cycle** — Required finite repetition count; nonpositive count gives empty; preflight result size..
+- **starmap** — Each ready row becomes one actual vector; one typed callback result per row. No source graph field is executed while reading it..
+- **zipLongest** — Two sequences padded to the longer length with the explicit complete fill value record..
+- **collect** — Nullary producer through the existing call bridge until its Stop(), or finite limit; other declared failures retain their name and payload inside FxCallFailure..
+- **includes** — Ordered short-circuit membership with explicit typed equality; no conflict with regex contains..
+- **adjoin** — Return original source if already present; otherwise return a fresh same-profile Array with the new value prepended..
+- **union** — Unique first occurrences from first then second; pure equivalence relation required..
+- **intersection** — Unique first-source values present in second, preserving first-source order..
+- **difference** — Unique first-source values absent from second; set difference, not Haskell list multiset subtraction..
+- **symmetricDifference** — First-only values then second-only values, each once; use existing difference and concat..
+- **isSubset** — Every equivalence class from first appears in second; multiplicity is ignored..
+- **mapOption** — Map one present payload to a new Maybe; absent input skips transform; Some(null) stays present..
+- **filterOption** — Retain the same present container when an int predicate accepts its payload; absent or rejected input yields absence..
+- **orElse** — Return the existing payload record or an already evaluated fallback record; result is not a Maybe..
+- **orElseGet** — Return the payload record; invoke a nullary fallback only when absent..
+- **orElseOption** — Return the original present Maybe, or call the nullary fallback once and return its Maybe unchanged..
+- **foldOption** — Invoke exactly one branch, a nullary absent branch or unary payload branch; return its typed result record..
+- **flattenOption** — Flatten one Maybe-of-Maybe level, retaining the nested container identity; absent outer input skips payload access..
+- **mapResult** — Map only success payload into a fresh ok result; retain the existing error container without invoking transform..
+- **mapErr** — Map only error payload into a fresh err result; retain the existing success container without invoking transform..
+- **orElseResult** — Invoke one error-to-Result continuation only on err; return its Result without nesting; success identity retained..
+- **foldResult** — Invoke exactly one unary branch with the corresponding typed payload; return its result record..
+- **attempt** — Invoke through existing FxTry; return ok(result record) or err(typed reference record to full original FxOutcome); kernel/admission failures propagate..
+- **tap** — Call one effect with the actual typed payload and return the exact original value record; no deep copying or swallowing failure..
+- **findField** — Maybe of the selected physical field record; required zero-based occurrence counts equal ready names only; no payload evaluation..
+- **hasField** — Whether that physical named occurrence exists; named uninitialized payloads count as present; no payload evaluation..
+- **getField** — Return the existing selected field record; missing or negative occurrence raises FxIndex; no payload evaluation..
+- **assoc** — First matching row as Maybe; keyIndex=1 covers reverse association with the same search; empty rows skipped..
+- **pairlis** — Fresh forward-ordered key/value rows then shallow tail rows; equal lengths required..
+- **getProperty** — Maybe of the first matching flat property value; present zero/null differs from absent..
+- **setProperty** — Update first matching value, otherwise append a key/value pair; return same target Array..
+- **removeProperty** — Remove first matching key/value pair; return int 1 if found, otherwise 0..
+- **getProperties** — First property whose key matches any indicator; Maybe of key/value/index; Array index is explicit, not a Lisp cons tail..
+- **asOperand** — Construct one ordinary OPERANDS_TEMPLATE-compatible prepared operand; present left then right actuals, exact source R/void and named failures. No new syntax mode..
+- **mismatch** — Maybe of first differing index, or shared-prefix length when only lengths differ; no difference yields none..
+- **searchSequence** — Maybe of first full subsequence start at or after start; empty pattern matches start; explicit equality..
+- **substitute** — Fresh same-profile Array, replacing every equivalent element; source unchanged and referenced targets shared..
+- **indexOf** — First literal byte-substring index at or after clamped start; -1 absent. Empty part matches the chosen valid boundary..
+- **lastIndexOf** — Last literal byte-substring index at or before clamped start; overlapping candidates are tested, -1 absent..
+- **compareText** — Unsigned-octet lexicographic order -1/0/1; exact case-sensitive content, length breaks an equal-prefix tie..
+- **trim** — Fresh byte slice after removing any chosen boundary characters on both sides; default is six ASCII whitespace characters..
+- **trimStart** — The same shared trim algorithm at the start only..
+- **trimEnd** — The same shared trim algorithm at the end only..
+- **repeatText** — Fresh repeated char[] through the shared generic cycle algorithm; negative count is SequenceSize..
+- **padLeft** — Fresh byte string of at least width units; repeat then truncate fill at the left, preserve text when already long enough..
+- **padRight** — The same shared padding algorithm with padding on the right..
+- **translate** — Simultaneous literal byte substitution, equal-size alphabets, first duplicate source entry wins, unknown bytes retained..
+- **join** — Join already rendered char[] parts through shared intercalate; no hidden printer or implicit coercion..
+- **formatInt** — Exact signed bigint to lowercase digits in radix 2..36; shared with the internal nonnegative decimal name builder..
+- **parseInt** — Strict whole-input signed bigint parse in radix 2..36; optional sign, ASCII digits case-insensitive, no whitespace/prefix/trailing text..
+- **removePrefix** — Remove one exact leading affix when present; fresh slice either way..
+- **removeSuffix** — The same affix-removal algorithm at the end..
+- **sum** — Common (+ initial copy(items)) Expression over actual ready numeric fields; empty input returns the initial value record..
+- **product** — Common (* initial copy(items)) Expression over actual ready numeric fields; empty input returns the initial value record..
+- **minimum** — First least ordered numeric value as its original typed record; empty input raises SequenceSize..
+- **maximum** — First greatest ordered numeric value as its original typed record; empty input raises SequenceSize..
+- **argMin** — Zero-based first index of the least ordered numeric value, using the same extremum loop..
+- **argMax** — Zero-based first index of the greatest ordered numeric value, using the same extremum loop..
+- **extrema** — Pair of original minimum and maximum records; delegates to the two existing extremum directions..
+- **min** — Choose the lesser of two typed ordered numeric value records; first identity wins ties..
+- **max** — Choose the greater of two typed ordered numeric value records; first identity wins ties..
+- **minMax** — Both original records in nondecreasing order; ties preserve input order and both identities..
+- **clamp** — Closed ordered interval through shared min/max; reversed bounds raise NumericDomain..
+- **sign** — Int -1/0/1 for ordered numeric values; no IEEE NaN or complex sign contract is claimed..
+- **gcd** — Exact nonnegative bigint Euclidean GCD, including gcd(0;0)=0..
+- **lcm** — Exact nonnegative bigint LCM through gcd; any zero input yields zero..
+- **divMod** — Exact bigint floor quotient and remainder with divisor sign; zero divisor raises NumericDomain..
 
 ## Готовые значения, требования и исходы
 

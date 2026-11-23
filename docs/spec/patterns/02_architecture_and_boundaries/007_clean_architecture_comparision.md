@@ -34,12 +34,12 @@ UseCase:
     @: output
     return: int
     execute:
-        return: output(decision := Policy\eligible(income; expense))
+        return: output(decision := Policy\eligible())
     demo:
         return: execute(100; 60; Presenter\render)
 ```
 
-Вызов UseCase\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI.
+Вызов UseCase\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI. Сокращение 23-Nov: income/expense use ordinary autofill; the predicate still sees both actual values.
 
 [Отдельный листинг](examples/lmx/007_clean_architecture.lm3)
 
@@ -79,7 +79,7 @@ func demo() int { return execute(100, 60, render) }
 
 ## Разбор LMX
 
-Вызов UseCase\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI.
+Вызов UseCase\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI. Сокращение 23-Nov: income/expense use ordinary autofill; the predicate still sees both actual values.
 
 ## Сопоставление
 
@@ -91,13 +91,15 @@ func demo() int { return execute(100, 60, render) }
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 300 | 22 |
-| Java | 341 | 9 |
-| Go | 268 | 7 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 286 | 22 | 286 |
+| Java | 341 | 9 | — |
+| Go | 268 | 7 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 

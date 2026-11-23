@@ -28,12 +28,12 @@ Presentation:
     int: quantity
     return: int
     handle:
-        return: Application\total(quantity)
+        return: Application\total()
     demo:
         return: handle(3)
 ```
 
-Вызов Presentation\demo(). Структуры задают слои и явные зависимости вниз.
+Вызов Presentation\demo(). Структуры задают слои и явные зависимости вниз. Сокращение 23-Nov: Same-named quantity uses ordinary autofill across the layer call.
 
 [Отдельный листинг](examples/lmx/005_layered_architecture.lm3)
 
@@ -72,7 +72,7 @@ func demo() int { return presentationHandle(3) }
 
 ## Разбор LMX
 
-Вызов Presentation\demo(). Структуры задают слои и явные зависимости вниз.
+Вызов Presentation\demo(). Структуры задают слои и явные зависимости вниз. Сокращение 23-Nov: Same-named quantity uses ordinary autofill across the layer call.
 
 ## Сопоставление
 
@@ -84,13 +84,15 @@ func demo() int { return presentationHandle(3) }
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 195 | 16 |
-| Java | 274 | 10 |
-| Go | 217 | 5 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 187 | 16 | 187 |
+| Java | 274 | 10 | — |
+| Go | 217 | 5 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 

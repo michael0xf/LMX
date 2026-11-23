@@ -16,7 +16,7 @@ P0 retains every written group. The common operand handler opens one outer RHS g
 
 All public receivers are part of the one current kernel namespace. `fun\const` is a physical source export group, not an optional package version or second registry. Service inputs remain private; source user inputs retain their individual policy.
 
-The current package has **19 integration bridges**: the eight original interfaces in §2 plus the read-only compatibility observation AR01, five ordinary call-phase hooks in §3, four common Array boundaries in §6, and the accepted-form gate AE01 below. These are internal boundaries, separate from the **123 public callable/operand names** and **24 other exported symbols** listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json).
+The current package has **19 integration bridges**: the eight original interfaces in §2 plus the read-only compatibility observation AR01, five ordinary call-phase hooks in §3, four common Array boundaries in §6, and the accepted-form gate AE01 below. These are internal boundaries, separate from the **212 public callable/operand names** and **24 other exported symbols** listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json).
 
 The bridge profile uses empty payload `()` for service exits `FxKernelFailure`
 and `FxTypeToken`. This defines the adapter service outcomes only. User-declared

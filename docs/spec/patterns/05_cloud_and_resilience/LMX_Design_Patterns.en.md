@@ -27,25 +27,25 @@ LMX stores the machine in a Message; Go and C# use an instance. The serial contr
 
 Bounded retry of a transient failure with delay between attempts.
 
-**Separate implementation comparison:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+**Separate implementation comparison:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
 **Scenario:** An idempotent read returns 503,503,200. Allow three attempts and delays of 1 and 2 units.
 
 **Observation:** Final status 200; three calls and two delays. Status 400 stops retries immediately.
 
-Usage calls direct LMX retryPost and real Go/.NET retry libraries. Independently written asynchronous implementations are compared only in097. Their result and cleanup-settled boundaries are stated separately.
+The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.
 
-### 097. [RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+### 097. [Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
-Implement a finite asynchronous retry policy with explicit completion and outstanding-work lifetime.
+A shared application implementation of bounded HTTP-503 retry for the Retry and Ambassador clients.
 
 **Usage examples:** [039. Retry](039_retry_comparision.md), [045. Ambassador](045_ambassador_comparision.md)
 
-**Scenario:** Preserve503,503,200 with3 attempts and1,2 delays, and503,200 with2 attempts/no delay. Also test immediate400, one-attempt exhaustion, predicate failure, cancellation, per-attempt timeout, late completion and one terminal notification.
+**Scenario:** The first client chooses 3 attempts and a recording delay: request returns 503,503,200. The second chooses 2 attempts without delay: request returns 503,200. Also check immediate completion on 400 and no retry when the limit is 1.
 
-**Observation:** Normal result after the configured finite budget. Only explicit retryOn accepts a repeated outcome. Timeout/cancel ends the policy once; late remote work may still finish and must settle before its retained resources are released.
+**Observation:** The first client receives 200 after 3 calls and delays [1,2]. The second receives 200 after 2 calls without delays. A 400 returns after one call; limit 1 returns 503 without delay. An invalid attempt limit is rejected before request.
 
-The three implementations show their complete policy state and algorithm. LMX reuses ordinary Message/post correlation and its existing delay host port; Go uses goroutines/channels/timers; C# uses Task and cancellation. No mock library is imported by the separate usage clients.
+These are complete application implementations of the same API, not an imported retry on one side versus a handwritten loop on another. LMX uses an ordinary operand, Go an exported package function, and C# a static method. The two clients share one library implementation. Client and implementation sizes are reported separately; their sum is not claimed to be smaller than the original standalone listings. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.
 
 ### 040. [Bulkhead](040_bulkhead_comparision.md)
 
@@ -91,13 +91,13 @@ The core is small in every language; Sidecar is primarily deployment: two proces
 
 A local network proxy hides the remote endpoint and retry policy from its client.
 
-**Separate implementation comparison:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+**Separate implementation comparison:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
 **Scenario:** The client requests a catalog. The ambassador calls its configured endpoint: first status 503, then 200.
 
 **Observation:** The client receives 200; the remote provider is called twice with the same endpoint and route.
 
-All clients retain the catalog HTTP boundary and configured endpoint/route; LMX uses direct retryPost, Go and C# use real retry libraries. Implementation097 is not imported by either control.
+The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.
 
 ### 049. [Cache-Aside](049_cache_aside_comparision.md)
 

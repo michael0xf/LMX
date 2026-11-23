@@ -2,7 +2,7 @@
 """Render the complete examples directory metrics; source execution is separate."""
 from pathlib import Path
 import importlib.util
-import json
+import json,hashlib
 from reportlab.platypus import Spacer,PageBreak,TableStyle
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -23,31 +23,36 @@ def cases(rows,language):
     for x in rows:
         foreign=f"{x['foreign']['characters']} / {x['foreign']['nonblank_lines']}" if x['foreign'] else '—'
         ratio=f"{x['ratio']:.3f}×" if x['ratio'] is not None else '—'
-        body.append([x['id'],x['title'],f"{x['lmx']['characters']} / {x['lmx']['nonblank_lines']}",foreign,ratio,STATUS[x['comparison_status']]])
-    result=table(['ID','Сценарий','LMX\nсимв. / стр.',language+'\nсимв. / стр.','Контроль / LMX','Граница'],body,[45,285,105,105,100,110])
+        body.append([x['id'],x['title'],f"{x['lmx']['characters']} / {x['lmx']['nonblank_lines']}",x['lmx']['without_complex_throws_characters'],foreign,ratio,STATUS[x['comparison_status']]])
+    result=table(['ID','Сценарий','LMX\nсимв. / стр.','без сложного\nThrows',language+'\nсимв. / стр.','Контроль / LMX','Граница'],body,[40,235,90,90,90,90,100])
     result.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2)]))
+    style.highlight_minimums(result,[(i+1,(2,x['lmx']['characters']),(3,x['lmx']['without_complex_throws_characters']),[(4,x['foreign']['characters'])]) for i,x in enumerate(rows) if x['comparison_status']=='complete_pair'])
     return result
 
 def implementations(rows,all_suites=False):
-    result=table(['Набор / ID' if all_suites else 'ID','Операции','LMX\nсимв. / стр.','Контроль\nсимв. / стр.'],
-        [[(x['foreign_language']+' / ' if all_suites else '')+x['id'],x['title'],f"{x['lmx']['characters']} / {x['lmx']['nonblank_lines']}",f"{x['foreign']['characters']} / {x['foreign']['nonblank_lines']}"] for x in rows],
-        [100,400,125,125] if all_suites else [65,435,125,125])
+    result=table(['Набор / ID' if all_suites else 'ID','Операции','LMX\nсимв. / стр.','без сложного\nThrows','Контроль\nсимв. / стр.'],
+        [[(('SBCL' if x['suite']=='sbcl' else x['foreign_language'])+' / ' if all_suites else '')+x['id'],x['title'],f"{x['lmx']['characters']} / {x['lmx']['nonblank_lines']}",x['lmx']['without_complex_throws_characters'],f"{x['foreign']['characters']} / {x['foreign']['nonblank_lines']}"] for x in rows],
+        [100,330,110,100,110] if all_suites else [65,365,110,100,110])
     result.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2)]))
+    style.highlight_minimums(result,[(i+1,(2,x['lmx']['characters']),(3,x['lmx']['without_complex_throws_characters']),[(4,x['foreign']['characters'])]) for i,x in enumerate(rows)])
     return result
 
 def method():
     return [p('Граница подсчёта и проверка','HeadingLMX'),
         p('Непробельные Unicode-символы и непустые строки полного основного листинга. Необходимые объявления, импорты и предметный код включены. Тестовая обвязка, отдельная реализация ядра и существенные альтернативы исключены из клиента и описаны отдельно.'),
         p('Клиенты контрольного языка используют настоящие средства языка или библиотеки. Их самостоятельные реализации сохранены для сравнения с LMX и не подставляются вместо настоящей библиотеки. LMX использует прямые функции единого ядра с lowerCamelCase именами.'),
+        p('На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и throws: copy(Throws) сохраняют эту ясность, и сокращать такие записи ради размера не хочется.'),
+        p('Колонка «без сложного Throws» сохраняет заголовок, первый написанный аргумент каждого списка и полные ссылки copy. Только аргументы после первого не входят в дополнительный подсчёт. Сами исходники не меняются. Зелёным показан минимум сопоставимой строки; дополнительный счётчик LMX выбирается, когда меньше полного.','SmallLMX'),
         p('Отношение строится только для полных пар одного договора. Размеры разных наборов не образуют рейтинг языков. Это метрика исходников, не скорости или памяти. LMX runtime в архив не входит; его семантические случаи имеют NOT_RUN. Доступные выполненные проверки контрольных языков отмечены в validation соответствующего набора.','SmallLMX')]
 
 def main():
     data=json.loads((ROOT/'STATISTICS.json').read_text());generated=[]
-    story=[p('LMX: все примеры и контрольные языки','TitleLMX'),p('23 ноября 2026 года · Haskell / Julia / Perl','SmallLMX'),
-        p(f"{data['counts']['lmx_examples']} сценария LMX, {data['counts']['complete_pairs']} полных сопоставимых пар. Исходные 24 сценария сохранены. В Julia и Perl добавлены самостоятельные характерные подборки; реализация библиотек учитывается отдельно."),
-        table(['Набор','Сценарии','Полные пары','Аналогии','Только LMX','LMX, пары','Контроль, пары','Контроль / LMX'],
-            [[x['foreign_language'],x['examples'],x['complete_pairs'],x['related_analogies'],x['lmx_only'],x['paired_lmx_characters'],x['paired_foreign_characters'],f"{x['paired_ratio']:.3f}×" if x['paired_ratio'] else '—'] for x in data['summaries']],
-            [110,70,90,75,85,100,105,115]),Spacer(1,12),*method(),
+    style.CURRENT_FILE='examples/STATISTICS.pdf'
+    story=[p('LMX: все примеры и контрольные языки','TitleLMX'),p('23 ноября 2026 года · Haskell / Julia / Perl / SBCL','SmallLMX'),
+        p(f"{data['counts']['lmx_examples']} сценария LMX, {data['counts']['complete_pairs']} полных сопоставимых пар. Исходные 24 сценария сохранены. В Julia, Perl и Common Lisp/SBCL добавлены самостоятельные характерные подборки; реализация библиотек учитывается отдельно."),
+        style.highlight_minimums(table(['Набор','Сценарии','Полные пары','Аналогии','Только LMX','LMX, пары','без сложного\nThrows','Контроль, пары','Контроль / LMX'],
+            [[x['foreign_language'],x['examples'],x['complete_pairs'],x['related_analogies'],x['lmx_only'],x['paired_lmx_characters'],x['paired_lmx_without_complex_throws_characters'],x['paired_foreign_characters'],f"{x['paired_ratio']:.3f}×" if x['paired_ratio'] else '—'] for x in data['summaries']],
+            [110,60,70,65,70,85,95,90,100]),[(i+1,(5,x['paired_lmx_characters']),(6,x['paired_lmx_without_complex_throws_characters']),[(7,x['paired_foreign_characters'])]) for i,x in enumerate(data['summaries'])]),Spacer(1,12),*method(),
         p('Машинные данные: STATISTICS.json, STATISTICS.csv, IMPLEMENTATIONS.csv и SOURCE_INVENTORY.json. Полные договоры и границы Haskell-аналогий: haskell/comparison_index.json.','SmallLMX')]
     for summary in data['summaries']:
         suite=summary['suite'];language=summary['foreign_language'];rows=[x for x in data['examples'] if x['suite']==suite]
@@ -59,6 +64,7 @@ def main():
     story.append(implementations(sorted(data['implementations'],key=lambda x:(x['suite'],x['id'])),all_suites=True))
     target=ROOT/'STATISTICS.pdf';doc(target,'LMX: все примеры').build(story,onFirstPage=footer,onLaterPages=footer);generated.append(target.relative_to(ROOT).as_posix())
     for suite,language in [('julia','Julia'),('perl','Perl')]:
+        style.CURRENT_FILE='examples/'+suite+'_comparison/LMX_Comparison_'+language+'.pdf'
         summary=next(x for x in data['summaries'] if x['suite']==suite)
         rows=[x for x in data['examples'] if x['suite']==suite]
         impl=[x for x in data['implementations'] if x['suite']==suite]
@@ -67,7 +73,7 @@ def main():
         if impl:story.extend([PageBreak(),p('Реализации библиотечных операций','TitleLMX'),implementations(impl),Spacer(1,10),p('В этих строках считаются полные явно приведённые тела реализации. Общая инфраструктура и ссылки на зависимости указаны в каждом сравнении. Клиентские программы сравнительные helpers не импортируют.','SmallLMX')])
         story.extend([Spacer(1,10),*method()])
         target=ROOT/(suite+'_comparison')/('LMX_Comparison_'+language+'.pdf');doc(target,'LMX / '+language).build(story,onFirstPage=footer,onLaterPages=footer);generated.append(target.relative_to(ROOT).as_posix())
-    (ROOT/'validation/pdf_generation_20261123.json').write_text(json.dumps({'edition':'2026-11-23','files':generated,'source':'STATISTICS.json','visual_review':'separate report'},ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'validation/pdf_generation_20261123.json').write_text(json.dumps({'edition':'2026-11-23','files':generated,'source':'STATISTICS.json','source_sha256':hashlib.sha256((ROOT/'STATISTICS.json').read_bytes()).hexdigest(),'generator_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'tables':style.TABLE_AUDIT,'green_cells':style.GREEN_AUDIT,'visual_review':'separate report'},ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'generated':generated}))
 
 if __name__=='__main__':main()

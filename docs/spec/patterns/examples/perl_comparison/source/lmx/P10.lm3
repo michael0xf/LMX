@@ -1,9 +1,3 @@
-Identity:
-    int: value
-    return: int
-    key:
-        return: value
-
 Same:
     int: first
     int: second
@@ -11,17 +5,15 @@ Same:
     test:
         return: first = second
 
+Frequency:
+    FxGroup@: group
+    return: @
+    row:
+        return: (\group\key; length(group\items))
+
 Example:
     int[]: items
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        @: groups groupBy(items; Identity\key; Same\test)
-        @[]: result []
-        sys\resize(result; length(groups))
-        int: i 0
-        while: i < length(groups)
-            @: group groups[i]
-            result[i] := (\group\key; length(group\items))
-            i += 1
-        return: result
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: map(groupBy(items; identity; Same\test); Frequency\row)

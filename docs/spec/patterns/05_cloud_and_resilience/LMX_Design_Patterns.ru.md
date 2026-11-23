@@ -27,25 +27,25 @@ LMX выражает автомат состоянием Message; Go и C# ис�
 
 Ограниченный повтор временного отказа с задержкой между попытками.
 
-**Отдельное сравнение реализации:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+**Отдельное сравнение реализации:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
 **Сценарий:** Идемпотентное чтение возвращает 503,503,200. Разрешены три попытки и задержки 1,2 единицы.
 
 **Наблюдение:** Итог 200; три обращения и две задержки. Статус 400 прекращает повторы сразу.
 
-Используются direct LMX retryPost и настоящие Go/.NET retry libraries. Самостоятельные asynchronous реализации сравниваются только в097; отдельно указаны итог и окончание cleanup.
+Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/039_retry_async_comparision.md).
 
-### 097. [RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+### 097. [Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
-Реализовать конечную asynchronous retry-policy с явным итогом и lifetime незавершённой работы.
+Собственная общая реализация ограниченного повтора HTTP 503 для клиентов Retry и Ambassador.
 
 **Примеры использования:** [039. Retry](039_retry_comparision.md), [045. Ambassador](045_ambassador_comparision.md)
 
-**Сценарий:** Сохранить503,503,200 с3 попытками/задержками1,2 и503,200 с2 попытками/без задержки. Дополнительно проверить400, один attempt, отказ predicate, cancel, timeout, late completion и один итог.
+**Сценарий:** Первый клиент задаёт 3 попытки и записывающий delay: request возвращает 503,503,200. Второй клиент задаёт 2 попытки без delay: request возвращает 503,200. Также проверить немедленное завершение при 400 и отсутствие повторов при лимите 1.
 
-**Наблюдение:** Итог после конечного budget; повтор допускает только retryOn. Timeout/cancel завершают policy один раз; поздняя работа может завершиться позже и удерживает необходимые ресурсы.
+**Наблюдение:** Первый клиент получает 200 после 3 вызовов и задержек [1,2]. Второй получает 200 после 2 вызовов без задержек. 400 возвращается после первого вызова; при лимите 1 ответ 503 возвращается без delay. Недопустимое число попыток отвергается до request.
 
-Все три реализации показывают полную policy. LMX использует обычные Message/post и существующий delay host port, Go — goroutines/channels/timers, C# — Task/cancellation. Клиенты чужой самописный helper не импортируют.
+Сравниваются полные собственные реализации одного API, а не импортированный retry с одной стороны и ручной цикл с другой. LMX использует обычный операнд, Go — экспортированную функцию пакета, C# — статический метод. Для двух клиентов библиотека поставляется один раз. Размер клиентов и размер реализации показываются отдельно; их сумма не объявляется меньше исходных автономных листингов. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/097_retry_library_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.
 
 ### 040. [Bulkhead](040_bulkhead_comparision.md)
 
@@ -91,13 +91,13 @@ LMX переносит владение разрешением к двум вл�
 
 Локальный сетевой посредник скрывает внешний endpoint и политику повторов от клиента.
 
-**Отдельное сравнение реализации:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
+**Отдельное сравнение реализации:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
 **Сценарий:** Клиент просит получить каталог. Ambassador обращается к заданному endpoint: первый результат 503, второй 200.
 
 **Наблюдение:** Клиент получает 200; внешний провайдер вызван дважды, с одним и тем же endpoint/route.
 
-Все клиенты сохраняют HTTP catalog boundary и endpoint/route; LMX использует retryPost, Go/C# — настоящие retry libraries, не исходник097.
+Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/045_ambassador_async_comparision.md).
 
 ### 049. [Cache-Aside](049_cache_aside_comparision.md)
 

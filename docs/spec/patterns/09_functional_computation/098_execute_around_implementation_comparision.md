@@ -6,7 +6,7 @@
 
 ## Общий сценарий
 
-Полностью реализовать контракт bracket для одного ресурса: получить один раз, вызвать action один раз, после успешного получения освободить один раз при успехе, допустимой ошибке и штатной остановке; сохранить произвольный результат/void. LMX заранее выделяет аргументы cleanup и регистрирует finally с проверкой успешного outcome до получения ресурса; Haskell использует mask/restore; Scala сохраняет два исключения по правилам приоритета и suppression, как Using.
+Полностью реализовать контракт bracket для одного ресурса: получить один раз, вызвать action один раз, после успешного получения освободить один раз при успехе, допустимой ошибке и штатной остановке; сохранить произвольный результат/void. LMX заранее выделяет аргументы cleanup, сохраняет успешный результат acquire в готовую ячейку и регистрирует finally перед подготовкой action; Haskell использует mask/restore; Scala сохраняет два исключения по правилам приоритета и suppression, как Using.
 
 **Ожидаемое наблюдение:** Успех: журнал 123 и результат action. Ошибка action: журнал 123 и распространение ошибки. Ошибка acquire: журнал 1 без release. Соседний клиент кодирует эти случаи как 42123, −123, −1.
 
@@ -24,21 +24,13 @@ FxAround:
     return: @
     around:
         throws: copy(FxThrows\traversal)
-        private: @: empty (copy(()))
         private: @: resourceArgs (copy(()))
         sys\resize(resourceArgs; 1)
-        private: @: acquired (copy(FxOutcome))
+        resourceArgs[0] := FxApply\apply(acquire; ())
         finally:
-            if: acquired\ok != 0
-                resourceArgs[0] := acquired\value
-                FxApply\apply(release; resourceArgs)
+            FxApply\apply(release; resourceArgs)
         ---
-        acquired := FxTry\attempt(acquire; empty)
-        if: acquired\ok = 0
-            throw: FxCallFailure(acquired)
-        resourceArgs[0] := acquired\value
-        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
-        return: FxApply\apply(action; actionArgs)
+        return: FxApply\apply(action; FxAppend\append(resourceArgs; arguments))
 ```
 
 Основной листинг — точные определения FxAround из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
@@ -114,13 +106,15 @@ object Around {
 
 ## Подсчёт
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 526 | 24 |
-| Haskell | 390 | 11 |
-| Scala | 836 | 36 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 316 | 16 | 316 |
+| Haskell | 390 | 11 | — |
+| Scala | 836 | 36 | — |
 
 Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
 
 ## Удалённые малозначимые повторы
 
@@ -136,7 +130,7 @@ API ограничен одним ресурсом, тремя callback и пр�
 
 Generic acquire/action/release: the resource, payload result and extra arguments are not tied to int.
 
-**Scenario.** Implement the complete single-resource bracket contract: acquire once; action once; release once after successful acquisition on success, declared failure or supported orderly interruption; preserve arbitrary result/void. LMX preallocates cleanup actuals and registers outcome-guarded finally before acquiring, Haskell uses mask/restore, Scala preserves dual failures using Using-style severity and suppression.
+**Scenario.** Implement the complete single-resource bracket contract: acquire once; action once; release once after successful acquisition on success, declared failure or supported orderly interruption; preserve arbitrary result/void. LMX preallocates cleanup actuals, stores the successful acquisition in the ready cell and registers finally before preparing the action. Haskell uses mask/restore; Scala preserves dual failures using Using-style severity and suppression.
 
 **Expected.** Success: log 123 and the action result. Body failure: log 123 and propagation. Acquisition failure: log 1 and no release. The adjacent client encodes these cases as 42123, −123 and −1.
 

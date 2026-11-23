@@ -3,10 +3,14 @@
 from pathlib import Path
 import csv,json
 ROOT=Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0,str(ROOT.parent/'tools'))
+from throws_metrics import measure_throws
 LANG={'LMX':('lmx','lm3','lmx'),'Haskell':('haskell','hs','haskell'),'Scala':('scala','scala','scala')}
 LABEL={'shared_body':'общий алгоритм шага','core_curry':'поэтапный curry','core':'прямой API ядра','local_callbacks':'процедурная композиция с локальным Around','standard':'готовое средство языка/библиотеки','implementation':'самостоятельная реализация'}
 def canon(s): return s.strip()+'\n'
 def count(s): return sum(not c.isspace() for c in s),sum(bool(x.strip()) for x in s.splitlines())
+def supplemental(s):return measure_throws(canon(s),ROOT.parent)['without_complex_throws_characters']
 def stem(p): return f"{p['id']:03d}_{p['slug']}"
 def link(p): return f"[{p['id']:03d}. {p['name']}]({stem(p)}_comparision.md)"
 def variant_path(p,lang,v):
@@ -31,9 +35,10 @@ def render_pattern(p,idx):
    _,_,tag=LANG[lang]
    reason=p.get('retained_variant_reasons',{}).get(lang,{}).get(v,'Отдельный подход; не суммируется с основным.')
    lines+=['## '+lang+' — другой подход: '+LABEL.get(v,v),'```'+tag+'\n'+canon(code)+'```',reason,'[Исходник альтернативы]('+variant_path(p,lang,v)+')']
- lines+=['## Подсчёт','| Язык | Непробельные символы | Непустые строки |\n| --- | ---: | ---: |\n'+'\n'.join(f"| {l['language']} | {count(l['code'])[0]} | {count(l['code'])[1]} |" for l in p['listings']),
+ lines+=['## Подсчёт','| Язык | Непробельные символы | Непустые строки | Без сложного Throws |\n| --- | ---: | ---: | ---: |\n'+'\n'.join(f"| {l['language']} | {count(l['code'])[0]} | {count(l['code'])[1]} | {supplemental(l['code']) if l['language']=='LMX' else '—'} |" for l in p['listings']),
  'Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.',
- '## Удалённые малозначимые повторы',p['dedup_notes_ru'],'## Семантические границы',p['limits_ru'],
+ 'Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.',
+ '## Удалённые малозначимые повторы',p['dedup_notes_ru'],'## Семантические границы',p['limits_ru'],p.get('failure_note','') if isinstance(p.get('failure_note',''),str) else '',
  '[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).',
  '## English explanation',p['summary_en'],'**Scenario.** '+p['scenario_en'],'**Expected.** '+p['expected_en'],'**Limits.** '+p['limits_en'],
  'Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.',
@@ -54,15 +59,16 @@ def main():
   (ROOT/(stem(p)+'_comparision.md')).write_text(render_pattern(p,idx))
   row={'id':p['id'],'pattern':p['name'],'scope':p['scope'],'kind':p.get('kind','pattern'),'layer':'implementation' if p.get('kind')=='implementation' else 'usage','source':stem(p)+'_comparision.md'}
   for l in p['listings']:row[l['language']+'_characters'],row[l['language']+'_nonblank_lines']=count(l['code'])
+  row['LMX_without_complex_throws_characters']=supplemental(next(l['code'] for l in p['listings'] if l['language']=='LMX'))
   rows.append(row)
  # Variant files duplicating the primary are no longer separate examples.
  for folder,ext,_ in LANG.values():
   for old in (ROOT/'examples'/folder/'variants').glob('*.'+ext):
    if old not in wanted:old.unlink()
- fields=['id','pattern','scope','kind','layer']+[l+'_characters' for l in LANG]+[l+'_nonblank_lines' for l in LANG]+['source']
+ fields=['id','pattern','scope','kind','layer']+[l+'_characters' for l in LANG]+[l+'_nonblank_lines' for l in LANG]+['LMX_without_complex_throws_characters','source']
  with (ROOT/'LMX_Comparison_09_functional_computation.csv').open('w',encoding='utf-8-sig',newline='') as f:
   w=csv.DictWriter(f,fieldnames=fields);w.writeheader();w.writerows(rows)
- table=['# Сравнение: Функциональные вычисления','Редакция 2026-11-23. Контрольные языки: Haskell, Scala. Числа — непробельные символы / непустые строки.','Четыре клиента готовых средств и четыре отдельные реализации. Суммы разных уровней не образуют рейтинг языка. Соседние реализации не импортируются в контрольные клиенты.','| ID | Паттерн | LMX | Haskell | Scala | Граница |\n| ---: | --- | ---: | ---: | ---: | --- |\n'+'\n'.join(f"| {p['id']:03d} | {link(p)} | "+' | '.join(f"{count(l['code'])[0]} / {count(l['code'])[1]}" for l in p['listings'])+' | '+('Реализация библиотеки' if p.get('kind')=='implementation' else 'Использование библиотеки')+' |' for p in items),'[Зависимости](IMPLEMENTATION_DEPENDENCIES.md) · [Выбор](variant_selection.json) · [Ошибки и Message](FAILURE_BOUNDARIES.md) · [Проверка](VALIDATION_2026-11-23.md)']
+ table=['# Сравнение: Функциональные вычисления','Редакция 2026-11-23. Контрольные языки: Haskell, Scala. Числа — непробельные символы / непустые строки.','Четыре клиента готовых средств и четыре отдельные реализации. Суммы разных уровней не образуют рейтинг языка. Соседние реализации не импортируются в контрольные клиенты.','| ID | Паттерн | LMX | Haskell | Scala | Граница | Без сложного Throws |\n| ---: | --- | ---: | ---: | ---: | --- | ---: |\n'+'\n'.join(f"| {p['id']:03d} | {link(p)} | "+' | '.join(f"{count(l['code'])[0]} / {count(l['code'])[1]}" for l in p['listings'])+' | '+('Реализация библиотеки' if p.get('kind')=='implementation' else 'Использование библиотеки')+' | '+str(supplemental(next(l['code'] for l in p['listings'] if l['language']=='LMX')))+' |' for p in items),'[Зависимости](IMPLEMENTATION_DEPENDENCIES.md) · [Выбор](variant_selection.json) · [Ошибки и Message](FAILURE_BOUNDARIES.md) · [Проверка](VALIDATION_2026-11-23.md)']
  (ROOT/'LMX_Comparison_09_functional_computation.md').write_text('\n\n'.join(table)+'\n')
  for lang,title in [('ru','LMX: Функциональные вычисления'),('en','LMX: Functional computation')]:
   lines=['# '+title,data['rationale_'+lang],data['overview_'+lang],'## Files','[Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv) · [Implementations](IMPLEMENTATION_DEPENDENCIES.md)','## Catalog']

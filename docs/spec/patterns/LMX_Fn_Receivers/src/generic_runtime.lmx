@@ -133,7 +133,26 @@ FxFailures:
         # Builder интернирует и устраняет повторные имена. Список не фиксирован.
         return: FxAppend\append(first; second)
 
-# Сравнение строк и фильтр имён служат только finite throws bookkeeping.
+# One comparison body, bound to the caller's real typed Array places.
+# unitSource/unitPart are ordinary non-private dynamic places declared by
+# each caller as char[] or int[]; no @[] cast or scalar dereference occurs.
+FxUnitRange:
+    private: int: at
+    return: int
+    equal:
+        if: at < 0 || at > length(unitSource)
+            return: 0
+        if: length(unitPart) > length(unitSource) - at
+            return: 0
+        private: int: i 0
+        while: i < length(unitPart)
+            if: unitSource[at + i] != unitPart[i]
+                return: 0
+            i += 1
+        return: 1
+
+# Internal exact name comparison, not a new public text operation.
+# Public literal equality is matches(byteText(first); second).
 # Отфильтрована внутренняя ПОЙМАННАЯ оболочка engine; исходные target failures
 # добавляются отдельно, поэтому target по-прежнему может сам бросать FxCallFailure.
 FxSameText:
@@ -144,12 +163,9 @@ FxSameText:
     same:
         if: length(first) != length(second)
             return: 0
-        private: int: i 0
-        while: i < length(first)
-            if: first[i] != second[i]
-                return: 0
-            i += 1
-        return: 1
+        char[]: unitSource first
+        char[]: unitPart second
+        return: FxUnitRange\equal(0)
 
 FxFailureFilter:
     private:

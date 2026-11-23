@@ -6,10 +6,12 @@ pasting the same hundreds of lines into every comparison. Both boundary counts
 (entry roots and complete reachable LMX source) remain explicit.
 """
 from pathlib import Path
-import json,re,hashlib
+import json,re,hashlib,sys
 ROOT=Path(__file__).resolve().parents[2];EX=ROOT/'examples';LIB=ROOT/'LMX_Fn_Receivers'
+sys.path.insert(0,str(ROOT/'tools'))
+from throws_metrics import measure_throws
 def metric(s):
- s=s.strip()+'\n';return {'characters':sum(not c.isspace() for c in s),'nonblank_lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest()}
+ s=s.strip()+'\n';return {'characters':sum(not c.isspace() for c in s),'nonblank_lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest(),'without_complex_throws_characters':measure_throws(s,ROOT)['without_complex_throws_characters']}
 def definitions():
  out={};loc={}
  for p in sorted((LIB/'src').glob('*.lmx')):
@@ -93,7 +95,7 @@ CONFIG=[
  ('h03_capture_comparision.md','Partial application','H03',['partial'],['FxPartial'],'Partial.hs','Native Haskell application: makeAdder n = (+) n.','LMX captures any finite prefix, preserving value/reference rules, remaining input policies and the original result. The Haskell comparison uses a heterogeneous typed argument representation; no Int or binary arity cap is intended.'),
  ('h06_pipe_comparision.md','Composition','H06',['pipe','compose'],['FxPipe','FxCompose'],'IntPipe.hs','Native (.) for composition; Data.List.foldl\' / Control.Monad.foldM for stage lists.','Construction does not execute stages. The stored callable preserves the first input policy and receives the exact final result. Pure and effectful Haskell variants are separate contracts; all effectful stages execute in order.'),
  ('h07_evaluation_modes_comparision.md','Lazy and evaluation modes','H07',['lazy','once'],['FxLazyState','FxLazyEngine','FxOnce','FxLazy'],'Lazy.hs','Native let / do and Control.Monad.replicateM.','lazy accepts a zero-input thunk; partial may bind all arguments first. once retains its general input contract. The first successful result is cached; failure permits retry, recursive forcing fails. LMX state belongs to one Message, Haskell Lazy.hs enforces one owning ThreadId. This does not replace the separate raw-occurrence test.'),
- ('h09_iterator_comparision.md','Iteration until Stop','H09',['iterateUntilStop'],['FxIterateUntilStop'],'StepIterator.hs','Control.Monad.Loops.whileJust_ from the actual monad-loops package.','The accepted declaration remains DATA until execution. Its established item and caller total stay live in the receiving activation. Only source Stop terminates; body Stop and other failures propagate in FxCallFailure. The Haskell loop passes values explicitly. AE01 is a concrete pending kernel integration boundary; see CORE_EXAMPLE_HELPERS.md.'),
+ ('h09_iterator_comparision.md','Iteration until Stop','H09',['iterateUntilStop'],['FxIterateUntilStop'],'StepIterator.hs','Control.Monad.Loops.whileJust_ from the actual monad-loops package.','The accepted declaration remains DATA until execution. Its established item and caller total stay live in the receiving activation. The primary H09 loop uses ordinary iteration()/body() and catches only source Stop. A Stop raised by the body and all other failures retain their original names. This is the authored declaration/body contract in LMX_semantics.en.md, with no string comparison or failure envelope. Haskell passes each yielded value explicitly and propagates exceptions normally. The separately retained core adapter deliberately has a different FxCallFailure API; it is not a semantic substitute for this short primary loop.'),
  ('v02_character_range_comparision.md','Inclusive range','V02',['between'],['FxBetween'],'CharacterRange.hs','Data.Ix.inRange from base.','Two inclusive bounds, original ordered types, no int conversion, reversed interval false. The LMX operand checks exactly two right values and uses comparison priority. Haskell fixes two bounds by a pair and requires Ord. Neither helper is a regular-expression matcher.')]
 def main():
  defs,loc=definitions();rows=[]
@@ -145,13 +147,13 @@ The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_F
 {extra}
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: |
-| LMX entry definitions shown above | {metric(body)['characters']} | {metric(body)['nonblank_lines']} | {metric(body)['utf8_bytes']} |
-| All reachable LMX source roots, counted once | {metric(allcode)['characters']} | {metric(allcode)['nonblank_lines']} | {metric(allcode)['utf8_bytes']} |
-| Complete Haskell comparison module | {metric(hs)['characters']} | {metric(hs)['nonblank_lines']} | {metric(hs)['utf8_bytes']} |
+| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: | ---: |
+| LMX entry definitions shown above | {metric(body)['characters']} | {metric(body)['without_complex_throws_characters']} | {metric(body)['nonblank_lines']} | {metric(body)['utf8_bytes']} |
+| All reachable LMX source roots, counted once | {metric(allcode)['characters']} | {metric(allcode)['without_complex_throws_characters']} | {metric(allcode)['nonblank_lines']} | {metric(allcode)['utf8_bytes']} |
+| Complete Haskell comparison module | {metric(hs)['characters']} | — | {metric(hs)['nonblank_lines']} | {metric(hs)['utf8_bytes']} |
 
-These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
+The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.\n\nНа мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.\n\nThese are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 
 ## Ownership and async scope
 
@@ -159,8 +161,31 @@ The reusable helpers here are synchronous computations on their owner. To run an
 
 **Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).
 '''
+  row={'file':'library_comparisons/'+filename,'entry':entries[0],'public':public[0],'public_names':public,'roots':roots,'source_files':paths,'lmx_entry':metric(body),'lmx':metric(allcode),'haskell':metric(hs),'haskell_source':'libraries/haskell/'+hsfile,'comparison_scope':'implementation_only','imported_by_clients':False,'core_versions':1,'kernel_provider_excluded_and_disclosed':True}
+  if ident=='H09':
+   local=(EX/'libraries/lmx/Cycles.lm3').read_text().strip()+'\n'
+   direct='''## Primary ordinary LMX implementation
+
+The complete helper below is also included in [H09.lm3](../lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
+
+```lmx
+'''+local.rstrip()+'''
+```
+
+The catch belongs to `iteration()` alone. `body()` is outside that catch: if it raises Stop, Stop propagates. A source failure other than Stop also propagates unchanged. Reusing an ordinary named catch avoids dispatching on the characters of an error-name string. No extra receiver, raw execution mode or adapter kernel is needed for this mechanism.
+
+## Separate core adapter with an error envelope
+
+The following retained adapter converts failures to FxCallFailure records and uses an accepted-code bridge. That is an additional API boundary. Its entry and reachable-source sizes are reported separately and are not used as the primary equivalent-loop size.
+
+'''
+   text=text.replace('## LMX implementation\n\n',direct)
+   text=text.replace('LMX public names: `iterateUntilStop`. These names belong to the proposed core; no user library import is needed.','Primary H09 uses the local `Cycles\\iterate` shown in full below. The optional `iterateUntilStop` adapter remains in the proposed core with its separate error-envelope contract.')
+   text=text.replace('| LMX entry definitions shown above |',f'| Primary complete Cycles helper | {metric(local)["characters"]} | {metric(local)["nonblank_lines"]} | {metric(local)["utf8_bytes"]} |\n| Optional adapter entry |')
+   text=text.replace('| All reachable LMX source roots, counted once |','| Optional adapter and all reachable LMX roots |')
+   row.update({'entry':'Cycles','public':'Cycles\\iterate','public_names':['Cycles\\iterate'],'roots':['Cycles'],'source_files':['examples/libraries/lmx/Cycles.lm3'],'lmx_entry':metric(local),'lmx':metric(local),'kernel_provider_excluded_and_disclosed':False,'primary_contract':'Ordinary named propagation; only source Stop is caught.','adapter_alternative':{'entry':entries[0],'public_names':public,'roots':roots,'source_files':paths,'lmx_entry':metric(body),'lmx':metric(allcode),'different_failure_api':True,'included_in_primary_metric':False}})
   (EX/'library_comparisons'/filename).write_text(text)
-  rows.append({'file':'library_comparisons/'+filename,'entry':entries[0],'public':public[0],'public_names':public,'roots':roots,'source_files':paths,'lmx_entry':metric(body),'lmx':metric(allcode),'haskell':metric(hs),'haskell_source':'libraries/haskell/'+hsfile,'comparison_scope':'implementation_only','imported_by_clients':False,'core_versions':1,'kernel_provider_excluded_and_disclosed':True})
+  rows.append(row)
  (EX/'validation/receiver_library_counts.json').write_text(json.dumps({'format':'receiver-library-comparisons-v2','status':'publication_consistency_not_execution','date':'2026-11-23','comparisons':rows},ensure_ascii=False,indent=2)+'\n')
  print(json.dumps({'comparisons':len(rows),'all_foreign_implementation_only':True}))
 if __name__=='__main__':main()

@@ -1,149 +1,116 @@
 #!/usr/bin/env python3
-"""Publish the current library-use/implementation boundary from canonical records."""
+"""Publish current comparison boundaries and metadata-backed core additions."""
 from pathlib import Path
 import json
+from packet_metadata import addition_metadata, implementation_source, restoration_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_SHA = '4b142bab169cf7cc3fd89766da35b90561f913b68dca3ab1f0725793e4ecb932'
+
 
 def main():
     records = {}
     for path in sorted(ROOT.glob('[0-9][0-9]_*/patterns.json')):
-        data = json.loads(path.read_text())
-        for item in data['patterns']:
-            records[item['id']] = (path.parent, data, item)
+        for item in json.loads(path.read_text())['patterns']:
+            records[item['id']] = (path.parent, item)
     links = {}
-    for ident, (directory, _, row) in records.items():
-        found = list(directory.glob(f'{ident:03d}_*_comparision.md'))
-        if len(found) != 1:
-            raise ValueError((ident, found))
-        links[ident] = found[0].relative_to(ROOT).as_posix()
+    for ident, (directory, row) in records.items():
+        links[ident] = (directory / f'{ident:03d}_{row["slug"]}_comparision.md').relative_to(ROOT).as_posix()
     uses = {91:[82],92:[83],93:[13],94:[16],95:[31],96:[32],97:[39,45],98:[84],99:[85]}
-    APIs = {
-        91:'Haskell Maybe / (>>=); Scala Option.flatMap',
-        92:'Haskell free / Free Identity; Scala TailCalls',
-        93:'Java IntUnaryOperator.andThen; Go ordinary function composition',
-        94:'Python next with a generator; C# LINQ FirstOrDefault',
-        95:'Python all; C# LINQ All',
-        96:'Python dataclass equality; C# record equality',
-        97:'Go cenkalti/backoff/v5; C# Polly',
-        98:'Haskell Control.Exception.bracket; Scala Using.resource',
-        99:'Haskell partial application; Scala Function2.curried',
+    functions = {
+        91:'some, none, bind',92:'done, more, trampoline',
+        93:'PipeLibrary',94:'FindLibrary',95:'SpecificationLibrary',96:'MoneyLibrary',
+        97:'RetryLibrary',98:'bracket',99:'partial, curry',
     }
-    core = {91:'some, none, bind',92:'done, more, trampoline',93:'pipe, compose',94:'findFirst',95:'allOf',96:'equalFields',97:'retryPost',98:'bracket',99:'partial, curry'}
+    boundaries = {
+        91:'Стандартные Maybe / Option; отдельное обобщённое сравнение контейнера и bind.',
+        92:'Haskell Free Identity / Scala TailCalls; отдельные контейнер и trampoline.',
+        93:'Короткий импортируемый pipe из 22-Nov; расширенная обобщённая версия сохранена отдельно.',
+        94:'Первый объект с заданным целочисленным id; обобщённый findFirst остаётся отдельной операцией.',
+        95:'Композиция двух предикатов с коротким замыканием; один общий контракт полей.',
+        96:'Двухкомпонентный Money; общий equalFields не подменяет предметное сравнение.',
+        97:'Собственный синхронный RetryHelper во всех трёх языках; весь helper учитывается отдельно и вместе с клиентами.',
+        98:'Haskell bracket / Scala Using.resource; один ресурс, полный acquire/action/release.',
+        99:'Haskell partial application / Scala curried; произвольная смешанная сигнатура LMX.',
+    }
+    statistics = json.loads((ROOT/'validation/statistics_20261122.json').read_text())
     text = [
-        '# Библиотечные операции: использование и сравнение реализации','',
-        'Редакция **23 ноября 2026 года**. Примеры использования и самостоятельные реализации имеют разные границы подсчёта. Все девять сравнений реализаций сохранены; они не становятся самописными зависимостями иностранных клиентов.','',
-        '| Сравнение реализации | Клиент | Прямые функции LMX | Реальное средство контрольного языка |',
+        '# Библиотечные операции: использование и сравнение реализации', '',
+        'Редакция **23 ноября 2026 года**. Короткие сопоставимые реализации 22-Nov восстановлены на основе спецификации 23-Nov. Девять сравнений реализаций сохранены. Их договоры различаются: некоторые показывают обобщённый стандартный API, другие — конкретный общий компонент приложения.', '',
+        '| Реализация | Клиенты | LMX | Граница сравнения |',
         '| --- | --- | --- | --- |',
     ]
-    for ident in sorted(uses):
-        row = records[ident][2]
-        title = row.get('title', row.get('name', str(ident)))
-        clients = ', '.join(f'[{i:03d}]({links[i]})' for i in uses[ident])
-        text.append(f'| [{ident:03d}. {title}]({links[ident]}) | {clients} | `{core[ident]}` | {APIs[ident]} |')
-    text.extend([
-        '', '## Как использовать исходники', '',
-        'В LMX все перечисленные функции относятся к одному проекту ядра и вызываются напрямую. '
-        'Самостоятельный клиент не загружает отдельную пользовательскую библиотеку. '
-        '[Общий реестр](../CORE_FUNCTIONS.md) связывает публичные имена, сигнатуры и полные алгоритмы.', '',
-        'Клиенты Haskell, Scala, Python, Go, Java и C# используют указанные настоящие средства языка или пакеты. '
-        'Наши MaybeValue, Bounce, Around, Partial и другие сравнительные реализации остаются в отдельных '
-        'листингах реализации. Они не импортируются в клиент вместо настоящей библиотеки. '
-        'Необходимые версии, зависимости и ограничения указаны у соответствующего исходника.', '',
-        '## Полнота', '',
-        'Реализации обобщены в пределах указанного договора операции: типы пользовательских значений '
-        'не привязаны к int, размер или арность не ограничены произвольной константой, разобраны пустые '
-        'входы и отказы. Значения int для индекса, type-кода и логического результата остаются там, где '
-        'они требуются семантикой. Предметный Money или счётчик в клиенте не специализируют общий helper.', '',
-        'Реализация отдельной операции не называется заменой целого framework. Например, 098 сравнивает '
-        'single-resource bracket, а не весь Using.Manager; 097 сравнивает явно ограниченную политику '
-        'повторов, а не полный набор возможностей Polly.', '',
-        '## Дополнительные примеры', '',
-        '[Сравнения Haskell](examples/library_comparisons/README.md) содержат полные самостоятельные модули и '
-        'ссылки на канонические определения LMX. Их клиент Analogies.hs использует base, array и '
-        'monad-loops, а не эти модули. [Julia](examples/julia_comparison/README.md) и '
-        '[Perl](examples/perl_comparison/README.md) следуют тому же правилу и отдельно учитывают '
-        'реализации библиотечных операций.', '',
-        '## Асинхронность и владение', '',
-        '`retryPost` реализует состояние задания в Message, выполняет отправку и ожидание через post, '
-        'сохраняет итог и учитывает поздние ответы. Отмена повторов или уведомление о таймауте не '
-        'доказывает завершение удалённой операции. Для синхронных combinators достаточно post всего '
-        'метода владельцу: транспорт, включая HTTP, уже предоставляет доставку, ответы и ошибки '
-        'доставки. Внутренняя вторая очередь или scheduler таким функциям не приписываются.', '',
-        '## Подсчёт', '',
-        'Клиент, реализация и общие зависимости считаются раздельно. Общий исходник ядра хранится '
-        'один раз; таблица зависимостей даёт полные тела по ссылкам и размер замыкания зависимостей '
-        'без повторов. Для конкретного приложения нельзя механически сложить все альтернативные '
-        'сценарии или прибавлять стандартную библиотеку только одному языку. '
-        '[Методика](COMPARISON_RULES.md) и [общая статистика примеров](examples/STATISTICS.md) '
-        'явно указывают, какие пары имеют одинаковый наблюдаемый договор.', '',
-        'LMX runtime не входит в пакет. Проверка публикации, исходников и размеров не является '
-        'отметкой выполнения LMX; точные оставшиеся входы перечислены в '
-        '[KERNEL_REQUIREMENTS.md](LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).','',
-    ])
+    for ident, clients in uses.items():
+        name = records[ident][1]['name']
+        client_links = ', '.join(f'[{i:03d}]({links[i]})' for i in clients)
+        text.append(f'| [{ident:03d}. {name}]({links[ident]}) | {client_links} | `{functions[ident]}` | {boundaries[ident]} |')
+    text += [
+        '', '## Общие компоненты и полный размер', '',
+        'Клиенты 039 и 045 используют собственный общий синхронный компонент 097 в LMX, Go и C#. Они явно помечены `shared_implementation_client`. Таблица включает оба клиента и один полный helper; импорт не превращает реализацию в бесплатную стандартную библиотеку. Для одного выбранного клиента JSON содержит отдельную сумму client + helper. Асинхронные варианты с другим договором сохранены в extended_comparisons.', '',
+        '| Компонент / клиенты | Язык | Клиенты | Helper один раз | Всего | LMX без сложного Throws |',
+        '| --- | --- | ---: | ---: | ---: | ---: |',
+    ]
+    for component in statistics['shared_implementation_components']:
+        ident = str(component['implementation_id'])+' / '+', '.join(f'{n:03d}' for n in component['usage_ids'])
+        for language, values in component['costs'].items():
+            text.append(f"| {ident} | {language} | {values['clients']} | {values['helper_once']} | {values['complete_component']} | {values.get('without_complex_throws_characters','—')} |")
+    text += [
+        '', '## Краткость и полнота', '',
+        'Выбирается самый короткий полный вариант с тем же наблюдаемым договором. Динамическое связывание, `{type value}` и копирование полей используются по действующей спецификации; лексическая видимость свободных имён не навязывается. Повторяющийся алгоритм выносится в обычную функцию либо заменяется копированием общего набора полей.', '',
+        'В 084 сохранён целиком авторский Around + общий Trace (709 непробельных символов). Основной клиент core bracket занимает 586 символов. Сравнение имени ошибки исключено по доказанному замкнутому набору callback-исходов этого примера; другие ошибки инфраструктуры выходят под собственными именами. Это не общее разрешение перехватывать любой FxCallFailure как ResourceFailure. [Точная проверка границы](09_functional_computation/review/084_failure_boundary.md).', '',
+        'Клиенты функциональной группы используют настоящие средства Haskell/Scala. Самостоятельные сравнительные реализации этих языков остаются отдельными листингами. Публичные функции LMX принадлежат одному ядру; узкие PatternLibrary-компоненты и их полные исходники явно указаны рядом. [Общий реестр](../CORE_FUNCTIONS.md) связывает публичные имена и определения.', '',
+        '## Дополнительные наборы', '',
+        '[Исходные 24 примера](examples/README.md), [Julia](examples/julia_comparison/README.md), [Perl](examples/perl_comparison/README.md) и [SBCL/Common Lisp](examples/SBCL_comparison/README.md) публикуют клиентов, полные сравнения реализаций и зависимости отдельно. Если у новой операции нет иностранной сравнительной реализации, она обозначена как unpaired, а действующее определение LMX и замыкание зависимостей всё равно доступны и посчитаны.', '',
+        '## Подсчёт и проверяемые ограничения', '',
+        'Основной размер включает весь текст выбранного листинга: заголовки, обязательные поля, импорты и Throws. Явные конечные отказы и общий `Throws/copy(Throws)` — преимущество LMX по авторской оценке: видно, какой метод что порождает. Дополнительная колонка «без сложного Throws» сохраняет заголовок и первый аргумент каждого списка, все ссылки/copy и первый аргумент общего банка. Общая реализация считается один раз в своей границе; сама программа и её эффекты не изменяются.', '',
+        'Замыкания зависимостей разных альтернатив пересекаются, поэтому их нельзя механически складывать как один исполняемый пакет. [Статистика](STATISTICS_2026-11-22.md), [полный JSON](validation/statistics_20261122.json) и [методика](COMPARISON_RULES.md) фиксируют границы. LMX runtime отсутствует; source checks и пересчёт размеров не являются исполнением LMX. [Требования интеграции](LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).', '',
+    ]
     (ROOT/'LIBRARY_COMPONENTS.md').write_text('\n'.join(text))
-    catalog = json.loads((ROOT/'LMX_Fn_Receivers/catalog.json').read_text())
-    additions = json.loads((ROOT/'LMX_Fn_Receivers/CORE_ADDITIONS_20261123.json').read_text())['entries']
+
+    library = ROOT/'LMX_Fn_Receivers'
+    catalog = json.loads((library/'catalog.json').read_text())
+    additions, manifests = addition_metadata(library)
+    main_metadata = json.loads((library/'CORE_ADDITIONS_20261123.json').read_text())
+    family_files = set(main_metadata['addition_manifests'])
+    current_names = {entry['name'] for item in manifests if item['file'] in family_files for entry in item['document']['entries']}
+    additions = [item for item in additions if item['name'] in current_names]
+    provenance = restoration_metadata(ROOT)
+    base = provenance['base_archive']; reference = provenance['short_example_reference']
+    families = [item for item in manifests if item['file'] in family_files]
     report = [
         '# Текущая редакция сравнений и функций ядра', '',
-        '**23 ноября 2026 года.** Основа — только заново загруженный автором `spec.tar.gz`.', '',
-        f'Точный SHA-256 исходного архива: `{BASE_SHA}`. Сопоставление файлов и патчи строятся '
-        'с этой основой, а не с предыдущей сгенерированной версией.', '',
+        f"**23 ноября 2026 года.** Основа — `{base['name']}`, SHA-256 `{base['sha256']}`. Короткие примеры восстановлены по `{reference['name']}`, SHA-256 `{reference['sha256']}`. Нормативная спецификация 23-Nov остаётся основой.", '',
         '## Что изменено', '',
-        '1. Сохранены сравнения самостоятельных реализаций LMX и контрольных языков. Иностранные '
-        'клиенты переведены на настоящие библиотеки или собственные средства языка.',
-        '2. LMX-клиенты используют прямые функции ядра. Общий каталог, exports, исходники и '
-        'нормативное описание согласованы; публичные имена имеют lowerCamelCase.',
-        '3. Обобщены контейнеры и callable-адаптеры, раскрыты отказы, пустые случаи и владение. '
-        'Асинхронная политика реализована через Message/post, а не скрытую shared-state очередь.',
-        '4. Полные варианты оставлены для существенно разных подходов. Однострочные изменения '
-        'и копии того же основного кода заменены пояснениями.',
-        '5. Добавлены отдельные наборы Julia и Perl в examples, общий реестр исходников и '
-        'статистика всей директории. Счётчики клиентов не смешиваются с реализациями.',
-        '6. Для Fable приложены точные preimages, source/generated patches и проверяющий '
-        'трёхстороннее слияние инструмент.', '',
-        '## Единый список дополнений', '',
-        f'Сохранены 115 прежних вызовных имён. Сейчас каталог содержит **{len(catalog)}** имён; '
-        'ниже перечислены добавления. [Полный список](../CORE_FUNCTIONS.md) включает все функции, '
-        'а не только новые.', '',
-        '| Новое имя | Договор | Исходник |','| --- | --- | --- |',
+        'Восстановлены краткие сопоставимые клиенты и реализации. Обобщённые или асинхронные варианты с другим договором сохранены отдельно. В повторяющемся коде используются обычные функции и copy; динамическое связывание не заменяется лексическими обходами.', '',
+        'Полные альтернативы сохранены для принципиально разных подходов. В GoF изменены два LMX-листинга: Visitor использует общее тело обработчика, Abstract Factory копирует общий набор методов. Остальные GoF-листинги сохранены относительно 23-Nov. В 084 Haskell использует собственный ResourceFailure и типизированный catch для соответствия остальным языкам.', '',
+        f"Каталог содержит **{len(catalog)}** публичных имён: сохранены **{base['public_names']}** из основы 23-Nov и добавлены **{len(additions)}** операций. Исторические восемь дополнений к ещё более ранней базе уже входят в {base['public_names']} и повторно новыми не считаются. Метаданные повторяющихся исторических записей объединяются по публичному имени и callable target.", '',
+        '## Семейства стандартных операций', '',
+        '| Метаданные | Новых имён |', '| --- | ---: |',
     ]
+    for family in families:
+        report.append(f"| [{family['file']}](LMX_Fn_Receivers/{family['file']}) | {len(family['document']['entries'])} |")
+    report += ['', '## Дополнения к 23-Nov', '', '| Имя | Договор | Исходник |', '| --- | --- | --- |']
     for item in additions:
-        path = 'LMX_Fn_Receivers/src/'+item['source']+'.lmx'
-        report.append(f"| `{item['name']}({item['arguments']})` | {item['scope'].replace('|',r'\|')} | [{item['source']}.lmx]({path}) |")
-    report.extend([
-        '', '## Существенные границы реализации', '',
-        '`bracket` регистрирует охраняемый finally до приобретения ресурса и освобождает его только '
-        'после успешного acquire. Это закрывает промежуток между исходными операторами; атомарность '
-        'передачи ресурса внутри нативного attempt не объявляется уже реализованной. '
-        'Haskell mask/restore и приоритеты исключений Scala описаны отдельно.', '',
-        '`lazy` и `once` проверяют повторный вход, публикуют первый успешный результат, сбрасывают '
-        'Busy после неудачи и устанавливают cleanup до перехода в Busy. Это состояние одного '
-        'Message; разделяемый межпоточный cache не подразумевается.', '',
-        '`iterateUntilStop` выполняет принятую декларацию и тело в принимающем исполнении. '
-        'Узкий provider AE01 — attemptAccepted — сохраняет происхождение принятой позиции и '
-        'живые места. Поиск по внутреннему имени декларации и выбор по совпадению указателя запрещены. '
-        'AR01 — acceptsRequirement — даёт внутреннее наблюдение существующей совместимости '
-        'без исполнения пользовательского кода. Доказанные 1/0 отделены от неизвестного результата '
-        'и не добавляют булев ABI публичному satisfies. Вместе с 17 ранее описанными входами '
-        'это **19 интеграционных интерфейсов**, отдельно от пользовательских операторов. '
-        'Четыре прежних булевых использования satisfies в Regex исправлены.', '',
-        '`retryPost` не теряет итог при недоставленной нотификации; он доступен через read. '
-        'Таймаут и cancel останавливают политику новых попыток, но не обнуляют ожидания поздних '
-        'ответов и не разрешают преждевременно уничтожать арену.', '',
-        '## Где смотреть результат', '',
+        source = implementation_source(item)
+        args = item.get('arguments', '')
+        scope = item.get('scope', '').replace('|', r'\|')
+        report.append(f"| `{item['name']}({args})` | {scope} | [{Path(source).name}](LMX_Fn_Receivers/{source}) |")
+    report += [
+        '', '## Границы реализации', '',
+        '`bracket` заранее выделяет ячейку аргумента cleanup, сохраняет успешный acquire в готовую ячейку и регистрирует finally до построения аргументов action. При отказе acquire handler не зарегистрирован. Повторных acquired/ok-проверок нет. Нативная атомарность и Haskell asynchronous masking не объявляются реализованными одним этим исходником.', '',
+        'Новые стандартные операции используют существующие typed value records, containers, names/nil, Pattern, ordinary callbacks и текущие интеграционные входы. Отдельные документы семейств описывают ограниченные конечные коллекции, payload/default правила, владение, ранний выход и отсутствие новых выдуманных providers. Подготовленные acceptance cases помечены NOT_RUN.', '',
+        'Формат конечных Throws сохраняется как написан автором. Дополнительная метрика сокращает только подсчитываемые аргументы после первого; ссылки и общие банки остаются учтены. Это не изменение API, inference эффектов или доказательство полноты динамических callback-исходов.', '',
+        '## Где смотреть', '',
         '- [Клиенты и девять сравнений реализаций](LIBRARY_COMPONENTS.md).',
-        '- [Все примеры, включая Julia и Perl](examples/README.md), [их статистика](examples/STATISTICS.md).',
-        '- [Общая статистика паттернов](STATISTICS_2026-11-22.md). Дата в имени сохраняется для старых ссылок; внутри указана текущая редакция.',
-        '- [Проверки функциональной группы](09_functional_computation/VALIDATION_2026-11-23.md).',
-        '- [Интеграционные требования ядра](LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).', '',
-        'Окончательные машинные отчёты отделяют фактически выполненные проверки от подготовленных '
-        'случаев NOT_RUN. В этом архиве не поставляется компилятор/интерпретатор LMX; генерация '
-        'документов и статические проверки не доказывают runtime-корректность.','',
-    ])
+        '- [Все 96 примеров](examples/README.md) и [их статистика](examples/STATISTICS.md).',
+        '- [Статистика паттернов](STATISTICS_2026-11-22.md), [машинные проверки](validation/current_packet_20261123.json).',
+        '- [Optional/Result/object операции](LMX_Fn_Receivers/CORE_STANDARD_OBJECTS.md).',
+        '- [Полный реестр ядра](../CORE_FUNCTIONS.md) и [интеграционные требования](LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).',
+        '- [Текущий отчёт проверок](VALIDATION.md).', '',
+        'LMX runtime не поставляется. Статические проверки, Python-модели, генерация публикаций и отдельно выполненные foreign tests не заменяют исполнения LMX. Этот пакет содержит исходники алгоритмов, сравнения и конкретные требования интеграции.', '',
+    ]
     (ROOT/'CORE_COMPARISONS_2026-11-23.md').write_text('\n'.join(report))
-    print(json.dumps({'implementation_comparisons':len(uses),'public_functions':len(catalog),'additions':len(additions)}))
+    print(json.dumps({'implementation_comparisons':len(uses),'public_functions':len(catalog),'additions_to_23Nov':len(additions),'base_archive':base['name']}))
+
 
 if __name__ == '__main__':
     main()

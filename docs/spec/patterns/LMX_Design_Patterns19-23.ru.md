@@ -26,16 +26,16 @@
 
 Измерены непробельные символы основного прикладного листинга, включая объявления, импорты, необходимые оболочки и demo. Внешний запуск, main, печать, тесты и runtime не включены. Имена не нормализованы; Python без необязательных аннотаций. Отношения вычислены из сумм, а не как среднее отношений по отдельным шаблонам. Отдельный поясняющий шаблон ядра в Interpreter исключён; строка его использования через `copy` включена.
 
-| Язык | Всего непробельных символов, 19–23 | К размеру LMX |
-|---|---:|---:|
-| LMX | 1389 | 1,00× |
-| Python | 1627 | 1,17× |
-| Java | 1970 | 1,42× |
-| C++ | 1778 | 1,28× |
-| C# | 2144 | 1,54× |
-| TypeScript | 1957 | 1,41× |
-| Go | 1848 | 1,33× |
-| Rust | 2165 | 1,56× |
+| Язык | Всего непробельных символов, 19–23 | К размеру LMX | LMX без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 1345 | 1,00× | 1345 |
+| Python | 1627 | 1,21× | — |
+| Java | 1970 | 1,46× | — |
+| C++ | 1778 | 1,32× | — |
+| C# | 2144 | 1,59× | — |
+| TypeScript | 1957 | 1,46× | — |
+| Go | 1848 | 1,37× | — |
+| Rust | 2165 | 1,61× | — |
 
 ## 19. Singleton — Одиночка
 
@@ -87,18 +87,14 @@ Frame:
         return: value + button\render()
 
 Light:
+    int: theme 1
     return: @
     button:
-        return: derive(Button; (int: value 1))
+        return: derive(Button; (int: value theme))
     frame:
-        return: derive(Frame; (int: value 10))
+        return: derive(Frame; (int: value theme * 10))
 
-Dark:
-    return: @
-    button:
-        return: derive(Button; (int: value 2))
-    frame:
-        return: derive(Frame; (int: value 20))
+Dark: merge(Light; (int: theme 2))
 
 Client:
     @: factory
@@ -119,7 +115,7 @@ Client\render(factory := Light) получает кнопку 1 и рамку 10
 
 Два семейства конфигураций и два вида продуктов; совместимость семейства обеспечена выбранной фабрикой и порядком действий потребителя. Продукты имеют общий формат и различаются настройками: для этого сценария отдельные подклассы LightButton/DarkButton не нужны. Никакой язык здесь не запрещает вручную смешать продукты двух семейств. Это не сравнение GUI-библиотек или автоматического доказательства совместимости. C++ выражает интерфейс фабрики двумя указателями на функции, сохраняя тот же выбор семейства во время выполнения.
 
-**LMX: 458** непробельных символов. [Сравнение на восьми языках](20_abstract_factory_comparison.md).
+**LMX: 414** непробельных символов. [Сравнение на восьми языках](20_abstract_factory_comparison.md).
 
 [Refactoring.Guru — Abstract Factory](https://refactoring.guru/design-patterns/abstract-factory) · [Refactoring.Guru — Abstract Factory in Python](https://refactoring.guru/design-patterns/abstract-factory/python/example)
 

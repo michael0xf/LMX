@@ -1,38 +1,45 @@
 Resource:
     int: value 42
     int: width 8
+
 Trace:
     int: mode 0
     int: events 0
+    eval:
+        Trace\events := events * 10 + x
+    code:
+        throws: ResourceFailure
+        eval()
+        if: Trace\mode = mode
+            throw: ResourceFailure()
+    end: code
     Acquire:
         return: @
         open:
             throws: ResourceFailure
-            Trace\events := Trace\events * 10 + 1
-            if: Trace\mode = 2
-                throw: ResourceFailure()
-            return: Resource
-    ---
+            int: x 1
+            code(2)
+        return: Resource
     Action:
         @: resource
         return: int
         use:
             throws: ResourceFailure
-            Trace\events := Trace\events * 10 + 2
-            if: Trace\mode = 1
-                throw: ResourceFailure()
-            return: resource\value + resource\width
-    ---
+            int: x 2
+            code(1)
+        return: resource\value + resource\width
     Release:
         @: resource
         close:
-            Trace\events := Trace\events * 10 + 3
+            int: x 3
+            eval()
+        end: close
 
 Example:
     int: mode
     return: @
     run:
-        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
+        throws: copy(FxThrows\sequence)
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)

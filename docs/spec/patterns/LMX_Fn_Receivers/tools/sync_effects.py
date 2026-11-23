@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Normalize explicit finite throws declarations without inferring effects.
+"""Record explicit finite throws declarations without inferring effects.
 
 The earlier lexical inference pass accumulated conservative seeds, including
 blanket fixture failures. This tool preserves those authored declarations; it
-does not prove that they are minimal, complete, caught, or executable. It only
-factors equal lists through ordinary qualified copy streams when that reduces
-the combined LMX source cost, and resolves them back to the same finite sets.
+does not prove that they are minimal, complete, caught, or executable. Source
+formatting is preserved by default. The optional --normalize legacy pass factors
+equal lists through qualified copy streams; it is never required for a valid
+contract. The additional size metric belongs to tools/throws_metrics.py and
+does not edit these declarations.
 
 The existing effect_contracts.json is a preservation guard, not an inference
 input. An intentional contract edit must update that reviewed declaration
@@ -28,7 +30,7 @@ REPORT = ROOT / 'tests/effect_contracts.json'
 AUDIT = ROOT / 'tests/effect_formatting_review.json'
 REGEN = ROOT / 'tests/effect_regeneration_review.json'
 IDENT = r'[A-Za-z_]\w*'
-QUALIFIED = rf'{IDENT}(?:\\{IDENT})+'
+QUALIFIED = rf'{IDENT}(?:\\{IDENT})*'
 HEADER = re.compile(rf'^( *)(?:independent:\s*)?({IDENT}):\s*$')
 DECL = re.compile(r'^( *)throws:\s*(.*?)\s*$')
 COPY = re.compile(rf'copy\(\s*({QUALIFIED})\s*\)|copy:\s*({QUALIFIED})')
@@ -188,10 +190,28 @@ class Source:
 
     def resolve(self, span, visiting=()):
         names = set()
-        for entry in self.entries(span):
+        entries = []
+        token = re.compile(rf'copy\(\s*{QUALIFIED}\s*\)|copy:\s*{QUALIFIED}|{IDENT}')
+        for line in self.entries(span):
+            offset = 0
+            for match in token.finditer(line):
+                if line[offset:match.start()].strip():
+                    raise ValueError(f'{span.file}:{span.start + 1}: unsupported failure-list entry {line!r}')
+                entries.append(match.group())
+                offset = match.end()
+            if line[offset:].strip():
+                raise ValueError(f'{span.file}:{span.start + 1}: unsupported failure-list entry {line!r}')
+        for entry in entries:
             match = COPY.fullmatch(entry)
             if match:
                 target = match.group(1) or match.group(2)
+                if target not in self.headers:
+                    parts = span.key.split('\\')
+                    for size in range(len(parts), 0, -1):
+                        candidate = '\\'.join(parts[:size] + [target])
+                        if candidate in self.headers:
+                            target = candidate
+                            break
                 if target in visiting:
                     raise ValueError('cyclic failure list: ' + ' -> '.join(visiting + (target,)))
                 if target not in self.cache:
@@ -284,6 +304,22 @@ def normalize(texts):
     return proposed, contracts, sorted(groups, key=lambda g: g['field'])
 
 
+def preserve(texts):
+    """Resolve authored lists, including mixed copy/name arguments, unchanged."""
+    source = Source(texts)
+    contracts = source.contracts()
+    groups = []
+    for key, spans in sorted(source.headers.items()):
+        if not key.startswith(BANK_ROOT + '\\') or len(spans) != 1:
+            continue
+        names = list(source.resolve(spans[0]))
+        uses = sum(len(re.findall(r'copy\(\s*' + re.escape(key) + r'\s*\)', text))
+                   for path, text in texts.items() if path != BANK)
+        groups.append({'field': key.split('\\')[-1], 'names': names,
+                       'uses': uses, 'format': 'as_authored'})
+    return dict(texts), contracts, groups
+
+
 def metrics(texts):
     return {'files': len(texts), 'characters_without_whitespace': sum(count(s) for s in texts.values()),
             'physical_lines': sum(len(s.splitlines()) for s in texts.values()),
@@ -292,12 +328,14 @@ def metrics(texts):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--check', action='store_true', help='verify normalized source and resolved report without writing')
+    parser.add_argument('--check', action='store_true', help='verify resolved report without writing or requiring compact formatting')
+    parser.add_argument('--normalize', action='store_true', help='explicit legacy formatting pass; never changes the finite error set')
     args = parser.parse_args()
     paths = sorted((ROOT / 'src').rglob('*.lmx')) + sorted((ROOT / 'examples').glob('*.lmx'))
     texts = {p.relative_to(ROOT): p.read_text() for p in paths}
-    proposed, explicit, groups = normalize(texts)
-    again, again_contracts, again_groups = normalize(proposed)
+    transform = normalize if args.normalize else preserve
+    proposed, explicit, groups = transform(texts)
+    again, again_contracts, again_groups = transform(proposed)
     if proposed != again or explicit != again_contracts or groups != again_groups:
         raise AssertionError('normalizer is not idempotent')
     old = json.loads(REPORT.read_text())
@@ -323,7 +361,8 @@ def main():
         'explicit_declarations': len(explicit),
     }
     audit = {
-        'scope': 'Formatting and exact resolution of existing finite declarations; no effect inference or LMX execution',
+        'scope': 'Exact resolution of authored finite declarations; no effect inference or LMX execution',
+        'source_format': 'normalized' if args.normalize else 'as_authored',
         'runtime_executed': False, 'baseline': baseline, 'current_source': metrics(proposed),
         'resolved_contracts_sha256': digest(report), 'contracts': len(report),
         'explicit_declarations': len(explicit), 'shared_root': BANK_ROOT, 'shared_source': BANK.as_posix(),
@@ -335,7 +374,8 @@ def main():
         'limitations': [
             'Existing conservative overdeclarations are intentionally preserved, including old blanket fixture names.',
             'No calls, implicit failures, dynamic targets, catch coverage, or rethrows are inferred or proved.',
-            'Only authored identifier lists and unambiguous qualified copy streams are normalized; other syntax is an error.',
+            'Only authored identifier lists and unambiguous copy streams are resolved; other syntax is an error.',
+            'Source formatting is preserved unless --normalize is explicitly requested. Long Throws are a documented language benefit.',
             'Empty legacy report entries mean no explicit list was recorded; they do not prove a method cannot fail.',
         ],
     }
@@ -346,7 +386,8 @@ def main():
     # is not a perpetual precondition for a valid idempotent normalization.
     audit['revision_source_footprint_reduced'] = audit['source_characters_saved'] > 0
     regen = {
-        'scope': 'In-memory normalization repeated twice on the current source; exact finite contracts and non-throws text compared',
+        'scope': 'In-memory contract resolution repeated twice on the current source; exact finite contracts and source text compared',
+        'source_format': 'normalized' if args.normalize else 'as_authored',
         'runtime_executed': False, 'effect_inference_performed': False,
         'normalizer': 'tools/sync_effects.py', 'contracts': len(report), 'explicit_declarations': len(explicit),
         'shared_lists': len(groups), 'all_explicit_contracts_preserved': True,

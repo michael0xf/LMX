@@ -65,21 +65,11 @@
     ]
   },
   "cases": {
-    "P01": {
-      "map": [
-        "PI01"
-      ]
-    },
+    "P01": {},
     "P02": {
-      "filter": [
-        "PI01"
-      ]
+      "compress": []
     },
-    "P03": {
-      "foldl": [
-        "PI01"
-      ]
-    },
+    "P03": {},
     "P04": {
       "scanl": [
         "PI01"
@@ -116,11 +106,18 @@
     "P10": {
       "groupBy": [
         "PI04"
+      ],
+      "identity": [],
+      "map": [
+        "PI01"
       ]
     },
     "P11": {
       "groupBy": [
         "PI04"
+      ],
+      "map": [
+        "PI01"
       ]
     },
     "P12": {
@@ -129,9 +126,7 @@
       ]
     },
     "P13": {
-      "flatMap": [
-        "PI01"
-      ]
+      "concat": []
     },
     "P14": {
       "split": [
@@ -157,6 +152,10 @@
       ],
       "matchedText": [
         "PI07"
+      ],
+      "collect": [],
+      "map": [
+        "PI01"
       ]
     },
     "P18": {
@@ -168,18 +167,20 @@
       "replace": [
         "PI07"
       ],
-      "matchedText": [
-        "PI07"
-      ]
+      "repeatText": []
     },
     "P20": {
       "matches": [
         "PI07"
       ]
     },
-    "P21": {},
+    "P21": {
+      "translate": []
+    },
     "P22": {},
-    "P23": {},
+    "P23": {
+      "collect": []
+    },
     "P24": {
       "bracket": [
         "PI06"
@@ -187,6 +188,891 @@
     }
   },
   "missing": [],
+  "unpaired_functions": [
+    "collect",
+    "compress",
+    "concat",
+    "identity",
+    "repeatText",
+    "translate"
+  ],
+  "canonical_sources": {
+    "P01": {},
+    "P02": {
+      "compress": {
+        "root": "FxSeqCompress",
+        "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+        "sha256": "1e4d207e73ac79896ce881e466673552e8715b51bbb3e5284ad6917648fe63d4",
+        "all_definitions": [
+          "FxSeqAllocate",
+          "FxSeqCompress",
+          "FxSeqInfo",
+          "FxSeqInteger",
+          "FxSeqRead",
+          "FxThrows"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      }
+    },
+    "P03": {},
+    "P04": {
+      "scanl": {
+        "root": "FxScan",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "b2d263367ff10e50a70e35d886028a1436b00911278ca3afe5500759d1fc98ef",
+        "all_definitions": [
+          "FxApply",
+          "FxScan",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxThrows",
+          "FxTry",
+          "FxTwo"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      }
+    },
+    "P05": {
+      "any": {
+        "root": "FxSeqAny",
+        "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+        "sha256": "278519a8df43775d8d50fe278ac4ffeef91d96d6745e19734a9ada8ed0312a9b",
+        "all_definitions": [
+          "FxApply",
+          "FxOne",
+          "FxSeqAny",
+          "FxSeqInfo",
+          "FxSeqPredicate",
+          "FxSeqRead",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      },
+      "all": {
+        "root": "FxSeqAll",
+        "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+        "sha256": "6ea407232d91cd061f26a24cf4b233c9d00c9c8735ce78449bf9527ced5cff6c",
+        "all_definitions": [
+          "FxApply",
+          "FxOne",
+          "FxSeqAll",
+          "FxSeqInfo",
+          "FxSeqPredicate",
+          "FxSeqRead",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      }
+    },
+    "P06": {
+      "select": {
+        "root": "RxSelect",
+        "source": "../../LMX_Fn_Receivers/src/structures.lmx",
+        "sha256": "35f05eac2349d44ddd709a735f51b3fd64b4757391039ea1218c18ed97739827",
+        "all_definitions": [
+          "FxSeqAllocate",
+          "FxSeqIndices",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSelect",
+          "FxSeqSelection",
+          "FxThrows",
+          "RxSelect"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI02"
+        ]
+      }
+    },
+    "P07": {
+      "splice": {
+        "root": "FxSeqSplice",
+        "source": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx",
+        "sha256": "0f3327ccb8f5e3e8bdf981ae9943cc482bf61ef017a6560e4e5af494eb350962",
+        "all_definitions": [
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqBounds",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqReplaceRange",
+          "FxSeqSize",
+          "FxSeqSlice",
+          "FxSeqSplice",
+          "FxThrows"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI02"
+        ]
+      }
+    },
+    "P08": {
+      "sort": {
+        "root": "FxSort",
+        "source": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+        "sha256": "37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a",
+        "all_definitions": [
+          "FxApply",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqBounds",
+          "FxSeqInfo",
+          "FxSeqInteger",
+          "FxSeqRead",
+          "FxSeqSlice",
+          "FxSeqStore",
+          "FxSort",
+          "FxThrows",
+          "FxTry",
+          "FxTwo"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI03"
+        ]
+      }
+    },
+    "P09": {
+      "unique": {
+        "root": "FxUnique",
+        "source": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+        "sha256": "45e5c9ba86ebc9d39d746aaddb819ee0770027085f46bb27681f4a13679bb019",
+        "all_definitions": [
+          "FxApply",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqPredicate",
+          "FxSeqRead",
+          "FxSeqStore",
+          "FxThrows",
+          "FxTry",
+          "FxTwo",
+          "FxUnique"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI03"
+        ]
+      }
+    },
+    "P10": {
+      "groupBy": {
+        "root": "FxGroupBy",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "c6a391aff1a3ebcaf3963e4123350fe6662d5c6bf8ca68cc77f15ccf50fa86cf",
+        "all_definitions": [
+          "FxApply",
+          "FxGroup",
+          "FxGroupBy",
+          "FxOne",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqPush",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxThrows",
+          "FxTry",
+          "FxTwo"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI04"
+        ]
+      },
+      "identity": {
+        "root": "FxIdentity",
+        "source": "../../LMX_Fn_Receivers/src/generic_combinators.lmx",
+        "sha256": "56705e37dd548b57d1ebc3e5e6d227318567a9627519bc498a40f06f2a6c859e",
+        "all_definitions": [
+          "FxBuild",
+          "FxConcat",
+          "FxDecimal",
+          "FxFormatInt",
+          "FxIdentity",
+          "FxIndices",
+          "FxInputPolicy",
+          "FxLabels",
+          "FxOne",
+          "FxOwnPolicy",
+          "FxSeqAllocate",
+          "FxSeqConcat",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqReverse",
+          "FxSeqSize",
+          "FxSignatures",
+          "FxThrows"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      },
+      "map": {
+        "root": "FxMap",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb",
+        "all_definitions": [
+          "FxApply",
+          "FxMap",
+          "FxOne",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      }
+    },
+    "P11": {
+      "groupBy": {
+        "root": "FxGroupBy",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "c6a391aff1a3ebcaf3963e4123350fe6662d5c6bf8ca68cc77f15ccf50fa86cf",
+        "all_definitions": [
+          "FxApply",
+          "FxGroup",
+          "FxGroupBy",
+          "FxOne",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqPush",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxThrows",
+          "FxTry",
+          "FxTwo"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI04"
+        ]
+      },
+      "map": {
+        "root": "FxMap",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb",
+        "all_definitions": [
+          "FxApply",
+          "FxMap",
+          "FxOne",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      }
+    },
+    "P12": {
+      "derive": {
+        "root": "RxDerive",
+        "source": "../../LMX_Fn_Receivers/src/structures.lmx",
+        "sha256": "4ed27df02fe433d37390af11adba8b6211a78882f8407bc15630ee82a3da4209",
+        "all_definitions": [
+          "RxDerive"
+        ],
+        "external_boundaries": [],
+        "comparison_pairs": [
+          "PI05"
+        ]
+      }
+    },
+    "P13": {
+      "concat": {
+        "root": "FxSeqConcat",
+        "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+        "sha256": "e014196b8f4ec2bd44a264d07bc97e5324e16dc6bb5f28a74810f636b29339f4",
+        "all_definitions": [
+          "FxSeqAllocate",
+          "FxSeqConcat",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxThrows"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      }
+    },
+    "P14": {
+      "split": {
+        "root": "RxSplit",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "76f69b887a0ddc530658676fcdd4033f4568dae3e27cd9d90368f487bd5f9f92",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxRecordOperands",
+          "FxRecords",
+          "FxSeqAdmit",
+          "FxSeqInfo",
+          "FxSeqPush",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxFindNext",
+          "RxFindState",
+          "RxFindStateMake",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxSelectAt",
+          "RxSplit",
+          "RxTextBuild",
+          "RxTextConfig",
+          "RxTextSlice"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      }
+    },
+    "P15": {
+      "matches": {
+        "root": "RxMatches",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "87a78bcac0b2904715e928bbf44821837b0af5b08a04611cbc0e91ab6b5fe336",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxMatches",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxSelectAt",
+          "RxTextBuild",
+          "RxTextConfig",
+          "RxWholeMatch"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      }
+    },
+    "P16": {
+      "wholeMatch": {
+        "root": "RxWholeMatch",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "108adca215fe982c1798289f4e4895d917035a8a3414ec6981464880448f304a",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxSelectAt",
+          "RxTextBuild",
+          "RxTextConfig",
+          "RxWholeMatch"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      },
+      "captureText": {
+        "root": "RxCaptureText",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "219585743225043c15ea6d3ceef24647eb2d98dd252cc06a3848c84613245077",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxRecordOperands",
+          "FxRecords",
+          "FxSameText",
+          "FxSome",
+          "FxUnitRange",
+          "RxCaptureLatest",
+          "RxCaptureText",
+          "RxLastCapture",
+          "RxPreparedText",
+          "RxSpanMake",
+          "RxTextSlice"
+        ],
+        "external_boundaries": [],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      }
+    },
+    "P17": {
+      "eachMatch": {
+        "root": "RxEachMatch",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "5ba2e0dbd0179a8f10fe6a63ae1ba948dc6303cb0376fdab4a6ab249685b788c",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxEachMatch",
+          "RxFindAllOwner",
+          "RxFindNext",
+          "RxFindState",
+          "RxFindStateMake",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxSelectAt",
+          "RxTextBuild",
+          "RxTextConfig"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      },
+      "matchedText": {
+        "root": "RxMatchedText",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "6d421caa71c7307ad79d1b5b3c3640ff8a3c97617a3fcdc7310458b1efc9b916",
+        "all_definitions": [
+          "RxMatchedText",
+          "RxPreparedText",
+          "RxTextSlice"
+        ],
+        "external_boundaries": [],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      },
+      "collect": {
+        "root": "FxStdCollect",
+        "source": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
+        "sha256": "d0929a09e78e1ee4f7eb196b18dab4dc9b035fae559020b21fd6a139c67bf76c",
+        "all_definitions": [
+          "FxSameText",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqPush",
+          "FxSeqSize",
+          "FxStdCollect",
+          "FxThrows",
+          "FxTry",
+          "FxUnitRange"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      },
+      "map": {
+        "root": "FxMap",
+        "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb",
+        "all_definitions": [
+          "FxApply",
+          "FxMap",
+          "FxOne",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI01"
+        ]
+      }
+    },
+    "P18": {
+      "replace": {
+        "root": "RxReplace",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "547e55c5b1977e8cb0be669ad2da3c4d2c77db5f9b2a86846305bac95b15825e",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxFindNext",
+          "RxFindState",
+          "RxFindStateMake",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxReplace",
+          "RxReplacement",
+          "RxReplacementAccept",
+          "RxReplacementText",
+          "RxSelectAt",
+          "RxTextAppend",
+          "RxTextAppendSpan",
+          "RxTextBuild",
+          "RxTextConfig"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      }
+    },
+    "P19": {
+      "replace": {
+        "root": "RxReplace",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "547e55c5b1977e8cb0be669ad2da3c4d2c77db5f9b2a86846305bac95b15825e",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxFindNext",
+          "RxFindState",
+          "RxFindStateMake",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxReplace",
+          "RxReplacement",
+          "RxReplacementAccept",
+          "RxReplacementText",
+          "RxSelectAt",
+          "RxTextAppend",
+          "RxTextAppendSpan",
+          "RxTextBuild",
+          "RxTextConfig"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      },
+      "repeatText": {
+        "root": "FxRepeatText",
+        "source": "../../LMX_Fn_Receivers/src/coreStandardText.lmx",
+        "sha256": "96963491bc2d4a92255736ce9ab4a9f165bf78c281b4e1c652d39e956b56558a",
+        "all_definitions": [
+          "FxRepeatText",
+          "FxSeqAllocate",
+          "FxSeqConcat",
+          "FxSeqEmpty",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxStdCycle",
+          "FxStdReplicate",
+          "FxThrows"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      }
+    },
+    "P20": {
+      "matches": {
+        "root": "RxMatches",
+        "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+        "sha256": "87a78bcac0b2904715e928bbf44821837b0af5b08a04611cbc0e91ab6b5fe336",
+        "all_definitions": [
+          "FxMaybe",
+          "FxNone",
+          "FxSeqInfo",
+          "FxSeqSize",
+          "FxSome",
+          "FxThrows",
+          "FxUnitRange",
+          "RxCandidate",
+          "RxCandidateMake",
+          "RxCursorFactory",
+          "RxCursorOwner",
+          "RxIsPattern",
+          "RxLiteral",
+          "RxLiteralProbe",
+          "RxMatchMake",
+          "RxMatches",
+          "RxNormalize",
+          "RxOctet",
+          "RxOpen",
+          "RxPatternFactory",
+          "RxPatternOwner",
+          "RxPrepare",
+          "RxPreparedText",
+          "RxPrimitiveConfig",
+          "RxPrimitiveMake",
+          "RxPrimitiveOpen",
+          "RxPrimitiveState",
+          "RxPrimitiveStep",
+          "RxSelectAt",
+          "RxTextBuild",
+          "RxTextConfig",
+          "RxWholeMatch"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI07"
+        ]
+      }
+    },
+    "P21": {
+      "translate": {
+        "root": "FxTranslate",
+        "source": "../../LMX_Fn_Receivers/src/coreStandardText.lmx",
+        "sha256": "6f6c099d11788cc756f46e3af4df967b4dd795fb666333198e95033acc398481",
+        "all_definitions": [
+          "FxCharIndex",
+          "FxSeqAllocate",
+          "FxSeqBounds",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSlice",
+          "FxThrows",
+          "FxTranslate"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      }
+    },
+    "P22": {},
+    "P23": {
+      "collect": {
+        "root": "FxStdCollect",
+        "source": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
+        "sha256": "d0929a09e78e1ee4f7eb196b18dab4dc9b035fae559020b21fd6a139c67bf76c",
+        "all_definitions": [
+          "FxSameText",
+          "FxSeqAdmit",
+          "FxSeqAllocate",
+          "FxSeqInfo",
+          "FxSeqPush",
+          "FxSeqSize",
+          "FxStdCollect",
+          "FxThrows",
+          "FxTry",
+          "FxUnitRange"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": []
+      }
+    },
+    "P24": {
+      "bracket": {
+        "root": "FxAround",
+        "source": "../../LMX_Fn_Receivers/src/generic_wrappers.lmx",
+        "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b",
+        "all_definitions": [
+          "FxAppend",
+          "FxApply",
+          "FxAround",
+          "FxSeqAllocate",
+          "FxSeqConcat",
+          "FxSeqInfo",
+          "FxSeqRead",
+          "FxSeqSize",
+          "FxThrows",
+          "FxTry"
+        ],
+        "external_boundaries": [
+          "FxKernel"
+        ],
+        "comparison_pairs": [
+          "PI06"
+        ]
+      }
+    }
+  },
+  "coverage_policy": "Known core bodies without a real foreign implementation pair are linked and counted as unpaired; no fabricated PI mapping.",
   "syntax_profile": "Pattern/TextView constructors and expression operands: PI07; declaration, copying, indexing, yield and scalar arithmetic: base language.",
   "foreign_dependencies": [
     "%+",

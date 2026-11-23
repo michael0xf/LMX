@@ -4,13 +4,33 @@ Edition: 2026-11-23. Client: [H09](../lmx/H09.lm3), [scenario](../../LMX_example
 
 ## Contract
 
-The accepted declaration remains DATA until execution. Its established item and caller total stay live in the receiving activation. Only source Stop terminates; body Stop and other failures propagate in FxCallFailure. The Haskell loop passes values explicitly. AE01 is a concrete pending kernel integration boundary; see CORE_EXAMPLE_HELPERS.md.
+The accepted declaration remains DATA until execution. Its established item and caller total stay live in the receiving activation. The primary H09 loop uses ordinary iteration()/body() and catches only source Stop. A Stop raised by the body and all other failures retain their original names. This is the authored declaration/body contract in LMX_semantics.en.md, with no string comparison or failure envelope. Haskell passes each yielded value explicitly and propagates exceptions normally. The separately retained core adapter deliberately has a different FxCallFailure API; it is not a semantic substitute for this short primary loop.
 
-LMX public names: `iterateUntilStop`. These names belong to the proposed core; no user library import is needed.
+Primary H09 uses the local `Cycles\iterate` shown in full below. The optional `iterateUntilStop` adapter remains in the proposed core with its separate error-envelope contract.
 
 **Foreign usage client:** Control.Monad.Loops.whileJust_ from the actual monad-loops package. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
 
-## LMX implementation
+## Primary ordinary LMX implementation
+
+The complete helper below is also included in [H09.lm3](../lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
+
+```lmx
+Cycles:
+    @: iteration
+    @: body
+    iterate:
+        while: 1
+            iteration()
+            catch: Stop ()
+                break
+            body()
+```
+
+The catch belongs to `iteration()` alone. `body()` is outside that catch: if it raises Stop, Stop propagates. A source failure other than Stop also propagates unchanged. Reusing an ordinary named catch avoids dispatching on the characters of an error-name string. No extra receiver, raw execution mode or adapter kernel is needed for this mechanism.
+
+## Separate core adapter with an error envelope
+
+The following retained adapter converts failures to FxCallFailure records and uses an accepted-code bridge. That is an additional API boundary. Its entry and reachable-source sizes are reported separately and are not used as the primary equivalent-loop size.
 
 Complete entry definitions, with no omitted branch:
 
@@ -37,7 +57,7 @@ Complete canonical source files for the entry and its LMX dependencies:
 - [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 
-The reachable roots are: `FxSameText`, `FxThrows`, `FxIterateUntilStop`.
+The reachable roots are: `FxUnitRange`, `FxSameText`, `FxThrows`, `FxIterateUntilStop`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -73,11 +93,16 @@ whileJust next body = iterateUntilStop (convert <$> next) body
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: |
-| LMX entry definitions shown above | 303 | 14 | 481 |
-| All reachable LMX source roots, counted once | 2008 | 160 | 3438 |
-| Complete Haskell comparison module | 644 | 19 | 830 |
+| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Primary complete Cycles helper | 73 | 9 | 159 |
+| Optional adapter entry | 303 | 303 | 14 | 481 |
+| Optional adapter and all reachable LMX roots | 2182 | 1303 | 172 | 3732 |
+| Complete Haskell comparison module | 644 | — | 19 | 830 |
+
+The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+
+На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 
 These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 

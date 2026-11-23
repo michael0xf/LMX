@@ -30,15 +30,7 @@ Addition:
 Demo:
     return: int
     run:
-        throws:
-            FxIndex
-            FxArity
-            FxRecordArity
-            FxTypeToken
-            FxKernelFailure
-            FxCallFailure
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture) FxCallFailure
         @: add curry(Addition\apply)
         @: add5 add(5)
         @: add100 add(100)
@@ -101,15 +93,7 @@ Addition:
 Demo:
     return: int
     run:
-        throws:
-            FxIndex
-            FxArity
-            FxRecordArity
-            FxTypeToken
-            FxKernelFailure
-            FxCallFailure
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture) FxCallFailure
         @: add5 partial(Addition\apply; (5))
         @: add100 partial(Addition\apply; (100))
         int: saved 1000
@@ -122,13 +106,15 @@ Demo:
 
 ## Подсчёт
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 292 | 23 |
-| Haskell | 154 | 8 |
-| Scala | 198 | 10 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 236 | 15 | 223 |
+| Haskell | 154 | 8 | — |
+| Scala | 198 | 10 | — |
 
 Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
 
 ## Удалённые малозначимые повторы
 

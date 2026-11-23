@@ -2,7 +2,7 @@
 
 Равенство определяется значением, а не адресом экземпляра.
 
-**Отдельное сравнение реализации:** [096. EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
+**Отдельное сравнение реализации:** [096. Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
 
 ## Общий сценарий
 
@@ -10,35 +10,26 @@
 
 **Ожидаемое наблюдение:** Первые два значения равны, третье отличается. demo кодирует эти две проверки как 10; идентичность объектов для равенства не требуется.
 
-**Граница сравнения:** Использование библиотеки. Read-only cents/currency с исходными100/840 и альтернативой978. Равенство позиционное по двум полям модели. Currency arithmetic и универсальный schema generator не заявляются.
+**Граница сравнения:** Использование библиотеки. Сравниваются только cents и currency двух уже допустимых Money-значений. Компоненты неизменяемы; низкоуровневая замена графовых фрагментов не является API компонента. Арифметика валют, хеширование и округление не включены. Клиент и полная реализация учитываются раздельно; типы и правила хранения языков не приравниваются.
 
-LMX вызывает операции единого ядра. Иностранные клиенты используют настоящие средства языка или установленную библиотеку; показанные рядом самостоятельные реализации в них не импортируются.
+LMX использует существующие средства ядра или явно названную компактную группу, определённую в связанном сравнении реализации. Иностранные клиенты используют настоящие средства языка или установленную библиотеку.
 
 ## LMX
 
 ```lmx
-immutable: Money:
-    int: cents 100
-    int: currency 840
-
-NumberEquality:
-    int: first
-    int: second
-    return: int
-    same:
-        return: first = second
-
 Demo:
     return: int
     run:
-        throws: copy(FxThrows\predicate)
-        @: first (copy(Money))
-        @: second (copy(Money))
-        @: third (merge(Money; immutable: (int: currency 978)))
-        return: equalFields(first; second; NumberEquality\same) * 10 + equalFields(first; third; NumberEquality\same)
+        throws: OperandArity
+        import: MoneyLibrary\Equality
+        @: money MoneyLibrary\immutable\Money
+        @: first (copy(money))
+        @: second (copy(money))
+        @: third (merge(money; immutable: (int: currency 978)))
+        return: (first equals second) * 10 + (first equals third)
 ```
 
-Money остаётся прикладной immutable Structure с cents и currency. В ядро входит только общий equalFields с явным scalar comparator.
+Demo\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\immutable\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.
 
 [Отдельный листинг](examples/lmx/032_value_object.lm3)
 
@@ -79,45 +70,43 @@ public static class Example {
 
 ## Разбор LMX
 
-Money остаётся прикладной immutable Structure с cents и currency. В ядро входит только общий equalFields с явным scalar comparator.
+Demo\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\immutable\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.
 
 ## Сопоставление
 
-Клиенты используют настоящие средства immutable/value. LMX явно задаёт comparator полей; Python/C# генерируют его. Money не становится builtin. Общий цикл и ручные модели хранения сравниваются в096.
-
-### Небольшие варианты записи
-
-Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 351 | 17 |
-| Python | 213 | 8 |
-| C# | 203 | 7 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 239 | 10 | 239 |
+| Python | 213 | 8 | — |
+| C# | 203 | 7 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 
 Equality follows component values rather than object identity.
 
-**Separate implementation comparison:** [096. EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
+**Separate implementation comparison:** [096. Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
 
 **Scenario.** Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.
 
 **Expected observation.** The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.
 
-**LMX.** Money remains an application immutable Structure with cents and currency. Only generic equalFields with an explicit scalar comparator belongs to the core.
+**LMX.** Demo\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\immutable\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden.
 
-**Comparison.** The clients use actual immutable/value facilities. LMX states its field comparator explicitly; Python and C# generate it from the record fields. Money is never promoted into a language builtin. The reusable equality loop and manual storage counterparts are in096.
+**Comparison.** The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
 
-**Scope and limitations.** Read-only cents and currency, with original 100/840 defaults and978 alternative. Equality is positional over this explicit two-field model. Hashing, currency arithmetic, and a universal reflection-based schema generator are not claimed.
+**Scope and limitations.** Only cents and currency of already admissible Money values are compared. Components are read-only; low-level graph-fragment replacement is not part of the component API. Currency arithmetic, hashing, and rounding are excluded. Client and full implementation are counted separately; language type and storage guarantees are not equated.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Money remains an application immutable Structure with cents and currency. Only generic equalFields with an explicit scalar comparator belongs to the core.
+- **LMX:** Demo\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\immutable\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden.
 - **Python:** Real frozen dataclass and generated value equality; no money.py import.
 - **C#:** Real record class; both fields and component equality are preserved.
 

@@ -1,18 +1,17 @@
-FxFindFirst:
-    private:
-        @: items
-        @: accepts
-    required: items accepts
+FindLibrary:
+    copy: sys\OPERANDS_TEMPLATE
     return: @
-    findFirst:
-        throws: copy(FxThrows\predicate)
-        FxSeqInfo\get(items)
-        private: int: count length(items)
-        private: int: i 0
-        while: i < count
-            private: @: value FxSeqRead\read(items; i)
-            private: @: accepted FxApply\apply(accepts; FxOne\make(value))
-            if: FxSeqPredicate\truth(accepted) != 0
-                return: FxSome\some(value := value)
+    findById:
+        throws: OperandArity
+        if: length(right) != 1
+            throw: OperandArity()
+        @: rows \left
+        int: id \right[0]
+        int: i 0
+        while: i < length(rows)
+            @: row rows[i]
+            if: row\id = id
+                return: row
             i += 1
-        return: FxNone\none()
+        @: missing 0
+        return: missing

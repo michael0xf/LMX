@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Check complete scenario sources, real client dependencies and deduplicated variants."""
 from pathlib import Path
-import hashlib,json,re
+import hashlib,json,re,sys
 ROOT=Path(__file__).resolve().parents[2];EX=ROOT/'examples'
+sys.path.insert(0,str(ROOT/'tools'))
+from throws_metrics import measure_throws
 BEGIN='# BEGIN ALTERNATIVE LMX (excluded from character counts)';END='# END ALTERNATIVE LMX'
 def canonical(s):return s.strip()+'\n'
 def metric(s):
- s=canonical(s);return {'characters':sum(not c.isspace() for c in s),'nonblank_lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest()}
+ s=canonical(s);return {'characters':sum(not c.isspace() for c in s),'nonblank_lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest(),'without_complex_throws_characters':measure_throws(s,ROOT)['without_complex_throws_characters']}
 def main():
  errors=[]
  def check(ok,msg):
@@ -36,8 +38,8 @@ def main():
  check('import Control.Monad.Loops (whileJust_)' in hs,'H09 does not use real monad-loops');check('import Data.Ix (inRange)' in hs,'V02 does not use real Data.Ix');check('libraries' not in (EX/'haskell/lmx-examples.cabal').read_text(),'custom modules leaked into client component')
  for ident in ['H04','R01','V03']:check(len(variants[ident]['variants'])==1,ident+': minor duplicate retained')
  check(len(checked)==24,'original 24 scenarios changed count');check(len(cases['V02']['cases'])==11,'V02 input coverage lost')
- h09=(EX/'lmx/H09.lm3').read_text();check('iterateUntilStop:' in h09 and 'FxCallFailure' in h09,'H09 missing core/error contract');check('Cycles:' not in h09,'H09 repeats core body')
+ h09=(EX/'lmx/H09.lm3').read_text();check('Cycles:' in h09 and 'Cycles\\iterate:' in h09,'H09 lost the complete local helper');check('catch: Stop ()' in h09 and 'FxCallFailure' not in h09,'H09 must retain ordinary source Stop handling');check(not cases['H09'].get('core_functions'),'H09 incorrectly requires an adapter core')
  core=(ROOT/'LMX_Fn_Receivers/src/coreComparisonExamples.lmx').read_text();check('PRIORITY sys\\priority("<=")' in core,'between has no comparison priority');check('FxKernel\\attemptAccepted' in core,'declaration/body integration lost');check('AE01' in (ROOT/'LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md').read_text(),'AE01 undocumented')
- report={'format':'examples-receiver-revision-v3','date':'2026-11-23','status':'PASS' if not errors else 'FAIL','scope':'Sources, guide identities, finite error contract, actual foreign dependencies, meaningful variants and exact metrics; not parser/runtime execution','runtime':{'lmx_executed':False,'haskell_executed':False},'source_count':len(checked),'checks':checked,'error_count':len(errors),'errors':errors}
+ report={'format':'examples-receiver-revision-v4','date':'2026-11-23','status':'PASS' if not errors else 'FAIL','scope':'Sources, guide identities, ordinary versus envelope failure boundaries, actual foreign dependencies, meaningful variants and exact metrics; not parser/runtime execution','runtime':{'lmx_executed':False,'haskell_executed':False},'source_count':len(checked),'checks':checked,'error_count':len(errors),'errors':errors}
  (EX/'validation/receiver_revision.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps({'status':report['status'],'checked':len(checked),'errors':errors},ensure_ascii=False));return bool(errors)
 if __name__=='__main__':raise SystemExit(main())

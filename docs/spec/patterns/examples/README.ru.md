@@ -17,7 +17,7 @@
 | [H05.lm3](lmx/H05.lm3) | `BindingProbe\run()` |
 | [H06.lm3](lmx/H06.lm3) | `CompositionProbe\run()` |
 | [H07.lm3](lmx/H07.lm3) | `Evaluation\prepared(), Evaluation\prepared()`; `Evaluation\raw(), Evaluation\raw()` |
-| [H08.lm3](lmx/H08.lm3) | `StateProbe\ownCopy()`; `StateProbe\callerPlace()` |
+| [H08.lm3](lmx/H08.lm3) | `StateProbe\run(Own\step)`; `StateProbe\run(Free\step)` |
 | [H09.lm3](lmx/H09.lm3) | `Numbers\demo()` |
 | [R01.lm3](lmx/R01.lm3) | `MergeProbe\run()` |
 | [R02.lm3](lmx/R02.lm3) | `StreamProbe\run()` |
@@ -35,9 +35,9 @@
 | [M01.lm3](lmx/M01.lm3) | `` |
 | [M05.lm3](lmx/M05.lm3) | `Lamp\set(command := 1)` |
 
-## Редакция с общими ресиверами и без малозначимых дублей
+## Редакция с общими ресиверами и восстановленными короткими примерами
 
-Общие функции входят в проект ядра и доступны прямо. H09 использует iterateUntilStop, V02 — between. Самостоятельные реализации LMX/Haskell сравниваются в library_comparisons; клиентам Haskell они не нужны. Полные альтернативы сохранены только для разных способов решения. H04, R01, V03 объясняют небольшие отличия в комментариях к основному варианту.
+H04 использует прямой merge из 22-Nov. H09 содержит полный короткий Cycles с обычным catch; определение включено в основной размер. V02 сохраняет between. H07 переиспользует общий шаблон операнда, H08 — одно тело изменения y и один runner, M01 — существующий read, V05 — общий шаг журнала и общий цикл set/observe. Динамическое связывание и copy учитываются как обычные возможности языка. При равном договоре выбирается кратчайшая полноценная запись; размещение функции в ядре не даёт её клиенту приоритета.
 
 [Реестр](variants.json) · [Ожидания](expected_results.json) · [Аудит](OPTIMIZATION_REVIEW.md) · [Размеры](validation/functional_receiver_counts.json). Все 24 сценария и их наблюдения сохранены.
 

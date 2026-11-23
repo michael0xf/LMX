@@ -4,7 +4,7 @@
 
 Для списка целых кодов вернуть пары [код,число вхождений], расположенные по первому появлению кода, а не по произвольному порядку хеша.
 
-
+Общий identity сохраняет готовую запись ключа. map переводит готовые FxGroup в наблюдаемые пары; ручной второй обход и resize не повторяются. FxGroup принимается напрямую по действующему typed-value договору.
 
 ## Вход и ожидаемый результат
 
@@ -41,10 +41,12 @@
 
 ## Размер выбранного варианта
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 625 | 413 | 25 |
-| Perl | 237 | 166 | 11 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 378 | 269 | 254 | 17 |
+| Perl | 237 | 166 | 166 | 11 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
 
@@ -53,12 +55,6 @@
 [Исходник](source/lmx/P10.lm3).
 
 ```lmx
-Identity:
-    int: value
-    return: int
-    key:
-        return: value
-
 Same:
     int: first
     int: second
@@ -66,20 +62,18 @@ Same:
     test:
         return: first = second
 
+Frequency:
+    FxGroup@: group
+    return: @
+    row:
+        return: (\group\key; length(group\items))
+
 Example:
     int[]: items
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        @: groups groupBy(items; Identity\key; Same\test)
-        @[]: result []
-        sys\resize(result; length(groups))
-        int: i 0
-        while: i < length(groups)
-            @: group groups[i]
-            result[i] := (\group\key; length(group\items))
-            i += 1
-        return: result
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: map(groupBy(items; identity; Same\test); Frequency\row)
 ```
 
 ## Perl
@@ -103,6 +97,8 @@ sub example {
 ## Отдельные реализации
 
 - groupBy: [PI04](library_comparisons/PI04_comparision.md)
+- identity: [полное тело ядра](../../LMX_Fn_Receivers/src/generic_combinators.lmx); [транзитивные зависимости](library_comparisons/shared_dependencies.lmx). Отдельная Perl-пара этой операции не написана.
+- map: [PI01](library_comparisons/PI01_comparision.md)
 
 Штатные средства Perl: hash, CORE::exists, CORE::push, CORE::map.
 

@@ -32,19 +32,39 @@
           "language": "LMX",
           "code": "Model:\n    int: count 5\n    increment:\n        node\\count += 1\n\nView:\n    @: model Model\n    return: int\n    render:\n        return: model\\count\n\nController:\n    @: model Model\n    click:\n        model\\increment()\n\nDemo:\n    return: int\n    run:\n        Model\\count := 5\n        Controller\\click()\n        return: View\\render()\n",
           "notes_ru": "Вызов Demo\\run(). Состояние модели изменяется явным node\\count. Model, View и Controller принадлежат одному последовательному Message.",
-          "notes_en": "Call Demo\\run(). Explicit node\\count changes model state. Model, View, and Controller belong to one serial Message."
+          "notes_en": "Call Demo\\run(). Explicit node\\count changes model state. Model, View, and Controller belong to one serial Message.",
+          "metrics": {
+            "characters": 208,
+            "nonblank_lines": 19,
+            "utf8_bytes": 328,
+            "sha256": "125ef120139607a97fb6967c9d17d17ac6562e86642a0038adcd254ec39a1fb5",
+            "without_complex_throws_characters": 208,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "class Model { count = 5; increment() { this.count++; } }\nclass View {\n    constructor(private model: Model) {}\n    render() { return this.model.count; }\n}\nclass Controller {\n    constructor(private model: Model) {}\n    click() { this.model.increment(); }\n}\nfunction demo() {\n    const model = new Model();\n    new Controller(model).click();\n    return new View(model).render();\n}\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 302,
+            "nonblank_lines": 14,
+            "utf8_bytes": 380,
+            "sha256": "2ef9f935e58e2b25a91ec0c4af2f6dd6516d3ce2ffb04b3fe3bccf9acb93c4cf"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    sealed class Model {\n        public int Count = 5;\n        public void Increment() { Count++; }\n    }\n    sealed class View {\n        readonly Model model;\n        public View(Model model) { this.model = model; }\n        public int Render() => model.Count;\n    }\n    sealed class Controller {\n        readonly Model model;\n        public Controller(Model model) { this.model = model; }\n        public void Click() { model.Increment(); }\n    }\n    public static int Demo() {\n        var model = new Model();\n        new Controller(model).Click();\n        return new View(model).Render();\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 422,
+            "nonblank_lines": 21,
+            "utf8_bytes": 622,
+            "sha256": "21df2cf83dedda8317167882435b9bfa88406b11aab98a4e5355ab50be1457d2"
+          }
         }
       ],
       "sources": [
@@ -78,19 +98,39 @@
           "language": "LMX",
           "code": "Model:\n    int: count 5\n\nScreen:\n    int: shown 0\n    int: value\n    show:\n        node\\shown := value\n\nPresenter:\n    @: model Model\n    @: view Screen\n    int: delta\n    click:\n        model\\count += delta\n        view\\show(value := model\\count)\n\nDemo:\n    return: int\n    run:\n        Model\\count := 5\n        Presenter\\click(delta := 2)\n        return: Model\\count * 10 + Screen\\shown\n",
           "notes_ru": "Вызов Demo\\run(). Screen не знает Model; все переходы координирует Presenter.",
-          "notes_en": "Call Demo\\run(). Screen has no reference to Model; Presenter coordinates the changes."
+          "notes_en": "Call Demo\\run(). Screen has no reference to Model; Presenter coordinates the changes.",
+          "metrics": {
+            "characters": 252,
+            "nonblank_lines": 20,
+            "utf8_bytes": 389,
+            "sha256": "7772255cdcf208ec00debc704c163c451beb003362d4b7ebd578fd2984dc7de8",
+            "without_complex_throws_characters": 252,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "interface View { show(value: number): void; }\nclass Screen implements View {\n    shown = 0;\n    show(value: number) { this.shown = value; }\n}\nclass Presenter {\n    constructor(private model: {count: number}, private view: View) {}\n    click(delta: number) {\n        this.model.count += delta;\n        this.view.show(this.model.count);\n    }\n}\nfunction demo() {\n    const model = {count: 5}, screen = new Screen();\n    new Presenter(model, screen).click(2);\n    return model.count * 10 + screen.shown;\n}\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 390,
+            "nonblank_lines": 17,
+            "utf8_bytes": 503,
+            "sha256": "33faa9c88fa645182d31af2af8c6bf9e49e015153c6aad872e9a317759fbb906"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    interface IView { void Show(int value); }\n    sealed class Model { public int Count = 5; }\n    sealed class Screen : IView {\n        public int Shown;\n        public void Show(int value) { Shown = value; }\n    }\n    sealed class Presenter {\n        readonly Model model; readonly IView view;\n        public Presenter(Model m, IView v) { model = m; view = v; }\n        public void Click(int delta) {\n            model.Count += delta;\n            view.Show(model.Count);\n        }\n    }\n    public static int Demo() {\n        var model = new Model(); var screen = new Screen();\n        new Presenter(model, screen).Click(2);\n        return model.Count * 10 + screen.Shown;\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 478,
+            "nonblank_lines": 21,
+            "utf8_bytes": 706,
+            "sha256": "105d81de110319a745b0f7b44e4e4250ce0dea5545005ed769e290be6de073ec"
+          }
         }
       ],
       "sources": [
@@ -124,19 +164,39 @@
           "language": "LMX",
           "code": "Screen:\n    int: shown 0\n    int: value\n    show:\n        node\\shown := value\n\nViewModel:\n    int: count 0\n    int: value\n    @: changed Screen\\show\n    set:\n        node\\count := value\n        changed(value := node\\count * 2)\n\nDemo:\n    return: int\n    run:\n        ViewModel\\set(value := 6)\n        return: Screen\\shown\n",
           "notes_ru": "Вызов Demo\\run(). changed — явно передаваемая связь, а не встроенное автоматическое наблюдение произвольного графа.",
-          "notes_en": "Call Demo\\run(). changed is an explicit binding, not automatic observation of arbitrary graph mutations."
+          "notes_en": "Call Demo\\run(). changed is an explicit binding, not automatic observation of arbitrary graph mutations.",
+          "metrics": {
+            "characters": 207,
+            "nonblank_lines": 17,
+            "utf8_bytes": 322,
+            "sha256": "5d749bdbc791b0ad5162c7fae1a3bcc663de35707cb0e30105c80a18f3bcc408",
+            "without_complex_throws_characters": 207,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "class ViewModel {\n    private count = 0;\n    changed: (value: number) => void = () => {};\n    get doubled() { return this.count * 2; }\n    set(value: number) {\n        this.count = value;\n        this.changed(this.doubled);\n    }\n}\nfunction demo() {\n    const vm = new ViewModel();\n    let shown = 0;\n    vm.changed = value => { shown = value; };\n    vm.set(6);\n    return shown;\n}\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 268,
+            "nonblank_lines": 16,
+            "utf8_bytes": 382,
+            "sha256": "e572ee835dbe36ab17b8d04d847b6b27036408458f31c0a19100943603a15ab6"
+          }
         },
         {
           "language": "C#",
           "code": "using System.ComponentModel;\nstatic class Example {\n    sealed class ViewModel : INotifyPropertyChanged {\n        int count;\n        public event PropertyChangedEventHandler? PropertyChanged;\n        public int Doubled => count * 2;\n        public void Set(int value) {\n            count = value;\n            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Doubled)));\n        }\n    }\n    public static int Demo() {\n        var vm = new ViewModel(); int shown = 0;\n        vm.PropertyChanged += (_, e) => {\n            if (e.PropertyName == nameof(ViewModel.Doubled)) shown = vm.Doubled;\n        };\n        vm.Set(6);\n        return shown;\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 463,
+            "nonblank_lines": 20,
+            "utf8_bytes": 666,
+            "sha256": "cdd3a4ebd7e0216017e52cfd46bf8014557fb5d0f0e8bba2dd4291f8d33eb27b"
+          }
         }
       ],
       "sources": [
@@ -170,19 +230,39 @@
           "language": "LMX",
           "code": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(node\\state; delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
           "notes_ru": "Вызов Demo\\run(). Редуктор чист в данном примере; изменяется только ссылка/значение store. Состояние — скаляр, поэтому старое значение сохраняется обычным копированием.",
-          "notes_en": "Call Demo\\run(). The reducer is pure in this example; only the store changes. Scalar state retains its previous value by ordinary value copying."
+          "notes_en": "Call Demo\\run(). The reducer is pure in this example; only the store changes. Scalar state retains its previous value by ordinary value copying.",
+          "metrics": {
+            "characters": 273,
+            "nonblank_lines": 19,
+            "utf8_bytes": 412,
+            "sha256": "6de2e9fa3d57136dc9261c868eaf71e6c6fbf2b0f4f11f8a9632bd8ce7d909b0",
+            "without_complex_throws_characters": 273,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "type Action = {type: \"add\"; delta: number};\nfunction reduce(state: number, action: Action) { return state + action.delta; }\nclass Store {\n    private state = 0;\n    dispatch(action: Action) { this.state = reduce(this.state, action); }\n    getState() { return this.state; }\n}\nfunction demo() {\n    const store = new Store();\n    store.dispatch({type: \"add\", delta: 2});\n    const previous = store.getState();\n    store.dispatch({type: \"add\", delta: 3});\n    return previous * 10 + store.getState();\n}\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 402,
+            "nonblank_lines": 14,
+            "utf8_bytes": 500,
+            "sha256": "ad7bf42d2410e6d2a32cb71da3b81211d431bd9521919f912e14ee536922f8dc"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    readonly record struct Add(int Delta);\n    static int Reduce(int state, Add action) => state + action.Delta;\n    sealed class Store {\n        public int State { get; private set; }\n        public void Dispatch(Add action) { State = Reduce(State, action); }\n    }\n    public static int Demo() {\n        var store = new Store();\n        store.Dispatch(new Add(2)); int previous = store.State;\n        store.Dispatch(new Add(3));\n        return previous * 10 + store.State;\n    }\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 366,
+            "nonblank_lines": 14,
+            "utf8_bytes": 506,
+            "sha256": "f420b5e04932c9a11d1965a8d0c84914faf542aa3eeac195b730981d0dab83b1"
+          }
         }
       ],
       "sources": [
@@ -218,19 +298,39 @@
           "language": "LMX",
           "code": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(1; 1)\n",
           "notes_ru": "Вызов Front\\demo(). Это принимающее ядро HTTP-профиля: провайдер декодирует application/lmx в Message, нормализует endpoint/route и выполняет admission до вызова handle. Числа — результаты выбранного тестового response-mapping.",
-          "notes_en": "Call Front\\demo(). This is the receiving core of the HTTP profile: its provider decodes application/lmx into a Message, normalizes endpoint/route, and performs admission before handle. Numbers are the test response mapping."
+          "notes_en": "Call Front\\demo(). This is the receiving core of the HTTP profile: its provider decodes application/lmx into a Message, normalizes endpoint/route, and performs admission before handle. Numbers are the test response mapping.",
+          "metrics": {
+            "characters": 120,
+            "nonblank_lines": 12,
+            "utf8_bytes": 222,
+            "sha256": "00daa19789c7d0c7181f546ee6e8739e16b0170a7d6e7afc87603fee173078c1",
+            "without_complex_throws_characters": 120,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "function handle(admitted: boolean, route: number): number {\n    if (!admitted) return 403;\n    if (route === 1) return 200;\n    return 404;\n}\nfunction demo() { return handle(true, 1); }\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 147,
+            "nonblank_lines": 6,
+            "utf8_bytes": 186,
+            "sha256": "5d367182ba6b201e269c27e03ae0df2d3d82acafaf954c0d32de5bc4d5d9b9e2"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    static int Handle(bool admitted, int route) {\n        if (!admitted) return 403;\n        if (route == 1) return 200;\n        return 404;\n    }\n    public static int Demo() => Handle(true, 1);\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 153,
+            "nonblank_lines": 8,
+            "utf8_bytes": 221,
+            "sha256": "adfb45e4f77291775797d1df5e8613da1f104494fd104458fe9b99785969da85"
+          }
         }
       ],
       "sources": [
@@ -266,19 +366,39 @@
           "language": "LMX",
           "code": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(3)\n",
           "notes_ru": "Вызов OrderPage\\demo(). В HTTP-профиле явная маршрутная Table связывает /orders/show с этим принимающим методом; host и HTML-представление не включены.",
-          "notes_en": "Call OrderPage\\demo(). An explicit HTTP route Table maps /orders/show to this receiver; the host and HTML rendering are excluded."
+          "notes_en": "Call OrderPage\\demo(). An explicit HTTP route Table maps /orders/show to this receiver; the host and HTML rendering are excluded.",
+          "metrics": {
+            "characters": 99,
+            "nonblank_lines": 9,
+            "utf8_bytes": 170,
+            "sha256": "d656f46ea1c63c4db2666dcba0f4d6924c8bf8445258021f251e95beff729a8b",
+            "without_complex_throws_characters": 99,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "class OrderPage {\n    handle(quantity: number) {\n        if (quantity < 1) return 0;\n        return quantity * 10;\n    }\n}\nfunction demo() { return new OrderPage().handle(3); }\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 128,
+            "nonblank_lines": 7,
+            "utf8_bytes": 177,
+            "sha256": "0b03a7f6fb83fc9a43aadc4bb189641a1eda55c84dce870324536fa76bac7300"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    sealed class OrderPage {\n        public int Handle(int quantity) {\n            if (quantity < 1) return 0;\n            return quantity * 10;\n        }\n    }\n    public static int Demo() => new OrderPage().Handle(3);\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 160,
+            "nonblank_lines": 9,
+            "utf8_bytes": 245,
+            "sha256": "ef573dac7a614209dadbbaa1e04e6efb76dff0ceb2dac108e6e84416c214b8c2"
+          }
         }
       ],
       "sources": [
@@ -314,19 +434,39 @@
           "language": "LMX",
           "code": "Navigation:\n    int: screen 1\n    int: valid\n    return: int\n    submit:\n        if: node\\screen = 1 && valid != 0\n            node\\screen := 2\n        return: node\\screen\n    demo:\n        node\\screen := 1\n        return: submit(valid := 1)\n",
           "notes_ru": "Вызов Navigation\\demo(). node\\screen хранит состояние конкретного владельца навигации; в многопользовательском сервисе это отдельный session Message, не глобальная переменная.",
-          "notes_en": "Call Navigation\\demo(). node\\screen belongs to one navigation owner; a multi-user service uses a separate session Message, not a global variable."
+          "notes_en": "Call Navigation\\demo(). node\\screen belongs to one navigation owner; a multi-user service uses a separate session Message, not a global variable.",
+          "metrics": {
+            "characters": 148,
+            "nonblank_lines": 11,
+            "utf8_bytes": 242,
+            "sha256": "67c7bc9040d264af5a39415b67c7ce41720c5957d8ee91635d9d1b6b5a7cc621",
+            "without_complex_throws_characters": 148,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "TypeScript",
           "code": "class Navigation {\n    private screen = 1;\n    submit(valid: boolean) {\n        if (this.screen === 1 && valid) this.screen = 2;\n        return this.screen;\n    }\n}\nfunction demo() { return new Navigation().submit(true); }\n",
           "notes_ru": "Внешний вызов demo(); DOM и HTTP-сервер не входят в ядро.",
-          "notes_en": "Call demo(); the DOM and HTTP server are outside the core."
+          "notes_en": "Call demo(); the DOM and HTTP server are outside the core.",
+          "metrics": {
+            "characters": 165,
+            "nonblank_lines": 8,
+            "utf8_bytes": 223,
+            "sha256": "a601a5bf85c195b0483d27c1abe89ed6d024ef169615192fac5ab9a9c0a01272"
+          }
         },
         {
           "language": "C#",
           "code": "static class Example {\n    sealed class Navigation {\n        int screen = 1;\n        public int Submit(bool valid) {\n            if (screen == 1 && valid) screen = 2;\n            return screen;\n        }\n    }\n    public static int Demo() => new Navigation().Submit(true);\n}\n",
           "notes_ru": "Внешний вызов Example.Demo(); графический toolkit и web-host не входят в ядро.",
-          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core."
+          "notes_en": "Call Example.Demo(); a GUI toolkit and web host are outside the core.",
+          "metrics": {
+            "characters": 177,
+            "nonblank_lines": 10,
+            "utf8_bytes": 275,
+            "sha256": "644ab9aab022ac2e7415c22a8e64b129c61b8478e99bbe4a2cfc55e866d48407"
+          }
         }
       ],
       "sources": [

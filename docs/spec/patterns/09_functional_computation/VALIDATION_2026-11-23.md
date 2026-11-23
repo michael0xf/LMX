@@ -13,7 +13,7 @@ All eight comparison subjects remain: four usage scenarios (082–085) and four 
 
 The implementation scopes are explicit. They do not claim to reproduce every function of `Option`, `Free`, `TailCalls`, or `Using.Manager`. Full generic value and prefix handling, cleanup on failure, relevant interruption semantics and shared dependency costs are disclosed rather than reduced to the usage example's integer values.
 
-The Haskell resource implementation now masks setup/cleanup and restores the caller's masking state during action. The Scala implementation preserves dual failures using severity and suppression. The LMX implementation prepares its cleanup actual vector and unsuccessful outcome, registers guarded `finally`, and only then calls acquire. Successful resource transfer through the native provider remains an integration obligation. [Failure boundaries](FAILURE_BOUNDARIES.md) explain precisely what Message/post already provides and what a single local resource lifetime cannot cover.
+The Haskell resource implementation now masks setup/cleanup and restores the caller's masking state during action. The Scala implementation preserves dual failures using severity and suppression. The LMX implementation allocates its cleanup actual vector before acquire, stores the successful result in the ready cell, and registers `finally` before preparing action arguments; failed acquisition never registers release. Successful resource transfer through the native provider remains an integration obligation. [Failure boundaries](FAILURE_BOUNDARIES.md) explain precisely what Message/post already provides and what a single local resource lifetime cannot cover.
 
 ## Deduplication
 
@@ -26,7 +26,7 @@ The source upload remains the base of the merge diff; historical receipts are ex
 
 ## Performed checks
 
-`tools/check_publication.py` performs 190 source/publication checks: exact JSON/source/fence correspondence, declared selection boundary and counts, retained complete alternatives, no custom comparison imports in foreign clients, scope-specific cleanup source invariants, generic prefix declarations and honest runtime status.
+`tools/check_publication.py` performs 195 source/publication checks: exact JSON/source/fence correspondence, declared selection boundary and counts, retained complete alternatives, no custom comparison imports in foreign clients, scope-specific cleanup source invariants, generic prefix declarations and honest runtime status.
 
 The [machine report](validation_2026-11-23.json) records the current outcome. [33 prepared acceptance observations](acceptance_cases.json) cover non-integer payloads, absence, callable final values, stack-driving transitions, acquisition/action/release failures, dual failure, interruption, Message ownership, empty/full/mixed prefixes, void and independent captures. They are **NOT_RUN**.
 

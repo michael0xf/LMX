@@ -31,13 +31,13 @@ Application:
     @: save
     return: int
     submit:
-        save(order := order)
+        save()
         return: order\total()
     demo:
         return: submit(Order; Repository\save)
 ```
 
-Вызов Application\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере.
+Вызов Application\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере. Сокращение 23-Nov: The retained save callback receives the caller order by its declared same-name input.
 
 [Отдельный листинг](examples/lmx/008_onion_architecture.lm3)
 
@@ -82,7 +82,7 @@ func demo() int { return submit(&Order{3, 10}, &Memory{}) }
 
 ## Разбор LMX
 
-Вызов Application\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере.
+Вызов Application\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере. Сокращение 23-Nov: The retained save callback receives the caller order by its declared same-name input.
 
 ## Сопоставление
 
@@ -94,13 +94,15 @@ func demo() int { return submit(&Order{3, 10}, &Memory{}) }
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 234 | 20 |
-| Java | 363 | 13 |
-| Go | 308 | 8 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 222 | 20 | 222 |
+| Java | 363 | 13 | — |
+| Go | 308 | 8 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 

@@ -1,0 +1,239 @@
+# STANDARD OPTION / RESULT OPERATIONS OVER THE EXISTING TYPED RECORDS.
+# Payloads and fallbacks below are references to type/value records, not int
+# placeholders and not boxed copies of an arbitrary referenced object.
+# Unselected callbacks are not invoked. A present null/zero/empty value is
+# still present. Direct callback failures retain the ordinary FxCallFailure.
+
+FxMapOption:
+    private:
+        FxMaybe@: input
+        @: transform
+    required: input transform
+    return: @
+    mapOption:
+        throws: copy(FxThrows\call)
+        if: input\present = 0
+            return: input
+        private: @: value FxApply\apply(transform; FxOne\make(input\value))
+        return: FxSome\some(value := value)
+
+FxFilterOption:
+    private:
+        FxMaybe@: input
+        @: accepts
+    required: input accepts
+    return: @
+    filterOption:
+        throws: copy(FxThrows\predicate)
+        if: input\present = 0
+            return: input
+        private: @: accepted FxApply\apply(accepts; FxOne\make(input\value))
+        if: FxSeqPredicate\truth(accepted) = 0
+            return: FxNone\none()
+        return: input
+
+# Java Optional.orElse: the fallback is already evaluated. The result is the
+# chosen payload record, not another Maybe. orElseGet is the lazy counterpart.
+FxOrElse:
+    private:
+        FxMaybe@: input
+        @: fallback
+    required: input fallback
+    return: @
+    orElse:
+        if: input\present != 0
+            return: input\value
+        return: fallback
+
+FxOrElseGet:
+    private:
+        FxMaybe@: input
+        @: fallback
+    required: input fallback
+    return: @
+    orElseGet:
+        throws: copy(FxThrows\call)
+        if: input\present != 0
+            return: input\value
+        return: FxApply\apply(fallback; ())
+
+# C++/Rust/Scala optional fallback returns another container. Keep that contract
+# distinct from Java's payload-returning orElse/orElseGet.
+FxOrElseOption:
+    private:
+        FxMaybe@: input
+        @: fallback
+    required: input fallback
+    return: @
+    orElseOption:
+        throws: copy(FxThrows\call)
+        if: input\present != 0
+            return: input
+        private: @: record FxApply\apply(fallback; ())
+        private: FxMaybe@: result record
+        return: result
+
+# Both branches reuse the two operations above; no second optional dispatch
+# algorithm is embedded in this eliminator.
+FxFoldOption:
+    private:
+        FxMaybe@: input
+        @: whenEmpty
+        @: whenPresent
+    required: input whenEmpty whenPresent
+    return: @
+    foldOption:
+        throws: copy(FxThrows\call)
+        private: @: mapped FxMapOption\mapOption(input; whenPresent)
+        return: FxOrElseGet\orElseGet(mapped; whenEmpty)
+
+FxFlattenOption:
+    private: FxMaybe@: input
+    required: input
+    return: @
+    flattenOption:
+        if: input\present = 0
+            return: input
+        private: FxMaybe@: result input\value
+        return: result
+
+FxMapResult:
+    private:
+        FxResult@: input
+        @: transform
+    required: input transform
+    return: @
+    mapResult:
+        throws: copy(FxThrows\call)
+        if: input\ok = 0
+            return: input
+        private: @: value FxApply\apply(transform; FxOne\make(input\value))
+        return: FxOk\ok(value := value)
+
+FxMapErr:
+    private:
+        FxResult@: input
+        @: transform
+    required: input transform
+    return: @
+    mapErr:
+        throws: copy(FxThrows\call)
+        if: input\ok != 0
+            return: input
+        private: @: reason FxApply\apply(transform; FxOne\make(input\reason))
+        return: FxErr\err(reason := reason)
+
+# Result.or_else invokes one error-to-Result continuation. It does not wrap
+# the returned Result in a second err or mistake its result record for data.
+FxOrElseResult:
+    private:
+        FxResult@: input
+        @: fallback
+    required: input fallback
+    return: @
+    orElseResult:
+        throws: copy(FxThrows\call)
+        if: input\ok != 0
+            return: input
+        private: @: record FxApply\apply(fallback; FxOne\make(input\reason))
+        private: FxResult@: result record
+        return: result
+
+FxFoldResult:
+    private:
+        FxResult@: input
+        @: onError
+        @: onSuccess
+    required: input onError onSuccess
+    return: @
+    foldResult:
+        throws: copy(FxThrows\call)
+        private: @: operation
+        private: @: value
+        if: input\ok != 0
+            operation := onSuccess
+            value := input\value
+        else:
+            operation := onError
+            value := input\reason
+        return: FxApply\apply(operation; FxOne\make(value))
+
+# Capture only the target's declared recoverable failures through FxTry.
+# Error payload is the complete FxOutcome as a typed @ record, preserving the
+# original failure name, payload and void/result distinction. Kernel/admission
+# failures still propagate normally rather than becoming fake user errors.
+FxAttemptResult:
+    private:
+        @: operation
+        @: args ()
+    required: operation
+    return: @
+    attempt:
+        throws: copy(FxThrows\kernel) FxRecordArity
+        private: @: outcome FxTry\attempt(operation; args)
+        if: outcome\ok != 0
+            return: FxOk\ok(value := outcome\value)
+        private: @: reason FxRecords\reference(outcome)
+        return: FxErr\err(reason := reason)
+
+# Scala tap / value inspection: execute the effect once and return exactly
+# the original typed record. Referenced mutable targets are not deep-copied.
+FxTap:
+    private:
+        @: value
+        @: action
+    required: value action
+    return: @
+    tap:
+        throws: copy(FxThrows\call)
+        FxApply\apply(action; FxOne\make(value))
+        return: value
+
+# One physical-name traversal; all three interfaces share its inputs and body.
+# occurrence is a required zero-based ordinal among equal ready names. An
+# anonymous uninit name is tested as nil before any string payload is read.
+FxFieldArguments:
+    private:
+        @: source
+        char[]: label
+        int: occurrence
+    required: source label occurrence
+
+FxFindField:
+    copy(FxFieldArguments)
+    return: @
+    findField:
+        throws: copy(FxThrows\sequence) FxIndex
+        if: occurrence < 0
+            throw: FxIndex()
+        private: @: labels RxNames\names(source)
+        private: int: i 0
+        private: int: matched 0
+        while: i < length(labels)
+            private: char[]: candidate \labels[i]
+            if: candidate != nil
+                if: FxSameText\same(candidate; label) != 0
+                    if: matched = occurrence
+                        return: FxSome\some(FxSeqRead\read(source; i))
+                    matched += 1
+            ---
+            i += 1
+        return: FxNone\none()
+
+FxHasField:
+    copy(FxFieldArguments)
+    return: int
+    hasField:
+        throws: copy(FxThrows\sequence) FxIndex
+        private: FxMaybe@: found FxFindField\findField(source; label; occurrence)
+        return: found\present
+
+FxGetField:
+    copy(FxFieldArguments)
+    return: @
+    getField:
+        throws: copy(FxThrows\sequence) FxIndex
+        private: FxMaybe@: found FxFindField\findField(source; label; occurrence)
+        if: found\present = 0
+            throw: FxIndex()
+        return: found\value

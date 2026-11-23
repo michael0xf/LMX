@@ -32,19 +32,39 @@
           "language": "LMX",
           "code": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: read()\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков. write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn.",
+          "metrics": {
+            "characters": 107,
+            "nonblank_lines": 9,
+            "utf8_bytes": 168,
+            "sha256": "131d6fbed1e2b6ff7a5215d96db487662664baf3176aee12e6fb163eb78e8601",
+            "without_complex_throws_characters": 107,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class Value {\n    private final java.util.concurrent.locks.ReentrantReadWriteLock lock =\n        new java.util.concurrent.locks.ReentrantReadWriteLock();\n    private int value = 10;\n    int read() {\n        lock.readLock().lock();\n        try { return value; } finally { lock.readLock().unlock(); }\n    }\n    int write(int next) {\n        lock.writeLock().lock();\n        try { value = next; return value; }\n        finally { lock.writeLock().unlock(); }\n    }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+          "notes_en": "Java 21 fragment; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.",
+          "metrics": {
+            "characters": 348,
+            "nonblank_lines": 14,
+            "utf8_bytes": 469,
+            "sha256": "e52ff17ba769c2e07fdaa63e97405a0a6bd9d1c5b07f07253f0241af0d525fef"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::sync::RwLock;\nstruct Value { value: RwLock<i32> }\nimpl Value {\n    fn new() -> Self { Self { value: RwLock::new(10) } }\n    fn read(&self) -> i32 { *self.value.read().unwrap() }\n    fn write(&self, next: i32) -> i32 {\n        let mut value = self.value.write().unwrap();\n        *value = next; *value\n    }\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+          "notes_en": "Rust fragment using std; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.",
+          "metrics": {
+            "characters": 239,
+            "nonblank_lines": 10,
+            "utf8_bytes": 318,
+            "sha256": "e89ac45db7faf7da5640a9fb4ff4053eabdab1e1c898f4c307e42468bbc9b9db"
+          }
         }
       ],
       "sources": [
@@ -88,19 +108,39 @@
           "language": "LMX",
           "code": "LazyMessage:\n    @: build\n    int: ready 0\n    int: value 0\n    return: int\n    get:\n        if: node\\ready = 0\n            node\\value := build()\n            node\\ready := 1\n        return: node\\value\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner.",
+          "metrics": {
+            "characters": 117,
+            "nonblank_lines": 10,
+            "utf8_bytes": 201,
+            "sha256": "316649a391acd1b91f58493df704f60f0e0ee639b37e42bdb28e47c659910c15",
+            "without_complex_throws_characters": 117,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class Lazy {\n    private volatile Integer value;\n    private final java.util.function.IntSupplier build;\n    Lazy(java.util.function.IntSupplier build) { this.build = build; }\n    int get() {\n        Integer result = value;\n        if (result == null) {\n            synchronized (this) {\n                result = value;\n                if (result == null) value = result = build.getAsInt();\n            }\n        }\n        return result;\n    }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+          "notes_en": "Java 21 fragment; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner.",
+          "metrics": {
+            "characters": 292,
+            "nonblank_lines": 15,
+            "utf8_bytes": 452,
+            "sha256": "162c405f1d5523ca2d2ab841712805cb87c0a54f19976ce45ff3065aa5d47a79"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::sync::OnceLock;\nstruct Lazy { value: OnceLock<i32> }\nimpl Lazy {\n    fn new() -> Self { Self { value: OnceLock::new() } }\n    fn get(&self, build: impl FnOnce() -> i32) -> i32 {\n        *self.value.get_or_init(build)\n    }\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+          "notes_en": "Rust fragment using std; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner.",
+          "metrics": {
+            "characters": 179,
+            "nonblank_lines": 8,
+            "utf8_bytes": 234,
+            "sha256": "f8d55e59c0424afe69eeb004b0ace48f77898fdce0624b5219fc37fb065b3636"
+          }
         }
       ],
       "sources": [
@@ -142,19 +182,39 @@
           "language": "LMX",
           "code": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    awaitValue:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди. Общий reply целиком показан и учтён: готовый запрос использует обычное автозаполнение requestId, а publish передаёт очередной ID из FIFO позиционно. Это не добавляет ожидания и не меняет правило повторной публикации.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue. The complete counted reply body is shared: an already-ready request uses ordinary requestId autofill, while publish supplies each FIFO ID positionally. This adds no wait and does not change republishing policy."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue. The complete counted reply body is shared: an already-ready request uses ordinary requestId autofill, while publish supplies each FIFO ID positionally. This adds no wait and does not change republishing policy.",
+          "metrics": {
+            "characters": 253,
+            "nonblank_lines": 19,
+            "utf8_bytes": 411,
+            "sha256": "02b0a99d22e953c2ee2bd1d6dbfafd8198c86e3508c0be14fbe51629180a3841",
+            "without_complex_throws_characters": 253,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class Ready {\n    private boolean ready;\n    private int value;\n    synchronized int awaitValue() throws InterruptedException {\n        while (!ready) wait();\n        return value;\n    }\n    synchronized void publish(int next) {\n        value = next; ready = true; notifyAll();\n    }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+          "notes_en": "Java 21 fragment; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue.",
+          "metrics": {
+            "characters": 208,
+            "nonblank_lines": 11,
+            "utf8_bytes": 292,
+            "sha256": "aad8d3455b43b2a652b96745145f188b32a2a6648af0b2a6a483953ac456f694"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::sync::{Condvar, Mutex};\nstruct Ready { value: Mutex<Option<i32>>, changed: Condvar }\nimpl Ready {\n    fn new() -> Self { Self { value: Mutex::new(None), changed: Condvar::new() } }\n    fn wait(&self) -> i32 {\n        let guard = self.value.lock().unwrap();\n        let guard = self.changed.wait_while(guard, |v| v.is_none()).unwrap();\n        guard.unwrap()\n    }\n    fn publish(&self, next: i32) {\n        *self.value.lock().unwrap() = Some(next);\n        self.changed.notify_all();\n    }\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+          "notes_en": "Rust fragment using std; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue.",
+          "metrics": {
+            "characters": 386,
+            "nonblank_lines": 14,
+            "utf8_bytes": 501,
+            "sha256": "3a1ef7c6a71b6f655fde510f77a0eba3077bb9b7450412c63184456fad4b6473"
+          }
         }
       ],
       "sources": [
@@ -198,19 +258,39 @@
           "language": "LMX",
           "code": "SaveMessage:\n    int: busy 0\n    return: int\n    start:\n        if: node\\busy = 1\n            return: 0\n        node\\busy := 1\n        return: 1\n    finish:\n        node\\busy := 0\n        return: 1\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests.",
+          "metrics": {
+            "characters": 106,
+            "nonblank_lines": 11,
+            "utf8_bytes": 198,
+            "sha256": "7db0a1c240693c3d0d74916853e2ec36ca8e56fa06238fb445ede1972420be5a",
+            "without_complex_throws_characters": 106,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class Save {\n    private final java.util.concurrent.atomic.AtomicBoolean busy =\n        new java.util.concurrent.atomic.AtomicBoolean();\n    boolean start() { return busy.compareAndSet(false, true); }\n    int finish() { busy.set(false); return 1; }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+          "notes_en": "Java 21 fragment; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests.",
+          "metrics": {
+            "characters": 211,
+            "nonblank_lines": 6,
+            "utf8_bytes": 257,
+            "sha256": "eecf742577091d8943de1e3c3855db01304737d35886685b1b75c9c345db6822"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::sync::atomic::{AtomicBool, Ordering};\nstruct Save { busy: AtomicBool }\nimpl Save {\n    fn new() -> Self { Self { busy: AtomicBool::new(false) } }\n    fn start(&self) -> bool {\n        self.busy.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_ok()\n    }\n    fn finish(&self) -> i32 { self.busy.store(false, Ordering::Release); 1 }\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+          "notes_en": "Rust fragment using std; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests.",
+          "metrics": {
+            "characters": 296,
+            "nonblank_lines": 9,
+            "utf8_bytes": 363,
+            "sha256": "37e69790ccec61f32ce939ca904546cba02e370e06fe3d26ff6ccd2a49fb4a44"
+          }
         }
       ],
       "sources": [
@@ -252,19 +332,39 @@
           "language": "LMX",
           "code": "CounterMessage:\n    int: count 0\n    return: int\n    next:\n        node\\count += 1\n        return: node\\count\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused.",
+          "metrics": {
+            "characters": 70,
+            "nonblank_lines": 6,
+            "utf8_bytes": 110,
+            "sha256": "1bcde9e313dab6d5cb796c600422b3485c5412321f5dc131303c930d6834a478",
+            "without_complex_throws_characters": 70,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class LocalCounter {\n    private static final ThreadLocal<Integer> count = ThreadLocal.withInitial(() -> 0);\n    static int next() {\n        int value = count.get() + 1; count.set(value); return value;\n    }\n    static void clear() { count.remove(); }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+          "notes_en": "Java 21 fragment; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused.",
+          "metrics": {
+            "characters": 202,
+            "nonblank_lines": 7,
+            "utf8_bytes": 260,
+            "sha256": "034d7b0a19ff9d8e9d514386b3187cab6f01f51b04001c05ac75377fd268500a"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::cell::Cell;\nthread_local! { static COUNT: Cell<i32> = const { Cell::new(0) }; }\nfn next() -> i32 {\n    COUNT.with(|count| { let value = count.get() + 1; count.set(value); value })\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+          "notes_en": "Rust fragment using std; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused.",
+          "metrics": {
+            "characters": 157,
+            "nonblank_lines": 5,
+            "utf8_bytes": 191,
+            "sha256": "8cf504251376801e43edb9237f1fdff9d5c2ed14e53a1462fad04e0572c6a93a"
+          }
         }
       ],
       "sources": [
@@ -306,19 +406,39 @@
           "language": "LMX",
           "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || read() < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex. Проверка использует уже показанный read() как локальный вызов: между проверкой и списанием нет post или ожидания. При отрицательном amount короткое замыкание по-прежнему пропускает чтение баланса.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex. The predicate uses the included read() as a local call: there is no post or wait between check and debit. Short-circuiting still skips the balance read for a negative amount."
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex. The predicate uses the included read() as a local call: there is no post or wait between check and debit. Short-circuiting still skips the balance read for a negative amount.",
+          "metrics": {
+            "characters": 143,
+            "nonblank_lines": 11,
+            "utf8_bytes": 234,
+            "sha256": "517a58c82e424c1c3f645bdebb047cee79cd3d597b987e8af5c1cfb5770befc4",
+            "without_complex_throws_characters": 143,
+            "complex_throws_removed_characters": 0
+          }
         },
         {
           "language": "Java",
           "code": "final class Account {\n    private int balance = 10;\n    synchronized boolean withdraw(int amount) {\n        if (amount < 0 || balance < amount) return false;\n        balance -= amount; return true;\n    }\n    synchronized int read() { return balance; }\n}\n",
           "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
-          "notes_en": "Java 21 fragment; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+          "notes_en": "Java 21 fragment; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex.",
+          "metrics": {
+            "characters": 184,
+            "nonblank_lines": 8,
+            "utf8_bytes": 254,
+            "sha256": "12bf3ffced7f43941ae79364e05cb3fa26762755e09a9d2f942e530338ff1fbc"
+          }
         },
         {
           "language": "Rust",
           "code": "use std::sync::Mutex;\nstruct Account { balance: Mutex<i32> }\nimpl Account {\n    fn new() -> Self { Self { balance: Mutex::new(10) } }\n    fn withdraw(&self, amount: i32) -> bool {\n        let mut balance = self.balance.lock().unwrap();\n        if amount < 0 || *balance < amount { return false; }\n        *balance -= amount; true\n    }\n    fn read(&self) -> i32 { *self.balance.lock().unwrap() }\n}\n",
           "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
-          "notes_en": "Rust fragment using std; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+          "notes_en": "Rust fragment using std; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex.",
+          "metrics": {
+            "characters": 299,
+            "nonblank_lines": 11,
+            "utf8_bytes": 398,
+            "sha256": "efb23f56083656ce365552f42229cf3526e8c2e3c0dbc66fead19e68ea489a51"
+          }
         }
       ],
       "sources": [

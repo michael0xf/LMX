@@ -247,15 +247,14 @@
       ],
       "load_before": [],
       "required_profile": [
-        "One current core: direct generic receivers are present, no import or alternate library version.",
-        "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+        "One current core; any procedural helper is explicitly present in this source."
       ],
-      "selected_variant": "receivers",
+      "selected_variant": "original",
       "alternative_variant": null,
       "alternative_cases": [],
       "alternative_load_before": [],
       "variant_cases": {
-        "receivers": [
+        "original": [
           {
             "invoke": "DefaultProbe\\run()",
             "expected": 6260106,
@@ -270,13 +269,13 @@
         ]
       },
       "variant_load_before": {
-        "receivers": []
+        "original": []
       },
       "source_regions": {
         "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)"
       },
       "core_versions": 1,
-      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан."
+      "fairness_note": "Обычный merge создаёт копию с готовым y=5; явные y=25 и y=0 заменяют default только в соответствующем вызове. Имена, четыре вызова и результат сохранены; тонкий bindFields описан одной заменой, без повторной программы."
     },
     {
       "id": "H05",
@@ -506,14 +505,15 @@
       "guide": "../LMX_examples_and_analogies.ru.md#h08",
       "cases": [
         {
-          "invoke": "StateProbe\\ownCopy()",
+          "invoke": "StateProbe\\run(Own\\step)",
           "expected": 0
         },
         {
-          "invoke": "StateProbe\\callerPlace()",
+          "invoke": "StateProbe\\run(Free\\step)",
           "expected": 3
         }
-      ]
+      ],
+      "reuse_note": "One runner and one y += 3 body. Own\\step calls Free\\step with its own autofilled y; direct Free\\step writes the runner caller place."
     },
     {
       "id": "H09",
@@ -529,19 +529,14 @@
         }
       ],
       "load_before": [],
-      "source_boundary": "Client only; iterateUntilStop is a core receiver with separate implementation comparison.",
-      "core_functions": [
-        "iterateUntilStop"
-      ],
+      "source_boundary": "Complete local Cycles plus unchanged Numbers scenario; the helper body is included in the primary source and its metric.",
+      "core_functions": [],
       "required_profile": [
-        "Core iterateUntilStop; declaration remains DATA until invoked.",
-        "FxKernel.attemptAccepted receiving-activation integration gate AE01; NOT_RUN."
+        "Ordinary declaration-as-DATA and associated-body execution from LMX_semantics.en.md#declaration-arguments.",
+        "Ordinary catch handles source Stop only; body Stop and other failures propagate by their original names."
       ],
-      "declared_exits": [
-        "FxCallFailure",
-        "FxKernelFailure",
-        "FxTypeToken"
-      ]
+      "declared_exits": [],
+      "restored_from": "22-Nov-2026-3.tar.gz"
     },
     {
       "id": "R01",
@@ -1107,7 +1102,8 @@
         "trace",
         "commanded",
         "sensed"
-      ]
+      ],
+      "reuse_note": "Indicator\\mark owns one trace update; Commissioning\\cycle owns one set/observe pair. Two unconditional calls preserve set(1), observe, set(0), observe even after the first mismatch."
     },
     {
       "id": "M01",
@@ -1447,13 +1443,13 @@
       "V02",
       "V03"
     ],
-    "rule": "One current core; genuine alternatives only. Small spelling or helper substitutions are notes, not repeated full listings. Select the shortest fair complete scenario; foreign clients import real packages only.",
+    "rule": "Select the shortest complete implementation for the actual scenario, whether local or core-based; preserve genuinely different approaches. Reuse existing methods and templates; include all local helpers and do not treat an error-envelope adapter as equivalent to ordinary named failure propagation.",
     "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
     "selected": {
       "H01": "original",
       "H02": "original",
       "H03": "receivers",
-      "H04": "receivers",
+      "H04": "original",
       "H06": "original",
       "H07": "original",
       "R01": "receivers",

@@ -22,14 +22,25 @@ inside individual files can refer to the author's wider repository; those paths 
 not change the layout or the source of this edition. The current work is summarized
 in the [revision report](REVISION_2026-11-22.md), including the [naming decisions](NAMING_2026-11-22.md).
 
-**Review edition: 2026-11-23.** This edition starts from the author's newly uploaded
-`spec.tar.gz`, not from an earlier generated packet.
+**Review edition: 2026-11-23, restored examples.** This edition starts from the
+author's `23-Nov-2026.tar.gz`, restores short examples from `22-Nov-2026-3.tar.gz`,
+and then removes repeated algorithms using the current LMX semantics. The
+[restoration report](RESTORATION_2026-11-23.md) records the inputs, actual changes,
+counting rules, and verification limits. The Fable packet applies the final result
+directly to the independently verified original `spec.tar.gz` project baseline.
 
 **Current implementation work:** [direct core functions](CORE_FUNCTIONS.md) and
 [library-use and implementation comparisons](patterns/CORE_COMPARISONS_2026-11-23.md). Control-language clients
 use real language/library facilities; their separately authored implementations
 remain comparison material. LMX clients use the corresponding direct kernel
 functions. Only meaningfully different approaches retain full alternative code.
+
+The [standard-operation review](patterns/LMX_Fn_Receivers/CORE_STANDARD_REVIEW_20261123.md)
+adds 89 implemented public operations to the 123 supplied names, for 212 in one
+current core. The [Common Lisp/SBCL comparison](patterns/examples/SBCL_comparison/README.md)
+is included in full. PDF and XLSX tables show the supplementary **«без сложного
+Throws»** metric and green minima for comparable rows, while preserving full-source
+counts and their ratios.
 
 **Author clarification — declaration arguments:** a supplied declaration is a DATA Structure,
 not an automatically executed call. Its internal name never selects an input. Unnamed actuals

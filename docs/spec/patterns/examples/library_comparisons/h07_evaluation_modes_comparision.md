@@ -69,14 +69,16 @@ FxLazy:
 Complete canonical source files for the entry and its LMX dependencies:
 
 - [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
+- [coreStandardText.lmx](../../LMX_Fn_Receivers/src/coreStandardText.lmx)
 - [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 - [generic_wrappers.lmx](../../LMX_Fn_Receivers/src/generic_wrappers.lmx)
 - [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
 - [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
+- [sequences_mutation.lmx](../../LMX_Fn_Receivers/src/sequences_mutation.lmx)
 
-The reachable roots are: `FxLazyState`, `FxThrows`, `FxFrameAttempt`, `FxFrameApply`, `FxLazyEngine`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxAppend`, `FxFailures`, `FxIndices`, `FxInputPolicy`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxConcat`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxSameText`, `FxFailureFilter`, `FxStageFailures`, `FxWrap`, `FxOnce`, `FxLazy`.
+The reachable roots are: `FxLazyState`, `FxThrows`, `FxFrameAttempt`, `FxFrameApply`, `FxLazyEngine`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxAppend`, `FxFailures`, `FxIndices`, `FxInputPolicy`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxConcat`, `FxSeqAdmit`, `FxSeqReplaceRange`, `FxSeqAppend`, `FxSeqReverse`, `FxFormatInt`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxUnitRange`, `FxSameText`, `FxFailureFilter`, `FxStageFailures`, `FxWrap`, `FxOnce`, `FxLazy`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -134,24 +136,16 @@ These test operands deliberately use numeric addition; they test evaluation coun
 
 ```lmx
 PreparedOps:
-    int@: left
-    int@[]: right
-    const: int: PASS_ARGS_AS_IS 0
-    const: int: PRIORITY sys\priority("+")
+    copy: sys\OPERANDS_TEMPLATE
     return: int
     twice:
         return: \left + \left
 
 RawOps:
-    @: left
-    @[]: right
-    const: int: PASS_ARGS_AS_IS 1
-    const: int: PRIORITY sys\priority("+")
+    merge: sys\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)
     return: int
     twice:
-        int: first sys\eval(left)
-        int: second sys\eval(left)
-        return: first + second
+        return: sys\eval(left) + sys\eval(left)
 ```
 
 ```haskell
@@ -220,11 +214,15 @@ separate interruption models. All runtime statuses remain NOT_RUN.
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: |
-| LMX entry definitions shown above | 999 | 46 | 1444 |
-| All reachable LMX source roots, counted once | 10875 | 587 | 16856 |
-| Complete Haskell comparison module | 1309 | 35 | 1639 |
+| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: | ---: |
+| LMX entry definitions shown above | 999 | 962 | 46 | 1444 |
+| All reachable LMX source roots, counted once | 13847 | 12782 | 702 | 21221 |
+| Complete Haskell comparison module | 1309 | — | 35 | 1639 |
+
+The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+
+На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 
 These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 

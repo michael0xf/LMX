@@ -2,19 +2,12 @@ Mask:
     Match@: matched
     return: char[]
     make:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        char[]: text matchedText(matched)
-        char[]: result []
-        sys\resize(result; length(text))
-        int: i 0
-        while: i < length(text)
-            result[i] := '*'
-            i += 1
-        return: result
+        throws: copy(FxThrows\sequence)
+        return: repeatText("*"; matched\end - matched\begin)
 
 Example:
     char[]: text
     return: char[]
     run:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
+        throws: copy(FxThrows\sequence) PatternArgument PatternEncoding PatternPosition
         return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)

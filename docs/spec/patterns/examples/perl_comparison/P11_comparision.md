@@ -4,7 +4,7 @@
 
 Сгруппировать целые записи по целому kind. Порядок групп — первое появление kind, порядок записей внутри группы — исходный. Никакие поля записи не удаляются.
 
-
+После общей группировки map меняет только внешний формат наблюдения; группы и все поля событий сохраняются, без второго самописного цикла.
 
 ## Вход и ожидаемый результат
 
@@ -63,10 +63,12 @@
 
 ## Размер выбранного варианта
 
-| Источник | Все символы | Без пробельных | Непустые строки |
-|---|---:|---:|---:|
-| LMX | 606 | 394 | 25 |
-| Perl | 305 | 218 | 12 |
+| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
+|---|---:|---:|---:|---:|
+| LMX | 434 | 296 | 281 | 22 |
+| Perl | 305 | 218 | 218 | 12 |
+
+Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
 
 Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
 
@@ -88,20 +90,18 @@ Same:
     test:
         return: first = second
 
+GroupRow:
+    FxGroup@: group
+    return: @
+    row:
+        return: (\group\key; group\items)
+
 Example:
     @: items
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        @: groups groupBy(items; Key\get; Same\test)
-        @[]: result []
-        sys\resize(result; length(groups))
-        int: i 0
-        while: i < length(groups)
-            @: group groups[i]
-            result[i] := (\group\key; group\items)
-            i += 1
-        return: result
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: map(groupBy(items; Key\get; Same\test); GroupRow\row)
 ```
 
 ## Perl
@@ -126,6 +126,7 @@ sub example {
 ## Отдельные реализации
 
 - groupBy: [PI04](library_comparisons/PI04_comparision.md)
+- map: [PI01](library_comparisons/PI01_comparision.md)
 
 Штатные средства Perl: hash autovivification, CORE::push, CORE::map.
 

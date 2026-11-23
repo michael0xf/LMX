@@ -37,7 +37,7 @@ def check_lmx(path):
         if not code.strip():continue
         indent=len(line)-len(line.lstrip())
         if indent%4:errors.append(f'{number}: indentation {indent}')
-        if last and indent<last[0]-4 and code.strip()!='---':errors.append(f'{number}: multi-level decrease {last[0]}->{indent} without cutter')
+        if last and indent<last[0]-4 and code.strip()!='---' and not code.lstrip().startswith('end:'):errors.append(f'{number}: multi-level decrease {last[0]}->{indent} without cutter')
         last=(indent,number)
     if stack:errors.append('unclosed brackets '+repr(stack))
     if quote:errors.append('unclosed literal '+quote)
@@ -122,6 +122,11 @@ def main():
                     observed={'error':str(err)};okay=str(err)==case.get('error')
                 if not okay:errors.append(item['id']+' expectation mismatch '+str(number))
                 expectations.append({'example':item['id'],'case':number,'status':'PASS' if okay else 'FAIL','observed':observed})
+    dep_report=json.loads((R/'validation/implementation_dependencies.json').read_text())
+    for definition in dep_report['definitions']:
+        name=definition['name']
+        if name not in current or hashlib.sha256(current[name]['code'].encode()).hexdigest()!=definition['sha256']:
+            errors.append('Shared production source drift '+name)
     lmx_paths=list((R/'source/lmx').glob('*.lm3'))+list((R/'library_comparisons').glob('*.lmx'))
     for path in sorted(lmx_paths):
         found=check_lmx(path)

@@ -2,7 +2,7 @@
 
 Updated **21 November 2026**. [Русская версия](about_languages_comparision.ru.md).
 
-**In this collection, LMX is shorter than Python in 19 of 23 examples**, with **16.54%** less application source overall. The model combines compact notation with typing, actor-style concurrency, low-level operations, and interpretation or native execution. These figures describe the current programs and the stated application/kernel counting boundary.
+**In this collection, LMX is shorter than Python in 19 of 23 examples**, with **17.41%** less application source overall. The model combines compact notation with typing, actor-style concurrency, low-level operations, and interpretation or native execution. These figures describe the current programs and the stated application/kernel counting boundary.
 
 The discussion concerns the model and the cost of its operations. Native performance comparable to optimized JVM execution is an architectural possibility: typed calculations and known calls can lower to ordinary C, while an external compiler performs machine-code optimization.
 
@@ -34,14 +34,14 @@ LMX was reviewed against the model and its results are expectations. All 161 lis
 
 ## Results for the current collection
 
-| Examples | LMX | Python | Overall LMX reduction | LMX shorter than Python |
-| --- | ---: | ---: | ---: | ---: |
-| 1–9 | 2097 | 2592 | 19.10% | 8 of 9 |
-| 10–18 | 2248 | 2651 | 15.20% | 7 of 9 |
-| 19–23 | 1389 | 1627 | 14.63% | 4 of 5 |
-| All 1–23 | 5734 | 6870 | 16.54% | 19 of 23 |
+| Examples | LMX | Python | Overall LMX reduction | LMX shorter than Python | LMX without complex Throws |
+| --- | ---: | ---: | ---: | --- | ---: |
+| 1–9 | 2081 | 2592 | 19.71% | 8 of 9 | 2081 |
+| 10–18 | 2248 | 2651 | 15.20% | 7 of 9 | 2248 |
+| 19–23 | 1345 | 1627 | 17.33% | 4 of 5 | 1345 |
+| All 1–23 | 5674 | 6870 | 17.41% | 19 of 23 | 5674 |
 
-The first 18 examples total **4345 versus 5243**, a **17.13%** reduction. LMX is shorter than Python in 15 of 18 cases and shortest among eight languages in 13. Python has the smallest total among the other seven; C++ is shorter than Python for Factory, Builder, Prototype and Memento. In Factory, C++ is also shorter than LMX: **297 versus 306**.
+The first 18 examples total **4329 versus 5243**, a **17.43%** reduction. LMX is shorter than Python in 15 of 18 cases and shortest among eight languages in 13. Python has the smallest total among the other seven; C++ is shorter than Python for Factory, Builder, Prototype and Memento. In Factory, C++ is also shorter than LMX: **297 versus 306**.
 
 Across the full collection, LMX is shortest among eight languages in **17 of 23** cases. Python is the minimum among the other seven in **17 of 23** rows. Other language totals are Java **9809**, C++ **7743**, C# **9105**, TypeScript **8843**, Go **8241**, and Rust **8890**.
 

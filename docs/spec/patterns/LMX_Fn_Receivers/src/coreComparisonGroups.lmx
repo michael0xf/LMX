@@ -373,3 +373,98 @@ FxRetryDelayMessage:
     elapsed:
         wait(duration)
         return: 1
+
+# RESTORED COMPACT PATTERN HELPERS — original finite contracts (22-Nov).
+# Named groups are explicitly imported by the compact examples. They do not
+# replace the generalized public functions above. Each body is measured in
+# its dedicated implementation comparison, not once per client.
+
+PipeLibrary:
+    copy: sys\OPERANDS_TEMPLATE
+    return: int
+    pipe:
+        int: value \left
+        int: i 0
+        while: i < length(right)
+            @: stage \right[i]
+            value := stage(value)
+            i += 1
+        return: value
+
+FindLibrary:
+    copy: sys\OPERANDS_TEMPLATE
+    return: @
+    findById:
+        throws: OperandArity
+        if: length(right) != 1
+            throw: OperandArity()
+        @: rows \left
+        int: id \right[0]
+        int: i 0
+        while: i < length(rows)
+            @: row rows[i]
+            if: row\id = id
+                return: row
+            i += 1
+        @: missing 0
+        return: missing
+
+SpecificationLibrary:
+    independent: AndData:
+        @: first 0
+        @: second 0
+        inputs:
+            int: value
+            return: int
+            accepts:
+                return: node\first(value) && node\second(value)
+    ---
+    Operators:
+        copy: sys\OPERANDS_TEMPLATE
+        return: @
+        both:
+            throws: OperandArity
+            if: length(right) != 1
+                throw: OperandArity()
+            @: instance (merge(AndData; (@: first \left; @: second \right[0])))
+            return: instance\inputs\accepts
+
+MoneyLibrary:
+    immutable: Money:
+        int: cents 100
+        int: currency 840
+    Equality:
+        copy: sys\OPERANDS_TEMPLATE
+        return: int
+        equals:
+            throws: OperandArity
+            if: length(right) != 1
+                throw: OperandArity()
+            @: a \left
+            @: b \right[0]
+            return: a\cents = b\cents && a\currency = b\currency
+
+RetryLibrary:
+    copy: sys\OPERANDS_TEMPLATE
+    return: int
+    retry:
+        throws: Attempts
+        if: length(right) < 1 || length(right) > 2
+            throw: Attempts()
+        int: limit \right[0]
+        if: limit < 1 || limit > 31
+            throw: Attempts()
+        @: request \left
+        int: attempt 0
+        int: pause 1
+        while: attempt < limit
+            int: status request()
+            if: status != 503
+                return: status
+            attempt += 1
+            if: attempt < limit && length(right) = 2
+                @: wait \right[1]
+                wait(pause)
+                pause *= 2
+        ---
+        return: 503

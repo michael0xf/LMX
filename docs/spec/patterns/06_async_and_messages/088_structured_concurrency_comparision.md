@@ -17,22 +17,16 @@ ScopeMessage:
     int: childId
     int: ok
     int: value
-    int: seen0 0
-    int: seen1 0
+    int[]: seen [0 0]
     int: remaining 2
     int: failed 0
     int: total 0
     @: lifecycle
     @: result
     stopped:
-        if: childId = 0
-            if: node\seen0 = 1
-                return
-            node\seen0 := 1
-        if: childId = 1
-            if: node\seen1 = 1
-                return
-            node\seen1 := 1
+        if: node\seen[childId] = 1
+            return
+        node\seen[childId] := 1
         if: ok = 0
             node\failed := 1
             lifecycle\requestStopChildren()
@@ -43,7 +37,7 @@ ScopeMessage:
             result\finish(1 - node\failed; node\total)
 ```
 
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. Сокращение 23-Nov: The two child IDs 0 and 1 select one shared duplicate-notification branch; lifecycle and result barrier are unchanged.
 
 [Отдельный листинг](examples/lmx/088_structured_concurrency.lm3)
 
@@ -105,7 +99,7 @@ gather(Children, Total, Error) ->
 
 ## Разбор LMX
 
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. Сокращение 23-Nov: The two child IDs 0 and 1 select one shared duplicate-notification branch; lifecycle and result barrier are unchanged.
 
 ## Сопоставление
 
@@ -117,13 +111,15 @@ LMX использует уже описанную иерархию Message и �
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 364 | 28 |
-| Go | 517 | 20 |
-| Erlang | 602 | 18 |
+| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
+| --- | ---: | ---: | ---: |
+| LMX | 316 | 22 | 316 |
+| Go | 517 | 20 | — |
+| Erlang | 602 | 18 | — |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
+
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
 
 ## English explanation
 

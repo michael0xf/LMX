@@ -3,8 +3,8 @@
 **Статус передачи.** Переключение выполнено 2026-11-23. Автор приостановил goal прежнего ведущего astra
 (чат 01a1d3c8-3541-7120-985e-7236aa852743; статус старой goal: **paused**) и передал проект Sol 6.1 xhigh
 (чат 01a1d3fb-54e2-7ee0-9108-8c062ecf4252). Слот pipeline передан новому ведущему сейчас; запущенных сборок нет.
-astra (прежний ведущий) не коммитит docs4 и F1, не принимает оставшиеся пакеты и не публикует: docs4 и F1 **ещё не закоммичены**,
-завершает новый ведущий.
+astra (прежний ведущий) не коммитит docs4 и F1, не принимает оставшиеся пакеты и не публикует:
+их завершил новый ведущий: документы `2473ad5d` и F1 `f7d0060f` опубликованы в origin/main.
 
 Чат astra 01a1d3c8-… — консультант только для крайних сомнений, после исследования нормы, кода, плана и свидетельств.
 
@@ -39,25 +39,29 @@ astra (прежний ведущий) не коммитит docs4 и F1, не п
 
 ## 3. Состояние для передачи (со слов передающего, не перепроверено при записи)
 
-- R = `C:/Nyasha_Planet/LMX`; HEAD = origin/main `64f2232c4601c937164f8eba7d869bdd69f89e06`
-  (raw docs/tasks/23-Nov-2026-4 уже опубликован).
+- R = `C:/Nyasha_Planet/LMX`; HEAD = origin/main `f7d0060fa9c30897bdeddb8be705a678661a4337`
+  (документы `2473ad5d`, F1 `f7d0060f`; raw docs/tasks/23-Nov-2026-4 опубликован раньше, `64f2232c`).
 - T = `R/build2/codex_fix250generationchain01/runs/fable-m10-call-forms-20261116-01/fable/tz-20261121`.
   P = `T/edition-20261123-4/sonnet`.
 - P1 (1080 файлов) и BACKENDS29 уже применены, **не повторять**. include_languages (17 файлов) применён.
   `q/current` содержит только README; все закрытые вопросы — в `q/`.
-- Последний архив A3: sha256 `0b5dd52b20d5c61634ad697489667a94873eca1302cd23038e3759c7a3976ff8`.
-- Sonnet заканчивает P2 (CORE_SEQUENCES_REGEX.ru и implementation-notes.ru: цитаты и редакционные остатки журнала и плана),
-  затем отдельный CODE-пакет witness + to_codex. Официальные render grammar, render semantics и verify semantics прошли:
-  четыре файла побайтно неизменны, расписки `T/docs4-accept-20261123`. После P2 остаются конечные ссылки и манифесты,
-  затем docs commit/push. Автор ждёт уведомления о настоящем commit/push.
-- F1 rev2: весь компонентный цикл принят; код WIP ещё **не закоммичен**. Манифест 1656 файлов,
+- Последний архив A3 (`LMX_blog/q/answered-A3-root-own-reference-20261123.md`, LF с `2473ad5d`): sha256
+  `f3fbdd092fd8aef7752d17f72ba10a824208a753754d5f75a669cb33125901fc`. Прежний sha256 `0b5dd52b…ff8` (CRLF) —
+  историческая запись, не текущая.
+- Документы: пакеты P2, F1 witness + to_codex, org4, naming5 и EOF/LF3 применены. Актуальная генерация semantics —
+  `T/docs4-finalize-sol/accept01/semantics-render.log`, проверка — в `T/docs4-finalize-sol/accept01/docs-check03.log`
+  (полный docs check PASS); grammar не менялась, подтверждена `T/docs4-accept-20261123/grammar-render.log`. Документы
+  опубликованы коммитом `2473ad5d`; автору о docs commit/push сообщено.
+- F1 rev2: весь компонентный цикл принят; код закоммичен и опубликован (`f7d0060f`). Манифест 1656 файлов,
   sha `45b39f133c92f9714ad59ea61d807fd2f12b7f08a136dc94f7e114bd0e5ec938`; расписки `T/accept-codex-2126br2`.
   Tool, RT, hosted и classic frontend, Graph собраны. K1 110/0; K2 439/0 и print equal; K3 19/0; R2 rt02 = rt01;
   K4 median 7.15 → 6.97; F3 sample L1 byte-identical. Без полной G1/G2, fixedpoint, full-suite и mutants.
   Принятый набор S = `R/build2/codex_fix250generationchain01/sol-m14-field-values-01`: `codex-s2126br2-tool02`,
-  `-rt02`, `-feh01`, `-graph01`, `-cfe01`. Точные hashes — в новом witness Sonnet; не пересобирать из-за новой метки.
-- Далее по F1: коммит кода (решение нового ведущего по расписке). Затем переякорить Opus
-  `T/step-path-replace/slice/` после `a714aacc` (не применён и не собирался). Пакет удаляет invalidation и code links
+  `-rt02`, `-feh01`, `-graph01`, `-cfe01`.
+  Точные hashes — в [witness](steps/witnesses/f1-language-words-20261123/notes.md); не пересобирать из-за новой метки.
+- F1 закоммичен (`f7d0060f`); граница приёмки — компонентные проверки по распискам, без полного G1/G2, неподвижной точки
+  и bootstrap; шаг 21.26 в целом открыт ((в)–(д)). Теперь переякорить Opus `T/step-path-replace/slice/` на HEAD
+  `f7d0060f` (написан на `a714aacc`; не применён и не собирался). Пакет удаляет invalidation и code links
   и заменяет graph fragment. В `SLICE.md` §1a два дополнения, ещё не закодированы: убрать checked route native L2
   при path/index write (общий store и L3 wrapper, уровень в emitter); profile-scalar graph path должен заменять
   fragment, а не работать inplace. Выводы: OPUS-SLICE-BOUNDARIES-DECIDED-20261123-78.
@@ -82,9 +86,12 @@ checklist, docs/spec, примеры.
 - Журналировать в `steps/docs-edits-log` ровно `docs/spec/**`, `provenance/**` и `tests/doc_examples/**`, не все `tests` и `docs` вообще.
 - Чужой WIP сохранить. main: без reset, clean, mass add, веток, worktree и PR. Коммиты с `[codex]`, `user.name=codex`,
   email не менять, peers в body. Обычные commit и push разрешены.
-- Чужой WIP не включать в docs случайно: `to_lmx_uds.md`, `claude_chat/CODEX_INBOUND.md`, `for_lmx_uds_about_fable_chat.md`
-  (ранее правил новый чат Sol 01a1d3fb-54e2-7ee0-9108-8c062ecf4252; сохранять до его решения); `docs/tasks/ffgg.txt`; `steps/handoff/m11-step5b-inventory-appendix-20261111.md`;
+- Чужой WIP не включать в docs случайно: `docs/tasks/ffgg.txt`;
+  `steps/handoff/m11-step5b-inventory-appendix-20261111.md`;
   `steps/witnesses/used-scope-20261020/reference-producer117.patch`.
+- История: `to_lmx_uds.md`, `claude_chat/CODEX_INBOUND.md` и `for_lmx_uds_about_fable_chat.md` были чужим WIP (правил
+  чат Sol 01a1d3fb-54e2-7ee0-9108-8c062ecf4252); приняты и опубликованы коммитом `2473ad5d`, действующего запрета их
+  менять нет.
 
 ## 6. Статус старой goal и что делает новый ведущий
 

@@ -135,7 +135,7 @@ end: lm_graph_int_literal
 
 # Construction consumes the P0 sequence and its argument separators. The only resulting expression representation
 # is the nested Lmx graph. Temporary cursors and the scratch list leave with construction.
-# Only construction assigns a parent while putting a written child. Runtime writes go through invalidation.
+# Only construction assigns a parent while putting a written child; runtime writes go through lmx_graph_write_slot.
 fn: lm_graph_build_put (c.LmxGraph@: g; c.Lmx@: parent; size_t: index; @: value) int
     c.Lmx@: child 0
     if: c.lmx_graph_put_in(g, parent, index, value) != 0

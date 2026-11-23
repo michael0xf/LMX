@@ -500,11 +500,6 @@ end: lmx_value_cell_store
 fn: lmx_value_cell_fill (c.LmxArena@: arena; @: cell; c.LmxWalkValue@: owner; @: raw; c.LmxWalkValue@: context; c.LmxPointerCellWrite: write) int
     c.LmxPointerCellRead: read 0
     c.LmxWalkValue@: stored lmx_pointer_cell_context(arena, cell)
-    c.LmxPool@: pool (cast: (c.LmxPool@) c.lmx_range_cell_pool(arena, cell))
-    @: old void 0
-    c.LmxCodeLink@: record 0
-    int: code 0
-    int: slot_cell 0
     int: local_reference 0
     c.LmxWalkValue: saved
     int: status 0
@@ -517,17 +512,6 @@ fn: lmx_value_cell_fill (c.LmxArena@: arena; @: cell; c.LmxWalkValue@: owner; @:
         local_reference := 1
     if: write = 0 && local_reference = 0
         return: 1
-    # A CHILDREN/REF cell is a slot of a graph node: this write is one of the three physical rebindings of a child
-    # (design 4.4), prepared before the write -- a refusal writes nothing -- and committed after it; any other cell
-    # takes a value, and its own places of code are asked after the write.
-    if: pool != 0 && (pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF)
-        slot_cell := 1
-        old := c.lmx_arena_pointer_void_read(cell)
-        status := c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code)
-        if: status != 0
-            return: status
-        ---
-    ---
     lmx_value_context_copy(@ saved, context)
     if: local_reference != 0
         status := c.lmx_arena_pointer_void_write(cell, raw)
@@ -543,18 +527,28 @@ fn: lmx_value_cell_fill (c.LmxArena@: arena; @: cell; c.LmxWalkValue@: owner; @:
         if: owner != stored
             lmx_value_context_copy(owner, @ saved)
         ---
-        if: slot_cell != 0
-            status := (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record, code))
-        else:
-            c.lmx_code_changed_cell(arena, cell)
-        ---
-    else:
-        if: slot_cell != 0
-            c.lmx_code_rebind_abandon(record)
-        ---
     ---
     return: status
 end: lmx_value_cell_fill
+
+# The book, #structure-index: «`S[i] := p` stores another `void*` there»; «only native L2 adds no check at all».
+# The physical store of a pointer-sized element: raw written as a void* into cell -- a Structure field, an Array<@>
+# element and a pointer cell alike -- and a pointer cell's own reference context, when it has one
+# (lmx_pointer_cell_context), set to the stored reference as lmx_value_cell_fill sets it. No admission: a caller that
+# needs one tests before.
+fn: lmx_value_pointer_put (c.LmxArena@: arena; @: cell; @: raw) int
+    c.LmxWalkValue@: stored lmx_pointer_cell_context(arena, cell)
+    @@: p void 0
+    p := (cast: (@@) cell)
+    \p := raw
+    if: stored != 0
+        lmx_value_context_copy(stored, 0)
+        stored\present := 1
+        stored\kind := c.LMX_WALK_VALUE_REFERENCE
+        stored\ref := raw
+    ---
+    return: 0
+end: lmx_value_pointer_put
 
 fn: lmx_pointer_fill_in (c.LmxArena@: arena; @: cell; @: raw; c.LmxWalkValue@: context) int
     if: (cast: (c.LmxPool@) c.lmx_pointer_pool_in(arena, cell)) = 0

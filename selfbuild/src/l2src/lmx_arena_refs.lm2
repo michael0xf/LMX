@@ -199,22 +199,11 @@ end: lmx_graph_ref_store_in
 # Constructor-only initialization/fixup of newly allocated reference slots.
 # This is separate from ordinary rebinding through the admitted physical map.
 fn: lmx_graph_ref_fill_in (c.LmxArena@: arena; c.Lmx@: graph_node; size_t: index; @: value) int
-    @@: slot void 0
-    @: old void 0
-    c.LmxCodeLink@: record 0
-    int: code 0
-    int: status 0
-    slot := lmx_graph_ref_cell_in(arena, graph_node, index)
+    @@: slot void lmx_graph_ref_cell_in(arena, graph_node, index)
     if: slot = 0
         return: 1
-    old := \slot
-    # One of the three physical rebindings of a slot (design 4.4): prepared before the write (a refusal writes nothing),
-    # committed after it.
-    status := lmx_code_rebind_prepare(arena, (cast: (@) slot), old, value, @ record, @ code)
-    if: status != 0
-        return: status
     \slot := value
-    return: lmx_code_rebind_commit(arena, (cast: (@) slot), old, value, record, code)
+    return: 0
 end: lmx_graph_ref_fill_in
 
 # Logical child value: a CHILDREN/REF cell holds an address; a primitive
@@ -286,10 +275,6 @@ fn: lmx_arena_refs_open_profiled (c.LmxArena@: arena; c.Lmx@: parent; size_t: ch
     array := (cast: (LmxPool@) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, storage_type, refs_profile))
     if: array = 0
         return: 1
-    # The interval of this child array names its Structure first, so a slot cell alone recovers (holder, slot)
-    # (lmx_range_slot_holder; design 4.4); a refusal leaves the Structure without a child array.
-    if: c.lmx_range_holder_set(arena, (cast: (@) c.lmx_chunk_data(array\head)), parent) != 0
-        return: 1
     va\data := (cast: (@) c.lmx_chunk_data(array\head))
     va\size := children
     return: 0
@@ -320,27 +305,16 @@ fn: lmx_arena_ref_value (c.Lmx@: parent; size_t: index) @
     return: \slot
 end: lmx_arena_ref_value
 
-# Rebinds one child reference (ABI 14.22). The referenced object is not
-# touched; the previous referent is neither freed nor retained here.  The arena is the slot's: the write is one of
-# the three physical rebindings of a slot (design 4.4), so the code links follow it and a write of code resets the
-# native words above -- no global names the arena, every caller passes it (slice 253).
+# Rebinds one child reference (ABI 14.22). The referenced object is not touched; the previous referent is neither
+# freed nor retained here. The arena argument is read by nothing: every generated program builder calls this
+# four-argument form, emitted by the frontend that compiled it, until the frontend's emitter and this signature move
+# together.
 fn: lmx_arena_ref_store (c.LmxArena@: arena; c.Lmx@: parent; size_t: index; @: value) int
-    @@: slot void 0
-    @: old void 0
-    c.LmxCodeLink@: record 0
-    int: code 0
-    int: status 0
-    if: arena = 0
-        return: 1
-    slot := lmx_arena_ref_cell(parent, index)
+    @@: slot void lmx_arena_ref_cell(parent, index)
     if: slot = 0
         return: 1
-    old := \slot
-    status := lmx_code_rebind_prepare(arena, (cast: (@) slot), old, value, @ record, @ code)
-    if: status != 0
-        return: status
     \slot := value
-    return: lmx_code_rebind_commit(arena, (cast: (@) slot), old, value, record, code)
+    return: 0
 end: lmx_arena_ref_store
 
 # Only for closed-unit paths whose child is a compiler-proven Structure.
@@ -349,63 +323,7 @@ fn: lmx_arena_ref_struct (c.Lmx@: parent; size_t: index) c.Lmx@
     return: (cast: (Lmx@) lmx_arena_ref_value(parent, index))
 end: lmx_arena_ref_struct
 
-# ---- Code and its native words (slice 253, design 4.4; slice 274) ------------------------------------------------------
-#
-# Executable code selects the native word `native` of ANY operand (lmx_walk_callable_addr), so a change of the code a
-# word was compiled over must drop that word: the next dispatch then walks the actual code.  The rule is neither a
-# role nor a slot number but what is written where.  A write into a slot is a write of CODE when
-#   (1) the holder is an operation -- a node whose head (slot 0) is a cell of the operations' array: the slot is its
-#       literal, an operand, a throws item, a pad -- whatever the child;
-#   (2) the child leaving or the child arriving is itself an operation;
-#   (3) the holder is a callable (the FN role pool) and the slot is one of its parts (args, return, var, body: 0-3);
-#   (4) the holder is a part of a callable, or a named occurrence without an operation head, and the child leaving
-#       or arriving is a NODE WITHOUT A NAME OF ITS OWN: a formal, a result description, a part of a `sub`.
-# Every other write is data and keeps the words (L2 88: a compatible entry survives an ordinary data-value change).  A
-# primitive cell in such a slot -- an own or formal value, a field of a named Structure -- is data.  So is a node whose
-# own address keys the table of source names, a named Structure or Array or a callable (slice 274): the generated code
-# holds none of them.  It reads such a slot when it runs and calls a callable through that callable's own word
-# (lmx_call_prim_values; a direct l2_mN call stands only in its own trampoline), and the walker takes it as a value.
-# A publication of `T:` or a field rebound by name keeps every word, and an operation arriving there is still (2).
-#
-# A write of code resets `native` of the holder and of every node that holds it AS CODE, and theirs, each once
-# (lmx_code_reset_from).  Replacing an operand is a change of the operation that has it (1); a change inside what an
-# unchanged operand refers to is not (lmx_code_holds): the operand `AT(root, 3)` or the `Box` of `@: q Box Box` is
-# read when the operation runs, and a node reached through a data edge -- a callable in a field, a library instance
-# under its owner -- is called through its own word, so its holder's word does not contain it.  `parent` is not
-# climbed, and a subgraph built under compiled code (S8.1 instances) leaves that code's words alone until it is
-# itself installed in a place of code.  The links are the index's side
-# storage (lmx_range_link_*): one record per current installation of a child in a place of code, made and removed
-# where the three physical rebinding paths write the slot -- lmx_graph_ref_fill_in, lmx_arena_ref_store and
-# lmx_value_cell_fill -- all through lmx_code_rebind_prepare before the write and lmx_code_rebind_commit after it,
-# which recover (holder, slot) from the slot cell itself (lmx_range_slot_holder).  A write of a VALUE into a cell (a
-# number, a pointer object) asks the cell's own records (lmx_code_changed_cell): none means data.
-#
-# A source-code write clears affected native entries. Whether the resulting
-# code is suitable for the requested executor is checked by that execution
-# or an explicit check operation; it does not restrict the physical write.
-
-fn: lmx_code_head_is_op (c.LmxArena@: arena; @: head) int
-    if: arena = 0 || head = 0
-        return: 0
-    return: (cast: (int) (c.lmx_range_classify(arena, head) = c.LMX_DOMAIN_KIND_OP))
-end: lmx_code_head_is_op
-
-# The node `x` when it is an operation.
-fn: lmx_code_node (c.LmxArena@: arena; @: x) c.Lmx@
-    c.Lmx@: graph lmx_graph_node_in(arena, x)
-    if: graph = 0
-        return: 0
-    if: lmx_code_head_is_op(arena, lmx_graph_value_in(arena, graph, 0U)) != 0
-        return: graph
-    return: 0
-end: lmx_code_node
-
-fn: lmx_code_unnamed_node (c.LmxArena@: arena; @: x) int
-    if: x = 0 || lmx_graph_node_in(arena, x) = 0
-        return: 0
-    return: (cast: (int) (c.lmx_source_name_get(arena, x) = 0))
-end: lmx_code_unnamed_node
-
+# Is x a callable: a Structure of the FN role pool (the admission and the walker ask this).
 fn: lmx_code_callable (c.LmxArena@: arena; c.Lmx@: x) int
     c.LmxPool@: pool 0
     if: arena = 0 || x = 0
@@ -415,186 +333,3 @@ fn: lmx_code_callable (c.LmxArena@: arena; c.Lmx@: x) int
         return: 0
     return: (cast: (int) (pool\role = c.LMX_POOL_ROLE_FN))
 end: lmx_code_callable
-
-# `x` stands in a part slot (0-3) of the callable `parent`.
-fn: lmx_code_part_slot (c.LmxArena@: arena; c.Lmx@: parent; c.Lmx@: x) int
-    size_t: k 0U
-    if: x = 0 || lmx_code_callable(arena, parent) = 0
-        return: 0
-    while: k < 4U
-        if: lmx_graph_value_in(arena, parent, k) = (cast: (@) x)
-            return: 1
-        ---
-        k := k + 1U
-    ---
-    return: 0
-end: lmx_code_part_slot
-
-fn: lmx_code_write (c.LmxArena@: arena; c.Lmx@: holder; size_t: slot; @: old; @: new) int
-    @: head void 0
-    c.Lmx@: parent 0
-    if: arena = 0 || holder = 0
-        return: 0
-    # The head as it stands for this decision: installing a frame's own head (slot 0, over nothing) is construction
-    # of that frame, not a change of the code it is in.
-    if: slot = 0U
-        head := old
-    else:
-        head := lmx_graph_value_in(arena, holder, 0U)
-    ---
-    if: lmx_code_head_is_op(arena, head) != 0
-        return: 1
-    if: old != 0 && lmx_code_node(arena, old) != 0
-        return: 1
-    if: new != 0 && lmx_code_node(arena, new) != 0
-        return: 1
-    if: slot < 4U && lmx_code_callable(arena, holder) != 0
-        return: 1
-    if: lmx_code_unnamed_node(arena, old) = 0 && lmx_code_unnamed_node(arena, new) = 0
-        return: 0
-    # A named node leaving shows the place for what it is, whatever Structure now takes it.
-    if: old != 0 && lmx_graph_node_in(arena, old) != 0 && c.lmx_source_name_get(arena, old) != 0
-        return: 0
-    if: c.lmx_source_name_get(arena, (cast: (@) holder)) != 0
-        return: 1
-    parent := (cast: (c.Lmx@) holder\parent)
-    return: lmx_code_part_slot(arena, parent, holder)
-end: lmx_code_write
-
-# Slot `slot` of `holder` has `item` as a part of its code: an operation wherever it stands (one statement in two bodies
-# is in both), a part of a callable, or a node without a name of its own built for this holder (a block, a call's list,
-# a formal).  Anything else standing in an operation's slot is an operand that refers to a node living elsewhere, and
-# a named node is read when the code runs (see the head of this section).
-fn: lmx_code_holds (c.LmxArena@: arena; c.Lmx@: holder; size_t: slot; c.Lmx@: item) int
-    if: lmx_code_head_is_op(arena, lmx_graph_value_in(arena, item, 0U)) != 0
-        return: 1
-    if: slot < 4U && lmx_code_callable(arena, holder) != 0
-        return: 1
-    if: (cast: (c.Lmx@) item\parent) != holder
-        return: 0
-    return: (cast: (int) (c.lmx_source_name_get(arena, (cast: (@) item)) = 0))
-end: lmx_code_holds
-
-fn: lmx_code_next_gen (c.LmxArena@: arena) size_t
-    arena\reset_gen := arena\reset_gen + 1U
-    if: arena\reset_gen = 0U
-        arena\reset_gen := 1U
-    ---
-    return: arena\reset_gen
-end: lmx_code_next_gen
-
-# `native: 0` at `start` and at everything that holds it as code: the holders it is linked into, and theirs, each
-# once.  The records themselves are the worklist (threaded through `work`) and carry the visit mark (the arena's reset
-# generation), so a reset allocates nothing and cannot fail: once a write of code is decided, the words above it are
-# gone for sure (P1-B of Codex's review).  Cycles and shared subgraphs end because a record is taken once per
-# generation; a holder reached through two records is expanded twice, which only repeats finished work.
-sub: lmx_code_reset_from (c.LmxArena@: arena; c.Lmx@: start)
-    c.LmxCodeLink@: work 0
-    c.LmxCodeLink@: link 0
-    c.Lmx@: at 0
-    size_t: gen 0U
-    if: arena = 0 || start = 0
-        return
-    gen := lmx_code_next_gen(arena)
-    start\native := 0
-    link := (cast: (LmxCodeLink@) c.lmx_range_links_of(arena, (cast: (@) start)))
-    while: link != 0
-        if: link\mark != gen && lmx_code_holds(arena, (cast: (c.Lmx@) (link\holder)), (cast: (size_t) (link\slot)), start) != 0
-            link\mark := gen
-            link\work := work
-            work := link
-        ---
-        link := link\next
-    ---
-    while: work != 0
-        link := work
-        work := link\work
-        at := link\holder
-        at\native := 0
-        link := (cast: (LmxCodeLink@) c.lmx_range_links_of(arena, (cast: (@) at)))
-        while: link != 0
-            if: link\mark != gen && lmx_code_holds(arena, (cast: (c.Lmx@) (link\holder)), (cast: (size_t) (link\slot)), at) != 0
-                link\mark := gen
-                link\work := work
-                work := link
-            ---
-            link := link\next
-        ---
-    ---
-    return
-end: lmx_code_reset_from
-
-# A value was written into `cell`: every place of code it stands in loses its word, with everything above.
-sub: lmx_code_changed_cell (c.LmxArena@: arena; @: cell)
-    c.LmxCodeLink@: link 0
-    c.LmxCodeLink@: next 0
-    if: arena = 0 || cell = 0
-        return
-    link := (cast: (LmxCodeLink@) c.lmx_range_links_of(arena, cell))
-    while: link != 0
-        next := link\next
-        lmx_code_reset_from(arena, (cast: (c.Lmx@) (link\holder)))
-        link := next
-    ---
-    return
-end: lmx_code_changed_cell
-
-# The rebinding of a slot cell, in two steps around the physical write, so that the write and its consequences stand or
-# fall together. PREPARE decides whether this changes code in its current state
-# and allocates the new child's link. Future execution is checked when requested,
-# not as a condition of writing a pointer. Non-zero refuses the
-# write: nothing written, nothing linked, every word in place.  COMMIT, after the write: the old child's record of this
-# place goes, the prepared one joins, and a write of code drops the words above the holder; nothing allocates or fails, and
-# no dispatch stands between the write and the drop.  ABANDON: the prepared record of a write that did not happen.
-fn: lmx_code_rebind_prepare (c.LmxArena@: arena; @: cell; @: old; @: new; c.LmxCodeLink@@: record; int@: code) int
-    c.Lmx@: holder 0
-    size_t: slot 0U
-    int: is_code 0
-    if: arena = 0 || cell = 0 || record = 0 || code = 0
-        return: 1
-    \record := 0
-    \code := 0
-    if: old = new
-        return: 0
-    holder := (cast: (c.Lmx@) c.lmx_range_slot_holder(arena, cell, @ slot))
-    if: holder = 0
-        return: 0
-    is_code := lmx_code_write(arena, holder, slot, old, new)
-    if: is_code != 0
-        if: new != 0
-            if: c.lmx_range_link_prepare(arena, new, holder, slot, record) != 0
-                return: 1
-            ---
-        ---
-    ---
-    \code := is_code
-    return: 0
-end: lmx_code_rebind_prepare
-
-fn: lmx_code_rebind_commit (c.LmxArena@: arena; @: cell; @: old; @: new; c.LmxCodeLink@: record; int: code) int
-    c.Lmx@: holder 0
-    size_t: slot 0U
-    int: status 0
-    if: arena = 0 || cell = 0
-        c.lmx_range_link_abandon(record)
-        return: 1
-    if: old = new
-        c.lmx_range_link_abandon(record)
-        return: 0
-    holder := (cast: (c.Lmx@) c.lmx_range_slot_holder(arena, cell, @ slot))
-    if: old != 0 && holder != 0
-        c.lmx_range_link_remove(arena, old, holder, slot)
-    ---
-    if: record != 0
-        status := (cast: (int) c.lmx_range_link_commit(arena, record))
-    ---
-    if: code != 0
-        lmx_code_reset_from(arena, holder)
-    ---
-    return: status
-end: lmx_code_rebind_commit
-
-sub: lmx_code_rebind_abandon (c.LmxCodeLink@: record)
-    c.lmx_range_link_abandon(record)
-    return
-end: lmx_code_rebind_abandon

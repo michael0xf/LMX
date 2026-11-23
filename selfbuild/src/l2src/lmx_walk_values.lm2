@@ -2771,7 +2771,6 @@ fn: lmx_walk_value_store_with_writer (c.LmxArena@: arena; c.LmxWalkPlace@: place
         ---
         if: place\context != 0 && place\context != scalar_context
             c.memcpy((cast: (@) place\context), (cast: (const: @) scalar_context), c.sizeof(c.LmxWalkValue))
-        c.lmx_code_changed_cell(arena, place\address)
         return: c.LMX_WALK_OK
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
         # Slice 272: another kind of value is the implicit `convert` before the write (the book :777); the contextual literal 0
@@ -2793,14 +2792,9 @@ fn: lmx_walk_value_store_with_writer (c.LmxArena@: arena; c.LmxWalkPlace@: place
         return: status
     if: lmx_walk_value_number(received_p, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
         return: c.LMX_WALK_INVALID
-    # A successful numeric code write drops the native entries above its cell.
-    int: in_code (cast: (int) (c.lmx_range_links_of(arena, (cast: (@) place\address)) != 0))
     status := lmx_walk_store_numeric_raw((cast: (@) place\address), ty, number)
     if: status = c.LMX_WALK_OK && place\context != 0
         c.lmx_value_context_copy(place\context, 0)
-    ---
-    if: status = c.LMX_WALK_OK && in_code != 0
-        c.lmx_code_changed_cell(arena, (cast: (@) place\address))
     ---
     return: status
 end: lmx_walk_value_store_with_writer

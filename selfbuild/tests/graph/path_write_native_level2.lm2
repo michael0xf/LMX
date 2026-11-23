@@ -1,0 +1,20 @@
+# Named path writes in native L2 code (an .lm2 file; SLICE.md §1a): the field's receiving context selects the store
+# (the book, #correspondence-stability: «Named receiving places use the ordinary admission contract») and the native
+# code adds no run-time admission. Source\x, an int, written 9 holds {int 9}; Source\p, an int reference, written a
+# reference to Target\y holds that reference; Holder, which addressed the former fragment of x, keeps it (x 1). The
+# values fit the fields, so the checked routes (interp, forced) answer the same as native.
+(
+    Holder:
+        int: h 0
+    Target:
+        int: y 7
+    Source:
+        int: x 1
+        @: p int 0
+)
+sub: main ()
+    @: shared node[0]
+    shared\Holder[0] := @(shared\Source\x)
+    shared\Source\x := 9
+    shared\Source\p := @(shared\Target\y)
+main()

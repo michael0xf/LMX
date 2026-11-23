@@ -1,0 +1,21 @@
+L2:
+    ---
+        Holder:
+            int: x 1
+        end: Holder
+        Target:
+            int: y 7
+        end: Target
+        Source:
+            int: x 9
+            @: p int @y
+        end: Source
+    ---
+    sub: main ()
+        @: shared (node [] 0)
+        :=: ((shared \ Holder) [] 0) (@ ((shared \ Source) \ x))
+        :=: ((shared \ Source) \ x) 9
+        :=: ((shared \ Source) \ p) (@ ((shared \ Target) \ y))
+    end: main
+    main:
+end: L2

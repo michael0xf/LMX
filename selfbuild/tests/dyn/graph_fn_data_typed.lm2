@@ -128,7 +128,7 @@ fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: 
             return: 110
         ---
     ---
-    if: c.lmx_graph_assign_int(g, code, root, checked_slot, after + 1) != 0
+    if: c.lmx_graph_assign_int(g, root, checked_slot, after + 1) != 0
         return: 111
     if: out != 0
         out[0] := 0
@@ -206,7 +206,7 @@ fn: fd_merge_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void
         return: 122
     if: fd_expect(arena, c.lmx_graph_get_in(g, m, 0U), abi, source, m, 0, @ zero) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, n, 2U), alias_abi, alias_source, n, 0, @ precise) != 0 || c.lmx_pointer_value_in(arena, c.lmx_graph_get_in(g, n, 0U)) != c.lmx_graph_get_in(g, n, 2U) || c.lmx_pointer_value_in(arena, c.lmx_graph_get_in(g, n, 1U)) != c.lmx_graph_ref_cell_in(arena, n, 2U)
         return: 123
-    if: c.lmx_graph_assign_int(g, code, root, checked_slot, checked + 1) != 0
+    if: c.lmx_graph_assign_int(g, root, checked_slot, checked + 1) != 0
         return: 124
     if: out != 0
         out[0] := 0
@@ -306,7 +306,7 @@ end: fd_merge_word_aliases
 fn: fd_index_value (@: g c.LmxGraph; @: holder c.Lmx; @: source void; @: expected void) int
     @: read_value void 0
     @: address void 0
-    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, source) != 0 || c.lmx_graph_count(holder) != 1U
+    if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, source) != 0 || c.lmx_graph_count(holder) != 1U
         return: 1
     if: c.lmx_graph_index(g, (cast: (@: void) holder), 0, @ read_value) != 0 || c.lmx_pointer_pool_in((cast: (@: c.LmxArena) g\arena), read_value) = 0
         return: 1
@@ -356,18 +356,20 @@ fn: fd_index_storage (@: g c.LmxGraph) int
         return: 165
     c.free(opaque)
     protected_node\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_index_write(g, protected_node, (cast: (@: void) protected_node), 0, (cast: (@: void) target)) = 0 || c.lmx_graph_get_in(g, protected_node, 0U) != scalar || protected_node\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_graph_index_write(g, (cast: (@: void) protected_node), 0, (cast: (@: void) target)) = 0 || c.lmx_graph_get_in(g, protected_node, 0U) != scalar || protected_node\native != (cast: (c.LmxEntry) c.fd_callback)
         return: 166
+    # An index write takes effect on its element and keeps the native entry of the written Structure or Array
+    # (kernel-implementation §6.5: graph writes do not invalidate native); the entry stays the one that was set.
     holder\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: fd_index_value(g, holder, (cast: (@: void) target), (cast: (@: void) target)) != 0 || holder\native != 0
+    if: fd_index_value(g, holder, (cast: (@: void) target), (cast: (@: void) target)) != 0 || holder\native != (cast: (c.LmxEntry) c.fd_callback)
         return: 167
     array\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: fd_index_value(g, (cast: (@: c.Lmx) array), (cast: (@: void) target), (cast: (@: void) target)) != 0 || array\native != 0
+    if: fd_index_value(g, (cast: (@: c.Lmx) array), (cast: (@: void) target), (cast: (@: void) target)) != 0 || array\native != (cast: (c.LmxEntry) c.fd_callback)
         return: 168
-    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, scalar) = 0 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target)
+    if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, scalar) = 0 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target)
         return: 169
     cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) numeric), 0U)
-    if: c.lmx_int_store_known(cell, 23) != 0 || c.lmx_graph_index_write(g, holder, (cast: (@: void) numeric), 0, pointer) = 0 || c.lmx_graph_value_int(g, cell, @ number) != 0 || number != 23
+    if: c.lmx_int_store_known(cell, 23) != 0 || c.lmx_graph_index_write(g, (cast: (@: void) numeric), 0, pointer) = 0 || c.lmx_graph_value_int(g, cell, @ number) != 0 || number != 23
         return: 170
     if: c.lmx_pointer_store_in(arena, pointer, (cast: (@: void) array)) != 0 || c.lmx_graph_index(g, pointer, 0, @ read_value) != 0 || c.lmx_pointer_pool_in(arena, read_value) = 0 || c.lmx_pointer_value_in(arena, read_value) != (cast: (@: void) target)
         return: 171
@@ -376,7 +378,7 @@ fn: fd_index_storage (@: g c.LmxGraph) int
     if: c.lmx_graph_address_type(g, giving_uninit, @ number) != 5 || number != 23 || c.lmx_graph_address_type(g, immutable_service, @ number) != 5 || number != 23
         return: 172
     holder\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, giving_uninit) != 4 || c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, immutable_service) != 4 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target) || holder\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, giving_uninit) != 4 || c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, immutable_service) != 4 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target) || holder\native != (cast: (c.LmxEntry) c.fd_callback)
         return: 173
     if: fd_index_value(g, holder, explicit_reference, giving_uninit) != 0
         return: 174
@@ -388,14 +390,14 @@ fn: fd_index_storage (@: g c.LmxGraph) int
     pointer := fd_merge_ref(g, target, "indexedReference")
     if: target = 0 || pointer = 0 || c.lmx_graph_put_in(g, target, 0U, scalar) != 0 || c.lmx_graph_put_in(g, holder, 0U, pointer) != 0 || c.lmx_graph_index(g, (cast: (@: void) holder), 0, @ read_value) != 0 || c.lmx_graph_index(g, read_value, 0, @ read_value) != 0 || c.lmx_pointer_value_in(arena, read_value) != scalar
         return: 176
-    # Mutating the actual primitive pointer cell of executable Array code must
-    # clear native even when decoding that field returns its Structure payload.
+    # Writing the actual primitive pointer cell of executable Array code takes effect on the cell and keeps native
+    # (kernel-implementation §6.5: graph writes do not invalidate native).
     code_array := c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_TYPE_GRAPH_LMX_REF - c.LMX_TYPE_POINTER_BASE, 1U, arena)
     cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) code_array), 0U)
     if: code_array = 0 || cell = 0 || c.lmx_pointer_store_in(arena, cell, (cast: (@: void) target)) != 0
         return: 177
     code_array\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_assign_reference(g, (cast: (@: c.Lmx) code_array), cell, (cast: (@: void) holder)) != 0 || c.lmx_pointer_value_in(arena, cell) != (cast: (@: void) holder) || code_array\native != 0
+    if: c.lmx_graph_assign_reference(g, cell, (cast: (@: void) holder)) != 0 || c.lmx_pointer_value_in(arena, cell) != (cast: (@: void) holder) || code_array\native = 0
         return: 178
 return: 0
 

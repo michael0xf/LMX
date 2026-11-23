@@ -1,0 +1,442 @@
+# The kernel's checks of graph writes -- the checked forms, the unchecked forms native L2 takes, and the native
+# entries a write keeps -- over hand-built graphs and over a witness the common builder builds (formerly the Graph
+# tool's commands mutation and method-mutation). gm_check answers 7 when every check passes; each check prints its
+# MUTATION-CHECK line.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/l2_graph_build.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# A real native entry whose distinct answer proves that dispatch used the entry, not the walker.
+fn: gm_native_probe (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: arena; c.Lmx@: code; c.LmxWalkValue@: input; c.LmxWalkValue@: result) int
+    return: 77
+end: gm_native_probe
+
+fn: gm_report (const: (char@: what); int: ok) int
+    if: ok != 0
+        c.printf("MUTATION-CHECK %s PASS\n", what)
+        return: 0
+    c.printf("MUTATION-CHECK %s FAIL\n", what)
+    return: 1
+end: gm_report
+
+# The data of a created function reaches, by a reference, a Structure C whose lexical parent P lies outside the written
+# data (the review of 332R): the copy keeps that chain -- the copy of C has a copy of P for its parent, through the same
+# map (kernel §6.4), never the source's mutable P and never none --, and the sources stay as they were.
+fn: gm_var_chain (c.LmxGraph@: g) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    c.Lmx@: outer 0
+    c.Lmx@: inner 0
+    c.Lmx@: written 0
+    c.Lmx@: args 0
+    c.Lmx@: body 0
+    c.Lmx@: decl 0
+    c.Lmx@: made 0
+    c.Lmx@: vars 0
+    c.Lmx@: copied 0
+    @: held void 0
+    @: kept void 0
+    @: link void 0
+    @: k void 0
+    @: word void 0
+    char@: name 0
+    char@: field 0
+    int: value 0
+    int: status 5
+    outer := c.lmx_graph_lmx(g, 0, 2U)
+    inner := c.lmx_graph_lmx(g, outer, 1U)
+    written := c.lmx_graph_lmx(g, 0, 1U)
+    args := c.lmx_graph_lmx(g, 0, 0U)
+    body := c.lmx_graph_lmx(g, 0, 0U)
+    decl := c.lmx_graph_lmx(g, 0, 0U)
+    k := c.lmx_graph_int(g, 7)
+    if: state = 0 || outer = 0 || inner = 0 || written = 0 || args = 0 || body = 0 || decl = 0 || k = 0
+        return: 1
+    link := c.lmx_graph_ref_lmx(g, inner)
+    if: link = 0 || c.lmx_graph_name(g, k, "k", 1U) != 0 || c.lmx_graph_name(g, (cast: (@) outer), "P", 1U) != 0 || c.lmx_graph_name(g, (cast: (@) inner), "C", 1U) != 0 || c.lmx_graph_name(g, link, "c", 1U) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, outer, 0U, k) != 0 || c.lmx_graph_put_in(g, outer, 1U, (cast: (@) inner)) != 0 || c.lmx_graph_put_in(g, inner, 0U, c.lmx_graph_word(g, "k", 1U)) != 0 || c.lmx_graph_put_in(g, written, 0U, link) != 0
+        return: 1
+    name := c.lmx_graph_intern("probe", 5U)
+    field := c.lmx_graph_intern("k", 1U)
+    word := c.lmx_graph_word(g, "int", 3U)
+    if: name = 0 || field = 0 || word = 0
+        return: 1
+    status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
+    if: status = 0
+        vars := c.lmx_graph_method_data(g, made)
+    if: vars != 0 && c.lmx_graph_count(vars) = 1U
+        held := c.lmx_graph_get_in(g, vars, 0U)
+        copied := (cast: (c.Lmx@) c.lmx_graph_target(g, held))
+    ---
+    if: copied != 0 && copied\parent != 0
+        kept := c.lmx_graph_field(g, (cast: (@) copied\parent), field)
+    return: gm_report("var-copy-keeps-the-lexical-chain-of-a-reached-structure", (cast: (int) (status = 0 && c.lmx_graph_kind(g, held) = 6 && copied != inner && copied\parent != 0 && copied\parent != outer && kept != k && c.lmx_graph_value_int(g, kept, @ value) = 0 && value = 7 && inner\parent = outer && c.lmx_graph_target(g, c.lmx_graph_get_in(g, written, 0U)) = (cast: (@) inner))))
+end: gm_var_chain
+
+# First/later writes preserve uninit reference identities; one construction map
+# copies the wrapper, its shared typed cell and the referent without aliasing source.
+fn: gm_reference (c.LmxGraph@: g; int: kind) int
+    c.Lmx@: written c.lmx_graph_lmx(g, 0, 3U)
+    c.Lmx@: args c.lmx_graph_lmx(g, 0, 0U)
+    c.Lmx@: body c.lmx_graph_lmx(g, 0, 0U)
+    c.Lmx@: decl c.lmx_graph_lmx(g, 0, 0U)
+    c.Lmx@: made 0
+    c.Lmx@: copied 0
+    @: wrapper void c.lmx_graph_uninit_reference(g, kind, 0)
+    @: cell void c.lmx_graph_reference_cell(g, wrapper)
+    @: first void 0
+    @: second void 0
+    @: first_value void 0
+    @: second_value void 0
+    @: copied_wrapper void 0
+    @: copied_cell void 0
+    @: copied_target void 0
+    @: word void c.lmx_graph_word(g, "int", 3U)
+    char@: name c.lmx_graph_intern("refprobe", 8U)
+    int: status 0
+    int: fails 0
+    if: kind = 5
+        first := c.lmx_graph_int(g, 5)
+        second := c.lmx_graph_int(g, 7)
+        first_value := c.lmx_graph_ref_int(g, first)
+        second_value := c.lmx_graph_ref_int(g, second)
+    if: kind = 6
+        first := (cast: (@) c.lmx_graph_lmx(g, 0, 0U))
+        second := (cast: (@) c.lmx_graph_lmx(g, 0, 0U))
+        first_value := first
+        second_value := second
+    if: written = 0 || args = 0 || body = 0 || decl = 0 || wrapper = 0 || cell = 0 || first_value = 0 || second_value = 0 || word = 0 || name = 0
+        return: 1
+    if: c.lmx_graph_name(g, cell, "r", 1U) != 0 || c.lmx_graph_put_in(g, written, 0U, wrapper) != 0 || c.lmx_graph_put_in(g, written, 1U, cell) != 0 || c.lmx_graph_put_in(g, written, 2U, first) != 0
+        return: 1
+    c.printf("MUTATION-REFERENCE kind%d\n", kind)
+    status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
+    if: status = 0
+        copied := c.lmx_graph_method_data(g, made)
+    if: copied != 0
+        copied_wrapper := c.lmx_graph_get_in(g, copied, 0U)
+        copied_cell := c.lmx_graph_get_in(g, copied, 1U)
+    fails := fails + gm_report("unwritten-reference-copy-keeps-service-wrapper-and-shared-cell", (cast: (int) (status = 0 && copied_wrapper != wrapper && copied_cell != cell && c.lmx_graph_kind(g, copied_wrapper) = kind + 3 && c.lmx_graph_kind(g, copied_cell) = kind && c.lmx_graph_reference_cell(g, copied_wrapper) = copied_cell)))
+    if: fails != 0
+        return: fails
+    status := c.lmx_graph_assign_reference(g, wrapper, first_value)
+    fails := fails + gm_report("reference-first-write-keeps-slot-wrapper-and-typed-cell", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, written, 0U) = wrapper && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = first)))
+    status := c.lmx_graph_assign_reference(g, wrapper, wrapper)
+    fails := fails + gm_report("reference-service-wrapper-is-a-value-of-its-type", (cast: (int) (status = 0 && c.lmx_arena_pointer_void_read(cell) = first)))
+    status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
+    if: status = 0
+        copied := c.lmx_graph_method_data(g, made)
+    if: copied != 0
+        copied_wrapper := c.lmx_graph_get_in(g, copied, 0U)
+        copied_cell := c.lmx_graph_get_in(g, copied, 1U)
+        copied_target := c.lmx_graph_get_in(g, copied, 2U)
+    fails := fails + gm_report("reference-copy-map-keeps-wrapper-cell-and-target-sharing", (cast: (int) (status = 0 && copied_wrapper != wrapper && copied_cell != cell && copied_target != first && c.lmx_graph_kind(g, copied_wrapper) = kind + 3 && c.lmx_graph_kind(g, copied_cell) = kind && c.lmx_graph_reference_cell(g, copied_wrapper) = copied_cell && c.lmx_arena_pointer_void_read(copied_cell) = copied_target)))
+    if: fails != 0
+        return: fails
+    status := c.lmx_graph_assign_reference(g, copied_wrapper, second_value)
+    fails := fails + gm_report("reference-copy-write-keeps-source-target", (cast: (int) (status = 0 && c.lmx_arena_pointer_void_read(copied_cell) = second && c.lmx_arena_pointer_void_read(cell) = first)))
+    status := c.lmx_graph_assign_reference(g, cell, second_value)
+    fails := fails + gm_report("reference-later-write-through-saved-cell-keeps-identities", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, written, 0U) = wrapper && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = second)))
+return: fails
+
+# Shared code, a data alias to its literal, and a cycle are ordinary Lmx slots. A bare write in called code writes
+# its activation's own place (the book, #frame-and-graph-assignment: «A local `novalue := 5` writes the frame and
+# leaves that source graph unchanged»): the graph slot of x keeps 9. Every write keeps the native entries
+# (kernel-implementation §6.5), so each call after a write dispatches the preserved entry (77); the walk of a written
+# literal and operator is observed by the method checks on a callable without an entry (61, 59).
+fn: gm_mutation () int
+    c.LmxArena@: arena (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    c.LmxGraph@: g 0
+    c.Lmx@: scope 0
+    c.Lmx@: a 0
+    c.Lmx@: b 0
+    c.Lmx@: data 0
+    c.Lmx@: fresh 0
+    c.Lmx@: statement 0
+    c.Lmx@: expression 0
+    @: x void 0
+    @: literal void 0
+    @: uninit void 0
+    @: same_cell void 0
+    @: plus void 0
+    @: minus void 0
+    int: value 0
+    int: status 0
+    int: fails 0
+    if: arena = 0 || c.lmx_arena_open(arena) != 0
+        return: 1
+    g := c.lmx_graph_open(arena)
+    scope := c.lmx_graph_lmx(g, 0, 5U)
+    a := c.lmx_graph_lmx(g, scope, 2U)
+    b := c.lmx_graph_lmx(g, scope, 2U)
+    data := c.lmx_graph_lmx(g, scope, 1U)
+    fresh := c.lmx_graph_lmx(g, scope, 1U)
+    statement := c.lmx_graph_lmx(g, a, 3U)
+    expression := c.lmx_graph_lmx(g, statement, 3U)
+    x := c.lmx_graph_int(g, 5)
+    literal := c.lmx_graph_int(g, 1)
+    uninit := c.lmx_graph_uninit_int(g)
+    plus := c.lmx_graph_word(g, "+", 1U)
+    minus := c.lmx_graph_word(g, "-", 1U)
+    if: scope = 0 || a = 0 || b = 0 || data = 0 || fresh = 0 || statement = 0 || expression = 0 || x = 0 || literal = 0 || uninit = 0 || plus = 0 || minus = 0
+        return: 1
+    if: c.lmx_graph_name(g, x, "x", 1U) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, scope, 0U, (cast: (@) a)) != 0 || c.lmx_graph_put_in(g, scope, 1U, (cast: (@) b)) != 0 || c.lmx_graph_put_in(g, scope, 2U, (cast: (@) data)) != 0 || c.lmx_graph_put_in(g, scope, 3U, (cast: (@) fresh)) != 0 || c.lmx_graph_put_in(g, scope, 4U, (cast: (@) scope)) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, a, 0U, x) != 0 || c.lmx_graph_put_in(g, a, 1U, (cast: (@) statement)) != 0 || c.lmx_graph_put_in(g, b, 0U, x) != 0 || c.lmx_graph_put_in(g, b, 1U, (cast: (@) statement)) != 0 || c.lmx_graph_put_in(g, data, 0U, literal) != 0 || c.lmx_graph_put_in(g, fresh, 0U, uninit) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, statement, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || c.lmx_graph_put_in(g, statement, 1U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, statement, 2U, (cast: (@) expression)) != 0 || c.lmx_graph_put_in(g, expression, 0U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, expression, 1U, plus) != 0 || c.lmx_graph_put_in(g, expression, 2U, literal) != 0
+        return: 1
+    a\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    b\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    fresh\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    same_cell := c.lmx_graph_place_cell(g, fresh, 0U)
+    status := c.lmx_graph_assign_int(g, fresh, 0U, 5)
+    fails := fails + gm_report("first-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_graph_kind(g, uninit) = 3 && c.lmx_arena_pointer_void_read(uninit) = same_cell && c.lmx_graph_kind(g, same_cell) = 1 && fresh\native != 0 && c.lmx_graph_read_int(g, fresh, 0U, @ value) = 0 && value = 5)))
+    status := c.lmx_graph_assign_int(g, fresh, 0U, 7)
+    fails := fails + gm_report("later-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_arena_pointer_void_read(uninit) = same_cell && fresh\native != 0 && c.lmx_graph_value_int(g, same_cell, @ value) = 0 && value = 7)))
+    status := c.lmx_graph_assign_int(g, a, 0U, 9)
+    fails := fails + gm_report("ordinary-data-write-preserves-both-entries", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
+    fails := fails + gm_report("preserved-entry-is-dispatched", (cast: (int) (c.lmx_graph_call(g, a) = 77)))
+    status := c.lmx_graph_write_slot(g, expression, 1U, (cast: (@) (@ value)))
+    fails := fails + gm_report("checked-slot-store-takes-a-foreign-address-and-keeps-entries", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, expression, 1U) = (cast: (@) (@ value)) && a\native != 0 && b\native != 0)))
+    status := c.lmx_graph_assign_int(g, data, 0U, 7)
+    fails := fails + gm_report("literal-written-through-data-alias-keeps-native", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && fresh\native != 0)))
+    status := c.lmx_graph_call(g, a)
+    fails := fails + gm_report("preserved-entry-is-dispatched-after-a-literal-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, a, 0U, @ value) = 0 && value = 9)))
+    status := c.lmx_graph_call(g, b)
+    fails := fails + gm_report("second-holder-entry-is-dispatched-after-the-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
+    status := c.lmx_graph_write_slot(g, expression, 1U, minus)
+    fails := fails + gm_report("operator-write-keeps-native", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && fresh\native != 0)))
+    status := c.lmx_graph_call(g, a)
+    fails := fails + gm_report("preserved-entry-is-dispatched-after-an-operator-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, a, 0U, @ value) = 0 && value = 9)))
+    fails := fails + gm_var_chain(g)
+    fails := fails + gm_reference(g, 5)
+    fails := fails + gm_reference(g, 6)
+    fails := fails + gm_report("activation-state-discarded", (cast: (int) (arena\activation = 0)))
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(arena)
+    c.free((cast: (@) arena))
+    if: fails != 0
+        return: 1
+    return: 0
+end: gm_mutation
+
+# Mutate the published Point/take witness -- embedded, built by the common builder -- through the same write API.
+# The sentinel proves whether native survives; once code changes, invocation must execute the current body with a
+# fresh activation and untouched formal slots.
+fn: gm_method () int
+    c.FILE@: file 0
+    c.LmxArena@: arena (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    c.LmxGraph@: g 0
+    c.Lmx@: root 0
+    c.Lmx@: point 0
+    c.Lmx@: method 0
+    c.Lmx@: args 0
+    c.Lmx@: body 0
+    c.Lmx@: statement 0
+    c.Lmx@: expression 0
+    c.Lmx@: product 0
+    c.Lmx@: formal 0
+    c.Lmx@: walker 0
+    @: required void 0
+    @@: values void (cast: (@@) c.calloc(2U, sizeof(@)))
+    int: status 0
+    int: answer 0
+    int: fails 0
+    int: opened 0
+    if: values = 0 || arena = 0 || c.lmx_arena_open(arena) != 0
+        return: 1
+    g := c.lmx_graph_open(arena)
+    file := c.fopen("graph_mutation_witness.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 1
+    if: c.fputs("Point:\n    int: y 0\n    int: x 0\nend: Point\n\n", file) < 0
+        return: 1
+    if: c.fputs("fn: take (@: p Point; int: q) int\n    return: p\\y * 10 + q\nend: take\n\n", file) < 0
+        return: 1
+    if: c.fputs("fn: take2 (@: p Point; int: q) int\n    return: p\\y * 10 + q\nend: take2\n", file) < 0 || c.fclose(file) != 0
+        return: 1
+    status := c.lm_graph_build_file(g, "graph_mutation_witness.lm3", @ root)
+    c.remove("graph_mutation_witness.lm3")
+    if: status != 0 || root = 0
+        return: 1
+    # One traversal creates take. Point already answers through the whole
+    # data registry, without executing a declaration on the way to r.
+    if: c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 1
+    point := (cast: (c.Lmx@) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Point", 5U))))
+    if: c.lmx_graph_kind(g, (cast: (@) point)) != 4
+        return: 1
+    method := (cast: (c.Lmx@) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take", 4U))))
+    if: c.lmx_graph_method(g, method) = 0
+        return: 1
+    args := c.lmx_graph_method_data(g, method)
+    body := c.lmx_graph_method_code(g, method)
+    statement := (cast: (c.Lmx@) c.lmx_graph_get_in(g, body, 0U))
+    expression := (cast: (c.Lmx@) c.lmx_graph_get_in(g, statement, 0U))
+    product := (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U))
+    required := c.lmx_graph_get_in(g, args, 1U)
+    method\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    status := c.lmx_graph_assign_int(g, point, 0U, 3)
+    fails := fails + gm_report("method-data-write-preserves-entry", (cast: (int) (status = 0 && method\native != 0)))
+    status := c.lmx_graph_admit(g, method, 0U, (cast: (@) point), @ values[0])
+    status := status + c.lmx_graph_admit(g, method, 1U, c.lmx_graph_int(g, 1), @ values[1])
+    if: status = 0
+        status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails := fails + gm_report("method-preserved-native-is-dispatched", (cast: (int) (status = 77)))
+    status := c.lmx_graph_assign_int(g, product, 2U, 20)
+    fails := fails + gm_report("method-body-literal-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails := fails + gm_report("method-preserved-entry-is-dispatched-after-a-body-write", (cast: (int) (status = 77)))
+    status := c.lmx_graph_write_slot(g, expression, 1U, c.lmx_graph_word(g, "-", 1U))
+    fails := fails + gm_report("method-body-operator-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails := fails + gm_report("method-preserved-entry-is-dispatched-after-an-operator-write", (cast: (int) (status = 77)))
+    formal := (cast: (c.Lmx@) c.lmx_graph_get_in(g, args, 0U))
+    status := c.lmx_graph_write_slot(g, formal, 0U, c.lmx_graph_word(g, "Point", 5U))
+    fails := fails + gm_report("method-written-formal-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    fails := fails + gm_report("method-formal-and-activation-lifetime", (cast: (int) (required = c.lmx_graph_get_in(g, args, 1U) && c.lmx_graph_kind(g, required) = 3 && arena\activation = 0)))
+    # A callable without an entry walks its current body: take2's literal and operator are written, and each
+    # invoke reads them (Point\y is 3: 3 * 20 + 1, then 3 * 20 - 1).
+    walker := (cast: (c.Lmx@) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take2", 5U))))
+    if: c.lmx_graph_method(g, walker) = 0 || walker\native != 0
+        return: 1
+    statement := (cast: (c.Lmx@) c.lmx_graph_get_in(g, c.lmx_graph_method_code(g, walker), 0U))
+    expression := (cast: (c.Lmx@) c.lmx_graph_get_in(g, statement, 0U))
+    product := (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U))
+    status := c.lmx_graph_admit(g, walker, 0U, (cast: (@) point), @ values[0])
+    status := status + c.lmx_graph_admit(g, walker, 1U, c.lmx_graph_int(g, 1), @ values[1])
+    if: status = 0
+        status := c.lmx_graph_assign_int(g, product, 2U, 20)
+    if: status = 0
+        status := c.lmx_graph_invoke(g, walker, values, 2U, @ answer)
+    fails := fails + gm_report("walker-reads-the-written-literal", (cast: (int) (status = 0 && answer = 61)))
+    status := c.lmx_graph_write_slot(g, expression, 1U, c.lmx_graph_word(g, "-", 1U))
+    if: status = 0
+        status := c.lmx_graph_invoke(g, walker, values, 2U, @ answer)
+    fails := fails + gm_report("walker-reads-the-written-operator", (cast: (int) (status = 0 && answer = 59)))
+    c.lmx_graph_space_close(opened)
+    c.free((cast: (@) values))
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(arena)
+    c.free((cast: (@) arena))
+    return: (cast: (int) (fails != 0))
+end: gm_method
+
+# A path write replaces the fragment of the field and leaves another holder of the former fragment as it was (the
+# book, #frame-and-graph-assignment: «Replacing one cell's fragment does not implicitly replace the other cell's
+# fragment»): the int and the reference route, through the kernel's two path entries; Source and Holder hold the
+# same int cell x and the same reference cell p; Source's third field is an int place without a value.
+fn: gm_path_replace () int
+    c.LmxArena@: arena (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    c.LmxGraph@: g 0
+    c.Lmx@: scope 0
+    c.Lmx@: source 0
+    c.Lmx@: holder 0
+    c.Lmx@: first 0
+    c.Lmx@: second 0
+    @: x void 0
+    @: p void 0
+    @: now void 0
+    @: u void 0
+    @: sc void 0
+    @: four void 0
+    unsigned@: pu 0
+    unsigned@: pv 0
+    int: n 0
+    c.Lmx@: view 0
+    int: value 0
+    int: status 0
+    int: fails 0
+    if: arena = 0 || c.lmx_arena_open(arena) != 0
+        return: 1
+    g := c.lmx_graph_open(arena)
+    scope := c.lmx_graph_lmx(g, 0, 4U)
+    source := c.lmx_graph_lmx(g, scope, 4U)
+    holder := c.lmx_graph_lmx(g, scope, 3U)
+    first := c.lmx_graph_lmx(g, scope, 0U)
+    second := c.lmx_graph_lmx(g, scope, 0U)
+    x := c.lmx_graph_int(g, 1)
+    if: g = 0 || scope = 0 || source = 0 || holder = 0 || first = 0 || second = 0 || x = 0
+        return: 1
+    p := c.lmx_graph_ref_lmx(g, first)
+    u := c.lmx_graph_uninit_int(g)
+    if: p = 0 || u = 0 || c.lmx_graph_name(g, x, "x", 1U) != 0 || c.lmx_graph_name(g, p, "p", 1U) != 0
+        return: 1
+    if: c.lmx_graph_name(g, c.lmx_arena_pointer_void_read(u), "u", 1U) != 0 || c.lmx_graph_put_in(g, source, 2U, u) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, source, 0U, x) != 0 || c.lmx_graph_put_in(g, source, 1U, p) != 0
+        return: 1
+    if: c.lmx_graph_put_in(g, holder, 0U, x) != 0 || c.lmx_graph_put_in(g, holder, 1U, p) != 0
+        return: 1
+    status := c.lmx_graph_store_path_int(g, source, 0U, 9)
+    now := c.lmx_graph_get_in(g, source, 0U)
+    value := 0
+    fails := fails + gm_report("int-path-write-replaces-the-fragment", (cast: (int) (status = 0 && now != x && c.lmx_graph_value_int(g, now, @ value) = 0 && value = 9 && c.lmx_graph_name_of(g, now) = c.lmx_graph_name_of(g, x))))
+    fails := fails + gm_report("int-path-write-keeps-the-other-holder", (cast: (int) (c.lmx_graph_get_in(g, holder, 0U) = x && c.lmx_graph_value_int(g, x, @ value) = 0 && value = 1)))
+    status := c.lmx_graph_store_path_reference(g, source, 1U, (cast: (@) second))
+    now := c.lmx_graph_get_in(g, source, 1U)
+    fails := fails + gm_report("reference-path-write-replaces-the-fragment", (cast: (int) (status = 0 && now != p && c.lmx_graph_target(g, now) = (cast: (@) second) && c.lmx_graph_name_of(g, now) = c.lmx_graph_name_of(g, p))))
+    fails := fails + gm_report("reference-path-write-keeps-the-other-holder", (cast: (int) (c.lmx_graph_get_in(g, holder, 1U) = p && c.lmx_graph_target(g, p) = (cast: (@) first))))
+    status := c.lmx_graph_store_path_int(g, source, 2U, 4)
+    now := c.lmx_graph_get_in(g, source, 2U)
+    fails := fails + gm_report("place-without-value-path-write-replaces-the-fragment", (cast: (int) (status = 0 && now != u && c.lmx_graph_kind(g, now) = 1 && c.lmx_graph_value_int(g, now, @ value) = 0 && value = 4 && c.lmx_graph_name_of(g, now) = c.lmx_graph_intern("u", 1U))))
+    # A field whose element is a profile-scalar value cell (the named cells of a merge result): a fresh cell of the
+    # old cell's pool replaces the fragment; the other holder keeps the old cell and its value 3.
+    if: c.lmx_graph_number(g, "3U", 2U, @ sc, @ n) != 2 || c.lmx_graph_number(g, "4U", 2U, @ four, @ n) != 2
+        return: 1
+    if: c.lmx_graph_name(g, sc, "r", 1U) != 0 || c.lmx_graph_put_in(g, source, 3U, sc) != 0 || c.lmx_graph_put_in(g, holder, 2U, sc) != 0
+        return: 1
+    status := c.lmx_graph_store_path_scalar(g, source, 3U, four)
+    now := c.lmx_graph_get_in(g, source, 3U)
+    pu := (cast: (unsigned@) now)
+    pv := (cast: (unsigned@) sc)
+    fails := fails + gm_report("profile-scalar-path-write-replaces-the-fragment", (cast: (int) (status = 0 && now != sc && now != four && now != 0 && \pu = 4U && c.lmx_graph_name_of(g, now) = c.lmx_graph_name_of(g, sc))))
+    fails := fails + gm_report("profile-scalar-path-write-keeps-the-other-holder", (cast: (int) (c.lmx_graph_get_in(g, holder, 2U) = sc && \pv = 3U)))
+    # The unchecked named path writes of native L2 take the receiving context the translator prepared: the int field
+    # takes a new int cell; the reference field (kind 6) written 0 takes the typed null reference of that kind. The
+    # other holder keeps x.
+    status := c.lmx_graph_path_int_store(g, source, 0U, 11)
+    now := c.lmx_graph_get_in(g, source, 0U)
+    fails := fails + gm_report("unchecked-int-path-write-replaces-the-fragment", (cast: (int) (status = 0 && c.lmx_graph_kind(g, now) = 1 && c.lmx_graph_value_int(g, now, @ value) = 0 && value = 11 && c.lmx_graph_name_of(g, now) = c.lmx_graph_name_of(g, x) && c.lmx_graph_get_in(g, holder, 0U) = x)))
+    status := c.lmx_graph_path_reference_store(g, source, 1U, 6, c.lmx_graph_int(g, 0))
+    now := c.lmx_graph_get_in(g, source, 1U)
+    fails := fails + gm_report("unchecked-reference-path-write-takes-the-typed-null", (cast: (int) (status = 0 && c.lmx_graph_kind(g, now) = 6 && c.lmx_arena_pointer_void_read(now) = 0 && c.lmx_graph_name_of(g, now) = c.lmx_graph_name_of(g, p))))
+    # `S[n]` is the void* slot write: no former-slot, address or foreign test, and a signed index. A view whose data
+    # is the second slot of holder's real backing writes the first at -1; the checked index write refuses -1.
+    status := c.lmx_graph_slot_store(g, holder, 1U, (cast: (@) (@ value)))
+    fails := fails + gm_report("unchecked-slot-store-takes-a-foreign-address", (cast: (int) (status = 0 && c.lmx_arena_ref_value(holder, 1U) = (cast: (@) (@ value)))))
+    status := c.lmx_graph_slot_store(g, holder, 1U, p)
+    view := c.lmx_graph_lmx(g, scope, 0U)
+    if: view = 0
+        return: 1
+    c.VoidArray@: holder_fields @ holder\array
+    c.VoidArray@: view_fields @ view\array
+    view_fields\data := (cast: (@) ((cast: (@@) holder_fields\data) + 1))
+    view_fields\size := 1
+    status := c.lmx_graph_index_store(g, (cast: (@) view), 0 - 1, (cast: (@) second))
+    fails := fails + gm_report("unchecked-index-write-takes-a-negative-offset", (cast: (int) (status = 0 && c.lmx_arena_ref_value(holder, 0U) = (cast: (@) second))))
+    status := c.lmx_graph_index_write(g, (cast: (@) view), 0 - 1, (cast: (@) first))
+    fails := fails + gm_report("checked-index-write-refuses-a-negative-index", (cast: (int) (status != 0 && c.lmx_arena_ref_value(holder, 0U) = (cast: (@) second))))
+    view_fields\data := 0
+    view_fields\size := 0
+    status := c.lmx_graph_slot_store(g, holder, 0U, x)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(arena)
+    c.free((cast: (@) arena))
+    return: (cast: (int) (fails != 0))
+end: gm_path_replace
+
+# The export of the machine row: 7 when every group of checks passes.
+fn: gm_check () int
+    int: fails gm_mutation()
+    fails := fails + gm_method()
+    fails := fails + gm_path_replace()
+    if: fails != 0
+        return: 1
+    return: 7

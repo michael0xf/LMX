@@ -1,0 +1,19 @@
+# A path write after a call with an effect, through an alias declared BEFORE the call. A route that cannot prove the
+# alias target after the call takes the whole callable through the walker; it must not run `main` natively up to the
+# write and then replay it, and the preparation must not run `touch`. touch counts its runs: `seen := seen + 1`. One
+# evaluation gives seen 1; a prepared or partly started native body replayed by the walker would give seen 2. done 9 is
+# the write after the call. Every route answers the same (the book, #frame-and-graph-assignment). The form uses no write
+# of a caller's alias by a callee through a hidden binding: that is the separate M14 debt, not pinned here.
+(
+    Observed:
+        int: seen 0
+        int: done 0
+)
+sub: touch ()
+    @: shared node[0]
+    shared\Observed\seen := shared\Observed\seen + 1
+sub: main ()
+    @: shared node[0]
+    touch()
+    shared\Observed\done := 9
+main()

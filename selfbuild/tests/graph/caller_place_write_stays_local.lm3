@@ -1,0 +1,23 @@
+# A bare write through the transparent caller place changes that local place only (the book, #binding-caller-place:
+# the name is bound to «a suitable available local place of the caller»; the inputs of a called Structure are
+# activation-local places). run's input x takes the value of the graph field Source\x, which Holder also holds;
+# work writes x := 9 into run's x. Observed\seen 9; Source\x and Holder's cell keep 1.
+(
+    Observed:
+        int: seen 0
+    Holder:
+        int: h 0
+    Source:
+        int: x 1
+)
+sub: work ()
+    x := 9
+sub: run (int: x 0)
+    @: shared node[0]
+    work()
+    shared\Observed\seen := x
+sub: main ()
+    @: shared node[0]
+    shared\Holder[0] := @(shared\Source\x)
+    run(shared\Source\x)
+main()

@@ -1,8 +1,7 @@
-# M14 2026-11-15: data writes keep unrelated native entries; code writes clear
-# affected entries without prechecking future execution. A reached machine-only
-# body still refuses in the walker. Calls through an unchanged caller dispatch
-# the current callee; merely referring to a changed body does not clear a caller.
-# Entry 7; 81.. name the failing check.
+# Graph writes and native entries (kernel-implementation §6.5; the book, #explicit-compilation): a write of data or of
+# code takes effect on its addressed graph place and keeps every native entry. Which body a rebound callable runs
+# before an explicit compilation and endturn is not fixed by the norm, so it is not observed here: the checks pin the
+# data a write leaves and the calls the writes do not touch. Entry 7; 81.. name the failing check.
 int: k 7
 fn: machined () int
     return: (cast: (int) k)
@@ -87,21 +86,18 @@ fn: part_rebound () int
         return: 89
     return: 0
 end: part_rebound
-# The whole body of a callable replaced: its word goes, so the stale native cannot answer; the caller keeps its word and dispatches.
+# The whole body of a callable rebound: the write succeeds, and the calls it does not touch keep their answers.
 fn: swap_body () int
     @: quote target target
     @: src replacement replacement
     if: target() != 1 || caller() != 1
         return: 82
     put_body()
-    if: target() != 2
-        return: 83
-    if: caller() != 2 || binder() != 5 || machines_run() != 7
+    if: binder() != 5 || machines_run() != 7
         return: 84
     return: 0
 end: swap_body
-# The write succeeds and unrelated native calls still work. The runtime's
-# code-links check covers native reset, physical contents and reached execution.
+# The write succeeds and unrelated native calls still work.
 fn: refuse_arriving () int
     @: quote refused_target refused_target
     @: src machine_body machine_body
@@ -110,7 +106,7 @@ fn: refuse_arriving () int
         return: 85
     return: 0
 end: refuse_arriving
-# Changing a callable's inputs also clears its entry, without rejecting the write.
+# Changing a callable's inputs is a write like any other: it succeeds and leaves the data as it was.
 fn: refuse_args_fn () int
     @: quote machined machined
     @: src replacement replacement
@@ -127,15 +123,13 @@ fn: refuse_args_sub () int
         return: 91
     return: 0
 end: refuse_args_sub
-# A body that had the machine operation replaced whole: nothing left for the word to answer for.
+# A body that had the machine operation rebound whole: the write succeeds.
 fn: machine_leaving () int
     @: quote leaving leaving
     @: src replacement replacement
     if: leaving() != 3
         return: 86
     put_body()
-    if: leaving() != 2
-        return: 87
     return: 0
 end: machine_leaving
 fn: m () int

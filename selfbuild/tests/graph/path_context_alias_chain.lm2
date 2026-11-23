@@ -1,0 +1,23 @@
+# A local alias of a local alias of the source root, written to by path in native L2 (an .lm2 file): the roots resolve
+# at translation (`top` -> `shared` -> `node[0]`), no initializer runs, and every store is the unchecked store of the
+# field's receiving context, so interp, native and forced answer the same. `top\Source\x := 9` replaces Source's int
+# fragment; Holder's slot 0 addressed the former fragment of x and keeps it (x 1); `top\Source\p := @(top\Target\y)`
+# gives the reference field p its target (the book, #frame-and-graph-assignment: "Replacing one cell's fragment does
+# not implicitly replace the other cell's fragment"; #correspondence-stability: "Named receiving places use the
+# ordinary admission contract"). Not a copy of path_write_native_level2: that row writes through `shared` itself.
+(
+    Holder:
+        int: h 0
+    Target:
+        int: y 7
+    Source:
+        int: x 1
+        @: p int 0
+)
+sub: main ()
+    @: shared node[0]
+    @: top shared
+    top\Holder[0] := @(top\Source\x)
+    top\Source\x := 9
+    top\Source\p := @(top\Target\y)
+main()

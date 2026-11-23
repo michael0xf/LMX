@@ -1,0 +1,20 @@
+L2:
+    ---
+        Counter:
+            int: n 1
+        end: Counter
+        Observed:
+            int: seen 15
+        end: Observed
+    ---
+    fn: bump () int
+        @: shared (node [] 0)
+        :=: ((shared \ Counter) \ n) (((shared \ Counter) \ n) + 1)
+        return: (((shared \ Counter) \ n) + 14)
+    end: bump
+    sub: main ()
+        @: shared (node [] 0)
+        :=: ((shared \ Observed) \ seen) (bump)
+    end: main
+    main:
+end: L2

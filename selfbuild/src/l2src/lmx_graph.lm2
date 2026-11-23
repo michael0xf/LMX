@@ -449,13 +449,9 @@ end: lmx_graph_uninit_int
 # An initialized int-reference primitive. Its referent is the actual int cell, including a cell obtained by @ before
 # its first assignment. This operation stores an address; it never reads that cell's uninitialized bytes.
 fn: lmx_graph_ref_int (c.LmxGraph@: g; @: cell) @
-    @: pointer void 0
     if: g = 0 || lmx_graph_kind(g, cell) != 1
         return: 0
-    pointer := c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_GRAPH_INT_REF, 0, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
-    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, cell) != 0
-        return: 0
-    return: pointer
+    return: lmx_graph_reference_holding(g, 5, cell)
 end: lmx_graph_ref_int
 
 # An Lmx of count slots under parent (0: a root of the arena), its slots empty (§3.1). 0 without memory.
@@ -1876,7 +1872,7 @@ end: lmx_graph_deref_int
 
 # Every write uses the same int cell. Neither the slot nor its optional pointer primitive is rebound or retyped.
 # 0, or 1 when the slot holds no int place. This operation never changes the signature/default declaration shape.
-fn: lmx_graph_assign_int (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: lmx; size_t: index; int: value) int
+fn: lmx_graph_assign_int (c.LmxGraph@: g; c.Lmx@: lmx; size_t: index; int: value) int
     @: held void lmx_graph_binding_leaf(g, lmx_graph_get_in(g, lmx, index))
     @: cell void 0
     int: kind lmx_graph_kind(g, held)
@@ -1885,7 +1881,7 @@ fn: lmx_graph_assign_int (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: lmx; size_t: in
     cell := held
     if: kind = 3
         cell := c.lmx_arena_pointer_void_read(held)
-    if: lmx_graph_kind(g, cell) != 1 || lmx_graph_invalidate(g, scope, 0, cell, cell) != 0
+    if: lmx_graph_kind(g, cell) != 1
         return: 1
     return: c.lmx_int_store_known(cell, value)
 end: lmx_graph_assign_int
@@ -1929,6 +1925,41 @@ fn: lmx_graph_uninit_reference (c.LmxGraph@: g; int: kind; @: cell) @
         return: (cast: (@) 0)
 return: wrapper
 
+# The address a reference takes from value, without admission (the extraction lmx_graph_reference_payload admits):
+# a place without a value is read through its reference cell; an int is its number as an address -- zero the null
+# address (the author 2026-11-23: an address may be the value of a reference); an untyped reference to a place without
+# a value gives the int cell of that place; any other value, the address it stands for (lmx_graph_address_of), else
+# none.
+fn: lmx_graph_reference_target (c.LmxGraph@: g; @: value) @
+    @: target void 0
+    int: given lmx_graph_kind(g, value)
+    if: given = 8 || given = 9
+        value := lmx_graph_reference_cell(g, value)
+        given := lmx_graph_kind(g, value)
+    if: given = 1
+        return: (cast: (@) (cast: (size_t) c.lmx_int_value_known(value)))
+    lmx_graph_address_of(g, value, @ target)
+    if: given = 7 && lmx_graph_kind(g, target) = 3
+        target := c.lmx_arena_pointer_void_read(target)
+    return: target
+end: lmx_graph_reference_target
+
+# A reference cell of kind -- 5 an int reference, 6 a reference to a Structure or a callable -- holding address: the
+# cell lmx_graph_ref_int, lmx_graph_ref_lmx and the null reference make after their own tests. No admission of the
+# address. 0 without memory.
+fn: lmx_graph_reference_holding (c.LmxGraph@: g; int: kind; @: address) @
+    @: pointer void 0
+    int: type c.LMX_TYPE_GRAPH_INT_REF
+    if: g = 0
+        return: 0
+    if: kind = 6
+        type := c.LMX_TYPE_GRAPH_LMX_REF
+    pointer := c.lmx_arena_pointer_cells_profiled(g\arena, type, 0, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, address) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_reference_holding
+
 # Admit a reference value without reading its referent's bytes or allocating.
 fn: lmx_graph_reference_payload (c.LmxGraph@: g; int: kind; @: value; @@: out) int
     @: target void 0
@@ -1946,15 +1977,9 @@ fn: lmx_graph_reference_payload (c.LmxGraph@: g; int: kind; @: value; @@: out) i
             return: status
         out[0] := 0
         return: 0
-    # The referent -- the int cell a pointer cell holds, or the Lmx the value stands for -- and its type checked by the
+    # The referent -- the address the value stands for (lmx_graph_reference_target) -- and its type checked by the
     # module of checks (lmx_check_reference).
-    if: kind = 5 && (given = 5 || given = 7)
-        target := c.lmx_arena_pointer_void_read(value)
-        if: given = 7 && lmx_graph_kind(g, target) = 3
-            target := c.lmx_arena_pointer_void_read(target)
-        ---
-    if: kind = 6
-        target := lmx_graph_target(g, value)
+    target := lmx_graph_reference_target(g, value)
     status := c.lmx_check_reference(kind, lmx_graph_kind(g, target))
     if: status != 0
         return: status
@@ -1963,12 +1988,10 @@ fn: lmx_graph_reference_payload (c.LmxGraph@: g; int: kind; @: value; @@: out) i
 
 # Publish into the existing physical reference cell; a declaration slot and
 # its service pointer are never rebound by a reference assignment.
-fn: lmx_graph_assign_reference (c.LmxGraph@: g; c.Lmx@: scope; @: cell; @: value) int
+fn: lmx_graph_assign_reference (c.LmxGraph@: g; @: cell; @: value) int
     @: target void 0
     cell := lmx_graph_reference_cell(g, cell)
     if: cell = 0 || lmx_graph_reference_payload(g, lmx_graph_kind(g, cell), value, @ target) != 0
-        return: 4
-    if: lmx_graph_invalidate(g, scope, 0, cell, cell) != 0
         return: 4
 return: c.lmx_arena_pointer_void_write(cell, target)
 
@@ -2010,181 +2033,42 @@ fn: lmx_graph_statement (c.LmxGraph@: g; @: value) int
     return: (cast: (int) (lmx_graph_fn_result(g, value) = 0))
 end: lmx_graph_statement
 
-# Is value, a field of code, code too -- an expression, an anonymous body, a Frame -- rather than a named Structure the
-# namespace of the live traversal holds as data of that block, or a Structure a receiver created? 1 or 0. Without a live
-# traversal every named field counts as code (the conservative reading).
-fn: lmx_graph_field_pointer_value (c.LmxGraph@: g; c.Lmx@: holder; size_t: index) @
-    @: cell void c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), holder, index)
-    c.LmxPointerCellRead: read 0
-    c.LmxPointerCellWrite: write 0
-    if: cell != 0 && c.lmx_value_cell_access((cast: (c.LmxArena@) g\arena), cell, @ read, @ write) = 0 && read != 0
-        return: read(cell)
-return: lmx_graph_get_in(g, holder, index)
-
-fn: lmx_graph_code_child (c.LmxGraph@: g; c.Lmx@: code; @: value) int
-    char@: name 0
-    if: c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), value) = 0 || lmx_graph_fn_result(g, value) != 0
-        return: 0
-    name := lmx_graph_name_of(g, value)
-    if: name != 0 && lmx_graph_space_find(code, name) = value
-        return: 0
-    return: 1
-end: lmx_graph_code_child
-
-# Does this executable Structure contain the written slot or primitive cell as code? Data places are not followed
-# through the words that read them. A shared literal cell is nevertheless the same physical code place through any alias.
-# Return 1 found, 0 absent, -1 allocation failure; every temporary address set is discarded.
-fn: lmx_graph_code_uses (c.LmxGraph@: g; c.Lmx@: code; @: slot; @: cell; @: replacement) int
-    c.Lmx@@: queue 0
-    size_t: count 0U
-    size_t: cap 0U
-    size_t: at 0U
-    size_t: i 0U
-    @: value void 0
-    c.Lmx@: inner 0
-    c.LmxGraphState@: state lmx_graph_state()
-    int: result 0
-    if: lmx_graph_method(g, code) != 0
-        # A callable's slots and its executable parts -- args, return, code, reached through their references -- are
-        # code; its own part data is data.
-        i := 0U
-        while: i < lmx_graph_count(code) && result = 0
-            if: lmx_graph_slot_name(g, code, i) != state\w_data
-                if: (slot != 0 && c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), code, i) = slot) || (cell != 0 && c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), code, i) = cell)
-                    result := 1
-                value := lmx_graph_target(g, lmx_graph_field_pointer_value(g, code, i))
-                if: result = 0 && c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), value) != 0
-                    if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (c.Lmx@) value)) != 0
-                        result := -1
-                    ---
-                ---
-            ---
-            i := i + 1U
-        ---
-    else:
-        i := 0U
-        while: i < lmx_graph_count(code) && result = 0
-            value := lmx_graph_field_pointer_value(g, code, i)
-            if: ((slot != 0 && c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), code, i) = slot) || (cell != 0 && c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), code, i) = cell)) && (lmx_graph_code_child(g, code, value) != 0 || lmx_graph_code_child(g, code, replacement) != 0)
-                result := 1
-            if: result = 0 && lmx_graph_code_child(g, code, value) != 0
-                if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (c.Lmx@) value)) != 0
-                    result := -1
-                ---
-            ---
-            i := i + 1U
-        ---
+# The book, #scope: «L2 code is written under the receiver `L2:`; its record lies in the graph as written, and by
+# it the translator and the interpreter learn the level of the code».
+# The book, #structure-index: «`S[i] := p` stores another `void*` there»; «only native L2 adds no check at all».
+# Native L2 compiles the unchecked form of an operation; the interpreter (L2 and L3) and native L3 take the checked
+# wrapper. The one physical store of a Structure or Array<@> element, which both offset forms end in: the element at
+# its address -- through the one physical indirection of a field-address table, as lmx_graph_cell_in resolves it --
+# takes value by the physical pointer store (lmx_value_pointer_put). No test.
+fn: lmx_graph_element_store (c.LmxArena@: arena; @: element; @: value) int
+    @: cell void element
+    @@: address void 0
+    if: (cast: (int) c.lmx_range_classify(arena, cell)) = c.LMX_KIND_FIELD_ADDRESSES
+        address := (cast: (@@) cell)
+        cell := \address
     ---
-    while: at < count && result = 0
-        inner := queue[at]
-        at := at + 1U
-        i := 0U
-        while: i < lmx_graph_count(inner) && result = 0
-            value := lmx_graph_field_pointer_value(g, inner, i)
-            if: (slot != 0 && c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), inner, i) = slot) || (cell != 0 && (value = cell || c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), inner, i) = cell))
-                result := 1
-            if: result = 0 && c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), value) != 0 && lmx_graph_fn_result(g, value) = 0
-                if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (c.Lmx@) value)) != 0
-                    result := -1
-                ---
-            ---
-            i := i + 1U
-        ---
-    ---
-    c.free((cast: (@) queue))
-    return: result
-end: lmx_graph_code_uses
+    return: c.lmx_value_pointer_put(arena, cell, value)
+end: lmx_graph_element_store
 
-# Fresh scan from the supplied traversal scope and its lexical parents, including shared Lmx children. First prepare
-# every affected entry; only then clear them, before the caller publishes the write. No reverse code index is retained.
-# Message/activation/mail root-set integration follows with those consumers; this slice supplies its complete root.
-fn: lmx_graph_invalidate_prepare (c.LmxGraph@: g; c.Lmx@: scope; @: slot; @: cell; @: replacement; c.Lmx@@@: out; size_t@: width) int
-    c.Lmx@@: nodes 0
-    c.Lmx@@: affected 0
-    size_t: count 0U
-    size_t: cap 0U
-    size_t: n_affected 0U
-    size_t: affected_cap 0U
-    size_t: at 0U
-    size_t: i 0U
-    c.Lmx@: current 0
-    @: value void 0
-    c.LmxGraphSpace@: space lmx_graph_space()
-    c.LmxGraphSpaceRow@: row 0
-    int: failed 0
-    int: used 0
-    if: g = 0 || out = 0 || width = 0 || c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), (cast: (@) scope)) = 0
-        return: 1
-    out[0] := 0
-    width[0] := 0U
-    failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, scope)
-    # The Structures the receivers created in the live traversal are no fields of the graph: their native entries are
-    # checked too, so a written body or signature is never run by a stale entry.
-    if: space != 0
-        while: i < space\count && failed = 0
-            row := space\rows + i
-            if: lmx_graph_fn_result(g, (cast: (@) row\value)) != 0
-                failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (c.Lmx@) row\value))
-            i := i + 1U
-        ---
-        i := 0U
-    ---
-    while: at < count && failed = 0
-        current := nodes[at]
-        at := at + 1U
-        if: current\native != 0
-            used := lmx_graph_code_uses(g, current, slot, cell, replacement)
-            if: used < 0
-                failed := 1
-            if: used > 0
-                failed := lmx_graph_scan_add(@ affected, @ n_affected, @ affected_cap, current)
-            ---
-        ---
-        if: failed = 0 && c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), (cast: (@) current\parent)) != 0
-            failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (c.Lmx@) current\parent))
-        i := 0U
-        while: i < lmx_graph_count(current) && failed = 0
-            value := lmx_graph_field_pointer_value(g, current, i)
-            if: c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), value) != 0
-                failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (c.Lmx@) value))
-            i := i + 1U
-        ---
-    ---
-    c.free((cast: (@) nodes))
-    if: failed != 0
-        c.free((cast: (@) affected))
-        return: failed
-    out[0] := affected
-    width[0] := n_affected
-return: 0
+# The unchecked element write at a non-negative index of holder's storage, as the slot of a field is found
+# (lmx_graph_receiving_place) and as the checked wrapper has checked it: the void* slot data + index
+# (lmx_graph_element_store). No node, bound, element, immutability or foreign-address test.
+fn: lmx_graph_slot_store (c.LmxGraph@: g; c.Lmx@: holder; size_t: index; @: value) int
+    c.VoidArray@: va (cast: (c.VoidArray@) (@ holder\array))
+    @@: slots void 0
+    slots := (cast: (@@) va\data)
+    return: lmx_graph_element_store((cast: (c.LmxArena@) g\arena), (cast: (@) (slots + index)), value)
+end: lmx_graph_slot_store
 
-sub: lmx_graph_invalidate_finish (c.Lmx@@: affected; size_t: count)
-    size_t: i 0U
-    c.Lmx@: current 0
-    while: i < count
-        current := affected[i]
-        current\native := 0
-        i := i + 1U
-    c.free((cast: (@) affected))
-return
-
-fn: lmx_graph_invalidate (c.LmxGraph@: g; c.Lmx@: scope; @: slot; @: cell; @: replacement) int
-    c.Lmx@@: affected 0
-    size_t: count 0U
-    int: status lmx_graph_invalidate_prepare(g, scope, slot, cell, replacement, @ affected, @ count)
-    if: status = 0
-        lmx_graph_invalidate_finish(affected, count)
-return: status
-
-# Runtime replacement, separate from the constructor's raw put. The physical slot is the write target.
-fn: lmx_graph_write_slot (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: holder; size_t: index; @: value) int
+# The checked element write (runtime replacement, separate from the constructor's raw put): a writable element of a
+# node of this arena, then the same void* store, without a requirement on the stored address,
+# (lmx_graph_slot_store) with the index it has checked. The write takes effect on its element and keeps every native
+# entry (kernel-implementation §6.5).
+fn: lmx_graph_write_slot (c.LmxGraph@: g; c.Lmx@: holder; size_t: index; @: value) int
     c.LmxArena@: arena 0
     @: cell void 0
     c.LmxPointerCellRead: read 0
     c.LmxPointerCellWrite: write 0
-    c.Lmx@@: affected 0
-    size_t: count 0U
-    int: status 0
     if: g = 0
         return: 1
     arena := (cast: (c.LmxArena@) g\arena)
@@ -2193,15 +2077,7 @@ fn: lmx_graph_write_slot (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: holder; size_t:
     cell := c.lmx_graph_cell_in(arena, holder, index)
     if: cell = 0 || c.lmx_value_cell_access(arena, cell, @ read, @ write) != 0 || write = 0 || c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
         return: 1
-    status := lmx_graph_invalidate_prepare(g, scope, cell, 0, value, @ affected, @ count)
-    if: status != 0
-        return: status
-    status := c.lmx_value_cell_store(arena, cell, 0, value, 0, write)
-    if: status = 0
-        lmx_graph_invalidate_finish(affected, count)
-    else:
-        c.free((cast: (@) affected))
-return: status
+return: lmx_graph_slot_store(g, holder, index, value)
 
 # The innermost place of the receiver chain of the field index of owner: the field (the qualifier record, or its single anonymous group, and 0) that holds the
 # declaration under the known qualifiers const/immutable/independent/private; the field itself when no qualifier stands in it. The walk of lmx_graph_receiving_view,
@@ -2321,7 +2197,7 @@ fn: lmx_graph_publish (c.LmxGraph@: g; c.Lmx@: root; size_t: index; @: value) in
     name := lmx_graph_declaration_place_name(g, statement)
     if: name = 0 || lmx_graph_name_address(g, value, name) != 0
         return: 1
-    if: lmx_graph_receiving_place(g, root, index, @ inner, @ at) != 0 || lmx_graph_write_slot(g, root, inner, at, value) != 0
+    if: lmx_graph_receiving_place(g, root, index, @ inner, @ at) != 0 || lmx_graph_write_slot(g, inner, at, value) != 0
         return: 1
     return: lmx_graph_space_put(root, name, value)
 end: lmx_graph_publish
@@ -3198,13 +3074,9 @@ end: lmx_graph_word_of
 # such a reference; the reference has its own address and name, the target keeps its own. 0 for a target that is no Lmx
 # or without memory.
 fn: lmx_graph_ref_lmx (c.LmxGraph@: g; c.Lmx@: target) @
-    @: pointer void 0
     if: g = 0 || lmx_graph_kind(g, (cast: (@) target)) != 4
         return: 0
-    pointer := c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_GRAPH_LMX_REF, 0, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
-    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, (cast: (@) target)) != 0
-        return: 0
-    return: pointer
+    return: lmx_graph_reference_holding(g, 6, (cast: (@) target))
 end: lmx_graph_ref_lmx
 
 # What a value stands for where a Structure is consumed -- a call head, a path step, a merge operand, a whole argument
@@ -3365,7 +3237,7 @@ end: lmx_graph_index
 
 # Store one pointer in the actual reference slot. Its former value imposes
 # no receiving requirement; interpretation reads the resulting current graph.
-fn: lmx_graph_index_write (c.LmxGraph@: g; c.Lmx@: scope; @: value; int: index; @: source) int
+fn: lmx_graph_index_write (c.LmxGraph@: g; @: value; int: index; @: source) int
     c.Lmx@: inner lmx_graph_index_node(g, value)
     @: address void 0
     int: status 0
@@ -3377,10 +3249,26 @@ fn: lmx_graph_index_write (c.LmxGraph@: g; c.Lmx@: scope; @: value; int: index; 
         return: status
     if: lmx_graph_address_of(g, source, @ address) != 0
         return: 4
-    if: lmx_graph_write_slot(g, scope, inner, (cast: (size_t) index), address) != 0
+    if: lmx_graph_write_slot(g, inner, (cast: (size_t) index), address) != 0
         return: 4
     return: 0
 end: lmx_graph_index_write
+
+# The book, #structure-index: «`S[i] := p` stores another `void*` there»; «only native L2 adds no check at all».
+# The unchecked index write of native L2: the void* slot at the signed index of the node value stands for -- data plus
+# index in C pointer arithmetic, so a negative index keeps its sign -- takes the address source stands for
+# (lmx_graph_reference_target: an int is its number), by the one element store (lmx_graph_element_store). No bound,
+# address or former-slot test. 0, or 4 when value stands for no node: nothing to address.
+fn: lmx_graph_index_store (c.LmxGraph@: g; @: value; int: index; @: source) int
+    c.Lmx@: inner lmx_graph_index_node(g, value)
+    c.VoidArray@: va 0
+    @@: slots void 0
+    if: inner = 0
+        return: 4
+    va := (cast: (c.VoidArray@) (@ inner\array))
+    slots := (cast: (@@) va\data)
+    return: lmx_graph_element_store((cast: (c.LmxArena@) g\arena), (cast: (@) (slots + index)), lmx_graph_reference_target(g, source))
+end: lmx_graph_index_store
 
 # `length(S)`: the number of the fields of the Structure value stands for. 0 and the number in out; 4 for a value that
 # stands for no Structure.

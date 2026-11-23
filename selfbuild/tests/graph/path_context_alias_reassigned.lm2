@@ -1,0 +1,19 @@
+# An alias moved from one known Structure to another before a path write: the write goes to the NEW target (the book,
+# #frame-and-graph-assignment: a path write replaces the fragment of the field of the Structure the name denotes at that
+# moment; the existing rows rebind the own place with `p := B`, and `@: payload leaf\data` binds an alias to a path).
+# w is bound to shared\First, then `w := shared\Second`, then `w\x := 9`: Second's x is 9, First's x stays 1. First and
+# Second differ in x, so a route that takes the target of the first initializer writes First and fails. The declaration
+# of an alias does not prove its target after an assignment; a route that cannot prove it at translation may take the
+# whole callable through the walker. Every route answers the same.
+(
+    First:
+        int: x 1
+    Second:
+        int: x 2
+)
+sub: main ()
+    @: shared node[0]
+    @: w shared\First
+    w := shared\Second
+    w\x := 9
+main()

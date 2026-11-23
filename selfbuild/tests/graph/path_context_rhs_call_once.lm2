@@ -1,0 +1,20 @@
+# A path write whose right side is a call with an effect, in native L2: the receiving place is proven at translation,
+# the call is not run by the preparation, and it runs once at the statement (the base `shared` is read before the right
+# side; the body of bump is the statement's own right side, not a second evaluation). bump adds 1 to Counter\n and
+# returns n + 14: once gives n 1 and seen 15; a second evaluation (a replay after a failed route, or an evaluation by
+# the preparation) would give n 2 and seen 16. interp, native and forced answer the same (the book,
+# #frame-and-graph-assignment; #binding-caller-place: the name is a place of the caller, not a re-evaluation).
+(
+    Counter:
+        int: n 0
+    Observed:
+        int: seen 0
+)
+fn: bump () int
+    @: shared node[0]
+    shared\Counter\n := shared\Counter\n + 1
+    return: shared\Counter\n + 14
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := bump()
+main()

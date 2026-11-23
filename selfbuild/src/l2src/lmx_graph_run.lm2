@@ -1741,14 +1741,7 @@ end: lmx_graph_place_store_int
 
 # A pointer of kind 5 or 6 that holds no address: a new pointer cell of its type (the null address is zero, R51 Q3).
 fn: lmx_graph_null_reference (c.LmxGraph@: g; int: kind) @
-    @: cell void 0
-    int: type c.LMX_TYPE_GRAPH_INT_REF
-    if: kind = 6
-        type := c.LMX_TYPE_GRAPH_LMX_REF
-    cell := c.lmx_arena_pointer_cells_profiled(g\arena, type, 0, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
-    if: cell = 0 || c.lmx_arena_pointer_void_write(cell, 0) != 0
-        return: 0
-    return: cell
+    return: c.lmx_graph_reference_holding(g, kind, 0)
 
 fn: lmx_graph_place_store_reference (c.LmxGraph@: g; c.Lmx@: code; size_t: token; @: value) int
     c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)
@@ -1800,7 +1793,7 @@ end: lmx_graph_place_store_reference
 
 # The physical destination supplies ABI/SOURCE. A local destination is already
 # owned by its activation; explicit graph destinations use the same typed store.
-fn: lmx_graph_scalar_store_cell (c.LmxGraph@: g; c.Lmx@: code; @: cell; @: raw) int
+fn: lmx_graph_scalar_store_cell (c.LmxGraph@: g; @: cell; @: raw) int
     c.LmxPool@: pool lmx_graph_scalar_pool(g, cell)
     c.LmxWalkPlace: place
     c.LmxWalkValue: value
@@ -1810,7 +1803,7 @@ fn: lmx_graph_scalar_store_cell (c.LmxGraph@: g; c.Lmx@: code; @: cell; @: raw) 
         return: 4
     if: c.lmx_walk_value_prepare_scalar_store(g\arena, @ place, @ value, received_p) != c.LMX_WALK_OK || c.lmx_walk_value_scalar_storage(g\arena, received_p, (cast: (int) pool\type), (cast: (const: c.LmxScalarABI@) pool\scalar_abi)) != c.LMX_WALK_OK
         return: 4
-    if: c.lmx_graph_invalidate(g, code, 0, cell, cell) != 0 || c.lmx_walk_value_store(g\arena, @ place, received_p) != c.LMX_WALK_OK
+    if: c.lmx_walk_value_store(g\arena, @ place, received_p) != c.LMX_WALK_OK
         return: 4
     return: 0
 end: lmx_graph_scalar_store_cell
@@ -1847,7 +1840,7 @@ fn: lmx_graph_place_store_scalar (c.LmxGraph@: g; c.Lmx@: code; size_t: token; @
     ---
     # Preparing a mutable destination does not replace the selected Value
     # until admission and the store succeed. A failed RHS/store keeps it.
-    status := lmx_graph_scalar_store_cell(g, code, cell, value)
+    status := lmx_graph_scalar_store_cell(g, cell, value)
     if: status != 0
         return: status
     row\cell := cell
@@ -1890,6 +1883,115 @@ fn: lmx_graph_known_int (c.LmxGraph@: g; c.Lmx@: code; char@: name; int: mode) i
     return: 0
 end: lmx_graph_known_int
 
+# A path write replaces the fragment of the field (the book, #frame-and-graph-assignment: «An explicit
+# `S\novalue := 5` replaces the graph fragment at S's selected structural place»): cell, named as the field, goes
+# into the slot of the field's leaf -- under its qualifier records at the place lmx_graph_receiving_place gives, as a
+# publication does -- through the one element write lmx_graph_write_slot. The former fragment is not touched:
+# another cell that refers to it keeps it. 0, or 1 for no cell, no name or a refused write.
+fn: lmx_graph_replace_leaf (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; @: cell) int
+    c.Lmx@: inner 0
+    size_t: at 0U
+    if: cell = 0 || lmx_graph_leaf_named(g, owner, slot, cell, @ inner, @ at) != 0
+        return: 1
+    return: c.lmx_graph_write_slot(g, inner, at, cell)
+end: lmx_graph_replace_leaf
+
+# The part both forms of a path write share -- resolution and naming, no admission: the leaf of the field slot of
+# owner (under its qualifier records, the place lmx_graph_receiving_place gives) in inner and at, and the field's name
+# given to cell. 0, or 1 for no leaf, no name or no memory: then there is nothing to write.
+fn: lmx_graph_leaf_named (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; @: cell; c.Lmx@@: inner; size_t@: at) int
+    char@: name 0
+    if: c.lmx_graph_receiving_place(g, owner, slot, inner, at) != 0
+        return: 1
+    name := c.lmx_graph_slot_name(g, \inner, \at)
+    if: name = 0 || c.lmx_graph_name_address(g, cell, name) != 0
+        return: 1
+    return: 0
+end: lmx_graph_leaf_named
+
+# The unchecked path write of native L2: the same leaf and name, then the element store without a test
+# (lmx_graph_slot_store). 0, or 1 when there is no leaf to write.
+fn: lmx_graph_leaf_store (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; @: cell) int
+    c.Lmx@: inner 0
+    size_t: at 0U
+    if: lmx_graph_leaf_named(g, owner, slot, cell, @ inner, @ at) != 0
+        return: 1
+    return: c.lmx_graph_slot_store(g, inner, at, cell)
+end: lmx_graph_leaf_store
+
+# An int path write, `S\x := n` (the interpreter's route and the emitted one): a new int cell replaces the field's
+# fragment (lmx_graph_replace_leaf). The field's declared kind decides (lmx_graph_own_kind): an int cell, a place
+# without a value (the book: `S\novalue := 5` gives `{int 5}`) and a declaration record of an int place -- R0's own
+# places among them -- are replaced alike. 4 for an owner that is no Structure; 1 for a field that declares no int.
+fn: lmx_graph_store_path_int (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; int: number) int
+    if: c.lmx_graph_kind(g, (cast: (@) owner)) != 4
+        return: 4
+    if: lmx_graph_own_kind(g, c.lmx_graph_get_in(g, owner, slot)) != 1
+        return: 1
+    return: lmx_graph_replace_leaf(g, owner, slot, c.lmx_graph_int(g, number))
+end: lmx_graph_store_path_int
+
+# The unchecked int path write of native L2: the field's receiving context is an int, so a new int cell of the number
+# replaces the fragment; no owner or kind test. 0, or 1 for no leaf or no memory.
+fn: lmx_graph_path_int_store (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; int: number) int
+    @: cell void c.lmx_graph_int(g, number)
+    if: cell = 0
+        return: 1
+    return: lmx_graph_leaf_store(g, owner, slot, cell)
+end: lmx_graph_path_int_store
+
+# A reference path write, `S\p := v` (the interpreter's route and the emitted one): the target admitted by the field's
+# declared kind (lmx_graph_own_kind, lmx_graph_reference_payload), then a new reference cell of that kind replaces the
+# field's fragment (lmx_graph_replace_leaf), a place without a value and a declaration record alike. 0, or 4.
+fn: lmx_graph_store_path_reference (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; @: value) int
+    @: target void 0
+    @: cell void 0
+    int: kind 0
+    if: c.lmx_graph_kind(g, (cast: (@) owner)) != 4
+        return: 4
+    kind := lmx_graph_own_kind(g, c.lmx_graph_get_in(g, owner, slot))
+    if: (kind != 5 && kind != 6) || c.lmx_graph_reference_payload(g, kind, value, @ target) != 0
+        return: 4
+    cell := c.lmx_graph_reference_holding(g, kind, target)
+    if: lmx_graph_replace_leaf(g, owner, slot, cell) != 0
+        return: 4
+    return: 0
+end: lmx_graph_store_path_reference
+
+# The unchecked reference path write of native L2. kind is the field's receiving context the translator prepared from
+# its declaration (lm_graph_path_context in the Graph tool), 5 or 6: its precondition. The live content of the field
+# does not select it again (Codex -42, point 4). The right side gives its address without admission
+# (lmx_graph_reference_target; zero is the typed null reference), and a new reference cell of that kind replaces the
+# fragment (lmx_graph_leaf_store). 0, or 1 for no leaf or no memory.
+fn: lmx_graph_path_reference_store (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; int: kind; @: value) int
+    @: cell void c.lmx_graph_reference_holding(g, kind, c.lmx_graph_reference_target(g, value))
+    if: cell = 0
+        return: 1
+    return: lmx_graph_leaf_store(g, owner, slot, cell)
+end: lmx_graph_path_reference_store
+
+# A path write of value into a field whose element is a profile-scalar value cell (the named cells of a merge result,
+# lmx_graph_merge_replay): a fresh cell of the old cell's pool -- its type, profile and scalar ABI, with the old cell's
+# context -- receives the value by the ordinary scalar store, into a cell not yet in the graph, then replaces the
+# field's fragment (lmx_graph_replace_leaf). The old cell and every holder of it keep their value. 0, or 4.
+fn: lmx_graph_store_path_scalar (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; @: value) int
+    @: old void c.lmx_graph_get_in(g, owner, slot)
+    c.LmxPool@: pool lmx_graph_scalar_pool(g, old)
+    c.LmxWalkValue@: context 0
+    @: fresh void 0
+    if: pool = 0
+        return: 4
+    fresh := c.lmx_arena_scalar_cells_profiled(g\arena, pool\type, pool\profile, pool\scalar_abi, 1U)
+    context := c.lmx_value_cell_context(g\arena, fresh)
+    if: fresh = 0 || context = 0 || c.lmx_value_cell_context(g\arena, old) = 0
+        return: 4
+    c.memcpy((cast: (@) context), (cast: (const: @) c.lmx_value_cell_context(g\arena, old)), c.sizeof(c.LmxWalkValue))
+    context\ref := fresh
+    if: lmx_graph_scalar_store_cell(g, fresh, value) != 0 || lmx_graph_replace_leaf(g, owner, slot, fresh) != 0
+        return: 4
+    return: 0
+end: lmx_graph_store_path_scalar
+
 # A bare reference write changes only its activation's stable working cell.
 # The row is reacquired after the RHS; physical writes use the same graph writer.
 fn: lmx_graph_store_reference (c.LmxGraph@: g; c.Lmx@: code; char@: name; int: mode; @: value) int
@@ -1908,15 +2010,15 @@ fn: lmx_graph_store_reference (c.LmxGraph@: g; c.Lmx@: code; char@: name; int: m
     if: kind != 5 && kind != 6
         return: 4
     slot := lmx_graph_visible_slot(g, code, name)
-    return: c.lmx_graph_assign_reference(g, code, c.lmx_graph_get_in(g, code, slot), value)
+    return: c.lmx_graph_assign_reference(g, c.lmx_graph_get_in(g, code, slot), value)
 end: lmx_graph_store_reference
 
 # Explicit paths write the graph, even when they address this activation's data. They neither publish nor refresh
 # bare working values; a later bare write changes only the local place.
-fn: lmx_graph_store_field (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: owner; size_t: slot; int: number) int
+fn: lmx_graph_store_field (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; int: number) int
     if: c.lmx_graph_kind(g, (cast: (@) owner)) != 4
         return: 4
-    return: c.lmx_graph_assign_int(g, code, owner, slot, number)
+    return: c.lmx_graph_assign_int(g, owner, slot, number)
 end: lmx_graph_store_field
 
 # The field a written path `owner\field` names, for a write through it: the owner evaluated -- a Structure, or the
@@ -1959,7 +2061,7 @@ fn: lmx_graph_eval_index_write (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: left; @: o
     status := lmx_graph_read_received_value(g, code, operand, 2, @ value)
     if: status != 0
         return: status
-    return: c.lmx_graph_index_write(g, code, base, index, value)
+    return: c.lmx_graph_index_write(g, base, index, value)
 end: lmx_graph_eval_index_write
 
 fn: lmx_graph_eval_assignment (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; int: mode) int
@@ -1996,9 +2098,11 @@ fn: lmx_graph_eval_assignment (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; 
         if: cell = 0
             cell := c.lmx_graph_reference_cell(g, c.lmx_graph_get_in(g, owner, slot))
         kind := c.lmx_graph_kind(g, cell)
+        # A declaration record -- R0's own places among them -- is written by its declared kind; the write replaces
+        # its fragment (lmx_graph_store_path_int, lmx_graph_store_path_reference).
+        if: cell = 0
+            kind := lmx_graph_own_kind(g, c.lmx_graph_get_in(g, owner, slot))
         if: kind != 1 && kind != 5 && kind != 6 && lmx_graph_scalar_pool(g, cell) = 0
-            return: 4
-        if: lmx_graph_scalar_pool(g, cell) != 0 && c.lmx_range_write_exact_blocked(g\arena, cell, 0, 0, 0U) != 0
             return: 4
         ---
     ---
@@ -2012,7 +2116,9 @@ fn: lmx_graph_eval_assignment (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; 
             return: status
         if: name != 0 && mode = 0
             return: lmx_graph_place_store_scalar(g, code, token, value)
-        return: lmx_graph_scalar_store_cell(g, code, cell, value)
+        if: name = 0
+            return: lmx_graph_store_path_scalar(g, owner, slot, value)
+        return: lmx_graph_scalar_store_cell(g, cell, value)
     if: kind = 5 || kind = 6
         if: kind = 6
             contract := 2
@@ -2023,13 +2129,15 @@ fn: lmx_graph_eval_assignment (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; 
             if: mode = 0
                 return: lmx_graph_place_store_reference(g, code, token, value)
             return: lmx_graph_store_reference(g, code, name, mode, value)
-        return: c.lmx_graph_assign_reference(g, code, cell, value)
+        return: lmx_graph_store_path_reference(g, owner, slot, value)
     status := lmx_graph_eval_number(g, code, c.lmx_graph_get_in(g, statement, 2U), @ number)
     if: status != 0
         return: status
     if: name != 0 && mode = 0
         return: lmx_graph_place_store_int(g, code, token, number)
-    return: lmx_graph_store_field(g, code, owner, slot, number)
+    if: name = 0
+        return: lmx_graph_store_path_int(g, owner, slot, number)
+    return: lmx_graph_store_field(g, owner, slot, number)
 end: lmx_graph_eval_assignment
 
 
@@ -4491,7 +4599,7 @@ fn: lmx_graph_block_declaration (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: holder; s
             if: slot >= c.lmx_graph_count(code)
                 return: 3
             if: kind = 1
-                status := c.lmx_graph_assign_int(g, code, code, slot, c.lmx_int_value_known(raw))
+                status := c.lmx_graph_assign_int(g, code, slot, c.lmx_int_value_known(raw))
             ---
         return: status
     required_kind := kind
@@ -4831,7 +4939,7 @@ fn: lmx_graph_block_body (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: body; size_t: fr
                 if: mode = 0
                     status := lmx_graph_place_store_int(g, code, token, number)
                 else:
-                    status := c.lmx_graph_assign_int(g, code, code, slot, number)
+                    status := c.lmx_graph_assign_int(g, code, slot, number)
                 ---
             ---
         ---
@@ -6998,7 +7106,7 @@ fn: lmx_graph_merge_field_value (c.LmxGraph@: g; @: raw) @
 
 # The legacy int branch of assignment admission. Scalar and WORD branches
 # in replay likewise keep the receiving cell; structural parts use layout.
-fn: lmx_graph_merge_write (c.LmxGraph@: g; c.Lmx@: result; @: place; @: value) int
+fn: lmx_graph_merge_write (c.LmxGraph@: g; @: place; @: value) int
     @: cell void place
     int: kind c.lmx_graph_kind(g, place)
     int: number 0
@@ -7008,7 +7116,7 @@ fn: lmx_graph_merge_write (c.LmxGraph@: g; c.Lmx@: result; @: place; @: value) i
         return: 4
     if: kind = 3
         cell := c.lmx_arena_pointer_void_read(place)
-    if: c.lmx_graph_kind(g, cell) != 1 || c.lmx_graph_invalidate(g, result, 0, cell, cell) != 0
+    if: c.lmx_graph_kind(g, cell) != 1
         return: 4
     if: c.lmx_int_store_known(cell, number) != 0
         return: 4
@@ -7641,14 +7749,14 @@ fn: lmx_graph_merge_replay (c.LmxGraph@: g; c.LmxCopyMap@: groups; c.LmxCopyMap@
                         if: lmx_graph_scalar_pool(g, place) != 0
                             # Always read the original late source. Its map entry
                             # may already denote this receiving cell's old bits.
-                            status := lmx_graph_scalar_store_cell(g, result, place, part)
+                            status := lmx_graph_scalar_store_cell(g, place, part)
                         else:
                             if: c.lmx_graph_kind(g, place) = 2 && c.lmx_graph_kind(g, part) = 2
-                                if: c.lmx_graph_invalidate(g, result, 0, place, place) != 0 || c.lmx_charptr_store_known(place, c.lmx_graph_word_text(g, part)) != 0
+                                if: c.lmx_charptr_store_known(place, c.lmx_graph_word_text(g, part)) != 0
                                     status := 4
                                 ---
                             else:
-                                status := lmx_graph_merge_write(g, result, place, part)
+                                status := lmx_graph_merge_write(g, place, part)
                             ---
                         ---
                     ---

@@ -1,0 +1,34 @@
+# A walked call reads the current graph (the book, #explicit-compilation: «the interpreter still performs the checks
+# of every reached operation and call on the current graph»; «the walker may see it before native»). Under
+# --walk-methods, once the body of target is rebound to the body of replacement, target() and a caller that calls it
+# run the rebound body. Native runs are not observed here: before the turn ends their moment is unspecified.
+# Entry 7; 81.. name the failing check.
+fn: target () int
+    return: 1
+end: target
+fn: replacement () int
+    return: 1 + 1
+end: replacement
+fn: caller () int
+    int: got target()
+    return: (cast: (int) got)
+end: caller
+int: quote 11
+int: src 12
+sub: put_body ()
+    quote\code := src\code
+end: put_body
+fn: m () int
+    @: quote target target
+    @: src replacement replacement
+    if: target() != 1 || caller() != 1
+        return: 81
+    put_body()
+    if: target() != 2
+        return: 82
+    if: caller() != 2
+        return: 83
+    return: 7
+end: m
+send: exit(exit_code: m(); stdout: ""; stderr: "")
+return

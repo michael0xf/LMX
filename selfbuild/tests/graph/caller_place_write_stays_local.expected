@@ -1,0 +1,25 @@
+---
+    Observed:
+        int: seen 9
+    end: Observed
+    Holder:
+        int: x 1
+    end: Holder
+    Source:
+        int: x 1
+    end: Source
+---
+sub: work ()
+    :=: x 9
+end: work
+sub: run (int: x 0)
+    @: shared (node [] 0)
+    work:
+    :=: ((shared \ Observed) \ seen) x
+end: run
+sub: main ()
+    @: shared (node [] 0)
+    :=: ((shared \ Holder) [] 0) (@ ((shared \ Source) \ x))
+    run: ((shared \ Source) \ x)
+end: main
+main:

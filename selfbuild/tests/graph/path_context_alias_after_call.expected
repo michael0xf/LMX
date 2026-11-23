@@ -1,0 +1,18 @@
+L2:
+    ---
+        Observed:
+            int: seen 1
+            int: done 9
+        end: Observed
+    ---
+    sub: touch ()
+        @: shared (node [] 0)
+        :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+    end: touch
+    sub: main ()
+        @: shared (node [] 0)
+        touch:
+        :=: ((shared \ Observed) \ done) 9
+    end: main
+    main:
+end: L2

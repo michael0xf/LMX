@@ -277,8 +277,11 @@ fn: gv_pending_value (@: g c.LmxGraph; @: root c.Lmx) int
     roots_before := c.lmx_execution_roots_mark(g\arena)
     c.lmx_execution_roots_push(g\arena, @ code_roots, 0, 0U, codes, 4U, (cast: (@: void) root), 0)
     status := c.lmx_graph_invoke_values(g, caller, 0, 0U, 0, value)
-    if: status != 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_FOREIGN || value\type != c.LMX_TYPE_FOREIGN || value\scalar_abi != abi || gv_check_metadata(arena, value, 9U) != 0 || c.lmx_walk_value_scalar_storage(g\arena, value, c.LMX_TYPE_FOREIGN, abi) != c.LMX_WALK_OK || c.memcmp((cast: (const: @: void) value\ref), @ precise, abi\size) != 0 || c.lmx_int_value_known(made) != 1 || c.lmx_int_value_known(collected) != 1 || c.lmx_int_value_known(used) != 1 || arena\activation != 0 || arena\execution_roots != @ code_roots
-        c.fprintf(c.stderr, "graph call pending Value status=%d made=%d collected=%d used=%d\n", status, (cast: (int) c.lmx_int_value_known(made)), (cast: (int) c.lmx_int_value_known(collected)), (cast: (int) c.lmx_int_value_known(used)))
+    # Use runs `data\used := data\used + 1`. An explicit path write replaces the graph fragment of the field (the book,
+    # #frame-and-graph-assignment): a new int cell stands in slot 2 of use_data, and the C variable used keeps the old
+    # cell. The count is read from the current slot; the old cell stays 0, so the write was not made in place.
+    if: status != 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_FOREIGN || value\type != c.LMX_TYPE_FOREIGN || value\scalar_abi != abi || gv_check_metadata(arena, value, 9U) != 0 || c.lmx_walk_value_scalar_storage(g\arena, value, c.LMX_TYPE_FOREIGN, abi) != c.LMX_WALK_OK || c.memcmp((cast: (const: @: void) value\ref), @ precise, abi\size) != 0 || c.lmx_int_value_known(made) != 1 || c.lmx_int_value_known(collected) != 1 || c.lmx_int_value_known(c.lmx_graph_get(use_data, 2U)) != 1 || c.lmx_graph_get(use_data, 2U) = used || c.lmx_int_value_known(used) != 0 || arena\activation != 0 || arena\execution_roots != @ code_roots
+        c.fprintf(c.stderr, "graph call pending Value status=%d made=%d collected=%d used=%d old=%d\n", status, (cast: (int) c.lmx_int_value_known(made)), (cast: (int) c.lmx_int_value_known(collected)), (cast: (int) c.lmx_int_value_known(c.lmx_graph_get(use_data, 2U))), (cast: (int) c.lmx_int_value_known(used)))
         return: 174
     c.lmx_execution_roots_restore(g\arena, roots_before)
     c.free(codes)

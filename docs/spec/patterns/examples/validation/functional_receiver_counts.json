@@ -17,7 +17,8 @@
     "H06",
     "H07",
     "R01",
-    "V02"
+    "V02",
+    "V03"
   ],
   "selected_receiver_primary_ids": [
     "H03",
@@ -197,22 +198,46 @@
       "alternative": "regex",
       "variants": {
         "original": {
-          "characters": 263,
-          "nonblank_lines": 11,
-          "utf8_bytes": 381,
-          "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
+          "characters": 462,
+          "nonblank_lines": 22,
+          "utf8_bytes": 684,
+          "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
         },
         "regex": {
-          "characters": 245,
+          "characters": 248,
           "nonblank_lines": 13,
-          "utf8_bytes": 384,
-          "sha256": "2580fe5582aacccde8857d5abd3b140398dfbd3796151dbd4c64a6c035714d53"
+          "utf8_bytes": 387,
+          "sha256": "3b6c7c3b6fcdcc7ed633a1b55bab30e131c2db594a135a0bdc77b4754836f53c"
         }
       },
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between."
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро."
+    },
+    {
+      "id": "V03",
+      "selected": "reuse",
+      "alternative": "original",
+      "variants": {
+        "original": {
+          "characters": 304,
+          "nonblank_lines": 23,
+          "utf8_bytes": 490,
+          "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+        },
+        "reuse": {
+          "characters": 298,
+          "nonblank_lines": 23,
+          "utf8_bytes": 480,
+          "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+        }
+      },
+      "eligible_variants": [
+        "original",
+        "reuse"
+      ],
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта."
     }
   ],
   "rows": [
@@ -387,7 +412,7 @@
     {
       "id": "H04",
       "file": "lmx/H04.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
         "characters": 265,
         "nonblank_lines": 17,
@@ -578,7 +603,7 @@
     {
       "id": "H09",
       "file": "lmx/H09.lm3",
-      "changed": false,
+      "changed": true,
       "before": {
         "characters": 212,
         "nonblank_lines": 16,
@@ -592,10 +617,10 @@
         "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
       },
       "after": {
-        "characters": 212,
-        "nonblank_lines": 16,
-        "utf8_bytes": 367,
-        "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
+        "characters": 285,
+        "nonblank_lines": 25,
+        "utf8_bytes": 527,
+        "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
       },
       "has_alternative": false
     },
@@ -880,26 +905,26 @@
         "sha256": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7"
       },
       "after": {
-        "characters": 263,
-        "nonblank_lines": 11,
-        "utf8_bytes": 381,
-        "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
+        "characters": 462,
+        "nonblank_lines": 22,
+        "utf8_bytes": 684,
+        "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
       },
       "has_alternative": true,
       "selected_variant": "original",
       "alternative_variant": "regex",
       "variants": {
         "original": {
-          "characters": 263,
-          "nonblank_lines": 11,
-          "utf8_bytes": 381,
-          "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
+          "characters": 462,
+          "nonblank_lines": 22,
+          "utf8_bytes": 684,
+          "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
         },
         "regex": {
-          "characters": 245,
+          "characters": 248,
           "nonblank_lines": 13,
-          "utf8_bytes": 384,
-          "sha256": "2580fe5582aacccde8857d5abd3b140398dfbd3796151dbd4c64a6c035714d53"
+          "utf8_bytes": 387,
+          "sha256": "3b6c7c3b6fcdcc7ed633a1b55bab30e131c2db594a135a0bdc77b4754836f53c"
         }
       },
       "original_source_sha256_at_import": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7",
@@ -907,13 +932,13 @@
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between.",
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро.",
       "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
     },
     {
       "id": "V03",
       "file": "lmx/V03.lm3",
-      "changed": false,
+      "changed": true,
       "before": {
         "characters": 304,
         "nonblank_lines": 23,
@@ -927,12 +952,36 @@
         "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
       },
       "after": {
-        "characters": 304,
+        "characters": 298,
         "nonblank_lines": 23,
-        "utf8_bytes": 490,
-        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+        "utf8_bytes": 480,
+        "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
       },
-      "has_alternative": false
+      "has_alternative": true,
+      "selected_variant": "reuse",
+      "alternative_variant": "original",
+      "variants": {
+        "original": {
+          "characters": 304,
+          "nonblank_lines": 23,
+          "utf8_bytes": 490,
+          "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+        },
+        "reuse": {
+          "characters": 298,
+          "nonblank_lines": 23,
+          "utf8_bytes": 480,
+          "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+        }
+      },
+      "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
+      "original_algorithm_preserved": true,
+      "eligible_variants": [
+        "original",
+        "reuse"
+      ],
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта.",
+      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
     },
     {
       "id": "V04",
@@ -985,14 +1034,14 @@
   ],
   "totals_changed": {
     "before": {
-      "characters": 1866,
-      "nonblank_lines": 114,
-      "utf8_bytes": 2823
+      "characters": 2170,
+      "nonblank_lines": 137,
+      "utf8_bytes": 3313
     },
     "after": {
-      "characters": 2170,
-      "nonblank_lines": 135,
-      "utf8_bytes": 3295
+      "characters": 2667,
+      "nonblank_lines": 169,
+      "utf8_bytes": 4078
     }
   },
   "totals_all": {
@@ -1002,9 +1051,9 @@
       "utf8_bytes": 8041
     },
     "after": {
-      "characters": 5408,
-      "nonblank_lines": 380,
-      "utf8_bytes": 8513
+      "characters": 5674,
+      "nonblank_lines": 400,
+      "utf8_bytes": 8966
     }
   },
   "runtime_executed": false

@@ -560,9 +560,29 @@
           "body_invocations": 3
         }
       ],
-      "load_before": [
-        "libraries/lmx/Cycles.lm3"
-      ]
+      "load_before": [],
+      "embedded_helpers": [
+        {
+          "source": "libraries/lmx/Cycles.lm3",
+          "metrics": {
+            "characters": 73,
+            "nonblank_lines": 9,
+            "utf8_bytes": 159,
+            "sha256": "f9a00041d9c3232a13261b7b71a56302fd8f2cd1e7c73d418e8e2a165b21adf4"
+          }
+        }
+      ],
+      "historical_client": {
+        "code": "Numbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+        "metrics": {
+          "characters": 212,
+          "nonblank_lines": 16,
+          "utf8_bytes": 367,
+          "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
+        },
+        "preserved_as": "Exact suffix after the full, counted Cycles helper."
+      },
+      "source_boundary": "The complete source includes Cycles and Numbers; no application helper is loaded separately."
     },
     {
       "id": "R01",
@@ -843,9 +863,7 @@
           "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
         }
       ],
-      "load_before": [
-        "libraries/lmx/CharacterRange.lm3"
-      ],
+      "load_before": [],
       "required_profile": [
         "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
       ],
@@ -1024,9 +1042,7 @@
         ]
       },
       "variant_load_before": {
-        "original": [
-          "libraries/lmx/CharacterRange.lm3"
-        ],
+        "original": [],
         "regex": []
       },
       "source_regions": {
@@ -1040,7 +1056,7 @@
         }
       },
       "core_versions": 1,
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between."
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро."
     },
     {
       "id": "V03",
@@ -1063,7 +1079,83 @@
           "expected": 0,
           "calls_after": 2
         }
-      ]
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; ordinary calls autofill gain and read from the active candidate."
+      ],
+      "selected_variant": "reuse",
+      "alternative_variant": "original",
+      "alternative_cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ],
+        "reuse": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "reuse": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта."
     },
     {
       "id": "V04",
@@ -1465,7 +1557,8 @@
       "H06",
       "H07",
       "R01",
-      "V02"
+      "V02",
+      "V03"
     ],
     "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
     "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
@@ -1477,7 +1570,8 @@
       "H06": "original",
       "H07": "original",
       "R01": "receivers",
-      "V02": "original"
+      "V02": "original",
+      "V03": "reuse"
     },
     "original_and_receivers_cases_preserved": true,
     "runtime_executed": false

@@ -5,10 +5,10 @@ Measurement:
     sample:
         return: read() * gain
     biased:
-        return: read() * gain + 1
+        return: sample() + 1
     readsTwice:
         int: discarded read()
-        return: read() * gain
+        return: sample()
 
 SamplingCheck:
     @: candidate
@@ -22,3 +22,31 @@ SamplingCheck:
         @: read fixedRead
         int: result candidate(gain := 4)
         return: result = 28 && node\calls = 1
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Прежний полный LMX с повторённым вычислением — не входит в подсчёт основной версии.
+# Measurement:
+#     int: gain
+#     @: read
+#     return: int
+#     sample:
+#         return: read() * gain
+#     biased:
+#         return: read() * gain + 1
+#     readsTwice:
+#         int: discarded read()
+#         return: read() * gain
+# 
+# SamplingCheck:
+#     @: candidate
+#     int: calls 0
+#     return: int
+#     fixedRead:
+#         node\calls += 1
+#         return: 7
+#     check:
+#         node\calls := 0
+#         @: read fixedRead
+#         int: result candidate(gain := 4)
+#         return: result = 28 && node\calls = 1
+# END ALTERNATIVE LMX

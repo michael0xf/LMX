@@ -20,13 +20,15 @@ AccountMessage:
     int: balance 10
     return: int
     withdraw:
-        if: amount < 0 || node\balance < amount
+        if: amount < 0 || read() < amount
             return: 0
         node\balance -= amount
         return: 1
     read:
         return: node\balance
 ```
+
+Проверка использует уже показанный read() как локальный вызов: между проверкой и списанием нет post или ожидания. При отрицательном amount короткое замыкание по-прежнему пропускает чтение баланса.
 
 LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.
 
@@ -81,11 +83,35 @@ LMX реализует координацию через отдельный Mess
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 149 | 11 |
+| LMX | 143 | 11 |
 | Java | 184 | 8 |
 | Rust | 299 | 11 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+AccountMessage:
+    int: amount
+    int: balance 10
+    return: int
+    withdraw:
+        if: amount < 0 || node\balance < amount
+            return: 0
+        node\balance -= amount
+        return: 1
+    read:
+        return: node\balance
+```
+
+**Основание выбора / Selection:** Use the included read method in the rejection predicate. This remains a direct local call inside withdraw, with no await/post between checking and decrementing. Short-circuit OR still skips the balance read for a negative amount.
+
+**Completeness:** The predicate uses the included read() as a local call: there is no post or wait between check and debit. Short-circuiting still skips the balance read for a negative amount. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 <!-- postfix-expression-review-2026-11-22 -->
 

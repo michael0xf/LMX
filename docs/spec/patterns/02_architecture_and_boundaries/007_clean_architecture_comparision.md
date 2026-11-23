@@ -36,9 +36,9 @@ UseCase:
     @: output
     return: int
     execute:
-        return: output(decision := Policy\eligible(income := income; expense := expense))
+        return: output(decision := Policy\eligible(income; expense))
     demo:
-        return: execute(income := 100; expense := 60; output := Presenter\render)
+        return: execute(100; 60; Presenter\render)
 ```
 
 Вызов UseCase\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI.
@@ -91,11 +91,48 @@ func demo() int { return execute(100, 60, render) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 342 | 22 |
+| LMX | 300 | 22 |
 | Java | 341 | 9 |
 | Go | 268 | 7 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий текущий вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Policy:
+    int: income
+    int: expense
+    return: int
+    eligible:
+        return: income - expense >= 30
+
+Presenter:
+    int: decision
+    return: int
+    render:
+        if: decision != 0
+            return: 200
+        return: 422
+
+UseCase:
+    int: income
+    int: expense
+    @: output
+    return: int
+    execute:
+        return: output(decision := Policy\eligible(income := income; expense := expense))
+    demo:
+        return: execute(income := 100; expense := 60; output := Presenter\render)
+```
+
+**Основание выбора / Selection:** Use visible input order income, expense for Policy and income, expense, output for UseCase. Keep the external output(decision := ...) contract and both complete Policy/Presenter implementations.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 <!-- postfix-expression-review-2026-11-22 -->
 

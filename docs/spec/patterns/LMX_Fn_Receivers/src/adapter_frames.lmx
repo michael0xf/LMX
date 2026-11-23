@@ -18,8 +18,7 @@ FxIndices:
         int: count
     return: @
     make:
-        throws:
-            FxIndex
+        throws: FxIndex
         if: start < 0 || count < 0
             throw: FxIndex()
         private: @: out (copy(()))
@@ -37,10 +36,7 @@ FxOwnPolicy:
     private: @: contract
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxIndex FxKernelFailure FxTypeToken
         private: @: info FxKernel\signature(contract)
         private: @: out (copy(FxInputPolicy))
         out\source := contract
@@ -64,13 +60,7 @@ FxSourcePolicy:
         @: pendingPositions
     return: @
     make:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(operation)
         private: int: n length(info\inputTypes)
         if: length(boundPositions) != length(boundValues)
@@ -114,13 +104,7 @@ FxFullPolicy:
     private: @: operation
     return: @
     make:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(operation)
         private: @: empty (copy(()))
         return: FxSourcePolicy\make(operation; FxIndices\make(0; length(info\inputTypes)); empty; empty; empty)
@@ -131,13 +115,7 @@ FxPrefixPolicy:
         @: captured
     return: @
     make:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(operation)
         private: int: n length(info\inputTypes)
         private: int: k length(captured)
@@ -147,8 +125,11 @@ FxPrefixPolicy:
 
 # These entries describe existing call transport. They are not user values,
 # not a lazy Array type, and never undergo the ordinary single-Structure W/E.
-# A place entry is a preserved declaration actual whose initializer reads the
-# already selected source place on demand; it is NOT an eagerly evaluated `pN`.
+# A place entry is internal transport of an already selected source place,
+# identified by destination position and (frame, sourcePosition). It is NOT a
+# source declaration actual or an eagerly evaluated `pN`. The kernel provider
+# must support its demanded read without internal-name matching/substitution;
+# this separate integration requirement is still NOT_RUN (acceptance PA01).
 FxTransportKinds:
     const:
         int: ready 0
@@ -189,8 +170,10 @@ FxPlaceEntry:
         return: out
 
 # Retain a selected explicit occurrence: ready values are not reevaluated, and
-# declaration forms retain source identity/namespace substitution. Unlike place,
-# this mode never manufactures an explicit argument from an omitted position.
+# declaration forms remain ordinary DATA Structures with their source identity
+# and selected positional/outer-label mapping. Their internal names never select
+# another input and passing them executes no initializer. Unlike place, this
+# mode never manufactures an explicit argument from an omitted position.
 FxActualEntry:
     private:
         int: position
@@ -220,11 +203,7 @@ FxFrameRead:
         int: index
     return: @
     read:
-        throws:
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxCallFailure FxIndex FxKernelFailure FxTypeToken
         private: @: slot FxKernel\frameSlot(frame; index; demand := 1)
         return: slot\value
 
@@ -232,19 +211,14 @@ FxFrameAttempt:
     private: @: frame
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         return: FxKernel\enter(frame; frame\failures)
 
 FxFrameApply:
     private: @: frame
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: outcome FxFrameAttempt\attempt(frame)
         if: outcome\ok = 0
             throw: FxCallFailure(outcome)
@@ -260,9 +234,7 @@ FxInvokeEntries:
         @: failures
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         private: @: prepared FxKernel\prepare(operation; entries)
         finally:
             FxKernel\releaseCall(prepared)
@@ -275,10 +247,7 @@ FxApplyEntries:
         @: entries
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: info FxKernel\signature(operation)
         private: @: outcome FxInvokeEntries\attempt(operation; entries; info\throws)
         if: outcome\ok = 0
@@ -291,10 +260,7 @@ FxApplyPlaces:
         @: frame
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         return: FxApplyEntries\apply(operation; FxFrameEntries\make(frame))
 
 # Memoization explicitly observes all exposed accepted values, in position order,
@@ -304,14 +270,7 @@ FxFrameSnapshot:
     private: @: frame
     return: @
     snapshot:
-        throws:
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\snapshot)
         private: @: out (copy(()))
         sys\resize(out; length(frame\inputTypes))
         private: int: i 0
@@ -339,10 +298,7 @@ FxFrameObserve:
     private: @: frame
     return: @
     observe:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxIndex FxKernelFailure FxTypeToken
         private: @: out (copy(()))
         sys\resize(out; length(frame\inputTypes))
         private: int: i 0
@@ -369,9 +325,6 @@ FxForwardEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         return: FxFrameApply\apply(frame)
 

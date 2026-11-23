@@ -39,11 +39,7 @@ WorkerMessage:
         if: job = -1
             return
         process(job)
-        post:
-            ask:
-                queueOwner\take()
-            answer:
-                selfAddress\received
+        start()
 ```
 
 queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.
@@ -100,11 +96,53 @@ Worker не конкурируют за выполнение одного LMX Th
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 288 | 28 |
+| LMX | 242 | 24 |
 | Go | 233 | 9 |
 | C# | 445 | 11 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+JobQueueMessage:
+    @: queue
+    return: int
+    take:
+        if: queue\size() = 0
+            return: -1
+        return: queue\pop()
+
+WorkerMessage:
+    int: job
+    @: queueOwner
+    @: selfAddress
+    @: process
+    start:
+        post:
+            ask:
+                queueOwner\take()
+            answer:
+                selfAddress\received
+    ---
+    received:
+        if: job = -1
+            return
+        process(job)
+        post:
+            ask:
+                queueOwner\take()
+            answer:
+                selfAddress\received
+```
+
+**Основание выбора / Selection:** Reuse WorkerMessage.start() after each successful process(job) instead of repeating its complete post/ask/answer block. The empty sentinel returns before processing or posting; queueOwner and explicit selfAddress continuation remain identical.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

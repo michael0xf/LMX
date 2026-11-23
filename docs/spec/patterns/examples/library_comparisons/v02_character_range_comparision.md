@@ -8,7 +8,7 @@
 
 ## Загрузка и граница
 
-Существующий LMX-стенд подготавливает [CharacterRange.lm3](../libraries/lmx/CharacterRange.lm3) и [V02.lm3](../lmx/V02.lm3) в одном свежем исходном контексте. `import: CharacterRange` открывает доступный namespace и сохраняет DATA метода библиотеки; этот import сам не задаёт файловый загрузчик. Это обычные исходники `.lm3`, без добавленного `main` или DATA для R0.
+Полный [V02.lm3](../lmx/V02.lm3) уже содержит CharacterRange и TicketCode и загружается в один свежий исходный контекст. [CharacterRange.lm3](../libraries/lmx/CharacterRange.lm3) сохранён отдельно для чтения; повторно загружать его вместе с V02 не нужно. `import: CharacterRange` открывает доступный namespace и сохраняет DATA метода библиотеки; этот import сам не задаёт файловый загрузчик. Это обычные исходники `.lm3`, без добавленного `main` или DATA для R0.
 
 Для Haskell модуль [CharacterRange.hs](../libraries/haskell/CharacterRange.hs) лежит в каталоге поиска `examples/libraries/haskell`. Отдельный клиент приведён в [V02TicketCode.hs](V02TicketCode.hs). Общие assertions доступны в `examples/haskell/Analogies.hs`; из корня архива:
 
@@ -102,7 +102,7 @@ between value (lower, upper) = lower <= value && value <= upper
 | Полная собственная библиотека | 199 / 11 | 118 / 3 |
 | Клиент + библиотека | 462 / 22 | 304 / 10 |
 
-Прежний самостоятельный LMX-клиент занимал 301 символ; новый клиент — 263, на 38 меньше. С полной библиотекой получается 462 символа: отдельный этот пример в целом стал больше. Выигрыш — повторно используемое понятное имя диапазона и однократная подготовка исходного выражения `candidate[index]` для каждой проверки; ускорение исполнения не заявляется. Объём helper показан целиком и не считается нулевым.
+Клиентская часть занимает 263 символа. Полный основной V02 включает CharacterRange и занимает 462 символа; в таблице выше эти же 462 разложены на клиент и helper. Исторический самостоятельный вариант до выделения helper занимал 301 символ. Выигрыш — повторно используемое понятное имя диапазона и однократная подготовка исходного выражения `candidate[index]` для каждой проверки; ускорение исполнения не заявляется. Объём helper показан целиком и не считается нулевым.
 
 ## English: contract and comparison
 
@@ -142,14 +142,14 @@ TicketCode:
             ReceiverIndex
             FxKernelFailure
             FxTypeToken
-        return: matches(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+        return: wholeMatch(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
 ```
 
 `charRange` receives one-unit text boundaries, `times` repeats exactly twice,
 and the prefix `then` form preserves its grouped Pattern arguments under the
-ordinary operand ABI. `matches` consumes the entire TextView. The same eleven
+ordinary operand ABI. `wholeMatch` consumes the entire TextView. The same eleven
 positive/negative ticket cases, including NUL and non-ASCII input, are retained.
-The source has 245 nonwhitespace characters, including its declared exits.
+The source has 248 nonwhitespace characters, including its declared exits.
 
 This alternative is not eligible to replace the competitive CharacterRange
 client. The existing Haskell control uses a small explicit range predicate and

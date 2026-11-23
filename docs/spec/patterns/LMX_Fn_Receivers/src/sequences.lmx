@@ -9,11 +9,7 @@ FxSeqRange:
     required: start stop
     return: @
     range:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            SequenceSize
-            SequenceStep
+        throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep
         if: step = 0
             throw: SequenceStep()
         private: @: out FxSeqAllocate\make(int[]; 0)
@@ -56,11 +52,7 @@ FxSeqSlice:
     required: source begin end
     return: @
     slice:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: int: count FxSeqBounds\count(source; begin; end)
         private: @: info FxSeqInfo\get(source)
         private: @: out FxSeqAllocate\make(info\arrayType; count)
@@ -76,11 +68,7 @@ FxSeqReverse:
     required: source
     return: @
     reverse:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: info FxSeqInfo\get(source)
         private: int: count length(source)
         private: @: out FxSeqAllocate\make(info\arrayType; count)
@@ -96,11 +84,7 @@ FxSeqConcat:
     required: parts
     return: @
     concat:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
         private: int: arrayType @[]
@@ -150,13 +134,7 @@ FxSeqCompress:
     required: source mask
     return: @
     compress:
-        throws:
-            FxKernelFailure
-            FxShape
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(source)
         FxSeqInfo\get(mask)
         private: int: count length(source)
@@ -191,12 +169,7 @@ FxSeqAny:
     required: items accepts
     return: int
     any:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
+        throws: copy(FxThrows\predicate)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: int: i 0
@@ -215,12 +188,7 @@ FxSeqAll:
     required: items accepts
     return: int
     all:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
+        throws: copy(FxThrows\predicate)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: int: i 0
@@ -239,13 +207,7 @@ FxSeqIndex:
     required: items accepts
     return: @
     index:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
+        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: int: i 0
@@ -264,12 +226,7 @@ FxSeqCount:
     required: items accepts
     return: int
     count:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
+        throws: copy(FxThrows\predicate)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: int: matched 0

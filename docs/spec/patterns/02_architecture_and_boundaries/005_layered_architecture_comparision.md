@@ -30,9 +30,9 @@ Presentation:
     int: quantity
     return: int
     handle:
-        return: Application\total(quantity := quantity)
+        return: Application\total(quantity)
     demo:
-        return: handle(quantity := 3)
+        return: handle(3)
 ```
 
 Вызов Presentation\demo(). Структуры задают слои и явные зависимости вниз.
@@ -84,11 +84,42 @@ func demo() int { return presentationHandle(3) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 215 | 16 |
+| LMX | 195 | 16 |
 | Java | 274 | 10 |
 | Go | 217 | 5 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Data:
+    return: int
+    price:
+        return: 10
+
+Application:
+    int: quantity
+    return: int
+    total:
+        return: quantity * Data\price()
+
+Presentation:
+    int: quantity
+    return: int
+    handle:
+        return: Application\total(quantity := quantity)
+    demo:
+        return: handle(quantity := 3)
+```
+
+**Основание выбора / Selection:** Use positional quantity in Application.total and Presentation.handle; each DATA visibly has that sole input. All three layers and their calls remain in the full listing.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

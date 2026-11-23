@@ -22,9 +22,10 @@ Demo:
     run:
         throws: OperandArity
         import: MoneyLibrary\Equality
-        @: first (copy(MoneyLibrary\immutable\Money))
-        @: second (copy(MoneyLibrary\immutable\Money))
-        @: third (merge(MoneyLibrary\immutable\Money; immutable: (int: currency 978)))
+        @: money MoneyLibrary\immutable\Money
+        @: first (copy(money))
+        @: second (copy(money))
+        @: third (merge(money; immutable: (int: currency 978)))
         return: (first equals second) * 10 + (first equals third)
 ```
 
@@ -78,11 +79,33 @@ Demo\run() возвращает 10: истина для first/second и ложь
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 273 | 9 |
+| LMX | 239 | 10 |
 | Python | 142 | 6 |
 | C# | 224 | 9 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Demo:
+    return: int
+    run:
+        throws: OperandArity
+        import: MoneyLibrary\Equality
+        @: first (copy(MoneyLibrary\immutable\Money))
+        @: second (copy(MoneyLibrary\immutable\Money))
+        @: third (merge(MoneyLibrary\immutable\Money; immutable: (int: currency 978)))
+        return: (first equals second) * 10 + (first equals third)
+```
+
+**Основание выбора / Selection:** Resolve the unchanged Money template path once into a local reference money, reused by both copy operations and merge. All cents/currency fields, both independent constructions and the differing currency case remain visible.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

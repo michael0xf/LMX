@@ -6,12 +6,12 @@
 
 | ID | Паттерн | LMX | Java | Rust | Граница |
 | ---: | --- | ---: | ---: | ---: | --- |
-| 065 | [Read-Write Lock](065_read_write_lock_comparision.md) | 111 / 9 | 348 / 14 | 239 / 10 | Протокол и порты |
+| 065 | [Read-Write Lock](065_read_write_lock_comparision.md) | 107 / 9 | 348 / 14 | 239 / 10 | Протокол и порты |
 | 066 | [Double-Checked Locking](066_double_checked_locking_comparision.md) | 117 / 10 | 292 / 15 | 179 / 8 | Протокол и порты |
-| 067 | [Guarded Suspension](067_guarded_suspension_comparision.md) | 258 / 17 | 208 / 11 | 386 / 14 | Протокол и порты |
+| 067 | [Guarded Suspension](067_guarded_suspension_comparision.md) | 253 / 19 | 208 / 11 | 386 / 14 | Протокол и порты |
 | 068 | [Balking](068_balking_comparision.md) | 106 / 11 | 211 / 6 | 296 / 9 | Протокол и порты |
 | 069 | [Thread-Local Storage](069_thread_local_storage_comparision.md) | 70 / 6 | 202 / 7 | 157 / 5 | Протокол и порты |
-| 070 | [Monitor Object](070_monitor_object_comparision.md) | 149 / 11 | 184 / 8 | 299 / 11 | Протокол и порты |
+| 070 | [Monitor Object](070_monitor_object_comparision.md) | 143 / 11 | 184 / 8 | 299 / 11 | Протокол и порты |
 
 Java показывает мониторы, volatile и TLS; Rust — Mutex/RwLock, OnceLock и безопасные области доступа. Они делают видимыми свойства, которые у LMX заменяются владением Message, а не исчезают бесплатно.
 

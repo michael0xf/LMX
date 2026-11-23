@@ -123,8 +123,8 @@ that representation under an alternative name.
 | Binding | Own actual/default/autofill places; transparent caller place; former own-copy fallback; derived uninit for the specified inline local | Semantics, L2, kernel, CORE |
 | Admission stages | Nonexecuting construction checks; explicit pre-C build tests; interpreted reached-call satisfies; prepared native contract; explicit satisfies in either path | Semantics, guide, kernel, CORE |
 | Private | Both source and visible lexical receiving place filter implicit dynamic binding; explicit access remains ordinary | Semantics, guide, kernel |
-| Declaration actuals | Retained DATA form; matching declaration replaced in namespace; unmatched inner name remains one positional Structure | Semantics, guide, kernel |
-| Iterate behavior | Step repeatedly executes the retained declaration; body sees the same receiving local without a second initializer call | Guide, semantics, coding instruction |
+| Declaration actuals | DATA Structure; ordinary positional reception or explicit outer name := value; internal name is never matched to an input; transmission does not call the declaration | Semantics, guide, kernel |
+| Iterate behavior | Step repeatedly executes the retained declaration; body uses the same receiving item and its original live demo.total place without an extra initializer call | Guide, semantics, coding instruction |
 | Operands | Ordinary method resolution, left/right, mandatory PASS_ARGS_AS_IS and PRIORITY, ordinary declared result. Only RIGHT opens once when LEFT is a written unnamed Structure and the sole RIGHT argument is another written unnamed Structure; LEFT stays whole, P0 does not open groups, callable W/E stays separate | Semantics, grammar, L2, guide |
 | Raw expression arguments | Original occurrence/context, explicit sys eval, no hidden evaluation by dereference, no permanent graph cache | Semantics, guide, kernel |
 | Expression order | Demand dependencies, per-evaluation effect count, normal C ordering plus the specified exponentiation rule | Semantics, grammar, coding instruction |

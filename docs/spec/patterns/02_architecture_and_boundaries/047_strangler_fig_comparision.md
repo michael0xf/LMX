@@ -29,13 +29,14 @@ Router:
     return: int
     handle:
         if: route = 1 && node\migrated != 0
-            return: Backends\modern(route := route)
-        return: Backends\legacy(route := route)
+            return: Backends\modern(route)
+        return: Backends\legacy(route)
     demo:
+        int: route 1
         node\migrated := 0
-        int: before handle(route := 1)
+        int: before handle()
         node\migrated := 1
-        return: before + handle(route := 1) + handle(route := 2)
+        return: before + handle() + handle(route := 2)
 ```
 
 Вызов Router\demo(). В HTTP-профиле Router — владелец явной маршрутной Table; изменения принимает своим Message turn. Листинг показывает решение о маршруте после decoder/admission.
@@ -99,11 +100,45 @@ func demo() int {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 330 | 20 |
+| LMX | 310 | 21 |
 | Java | 309 | 15 |
 | Go | 227 | 12 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Backends:
+    int: route
+    return: int
+    legacy:
+        return: 100 + route
+    modern:
+        return: 200 + route
+
+Router:
+    int: migrated 0
+    int: route
+    return: int
+    handle:
+        if: route = 1 && node\migrated != 0
+            return: Backends\modern(route := route)
+        return: Backends\legacy(route := route)
+    demo:
+        node\migrated := 0
+        int: before handle(route := 1)
+        node\migrated := 1
+        return: before + handle(route := 1) + handle(route := 2)
+```
+
+**Основание выбора / Selection:** Use the visible Backends.route position, and set demo-local route to 1 once for two handle() calls via autofill. The final route 2 remains explicitly named; migrated state writes and response order remain 101,201,102.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

@@ -9,11 +9,7 @@ FxSeqIndices:
     required: source indices
     return: @
     check:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         FxSeqInfo\get(source)
         FxSeqInfo\get(indices)
         private: int: total length(source)
@@ -38,11 +34,7 @@ FxSeqSelection:
     required: source positions
     return: @
     copySelected:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: info FxSeqInfo\get(source)
         private: int: count length(positions)
         private: @: out FxSeqAllocate\make(info\arrayType; count)
@@ -60,11 +52,7 @@ FxSeqSelect:
     required: source indices
     return: @
     select:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: positions FxSeqIndices\check(source; indices)
         return: FxSeqSelection\copySelected(source; positions)
 
@@ -75,11 +63,7 @@ FxSeqOmit:
     required: source indices
     return: @
     omit:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: positions FxSeqIndices\check(source; indices)
         private: @: info FxSeqInfo\get(source)
         private: int: count length(source)
@@ -111,12 +95,7 @@ FxSeqReorder:
     required: source permutation
     return: @
     reorder:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            ReceiverPermutation
-            SequenceSize
+        throws: copy(FxThrows\reorder)
         FxSeqInfo\get(source)
         FxSeqInfo\get(permutation)
         private: int: count length(source)
@@ -144,11 +123,7 @@ FxSeqProject:
     required: source indices
     return: @
     project:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: selected FxSeqSelect\select(source; indices)
         # One ordinary copy map, including repeated targets, cycles and owners.
         return: (copy(selected))
@@ -158,11 +133,7 @@ FxSeqList:
     required: values
     return: @
     list:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         return: FxSeqRecords\make(values)
 
 FxSeqFlatMap:
@@ -172,12 +143,7 @@ FxSeqFlatMap:
     required: items next
     return: @
     flatMap:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: out FxSeqAllocate\make(@[]; 0)

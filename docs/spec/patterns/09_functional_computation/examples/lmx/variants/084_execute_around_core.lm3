@@ -8,8 +8,7 @@ Trace:
 Acquire:
     return: @
     open:
-        throws:
-            ResourceFailure
+        throws: ResourceFailure
         Trace\events := Trace\events * 10 + 1
         if: Trace\mode = 2
             throw: ResourceFailure()
@@ -19,8 +18,7 @@ Action:
     @: resource
     return: int
     use:
-        throws:
-            ResourceFailure
+        throws: ResourceFailure
         Trace\events := Trace\events * 10 + 2
         if: Trace\mode = 1
             throw: ResourceFailure()
@@ -36,12 +34,8 @@ Example:
     return: int
     run:
         throws:
-            FxIndex
-            FxArity
-            FxRecordArity
             FxTypeToken
             FxKernelFailure
-            FxCallFailure
             ReceiverIndex
             SequenceSize
         Trace\mode := mode

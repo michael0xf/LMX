@@ -12,7 +12,7 @@
 
 Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
 ## LMX — основной: текущее ядро
 
@@ -35,10 +35,7 @@ FxMore:
     private: @: thunk
     return: @
     more:
-        throws:
-            FxArity
-            FxKernelFailure
-            FxTypeToken
+        throws: FxArity FxKernelFailure FxTypeToken
         private: @: shape FxKernel\signature(subject := thunk)
         if: length(shape\inputTypes) != 0
             throw: FxArity()
@@ -50,10 +47,7 @@ FxTrampoline:
     private: FxBounce@: current
     return: @
     trampoline:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: empty (copy(()))
         while: current\done = 0
             private: @: record FxApply\apply(current\next; empty)
@@ -113,7 +107,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 611 | 39 |
+| LMX | 591 | 33 |
 | Haskell | 198 | 9 |
 | Scala | 303 | 13 |
 
@@ -216,7 +210,7 @@ object BounceBool {
 
 **Возможности общего ядра.** Контейнер обобщён по результату, но протокол шага намеренно nullary→Bounce. Это математическая форма батута, а не случайная специализация на одном int-аргументе. У произвольной исходной функции аргументы связывает partial с произвольной сигнатурой.
 
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
 
 ## English explanation
 
@@ -228,11 +222,11 @@ Generic Bounce holds an arbitrary result record or a nullary thunk; the runner d
 
 **Expected observation.** trampoline(done(record)) returns that result record without invoking a continuation. Each more invokes the retained thunk once. Parity yields 1,0,0 in LMX and true,false,false in the controls without accumulating a recursive step stack.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
 
 **Primary LMX.** The primary listing contains the container, constructors and loop from src/containers.lmx. Ordinary apply performs the nullary invocation; the resulting @ record is read as the reference to the next Bounce. partial is not duplicated inside the container.
 
-**Current core implementation.** The primary listing contains the container, constructors and loop from src/containers.lmx. Ordinary apply performs the nullary invocation; the resulting @ record is read as the reference to the next Bounce. partial is not duplicated inside the container.
+**LMX variant `core`.** The primary listing contains the container, constructors and loop from src/containers.lmx. Ordinary apply performs the nullary invocation; the resulting @ record is read as the reference to the next Bounce. partial is not duplicated inside the container.
 
 No execution of LMX or the control programs is claimed.
 

@@ -24,12 +24,12 @@ ProjectionMessage:
     apply:
         throws: Gap
         if: seq <= node\last
-            return: node\total
+            return: query()
         if: seq != node\last + 1
             throw: Gap()
         node\total += delta
         node\last := seq
-        return: node\total
+        return: query()
     query:
         return: node\total
 ```
@@ -90,11 +90,41 @@ func (p *Projection) Query() int { return p.Total }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 214 | 17 |
+| LMX | 208 | 17 |
 | Java | 205 | 11 |
 | Go | 269 | 11 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+ProjectionMessage:
+    int: total 0
+    int: last 0
+    int: seq
+    int: delta
+    return: int
+    apply:
+        throws: Gap
+        if: seq <= node\last
+            return: node\total
+        if: seq != node\last + 1
+            throw: Gap()
+        node\total += delta
+        node\last := seq
+        return: node\total
+    query:
+        return: node\total
+```
+
+**Основание выбора / Selection:** Reuse the existing query() for both apply return paths. Duplicate detection and Gap rejection remain before mutation, and successful total/last updates complete before query reads the total.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

@@ -23,28 +23,23 @@ SagaMessage:
     handle:
         int: action 0
         if: kind = 0 && node\phase = 0
-            node\phase := 1
             action := 1
         if: kind = 1 && node\phase = 1
             if: ok
-                node\phase := 2
                 action := 2
             else:
-                node\phase := 4
                 action := 4
         ---
         if: kind = 2 && node\phase = 2
             if: ok
-                node\phase := 5
                 action := 5
             else:
-                node\phase := 3
                 action := 3
         ---
         if: kind = 3 && node\phase = 3 && ok
-            node\phase := 4
             action := 4
         if: action != 0
+            node\phase := action
             node\transport\publish(action)
 ```
 
@@ -114,11 +109,55 @@ SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 c
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 361 | 31 |
+| LMX | 301 | 26 |
 | Java | 452 | 18 |
 | Go | 359 | 14 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+SagaMessage:
+    int: phase 0
+    int: kind
+    int: ok
+    @: transport
+    handle:
+        int: action 0
+        if: kind = 0 && node\phase = 0
+            node\phase := 1
+            action := 1
+        if: kind = 1 && node\phase = 1
+            if: ok
+                node\phase := 2
+                action := 2
+            else:
+                node\phase := 4
+                action := 4
+        ---
+        if: kind = 2 && node\phase = 2
+            if: ok
+                node\phase := 5
+                action := 5
+            else:
+                node\phase := 3
+                action := 3
+        ---
+        if: kind = 3 && node\phase = 3 && ok
+            node\phase := 4
+            action := 4
+        if: action != 0
+            node\transport\publish(action)
+```
+
+**Основание выбора / Selection:** Factor the common phase write into the final action != 0 block. Each kind matches at most one transition branch, branch tests have no effects, and every original next phase equals action; phase is still committed before publishing exactly once.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

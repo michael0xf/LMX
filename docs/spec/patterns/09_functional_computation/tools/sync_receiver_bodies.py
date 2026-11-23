@@ -25,7 +25,10 @@ def dependencies(names,available):
   if name in seen:continue
   if name not in available:continue
   seen.add(name)
-  refs=set(re.findall(r'\b(?:Fx|Rx)[A-Za-z0-9_]+\b',available[name]['code']))
+  # FxThrows is a finite table of failure NAMES. A name such as FxPredicate
+  # in that table is not a dependency on the same-spelled callable owner.
+  # Count the complete shared table once, without linking unrelated bodies.
+  refs=set() if name=='FxThrows' else set(re.findall(r'\b(?:Fx|Rx)[A-Za-z0-9_]+\b',available[name]['code']))
   stack.extend(refs-seen)
  return seen
 def main():

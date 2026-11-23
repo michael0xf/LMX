@@ -29,7 +29,7 @@ Core:
     quote:
         return: quantity * price()
     demo:
-        return: quote(quantity := 2; price := Adapters\memory) + quote(quantity := 2; price := Adapters\alternate)
+        return: quote(2; Adapters\memory) + quote(2; Adapters\alternate)
 ```
 
 Вызов Core\demo(). price — явно supplied callable; ни глобального service locator, ни поиска реализации по имени нет.
@@ -80,11 +80,39 @@ func demo() int { return quote(2, memory) + quote(2, alternate) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 215 | 14 |
+| LMX | 181 | 14 |
 | Java | 264 | 9 |
 | Go | 183 | 5 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Adapters:
+    return: int
+    memory:
+        return: 10
+    alternate:
+        return: 12
+
+Core:
+    int: quantity
+    @: price
+    return: int
+    quote:
+        return: quantity * price()
+    demo:
+        return: quote(quantity := 2; price := Adapters\memory) + quote(quantity := 2; price := Adapters\alternate)
+```
+
+**Основание выбора / Selection:** Use the visible Core input order quantity, price for both calls. Both distinct adapters and the two quotations remain; a helper or common quantity local is longer than this positional form.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

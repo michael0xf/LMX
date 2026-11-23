@@ -30,7 +30,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity := quantity)\n    demo:\n        return: handle(quantity := 3)\n",
+          "code": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity)\n    demo:\n        return: handle(3)\n",
           "notes_ru": "Вызов Presentation\\demo(). Структуры задают слои и явные зависимости вниз.",
           "notes_en": "Call Presentation\\demo(). Structures represent layers and explicit downward dependencies."
         },
@@ -54,7 +54,32 @@
           "why_ru": "Различие логических слоёв и физических tiers.",
           "why_en": "Logical layers versus physical tiers."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity := quantity)\n    demo:\n        return: handle(quantity := 3)\n",
+          "reuse": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity)\n    demo:\n        return: handle(3)\n"
+        }
+      },
+      "procedural_lmx": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity := quantity)\n    demo:\n        return: handle(quantity := 3)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use positional quantity in Application.total and Presentation.handle; each DATA visibly has that sole input. All three layers and their calls remain in the full listing. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 6,
@@ -76,7 +101,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(quantity := 2; price := Adapters\\memory) + quote(quantity := 2; price := Adapters\\alternate)\n",
+          "code": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(2; Adapters\\memory) + quote(2; Adapters\\alternate)\n",
           "notes_ru": "Вызов Core\\demo(). price — явно supplied callable; ни глобального service locator, ни поиска реализации по имени нет.",
           "notes_en": "Call Core\\demo(). price is an explicitly supplied callable, not a global service locator or hidden name search."
         },
@@ -100,7 +125,32 @@
           "why_ru": "Исходная статья автора о портах и адаптерах.",
           "why_en": "The original ports-and-adapters article."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(quantity := 2; price := Adapters\\memory) + quote(quantity := 2; price := Adapters\\alternate)\n",
+          "reuse": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(2; Adapters\\memory) + quote(2; Adapters\\alternate)\n"
+        }
+      },
+      "procedural_lmx": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(quantity := 2; price := Adapters\\memory) + quote(quantity := 2; price := Adapters\\alternate)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the visible Core input order quantity, price for both calls. Both distinct adapters and the two quotations remain; a helper or common quantity local is longer than this positional form. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 7,
@@ -122,7 +172,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
+          "code": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income; expense))\n    demo:\n        return: execute(100; 60; Presenter\\render)\n",
           "notes_ru": "Вызов UseCase\\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI.",
           "notes_en": "Call UseCase\\demo(). output(decision:int)→int is an outer presentation port; the business rule does not read an HTTP profile or GUI."
         },
@@ -151,21 +201,33 @@
       "variants": {
         "LMX": {
           "procedural": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
-          "direct_expression": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n"
+          "direct_expression": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
+          "reuse": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income; expense))\n    demo:\n        return: execute(100; 60; Presenter\\render)\n"
         }
       },
       "primary_variant": {
-        "LMX": "direct_expression"
+        "LMX": "reuse"
       },
       "eligible_variants": {
         "LMX": [
           "procedural",
-          "direct_expression"
+          "direct_expression",
+          "reuse"
         ]
       },
       "fairness_notes": {
-        "LMX": "Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
-      }
+        "LMX": "Use visible input order income, expense for Policy and income, expense, output for UseCase. Keep the external output(decision := ...) contract and both complete Policy/Presenter implementations. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      },
+      "reuse_review": {
+        "previous_primary": "direct_expression",
+        "previous_fairness_note": "Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism.",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "inline_current_lmx_variants": [
+        "direct_expression",
+        "reuse"
+      ]
     },
     {
       "id": 8,
@@ -187,7 +249,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(order := Order; save := Repository\\save)\n",
+          "code": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(Order; Repository\\save)\n",
           "notes_ru": "Вызов Application\\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере.",
           "notes_en": "Call Application\\demo(). Order has no repository dependency; the test adapter save(order:@) retains a reference."
         },
@@ -211,7 +273,32 @@
           "why_ru": "Авторское описание отделения инфраструктуры от домена.",
           "why_en": "The author’s description of infrastructure outside the domain."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(order := Order; save := Repository\\save)\n",
+          "reuse": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(Order; Repository\\save)\n"
+        }
+      },
+      "procedural_lmx": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(order := Order; save := Repository\\save)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the visible submit input order order, save. Keep the named order actual on the saved callback because Repository has last before order; identity and save-before-total behavior remain. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 9,
@@ -325,7 +412,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
+          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(-3)\n",
           "notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
           "notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery."
         },
@@ -353,7 +440,32 @@
       "kind": "pattern",
       "implementation_ids": [
         93
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
+          "reuse": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(-3)\n"
+        }
+      },
+      "procedural_lmx": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the sole visible value position for pipeline(-3). The normalize/double/offset stages and measured PipeLibrary usage remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 93,
@@ -484,7 +596,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        install(implementation := Plugins\\twice)\n        int: first execute(value := 5)\n        install(implementation := Plugins\\thrice)\n        return: first + execute(value := 5)\n",
+          "code": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        int: value 5\n        install(implementation := Plugins\\twice)\n        int: first execute()\n        install(implementation := Plugins\\thrice)\n        return: first + execute()\n",
           "notes_ru": "Вызов Kernel\\demo(). Изменяется ссылка extension на уже существующий метод. Это не редактирование исполняемого тела и не скрытая компиляция.",
           "notes_en": "Call Kernel\\demo(). extension changes to an existing method. This neither edits a method body nor triggers hidden compilation."
         },
@@ -508,7 +620,32 @@
           "why_ru": "Практическое устройство ядра и extension points.",
           "why_en": "A concrete kernel and extension-point design."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "reuse_existing_definition_or_place",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        install(implementation := Plugins\\twice)\n        int: first execute(value := 5)\n        install(implementation := Plugins\\thrice)\n        return: first + execute(value := 5)\n",
+          "reuse": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        int: value 5\n        install(implementation := Plugins\\twice)\n        int: first execute()\n        install(implementation := Plugins\\thrice)\n        return: first + execute()\n"
+        }
+      },
+      "procedural_lmx": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        install(implementation := Plugins\\twice)\n        int: first execute(value := 5)\n        install(implementation := Plugins\\thrice)\n        return: first + execute(value := 5)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Set the demo-local value to 5 once and reuse ordinary autofill for both execute() calls. Kernel.value has no default, Plugins receive the same explicit value, and both install operations and plugin bodies remain. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 46,
@@ -530,7 +667,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(quantity := 2)\n",
+          "code": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(2)\n",
           "notes_ru": "Вызов Checkout\\demo(). Преобразование единиц написано явно; исходный primitive int не несёт автоматического знания о валюте.",
           "notes_en": "Call Checkout\\demo(). Unit translation is explicit; a primitive int does not automatically know its currency."
         },
@@ -554,7 +691,32 @@
           "why_ru": "Изоляция различных семантических моделей.",
           "why_en": "Isolation of different semantic models."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(quantity := 2)\n",
+          "reuse": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(2)\n"
+        }
+      },
+      "procedural_lmx": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(quantity := 2)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the sole visible quantity input for Checkout.total in demo. Legacy, conversion adapter and checkout remain separate and complete. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 47,
@@ -576,7 +738,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route := route)\n        return: Backends\\legacy(route := route)\n    demo:\n        node\\migrated := 0\n        int: before handle(route := 1)\n        node\\migrated := 1\n        return: before + handle(route := 1) + handle(route := 2)\n",
+          "code": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route)\n        return: Backends\\legacy(route)\n    demo:\n        int: route 1\n        node\\migrated := 0\n        int: before handle()\n        node\\migrated := 1\n        return: before + handle() + handle(route := 2)\n",
           "notes_ru": "Вызов Router\\demo(). В HTTP-профиле Router — владелец явной маршрутной Table; изменения принимает своим Message turn. Листинг показывает решение о маршруте после decoder/admission.",
           "notes_en": "Call Router\\demo(). In the HTTP profile Router owns an explicit route Table and changes it on its Message turn. The listing shows routing after decoding/admission."
         },
@@ -600,7 +762,32 @@
           "why_ru": "Постепенная замена частей работающей системы.",
           "why_en": "Incremental replacement of a running system."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "reuse_and_positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route := route)\n        return: Backends\\legacy(route := route)\n    demo:\n        node\\migrated := 0\n        int: before handle(route := 1)\n        node\\migrated := 1\n        return: before + handle(route := 1) + handle(route := 2)\n",
+          "reuse": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route)\n        return: Backends\\legacy(route)\n    demo:\n        int: route 1\n        node\\migrated := 0\n        int: before handle()\n        node\\migrated := 1\n        return: before + handle() + handle(route := 2)\n"
+        }
+      },
+      "procedural_lmx": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route := route)\n        return: Backends\\legacy(route := route)\n    demo:\n        node\\migrated := 0\n        int: before handle(route := 1)\n        node\\migrated := 1\n        return: before + handle(route := 1) + handle(route := 2)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the visible Backends.route position, and set demo-local route to 1 once for two handle() calls via autofill. The final route 2 remains explicitly named; migrated state writes and response order remain 101,201,102. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     }
   ]
 }

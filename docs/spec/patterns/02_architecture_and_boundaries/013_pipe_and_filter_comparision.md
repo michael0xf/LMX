@@ -32,7 +32,7 @@ Filters:
         import: PipeLibrary
         return: value pipe normalize double offset
     demo:
-        return: pipeline(value := -3)
+        return: pipeline(-3)
 ```
 
 Вызов Filters\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\priority("+") из sys\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.
@@ -86,11 +86,40 @@ func demo() int { return pipeline(-3) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 209 | 16 |
+| LMX | 202 | 16 |
 | Java | 308 | 10 |
 | Go | 275 | 7 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Filters:
+    int: value
+    return: int
+    normalize:
+        if: value < 0
+            return: -value
+        return: value
+    double:
+        return: value * 2
+    offset:
+        return: value + 1
+    pipeline:
+        import: PipeLibrary
+        return: value pipe normalize double offset
+    demo:
+        return: pipeline(value := -3)
+```
+
+**Основание выбора / Selection:** Use the sole visible value position for pipeline(-3). The normalize/double/offset stages and measured PipeLibrary usage remain unchanged.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

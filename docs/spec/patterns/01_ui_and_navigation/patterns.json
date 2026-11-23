@@ -168,7 +168,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(state := node\\state; delta := delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
+          "code": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(node\\state; delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
           "notes_ru": "Вызов Demo\\run(). Редуктор чист в данном примере; изменяется только ссылка/значение store. Состояние — скаляр, поэтому старое значение сохраняется обычным копированием.",
           "notes_en": "Call Demo\\run(). The reducer is pure in this example; only the store changes. Scalar state retains its previous value by ordinary value copying."
         },
@@ -192,7 +192,32 @@
           "why_ru": "Store, actions и чистые преобразования состояния.",
           "why_en": "Store, actions, and pure state transformations."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(state := node\\state; delta := delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
+          "reuse": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(node\\state; delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n"
+        }
+      },
+      "procedural_lmx": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(state := node\\state; delta := delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use positional state and delta for the visibly ordered Reducer DATA. Reducer invocation, current-store update and the saved intermediate state remain; no helper is hidden. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 35,
@@ -214,7 +239,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(admitted := 1; route := 1)\n",
+          "code": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(1; 1)\n",
           "notes_ru": "Вызов Front\\demo(). Это принимающее ядро HTTP-профиля: провайдер декодирует application/lmx в Message, нормализует endpoint/route и выполняет admission до вызова handle. Числа — результаты выбранного тестового response-mapping.",
           "notes_en": "Call Front\\demo(). This is the receiving core of the HTTP profile: its provider decodes application/lmx into a Message, normalizes endpoint/route, and performs admission before handle. Numbers are the test response mapping."
         },
@@ -238,7 +263,32 @@
           "why_ru": "Общая обработка всех входящих запросов.",
           "why_en": "Common handling of incoming requests."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(admitted := 1; route := 1)\n",
+          "reuse": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(1; 1)\n"
+        }
+      },
+      "procedural_lmx": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(admitted := 1; route := 1)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the visible Front input order admitted, route in demo. Both authorization and unknown-route branches remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 36,
@@ -260,7 +310,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(quantity := 3)\n",
+          "code": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(3)\n",
           "notes_ru": "Вызов OrderPage\\demo(). В HTTP-профиле явная маршрутная Table связывает /orders/show с этим принимающим методом; host и HTML-представление не включены.",
           "notes_en": "Call OrderPage\\demo(). An explicit HTTP route Table maps /orders/show to this receiver; the host and HTML rendering are excluded."
         },
@@ -284,7 +334,32 @@
           "why_ru": "Обработчик одной страницы или действия.",
           "why_en": "A handler for one page or action."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "positional_simplification",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(quantity := 3)\n",
+          "reuse": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(3)\n"
+        }
+      },
+      "procedural_lmx": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(quantity := 3)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Use the sole visible quantity input in demo. The invalid-quantity branch and subtotal calculation remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 37,

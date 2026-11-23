@@ -888,7 +888,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: first (copy(MoneyLibrary\\immutable\\Money))\n        @: second (copy(MoneyLibrary\\immutable\\Money))\n        @: third (merge(MoneyLibrary\\immutable\\Money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
+          "code": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: money MoneyLibrary\\immutable\\Money\n        @: first (copy(money))\n        @: second (copy(money))\n        @: third (merge(money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
           "notes_ru": "Demo\\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\\immutable\\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.",
           "notes_en": "Demo\\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\\immutable\\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden."
         },
@@ -916,7 +916,32 @@
       "kind": "pattern",
       "implementation_ids": [
         96
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "reuse_existing_definition_or_place",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: first (copy(MoneyLibrary\\immutable\\Money))\n        @: second (copy(MoneyLibrary\\immutable\\Money))\n        @: third (merge(MoneyLibrary\\immutable\\Money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
+          "reuse": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: money MoneyLibrary\\immutable\\Money\n        @: first (copy(money))\n        @: second (copy(money))\n        @: third (merge(money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n"
+        }
+      },
+      "procedural_lmx": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: first (copy(MoneyLibrary\\immutable\\Money))\n        @: second (copy(MoneyLibrary\\immutable\\Money))\n        @: third (merge(MoneyLibrary\\immutable\\Money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Resolve the unchanged Money template path once into a local reference money, reused by both copy operations and merge. All cents/currency fields, both independent constructions and the differing currency case remain visible. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 96,

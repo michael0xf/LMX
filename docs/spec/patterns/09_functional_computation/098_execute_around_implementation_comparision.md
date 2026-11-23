@@ -12,7 +12,9 @@
 
 Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+
+[Объявления выходов, обработчики и граница примера](FAILURE_BOUNDARIES.md#cleanup).
 
 ## LMX — основной: текущее ядро
 
@@ -25,12 +27,7 @@ FxAround:
         @: arguments ()
     return: @
     around:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         private: @: empty (copy(()))
         private: @: resource FxApply\apply(acquire; empty)
         private: @: resourceArgs FxOne\make(resource)
@@ -87,7 +84,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 399 | 22 |
+| LMX | 359 | 17 |
 | Haskell | 287 | 10 |
 | Scala | 141 | 9 |
 
@@ -166,7 +163,7 @@ object AroundInt {
 
 **Возможности общего ядра.** Обсуждается синхронная схема. Обобщение результата не означает автоматическую поддержку асинхронных исключений или ресурсных гарантий Message. Ошибки release следуют обычному finally-контракту; дополнительно прикладные failure names передаются через общий call-bridge.
 
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
 
 ## English explanation
 
@@ -178,11 +175,11 @@ Generic acquire/action/release: the resource, payload result and extra arguments
 
 **Expected observation.** Success: log 123 and the action result. Body failure: log 123 and propagation. Acquisition failure: log 1 and no release. The adjacent client encodes these cases as 42123, −123 and −1.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
 
 **Primary LMX.** The listing contains the bracket body from src/generic_wrappers.lmx. Resource and actuals travel in a vector of typed value records, not a reinterpreted dense int array. Generic apply uses ordinary argument admission and returns a record carrying the exact result type. The direct record API reports previously unknown failures as FxCallFailure with the original name and payload. Generated typed callables instead retain their declared failures through the explicit raise bridge.
 
-**Current core implementation.** The listing contains the bracket body from src/generic_wrappers.lmx. Resource and actuals travel in a vector of typed value records, not a reinterpreted dense int array. Generic apply uses ordinary argument admission and returns a record carrying the exact result type. The direct record API reports previously unknown failures as FxCallFailure with the original name and payload. Generated typed callables instead retain their declared failures through the explicit raise bridge.
+**LMX variant `core`.** The listing contains the bracket body from src/generic_wrappers.lmx. Resource and actuals travel in a vector of typed value records, not a reinterpreted dense int array. Generic apply uses ordinary argument admission and returns a record carrying the exact result type. The direct record API reports previously unknown failures as FxCallFailure with the original name and payload. Generated typed callables instead retain their declared failures through the explicit raise bridge.
 
 No execution of LMX or the control programs is claimed.
 
@@ -196,3 +193,5 @@ No execution of LMX or the control programs is claimed.
 ## Проверка
 
 [Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+
+[Declared exits, handlers, and example boundary](FAILURE_BOUNDARIES.md#cleanup).

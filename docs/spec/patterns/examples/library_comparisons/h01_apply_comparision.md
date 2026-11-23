@@ -14,18 +14,147 @@
 
 Ниже приведено консервативное замыкание по корневым LMX-определениям от `FxApply`: полные определения перечислены один раз, включая те, которые упомянуты в генерируемом тексте тела. Это видимый исходник текущего ядра; он не подменяется строкой импорта. Общие определения повторно используются другими receivers; одинаковые определения не считаются новой самостоятельной реализацией для каждого клиента.
 
+- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 
 ```lmx
+FxThrows:
+    adapter:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    call:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+    capture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    fixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    lazyfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxLazyCycle
+        FxRecordArity
+        FxTypeToken
+    mutation:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    mutationfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    permutation:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    predicate:
+        FxCallFailure
+        FxKernelFailure
+        FxPredicate
+        FxTypeToken
+        ReceiverIndex
+    rangefixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        SequenceSize
+        SequenceStep
+    recordcall:
+        FxCallFailure
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    reorder:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    retry:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    selection:
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequence:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequencefixture:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceElement
+        SequenceSize
+        SequenceStep
+    snapshot:
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    traversal:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+
 FxTry:
     private:
         @: operation
         @: args
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         private: @: info FxKernel\signature(subject := operation)
         return: FxKernel\attempt(operation; args; info\throws)
 
@@ -35,10 +164,7 @@ FxApply:
         @: args
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: outcome FxTry\attempt(operation := operation; args := args)
         if: outcome\ok = 0
             throw: FxCallFailure(outcome)
@@ -77,7 +203,7 @@ Application:
 
 | Показанный код | Непробельные символы | Непустые строки | UTF-8 байты |
 | --- | ---: | ---: | ---: |
-| LMX: алгоритм и перечисленные LMX-зависимости | 402 | 25 | 639 |
+| LMX: алгоритм и перечисленные LMX-зависимости | 1878 | 149 | 3135 |
 | Haskell: весь показанный модуль | 79 | 3 | 99 |
 | LMX: процедурный механизм сценария, отдельный контракт | 71 | 6 | 105 |
 

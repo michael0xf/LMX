@@ -22,9 +22,11 @@ FutureMessage:
     int: value 0
     @: waiters
     @: replies
+    reply:
+        replies\send(requestId; node\value)
     get:
         if: node\ready = 1
-            replies\send(requestId; node\value)
+            reply()
             return
         waiters\push(requestId)
     resolve:
@@ -33,8 +35,10 @@ FutureMessage:
         node\value := next
         node\ready := 1
         while: waiters\size() > 0
-            replies\send(waiters\pop(); node\value)
+            reply(waiters\pop())
 ```
+
+Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\pop()) получает очередной ID позиционно; оба читают текущее node\value.
 
 LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.
 
@@ -88,11 +92,43 @@ LMX/Erlang сохраняют ожидающих у владельца. Go close
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 273 | 19 |
+| LMX | 268 | 21 |
 | Go | 256 | 7 |
 | Erlang | 292 | 11 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+FutureMessage:
+    int: requestId
+    int: next
+    int: ready 0
+    int: value 0
+    @: waiters
+    @: replies
+    get:
+        if: node\ready = 1
+            replies\send(requestId; node\value)
+            return
+        waiters\push(requestId)
+    resolve:
+        if: node\ready = 1
+            return
+        node\value := next
+        node\ready := 1
+        while: waiters\size() > 0
+            replies\send(waiters\pop(); node\value)
+```
+
+**Основание выбора / Selection:** Share the complete reply method between the ready fast path and FIFO drain. The ready call uses normal DATA autofill of requestId; the draining call explicitly supplies each popped ID. The helper still sends the current node\value, and the first-resolution guard remains.
+
+**Completeness:** The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\pop()) receives the next ID positionally; both read the current node\value. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 ## English explanation
 

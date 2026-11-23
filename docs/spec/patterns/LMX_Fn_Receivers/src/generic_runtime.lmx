@@ -10,8 +10,7 @@ FxRecords:
     private: @: value
     return: @
     reference:
-        throws:
-            FxRecordArity
+        throws: FxRecordArity
         return: (value FxRecordOperands\record)
 
 FxOne:
@@ -44,11 +43,7 @@ FxAppend:
         @: second
     return: @
     append:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: empty (copy(()))
         return: FxSeqConcat\concat(parts := (empty; first; second))
 
@@ -61,14 +56,7 @@ FxArguments:
         @: args
     return: @
     capture:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture)
         private: @: info FxKernel\signature(subject := operation)
         if: length(args) > length(info\inputTypes)
             throw: FxArity()
@@ -80,10 +68,7 @@ FxApply:
         @: args
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: outcome FxTry\attempt(operation := operation; args := args)
         if: outcome\ok = 0
             throw: FxCallFailure(outcome)
@@ -105,12 +90,7 @@ FxWrap:
         @: policy 0
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         private: @: info FxKernel\signature(subject := contract)
         private: @: state (copy(FxEngineState))
         state\engine := engine
@@ -139,9 +119,7 @@ FxTry:
         @: args
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         private: @: info FxKernel\signature(subject := operation)
         return: FxKernel\attempt(operation; args; info\throws)
 
@@ -151,11 +129,7 @@ FxFailures:
         @: second
     return: @
     union:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         # Builder интернирует и устраняет повторные имена. Список не фиксирован.
         return: FxAppend\append(first; second)
 

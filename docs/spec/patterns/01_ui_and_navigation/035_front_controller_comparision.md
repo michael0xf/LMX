@@ -26,7 +26,7 @@ Front:
             return: 200
         return: 404
     demo:
-        return: handle(admitted := 1; route := 1)
+        return: handle(1; 1)
 ```
 
 Вызов Front\demo(). Это принимающее ядро HTTP-профиля: провайдер декодирует application/lmx в Message, нормализует endpoint/route и выполняет admission до вызова handle. Числа — результаты выбранного тестового response-mapping.
@@ -77,11 +77,36 @@ static class Example {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 137 | 12 |
+| LMX | 120 | 12 |
 | TypeScript | 147 | 6 |
 | C# | 153 | 8 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Front:
+    int: admitted
+    int: route
+    return: int
+    handle:
+        if: admitted = 0
+            return: 403
+        if: route = 1
+            return: 200
+        return: 404
+    demo:
+        return: handle(admitted := 1; route := 1)
+```
+
+**Основание выбора / Selection:** Use the visible Front input order admitted, route in demo. Both authorization and unknown-route branches remain unchanged.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

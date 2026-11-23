@@ -12,7 +12,7 @@
 
 Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
 ## LMX — основной: текущее ядро
 
@@ -23,14 +23,7 @@ FxPartial:
         @: prefix
     return: @
     partial:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture)
         private: @: info FxKernel\signature(subject := operation)
         private: int: n length(info\inputTypes)
         private: int: k length(prefix)
@@ -79,7 +72,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 589 | 24 |
+| LMX | 533 | 17 |
 | Haskell | 101 | 3 |
 | Scala | 91 | 4 |
 
@@ -153,7 +146,7 @@ object CurryInt {
 
 **Возможности общего ядра.** Остаточные входы сохраняют собственные defaults, required/private и разрешённое связывание исходного F. Prefix остаётся в полном исходном DATA для зависимых defaults. Ни factory, ни общий wrapper не запускают ненужные initializers. Произвольное окружение фабрики не захватывается; полный prefix даёт отложенный nullary callable. Runtime-подтверждение требует подключения обычных call-phase hooks.
 
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
 
 ## English explanation
 
@@ -165,11 +158,11 @@ General partial(F;prefix): an arbitrary heterogeneous signature, 0≤k≤N, exac
 
 **Expected observation.** The general case retains input order/types, exact R and declared failures. The addition client yields 6,101,6. N=0 produces a nullary callable; k>N fails before publishing a result.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
 
 **Primary LMX.** The actual partial algorithm is taken from src/generic_functions.lmx. It uses shared signature analysis, capturePrefix, DATA/graph construction and an ordinary generated call; arity and result type are not hardwired. Shared helpers are listed and measured in IMPLEMENTATION_DEPENDENCIES.md. Kernel interfaces are integration requirements, not a tested binary.
 
-**Current core implementation.** The actual partial algorithm is taken from src/generic_functions.lmx. It uses shared signature analysis, capturePrefix, DATA/graph construction and an ordinary generated call; arity and result type are not hardwired. Shared helpers are listed and measured in IMPLEMENTATION_DEPENDENCIES.md. Kernel interfaces are integration requirements, not a tested binary.
+**LMX variant `core`.** The actual partial algorithm is taken from src/generic_functions.lmx. It uses shared signature analysis, capturePrefix, DATA/graph construction and an ordinary generated call; arity and result type are not hardwired. Shared helpers are listed and measured in IMPLEMENTATION_DEPENDENCIES.md. Kernel interfaces are integration requirements, not a tested binary.
 
 No execution of LMX or the control programs is claimed.
 

@@ -38,15 +38,7 @@ FxLambdaMiddleEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxArity
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\retry)
         private: int: k length(state\prefix)
         private: @: value FxFrameRead\read(frame; 0)
         private: @: captured FxCaptureOne\capture(state\info\inputTypes[k]; value)
@@ -66,13 +58,7 @@ FxLambdaStages:
         @: prefix
     return: @
     build:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: inputs info\inputTypes
         private: int: n length(inputs)
         private: int: k length(prefix)
@@ -108,28 +94,22 @@ FxLambda:
     private: @: operation
     return: @
     lambda:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         return: FxLambdaStages\build(operation; info; (copy(())))
 ```
 
 ## Стоимость общих зависимостей
 
-Полное транзитивное множество curry: **11573** непробельных символов / **627** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **1948** символов / **97** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.
+Полное транзитивное множество curry: **12553** непробельных символов / **651** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **1791** символов / **73** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.
 
 | Дополнительное определение | Источник | Символы | Строки |
 | --- | --- | ---: | ---: |
 | `FxCurryState` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 53 | 5 |
-| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 13 |
-| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 221 | 13 |
-| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 440 | 20 |
-| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 963 | 38 |
+| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 9 |
+| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 178 | 7 |
+| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 369 | 12 |
+| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 920 | 32 |
 | `FxOne` | [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx) | 97 | 8 |
 
 ## Проверка

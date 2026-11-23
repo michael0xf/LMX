@@ -14,11 +14,7 @@ FxLazyEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxLazyCycle
-            FxTypeToken
+        throws: FxCallFailure FxKernelFailure FxLazyCycle FxTypeToken
         if: state\status = 2
             return: state\value
         if: state\status = 1
@@ -42,13 +38,7 @@ FxOnce:
     private: @: operation
     return: @
     once:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
         private: @: state (copy(FxLazyState))
@@ -61,13 +51,7 @@ FxLazy:
     private: @: operation
     return: @
     lazy:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         if: length(info\inputTypes) != 0
             throw: FxArity()
@@ -77,10 +61,7 @@ FxForce:
     private: @: thunk
     return: @
     force:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         return: FxApply\apply(thunk; (copy(())))
 
 FxRepeat:
@@ -90,15 +71,7 @@ FxRepeat:
         @: args ()
     return: @
     repeat:
-        throws:
-            FxArity
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\retry)
         if: count < 0
             throw: FxIndex()
         private: @: captured FxArguments\capture(operation; args)
@@ -117,10 +90,7 @@ FxUntil:
         @: initial
     return: @
     runUntil:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: current initial
         while: 1
             current := FxApply\apply(step; FxOne\make(current))
@@ -139,15 +109,7 @@ FxRetry:
         @: args ()
     return: @
     retryCall:
-        throws:
-            FxArity
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\retry)
         if: attempts < 1
             throw: FxIndex()
         private: @: captured FxArguments\capture(operation; args)
@@ -172,12 +134,7 @@ FxAround:
         @: arguments ()
     return: @
     around:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         private: @: empty (copy(()))
         private: @: resource FxApply\apply(acquire; empty)
         private: @: resourceArgs FxOne\make(resource)
@@ -197,14 +154,7 @@ FxRecoverEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\snapshot)
         private: @: outcome FxFrameAttempt\attempt(frame)
         if: outcome\ok != 0
             return: outcome\value
@@ -224,13 +174,7 @@ FxRecover:
         @: handler
     return: @
     recover:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: handlerInfo FxKernel\signature(subject := handler)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
@@ -257,11 +201,7 @@ FxTraceEmit:
         @: value
         int: hasValue
     emit:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\recordcall)
         private: @: event (copy(FxTraceEvent))
         event\phase := phase
         event\args := args
@@ -275,12 +215,7 @@ FxTraceEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: FxCallFailure FxIndex FxKernelFailure FxRecordArity FxTypeToken
         FxTraceEmit\emit(state\sink; "enter"; FxFrameObserve\observe(frame); 0; 0)
         private: int: succeeded 0
         finally:
@@ -301,13 +236,7 @@ FxTrace:
         @: sink
     return: @
     trace:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: sinkInfo FxKernel\signature(subject := sink)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)

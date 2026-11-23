@@ -6,11 +6,11 @@
 
 | ID | Паттерн | LMX | Java | Go | Граница |
 | ---: | --- | ---: | ---: | ---: | --- |
-| 011 | [CQRS](011_cqrs_comparision.md) | 262 / 19 | 395 / 16 | 347 / 12 | Протокол и порты |
+| 011 | [CQRS](011_cqrs_comparision.md) | 257 / 19 | 395 / 16 | 347 / 12 | Протокол и порты |
 | 012 | [Event Sourcing](012_event_sourcing_comparision.md) | 248 / 18 | 372 / 17 | 366 / 13 | Протокол и порты |
-| 041 | [Saga](041_saga_comparision.md) | 361 / 31 | 452 / 18 | 359 / 14 | Протокол и порты |
+| 041 | [Saga](041_saga_comparision.md) | 301 / 26 | 452 / 18 | 359 / 14 | Протокол и порты |
 | 048 | [Transactional Outbox](048_transactional_outbox_comparision.md) | 326 / 21 | 563 / 21 | 588 / 23 | Протокол и порты |
-| 050 | [Materialized View](050_materialized_view_comparision.md) | 214 / 17 | 205 / 11 | 269 / 11 | Протокол и порты |
+| 050 | [Materialized View](050_materialized_view_comparision.md) | 208 / 17 | 205 / 11 | 269 / 11 | Протокол и порты |
 | 051 | [Sharding](051_sharding_comparision.md) | 171 / 11 | 291 / 9 | 240 / 7 | Протокол и порты |
 | 055 | [Leader Election](055_leader_election_comparision.md) | 199 / 12 | 319 / 14 | 278 / 10 | Протокол и порты |
 | 057 | [Claim Check](057_claim_check_comparision.md) | 388 / 23 | 488 / 14 | 476 / 13 | Протокол и порты |

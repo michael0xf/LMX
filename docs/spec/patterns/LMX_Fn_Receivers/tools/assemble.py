@@ -5,6 +5,7 @@ import json
 ROOT = Path(__file__).resolve().parents[1]
 PARTS = [
     'src/kernel_contracts.lmx',
+    'src/failures.lmx',
     'src/reflection.lmx',
     'src/adapter_frames.lmx',
     'src/generic_functions.lmx',

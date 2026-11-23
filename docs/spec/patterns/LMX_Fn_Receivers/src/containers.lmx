@@ -27,10 +27,7 @@ FxBind:
         @: next
     return: @
     bind:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
@@ -66,10 +63,7 @@ FxBindResult:
         @: next
     return: @
     bindResult:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         if: input\ok = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
@@ -85,11 +79,7 @@ FxList:
     required: values
     return: @
     list:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         return: FxSeqList\list(values)
 
 FxListBind:
@@ -99,12 +89,7 @@ FxListBind:
     required: items next
     return: @
     flatMap:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         return: FxSeqFlatMap\flatMap(items; next)
 
 # Bounce stores either a final value record or an ordinary nullary callable.
@@ -128,10 +113,7 @@ FxMore:
     private: @: thunk
     return: @
     more:
-        throws:
-            FxArity
-            FxKernelFailure
-            FxTypeToken
+        throws: FxArity FxKernelFailure FxTypeToken
         private: @: shape FxKernel\signature(subject := thunk)
         if: length(shape\inputTypes) != 0
             throw: FxArity()
@@ -143,10 +125,7 @@ FxTrampoline:
     private: FxBounce@: current
     return: @
     trampoline:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: empty (copy(()))
         while: current\done = 0
             private: @: record FxApply\apply(current\next; empty)

@@ -45,6 +45,18 @@ def main():
     check(set(x['load_before']) <= set(r.get('allowed_user_helpers',[])),ident+': undeclared user-helper or alternate core dependency retained')
    check(cases[ident].get('selected_variant')==selected['id'],ident+': expected cases selected variant mismatch')
    check(cases[ident].get('core_versions')==1,ident+': current-core scope missing')
+  source_record=selected if ident in variants else cases[ident]
+  if source_record.get('embedded_helpers'):
+   historical=source_record['historical_client']
+   check(metric(historical['code'])==historical['metrics'],ident+': preserved client metrics differ')
+   helper_sources=[]
+   for helper in source_record['embedded_helpers']:
+    helper_code=canonical((EX/helper['source']).read_text())
+    check(metric(helper_code)==helper['metrics'],ident+': embedded helper source changed')
+    helper_sources.append(helper_code.rstrip())
+   complete='\n\n'.join(helper_sources+[canonical(historical['code']).rstrip()])+'\n'
+   check(primary==complete,ident+': complete listing is not exact helper prefix plus preserved client')
+   check(not cases[ident].get('load_before'),ident+': embedded helper still loaded separately')
   checked.append({'id':ident,'primary':metric(primary),'selected':row.get('selected_variant','single_existing'),'has_alternative':ident in variants})
  check((EX/'libraries/haskell/Partial.hs').read_bytes()==(ROOT/'09_functional_computation/examples/haskell/099_integer_partial_application_implementation.hs').read_bytes(),'Partial.hs differs from generic099')
  report={'format':'examples-receiver-revision-v2','date':'2026-11-22','status':'PASS' if not errors else 'FAIL','scope':'One-core semantic alternatives, shortest fair primary, exact source identity and counts. No parser or runtime execution.','core_versions':1,'runtime':{'lmx_executed':False,'haskell_executed':False},'source_count':len(checked),'paired_ids':list(variants),'selected':{k:v['selected'] for k,v in variants.items()},'checks':checked,'error_count':len(errors),'errors':errors,'counts_report':'functional_receiver_counts.json','library_counts_report':'receiver_library_counts.json'}

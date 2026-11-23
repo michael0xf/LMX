@@ -2,7 +2,7 @@
 
 Haskell is a natural control for Maybe/Monad and currying. Scala combines functional constructs with JVM execution, explicit trampolines and ordinary resource handling. The selection follows mechanisms rather than a universal brevity ranking.
 
-The archive defines one current LMX core. Its operations are called directly; no selectable Maybe/Curry/Bounce library editions are supplied. Primary code is the shortest correct current-contract algorithm at the same comparison boundary. Ready components are available to clients in all three languages; implementation rows show actual bodies and shared infrastructure is counted separately. Former specialized listings remain adjacent as explanation and are excluded from the current count; they do not replace generic containers or callables with int restrictions.
+The archive defines one current LMX core. Its operations are called directly; no selectable Maybe/Curry/Bounce library editions are supplied. Primary code is the shortest correct application scenario with all of its own code counted. Ready generic components are available in all three languages; implementation rows show their actual bodies and retain the generic contract. Client 084 may instead use a local Around: all three callbacks and observations remain, and the entire helper is counted within the client. Generic bracket remains a current alternative with implementation 098. Earlier publications remain adjacent without double counting; a historical-source label does not imply that every construct in that source is forbidden by the current language.
 
 ## Files
 
@@ -13,6 +13,7 @@ The archive defines one current LMX core. Its operations are called directly; no
 - [Current core dependencies and implementation cost](IMPLEMENTATION_DEPENDENCIES.md)
 - [Validation](VALIDATION_2026-11-22.md)
 - [Receiver API](../LMX_Fn_Receivers/API.md)
+- [Declared exits and handlers](FAILURE_BOUNDARIES.md)
 
 ## Catalog
 
@@ -46,7 +47,7 @@ Mutual even/odd steps use generic Bounce with a nullary continuation created by 
 
 **Companion implementation:** [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md), [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Primary variants:** LMX: core, Haskell: generic, Scala: generic.
+**Primary variants:** LMX: shared_body, Haskell: generic, Scala: generic.
 
 **Scenario:** For nonnegative n, compute parity. An unfinished step returns more(partial(otherStep; (n−1))) without invoking the other step. trampoline invokes one retained thunk at a time until done.
 
@@ -66,13 +67,13 @@ Generic Bounce holds an arbitrary result record or a nullary thunk; the runner d
 
 ### [084. Execute Around](084_execute_around_comparision.md)
 
-The client calls direct bracket; acquire/action/release and the observable log remain application code.
+Supplied acquire/action/release callbacks surround protected resource use. The shortest LMX includes its local helper in full; generic bracket remains a current alternative.
 
 **Companion implementation:** [098. Execute Around implementation](098_execute_around_implementation_comparision.md)
 
-**Primary variants:** LMX: core, Haskell: generic, Scala: generic.
+**Primary variants:** LMX: shared_trace, Haskell: generic, Scala: generic.
 
-**Scenario:** The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. The client uses the same ready bracket abstraction in all three languages and catches the failure only to observe the log.
+**Scenario:** The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. Every variant supplies acquire/release/action callbacks, releases only an acquired resource, and catches the application failure to observe the log. Using a maximally generic bracket is not a separate requirement of this int-result application.
 
 **Observation:** run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure reaches the client after release. run(2) yields −1: acquisition failed and no release ran. The resource is not used after cleanup.
 
@@ -114,4 +115,4 @@ General partial(F;prefix): an arbitrary heterogeneous signature, 0≤k≤N, exac
 
 ## Counting boundary
 
-Only primary listings are measured; each is the shortest eligible current-contract algorithm in its language. Historical LMX source remains beside current code. Current core dependencies and shared infrastructure are accounted separately. No runtime execution is implied.
+Only primary listings are measured; each is the shortest eligible current-contract algorithm in its language. Historical LMX source remains beside current code. Current core dependencies and shared infrastructure are accounted separately; the local helper in 084 is counted in full inside its client. Generic implementation requirements are not imposed on a usage scenario beyond its actual contract. No runtime execution is implied.

@@ -22,17 +22,21 @@ ReadyMessage:
     int: value 0
     @: waiters
     @: replies
+    reply:
+        replies\send(requestId; node\value)
     awaitValue:
         if: node\ready = 1
-            replies\send(requestId; node\value)
+            reply()
             return
         waiters\push(requestId)
     publish:
         node\value := next
         node\ready := 1
         while: waiters\size() > 0
-            replies\send(waiters\pop(); node\value)
+            reply(waiters\pop())
 ```
+
+Общий reply целиком показан и учтён: готовый запрос использует обычное автозаполнение requestId, а publish передаёт очередной ID из FIFO позиционно. Это не добавляет ожидания и не меняет правило повторной публикации.
 
 LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.
 
@@ -93,11 +97,41 @@ Java/Rust освобождают lock во время ожидания и пов
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 258 | 17 |
+| LMX | 253 | 19 |
 | Java | 208 | 11 |
 | Rust | 386 | 14 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+ReadyMessage:
+    int: requestId
+    int: next
+    int: ready 0
+    int: value 0
+    @: waiters
+    @: replies
+    awaitValue:
+        if: node\ready = 1
+            replies\send(requestId; node\value)
+            return
+        waiters\push(requestId)
+    publish:
+        node\value := next
+        node\ready := 1
+        while: waiters\size() > 0
+            replies\send(waiters\pop(); node\value)
+```
+
+**Основание выбора / Selection:** Share the complete reply method between an already-ready request and the publish drain. Normal DATA autofill carries requestId for the first case; each popped ID is positional for the second. publish can still run while earlier clients wait, and later publication is not changed into Future single assignment.
+
+**Completeness:** The complete counted reply body is shared: an already-ready request uses ordinary requestId autofill, while publish supplies each FIFO ID positionally. This adds no wait and does not change republishing policy. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 ## English explanation
 

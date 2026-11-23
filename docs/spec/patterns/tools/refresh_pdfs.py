@@ -75,6 +75,7 @@ def main():
     story += [table(['Пример','Основные символы','Непустые строки','Второй вариант рядом'],rows,[160,205,185,230]),PageBreak(),p('Исходная подборка GoF','TitleLMX'),p('Все 184 основных листинга повторно пересчитаны. Более короткие варианты Composite, Prototype и Abstract Factory сохранены вместе с процедурными аналогами. В Flyweight исправлен отступ return; width остаётся во всех языках.')]
     rows=[[lang,n] for lang,n in stats['gof']['total_characters'].items()]
     story += [table(['Язык','Непробельных символов'],rows,[300,480]),Spacer(1,15),p('Метод и проверка','HeadingLMX'),p('Источник всех чисел: основные строки кода в patterns.json, отдельные .lm3 и помеченные прикладные блоки корневых Markdown. Нормализация LF, удаление пустых строк по краям, один LF в конце. Unicode-символы, для которых isspace=false, считаются по одному. В JSON также сохранены UTF-8-байты и SHA-256.'),p('Эти измерения описывают конкретные исходники. Они не подтверждают runtime-корректность, одинаковую универсальность всех реализаций, скорость или расход памяти. Проверки публикации и формул отделены от будущей приёмки LMX на ядре.'),p('Полные данные: validation/statistics_20261122.json. Текстовая сводка и CSV/XLSX: STATISTICS_2026-11-22.*. Групповые PDF/Excel находятся в девяти каталогах сравнения.','SmallLMX')]
+    story += [p('Клиенты и реализации ядра считаются раздельно. Исторические специализации сохранены как пояснение. Для 085 показаны сопоставимые curry/partial. В 084 весь локальный Around входит в основной размер; общий bracket сохранён рядом. Прежний процедурный код также доступен. Полные основания выбора находятся в patterns.json и Markdown.','SmallLMX')]
     story += [PageBreak(),p('Выбор основного варианта','TitleLMX'),p('Сначала проверяется один договор задачи и сопоставимый уровень подсчёта, затем выбирается минимум по символам. Архитектурные преимущества динамического LMX сохраняются; одинаковое устройство алгоритмов не требуется. Все варианты работают в одном текущем ядре, а исторические листинги не подключаются как другие версии библиотек.')]
     choices=[]
     for x in stats['functional_receiver_counts']['rows']:
@@ -82,7 +83,7 @@ def main():
         selected=x['selected_variant'];alternate=x['alternative_variant'];eligible=x.get('eligible_variants',list(x['variants']))
         choices.append([x['id'],selected,x['variants'][selected]['characters'],x['variants'][alternate]['characters'],'Да' if alternate in eligible else 'Нет: другой договор'])
     if choices:story += [table(['Пример','Основной вариант','Основной, символы','Второй, символы','Второй сопоставим'],choices,[80,180,140,140,240]),Spacer(1,8)]
-    story += [p('Полное основание выбора записано рядом с каждым примером и в examples/validation/functional_receiver_counts.json. Более короткий код, который убирает реальные raw-occurrences, поля или эффекты, не заменяет исходный сценарий.','SmallLMX'),p('Функциональная группа: текущий общий контракт','HeadingLMX')]
+    story += [p('Полное основание выбора записано рядом с каждым примером и в examples/validation/functional_receiver_counts.json. Более короткий код, который убирает реальные raw-occurrences, поля или эффекты, не заменяет исходный сценарий.','SmallLMX'),p('Функциональная группа: текущие варианты','HeadingLMX')]
     choices=[]
     for x in json.loads((ROOT/'09_functional_computation/patterns.json').read_text())['patterns']:
         code=next(y['code'] for y in x['listings'] if y['language']=='LMX')
@@ -90,11 +91,11 @@ def main():
         alternatives=[n for n in eligible if n!=active]
         if alternatives:
             name=min(alternatives,key=lambda n:sum(not c.isspace() for c in variants[n]));old=variants[name]
-            note=f'Сопоставимая пара: {active} / {name}; выбран минимум'
+            note=('Общие code/eval / отдельные callbacks; оба helper учтены полностью' if x['id']==84 else f'Сопоставимая пара: {active} / {name}; выбран минимум')
         else:
             old=x.get('alternative',{}).get('LMX',{}).get('code','');note='Исторический исходник сохранён; договор отличается'
         choices.append([f"{x['id']:03d}",sum(not c.isspace() for c in code),sum(not c.isspace() for c in old),note])
-    story += [table(['ID','Основной LMX','Второй LMX','Граница сравнения'],choices,[70,140,160,410]),Spacer(1,8),p('Клиенты и реализации ядра считаются раздельно. Исторические специализации сохранены как пояснение. Для 085 показаны сопоставимые curry/partial; прежний процедурный код также доступен рядом. Полные основания выбора находятся в patterns.json и Markdown.','SmallLMX')]
+    story += [table(['ID','Основной LMX','Второй LMX','Граница сравнения'],choices,[70,140,160,410])]
     target=ROOT/'STATISTICS_2026-11-22.pdf';doc(target,'LMX: статистика 22 ноября 2026').build(story,onFirstPage=footer,onLaterPages=footer);generated.append(target.name)
     gof=json.loads((ROOT/'validation/gof_statistics_20261122.json').read_text())
     languages=['LMX','Python','Java','C++','C#','TypeScript','Go','Rust']

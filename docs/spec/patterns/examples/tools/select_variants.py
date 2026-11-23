@@ -68,7 +68,7 @@ def main():
   anchor='<a id="'+ident.lower()+'"></a>';start=guide.index(anchor);next_anchor=re.search(r'<a id="[^\"]+"></a>',guide[start+len(anchor):]);end=start+len(anchor)+next_anchor.start() if next_anchor else len(guide)
   guide=guide[:start]+snippet+guide[end:]
   comparisons.append({'id':ident,'selected':chosen['id'],'alternative':alternate['id'],'variants':{v['id']:v['metrics'] for v in variants},'eligible_variants':record['eligible_variants'],'fairness_note':record['fairness_note']})
- intro='''**Правило основной версии.** Для H01, H02, H03, H04, H06, H07, R01 и V02 рядом сохранены прямой/процедурный код и вариант с [общими ресиверами текущего ядра](LMX_Fn_Receivers/README.md). Основным является более короткий корректный полный листинг среди вариантов с сопоставимой границей учёта; второй показан рядом и исключён из размера основного. H05/H08 сохраняют непосредственное связывание и место записи, H09 — живую декларацию и выход Stop. [Полный аудит](examples/OPTIMIZATION_REVIEW.md).\n'''
+ intro='''**Правило основной версии.** Для H01, H02, H03, H04, H06, H07, R01, V02 и V03 рядом сохранены полные варианты реализации: с прямыми вызовами, общими ресиверами текущего ядра либо повторным использованием уже показанного локального метода. Основным является более короткий корректный полный листинг среди вариантов с сопоставимой границей учёта; второй показан рядом и исключён из размера основного. H09 и V02 включают собственные helpers в основной код и его размер. H05/H08 сохраняют непосредственное связывание и место записи, H09 — живую декларацию и выход Stop. [Полный аудит](examples/OPTIMIZATION_REVIEW.md).\n'''
  guide=re.sub(r'\*\*Редакция с общими ресиверами\.\*\*.*?\n',intro,guide,count=1)
  guide=re.sub(r'\*\*Правило основной версии\.\*\*.*?\n',intro,guide,count=1)
  (ROOT/'LMX_examples_and_analogies.ru.md').write_text(guide)
@@ -79,7 +79,7 @@ def main():
  for path in sorted((EX/'lmx').glob('*.lm3')):
   ident=path.stem;current=path.read_text().split(BEGIN)[0].split(OLD_BEGIN)[0]
   previous=oldrows[ident];before=previous.get('historical_before',previous['before'])
-  item={'id':ident,'file':'lmx/'+path.name,'changed':ident in selected,'before':before,'historical_before':before,'after':metric(current),'has_alternative':ident in selected}
+  item={'id':ident,'file':'lmx/'+path.name,'changed':metric(current)['sha256']!=before['sha256'],'before':before,'historical_before':before,'after':metric(current),'has_alternative':ident in selected}
   if ident in selected:
    record=next(r for r in registry['records'] if r['id']==ident)
    item.update({'selected_variant':record['selected'],'alternative_variant':record['alternative'],'variants':{v['id']:v['metrics'] for v in record['variants']},'original_source_sha256_at_import':record['original_source_sha256_at_import'],'original_algorithm_preserved':True,'eligible_variants':record['eligible_variants'],'fairness_note':record['fairness_note'],'syntax_normalized':'Name :: DATA; signatureTypes token constructor'})
@@ -91,15 +91,15 @@ def main():
  # A current publication report supersedes the former forced-functional counts.
  audit='''# Аудит examples: выбор основной версии по длине
 
-Редакция:22 ноября2026 года. Просмотрены все24 исходных LMX-клиента. Для H01,H02,H03,H04,H06,H07,R01,V02 сохранены основные алгоритмы и альтернативные приёмы; эквивалентность полного сценария отмечена отдельно: прямая/процедурная и с общими ресиверами текущего ядра. Основной выбран минимальный корректный листинг среди вариантов с честной границей учёта. Все receivers доступны в одном ядре без import fun. Учитываются реальные throws, поля, копии, идентичности и эффекты; языки могут выражать их разными архитектурными механизмами.
+Редакция:22 ноября2026 года. Просмотрены все24 исходных LMX-клиента. Для H01,H02,H03,H04,H06,H07,R01,V02,V03 сохранены полные основные и альтернативные алгоритмы; эквивалентность полного сценария отмечена отдельно. V03 повторно использует уже имеющийся локальный sample. Основной выбран минимальный корректный листинг среди вариантов с честной границей учёта. Все receivers доступны в одном ядре без import fun. Учитываются реальные throws, поля, копии, идентичности и эффекты; языки могут выражать их разными архитектурными механизмами. [Индивидуальный аудит 47 примеров](../validation/reuse_review_gof_examples_20261122.json) охватывает также23 корневых GoF.
 
-| Пример | Прямая/специализированная | Общие ресиверы | Основной |
+| Пример | Первый сохранённый вариант | Второй вариант | Основной |
 | --- | ---: | ---: | --- |
 '''
  for record in registry['records']:
   a,b=record['variants'];audit+=f"| [{record['id']}](lmx/{record['id']}.lm3) | {a['metrics']['characters']} | {b['metrics']['characters']} | {record['selected']} |\n"
  audit+='''
-Остальные16 клиентов сохранены прямыми. H05/H08 проверяют непосредственный caller и место записи, H09 — передаваемую декларацию, четыре вызова next и три исполнения тела. Остальные случаи относятся к графу, проверке поведения и Message/HTTP; дополнительный функциональный wrapper не уменьшает их проверяемый механизм. R01 получил более короткий эквивалентный derive, с сохранением width/height/depth и видимой реализацией рядом. Новый Pattern-вариант V02 показан отдельно: он сохраняет ASCII-результаты на 8-битном byteText-профиле, но не подменяет собственный between и не получает бесплатного конкурентного regex-контроля. [Проверка всех24 по новой семантике](SEQUENCE_PATTERN_REVIEW.md).
+Остальные15 клиентов сохраняют прямой алгоритм. H05/H08 проверяют непосредственный caller и место записи, H09 — передаваемую декларацию, четыре вызова next и три исполнения тела. Полный Cycles включён в основной H09; полный CharacterRange включён в основной V02. Их прежние клиентские части сохранены без изменений, но размер теперь включает helpers. Остальные случаи относятся к графу, проверке поведения и Message/HTTP; дополнительный функциональный wrapper не уменьшает их проверяемый механизм. R01 получил более короткий эквивалентный derive, с сохранением width/height/depth и видимой реализацией рядом. Pattern-вариант V02 показан отдельно: он сохраняет ASCII-результаты на 8-битном byteText-профиле, но не подменяет собственный between и не получает бесплатного конкурентного regex-контроля. [Проверка всех24 по новой семантике](SEQUENCE_PATTERN_REVIEW.md).
 
 ## Границы измерения и зависимости
 
@@ -123,7 +123,7 @@ def main():
  readme=(EX/'README.ru.md').read_text();start=readme.index('## Редакция с общими ресиверами');end=readme.index('## Haskell',start)
  replacement='''## Редакция с общими ресиверами и выбором короткого варианта
 
-Для H01,H02,H03,H04,H06,H07,R01,V02 основной — более короткий корректный полный LMX-код, второй вариант сохранён рядом и исключён из его размера. Сравниваются только корректные варианты с сопоставимой границей учёта. Естественные динамические вызовы, копирование и связывание LMX не заменяются искусственной архитектурной имитацией. [Аудит и таблица](OPTIMIZATION_REVIEW.md) · [Оба исходника и зависимости](variants.json).
+Для H01,H02,H03,H04,H06,H07,R01,V02,V03 основной — более короткий корректный полный LMX-код, второй вариант сохранён рядом и исключён из его размера. V03 использует уже объявленный локальный sample; H09 и V02 включают собственные Cycles/CharacterRange в основной блок и размер. Сравниваются только корректные варианты с сопоставимой границей учёта. Естественные динамические вызовы, копирование и связывание LMX не заменяются искусственной архитектурной имитацией. [Аудит и таблица](OPTIMIZATION_REVIEW.md) · [Оба исходника и зависимости](variants.json).
 
 `expected_results.json` указывает `selected_variant`, `alternative_cases`, `variant_cases` и `variant_load_before`. Каждый вариант запускается отдельно. Все общие ресиверы входят в одно текущее ядро и доступны прямо. [LMX_Receivers.lmx](../LMX_Fn_Receivers/LMX_Receivers.lmx) — его видимые исходники, а не отдельная выбираемая версия библиотеки. Старые механизмы, если они нужны процедурному аналогу, явно записаны внутри самого примера. Каталог libraries сохраняет исходники механизмов для чтения, а не набор альтернативных ядер.
 

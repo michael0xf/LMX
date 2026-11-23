@@ -11,12 +11,7 @@ FxMixedTarget:
         char[]: text
     return: double
     evaluate:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += 1
         # В этом тесте number >= 0. Смешанная сигнатура не подразумевает
         # неоговорённое автоматическое int -> double promotion в арифметике.
@@ -36,23 +31,13 @@ FxProcedureTarget:
         int: count
         char[]: label
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += count + length(label)
 
 FxNullaryTarget:
     return: double
     value:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += 1
         return: 2.5
 
@@ -64,24 +49,14 @@ FxPairTarget:
         int: number
         char[]: text
     create:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: count label
 
 FxReturnedCallable:
     private: int: value
     return: int
     increment:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: value + 1
 
 FxCallableResultTarget:
@@ -90,12 +65,7 @@ FxCallableResultTarget:
         double: second
     return: @
     choose:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += 1
         return: FxReturnedCallable\increment
 

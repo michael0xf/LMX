@@ -17,7 +17,7 @@
 | 049 | [Cache-Aside](049_cache_aside_comparision.md) | 182 / 15 | 234 / 7 | 222 / 9 | Протокол и порты |
 | 052 | [Throttling](052_throttling_comparision.md) | 179 / 14 | 177 / 7 | 170 / 9 | Протокол и порты |
 | 053 | [Queue-Based Load Leveling](053_queue_based_load_leveling_comparision.md) | 113 / 10 | 189 / 6 | 202 / 7 | Протокол и порты |
-| 054 | [Competing Consumers](054_competing_consumers_comparision.md) | 288 / 28 | 233 / 9 | 445 / 11 | Протокол и порты |
+| 054 | [Competing Consumers](054_competing_consumers_comparision.md) | 242 / 24 | 233 / 9 | 445 / 11 | Протокол и порты |
 | 056 | [Health Endpoint Monitoring](056_health_endpoint_monitoring_comparision.md) | 96 / 9 | 84 / 5 | 77 / 2 | Протокол и порты |
 | 087 | [Backpressure](087_backpressure_comparision.md) | 187 / 17 | 194 / 6 | 166 / 8 | Протокол и порты |
 

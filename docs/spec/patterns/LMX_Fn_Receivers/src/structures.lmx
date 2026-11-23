@@ -9,11 +9,7 @@ RxSelect:
     required: source indices
     return: @
     select:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         return: FxSeqSelect\select(source; indices)
 
 RxOmit:
@@ -23,11 +19,7 @@ RxOmit:
     required: source indices
     return: @
     omit:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         return: FxSeqOmit\omit(source; indices)
 
 RxReorder:
@@ -37,12 +29,7 @@ RxReorder:
     required: source permutation
     return: @
     reorder:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            ReceiverPermutation
-            SequenceSize
+        throws: copy(FxThrows\reorder)
         return: FxSeqReorder\reorder(source; permutation)
 
 RxProject:
@@ -52,11 +39,7 @@ RxProject:
     required: source indices
     return: @
     project:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         return: FxSeqProject\project(source; indices)
 
 # defaults(source; fallback): composition whose fallback defines the model.
@@ -148,9 +131,7 @@ RxPatch:
     RxSlotPatch@: change
     return: @
     patch:
-        throws:
-            ReceiverPatchBase
-            ReceiverPatchFormat
+        throws: ReceiverPatchBase ReceiverPatchFormat
         int: oldSize change\oldSize
         int: newSize change\newSize
         @: old change\before
@@ -219,8 +200,7 @@ RxComposeData:
     @: overlay
     return: @
     composeData:
-        throws:
-            ReceiverParent
+        throws: ReceiverParent
         @: data parent(code)
         if: data = 0
             throw: ReceiverParent()
@@ -238,8 +218,7 @@ RxBindFields:
     private: @: bindings
     return: @
     bindFields:
-        throws:
-            ReceiverParent
+        throws: ReceiverParent
         return: RxComposeData\composeData(operation; bindings)
 
 # Общий rename находится в reflection_bridges.lmx и использует таблицу имён.

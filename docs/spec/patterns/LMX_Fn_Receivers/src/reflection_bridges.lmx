@@ -6,12 +6,7 @@ RxSignature:
     private: @: operation
     return: @
     signature:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         private: @: info FxKernel\signature(subject := operation)
         return: FxSignatures\make(inputs := info\inputTypes; result := info\resultType)
 
@@ -22,9 +17,7 @@ RxNames:
     private: @: source
     return: @
     names:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         return: FxKernel\fieldNames(source := source)
 
 # Один общий copy сохраняет циклы, общие рёбра и parent-карту.
@@ -37,11 +30,7 @@ RxRename:
         @: labels
     return: @
     rename:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxArity FxIndex FxKernelFailure FxTypeToken
         if: length(indices) != length(labels)
             throw: FxArity()
         private: int: i 0

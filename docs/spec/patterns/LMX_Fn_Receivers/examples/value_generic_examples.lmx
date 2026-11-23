@@ -5,39 +5,21 @@ FxTextLength:
     private: char[]: value
     return: int
     measure:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxLazyCycle
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\lazyfixture)
         return: length(value)
 
 FxDoubleStep:
     private: double: value
     return: double
     increase:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxLazyCycle
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\lazyfixture)
         return: value + 0.5
 
 FxStringMaybe:
     private: char[]: value
     return: @
     accept:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxLazyCycle
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\lazyfixture)
         if: length(value) = 0
             return: FxNone\none()
         return: FxSome\some(value := (value FxRecordOperands\record))

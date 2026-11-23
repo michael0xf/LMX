@@ -12,10 +12,7 @@ FxCompositionEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: middle FxFrameApply\apply(frame)
         return: FxApply\apply(state\outer; FxOne\make(middle))
 
@@ -25,13 +22,7 @@ FxCompose:
         @: inner
     return: @
     compose:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: a FxKernel\signature(subject := outer)
         private: @: b FxKernel\signature(subject := inner)
         if: length(a\inputTypes) != 1 || b\hasResult = 0
@@ -49,25 +40,14 @@ FxPipe:
         @: second
     return: @
     pipe:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         return: FxCompose\compose(outer := second; inner := first)
 
 FxIdentity:
     private: @: typeToken
     return: @
     identity:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         private: @: requirement FxKernel\normalizeType(token := typeToken)
         private: @: contract FxSignatures\make(FxOne\make(requirement); requirement)
         private: @: state (copy(()))
@@ -84,10 +64,7 @@ FxPermutationEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         return: FxFrameApply\apply(frame)
 
 FxPermute:
@@ -96,14 +73,7 @@ FxPermute:
         @: permutation
     return: @
     permute:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            ReceiverPermutation
-            SequenceSize
+        throws: copy(FxThrows\permutation)
         private: @: info FxKernel\signature(subject := operation)
         private: @: reordered RxReorder\reorder(info\inputTypes; permutation)
         private: @: state (copy(FxPermutationState))
@@ -129,14 +99,7 @@ FxMemoEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\snapshot)
         private: @: key FxFrameSnapshot\snapshot(frame)
         private: int: i 0
         while: i < length(state\entries)
@@ -167,13 +130,7 @@ FxMemo:
         @: sameKey
     return: @
     memo:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: equality FxKernel\signature(subject := sameKey)
         private: @: state (copy(FxMemoState))
@@ -194,11 +151,7 @@ FxFixEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\recordcall)
         return: FxFrameApply\apply(frame)
 
 # F(self; T0...Tn)->R превращается в T0...Tn->R.
@@ -207,14 +160,7 @@ FxFix:
     private: @: operation
     return: @
     fix:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture)
         private: @: info FxKernel\signature(subject := operation)
         if: length(info\inputTypes) = 0
             throw: FxArity()
@@ -240,10 +186,7 @@ FxAdapterEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: mappedRecord FxFrameApply\apply(frame)
         private: @: mapped \mappedRecord
         private: @: result FxApply\apply(state\operation; mapped)
@@ -264,13 +207,7 @@ FxAdapter:
         @: contract
     return: @
     adapter:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: a FxKernel\signature(subject := operation)
         private: @: b FxKernel\signature(subject := before)
         private: @: c FxKernel\signature(subject := after)
@@ -290,11 +227,7 @@ FxPredicateEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\recordcall)
         private: @: record FxFrameApply\apply(frame)
         private: int: truth \record
         return: ((truth != 0) FxRecordOperands\record)
@@ -306,13 +239,7 @@ FxPredicate:
     private: @: operation
     return: @
     predicate:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: booleanType FxKernel\normalizeType(token := FxBooleanToken[0])
         private: @: contract FxSignatures\make(info\inputTypes; booleanType)
@@ -331,13 +258,7 @@ FxContractEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: FxCallFailure FxKernelFailure FxPredicate FxTypeToken ReceiverIndex SequenceSize
         if: state\pre != 0
             private: @: flagRecord FxApplyPlaces\apply(state\pre; frame)
             private: int: flag \flagRecord
@@ -364,13 +285,7 @@ FxContract:
         @: post
     return: @
     contract:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
         private: @: failures FxAppend\append(info\throws; ("FxPredicate"))
         if: pre != 0
@@ -392,13 +307,7 @@ FxGuard:
         @: accepts
     return: @
     guard:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         return: FxContract\contract(operation; accepts; 0)
 
 FxOverloadState:
@@ -411,12 +320,7 @@ FxOverloadEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxAmbiguous
-            FxCallFailure
-            FxKernelFailure
-            FxNoMatch
-            FxTypeToken
+        throws: FxAmbiguous FxCallFailure FxKernelFailure FxNoMatch FxTypeToken
         private: @: selected 0
         private: int: i 0
         while: i < length(state\candidates)
@@ -441,13 +345,7 @@ FxOverload:
         @: contract
     return: @
     overload:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         if: length(candidates) != length(accepts)
             throw: FxArity()
         private: @: failures ("FxAmbiguous"; "FxNoMatch")

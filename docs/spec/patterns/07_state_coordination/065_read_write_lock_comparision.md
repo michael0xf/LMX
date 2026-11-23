@@ -23,8 +23,10 @@ ValueMessage:
         return: node\value
     write:
         node\value := newValue
-        return: node\value
+        return: read()
 ```
+
+write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.
 
 LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.
 
@@ -84,11 +86,33 @@ LMX реализует координацию через отдельный Mess
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 111 | 9 |
+| LMX | 107 | 9 |
 | Java | 348 | 14 |
 | Rust | 239 | 10 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+ValueMessage:
+    int: newValue
+    int: value 10
+    return: int
+    read:
+        return: node\value
+    write:
+        node\value := newValue
+        return: node\value
+```
+
+**Основание выбора / Selection:** Reuse the included read method after write updates node\value. Both execute within the same owner turn; the returned value comes from the updated graph rather than a copied DATA value.
+
+**Completeness:** write returns the included read result after the write; both calls remain in the same owner turn. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 ## English explanation
 

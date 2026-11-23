@@ -15,6 +15,7 @@ partial принимает callable с N входами и K готовыми з
 Ниже приведено консервативное замыкание по корневым LMX-определениям от `FxPartial`: полные определения перечислены один раз, включая те, которые упомянуты в генерируемом тексте тела. Это видимый исходник текущего ядра; он не подменяется строкой импорта. Общие определения повторно используются другими receivers; одинаковые определения не считаются новой самостоятельной реализацией для каждого клиента.
 
 - [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
+- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 - [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
@@ -27,8 +28,7 @@ FxIndices:
         int: count
     return: @
     make:
-        throws:
-            FxIndex
+        throws: FxIndex
         if: start < 0 || count < 0
             throw: FxIndex()
         private: @: out (copy(()))
@@ -51,10 +51,7 @@ FxOwnPolicy:
     private: @: contract
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxIndex FxKernelFailure FxTypeToken
         private: @: info FxKernel\signature(contract)
         private: @: out (copy(FxInputPolicy))
         out\source := contract
@@ -73,10 +70,7 @@ FxBuild:
         @: policy 0
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
+        throws: FxIndex FxKernelFailure FxTypeToken
         private: @: shape FxKernel\signature(subject := contract)
         private: @: bodyGraph sys\fromLmx(bodyText)
         private: @: selectedPolicy policy
@@ -100,8 +94,7 @@ FxRecordOperands:
     required: left right
     return: @
     record:
-        throws:
-            FxRecordArity
+        throws: FxRecordArity
         if: length(right) != 0
             throw: FxRecordArity()
         return: left
@@ -111,9 +104,7 @@ FxSeqInfo:
     required: source
     return: @
     get:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         return: FxKernel\arrayInfo(source := source)
 
 FxSeqAllocate:
@@ -123,10 +114,7 @@ FxSeqAllocate:
     required: arrayType count
     return: @
     make:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            SequenceSize
+        throws: FxKernelFailure FxTypeToken SequenceSize
         if: count < 0
             throw: SequenceSize()
         private: @: out (arrayType: [])
@@ -143,10 +131,7 @@ FxSeqRead:
     required: source index
     return: @
     read:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
         return: FxKernel\arrayRead(source := source; index := index)
 
 FxSeqSize:
@@ -157,24 +142,149 @@ FxSeqSize:
     required: base extra limit
     return: int
     sum:
-        throws:
-            SequenceSize
+        throws: SequenceSize
         if: base < 0 || extra < 0 || base > limit
             throw: SequenceSize()
         if: extra > limit - base
             throw: SequenceSize()
         return: base + extra
 
+FxThrows:
+    adapter:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    call:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+    capture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    fixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    lazyfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxLazyCycle
+        FxRecordArity
+        FxTypeToken
+    mutation:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    mutationfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    permutation:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    predicate:
+        FxCallFailure
+        FxKernelFailure
+        FxPredicate
+        FxTypeToken
+        ReceiverIndex
+    rangefixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        SequenceSize
+        SequenceStep
+    recordcall:
+        FxCallFailure
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    reorder:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    retry:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    selection:
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequence:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequencefixture:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceElement
+        SequenceSize
+        SequenceStep
+    snapshot:
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    traversal:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+
 FxSeqConcat:
     private: @: parts
     required: parts
     return: @
     concat:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
         private: int: arrayType @[]
@@ -223,11 +333,7 @@ FxConcat:
         char[]: second
     return: char[]
     concat:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: out FxSeqConcat\concat(parts := (first; second))
         return: \out
 
@@ -235,8 +341,7 @@ FxDecimal:
     private: int: number
     return: char[]
     decimal:
-        throws:
-            FxIndex
+        throws: FxIndex
         if: number < 0
             throw: FxIndex()
         private: char[]: digits "0123456789"
@@ -263,12 +368,7 @@ FxLabels:
     private: int: count
     return: @
     labels:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         if: count < 0
             throw: FxIndex()
         private: @: out (copy(()))
@@ -285,12 +385,7 @@ FxSignatures:
         @: result
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         private: @: labels FxLabels\labels(length(inputs))
         private: @: data FxKernel\signatureData(inputs := inputs; result := result; labels := labels)
         Built :: data
@@ -306,13 +401,7 @@ FxCaptureOne:
         @: sourceRecord
     return: @
     capture:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: FxIndex FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex SequenceSize
         private: @: inputTypes (copy(()))
         sys\resize(inputTypes; 1)
         inputTypes[0] := requirement
@@ -332,14 +421,7 @@ FxCapturePrefix:
         @: prefix
     return: @
     capture:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture)
         if: length(prefix) > length(inputTypes)
             throw: FxArity()
         private: @: captured (copy(()))
@@ -354,19 +436,14 @@ FxFrameAttempt:
     private: @: frame
     return: @
     attempt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         return: FxKernel\enter(frame; frame\failures)
 
 FxFrameApply:
     private: @: frame
     return: @
     apply:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         private: @: outcome FxFrameAttempt\attempt(frame)
         if: outcome\ok = 0
             throw: FxCallFailure(outcome)
@@ -378,10 +455,7 @@ FxForwardEngine:
         @: frame
     return: @
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
+        throws: copy(FxThrows\call)
         return: FxFrameApply\apply(frame)
 
 FxSeqBounds:
@@ -392,10 +466,7 @@ FxSeqBounds:
     required: source begin end
     return: int
     count:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
         FxSeqInfo\get(source)
         if: begin < 0 || end < begin || end > length(source)
             throw: ReceiverIndex()
@@ -409,11 +480,7 @@ FxSeqSlice:
     required: source begin end
     return: @
     slice:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: int: count FxSeqBounds\count(source; begin; end)
         private: @: info FxSeqInfo\get(source)
         private: @: out FxSeqAllocate\make(info\arrayType; count)
@@ -431,12 +498,7 @@ FxSlice:
         int: count
     return: @
     slice:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         if: start < 0 || count < 0 || start > length(values)
             throw: FxIndex()
         if: count > length(values) - start
@@ -452,13 +514,7 @@ FxSourcePolicy:
         @: pendingPositions
     return: @
     make:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(operation)
         private: int: n length(info\inputTypes)
         if: length(boundPositions) != length(boundValues)
@@ -504,13 +560,7 @@ FxPrefixPolicy:
         @: captured
     return: @
     make:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(operation)
         private: int: n length(info\inputTypes)
         private: int: k length(captured)
@@ -562,11 +612,7 @@ FxAppend:
         @: second
     return: @
     append:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         private: @: empty (copy(()))
         return: FxSeqConcat\concat(parts := (empty; first; second))
 
@@ -576,11 +622,7 @@ FxFailures:
         @: second
     return: @
     union:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         # Builder интернирует и устраняет повторные имена. Список не фиксирован.
         return: FxAppend\append(first; second)
 
@@ -605,12 +647,7 @@ FxWrap:
         @: policy 0
     return: @
     make:
-        throws:
-            FxIndex
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\selection)
         private: @: info FxKernel\signature(subject := contract)
         private: @: state (copy(FxEngineState))
         state\engine := engine
@@ -633,14 +670,7 @@ FxPartial:
         @: prefix
     return: @
     partial:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\capture)
         private: @: info FxKernel\signature(subject := operation)
         private: int: n length(info\inputTypes)
         private: int: k length(prefix)
@@ -698,7 +728,7 @@ Curry:
 
 | Показанный код | Непробельные символы | Непустые строки | UTF-8 байты |
 | --- | ---: | ---: | ---: |
-| LMX: алгоритм и перечисленные LMX-зависимости | 10958 | 596 | 17588 |
+| LMX: алгоритм и перечисленные LMX-зависимости | 11940 | 624 | 18383 |
 | Haskell: весь показанный модуль | 101 | 3 | 128 |
 | LMX: процедурный механизм сценария, отдельный контракт | 275 | 18 | 418 |
 

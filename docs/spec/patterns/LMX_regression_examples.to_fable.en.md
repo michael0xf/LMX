@@ -573,7 +573,7 @@ cycles\iterate(body := (); iteration := int(item stream\next()))
 
 **Basis:** [positional counter](../LMX_semantics.en.md#named-actuals) and the [named record of the same call](../LMX_semantics.en.md#declaration-arguments).
 
-### D-03 — A declaration is a Structure that no `int` input admits, while an ordinary callable actual still executes
+### D-03 — A declaration is passed positionally as DATA; its internal name is not matched
 
 ```lmx
 Producer:
@@ -584,24 +584,28 @@ Producer:
         return: 7
 
 Receiver:
-    int: first
+    @: first
     int: second
     return: int
     ignore:
         return: 4
-    read:
-        return: second + second
+    runFirst:
+        first()
+        return: 4
 ```
 
 Run from counter 0 in separate fixtures:
 
 | Call | Result | Producer calls | Meaning |
 |---|---:|---:|---|
-| `Receiver\ignore(int: second Producer\make())` | refusal | 0 | The declaration is one Structure at the first position; `int: first` admits no Structure |
-| `Receiver\read(second := int(second Producer\make()))` | refusal | 0 | Naming the destination changes nothing: `int: second` admits no declaration Structure |
+| `Receiver\ignore(int: second Producer\make())` | 4 | 0 | The whole declaration goes to first position `first`; its internal name `second` is irrelevant to mapping |
+| `Receiver\ignore(int: item Producer\make())` | 4 | 0 | Renaming the declaration changes neither the selected position nor admission |
+| `Receiver\runFirst(int: item Producer\make())` | 4 | 1 | Explicit `first()` executes the accepted declaration later |
+| `Receiver\ignore(first := int: item Producer\make())` | 4 | 0 | The outer label explicitly selects `first`; the declaration remains DATA |
+| `Receiver\ignore(second := int: item Producer\make())` | Rejected | 0 | The outer label selects primitive `second`; a structural declaration is not replaced by its initializer result to make it fit |
 | `Receiver\ignore(second := Producer\make())` | 4 | 1 | Ordinary callable actual executes under the ordinary call contract |
 
-The declaration is not matched with the input `second` by its inner name: it is one Structure, and no `int` input takes it as a value, whether the destination is named or not. Unlike D-01, the receiving inputs here are not references. The refused calls run no `make`, and passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
+The first declaration fills position `first` as a complete DATA Structure even though an input named `second` exists. There is no inner-name lookup, same-name replacement branch, or retry at another position after a failed admission. Passing the form neither executes it nor overwrites `Receiver`'s source graph. An explicit later invocation and an ordinary callable actual retain their normal execution contracts. D-01's body also retains the live source `total`; the accepted declaration and body are not independent fallback copies.
 
 **Basis:** [passing a declaration receiver](../LMX_semantics.en.md#declaration-arguments); [the boundary between a declaration receiver and a call](../LMX_semantics.en.md#declaration-arguments); [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 

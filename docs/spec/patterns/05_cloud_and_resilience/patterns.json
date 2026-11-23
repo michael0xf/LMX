@@ -548,7 +548,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n",
+          "code": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        start()\n",
           "notes_ru": "queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.",
           "notes_en": "queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run."
         },
@@ -572,7 +572,32 @@
           "why_ru": "Несколько рабочих участников запрашивают работу у единственного владельца очереди.",
           "why_en": "Several workers request work from a single queue owner."
         }
-      ]
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "reuse_existing_definition_or_place",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n",
+          "reuse": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        start()\n"
+        }
+      },
+      "procedural_lmx": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Reuse WorkerMessage.start() after each successful process(job) instead of repeating its complete post/ask/answer block. The empty sentinel returns before processing or posting; queueOwner and explicit selfAddress continuation remain identical. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
     },
     {
       "id": 56,

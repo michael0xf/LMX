@@ -31,7 +31,7 @@ Checkout:
     total:
         return: quantity * ACL\cents()
     demo:
-        return: total(quantity := 2)
+        return: total(2)
 ```
 
 Вызов Checkout\demo(). Преобразование единиц написано явно; исходный primitive int не несёт автоматического знания о валюте.
@@ -79,11 +79,41 @@ ACL отвечает за смысловые различия, а не толь�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 175 | 15 |
+| LMX | 165 | 15 |
 | Java | 177 | 6 |
 | Go | 162 | 5 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Legacy:
+    return: int
+    dollars:
+        return: 12
+
+ACL:
+    return: int
+    cents:
+        return: Legacy\dollars() * 100
+
+Checkout:
+    int: quantity
+    return: int
+    total:
+        return: quantity * ACL\cents()
+    demo:
+        return: total(quantity := 2)
+```
+
+**Основание выбора / Selection:** Use the sole visible quantity input for Checkout.total in demo. Legacy, conversion adapter and checkout remain separate and complete.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

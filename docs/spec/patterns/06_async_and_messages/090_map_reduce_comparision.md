@@ -35,10 +35,12 @@ ReducerMessage:
     return: int
     add:
         node\count += 1
-        return: node\count
+        return: read()
     read:
         return: node\count
 ```
+
+ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.
 
 LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.
 
@@ -97,11 +99,47 @@ LMX выражает shuffle явным выбором Message-владельц�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 220 | 22 |
+| LMX | 216 | 22 |
 | Go | 290 | 16 |
 | Erlang | 267 | 7 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+MapperMessage:
+    int: value
+    @: even
+    @: odd
+    @: barrier
+    map:
+        @: reducer even
+        if: value % 2 = 1
+            reducer := odd
+        post:
+            ask:
+                reducer\add()
+            answer:
+                barrier\accepted
+
+ReducerMessage:
+    int: count 0
+    return: int
+    add:
+        node\count += 1
+        return: node\count
+    read:
+        return: node\count
+```
+
+**Основание выбора / Selection:** Reuse the reducer read method after incrementing node\count. Mapper selection, distinct reducer owners, post/ask/answer and barrier acknowledgement are preserved. No local map/group/fold replaces the distributed protocol.
+
+**Completeness:** ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 ## English explanation
 

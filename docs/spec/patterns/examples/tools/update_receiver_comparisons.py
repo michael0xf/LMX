@@ -54,7 +54,9 @@ def closure(start,definitions):
   seen.add(name)
   # Keep full generated-code strings; only standalone comments are omitted for references.
   code='\n'.join(x for x in definitions[name].splitlines() if not x.lstrip().startswith('#'))
-  references=set(re.findall(r'\b(?:Fx|Rx)[A-Za-z_0-9]+\b',code))
+  # Shared throws entries are failure names, not references to callable
+  # owners that happen to have the same spelling. Count the table itself.
+  references=set() if name=='FxThrows' else set(re.findall(r'\b(?:Fx|Rx)[A-Za-z_0-9]+\b',code))
   for dep in sorted(references):
    if dep!=name and dep in definitions:visit(dep)
   ordered.append(name)

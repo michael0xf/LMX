@@ -42,6 +42,8 @@ def main():
                     if m['characters']!=min(sizes[v] for v in eligible):raise ValueError(f'{directory.name}/{p["id"]}/{lang}: primary is not shortest eligible')
                     report['variant_selection'].append({'group':directory.name,'id':p['id'],'language':lang,'primary':p['primary_variant'][lang],'eligible_variants':eligible,'fairness_note':p.get('fairness_notes',{}).get(lang,''),'characters':sizes,'selected_characters':m['characters']})
             labels={'scenario':{'core':'Ядро сценария','protocol':'Протокол и порты','executable':'Самостоятельный пример'}.get(p['scope'],p['scope']),'usage':'Использование библиотеки','implementation':'Реализация библиотеки'}
+            if p['id']==84 and p.get('primary_variant',{}).get('LMX') in ('local_callbacks','shared_trace'):
+                labels[layer]='Клиент + локальный helper'
             summary.append('| '+f"{p['id']:03d}"+' | '+f"[{p['name']}]({source})"+' | '+' | '.join(f"{m['characters']} / {m['nonblank_lines']}" for m in counts)+' | '+labels[layer]+' |')
             row={'id':p['id'],'pattern':p['name'],'scope':p['scope'],'kind':p.get('kind','pattern'),'layer':layer}
             for field,key in [('characters','characters'),('nonblank_lines','nonblank_lines')]:

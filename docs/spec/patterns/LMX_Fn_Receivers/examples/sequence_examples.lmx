@@ -7,14 +7,7 @@ FxSeqProbeEqualInts:
         @: expected
     required: actual expected
     check:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
+        throws: FxArity FxIndex FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex SequenceElement
         sys\assert(length(actual) = length(expected))
         private: int: i 0
         while: i < length(expected)
@@ -28,12 +21,7 @@ FxSeqProbeScale:
     int: factor 3
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: value * factor
 
 FxSeqProbeSubtract:
@@ -41,12 +29,7 @@ FxSeqProbeSubtract:
     int: value
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: accumulated - value
 
 FxSeqProbeLog:
@@ -56,12 +39,7 @@ FxSeqProbeOdd:
     int: value
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxSeqProbeLog\calls += 1
         return: value % 2 != 0
 
@@ -69,12 +47,7 @@ FxSeqProbeBelowFive:
     int: value
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         FxSeqProbeLog\calls += 1
         return: value < 5
 
@@ -82,24 +55,14 @@ FxSeqProbeDuplicate:
     int: value
     return: @
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: (int[]: [value value])
 
 FxSeqProbeKey:
     int: value
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: value % 2
 
 FxSeqProbeSameKey:
@@ -107,43 +70,20 @@ FxSeqProbeSameKey:
     int: second
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: first = second
 
 FxSeqProbeSome:
     int: value
     return: @
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
+        throws: copy(FxThrows\fixture)
         return: FxSome\some(value := (value FxRecordOperands\record))
 
 FxSeqProbeNumeric:
     return: int
     run:
-        throws:
-            FxArity
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxPredicate
-            FxRecordArity
-            FxShape
-            FxTypeToken
-            ReceiverIndex
-            ReceiverPermutation
-            SequenceElement
-            SequenceSize
-            SequenceStep
+        throws: copy(FxThrows\sequencefixture)
         private: int[]: input [1 2 3]
         private: @: mapped FxMap\map(input; FxSeqProbeScale\run)
         FxSeqProbeEqualInts\check(mapped; (3; 6; 9))
@@ -232,15 +172,7 @@ FxSeqProbeQueries:
 FxSeqProbeMutation:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int[]: values [1 2 3 4]
         private: @: alias values
         private: @: replaced FxSeqReplaceRange\replaceRange(values; 1; 3; (9; 8; 7))
@@ -276,15 +208,7 @@ FxSeqProbeMutation:
 FxSeqProbeSpliceDense:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int[]: values [1 2 3 4]
         private: @: alias values
         private: @: removed FxSeqSplice\splice(values; 1; 3; (9; 8; 7))
@@ -319,15 +243,7 @@ FxSeqProbeSpliceDense:
 FxSeqProbeSpliceReferences:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: @: first (int: width 1)
         private: @: second (int: width 2)
         private: @: third (int: width 3)
@@ -356,15 +272,7 @@ FxSeqProbeSpliceReferences:
 FxSeqProbeSpliceTypedReferences:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int: first 10
         private: int: second 20
         private: int: third 30
@@ -386,15 +294,7 @@ FxSeqProbeSpliceTypedReferences:
 FxSeqProbeSpliceEmpty:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int[]: values [1 2]
         private: @: alias values
         private: @: emptyCut FxSeqSplice\splice(values; 1; 1; (7))
@@ -417,15 +317,7 @@ FxSeqProbeSpliceEmpty:
 FxSeqProbeSpliceBadInsert:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int[]: values [1 2 3]
         private: @: alias values
         # A valid first inserted value must not commit before the bad second.
@@ -445,15 +337,7 @@ FxSeqProbeSpliceBadBounds:
     required: begin end
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: char[]: values "abc"
         private: @: alias values
         FxSeqSplice\splice(values; begin; end; "X")
@@ -488,15 +372,7 @@ FxSeqProbeBadMask:
 FxSeqProbeBadInsert:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutationfixture)
         private: int[]: values [1 2]
         FxSeqReplaceRange\replaceRange(values; 0; 1; (7; "bad"))
         return: 0
@@ -507,14 +383,7 @@ FxSeqProbeBadInsert:
 FxSeqProbeZeroStep:
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            SequenceSize
-            SequenceStep
+        throws: copy(FxThrows\rangefixture)
         FxSeqRange\range(2; 2; 0)
         return: 0
         catch: SequenceStep ()
@@ -527,14 +396,7 @@ FxSeqProbeRangeBoundary:
     required: maxInt
     return: int
     run:
-        throws:
-            FxArity
-            FxIndex
-            FxKernelFailure
-            FxRecordArity
-            FxTypeToken
-            SequenceSize
-            SequenceStep
+        throws: copy(FxThrows\rangefixture)
         private: int[]: values FxSeqRange\range(maxInt - 1; maxInt; 2)
         sys\assert(length(values) = 1 && values[0] = maxInt - 1)
         return: 1
@@ -542,20 +404,7 @@ FxSeqProbeRangeBoundary:
 FxSequenceExamples:
     return: int
     run:
-        throws:
-            FxArity
-            FxCallFailure
-            FxIndex
-            FxKernelFailure
-            FxPredicate
-            FxRecordArity
-            FxShape
-            FxTypeToken
-            ReceiverIndex
-            ReceiverPermutation
-            SequenceElement
-            SequenceSize
-            SequenceStep
+        throws: copy(FxThrows\sequencefixture)
         sys\assert(FxSeqProbeNumeric\run() = 1)
         sys\assert(FxSeqProbeQueries\run() = 1)
         sys\assert(FxSeqProbeMutation\run() = 1)

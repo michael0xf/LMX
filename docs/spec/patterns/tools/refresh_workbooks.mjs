@@ -117,7 +117,7 @@ if(mode!=='inspect') {
     ex.getRange(`D${r}`).formulas=[[`=C${r}-B${r}`]];
     ex.getRange(`E${r}:F${r}`).values=[[x.before.nonblank_lines,x.after.nonblank_lines]];
     ex.getRange(`G${r}`).formulas=[[`=F${r}-E${r}`]];
-    ex.getRange(`H${r}:I${r}`).values=[[x.has_alternative||x.archived_inline?'Да':'Без изменений','examples/'+x.file]];
+    ex.getRange(`H${r}:I${r}`).values=[[x.has_alternative||x.archived_inline?'Да':x.changed?'Клиент сохранён':'Без изменений','examples/'+x.file]];
   }
   const et=6+ers.length;
   ex.getRange(`A${et}`).values=[['Итого']];
@@ -133,7 +133,7 @@ if(mode!=='inspect') {
   gf.getRange(`A6:C${gr-1}`).format.rowHeight=25;gf.getRange(`B6:B${gr-1}`).setNumberFormat('#,##0');
   gf.getRange(`B6:B${gr-1}`).format.horizontalAlignment='center';
   gf.getRange('A16').values=[['Метрики описывают приведённый код, не скорость языка.']];
-  base(variants,'Выбор из двух вариантов LMX','Минимум среди корректных вариантов с сопоставимой границей; единое ядро.','F',[13,21,18,18,20,72]);
+  base(variants,'Основные и сохранённые варианты LMX','Минимум среди корректных вариантов с сопоставимой границей; единое ядро.','F',[13,21,18,18,20,72]);
   variants.getRange('A5:F5').values=[['Пример','Основной','Основной,\nсимволы','Второй,\nсимволы','Второй\nсопоставим','Договор и граница сравнения']];
   let vr=6;
   for(const x of ers.filter(x=>x.has_alternative)) {
@@ -150,9 +150,9 @@ if(mode!=='inspect') {
     const count=s=>[...s].filter(c=>!(/\s/u.test(c))).length;
     const selectedName=x.primary_variant?.LMX||'core',choices=x.variants?.LMX||{},eligible=x.eligible_variants?.LMX||[];
     const alternatives=eligible.filter(n=>n!==selectedName).sort((a,b)=>count(choices[a])-count(choices[b]));
-    const second=alternatives.length?choices[alternatives[0]]:other.code;
+    const second=alternatives.length?choices[alternatives[0]]:[other.context_prefix,other.code].filter(Boolean).join('\n');
     const comparable=alternatives.length>0||other.eligible;
-    const note=alternatives.length?`Сопоставимая пара ${selectedName} / ${alternatives[0]}; выбран минимум. Дополнительная реализация curry показана и посчитана отдельно. Прежний процедурный код также сохранён.`:'Общий текущий контракт; историческая специализация или прежний API сохранены как пояснение, не как другая версия ядра.';
+    const note=alternatives.length?(x.id===84?`Оба сравниваемых варианта полностью включают Around и callbacks. Основной использует общие code/eval, второй — отдельные тела. Generic bracket также сохранён. Освобождение, журнал и обработка отказов остаются.`:x.id===83?`Основной объединяет алгоритм в Steps\\code; второй сохраняет отдельные even/odd. Общий список выходов и все обращения учтены; переходы и результат сохранены.`:`Сопоставимая пара ${selectedName} / ${alternatives[0]}; выбран минимум. Дополнительная реализация curry показана и посчитана отдельно. Прежний процедурный код также сохранён.`):'Общий текущий контракт; историческая специализация или прежний API сохранены как пояснение, не как другая версия ядра.';
     variants.getRange(`A${vr}:F${vr}`).values=[[String(x.id).padStart(3,'0'),selectedName,count(active),count(second),comparable?'Да':'Нет',note]];
     variants.getRange(`A${vr}:F${vr}`).format={wrapText:true,rowHeight:Math.max(52,14*Math.ceil(note.length/75)+14),verticalAlignment:'center'};
     vr++;

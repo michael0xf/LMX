@@ -59,7 +59,7 @@ Build real owner → DATA → CODE. `node\private\state` is the passed explicit 
 - **Own policy:** the explicitly chosen new contract's DATA supplies its ordinary declarations. A type-only constructor does not inherit defaults from unrelated source functions.
 - The disjoint position sets cover source positions. The LMX `FxSourcePolicy` validates the map; ordinary admission validates actual values.
 - Public maps, required applicability, duplicates, excess actuals and named selection are checked at the ordinary pre-effect stage. Explicit expressions are prepared once in written order. Omission is never encoded by a fake value.
-- Keep full source DATA places, initializer provenance, source lexical node and declaration actual namespace substitution. Removing a captured input from the public list does not remove its target place.
+- Keep full source DATA places, initializer provenance and source lexical node. A declaration actual remains its complete DATA Structure at the selected positional or explicitly outer-named destination; preserve its receiving-execution relationship if later executed. Do not select an input by its internal declared name. Removing a captured input from the public list does not remove its target place.
 - Preserve both private filters and own-versus-transparent-place behavior. Do not make engine locals sources for target autofill. Do not collect descendant free names or bypass intermediate ordinary calls.
 - For a non-final curry stage, only its current projected input is selected as a public input. Future inputs are not missing mandatory inputs of a full call which has not been attempted. A demanded current default can still read source declarations under their ordinary uninit/default rules.
 
@@ -119,11 +119,21 @@ With `demand=1`, perform one ordinary read of this selected place. Reuse its dec
 
 ### prepare(operation; entries)
 
-Expose ordinary call preparation at the reached call site. Each finite entry contains a destination position and either a ready typed record, a borrowed source-place reference, or a reference to an already selected explicit actual occurrence. The last form preserves presence and the original ready value/declaration form; it never turns omission or an autofilled proxy into an explicit actual. Maps are validated before effects. Ready entries are already prepared values. A place entry uses the existing preserved declaration-actual mechanism: its initializer reads the selected source place only when consumed. If the source supplied a declaration form, retain that form and its namespace substitution contract instead of erasing it into a value.
+Expose ordinary call preparation at the reached call site. Each finite entry contains a destination position and one of the existing transport kinds. Validate the maps before effects; do not derive the destination from a declaration's internal name.
+
+| Kind | Required interpretation |
+| --- | --- |
+| `ready` | An already prepared typed value record received under the destination's ordinary contract. |
+| `place` | Internal transport of an already selected source place, addressed by destination position and `(frame, sourcePosition)`. This is not a source declaration actual and does not use declaration substitution. |
+| `actual` | The already selected explicit occurrence, retaining its presence, original ready value or complete declaration Structure, and selected positional/outer-label map. Omission or an autofilled proxy does not become an explicit actual. |
+
+The `place` provider must preserve demanded source reads, ordinary receiving admission, own-versus-transparent place semantics, omission and frame lifetime through the existing preparation mechanism. A source place containing a declaration Structure still supplies that Structure under ordinary admission; it is not automatically reduced to an initializer's primitive result. An `actual` containing a declaration remains ordinary DATA material: transfer executes no initializer, its internal name selects no input, and its subsequent execution follows the accepted-form/body contract.
 
 No public new lazy collection is involved. The entry is temporary call transport; ordinary receiving places, admission and initializer machinery do the work. No second execution pass or repeated Structure expansion occurs. Additional omitted formals of the called function retain its own policy. Dynamic lookup uses the reached ordinary call chain, never a caller context supplied by the factory.
 
 Return one owned prepared frame. Preparation executes no target body. Eagerly prepared explicit values keep their written order; preserved declaration descriptions remain deferred.
+
+**Pending integration gate PA01:** support and validate the distinct `place` path without implementing it as a user declaration actual. The gate must demonstrate selective demand of primitive source inputs and ordinary admission of actual declaration Structures, including an internal name that coincides with another input. The records and LMX algorithms in this archive do not implement or prove that provider. See [the required distinction and evidence](tests/ADAPTER_ACCEPTANCE.md#place-actual-integration); all four execution directions remain `NOT_RUN`.
 
 ### enter(frame; failures)
 
@@ -143,7 +153,7 @@ Do not implement these algorithms again inside `FxKernel`. Equally, do not claim
 
 ## 5. Acceptance and optimization
 
-Run the current specification's [A01–A20](../../LMX_semantics.en.md#adapter-observations) and [B01–B11](../../LMX_semantics.en.md#uncurry-observations), the prepared [adapter fixtures](tests/adapter_semantics.lmx), and [the package acceptance](tests/ACCEPTANCE.md) in I→I, I→N, N→I and N→N. Native tests must actually execute compiled methods. Compare journals, place identities, lifetime and partial failure order, not just final return values.
+Run the current specification's [A01–A20](../../LMX_semantics.en.md#adapter-observations) and [B01–B11](../../LMX_semantics.en.md#uncurry-observations), the separate [PA01 integration gate](tests/ADAPTER_ACCEPTANCE.md#place-actual-integration), the prepared [adapter fixtures](tests/adapter_semantics.lmx), and [the package acceptance](tests/ACCEPTANCE.md) in I→I, I→N, N→I and N→N. Native tests must actually execute compiled methods. Compare journals, place identities, lifetime and partial failure order, not just final return values.
 
 Optimize after correctness: use existing cached type relationships, prepared contracts, direct native ABI and real Array access; avoid copies of already-ready @[] vectors, whole-frame snapshots and repeated parsing. Measure direct/partial/once hit/miss/uncurry at equal work, including reads, calls and allocations. No measured speed claim is made in this archive.
 

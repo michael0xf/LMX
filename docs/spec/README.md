@@ -24,6 +24,11 @@ in the [revision report](REVISION_2026-11-22.md), including the [naming decision
 
 **Review edition: 2026-11-22.**
 
+**Author clarification — declaration arguments:** a supplied declaration is a DATA Structure,
+not an automatically executed call. Its internal name never selects an input. Unnamed actuals
+use ordinary positions; only an outer `name := value` names a destination. See the
+[merge note and complete numbers/cycles example](LMX_semantics.en.md#declaration-arguments).
+
 The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `Struct@: ptr` and `type[]: array`. See the [task-to-documentation review](patterns/TZ_APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
 
 This edition integrates the requested

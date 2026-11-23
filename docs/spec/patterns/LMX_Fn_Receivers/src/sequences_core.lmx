@@ -11,9 +11,7 @@ FxSeqInfo:
     required: source
     return: @
     get:
-        throws:
-            FxKernelFailure
-            FxTypeToken
+        throws: FxKernelFailure FxTypeToken
         return: FxKernel\arrayInfo(source := source)
 
 FxSeqRead:
@@ -23,10 +21,7 @@ FxSeqRead:
     required: source index
     return: @
     read:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
         return: FxKernel\arrayRead(source := source; index := index)
 
 # The declaration head is an existing full int type code, resolved by the
@@ -38,10 +33,7 @@ FxSeqAllocate:
     required: arrayType count
     return: @
     make:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            SequenceSize
+        throws: FxKernelFailure FxTypeToken SequenceSize
         if: count < 0
             throw: SequenceSize()
         private: @: out (arrayType: [])
@@ -56,10 +48,7 @@ FxSeqEmpty:
     required: source
     return: @
     make:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            SequenceSize
+        throws: FxKernelFailure FxTypeToken SequenceSize
         private: @: info FxSeqInfo\get(source)
         return: FxSeqAllocate\make(info\arrayType; 0)
 
@@ -73,8 +62,7 @@ FxSeqSize:
     required: base extra limit
     return: int
     sum:
-        throws:
-            SequenceSize
+        throws: SequenceSize
         if: base < 0 || extra < 0 || base > limit
             throw: SequenceSize()
         if: extra > limit - base
@@ -89,10 +77,7 @@ FxSeqBounds:
     required: source begin end
     return: int
     count:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
         FxSeqInfo\get(source)
         if: begin < 0 || end < begin || end > length(source)
             throw: ReceiverIndex()
@@ -109,10 +94,7 @@ FxSeqAdmit:
     required: target value
     return: @
     admit:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            SequenceElement
+        throws: FxKernelFailure FxTypeToken SequenceElement
         return: FxKernel\arrayAdmit(target := target; value := value)
 
 FxSeqStore:
@@ -122,11 +104,7 @@ FxSeqStore:
         @: value
     required: target index value
     write:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
+        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement
         private: @: ready FxSeqAdmit\admit(target; value)
         FxKernel\arrayWrite(target := target; index := index; value := ready)
 
@@ -137,12 +115,7 @@ FxSeqPush:
     required: target value
     return: @
     append:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         private: @: info FxSeqInfo\get(target)
         private: @: ready FxSeqAdmit\admit(target; value)
         private: int: oldSize length(target)
@@ -158,11 +131,7 @@ FxSeqRecords:
     required: source
     return: @
     make:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         FxSeqInfo\get(source)
         private: int: count length(source)
         private: @: out FxSeqAllocate\make(@[]; count)
@@ -179,8 +148,7 @@ FxSeqInteger:
     required: value
     return: int
     read:
-        throws:
-            SequenceElement
+        throws: SequenceElement
         private: int: sample 0
         if: sys\typeof(value) != sys\typeof(@sample)
             throw: SequenceElement()
@@ -191,8 +159,7 @@ FxSeqPredicate:
     required: value
     return: int
     truth:
-        throws:
-            FxPredicate
+        throws: FxPredicate
         private: int: sample 0
         if: sys\typeof(value) != sys\typeof(@sample)
             throw: FxPredicate()

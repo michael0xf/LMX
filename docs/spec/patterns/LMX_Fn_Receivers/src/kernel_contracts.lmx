@@ -74,11 +74,14 @@ FxKernelReleaseCallAPI :: (@: frame)
 # ordinary implicit failure remains an implicit failure. uninit is not @0.
 #
 # prepare(operation,entries) performs ordinary selection and call preparation.
-# ready entries hold a value record; place entries are preserved declaration
-# actuals whose initializer reads an existing selected place on demand. Supplied
-# source declaration forms keep their form/namespace substitution. An actual
-# entry retains the already selected explicit occurrence/form; an omitted input
-# cannot be made supplied by this entry. All maps are
+# ready entries hold a value record. A place entry is internal source-place
+# transport by destination position and (frame, sourcePosition), not a source
+# declaration actual. Its provider must preserve demanded reads, receiving
+# admission, selected place ownership and lifetime; acceptance PA01 is NOT_RUN.
+# An actual entry retains an already selected explicit occurrence/form and its
+# positional/outer-label mapping. A declaration stays an ordinary DATA Structure:
+# no internal-name remapping or initializer execution during transfer. An omitted
+# input cannot be made supplied by this entry. All maps are
 # checked before effects; W/E and source expressions are never applied a second time.
 # Its ordinary dynamic context is the reached call site, not a saved factory scope.
 #

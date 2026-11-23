@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import codecs
 import csv
+import hashlib
 import io
 import json
 import re
@@ -46,6 +47,12 @@ SCOPES_RU = {
 def canonical_code(code: str) -> str:
     """Exactly the normalization used for the published source files."""
     return code.strip() + "\n"
+
+
+def historical_code(alternative: dict) -> str:
+    """Show required context before the separately retained original client."""
+    prefix = alternative.get('context_prefix', '')
+    return (canonical_code(prefix) + '\n' if prefix else '') + canonical_code(alternative['code'])
 
 
 PROCEDURAL_BEGIN = "# BEGIN PROCEDURAL LMX (excluded from character counts)"
@@ -216,12 +223,31 @@ def audit(root: Path) -> dict:
                     fail(markdown_path, "Unclosed Markdown code fence")
                 alternatives = pattern.get('alternative', {})
                 archived_count = len(alternatives) if alternatives else int(bool(pattern.get('procedural_lmx'))) + len(pattern.get('previous_controls', {}))
-                if len(blocks) != 3 + archived_count:
-                    fail(markdown_path, f"Expected 3 counted and {archived_count} archival fenced code blocks; found {len(blocks)}")
+                current_alternates = [v for v in pattern.get('inline_current_lmx_variants', [])
+                                      if v != pattern.get('primary_variant', {}).get('LMX')]
+                if len(blocks) != 3 + len(current_alternates) + archived_count:
+                    fail(markdown_path, f"Expected 3 counted, {len(current_alternates)} current alternate and {archived_count} archival fenced code blocks; found {len(blocks)}")
+                for offset, variant in enumerate(current_alternates, 3):
+                    code = pattern.get('variants', {}).get('LMX', {}).get(variant)
+                    if not isinstance(code, str) or offset >= len(blocks) or blocks[offset] != ('lmx', canonical_code(code)):
+                        fail(markdown_path, f"Current alternate {variant} differs from its stored source")
                 for language, alternate in alternatives.items():
                     fence = LANGUAGES[language][2]
-                    if (fence, canonical_code(alternate['code'])) not in blocks[3:]:
+                    presented = historical_code(alternate)
+                    if (fence, presented) not in blocks[3:]:
                         fail(markdown_path, f"Alternative {language} differs from its stored source")
+                    if alternate.get('context_prefix'):
+                        raw_client = alternate['code']
+                        prefix = canonical_code(alternate['context_prefix']) + '\n'
+                        if presented[len(prefix):] != raw_client:
+                            fail(markdown_path, f"Alternative {language}: historical client is not byte-exact after the declared context")
+                        if hashlib.sha256(raw_client.encode()).hexdigest() != alternate.get('preserved_code_sha256'):
+                            fail(json_file, f"ID {identifier}/{language}: preserved historical client hash changed")
+                        if language == 'LMX' and raw_client != pattern.get('procedural_lmx'):
+                            fail(json_file, f"ID {identifier}: historical client differs from the retained procedural snapshot")
+                        context_source = next((p for p in patterns if p['id'] == alternate.get('context_prefix_source_id')), None)
+                        if context_source is None or alternate['context_prefix'] != context_source.get('alternative', {}).get(language, {}).get('code'):
+                            fail(json_file, f"ID {identifier}/{language}: context differs from its preserved source definition")
                 if not alternatives and pattern.get('procedural_lmx'):
                     old = canonical_code(pattern['procedural_lmx'])
                     if ('lmx', old) not in blocks[3:]:
@@ -230,6 +256,20 @@ def audit(root: Path) -> dict:
                     fence = LANGUAGES[language][2]
                     if (fence, canonical_code(old)) not in blocks[3:]:
                         fail(markdown_path, f"Archived {language} differs from the preserved original")
+
+            # Explicitly registered explanatory sources are preserved but are
+            # not counted as primary listings or new comparison records.
+            for companion in pattern.get('companion_sources', []):
+                name = companion.get('file', '')
+                companion_path = directory / name
+                if (not name.startswith('examples/') or '..' in Path(name).parts
+                        or companion.get('counts_as_primary') is not False):
+                    fail(json_file, f"ID {identifier}: invalid companion source declaration")
+                    continue
+                expected_sources.add(name)
+                companion_text = read_text(companion_path)
+                if companion_text is not None and hashlib.sha256(companion_text.encode()).hexdigest() != companion.get('sha256'):
+                    fail(companion_path, 'Companion source differs from its recorded hash')
 
             listings = pattern.get("listings", [])
             actual_order = [x.get("language") for x in listings if isinstance(x, dict)] if isinstance(listings, list) else []
@@ -278,8 +318,13 @@ def audit(root: Path) -> dict:
                     if actual_primary != normalized:
                         fail(source_path, f"ID {identifier}/{language}: source differs from code.strip() + LF")
                     if language == 'LMX' and pattern.get('alternative', {}).get('LMX'):
-                        if archive != canonical_code(pattern['alternative']['LMX']['code']):
+                        alternate = pattern['alternative']['LMX']
+                        if archive != historical_code(alternate):
                             fail(source_path, "Missing or changed alternative in source file")
+                        if alternate.get('context_prefix'):
+                            prefix = canonical_code(alternate['context_prefix']) + '\n'
+                            if archive is None or not archive.startswith(prefix) or archive[len(prefix):] != alternate['code']:
+                                fail(source_path, "Historical client must remain byte-exact after its declared context")
                     elif language == 'LMX' and pattern.get('procedural_lmx'):
                         if archive != canonical_code(pattern['procedural_lmx']):
                             fail(source_path, "Missing or changed procedural original in source file")
@@ -320,6 +365,8 @@ def audit(root: Path) -> dict:
                             if cells[offset] != expected_value:
                                 fail(comparison_path, f"ID {identifier}/{language}: table says {cells[offset]!r}, expected {expected_value!r}")
                     scope_label = {'implementation':'Реализация библиотеки','usage':'Использование библиотеки'}.get(record_layer,SCOPES_RU.get(pattern.get("scope")))
+                    if identifier == 84 and pattern.get('primary_variant', {}).get('LMX') in ('local_callbacks', 'shared_trace'):
+                        scope_label = 'Клиент + локальный helper'
                     if scope_label is not None and cells[5] != scope_label:
                         fail(comparison_path, f"ID {identifier}: unexpected scope label {cells[5]!r}")
 
@@ -401,7 +448,7 @@ def audit(root: Path) -> dict:
             "nonblank_lines": "splitlines() entries with nonempty strip()",
             "utf8_bytes": "len(canonical_source.encode('utf-8')) including spaces and the final LF",
             "csv": "UTF-8 BOM required; *_utf8_bytes columns are checked if present, otherwise bytes remain in this report",
-            "procedural_originals": "Preserved in alternative/variants or procedural_lmx metadata, a separate Markdown fence and commented source section; excluded from main metrics. The primary is shortest among eligible comparable variants.",
+            "procedural_originals": "Preserved in alternative/variants or procedural_lmx metadata; the separate Markdown fence and commented source section include any explicit context_prefix before the byte-exact original client. Context is checked against its named preserved source, and the client against its recorded hash and procedural snapshot. These saved listings are excluded from main metrics. The primary is shortest among eligible comparable variants.",
         },
         "group_count": len(json_files),
         "pattern_count": len(pattern_ids),

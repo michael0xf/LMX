@@ -15,8 +15,9 @@ depth, model ordering, source independence, and one composition map remain.
 The complete 71-character helper is shown in
 [the adjacent comparison](library_comparisons/r01_derive_comparision.md).
 
-V02 has a new Pattern alternative, 245 characters versus 263 for its original
-client. It keeps all eleven ticket cases on its explicit byteText profile.
+V02 has a Pattern alternative of 248 characters. Its competitive original is
+now a complete 462-character listing: the 263-character client plus the
+199-character local CharacterRange helper. It keeps all eleven ticket cases on its explicit byteText profile.
 It is **not eligible for the existing competitive comparison**: that control
 shows a small custom character-range helper, not a regex engine; the original
 between/RangeArity mechanism and its own tests also remain meaningful. Both
@@ -44,7 +45,7 @@ in the regenerated apply/partial/pipe/lazy comparison descriptions.
 | H06 | Both composition orders and intermediate arithmetic | Direct nested calls remain shorter; retain the complete pipe alternative with current exits |
 | H07 | Prepared occurrence evaluated once versus actual raw occurrence evaluated twice | Preserve the raw source/eval mechanism. Lazy-plus-two-calls stays an explanatory alternative, not an eligible replacement |
 | H08 | Own input place versus transparent caller place | Preserve direct invocation and mutations; collection callbacks introduce a different binding context |
-| H09 | Three yielded values, four next calls including Stop, live declaration, mutable body place | Do not replace with range/foldl merely to obtain 12: that would lose the scenario's call and declaration behavior |
+| H09 | Three yielded values, four next calls including Stop, live declaration, mutable body place | Keep the live declaration and Stop protocol; include the complete Cycles helper in the counted primary |
 | R01 | width=2, height=5, depth=7, one model composition, unchanged inputs | Add equivalent derive; select its 183-character complete client; retain direct merge and Haskell control |
 | R02 | Explicit copy stream and the written anonymous assignment groups | Keep grouped assignment. Selecting indices or materializing a list would hide the expansion rule being demonstrated |
 | R03 | Import identity, ordinary dynamic binding, copied owner, subsequent owner write | Preserve those explicit operations; a selection helper is not a substitute for import/copy ownership |
@@ -54,8 +55,8 @@ in the regenerated apply/partial/pipe/lazy comparison descriptions.
 | R07 | OPERANDS_TEMPLATE first, one ordinary graph, executable operand tree | Keep the explicit operand; new sequence APIs do not replace the tree/execution relation |
 | R09 | Uninitialized primitive/reference, local write versus graph-fragment replacement | Preserve all states. Empty arrays, null, and initialized zero cannot replace uninit |
 | A01 | One physical slot replacement, descriptor length, new named content | The existing one-slot assignment is already shortest. replaceRange is for length-changing/range operations and adds checks/arguments here |
-| V02 | Exact length, separator, two ASCII letters/digits, NUL and Unicode rejection, custom helper contract | Add Pattern as a separately scoped alternative; retain the original competitive client and all eleven cases |
-| V03 | Good/biased/twice-reading candidates, exactly one observable reader call | Preserve direct behavioral admission checks; map/filter would obscure the specific read count and invocation |
+| V02 | Exact length, separator, two ASCII letters/digits, NUL and Unicode rejection, custom helper contract | Keep Pattern as a separately scoped alternative; count CharacterRange with the unchanged original client and retain all eleven cases |
+| V03 | Good/biased/twice-reading candidates, exactly one observable reader call | Reuse the existing sample method in biased and readsTwice; preserve the old full listing alongside, every verdict, and the exact read count |
 | V04 | Named NoSample exit differs from numeric zero success | Keep the catch path; none/false/collection filtering cannot replace a declared failure |
 | V05 | On/write/read/off/write/read acknowledgements, sensed state, counters and trace | Preserve every field and effect order. A sequence reduction could return the same Boolean while losing the protocol trace |
 | M01 | Owner-side counter mutation and reads | Retain Message-oriented ownership behavior; no shared-memory or generic collection substitute |
@@ -82,3 +83,7 @@ both formulations. The adjacent apply/partial/pipe/lazy implementations are
 regenerated from their actual transitive source dependencies, including the
 new common array helpers when referenced. No execution receipt is claimed
 for either LMX or Haskell.
+
+## Complete-source and local-reuse audit
+
+The later [47-example audit](../validation/reuse_review_gof_examples_20261122.json) includes all 24 clients and all 23 root GoF examples. H09 and V02 now include their complete application helpers in the primary source; their former client text is retained unchanged. V03 uses its existing sample method without changing DATA or callback counts. Foreign sources remain unchanged. This is source review, not execution.

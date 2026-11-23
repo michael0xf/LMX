@@ -26,7 +26,7 @@ Store:
     int: state 0
     int: delta
     dispatch:
-        node\state := Reducer\reduce(state := node\state; delta := delta)
+        node\state := Reducer\reduce(node\state; delta)
 
 Demo:
     return: int
@@ -100,11 +100,45 @@ TypeScript использует объект action, C# — value record, LMX �
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 287 | 19 |
+| LMX | 273 | 19 |
 | TypeScript | 402 | 14 |
 | C# | 366 | 14 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Reducer:
+    int: state
+    int: delta
+    return: int
+    reduce:
+        return: state + delta
+
+Store:
+    int: state 0
+    int: delta
+    dispatch:
+        node\state := Reducer\reduce(state := node\state; delta := delta)
+
+Demo:
+    return: int
+    run:
+        Store\state := 0
+        Store\dispatch(delta := 2)
+        int: previous Store\state
+        Store\dispatch(delta := 3)
+        return: previous * 10 + Store\state
+```
+
+**Основание выбора / Selection:** Use positional state and delta for the visibly ordered Reducer DATA. Reducer invocation, current-store update and the saved intermediate state remain; no helper is hidden.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

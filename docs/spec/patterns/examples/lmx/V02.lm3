@@ -1,3 +1,15 @@
+CharacterRange:
+    copy: sys\OPERANDS_TEMPLATE
+    return: int
+    between:
+        throws: RangeArity
+        if: length(right) != 2
+            throw: RangeArity()
+        char: value \left
+        char: lower \right[0]
+        char: upper \right[1]
+        return: lower <= value && value <= upper
+
 TicketCode:
     char[]: candidate
     return: int
@@ -24,5 +36,5 @@ TicketCode:
 #             ReceiverIndex
 #             FxKernelFailure
 #             FxTypeToken
-#         return: matches(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+#         return: wholeMatch(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
 # END ALTERNATIVE LMX

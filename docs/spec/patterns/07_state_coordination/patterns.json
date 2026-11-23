@@ -20,8 +20,8 @@
       "scenario_en": "Start at 10. Read, write 20, read again; then consider concurrent read requests.",
       "expected_ru": "Последовательный сценарий даёт 10,20. Java/Rust допускают параллельных читателей; LMX owner обслуживает их последовательно.",
       "expected_en": "The sequential trace returns 10,20. Java/Rust permit concurrent readers; the LMX owner serves them serially.",
-      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
-      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков. write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn.",
       "comparison_ru": "Это функциональная альтернатива для согласованных скалярных чтений, а не реализация самого RW-lock на L3. Параллельный доступ к большому неизменяемому снимку можно вынести в отдельный протокол.",
       "comparison_en": "This is a functional alternative for consistent scalar reads, not an implementation of an L3 RW-lock. Parallel access to a large immutable snapshot requires a separate protocol.",
       "limits_ru": "Нельзя объявлять одинаковую пропускную способность или гарантию параллельных readers. Fairness, starvation и poison policy отличаются; Rust unwrap выбран только для безаварийного сценария.",
@@ -30,9 +30,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
-          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+          "code": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: read()\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков. write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn."
         },
         {
           "language": "Java",
@@ -60,7 +60,26 @@
           "why_ru": "Чтение согласованного снимка при исключении пересечения с изменением.",
           "why_en": "Reading a consistent snapshot without overlapping a mutation."
         }
-      ]
+      ],
+      "variants": {
+        "LMX": {
+          "procedural": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
+          "shared_methods": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: read()\n"
+        }
+      },
+      "procedural_lmx": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
+      "primary_variant": {
+        "LMX": "shared_methods"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "shared_methods"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Reuse the included read method after write updates node\\value. Both execute within the same owner turn; the returned value comes from the updated graph rather than a copied DATA value. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      }
     },
     {
       "id": 66,
@@ -124,8 +143,8 @@
       "scenario_en": "Two clients wait for a value; publish(7) makes it ready and completes both waits.",
       "expected_ru": "До publish ответов нет; после — оба клиента получают 7. LMX owner продолжает обслуживать publish, пока запросы ждут.",
       "expected_en": "No replies before publish; afterwards both clients receive 7. The LMX owner remains able to process publish while requests wait.",
-      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
-      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди. Общий reply целиком показан и учтён: готовый запрос использует обычное автозаполнение requestId, а publish передаёт очередной ID из FIFO позиционно. Это не добавляет ожидания и не меняет правило повторной публикации.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue. The complete counted reply body is shared: an already-ready request uses ordinary requestId autofill, while publish supplies each FIFO ID positionally. This adds no wait and does not change republishing policy.",
       "comparison_ru": "Java/Rust освобождают lock во время ожидания и повторно проверяют predicate. LMX сохраняет запрос и завершает turn, позволяя publish дойти до владельца; это событийная форма guarded wait.",
       "comparison_en": "Java/Rust release the lock while waiting and recheck the predicate. LMX stores the request and ends its turn so publish can reach the owner: an event-driven guarded wait.",
       "limits_ru": "Отмена ожидания, исчезновение клиента и повторные publish требуют политики. Без неё список ожидающих может расти; это не автоматическое продление жизни исходного stack frame.",
@@ -134,9 +153,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+          "code": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    awaitValue:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди. Общий reply целиком показан и учтён: готовый запрос использует обычное автозаполнение requestId, а publish передаёт очередной ID из FIFO позиционно. Это не добавляет ожидания и не меняет правило повторной публикации.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue. The complete counted reply body is shared: an already-ready request uses ordinary requestId autofill, while publish supplies each FIFO ID positionally. This adds no wait and does not change republishing policy."
         },
         {
           "language": "Java",
@@ -164,7 +183,26 @@
           "why_ru": "Запрос получает результат только после выполнения предиката готовности.",
           "why_en": "A request receives its result only after a readiness predicate becomes true."
         }
-      ]
+      ],
+      "variants": {
+        "LMX": {
+          "procedural": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
+          "shared_methods": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    awaitValue:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n"
+        }
+      },
+      "procedural_lmx": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
+      "primary_variant": {
+        "LMX": "shared_methods"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "shared_methods"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Share the complete reply method between an already-ready request and the publish drain. Normal DATA autofill carries requestId for the first case; each popped ID is positional for the second. publish can still run while earlier clients wait, and later publication is not changed into Future single assignment. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      }
     },
     {
       "id": 68,
@@ -280,8 +318,8 @@
       "scenario_en": "Balance is 10. Two clients request withdraw(7); checking and decrementing must be one operation.",
       "expected_ru": "Ровно один запрос успешен; итоговый баланс 3. Отдельные read+write этим свойством не обладают.",
       "expected_en": "Exactly one request succeeds; final balance is 3. Separate read+write requests do not have this property.",
-      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
-      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex. Проверка использует уже показанный read() как локальный вызов: между проверкой и списанием нет post или ожидания. При отрицательном amount короткое замыкание по-прежнему пропускает чтение баланса.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex. The predicate uses the included read() as a local call: there is no post or wait between check and debit. Short-circuiting still skips the balance read for a negative amount.",
       "comparison_ru": "Последовательный turn позволяет выражать владельца-инвариант без пользовательского lock на L3. Это не распределённая транзакция: другой владелец не включается в ту же атомарную операцию автоматически.",
       "comparison_en": "A serial turn expresses an invariant-owning object without an application L3 lock. It is not a distributed transaction: another owner does not automatically join the atomic operation.",
       "limits_ru": "Переполнение целого, durability и многосчётный перевод вне сценария. Ошибка после изменения графа не означает автоматический rollback.",
@@ -290,9 +328,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
-          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
-          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+          "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || read() < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex. Проверка использует уже показанный read() как локальный вызов: между проверкой и списанием нет post или ожидания. При отрицательном amount короткое замыкание по-прежнему пропускает чтение баланса.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex. The predicate uses the included read() as a local call: there is no post or wait between check and debit. Short-circuiting still skips the balance read for a negative amount."
         },
         {
           "language": "Java",
@@ -325,21 +363,34 @@
       "variants": {
         "LMX": {
           "procedural": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
-          "direct_expression": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n"
+          "direct_expression": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "shared_methods": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || read() < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n"
         }
       },
       "primary_variant": {
-        "LMX": "direct_expression"
+        "LMX": "shared_methods"
       },
       "eligible_variants": {
         "LMX": [
           "procedural",
-          "direct_expression"
+          "direct_expression",
+          "shared_methods"
         ]
       },
       "fairness_notes": {
-        "LMX": "Combine two pure rejection guards with ordinary short-circuit OR. A negative amount still skips the balance read; the accepted update remains one Message turn. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
-      }
+        "LMX": "Use the included read method in the rejection predicate. This remains a direct local call inside withdraw, with no await/post between checking and decrementing. Short-circuit OR still skips the balance read for a negative amount. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      },
+      "inline_current_lmx_variants": [
+        "direct_expression"
+      ],
+      "companion_sources": [
+        {
+          "file": "examples/lmx/070_monitor_object_direct_expression.lm3",
+          "counts_as_primary": false,
+          "sha256": "cfb54b7f202df658b769714d3043b29390364020f18ab0cc402f333dcd2b89e3",
+          "reason": "Complete prior primary retained as commented source; selected shared_methods variant is in the ordinary source file."
+        }
+      ]
     }
   ]
 }

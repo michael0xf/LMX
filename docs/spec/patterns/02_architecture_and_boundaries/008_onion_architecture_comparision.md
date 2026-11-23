@@ -36,7 +36,7 @@ Application:
         save(order := order)
         return: order\total()
     demo:
-        return: submit(order := Order; save := Repository\save)
+        return: submit(Order; Repository\save)
 ```
 
 Вызов Application\demo(). Order не зависит от Repository; save(order:@) сохраняет ссылку в тестовом адаптере.
@@ -94,11 +94,46 @@ func demo() int { return submit(&Order{3, 10}, &Memory{}) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 247 | 20 |
+| LMX | 234 | 20 |
 | Java | 363 | 13 |
 | Go | 308 | 8 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Order:
+    int: quantity 3
+    int: price 10
+    return: int
+    total:
+        return: quantity * price
+
+Repository:
+    @: last 0
+    @: order
+    save:
+        node\last := order
+
+Application:
+    @: order
+    @: save
+    return: int
+    submit:
+        save(order := order)
+        return: order\total()
+    demo:
+        return: submit(order := Order; save := Repository\save)
+```
+
+**Основание выбора / Selection:** Use the visible submit input order order, save. Keep the named order actual on the saved callback because Repository has last before order; identity and save-before-total behavior remain.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

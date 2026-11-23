@@ -13,12 +13,7 @@ FxMap:
     required: items transform
     return: @
     map:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; count)
@@ -36,12 +31,7 @@ FxFilter:
     required: items accepts
     return: @
     filter:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -67,11 +57,7 @@ FxFold:
     required: items seed step
     return: @
     fold:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: accumulator seed
@@ -93,11 +79,7 @@ FxZip:
     required: first second
     return: @
     zip:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\sequence)
         FxSeqInfo\get(first)
         FxSeqInfo\get(second)
         private: int: count length(first)
@@ -121,12 +103,7 @@ FxZipWith:
     required: first second combine
     return: @
     zipWith:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         FxSeqInfo\get(first)
         FxSeqInfo\get(second)
         private: int: count length(first)
@@ -149,12 +126,7 @@ FxScan:
     required: items seed step
     return: @
     scan:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; 0)
@@ -178,12 +150,7 @@ FxTraverse:
     required: items next
     return: @
     traverse:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; count)
@@ -205,12 +172,7 @@ FxTranspose:
     required: rows
     return: @
     transpose:
-        throws:
-            FxKernelFailure
-            FxShape
-            FxTypeToken
-            ReceiverIndex
-            SequenceSize
+        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize
         FxSeqInfo\get(rows)
         private: int: height length(rows)
         private: @: result FxSeqAllocate\make(@[]; 0)
@@ -253,13 +215,7 @@ FxGroupBy:
     required: items keyOf sameKey
     return: @
     groupBy:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; 0)

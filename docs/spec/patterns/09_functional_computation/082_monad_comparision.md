@@ -12,7 +12,7 @@
 
 Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
 ## LMX — основной: текущее ядро
 
@@ -156,7 +156,7 @@ object MonadExample {
 
 **Возможности общего ядра.** Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.
 
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
 
 ## English explanation
 
@@ -168,11 +168,11 @@ Two bind operations over generic Maybe; the application half still checks an int
 
 **Expected observation.** 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
 
 **Primary LMX.** The operations are directly available from the current core. `(x record)` captures the primitive value record without an IntBox. A Maybe payload uses a record reference; bind invokes half through generic apply, passing an actual int value. The named value actual keeps the record whole.
 
-**Current core implementation.** The operations are directly available from the current core. `(x record)` captures the primitive value record without an IntBox. A Maybe payload uses a record reference; bind invokes half through generic apply, passing an actual int value. The named value actual keeps the record whole.
+**LMX variant `core`.** The operations are directly available from the current core. `(x record)` captures the primitive value record without an IntBox. A Maybe payload uses a record reference; bind invokes half through generic apply, passing an actual int value. The named value actual keeps the record whole.
 
 No execution of LMX or the control programs is claimed.
 

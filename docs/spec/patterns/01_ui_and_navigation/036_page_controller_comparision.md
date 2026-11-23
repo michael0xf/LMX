@@ -23,7 +23,7 @@ OrderPage:
             return: 0
         return: quantity * 10
     demo:
-        return: handle(quantity := 3)
+        return: handle(3)
 ```
 
 Вызов OrderPage\demo(). В HTTP-профиле явная маршрутная Table связывает /orders/show с этим принимающим методом; host и HTML-представление не включены.
@@ -76,11 +76,33 @@ Page Controller отличается от Front Controller принадлежн�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 109 | 9 |
+| LMX | 99 | 9 |
 | TypeScript | 128 | 7 |
 | C# | 160 | 9 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+OrderPage:
+    int: quantity
+    return: int
+    handle:
+        if: quantity < 1
+            return: 0
+        return: quantity * 10
+    demo:
+        return: handle(quantity := 3)
+```
+
+**Основание выбора / Selection:** Use the sole visible quantity input in demo. The invalid-quantity branch and subtotal calculation remain unchanged.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

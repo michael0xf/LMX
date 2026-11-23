@@ -34,10 +34,11 @@ Kernel:
     execute:
         return: node\extension(value := value)
     demo:
+        int: value 5
         install(implementation := Plugins\twice)
-        int: first execute(value := 5)
+        int: first execute()
         install(implementation := Plugins\thrice)
-        return: first + execute(value := 5)
+        return: first + execute()
 ```
 
 Вызов Kernel\demo(). Изменяется ссылка extension на уже существующий метод. Это не редактирование исполняемого тела и не скрытая компиляция.
@@ -98,11 +99,47 @@ func demo() int {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 361 | 22 |
+| LMX | 355 | 23 |
 | Java | 356 | 14 |
 | Go | 326 | 10 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+Plugins:
+    int: value
+    return: int
+    twice:
+        return: value * 2
+    thrice:
+        return: value * 3
+
+Kernel:
+    @: extension Plugins\twice
+    @: implementation
+    int: value
+    return: int
+    install:
+        node\extension := implementation
+        return: 1
+    execute:
+        return: node\extension(value := value)
+    demo:
+        install(implementation := Plugins\twice)
+        int: first execute(value := 5)
+        install(implementation := Plugins\thrice)
+        return: first + execute(value := 5)
+```
+
+**Основание выбора / Selection:** Set the demo-local value to 5 once and reuse ordinary autofill for both execute() calls. Kernel.value has no default, Plugins receive the same explicit value, and both install operations and plugin bodies remain.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

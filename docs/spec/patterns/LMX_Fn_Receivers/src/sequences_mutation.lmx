@@ -12,12 +12,7 @@ FxSeqReplaceRange:
     required: target begin end values
     return: @
     replaceRange:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         private: @: info FxSeqInfo\get(target)
         FxSeqInfo\get(values)
         private: int: removed FxSeqBounds\count(target; begin; end)
@@ -76,12 +71,7 @@ FxSeqSplice:
     required: target begin end values
     return: @
     splice:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         # Snapshot the removed range before reserve, resize, or any target
         # write. Slice preserves the complete physical element profile and
         # copies outer slots only: referenced targets remain shared.
@@ -99,12 +89,7 @@ FxSeqAppend:
     required: target values
     return: @
     append:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         FxSeqInfo\get(target)
         private: int: end length(target)
         return: FxSeqReplaceRange\replaceRange(target; end; end; values)
@@ -117,12 +102,7 @@ FxSeqInsert:
     required: target position values
     return: @
     insert:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         return: FxSeqReplaceRange\replaceRange(target; position; position; values)
 
 FxSeqDeleteAt:
@@ -133,11 +113,6 @@ FxSeqDeleteAt:
     required: target begin end
     return: @
     deleteAt:
-        throws:
-            FxKernelFailure
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\mutation)
         private: @: empty FxSeqAllocate\make(@[]; 0)
         return: FxSeqReplaceRange\replaceRange(target; begin; end; empty)

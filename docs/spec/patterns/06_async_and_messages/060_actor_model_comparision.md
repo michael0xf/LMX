@@ -21,10 +21,12 @@ CounterMessage:
     return: int
     add:
         node\total += delta
-        return: node\total
+        return: read()
     read:
         return: node\total
 ```
+
+После обновления add вызывает уже показанный read: это обычный локальный вызов того же владельца, без нового письма.
 
 LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы.
 
@@ -75,11 +77,33 @@ Message непосредственно соответствует выбранн
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 104 | 9 |
+| LMX | 100 | 9 |
 | Go | 141 | 8 |
 | Erlang | 144 | 7 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- shared-method-reuse-review-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
+
+```lmx
+CounterMessage:
+    int: delta
+    int: total 0
+    return: int
+    add:
+        node\total += delta
+        return: node\total
+    read:
+        return: node\total
+```
+
+**Основание выбора / Selection:** Reuse the already included read method after the add update. read still reads node\total from the same CounterMessage, inside the current turn; no new post or participant is introduced.
+
+**Completeness:** After the update, add reuses the included read method: an ordinary local call on the same owner, with no new letter. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
 
 ## English explanation
 

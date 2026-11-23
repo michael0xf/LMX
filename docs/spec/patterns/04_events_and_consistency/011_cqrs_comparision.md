@@ -32,7 +32,7 @@ ReadMessage:
     return: int
     apply:
         node\visible := snapshot
-        return: node\visible
+        return: query()
     query:
         return: node\visible
 ```
@@ -99,11 +99,44 @@ WriteMessage и ReadMessage — шаблоны двух отдельных ис�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 262 | 19 |
+| LMX | 257 | 19 |
 | Java | 395 | 16 |
 | Go | 347 | 12 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- reuse-review-01-05-2026-11-22 -->
+
+## Предыдущий полный вариант LMX — вне основного подсчёта
+
+Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
+
+```lmx
+WriteMessage:
+    int: balance 0
+    int: amount
+    @: transport
+    add:
+        throws: Amount
+        if: amount < 0
+            throw: Amount()
+        node\balance += amount
+        node\transport\publish(node\balance)
+
+ReadMessage:
+    int: visible 0
+    int: snapshot
+    return: int
+    apply:
+        node\visible := snapshot
+        return: node\visible
+    query:
+        return: node\visible
+```
+
+**Основание выбора / Selection:** Reuse the existing ReadMessage.query method for the apply result. The state write still occurs before the read; query itself remains read-only and cannot dispatch a command.
+
+<!-- /reuse-review-01-05-2026-11-22 -->
 
 ## English explanation
 

@@ -124,8 +124,8 @@
       "scenario_en": "Two clients send add(2) and add(5) to one counter initially at zero.",
       "expected_ru": "После подтверждённого выполнения обеих операций read возвращает 7 при любом порядке их admission.",
       "expected_en": "After both operations are confirmed complete, read returns 7 in either admission order.",
-      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы.",
-      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы. После обновления add вызывает уже показанный read: это обычный локальный вызов того же владельца, без нового письма.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses. After the update, add reuses the included read method: an ordinary local call on the same owner, with no new letter.",
       "comparison_ru": "Message непосредственно соответствует выбранной actor-модели: один владелец mutable graph и последовательное исполнение. Структурный callable и транспорт не создают общего mutable heap между владельцами.",
       "comparison_en": "Message directly realizes this actor model: one mutable-graph owner and serial execution. Structural callables and transport do not create a shared mutable heap across owners.",
       "limits_ru": "Нет общего sender-clock порядка, exactly-once delivery или автоматического rollback. Повтор add после потерянного ответа может удвоить эффект.",
@@ -134,9 +134,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: node\\total\n    read:\n        return: node\\total\n",
-          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы.",
-          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses."
+          "code": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: read()\n    read:\n        return: node\\total\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы. После обновления add вызывает уже показанный read: это обычный локальный вызов того же владельца, без нового письма.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses. After the update, add reuses the included read method: an ordinary local call on the same owner, with no new letter."
         },
         {
           "language": "Go",
@@ -164,7 +164,26 @@
           "why_ru": "Владелец изолированного состояния принимает целые операции через сообщения.",
           "why_en": "An isolated state owner receives complete operations through messages."
         }
-      ]
+      ],
+      "variants": {
+        "LMX": {
+          "procedural": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: node\\total\n    read:\n        return: node\\total\n",
+          "shared_methods": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: read()\n    read:\n        return: node\\total\n"
+        }
+      },
+      "procedural_lmx": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: node\\total\n    read:\n        return: node\\total\n",
+      "primary_variant": {
+        "LMX": "shared_methods"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "shared_methods"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Reuse the already included read method after the add update. read still reads node\\total from the same CounterMessage, inside the current turn; no new post or participant is introduced. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      }
     },
     {
       "id": 61,
@@ -320,8 +339,8 @@
       "scenario_en": "Two clients request the result before resolve(7), and a third after it. A second resolve(9) is rejected.",
       "expected_ru": "Три клиента получают 7; resolve принимает только первое значение.",
       "expected_en": "All three clients receive 7; resolve accepts only the first value.",
-      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.",
-      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\\pop()) получает очередной ID позиционно; оба читают текущее node\\value.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\\pop()) receives the next ID positionally; both read the current node\\value.",
       "comparison_ru": "LMX/Erlang сохраняют ожидающих у владельца. Go close(done) одновременно публикует значение и разблокирует читателей по контракту каналов; это не polling.",
       "comparison_en": "LMX/Erlang retain waiters at the owner. Go close(done) publishes the value and releases readers under channel synchronization; it is not polling.",
       "limits_ru": "Ошибка, cancellation, срок жизни, удаление потерянных клиентов и распределённая доставка — отдельные расширения. «Отклоняется» в сценарии означает отсутствие изменения, без отдельного error reply.",
@@ -330,9 +349,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    get:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.",
-          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions."
+          "code": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    get:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\\pop()) получает очередной ID позиционно; оба читают текущее node\\value.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\\pop()) receives the next ID positionally; both read the current node\\value."
         },
         {
           "language": "Go",
@@ -360,7 +379,26 @@
           "why_ru": "Однократно завершённый результат доступен всем ожидающим и поздним читателям.",
           "why_en": "A once-completed result is available to current waiters and later readers."
         }
-      ]
+      ],
+      "variants": {
+        "LMX": {
+          "procedural": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    get:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
+          "shared_methods": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    get:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n"
+        }
+      },
+      "procedural_lmx": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    get:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
+      "primary_variant": {
+        "LMX": "shared_methods"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "shared_methods"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Share the complete reply method between the ready fast path and FIFO drain. The ready call uses normal DATA autofill of requestId; the draining call explicitly supplies each popped ID. The helper still sends the current node\\value, and the first-resolution guard remains. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      }
     },
     {
       "id": 71,
@@ -516,8 +554,8 @@
       "scenario_en": "Two partitions [1,2] and [3,4] are grouped by parity. Map emits (n mod 2,1); reduce counts values.",
       "expected_ru": "Результат {0:2,1:2}. Чтение итогов выполняется после четырёх подтверждённых reduce-операций.",
       "expected_en": "Result {0:2,1:2}. Final reads occur after four acknowledged reduce operations.",
-      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.",
-      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged.",
       "comparison_ru": "LMX выражает shuffle явным выбором Message-владельца ключа; Go channel и Erlang mail переносят ключи. Это раскрывает алгоритм map/group/reduce, но ещё не распределённый движок Google MapReduce.",
       "comparison_en": "LMX expresses shuffle as explicit selection of the key owner Message; Go channels and Erlang mail carry keys. This exposes map/group/reduce without claiming to implement the distributed Google MapReduce engine.",
       "limits_ru": "Нет spill-to-disk, сбойного перезапуска map, dedup, сортировки ключей и durable shuffle. Неотрицательные целые ограничены четырьмя значениями; порядок обработки не влияет на сумму.",
@@ -526,9 +564,9 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: node\\count\n    read:\n        return: node\\count\n",
-          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.",
-          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement."
+          "code": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: read()\n    read:\n        return: node\\count\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged."
         },
         {
           "language": "Go",
@@ -556,7 +594,26 @@
           "why_ru": "Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.",
           "why_en": "Map emits keys, shuffle routes them to owners, and reduce combines values per key."
         }
-      ]
+      ],
+      "variants": {
+        "LMX": {
+          "procedural": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: node\\count\n    read:\n        return: node\\count\n",
+          "shared_methods": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: read()\n    read:\n        return: node\\count\n"
+        }
+      },
+      "procedural_lmx": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: node\\count\n    read:\n        return: node\\count\n",
+      "primary_variant": {
+        "LMX": "shared_methods"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "shared_methods"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Reuse the reducer read method after incrementing node\\count. Mapper selection, distinct reducer owners, post/ask/answer and barrier acknowledgement are preserved. No local map/group/fold replaces the distributed protocol. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
+      }
     }
   ]
 }

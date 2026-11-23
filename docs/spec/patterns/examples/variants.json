@@ -573,19 +573,17 @@
       "expected_ru": "AB-09 и QZ-70 принимаются; неверная длина, разделитель, NUL и символы вне ASCII-диапазонов отклоняются. Все 11 исходных случаев сохранены.",
       "implementation_comparison": "library_comparisons/v02_character_range_comparision.md",
       "original_source_sha256_at_import": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7",
-      "allowed_user_helpers": [
-        "libraries/lmx/CharacterRange.lm3"
-      ],
+      "allowed_user_helpers": [],
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between.",
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро.",
       "variants": [
         {
           "id": "original",
           "label_ru": "Прямой LMX с пользовательским between",
           "correct_for_scenario": true,
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
+          "code": "CharacterRange:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    between:\n        throws: RangeArity\n        if: length(right) != 2\n            throw: RangeArity()\n        char: value \\left\n        char: lower \\right[0]\n        char: upper \\right[1]\n        return: lower <= value && value <= upper\n\nTicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
           "cases": [
             {
               "invoke": "TicketCode\\accepts(\"AB-09\")",
@@ -641,25 +639,44 @@
               "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
             }
           ],
-          "load_before": [
-            "libraries/lmx/CharacterRange.lm3"
-          ],
+          "load_before": [],
           "required_profile": [
             "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
           ],
-          "notes_ru": "Сохранён полный исходный клиент: длина, разделитель, две буквы и две цифры ASCII; собственный операнд between и RangeArity остаются частью показанного механизма. Полная реализация CharacterRange приведена рядом и учтена отдельно.",
+          "notes_ru": "Полный листинг включает собственный CharacterRange/between и весь прежний TicketCode. Клиент сохранён без изменений после определения helper; отдельная загрузка не требуется. В основной размер входят обе части и объявления RangeArity. Проверяются длина, разделитель, две буквы и две цифры ASCII.",
           "metrics": {
-            "characters": 263,
-            "nonblank_lines": 11,
-            "utf8_bytes": 381,
-            "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
-          }
+            "characters": 462,
+            "nonblank_lines": 22,
+            "utf8_bytes": 684,
+            "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+          },
+          "historical_client": {
+            "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
+            "metrics": {
+              "characters": 263,
+              "nonblank_lines": 11,
+              "utf8_bytes": 381,
+              "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
+            },
+            "preserved_as": "Exact suffix of the complete primary; the local helper is prefixed and counted."
+          },
+          "embedded_helpers": [
+            {
+              "source": "libraries/lmx/CharacterRange.lm3",
+              "metrics": {
+                "characters": 199,
+                "nonblank_lines": 11,
+                "utf8_bytes": 302,
+                "sha256": "8c08f5c6a8e461ddd72fe784c3157233c5fe610f3046a81126e3d54456e9e612"
+              }
+            }
+          ]
         },
         {
           "id": "regex",
           "label_ru": "Дополнительный LMX с Pattern",
           "correct_for_scenario": true,
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws:\n            PatternArgument\n            PatternEncoding\n            PatternPosition\n            SequenceSize\n            ReceiverIndex\n            FxKernelFailure\n            FxTypeToken\n        return: matches(byteText(source := candidate); (then (charRange(\"A\"; \"Z\") times 2) \"-\" (asciiDigit times 2)))\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws:\n            PatternArgument\n            PatternEncoding\n            PatternPosition\n            SequenceSize\n            ReceiverIndex\n            FxKernelFailure\n            FxTypeToken\n        return: wholeMatch(byteText(source := candidate); (then (charRange(\"A\"; \"Z\") times 2) \"-\" (asciiDigit times 2)))\n",
           "cases": [
             {
               "invoke": "TicketCode\\accepts(\"AB-09\")",
@@ -722,16 +739,101 @@
           ],
           "notes_ru": "Новая префиксная форма then сохраняет группы повторений и не попадает под условное открытие right. Сопоставление охватывает весь byteText; charRange получает строковые границы \"A\"/\"Z\", а asciiDigit — именно ASCII. Это пример применения новой семантики, а не замена контрольного пользовательского операнда between. Ядро и его дополнительные объявления отказов показаны явно; код не запускался.",
           "metrics": {
-            "characters": 245,
+            "characters": 248,
             "nonblank_lines": 13,
-            "utf8_bytes": 384,
-            "sha256": "2580fe5582aacccde8857d5abd3b140398dfbd3796151dbd4c64a6c035714d53"
+            "utf8_bytes": 387,
+            "sha256": "3b6c7c3b6fcdcc7ed633a1b55bab30e131c2db594a135a0bdc77b4754836f53c"
           }
         }
       ],
-      "retained_explanation_ru": "Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII. Операнд `between` импортирован из [собственной библиотеки CharacterRange](examples/libraries/lmx/CharacterRange.lm3); клиент сохраняет длину, дефис и конкретные диапазоны. [Полная пара реализаций LMX/Haskell](examples/library_comparisons/v02_character_range_comparision.md) показывает helper, способы загрузки, арность и стоимость отдельно. `throws: RangeArity` распространяет объявленный выход helper даже при заведомо корректных двух границах в каждом вызове. Режим 0 получает готовые символы; каждое применение явно сгруппировано перед `&&`.\n\n| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport CharacterRange (between)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (\\x -> x `between` ('A','Z')) [a,b] &&\n  all (\\x -> x `between` ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nБиблиотека проверяет только включительные границы. Перевёрнутый диапазон даёт false/0. Haskell фиксирует две границы типом пары; общий LMX-операнд проверяет длину `right` явно. Весь клиент LMX сократился с 301 до 263 непробельных символов, но с полной библиотекой (199) занимает 462: это полезное выделение общей операции, а не обещание меньшего полного standalone-кода.",
+      "retained_explanation_ru": "Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII. Операнд `between` определён в полном листинге выше; [отдельный CharacterRange](examples/libraries/lmx/CharacterRange.lm3) сохраняется для чтения реализации. Клиент сохраняет длину, дефис и конкретные диапазоны. [Полная пара реализаций LMX/Haskell](examples/library_comparisons/v02_character_range_comparision.md) показывает helper, арность и разбивку стоимости; основной V02 уже включает его целиком. `throws: RangeArity` распространяет объявленный выход helper даже при заведомо корректных двух границах в каждом вызове. Режим 0 получает готовые символы; каждое применение явно сгруппировано перед `&&`.\n\n| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport CharacterRange (between)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (\\x -> x `between` ('A','Z')) [a,b] &&\n  all (\\x -> x `between` ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nБиблиотека проверяет только включительные границы. Перевёрнутый диапазон даёт false/0. Haskell фиксирует две границы типом пары; общий LMX-операнд проверяет длину `right` явно. Клиентская часть занимает 263 непробельных символа, а CharacterRange — 199. Основной полный листинг V02 поэтому занимает 462: обе части считаются вместе. Ранее показанные 263 относились только к клиенту.",
       "selected": "original",
       "alternative": "regex",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+    },
+    {
+      "id": "V03",
+      "title_ru": "V03. Куда вставляется mock",
+      "expected_ru": "sample даёт вердикт 1 при одном чтении; biased — 0 при одном чтении; readsTwice — 0 при двух чтениях. Повторная проверка сбрасывает счётчик.",
+      "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
+      "eligible_variants": [
+        "original",
+        "reuse"
+      ],
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта.",
+      "retained_explanation_ru": "| Вызов | Вердикт | Число чтений |\n| --- | ---: | ---: |\n| `SamplingCheck\\check(candidate := Measurement\\sample)` | 1 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\biased)` | 0 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\readsTwice)` | 0 | 2 |\n\nВыполняется настоящий кандидат. Подменена его зависимость `read`, а не весь проверяемый алгоритм. Собственное незаполненное `read` кандидата получает обычную локальную ссылку checker через autofill; `gain` передан явно. Счётчик mock расположен в явно доступном лексическом состоянии.\n\nПоследний кандидат специально возвращает правильное число `28`, но делает два чтения. Проверка только результата пропустила бы дефект. Haskell-аналог — параметр `readSample :: IO Int` у `sample`, с тестовым действием, которое возвращает `7` и увеличивает `IORef`. Подмена зависимости не требует отдельного языка тестов ни в одном варианте.\n\nКонтрольный повтор первого вызова опять даёт `1` и ровно одно чтение: checker явно сбрасывает свой счётчик. [Основание](../LMX_semantics.en.md#binding-autofill); V02 английского корпуса.",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прежний полный LMX с повторённым вычислением",
+          "correct_for_scenario": true,
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: read() * gain + 1\n    readsTwice:\n        int: discarded read()\n        return: read() * gain\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; all application methods are present in the listing."
+          ],
+          "notes_ru": "Прежний основной листинг сохранён целиком. Каждый кандидат явно содержит вычисление read() * gain; отдельная зависимость не загружается.",
+          "metrics": {
+            "characters": 304,
+            "nonblank_lines": 23,
+            "utf8_bytes": 490,
+            "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+          }
+        },
+        {
+          "id": "reuse",
+          "label_ru": "LMX с повторным использованием sample",
+          "correct_for_scenario": true,
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; ordinary calls autofill gain and read from the active candidate."
+          ],
+          "notes_ru": "sample уже реализует чтение и умножение. biased вызывает его один раз и добавляет 1. readsTwice сохраняет первый read(), затем вызывает sample() для второго чтения. При sample() собственные незаполненные gain и read получают значения из исполняемого кандидата; новых DATA-полей, сохранённого состояния и интерфейсных входов нет.",
+          "metrics": {
+            "characters": 298,
+            "nonblank_lines": 23,
+            "utf8_bytes": 480,
+            "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+          }
+        }
+      ],
+      "selected": "reuse",
+      "alternative": "original",
       "selection_metric": "nonwhitespace_characters_of_complete_current_source"
     }
   ]

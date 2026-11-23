@@ -12,7 +12,7 @@
 
 Основные варианты: LMX — **ядро: поэтапное curry**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
 ## LMX — основной: ядро: поэтапное curry
 
@@ -178,7 +178,7 @@ object CurryingExample {
 
 **Возможности общего ядра.** int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.
 
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
+Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
 
 ## English explanation
 
@@ -190,11 +190,11 @@ Direct partial builds add5 and add100 from an ordinary function; environment cop
 
 **Expected observation.** 6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
+Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
 
 **Primary LMX.** One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099.
 
-**Current core implementation.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
+**LMX variant `core`.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
 
 No execution of LMX or the control programs is claimed.
 

@@ -1,6 +1,6 @@
 # 096. Money value equality — implementation
 
-Полностью показать конкретный двухкомпонентный Money и его импортируемое равенство.
+Общий equals сравнивает значения через явную проекцию и единое равенство.
 
 **Примеры использования:** [032. Value Object](032_value_object_comparision.md)
 
@@ -10,30 +10,29 @@
 
 **Ожидаемое наблюдение:** Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.
 
-**Граница сравнения:** Реализация библиотеки. Это библиотека одного типа с двумя int-компонентами, не реализация Python dataclasses, C# records или универсального schema compiler. Принимаются корректные Money-значения; произвольные неверные типы и метапрограммное изменение классов/графа не сравниваются. В LMX защищены значения полей, как и в исходном примере; отдельная ретроактивная заморозка внешнего контейнера не добавлена.
+**Граница сравнения:** Реализация библиотеки. LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.
 
 Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.
 
 ## LMX
 
 ```lmx
-MoneyLibrary:
-    immutable: Money:
-        int: cents 100
-        int: currency 840
-    Equality:
-        copy: sys\OPERANDS_TEMPLATE
-        return: int
-        equals:
-            throws: OperandArity
-            if: length(right) != 1
-                throw: OperandArity()
-            @: a \left
-            @: b \right[0]
-            return: a\cents = b\cents && a\currency = b\currency
+FxEquals:
+    private:
+        @: first
+        @: second
+        @: projection 0
+        @: same 0
+    required: first second
+    return: int
+    equals:
+        throws: copy(FxThrows\predicate)
+        private: @: a FxProjectValue\get(first; projection)
+        private: @: b FxProjectValue\get(second; projection)
+        return: FxValueSame\test(a; b; same)
 ```
 
-Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\cents и a\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.
+Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.
 
 [Отдельный листинг](examples/lmx/096_money_value_equality_implementation.lm3)
 
@@ -78,7 +77,7 @@ namespace ExampleLib {
 
 ## Разбор LMX
 
-Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\cents и a\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.
+Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.
 
 ## Сопоставление
 
@@ -90,19 +89,19 @@ Python использует базовый immutable tuple, запрещает i
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 231 | 14 | 231 |
-| Python | 268 | 10 | — |
-| C# | 335 | 10 | — |
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 248 | 13 |
+| Python | 268 | 10 |
+| C# | 335 | 10 |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Все объявления, аргументы и ссылки на общий банк ошибок учитываются целиком.
 
 ## English explanation
 
-Fully show the concrete two-component Money representation and imported equality.
+Generic equals applies an explicit projection and the shared equality dispatch.
 
 **Usage examples:** [032. Value Object](032_value_object_comparision.md)
 
@@ -110,15 +109,15 @@ Fully show the concrete two-component Money representation and imported equality
 
 **Expected observation.** Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.
 
-**LMX.** Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\cents and a\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.
+**LMX.** The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.
 
 **Comparison.** Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.
 
-**Scope and limitations.** This implements one type with two int components, not Python dataclasses, C# records, or a universal schema compiler. Inputs are valid Money values; invalid foreign types and metaprogrammatic class/graph mutation are outside scope. LMX protects field values as in the original example; no retroactive freezing of the outer container is added.
+**Scope and limitations.** LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\cents and a\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.
+- **LMX:** The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.
 - **Python:** Complete money.py, using only a basic tuple and its own two-field comparison.
 - **C#:** Complete ExampleLib.Money, with readonly components and explicit Same, without record-generated equality.
 

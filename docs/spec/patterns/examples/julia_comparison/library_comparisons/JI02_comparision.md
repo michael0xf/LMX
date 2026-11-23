@@ -4,9 +4,9 @@
 
 Полные конечные одномерные массивы и прямоугольные массивы строк. Диапазоны и срезы полуоткрыты и используют нулевые позиции. Предусмотрены пустые входы, отрицательный шаг, отказ на нулевом шаге, проверка размеров и несовместимой формы. Копируются внешние позиции, ссылочные цели сохраняются. concat не делает рекурсивного flatten. Julia reference принимает обычные one-based AbstractVector, а не все возможные AbstractArray/OffsetArray.
 
-Это полная реализация объявленных операций в указанном профиле, а не весь Julia Base. Foreign comparison-модуль не импортируется клиентами. Зависимости Julia: нет дополнительных Julia comparison-модулей; тела находятся рядом. LMX-тела извлечены из текущего ядра; [общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) составляют их явное дополнение.
+Единое LMX-тело используется обеими клиентскими формами. Julia comparison-модуль клиенты не импортируют. Зависимости Julia: нет дополнительных Julia comparison-модулей.
 
-Публичные операции: `range`, `slice`, `reverse`, `compress`, `concat`, `transpose`.
+[Общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) дополняют эти тела.
 
 ## LMX: действующие тела
 
@@ -209,7 +209,7 @@ FxTranspose:
         return: result
 ```
 
-## Julia: самостоятельная семантическая реализация
+## Julia: самостоятельная реализация
 
 ```julia
 module JuliaArrayReference
@@ -329,14 +329,14 @@ end
 end
 ```
 
-## Размеры компонентов
+## Полный размер компонентов
 
-| Язык | Без пробельных | Без сложного Throws | Непустые строки | Все символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 4233 | 4097 | 191 | 6661 |
-| Julia | 2529 | 2529 | 114 | 3417 |
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 4233 | 6661 | 191 |
+| Julia | 2529 | 3417 | 114 |
 
-Колонка «Без сложного Throws» исключает только аргументы после первого; copy(Throws) сохраняется целиком. Исходник не изменяется. Размер общих зависимостей приводится отдельно: складывать его для каждой строки повторно нельзя. Подготовлены empty/error/alias/callback cases в validation; runtime execution NOT_RUN.
+Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.
 
 ## Исходники LMX
 
@@ -347,7 +347,7 @@ end
 - `FxSeqConcat` — [../../LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx)
 - `FxTranspose` — [../../LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx)
 
-## Первичные источники семантики Julia
+## Первичные источники
 
-- [https://docs.julialang.org/en/v1/base/arrays/](https://docs.julialang.org/en/v1/base/arrays/)
-- [https://docs.julialang.org/en/v1/base/collections/](https://docs.julialang.org/en/v1/base/collections/)
+- <https://docs.julialang.org/en/v1/base/arrays/>
+- <https://docs.julialang.org/en/v1/base/collections/>

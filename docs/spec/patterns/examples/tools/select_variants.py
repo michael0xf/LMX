@@ -1,81 +1,134 @@
 #!/usr/bin/env python3
-"""Publish genuine alternatives; a one-line substitution is a note, not a listing."""
+"""Publish both full LMX styles for all24 root scenarios; never select one away."""
 from pathlib import Path
-import json,re,hashlib,copy,sys
-ROOT=Path(__file__).resolve().parents[2]; EX=ROOT/'examples'
+import csv,json,os,re,sys
+ROOT=Path(__file__).resolve().parents[2];EX=ROOT/'examples'
 sys.path.insert(0,str(ROOT/'tools'))
-from throws_metrics import measure_throws
-BEGIN='# BEGIN ALTERNATIVE LMX (excluded from character counts)'; END='# END ALTERNATIVE LMX'
-def canonical(s):return s.strip()+'\n'
-def metric(s):
- s=canonical(s);return {'characters':sum(not c.isspace() for c in s),'nonblank_lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest(),'without_complex_throws_characters':measure_throws(s,ROOT)['without_complex_throws_characters']}
-def save(p,d):p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+from lmx_style_variants import normalize,measure,get_variants,write_sources,validate_variants
+from lmx_execution_contract import apply_execution_contract, ensure_startup_note, startup_note
+from guide_supplement import compose_guide
+
+
+def save(path,value):path.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n')
+def fence(language,code):return '```'+language+'\n'+normalize(code)+'```'
+def table(entry):
+    values=[('LMX — процедурный',entry['lmx_variants']['procedural']['metrics']),('LMX — функциональный',entry['lmx_variants']['functional']['metrics'])]
+    if entry.get('foreign_code'):values.append(('Haskell'+(' — аналогия' if entry['status']!='complete_pair' else ''),measure(entry['foreign_code'])))
+    eligible=values if entry['status']=='complete_pair' else values[:2]
+    minimum=min(m['characters'] for _,m in eligible)
+    lines=['| Запись | Непробельные символы | Непустые строки |','| --- | ---: | ---: |']
+    for label,m in values:
+        marked=(label,m) in eligible and m['characters']==minimum
+        chars=f"**{m['characters']}**" if marked else str(m['characters'])
+        lines.append(f"| {label} | {chars} | {m['nonblank_lines']} |")
+    return '\n'.join(lines)
+
+
+def sections(entry, directory):
+    lines=['## Общий договор',entry['contract_notes'],entry['style_note']]
+    if entry['style_relation']=='same_minimal_form':
+        lines += ['Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.']
+    displayed=[('shared',entry['lmx_variants']['functional'])] if entry['style_relation']=='same_minimal_form' else get_variants(entry)
+    for style,variant in displayed:
+        label='общая минимальная форма обоих стилей' if style=='shared' else 'процедурный' if style=='procedural' else 'функциональный'
+        rel=os.path.relpath(EX/variant['source_file'],directory)
+        lines += ['## LMX — '+label,fence('lmx',variant['code']),f'[Полный исходник]({rel})']
+    if entry.get('foreign_code'):
+        lines += ['## Haskell'+(' — связанная аналогия' if entry['status']=='related_analogy' else ''),fence('haskell',entry['foreign_code'])]
+    else:lines += ['## Haskell','Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.']
+    lines += ['## Размер полного текста',table(entry),'Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.',
+              'Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.']
+    return lines
+
+
+def guide_document(entries, expected):
+    """Keep the measured sections and all permanent semantic chapters together."""
+    guide=['# Примеры LMX и аналоги Haskell: две полные стилевые записи',
+        startup_note('../LMX_semantics.en.md#source-entry-profiles'),
+        'Все24 исходных сценария сохранены. Для каждого опубликованы процедурная и функциональная LMX-записи одного observablecontract. Ни одна не исключается из сравнения только потому, что другая короче. Все объявления и Throws входят в полный размер.',
+        'Функциональная запись находится по прежнему пути lmx/ID.lm3; отличающийся процедурный вариант — в lmx/procedural/ID.lm3. Одинаковые минимальные формы используют один исходник и один Markdown-листинг. Они используют одно ядро. Если проверяемые copy/raw/place/Message-семантики требуют одной минимальной формы, это прямо объясняется и не выдаётся за два разных алгоритма.',
+        'Haskell-код и статус complete_pair/related_analogy/lmx_only не изменяются. Частичная аналогия не превращается в полную пару. Зелёный минимум в PDF/XLSX выбирается по полному тексту сопоставимых записей.']
+    for entry in entries:
+        guide += [f'<a id="{entry["id"].lower()}"></a>\n### {entry["id"]}. {entry["title"]}']+sections(entry,ROOT)
+    return compose_guide('\n\n'.join(guide)+'\n',EX,
+                         ROOT/'LMX_examples_and_analogies.ru.md',expected['additional_fixtures'])
+
+
 def main():
- registry=json.loads((EX/'variants.json').read_text()); expect=json.loads((EX/'expected_results.json').read_text())
- baseline=json.loads((EX/'validation/source_baseline_20261123.json').read_text()); oldrows={x['id']:x for x in baseline['records']}
- cases={x['id']:x for x in expect['source_examples']};guide=(ROOT/'LMX_examples_and_analogies.ru.md').read_text();selected={};comparisons=[]
- for r in registry['records']:
-  ident=r['id'];variants=r['variants']
-  for v in variants:v['code']=canonical(v['code']);v['metrics']=metric(v['code'])
-  allowed=[v for v in variants if v['correct_for_scenario'] and v['id'] in r['eligible_variants']]
-  chosen=min(allowed,key=lambda v:(v['metrics']['characters'],v['id']!='original'));alternates=[v for v in variants if v is not chosen]
-  assert len(alternates)<=1,ident
-  alt=alternates[0] if alternates else None;r['selected']=chosen['id'];r['alternative']=alt['id'] if alt else None;selected[ident]=chosen
-  text=chosen['code']
-  if alt:text+='\n'+BEGIN+'\n# '+alt['label_ru']+' — отдельный подход; вне основного размера.\n'+'\n'.join('# '+x for x in alt['code'].splitlines())+'\n'+END+'\n'
-  (EX/'lmx'/f'{ident}.lm3').write_text(text)
-  row=cases[ident]
-  for key in ('cases','load_before','required_profile'):row[key]=copy.deepcopy(chosen.get(key,[]))
-  row['selected_variant']=chosen['id'];row['alternative_variant']=r['alternative'];row['alternative_cases']=copy.deepcopy(alt['cases']) if alt else [];row['alternative_load_before']=copy.deepcopy(alt['load_before']) if alt else []
-  row['variant_cases']={v['id']:copy.deepcopy(v['cases']) for v in variants};row['variant_load_before']={v['id']:copy.deepcopy(v['load_before']) for v in variants}
-  row['source_regions']={'primary':'Before '+BEGIN}
-  if alt:row['source_regions']['alternative']={'begin':BEGIN,'end':END,'comment_prefix':'# ','skip_label_line':True,'execute_separately':True}
-  for key in ['embedded_helpers','historical_client','procedural_source_region','procedural_cases','procedural_load_before']:row.pop(key,None)
-  row['core_versions']=1;row['fairness_note']=r['fairness_note']
-  snippet=f'<a id="{ident.lower()}"></a>\n### {r["title_ru"]}\n\n'
-  snippet+='Основной вариант выбирается по полному размеру и договору задачи. Необходимые локальные определения учитываются; вариант с ядром не получает отдельного приоритета. Реально различающиеся способы показаны отдельно, небольшие замены строк — только пояснением.\n\n| Вариант | Непробельные символы | без сложного Throws | Непустые строки | Роль |\n| --- | ---: | ---: | ---: | --- |\n'
-  for v in variants:snippet+=f'| {v["label_ru"]} | {v["metrics"]["characters"]} | {v["metrics"]["without_complex_throws_characters"]} | {v["metrics"]["nonblank_lines"]} | '+('Основной' if v is chosen else 'Другой подход')+' |\n'
-  snippet+='\n#### Основной вариант LMX\n\n<!-- example: '+ident+' -->\n```lmx\n'+chosen['code'].rstrip()+'\n```\n\n'+chosen['notes_ru']+'\n\n**Ожидается:** '+r['expected_ru']+'\n'
-  if r.get('retained_explanation_ru'):snippet+='\n'+r['retained_explanation_ru']+'\n'
-  if alt:snippet+='\n#### '+alt['label_ru']+' — вне основного размера\n\n<!-- alternative-example: '+ident+' -->\n```lmx\n'+alt['code'].rstrip()+'\n```\n\n'+alt['notes_ru']+'\n'
-  if r.get('inline_variant_note_ru'):snippet+='\n**Вместо повторного листинга.** '+r['inline_variant_note_ru']+'\n'
-  if r.get('implementation_comparison'):snippet+='\n[Отдельное сравнение реализаций](examples/'+r['implementation_comparison']+').\n'
-  snippet+='\n**Граница сравнения.** '+r['fairness_note']+'\n\n[Ожидания и отдельные случаи](examples/expected_results.json). LMX runtime и GHC для этой редакции не запускались.\n\n'
-  anchor='<a id="'+ident.lower()+'"></a>';start=guide.index(anchor);n=re.search(r'<a id="[^\"]+"></a>',guide[start+len(anchor):]);end=start+len(anchor)+n.start() if n else len(guide)
-  guide=guide[:start]+snippet+guide[end:]
-  comparisons.append({'id':ident,'selected':r['selected'],'alternative':r['alternative'],'variants':{v['id']:v['metrics'] for v in variants},'eligible_variants':r['eligible_variants'],'fairness_note':r['fairness_note']})
- intro='**Правило основной версии.** Основной — кратчайший полный вариант при сопоставимом контракте, независимо от локального определения или использования ядра. Локальные helpers входят в листинг и размер. Общие тела и шаблоны переиспользуются; полные альтернативы остаются для разных подходов. Обёртка FxCallFailure не считается равнозначной распространению исходного именованного отказа. Haskell-клиенты используют настоящие библиотеки и обычные операции языка.\n'
- guide=re.sub(r'\*\*Правило основной версии\.\*\*.*?\n',intro,guide,count=1)
- throws_note='**Throws и длина кода.** На мой взгляд, явные списки ошибок — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий Throws и `throws: copy(Throws)` сохраняют эту ясность. Сокращать такие записи ради размера не хочется. Колонка «без сложного Throws» считает заголовки, первый аргумент каждого списка и полные ссылки copy; только аргументы после первого не входят в дополнительный подсчёт. Исходники не меняются.\n'
- if '**Throws и длина кода.**' in guide:
-  guide=re.sub(r'\*\*Throws и длина кода\.\*\*.*?\n',lambda _:throws_note,guide,count=1)
- else:guide=guide.replace(intro,intro+'\n'+throws_note,1)
- (ROOT/'LMX_examples_and_analogies.ru.md').write_text(guide);save(EX/'variants.json',registry)
- expect['receiver_revision']={'date':'2026-11-23','variant_ids':list(selected),'rule':registry['rule'],'metric_boundary':BEGIN,'selected':{i:v['id'] for i,v in selected.items()},'scenario_cases_preserved':True,'minor_variants_compacted':True,'runtime_executed':False};save(EX/'expected_results.json',expect)
- rows=[]
- for path in sorted((EX/'lmx').glob('*.lm3')):
-  ident=path.stem;current=path.read_text().split(BEGIN)[0];previous=oldrows[ident];before=previous['metrics'];r=next((r for r in registry['records'] if r['id']==ident),None)
-  row={'id':ident,'file':'lmx/'+path.name,'changed':metric(current)['sha256']!=before['sha256'],'before':before,'historical_before':before,'after':metric(current),'has_alternative':bool(r and r['alternative'])}
-  if r:row.update({'selected_variant':r['selected'],'alternative_variant':r['alternative'],'variants':{v['id']:v['metrics'] for v in r['variants']},'original_source_sha256_at_import':r['original_source_sha256_at_import'],'scenario_preserved':True,'eligible_variants':r['eligible_variants'],'fairness_note':r['fairness_note']})
-  rows.append(row)
- changed=[r for r in rows if r['id'] in selected]
- counts={'format':'functional-receiver-counts-v3','date':'2026-11-23','baseline_archive_sha256':baseline['archive_sha256'],'scope':'Primary client, excluding distinct commented alternatives and separately compared implementations','metric_boundary':BEGIN,'source_count':len(rows),'changed_ids':list(selected),'selected_receiver_primary_ids':[i for i,v in selected.items() if v['id']=='receivers'],'variant_comparisons':comparisons,'rows':rows,'totals_changed':{side:{k:sum(x[side][k] for x in changed) for k in ('characters','nonblank_lines','utf8_bytes')} for side in ('before','after')},'totals_all':{side:{k:sum(x[side][k] for x in rows) for k in ('characters','nonblank_lines','utf8_bytes')} for side in ('before','after')},'runtime_executed':False}
- counts['totals_all']['after']['without_complex_throws_characters']=sum(x['after']['without_complex_throws_characters'] for x in rows)
- counts['totals_changed']['after']['without_complex_throws_characters']=sum(x['after']['without_complex_throws_characters'] for x in changed)
- save(EX/'validation/functional_receiver_counts.json',counts);save(EX/'validation/primary_listings.json',{'format':'lmx-primary-listings-v3','status':'source_text_not_runtime_receipt','source_prefix_ends_before':BEGIN,'selected':{i:v['id'] for i,v in selected.items()},'listings':{i:v['code'] for i,v in selected.items()}})
- audit='# Аудит examples: восстановление коротких реализаций\n\nРедакция: 23 ноября 2026 года. Все 24 сценария сохранены. H04 восстановлен на основе прямого merge из 22-Nov; H09 снова содержит целиком исходный короткий Cycles. Вариант с ядром не имеет приоритета перед более простым полным решением.\n\n| Пример | Сохранённые подходы | Основной |\n| --- | --- | --- |\n'
- for r in registry['records']:audit+='| '+r['id']+' | '+', '.join(v['id'] for v in r['variants'])+' | '+r['selected']+' |\n'
- audit+='\nH07 переиспользует sys\\OPERANDS_TEMPLATE через copy/merge. H08 использует один runner и одно тело изменения y, демонстрируя собственную ячейку Own и свободное динамическое место Free. M01.add вызывает уже существующий read. V05 записывает шаг журнала и пару set/observe по одному разу; два вызова пары безусловны. H01/H02/H03/H04/H06 не хранят ненужные промежуточные результаты.\n\nH09 включает полное локальное определение Cycles в основной размер. Его catch обрабатывает только Stop источника; отказ тела распространяется под исходным именем. Отдельный core-адаптер с FxCallFailure показан как иной контракт и не используется для подмены основного примера. V02 сохраняет between; prepared/raw occurrences H07 и lazy сохраняются как разные подходы.\n\nHaskell использует аппликацию, композицию, foldM/replicateM, Data.Ix.inRange и Control.Monad.Loops.whileJust_. Каталог libraries содержит сравниваемые реализации; клиентский Cabal-компонент не добавляет его в hs-source-dirs.\n\n[Ожидания](expected_results.json), [реестр вариантов](variants.json), [размеры](validation/functional_receiver_counts.json). Проверены исходники и согласованность; исполнение LMX/GHC не заявляется.\n'
- (EX/'OPTIMIZATION_REVIEW.md').write_text(audit)
- readme=(EX/'README.ru.md').read_text();start=readme.index('## Редакция с общими ресиверами');end=readme.index('## Haskell',start)
- readme=readme[:start]+'''## Редакция с общими ресиверами и восстановленными короткими примерами
-
-H04 использует прямой merge из 22-Nov. H09 содержит полный короткий Cycles с обычным catch; определение включено в основной размер. V02 сохраняет between. H07 переиспользует общий шаблон операнда, H08 — одно тело изменения y и один runner, M01 — существующий read, V05 — общий шаг журнала и общий цикл set/observe. Динамическое связывание и copy учитываются как обычные возможности языка. При равном договоре выбирается кратчайшая полноценная запись; размещение функции в ядре не даёт её клиенту приоритета.
-
-[Реестр](variants.json) · [Ожидания](expected_results.json) · [Аудит](OPTIMIZATION_REVIEW.md) · [Размеры](validation/functional_receiver_counts.json). Все 24 сценария и их наблюдения сохранены.
-
-'''+readme[end:]
- readme=re.sub(r'runghc -[^\n]*Analogies.hs','cd haskell && cabal run lmx-analogy-clients',readme)
- (EX/'README.ru.md').write_text(readme)
- print(json.dumps({'selected':{i:v['id'] for i,v in selected.items()},'alternatives':sum(bool(r['alternative']) for r in registry['records']),'totals':counts['totals_all']},ensure_ascii=False))
-if __name__=='__main__':main()
+    index_path=EX/'haskell/comparison_index.json';index=apply_execution_contract(json.loads(index_path.read_text()));entries=index['entries']
+    expected_path=EX/'expected_results.json';expected=apply_execution_contract(json.loads(expected_path.read_text()));cases={x['id']:x for x in expected['source_examples']}
+    prior=json.loads((EX/'variants.json').read_text());old={r['id']:r for r in prior['records']}
+    records=[];rows=[]
+    comparison_dir=EX/'haskell/comparisons';comparison_dir.mkdir(exist_ok=True)
+    for entry in entries:
+        ident=entry['id'];write_sources(entry,EX);errors=validate_variants(entry,EX)
+        if errors:raise ValueError((ident,errors))
+        entry['lmx_source']=entry['lmx_variants']['functional']['source_file'];entry['lmx_source_sha256']=entry['lmx_variants']['functional']['metrics']['sha256']
+        entry['lmx_style_comparison']='haskell/comparisons/'+ident+'_comparision.md'
+        (comparison_dir/(ident+'_comparision.md')).write_text('\n\n'.join(['# '+ident+'. '+entry['title']]+sections(entry,comparison_dir))+'\n')
+        c=cases[ident];c['lmx_sources']={s:v['source_file'] for s,v in get_variants(entry)};c['compared_styles']=['procedural','functional'];c['selected_variant']='functional';c['lmx_legacy_role']=entry['lmx_legacy_role']
+        c['source_regions']={'functional':'whole functional file','procedural':'whole procedural file'}
+        c['style_cases']={s:c.get('cases',[]) for s in ['procedural','functional']}
+        c['fairness_note']='Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.'
+        for key in ['alternative_variant','alternative_cases','alternative_load_before','procedural_source_region']:c.pop(key,None)
+        base=old.get(ident,{})
+        record={k:base[k] for k in ['original_source_sha256_at_import','expected_ru','implementation_comparison','retained_explanation_ru'] if k in base}
+        record.update(id=ident,title_ru=entry['title'],selected='functional',alternative=None,
+                      eligible_variants=['procedural','functional'],fairness_note=c['fairness_note'],
+                      variants=[{'id':s,'label_ru':'Процедурный LMX' if s=='procedural' else 'Функциональный LMX',
+                                 'code':v['code'],'metrics':v['metrics'],'correct_for_scenario':True,
+                                 'cases':c.get('cases',[]),'load_before':c.get('load_before',[]),'notes_ru':entry['style_note']} for s,v in get_variants(entry)])
+        for key in ['lmx_variants','lmx_comparison_variants','lmx_legacy_role','style_relation','style_note']:record[key]=entry[key]
+        records.append(record)
+        rows.append({'id':ident,'status':entry['status'],'style_relation':entry['style_relation'],
+                     'procedural':entry['lmx_variants']['procedural']['metrics'],
+                     'functional':entry['lmx_variants']['functional']['metrics'],
+                     'foreign':measure(entry['foreign_code']) if entry.get('foreign_code') else None,
+                     'foreign_ratio_eligible':entry['status']=='complete_pair'})
+    expected['receiver_revision']={
+        'date':'2026-11-23','variant_ids':[entry['id'] for entry in entries],
+        'rule':'Compare both complete procedural and functional LMX forms for every observable contract. Reuse common implementations and templates; retain all declarations, local helpers and Throws in each full metric. Identical minimal forms share one physical source and one displayed body.',
+        'metric_boundary':'Whole source file for each of the two compared styles; no excluded error declarations.',
+        'compared_styles':['procedural','functional'],
+        'compatibility_mirror':'functional; not an additional compared listing',
+        'scenario_cases_preserved':True,'runtime_executed':False}
+    save(index_path,index);save(expected_path,expected)
+    save(EX/'variants.json',apply_execution_contract({'format':'lmx-dual-style-variants-v1','rule':'Compare both complete styles; no shortest-only selection; foreign controls unchanged.','records':records}))
+    target=ROOT/'LMX_examples_and_analogies.ru.md'
+    target.write_text(guide_document(entries,expected))
+    manifest={'format':'lmx-dual-style-counts-v1','scope':'Both complete style sources including every declaration and Throws; no normalized error column.','source_count':len(rows),'style_listing_count':2*len(rows),'unique_source_count':len({v['source_file'] for e in entries for v in e['lmx_variants'].values()}),'rows':rows,'runtime_executed':False}
+    save(EX/'validation/functional_receiver_counts.json',manifest)
+    save(EX/'validation/primary_listings.json',{'format':'lmx-style-listings-v1','status':'source_text_not_runtime_receipt','legacy_role':'functional compatibility mirror, not an extra comparison','selected':{e['id']:'functional' for e in entries},'listings':{e['id']:e['lmx_variants']['functional']['code'] for e in entries},'style_listings':{e['id']:{s:v['code'] for s,v in get_variants(e)} for e in entries}})
+    tablelines=['# Две стилевые формы исходных24 сценариев','',
+        'Каждый сценарий имеет два полных исходника одного договора. Совпадение минимальной формы отмечено явно. Иностранные исходники и статусы сопоставимости сохранены.', '',
+        '| ID | Процедурный LMX | Функциональный LMX | Haskell | Статус | Соотношение форм |',
+        '| --- | ---: | ---: | ---: | --- | --- |']
+    for row in rows:
+        tablelines += [f"| [{row['id']}](haskell/comparisons/{row['id']}_comparision.md) | {row['procedural']['characters']} | {row['functional']['characters']} | {row['foreign']['characters'] if row['foreign'] else '—'} | {row['status']} | {row['style_relation']} |"]
+    tablelines += ['','Все объявления и Throws входят в цену. Выбор одной основной LMX-записи по краткости больше не применяется. Прежний canonicalpath — только физический путь функционального исходника, а не дополнительная третья запись.','', 'Runtime LMX: NOT_RUN.']
+    (EX/'OPTIMIZATION_REVIEW.md').write_text('\n'.join(tablelines)+'\n')
+    for name in ['README.md','README.ru.md','haskell/README.md']:
+        path=EX/name
+        if not path.exists():continue
+        text=path.read_text()
+        text=text.replace('При равном договоре выбирается кратчайшая полноценная запись; размещение функции в ядре не даёт её клиенту приоритета.','Обе стилевые записи одного договора сравниваются полностью; одна не исключается ради краткости.')
+        text=text.replace('Самый короткий полный вариант','Обе полные стилевые записи')
+        heading='## Процедурная и функциональная формы'
+        text=re.sub(r'^'+re.escape(heading)+r'\n[\s\S]*?(?=^## |\Z)','',text,flags=re.M)
+        rel='../OPTIMIZATION_REVIEW.md' if name.startswith('haskell/') else 'OPTIMIZATION_REVIEW.md'
+        text+='\n'+heading+'\n\nВсе24 сценария опубликованы в двух полных LMX-записях с одним договором. [Таблица и ссылки]('+rel+'). Оба текста, включая все Throws, входят в сравнение. Минимальные формы copy/raw/place/Message могут совпадать; для каждого такого случая дано объяснение. Иностранные исходники и статус аналогий не изменяются.\n'
+        text=ensure_startup_note(text,os.path.relpath(ROOT.parent/'LMX_semantics.en.md',path.parent)+'#source-entry-profiles')
+        path.write_text(text)
+    print(json.dumps({'root_scenarios':len(entries),'compared_style_records':2*len(entries),'unique_lmx_sources':len({v['source_file'] for e in entries for v in e['lmx_variants'].values()}),'same_minimal_form':sum(e['style_relation']=='same_minimal_form' for e in entries),'foreign_sources_changed':False}))
+if __name__=='__main__':
+    if sys.argv[1:]==['--guide-only']:
+        entries=json.loads((EX/'haskell/comparison_index.json').read_text())['entries']
+        expected=json.loads((EX/'expected_results.json').read_text())
+        (ROOT/'LMX_examples_and_analogies.ru.md').write_text(guide_document(entries,expected))
+        print(json.dumps({'compared_scenarios':len(entries),
+                          'supplementary_fixtures':len(expected['additional_fixtures']),
+                          'changed_comparison_sources':False}))
+    elif sys.argv[1:]:
+        raise SystemExit('usage: select_variants.py [--guide-only]')
+    else:
+        main()

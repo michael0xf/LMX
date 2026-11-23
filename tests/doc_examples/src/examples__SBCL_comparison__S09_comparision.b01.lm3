@@ -5,6 +5,13 @@ Example:
     int[]: replacement
     return: @
     run:
-        throws: copy(FxThrows\mutation)
-        int[]: result [copy(items)]
-        return: replaceRange(result; start; end; replacement)
+        int[]: result []
+        sys\resize(result; length(items))
+        int: i 0
+        while: i < length(items)
+            if: i >= start && i < end
+                result[i] := replacement[i - start]
+            else:
+                result[i] := items[i]
+            i += 1
+        return: result

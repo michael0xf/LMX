@@ -1,12 +1,14 @@
 # P19. Вычисляемая замена с сохранением ширины
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Каждую максимальную последовательность ASCII-цифр заменить таким же количеством звёздочек. Длина строки и прочие символы сохраняются; callback вызывается один раз на выбранное совпадение.
 
-Ширина берётся из готового диапазона Match в byteText: повторного копирования matchedText не нужно. repeatText формирует ровно столько звёздочек, а replace вызывает Mask один раз на совпадение.
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
 
-## Вход и ожидаемый результат
+Ширина берётся из готового диапазона Match в byteText: повторного копирования matchedValue не нужно. cycle формирует ровно столько звёздочек, а replace вызывает Mask один раз на совпадение.
+
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -17,42 +19,79 @@
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 390 | 754 | 31 |
+| LMX функциональный | 342 | 429 | 12 |
+| Perl | 88 | 114 | 6 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 374 | 287 | 242 | 12 |
-| Perl | 114 | 88 | 88 | 6 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+## LMX — процедурный
 
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
+```lmx
+Mask:
+    char[]: target
+    int: begin
+    int: end
+    apply:
+        int: i begin
+        while: i < end
+            target[i] := '*'
+            i += 1
 
-## LMX
 
-[Исходник](source/lmx/P19.lm3).
+Example:
+    char[]: text
+    return: char[]
+    run:
+        throws: copy(sys\resize\throws)
+        char[]: out []
+        sys\resize(out; length(text))
+        int: i 0
+        while: i < length(text)
+            out[i] := text[i]
+            i += 1
+        i := 0
+        while: i < length(text)
+            if: text[i] >= '0' && text[i] <= '9'
+                int: begin i
+                while: i < length(text) && text[i] >= '0' && text[i] <= '9'
+                    i += 1
+                Mask\apply(out; begin; i)
+            else:
+                i += 1
+        ---
+        return: out
+```
+
+[Полный исходник](source/lmx/procedural/P19.lm3). 390 непробельных символов; 31 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
 
 ```lmx
 Mask:
     Match@: matched
     return: char[]
     make:
-        throws: copy(FxThrows\sequence)
-        return: repeatText("*"; matched\end - matched\begin)
+        throws: copy(FxTextCycle\cycle\throws)
+        return: cycle("*"; matched\end - matched\begin)
 
 Example:
     char[]: text
     return: char[]
     run:
-        throws: copy(FxThrows\sequence) PatternArgument PatternEncoding PatternPosition
+        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxReplace\replace\throws) copy(Mask\make\throws)
         return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)
 ```
 
+[Полный исходник](source/lmx/P19.lm3). 342 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
+
 ## Perl
 
-[Исходник](source/perl/P19.pl).
+[Полный исходник](source/perl/P19.pl).
 
 ```perl
 use strict;
@@ -63,18 +102,16 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - replace: [PI07](library_comparisons/PI07_comparision.md)
-- repeatText: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardText.lmx); [транзитивные зависимости](library_comparisons/shared_dependencies.lmx). Отдельная Perl-пара этой операции не написана.
+- cycle: [полное тело ядра](../../LMX_Fn_Receivers/src/sequence_profiles.lmx); [общие зависимости](library_comparisons/shared_dependencies.lmx).
 
-Штатные средства Perl: s///ger, string repetition x.
-
-Построение Pattern/TextView: byteText, atLeast, asciiDigit. Общий строитель regex-профиля отдельно показан в [PI07](library_comparisons/PI07_comparision.md).
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
-"""Choose within the same usage/implementation boundary; no history inflation."""
+"""Publish both LMX client styles; retain existing foreign/body selections."""
 from pathlib import Path
-import json
+import json,sys
 ROOT=Path(__file__).resolve().parents[1]
-import sys
 sys.path.insert(0,str(ROOT.parent/'tools'))
-from throws_metrics import measure_throws
-def canon(s): return s.strip()+'\n'
-def count(s): return sum(not c.isspace() for c in s)
+from lmx_execution_contract import apply_execution_contract
+from lmx_style_variants import normalize,measure,validate_variants
+
 def main():
- path=ROOT/'patterns.json'; data=json.loads(path.read_text()); decisions=[]
- for p in data['patterns']:
-  for listing in p['listings']:
-   lang=listing['language']; variants={k:canon(v) for k,v in p['variants'][lang].items()}; p['variants'][lang]=variants
-   eligible=p['eligible_variants'][lang]; assert eligible and all(k in variants for k in eligible)
-   minimum=min(count(variants[k]) for k in eligible)
-   choices=[k for k in eligible if count(variants[k])==minimum]
-   chosen=p['primary_variant'][lang] if p['primary_variant'][lang] in choices else choices[0]
-   p['primary_variant'][lang]=chosen;listing['primary_variant']=chosen;listing['code']=variants[chosen]
-   listing.update(p.get('variant_notes',{}).get(lang,{}).get(chosen,{}))
-   decisions.append({'id':p['id'],'language':lang,'primary_variant':chosen,'eligible_variants':eligible,'primary_characters':minimum,'retained_approaches':list(variants),'fairness_note':p['fairness_notes'][lang]})
- for row in decisions:
-  if row['language']=='LMX':
-   pattern=next(p for p in data['patterns'] if p['id']==row['id'])
-   row['without_complex_throws_characters']={name:measure_throws(code,ROOT.parent)['without_complex_throws_characters'] for name,code in pattern['variants']['LMX'].items()}
- path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
- (ROOT/'variant_selection.json').write_text(json.dumps({'policy':data['selection_policy'],'decisions':decisions},ensure_ascii=False,indent=2)+'\n')
- print(json.dumps({'choices':len(decisions),'policy':'real facilities for usage; complete scoped implementations separately'}))
+    path=ROOT/'patterns.json';data=apply_execution_contract(json.loads(path.read_text()));decisions=[]
+    for row in data['patterns']:
+        for listing in row['listings']:
+            language=listing['language']
+            if language=='LMX' and row.get('lmx_variants'):
+                errors=validate_variants(row)
+                if errors:raise ValueError((row['id'],errors))
+                code=row['lmx_variants']['functional']['code']
+                listing.update(code=code,primary_variant='functional',publication_role='compatibility_mirror_not_separate_comparison')
+                row['primary_variant']['LMX']='functional'
+                decisions.append({'id':row['id'],'language':'LMX','compared_styles':['procedural','functional'],
+                                  'metrics':{s:v['metrics'] for s,v in row['lmx_variants'].items()},
+                                  'selection':'both full styles; no shortest-only selection'})
+            else:
+                variant=row['primary_variant'][language]
+                listing['code']=normalize(row['variants'][language][variant])
+                listing['primary_variant']=variant
+                decisions.append({'id':row['id'],'language':language,'variant':variant,'metrics':measure(listing['code']),
+                                  'selection':'one unchanged canonical implementation' if row.get('kind')=='implementation' else 'unchanged foreign control'})
+    path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'variant_selection.json').write_text(json.dumps({'policy':data['selection_policy'],'decisions':decisions},ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({'client_pairs':4,'common_implementations':4,'foreign_sources_changed':False}))
 if __name__=='__main__':main()

@@ -4,5 +4,17 @@ Example:
     int: step
     return: @
     run:
-        throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep
-        return: range(start; stop; step)
+        throws: copy(FxSeqInfo\get\throws) copy(sys\resize\throws) SequenceStep SequenceSize
+        if: step = 0
+            throw: SequenceStep()
+        int[]: out []
+        @: info FxSeqInfo\get(out)
+        bigint: value start
+        while: (step > 0 && value < stop) || (step < 0 && value > stop)
+            if: length(out) = info\maxLength
+                throw: SequenceSize()
+            int: at length(out)
+            sys\resize(out; at + 1)
+            out[at] := value
+            value += step
+        return: out

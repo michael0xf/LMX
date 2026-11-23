@@ -1,11 +1,14 @@
 Example:
     int: x
-    return: @
+    return: FxMaybe@
     half:
         throws: FxRecordArity
         if: x % 2 = 0
-            return: some(value := (x / 2 record))
+            return: some(x / 2)
         return: none()
     run:
-        throws: copy(FxThrows\fixture) FxCallFailure
-        return: bind(bind(some(value := (x record)); half); half)
+        throws: copy(half\throws)
+        @: result half(x)
+        if: result\present = 0
+            return: result
+        return: half(\result\value)

@@ -2,7 +2,15 @@ Repository:
     @[]: rows
     int: id
     return: @
+    Match:
+        @: row
+        return: int
+        accepts:
+            return: row\id = id
     find:
-        throws: OperandArity
-        import: FindLibrary
-        return: rows findById id
+        throws: copy(FxThrows\predicate)
+        @: found findFirst(rows; Match\accepts)
+        if: found\present != 0
+            return: \found\value
+        @: missing 0
+        return: missing

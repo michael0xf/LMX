@@ -2,11 +2,11 @@
 
 **No runtime execution has occurred.** The real kernel and its call-phase provider are not in this archive. All 31 current specification cases and the separate integration gate PA01 remain `NOT_RUN` for all four required execution directions. Source probes and text checks do not change that status.
 
-Use [the current semantics A01–A20](../../../LMX_semantics.en.md#adapter-observations) and [B01–B11](../../../LMX_semantics.en.md#uncurry-observations) as the oracle. The separately supplied priority task is reference material and may contain older names; current names, types and source forms prevail.
+Use [the current semantics A01–A20](../../../LMX_semantics.en.md#adapter-observations) and [B01–B11](../../../LMX_semantics.en.md#uncurry-observations) as the oracle. The shared operand DATA fragment and the explicit priorities are specified in [the publication contract](../PUBLICATION_CONTRACT.md#prepared-operand-data); current names, types and source forms prevail.
 
 ## Prepared concrete probes
 
-[adapter_semantics.lmx](adapter_semantics.lmx) defines `FxAdapterExamples\run()`. Load the current assembled receiver definitions and this fixture through the actual kernel's normal source mechanism, then invoke that entry. The archive does not invent a kernel CLI command or claim a fixture command was executed.
+[adapter_semantics.lmx](adapter_semantics.lmx) defines `FxAdapterExamples\run()`. Program execution begins with ordinary L3 Thread R0, without DATA or user actuals. After the current assembled receiver definitions and this fixture are available through the normal graph/source mechanism, already running root code or a reached message handler invokes `FxAdapterExamples\run()` as an ordinary operation. Selecting this method does not replace R0 startup. The archive does not invent a kernel CLI command or claim a fixture command was executed.
 
 | Observations | Concrete source behavior |
 | --- | --- |

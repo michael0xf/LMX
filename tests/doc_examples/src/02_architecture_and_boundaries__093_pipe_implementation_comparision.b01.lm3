@@ -29,12 +29,3 @@ FxCompose:
         state\inner := inner
         private: @: failures FxFailures\union(a\throws; b\throws)
         return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
-
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
-    pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)

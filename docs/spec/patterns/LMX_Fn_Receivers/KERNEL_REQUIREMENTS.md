@@ -8,11 +8,11 @@ The normative adapter requirements are [the current semantics](../../LMX_semanti
 
 Use one parser, one complete source graph, ordinary owner/DATA/CODE and existing Message arenas. A generated callable is an ordinary callable with genuine parent links. No second expanded executable graph, permanent namespace copy, hidden global closure environment, new lazy-array VM or alternative bytecode engine is permitted.
 
-Signature inspection and `satisfies` execute no candidate, default, test or converter. Source expressions and declaration actuals keep their normal effect timing. Compilation remains explicit; a new ABI never borrows an incompatible native entry. Permitted graph changes and compiled-call validity follow the existing `endturn` rules.
+Signature inspection and `satisfies` execute no candidate, default, test or converter. Source expressions and declaration actuals keep their normal effect timing. Compilation remains explicit; a new ABI never borrows an incompatible native entry. Plain graph mutation and subsequent interpretation require neither compilation nor `endturn`. Installing a newly compiled machine implementation follows the existing explicit compilation and `endturn` rules; graph editing alone does not patch an old native caller.
 
 P0 retains every written group. The common operand handler opens one outer RHS group only when the written left is anonymous, there is exactly one right argument, and that right argument is a written anonymous Structure. The left remains whole. Returned Structures and references do not satisfy that source-form exception. Ordinary callable W/E remains separate.
 
-`Name :: DATA` uses the general Expression/`OPERANDS_TEMPLATE` mechanism and one whole right DATA argument. It does not open a Frame or invent an `end:` target. `signatureTypes` retains its existing operand and explicit named-call forms. Both create the same positional signature kind, with the existing named-signature/`call` relationship unchanged.
+`Name :: DATA` uses the general Expression/`OPERANDS_TEMPLATE` mechanism and one whole right DATA argument. It does not open a Frame or invent an `end:` target. `to` retains its existing operand and explicit named-call forms. Both create the same positional signature kind, with the existing named-signature/`call` relationship unchanged.
 
 All public receivers are part of the one current kernel namespace. `fun\const` is a physical source export group, not an optional package version or second registry. Service inputs remain private; source user inputs retain their individual policy.
 
@@ -166,6 +166,16 @@ Catch only admitted declared names in `failures`. Preserve the original name and
 
 Resolve the canonical name in the generated CODE's declared outcome set, then use ordinary named throw delivery. No unchecked root context, wildcard `throws:*`, private bypass or general catch-all is introduced. A provider may generate finite ordinary catch/throw branches if no dynamic-name primitive exists.
 
+This interface is used by generated CODE: `FxWrap\make` in
+[generic_runtime.lmx](src/generic_runtime.lmx) emits the catch/rethrow boundary,
+and `FxAsOperand\asOperand` in [coreStandardLisp.lmx](src/coreStandardLisp.lmx)
+emits the failure branch for the prepared operand. Both emit
+`FxKernel\raise(name := outcome\failure; payload := outcome\payload)`.
+Construction only builds that ordinary CODE; the rethrow occurs when the
+generated callable actually reaches the branch. Searching only for a direct
+call outside source strings therefore misses the provider's consumers.
+This remains a required provider contract, not evidence of runtime execution.
+
 ### fieldNames(source)
 
 Read the existing owning-field association in physical order, including repeated names. A named field yields a ready LMX string; an anonymous field yields `uninit:char[]`, not an empty string or @0. `sys\name(identifier)` is a different source-identifier operation. No second name table is stored in graph fields.
@@ -256,3 +266,7 @@ The sequence and Regex implementations share the existing type table, descriptor
 | `arrayWrite(target,index,value)` | Write an already prepared same-profile/admitted value with ordinary bounds/lifetime checks and no repeated full admission, converter or callback. Keep descriptor identity and parent links. |
 
 `arrayRead` uses `ReceiverIndex`, `FxKernelFailure`, `FxTypeToken`; incompatible insertion uses `SequenceElement` from `arrayAdmit`. System/implicit failures retain their ordinary channels. A prepared native path may use direct typed loads/stores without observable boxing. These hooks contain no map/filter/range-replacement/matcher algorithm and add no Sequence value kind.
+
+## Actor publication and Expression lowering
+
+The same existing dispatcher serves both forms of every operation. P0 already preserves receiver forms in Expression; integration belongs in translator role routing, not a replacement lexer. The exact implementation contract for semantic family selection, whole-value capture before default admission, exact-R builders and source profiles is [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). These hooks reuse the interfaces above. Ordinary and backtick names share one decoded identity; symbolic callable spelling does not select a different role. Attached `++var`, `var++`, `--var`, `var--` remain unary PLACE operations with their specified before/after results.

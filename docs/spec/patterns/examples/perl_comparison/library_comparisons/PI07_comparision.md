@@ -1,6 +1,6 @@
 # PI07. Построение шаблонов и операции над regex-движком
 
-Общий byte/ASCII-профиль: построение буквальных и последовательных шаблонов, повторения с обеими стратегиями, уникальные именованные захваты и ссылка на ранее объявленную группу; wholeMatch/matches; ленивые неперекрывающиеся eachMatch; matchedText/captureText; полная замена строкой или callback; split с пустыми краевыми полями. Пустые совпадения продвигаются по правилам движка, отсутствующий и пустой capture различаются.
+Общий byte/ASCII-профиль: построение буквальных и последовательных шаблонов, повторения с обеими стратегиями, уникальные именованные захваты и ссылка на ранее объявленную группу; wholeMatch/matches; ленивые неперекрывающиеся eachMatch; matchedValue/captureValue; полная замена строкой или callback; split с пустыми краевыми полями. Пустые совпадения продвигаются по правилам движка, отсутствующий и пустой capture различаются.
 
 Это отдельное сравнение реализации. Клиенты Perl **не импортируют** этот модуль: они используют настоящий CORE/List::Util. LMX вызывает предлагаемое ядро.
 
@@ -10,12 +10,10 @@ Perl использует собственный regex engine для распо�
 
 ## Размер
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 14332 | 9969 | 9813 | 414 |
-| Perl | 5209 | 3999 | 3999 | 168 |
-
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 9897 | 14267 | 425 |
+| Perl | 3999 | 5209 | 168 |
 
 ## LMX
 
@@ -50,17 +48,16 @@ RxByteText:
     byteText:
         return: RxTextViewMake\make(source := source; profile := 1)
 
-RxTextConfig:
-    char[]: text ""
+RxPrimitiveConfig:
+    @: probe 0
+    @: payload 0
 
 RxLiteral:
-    private: char[]: text
-    required: text
+    private: @: value
+    required: value
     return: @
     literal:
-        private: @: payload (copy(RxTextConfig))
-        payload\text := text
-        return: RxPrimitiveMake\make(RxLiteralProbe\probe; payload)
+        return: RxPrimitiveMake\make(RxLiteralProbe\probe; value)
 
 RxSameAs:
     private: char[]: name
@@ -79,7 +76,7 @@ RxPartsPrepare:
     private: @: patterns
     return: @
     prepare:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: info FxSeqInfo\get(source := patterns)
         private: @[]: parts []
         sys\resize(parts; length(patterns))
@@ -97,8 +94,8 @@ RxSequence:
     private: @: patterns
     required: patterns
     return: @
-    sequence:
-        throws: copy(FxThrows\kernel)
+    then:
+        throws: copy(FxThrows\pattern)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: emptyPattern
@@ -122,7 +119,7 @@ RxRepeated:
     required: pattern
     return: @
     repeated:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         if: minimum < 0
             throw: PatternArgument()
         if: order != extendFirst && order != stopFirst
@@ -151,7 +148,7 @@ RxCapture:
     required: name pattern
     return: @
     capture:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxCaptureConfig))
         config\name := name
         config\pattern := RxNormalize\make(value := pattern)
@@ -186,11 +183,11 @@ RxThenOperand:
     const: int: PRIORITY sys\priority("+")
     return: @
     then:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) < 2
             throw: PatternArgument()
-        return: RxSequence\sequence(patterns := args)
+        return: RxSequence\then(patterns := args)
 
 RxRepeatOperands:
     private:
@@ -201,21 +198,21 @@ RxRepeatOperands:
     const: int: PRIORITY sys\priority("*")
     return: @
     times:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
     atLeast:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count)
     atMost:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
@@ -224,7 +221,7 @@ RxRepeatOperands:
             throw: PatternArgument()
         return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
     optional:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 1
             throw: PatternArgument()
@@ -232,7 +229,7 @@ RxRepeatOperands:
 
 RxSelectAt:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         Pattern@: pattern
         int: position
         int: whole 0
@@ -256,13 +253,13 @@ RxSelectAt:
 
 RxWholeMatch:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     wholeMatch:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := 0; whole := 1)
 
@@ -275,7 +272,7 @@ RxFindState:
 
 RxFindStateMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         Pattern@: pattern
     return: @
     make:
@@ -329,13 +326,13 @@ RxFindAllOwner:
 
 RxEachMatch:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     eachMatch:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: owner (copy(RxFindAllOwner))
         owner\private\state := RxFindStateMake\make(prepared; ready)
@@ -343,21 +340,21 @@ RxEachMatch:
 
 RxMatches:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: int
     matches:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: found RxWholeMatch\wholeMatch(source := source; pattern := pattern)
         return: found\present
 
-RxMatchedText:
+RxMatchedValue:
     private: Match@: result
     required: result
-    return: char[]
-    matchedText:
-        return: RxTextSlice\copyText(result\private\prepared; result\begin; result\end)
+    return: @
+    matchedValue:
+        return: RxSourceSlice\copyValue(result\private\prepared; result\begin; result\end)
 
 RxLastCapture:
     private:
@@ -372,86 +369,56 @@ RxLastCapture:
         private: @: entry latest\value
         return: FxSome\some(value := RxSpanMake\make(result\private\prepared; entry\begin; entry\end))
 
-RxCaptureText:
+RxCaptureValue:
     private:
         Match@: result
         char[]: name
     required: result name
     return: @
-    captureText:
+    captureValue:
         private: @: latest RxLastCapture\lastCapture(result; name)
         if: latest\present = 0
             return: latest
         private: @: span latest\value
-        private: char[]: text RxTextSlice\copyText(span\private\prepared; span\begin; span\end)
-        return: FxSome\some(value := FxRecords\reference(value := text))
-
-RxReplacementAccept:
-    private: @: replacement
-    required: replacement
-    return: @
-    accept:
-        throws: copy(FxThrows\kernel)
-        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
-            private: char[]: text \replacement
-            return: replacement
-        private: RxReplacement@: operation replacement
-        return: operation
-
-RxReplacementText:
-    private:
-        @: replacement
-        Match@: matched
-    return: char[]
-    make:
-        throws: copy(FxThrows\kernel)
-        private: char[]: text
-        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
-            text := \replacement
-        else:
-            private: RxReplacement@: operation replacement
-            # The callback is reached once, after selection, with one whole
-            # Match by named actual. Its ordinary failure is never a mismatch.
-            text := operation(matched := matched)
-        private: @: checked RxTextBuild\make(text; matched\private\prepared\profile)
-        return: text
+        private: @: text RxSourceSlice\copyValue(span\private\prepared; span\begin; span\end)
+        return: FxSome\some(value := text)
 
 RxReplace:
     private:
-        TextView@: source
+        @: source
         @: pattern
-        @: replacement
+        RxReplacementInput@: replacement
     required: source pattern replacement
-    return: char[]
+    return: @
     replace:
-        throws: copy(FxThrows\kernel)
-        private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: admittedReplacement replacement
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
-        private: char[]: out []
+        private: @: out RxSourceSlice\copyValue(prepared; 0; 0)
         private: int: copiedUntil 0
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
             private: @: matched selected\value
-            private: char[]: replacementText RxReplacementText\make(admittedReplacement; matched)
-            RxTextAppendSpan\append(out; prepared; copiedUntil; matched\begin)
-            RxTextAppend\append(out; replacementText)
+            private: @: replacementValue RxReplacementValue\make(admittedReplacement; matched)
+            RxSourceAppendSpan\append(out; prepared; copiedUntil; matched\begin)
+            RxSourceAppend\append(out; replacementValue; prepared)
             copiedUntil := matched\end
             selected := RxFindNext\step(state := state)
         # Search position and source-copy position remain separate.
-        RxTextAppendSpan\append(out; prepared; copiedUntil; length(prepared\units))
+        RxSourceAppendSpan\append(out; prepared; copiedUntil; length(prepared\units))
         return: out
 
 RxSplit:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     split:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
         private: @[]: parts []
@@ -459,13 +426,57 @@ RxSplit:
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
             private: @: matched selected\value
-            private: char[]: text RxTextSlice\copyText(prepared; copiedUntil; matched\begin)
-            FxSeqPush\append(parts; FxRecords\reference(value := text))
+            private: @: text RxSourceSlice\copyValue(prepared; copiedUntil; matched\begin)
+            FxSeqPush\append(parts; text)
             copiedUntil := matched\end
             selected := RxFindNext\step(state := state)
-        private: char[]: tail RxTextSlice\copyText(prepared; copiedUntil; length(prepared\units))
-        FxSeqPush\append(parts; FxRecords\reference(value := tail))
+        private: @: tail RxSourceSlice\copyValue(prepared; copiedUntil; length(prepared\units))
+        FxSeqPush\append(parts; tail)
         return: parts
+
+RxReplacementInput:
+    @: literal 0
+    @: operation 0
+
+RxReplacementLiteral:
+    private: @: value
+    required: value
+    return: @
+    accept:
+        throws: copy(FxThrows\pattern)
+        FxSeqInfo\get(value)
+        private: @: result (copy(RxReplacementInput))
+        result\literal := value
+        return: result
+
+RxReplacementCallable:
+    private: @: operation
+    required: operation
+    return: @
+    accept:
+        throws: copy(FxThrows\pattern)
+        private: @: shape FxKernel\signature(operation)
+        if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+            throw: FxArity()
+        private: @: result (copy(RxReplacementInput))
+        result\operation := operation
+        return: result
+
+RxReplacementValue:
+    private:
+        RxReplacementInput@: replacement
+        Match@: matched
+    required: replacement matched
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        private: @: result replacement\literal
+        if: replacement\operation != 0
+            result := FxApply\apply(replacement\operation; FxOne\make(matched))
+        private: RxPreparedSource@: source matched\private\prepared
+        private: @: validate source\domain\literalUnits
+        validate(value := result; profile := source\profile)
+        return: result
 ```
 
 ## Perl
@@ -645,7 +656,7 @@ sub split_parts {
 
 ## Проверка и ограничения
 
-Это сравнение операций над общим согласованным regex-профилем, не порт всего Perl engine и не равенство всех возможностей LMX Pattern. В Perl имена capture ограничены ASCII-идентификаторами и уникальны, sameAs ссылается на объявленную предыдущую группу; повторная история captureTexts и lookbehind здесь не заявлены. Исходный текст не меняется во время курсора. Все byte-значения 0..255 допустимы; Unicode-сопоставление не подменяется этим профилем. Ошибка callback распространяется, не превращается в отсутствие совпадения. Сами Pattern-строители раскрыты здесь отдельно; реальные клиенты Perl записаны обычным regex-синтаксисом. Для проверки допуска Pattern/replacement/max-count LMX теперь использует внутренний readonly acceptsRequirement и конечные FxKernelFailure/FxTypeToken. Это текущий native integration gate AR01, а не исполненный в архиве провайдер.
+Это сравнение операций над общим согласованным regex-профилем, не порт всего Perl engine и не равенство всех возможностей LMX Pattern. В Perl имена capture ограничены ASCII-идентификаторами и уникальны, sameAs ссылается на объявленную предыдущую группу; повторная история captureValues и lookbehind здесь не заявлены. Исходный текст не меняется во время курсора. Все byte-значения 0..255 допустимы; Unicode-сопоставление не подменяется этим профилем. Ошибка callback распространяется, не превращается в отсутствие совпадения. Сами Pattern-строители раскрыты здесь отдельно; реальные клиенты Perl записаны обычным regex-синтаксисом. Для проверки допуска Pattern/replacement/max-count LMX теперь использует внутренний readonly acceptsRequirement и конечные FxKernelFailure/FxTypeToken. Это текущий native integration gate AR01, а не исполненный в архиве провайдер.
 
 Запуск Perl: [отчёт](../validation/implementation_tests.json). LMX: **NOT_RUN**; проверка текста не подменяет запуск.
 

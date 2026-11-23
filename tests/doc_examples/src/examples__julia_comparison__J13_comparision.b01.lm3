@@ -1,13 +1,11 @@
-Above:
-    int: value
-    return: int
-    accepts:
-        return: value > limit
-
 Example:
     int[]: xs
     int: limit
     return: int
     run:
-        throws: copy(FxThrows\predicate)
-        return: any(xs; Above\accepts)
+        int: i 0
+        while: i < length(xs)
+            if: xs[i] > limit
+                return: 1
+            i += 1
+        return: 0

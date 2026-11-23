@@ -1,24 +1,26 @@
 # Functional operations: failure, cleanup and Message boundaries
 
-This edition uses direct core calls in LMX usage examples and real library facilities in Haskell and Scala. The separate implementation comparisons remain independent programs. In particular, `Around` names the comparison implementation; it is not the module imported by the Haskell or Scala usage client.
+This edition compares procedural and functional LMX clients for the same observable scenarios, alongside the unchanged real Haskell and Scala library clients. The separate implementation comparisons remain independent programs. In particular, `Around` names the comparison implementation; it is not the module imported by the Haskell or Scala usage client.
 
 <a id="trampoline"></a>
 ## 083: trampoline and ordinary failures
 
-The [LMX client](examples/lmx/083_trampoline.lm3) declares its finite failure list once in `Steps\Throws`; the shared step, two entry methods and `Example\run` reuse it with `copy`. `trampoline` is an ordinary core receiver. Prefix `\` in `\trampoline(...)` reads its returned value record; it is not part of the receiver's name.
+The [functional LMX client](examples/lmx/083_trampoline.lm3) declares its finite failure list once in `Steps\Throws`; the shared step, two entry methods and `Example\run` reuse it with `copy`. `trampoline` is an ordinary core receiver. Prefix `\` in `\trampoline(...)` reads its returned value record; it is not part of the receiver's name.
 
 `throws` describes exits propagated by this callable. Its caller must handle or redeclare those names under [the ordinary LMX rule](../../LMX_semantics.en.md#exceptions). Haskell and Scala parity functions are likewise callable components, not complete applications. No silently swallowed error or invented successful parity value is added to make them shorter.
 
-The former full-file variant that merely added an outer `catch` duplicated the whole step algorithm. It has been removed. If an application wants a Result boundary, the only relevant additional handler is `catch: FxCallFailure (@: outcome)` followed by `return: err(reason := outcome)`; other declared failures still need that application's policy. This is a description of the local change, not a second standalone listing.
+The former full-file variant that merely added an outer `catch` duplicated the whole step algorithm. It has been removed. If an application wants a Result boundary, the only relevant additional handler is `catch: FxCallFailure (@: outcome)` followed by `return: err(outcome)`; the adaptive constructor captures the failure record as a value without reading or comparing its contents. Other declared failures still need that application's policy. This is a description of the local change, not a second standalone listing.
 
 `done`, `more`, and `trampoline` implement stack control within one call; they are not futures. For asynchronous use, send the entire trampoline invocation through `post` to its owner Message. The existing transport carries the final result/failure. A thunk and the state it references remain in the receiving owner's arena. No second asynchronous trampoline runtime is needed, and timeout alone does not cancel the operation.
 
+The [procedural parity client](examples/lmx/procedural/083_trampoline.lm3) uses an explicit loop for the same finite nonnegative inputs0/1/100001. It is a comparison of this client scenario, not a replacement for the arbitrary-payload Bounce implementation in092.
+
 <a id="execute-around"></a>
-## 084: use the real core/library operation
+## 084: complete local Around and shared bracket
 
-The [primary LMX client](examples/lmx/084_execute_around.lm3) calls `bracket`. The full [local Around alternative](examples/lmx/variants/084_execute_around_local_callbacks.lm3) remains because composing a local callback helper with dynamic binding is a different approach. Its definition is included in the same listing. It is not another edition of the core and is not used as the primary library-usage comparison.
+The [functional LMX client](examples/lmx/084_execute_around.lm3) calls `bracket`. The [procedural LMX client](examples/lmx/procedural/084_execute_around.lm3) includes the complete local `Around` helper with ordinary `finally` and the original named `ResourceFailure` handler. Both are compared in full; neither style is excluded by shortest-source selection. Both reuse one Trace\eval and one Trace\code. The shared kernel implementation remains one separate body in098.
 
-All three primary clients preserve the resource field `value = 42`, acquire/action/release callbacks, and trace. Their common observations remain:
+Both LMX styles and the two unchanged foreign clients preserve the resource field `value = 42`, acquire/action/release callbacks, and trace. Their common observations remain:
 
 | Mode | Outcome | Trace | Encoded result |
 | ---: | --- | ---: | ---: |
@@ -28,7 +30,7 @@ All three primary clients preserve the resource field `value = 42`, acquire/acti
 
 Haskell imports `Control.Exception.bracket` and uses `try` to inspect the application failure. Scala imports `scala.util.Using` and invokes `Using.resource` with an explicit `Releasable[Resource]`. Neither client imports the comparison module `Around`.
 
-LMX's general record API carries an admitted callback failure in `FxCallFailure`. The client verifies the original `ResourceFailure` name inside the outcome before returning the negative trace. Remaining technical exits are still declared. This envelope is a contract of the generic API, not a new rule for every ordinary LMX call.
+LMX's general record API carries an admitted callback failure in `FxCallFailure`. In this closed example acquire/action declare only ResourceFailure and release declares none. The functional handler can therefore return the negative trace without comparing failure-name text; infrastructure exits remain separate. The procedural style catches the original ResourceFailure directly. See [the exact boundary](review/084_failure_boundary.md). This envelope is a contract of the generic API, not a new rule for every ordinary LMX call.
 
 ## 098: full single-resource implementations
 

@@ -1,22 +1,16 @@
-Arithmetic:
-    int: value
-    return: int
-    twice:
-        return: value * 2
-    plusOne:
-        return: value + 1
+PairOperation :: (int: a; int: b; return: int)
 
-ApplyProbe:
+Candidate:
+    int: b
+    int: a
+    return: int
+    encode:
+        return: b * 10 + a
+
+SignatureProbe:
     return: int
     run:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxTypeToken
-        @: chosen Arithmetic\twice
-        @: firstRecord apply(chosen; (7))
-        int: first \firstRecord
-        chosen := Arithmetic\plusOne
-        @: secondRecord apply(chosen; (7))
-        int: second \secondRecord
+        PairOperation@: selected Candidate\encode
+        int: first selected(a := 2; b := 7)
+        int: second Candidate\encode(a := 2; b := 7)
         return: first * 100 + second

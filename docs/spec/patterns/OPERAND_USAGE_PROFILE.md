@@ -2,9 +2,9 @@
 
 Редакция: 22 ноября 2026 года. Эта редакция использует текущие правила языка; новые встроенные операции не вводятся.
 
-## Готовый стандартный заголовок
+## Готовый заголовок сравнительного профиля
 
-В [корневом примере Interpreter](23_interpreter_comparison.md) уже предоставлен следующий шаблон ядра:
+В [корневом примере Interpreter](23_interpreter_comparison.md) явно предоставлен следующий обычный DATA-фрагмент профиля сравнения:
 
 ```lmx
 sys:
@@ -14,12 +14,11 @@ sys:
         const: int: PASS_ARGS_AS_IS 0
         const: int: PRIORITY priority("+")
 ```
-
-Новые операнды используют `copy: sys\OPERANDS_TEMPLATE`. Эта строка входит в размер реализации операнда. Определение самого стандартного заголовка не копируется в каждый прикладной листинг, как не копируются внутренности стандартной библиотеки контрольного языка. Шаблон не содержит `return`: конкретная операция задаёт собственный тип результата.
+Операнды этого профиля используют `copy: sys\OPERANDS_TEMPLATE`. Эта строка входит в размер реализации операнда. Общее определение предоставлено один раз и явно требуется соответствующими fixtures; оно не повторяется в каждом клиенте. Шаблон не содержит `return`: конкретная операция задаёт собственный тип результата.
 
 По уточнению автора в этой редакции предпочтительна позиционная передача: **`copy: sys\OPERANDS_TEMPLATE` стоит первым в DATA операнда**, до дополнительных входных полей. Поэтому `left` и `right` занимают первые две входные позиции; остальные поля следуют за готовым заголовком. Имена четырёх полей по-прежнему проверяются структурным требованием. Импорт готовых методов в клиенте сохраняет их исходный DATA и не заменяет это копирование заголовка при реализации самого операнда.
 
-Абстрактное требование `operand_template` из [нормы](../LMX_semantics.en.md#operand-receiver) и готовый `sys\OPERANDS_TEMPLATE` выполняют разные роли. Первое проверяет наличие четырёх именованных полей; второе действительно предоставляет их с готовыми значениями режима и приоритета. Одна проверка соответствия не добавляет полей.
+Структурное требование `OPERANDS_TEMPLATE` из [нормы](../LMX_semantics.en.md#operand-receiver) и явно предоставленный здесь `sys\OPERANDS_TEMPLATE` выполняют разные роли. Первое проверяет необходимые именованные поля; второе предоставляет конкретные поля с готовыми значениями режима и приоритета. Одна проверка соответствия не добавляет полей, системного объекта или нового API. Этот fixture не доказывает наличие такого объекта в любой среде LMX. Общие библиотечные реализации используют собственный обычный DATA-фрагмент `FxPreparedOperands` и явно задают приоритет каждой операции; [договор публикации](LMX_Fn_Receivers/PUBLICATION_CONTRACT.md#prepared-operand-data) описывает эту независимую реализацию.
 
 ## Значения и продолжения
 
@@ -64,7 +63,7 @@ Endpoint/route, `application/lmx`, admission, синхронный семант�
 
 ## English note
 
-The supplied `sys\OPERANDS_TEMPLATE` has prepared-value mode 0 and addition priority, with no forced result type. A copied header is counted in each operator implementation. Callable values are references until explicitly invoked. A right-argument Array does not imply an automatic fold.
+This comparison profile explicitly supplies the ordinary DATA fragment `sys\OPERANDS_TEMPLATE`, with prepared-value mode 0 and addition priority and without a forced result type. The structural requirement alone does not create this object or a new system API. The common library independently uses `FxPreparedOperands` and explicit operation priorities. A copied header is counted in each operator implementation. Callable values are references until explicitly invoked. A right-argument Array does not imply an automatic fold.
 
 An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
 

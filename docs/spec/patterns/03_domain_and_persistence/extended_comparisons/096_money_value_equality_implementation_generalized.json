@@ -13,8 +13,8 @@
   "scenario_en": "Compare arbitrary finite sequences by length and each pair of fields; the Money fixture keeps cents and currency as read-only values.",
   "expected_ru": "Пустые равны. При разных длинах comparator не вызывается; при равных обход останавливается на первом различии. Money даёт10. Ошибки comparator передаются дальше.",
   "expected_en": "Empty equals empty. Different lengths call no comparator. Equal lengths stop at the first unequal pair; the original Money fixture gives10. Comparator failures propagate.",
-  "lmx_notes_ru": "Общий цикл работает с любыми длинами и типами, используя переданный comparator. Immutable Money является обычным механизмом языка и показан в032.",
-  "lmx_notes_en": "Generic loop handles arbitrary lengths and types through the supplied comparator. Immutable Money uses ordinary language machinery shown in032.",
+  "lmx_notes_ru": "Точные общие определения FxEqualFields из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.",
+  "lmx_notes_en": "Exact common definitions FxEqualFields from the current core. This publication mirror preserves the stated type, context and failure contract; revised LMX runtime execution is NOT_RUN.",
   "comparison_ru": "Общий цикл generic во всех языках. Иностранные ручные Money дополнительно показывают storage/value contracts. LMX использует свой immutable structural механизм, не имитируя класс.",
   "comparison_en": "The common loop is generic in every language. Foreign manual Money types additionally expose their required field/storage/value protocols. LMX reuses the existing immutable structural mechanism instead of emulating a generated class.",
   "limits_ru": "Позиционное равенство с явным comparator: не graph identity, deep equality, сериализация или поиск имён. Изменения во время сравнения не допускаются. Hash показан только для целостности иностранных value types.",
@@ -23,7 +23,7 @@
   "listings": [
     {
       "language": "LMX",
-      "code": "FxEqualFields:\n    private:\n        @: first\n        @: second\n        @: same\n    required: first second same\n    return: int\n    equalFields:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        private: int: count length(first)\n        if: count != length(second)\n            return: 0\n        private: int: i 0\n        while: i < count\n            private: @: a FxSeqRead\\read(first; i)\n            private: @: b FxSeqRead\\read(second; i)\n            private: @: accepted FxApply\\apply(same; FxTwo\\make(a; b))\n            if: FxSeqPredicate\\truth(accepted) = 0\n                return: 0\n            i += 1\n        return: 1\n",
+      "code": "FxEqualFields:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second\n    return: int\n    equalFields:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        if: length(first) != length(second)\n            return: 0\n        return: FxSequenceDifference\\find(\n            first := first;\n            second := second;\n            same := same;\n            count := length(first)\n        ) < 0\n",
       "notes_ru": "Общий цикл работает с любыми длинами и типами, используя переданный comparator. Immutable Money является обычным механизмом языка и показан в032.",
       "notes_en": "Generic loop handles arbitrary lengths and types through the supplied comparator. Immutable Money uses ordinary language machinery shown in032."
     },
@@ -53,5 +53,12 @@
     "foreign_usage_imports_own_implementation": false,
     "implementation_pair_retained": true,
     "runtime_lmx": "NOT_RUN"
-  }
+  },
+  "lmx_runtime_execution": "NOT_RUN",
+  "implementation_sources": [
+    {
+      "definition": "FxEqualFields",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    }
+  ]
 }

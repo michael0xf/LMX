@@ -1,6 +1,6 @@
 # S08. REMOVE-DUPLICATES: сохранить первые
 
-Полная пара в указанном ниже договоре.
+Полное сравнение на указанном домене.
 
 ## Общий договор
 
@@ -59,61 +59,75 @@
 ]
 ```
 
-## Размер основного варианта
+## Размер полных вариантов
 
-| Источник | Полный, без пробельных | Без сложного Throws | Все символы | Непустые строки |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 175 | 151 | 253 | 12 |
-| Common Lisp / SBCL | 63 | — | 74 | 2 |
+| Источник | Без пробельных | Все символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX — процедурный | 202 | 388 | 15 |
+| LMX — функциональный | 75 | 115 | 6 |
+| Common Lisp / SBCL | 63 | 74 | 2 |
 
-Учитывается полный основной листинг. Тестовый стенд и отдельные реализации ядра в него не входят; их файлы и размеры приведены отдельно.
+Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
-## LMX
-
-[Исходник](source/lmx/S08.lm3).
+## LMX — процедурный
 
 ```lmx
-Equal:
-    int: first
-    int: second
-    return: int
-    same:
-        return: first = second
-
 Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxThrows\mutation) FxCallFailure FxPredicate
-        return: unique(items; Equal\same)
+        int[]: result []
+        int: i 0
+        while: i < length(items)
+            int: j 0
+            while: j < length(result) && result[j] != items[i]
+                j += 1
+            if: j = length(result)
+                sys\resize(result; j + 1)
+                result[j] := items[i]
+            i += 1
+        return: result
 ```
+
+[Полный исходник](source/lmx/procedural/S08.lm3). 202 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Example:
+    int[]: items
+    return: @
+    run:
+        throws: copy(unique	hrows)
+        return: (unique items)
+```
+
+[Полный исходник](source/lmx/S08.lm3). 75 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
-[Исходник](source/common-lisp/S08.lisp).
+[Полный исходник](source/common-lisp/S08.lisp).
 
 ```common-lisp
 (defun example (items)
   (remove-duplicates items :from-end t :test #'=))
 ```
 
-## Почему эти варианты сопоставимы
+## Соответствие стилей договору
 
-Исходный полный вариант; нормы и конечные эффекты проверены.
+Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
 
-Без :FROM-END T стандартный REMOVE-DUPLICATES сохранял бы последние вхождения, что отличалось бы от LMX unique.
+(unique items) использует общий Expression и единственное стандартное определение unique с обычным равенством; локальный Equal удалён. Целочисленный домен сохраняет сопоставимость с REMOVE-DUPLICATES :FROM-END T, который оставляет первые вхождения. В общем LMX API same необязателен; профиль исходного массива и тип первого представителя сохраняются.
 
-Средства Common Lisp/SBCL: `CL:REMOVE-DUPLICATES`.
+## Общие операции и реализации
 
-## Реализации используемых функций
+- `unique`: [тело ядра](../../LMX_Fn_Receivers/src/corePerlExamples.lmx); отдельное сравнение [SI03](library_comparisons/SI03_comparision.md).
 
-- `unique`: [SI03](library_comparisons/SI03_comparision.md)
-
-Common Lisp-клиент не загружает сравнительные reference-реализации.
+Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). LMX: **NOT_RUN**; структурная проверка текста не доказывает исполнение.
+SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
 
 ## Первичные источники
 

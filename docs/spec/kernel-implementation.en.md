@@ -1,6 +1,6 @@
 # LMX kernel implementation specification: graph, namespace, storage, and execution
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 This is the implementation target for the standalone Fable acceptance package, reconciled through
 2026-11-21. It describes required observable behavior and preserves the established machine,
@@ -19,10 +19,20 @@ Accepted earlier contracts are retained except where these rules explicitly chan
 <a id="binding-callables-20261119"></a>
 ## Current call and graph baseline
 
+Receiver and Expression spellings enter one role-aware lowering path.
+P0 already carries all receiver forms; the backend resolves the canonical
+operation and consumes its original actual occurrences without re-parsing
+exact-name content. Attached updates normalize to `++var` / `var++` and
+`--var` / `var--`, one PLACE each. The [lowering reference](OPERATION_FORMS.md)
+specifies one place resolution/read/update/store path, preserved source context
+and exact pre/post results. It is a reference algorithm, not a claim of a
+completed production runtime run.
+
 A callable is an ordinary selected executable Structure C. Its actual parent performs the DATA
 role. `call(code)` and `call(args code)`, as well as ordinary `C()` and `C(args)`, use the common
-selection, reception, binding, execution, and result mechanism. R0 is a procedural entry without
-DATA or user arguments. `name :: data` declares a named positional signature, not an executable
+selection, reception, binding, execution, and result mechanism. Program startup always starts
+R0 as an ordinary L3 Thread beneath the stub parent, without DATA or user actuals, and executes
+its CODE from the beginning. `name :: data` declares a named positional signature, not an executable
 implementation. The special data name, separate data call parameter, `fncall`, and `sub` are
 removed; `node` remains lexical.
 
@@ -715,7 +725,7 @@ Checking executes neither arbitrary user initializers nor `test`. Construction e
 candidate interface facts; reached interpreter calls invoke standard `satisfies`, including the
 required receiving checks and its scoped correspondence. Prepared native calls do not automatically invoke
 runtime `satisfies`; an explicitly written `satisfies` executes in either path. Actual-value
-conversion/range checks remain in force. A separate post-clean-graph, pre-C build/test phase runs
+conversion/range checks remain in force. A separate build/test phase, run in interpretation mode on the graph being accepted after clean-graph construction and L1/C generation and before machine compilation, runs
 checks reached through ordinary build/test receiver contracts, without a recursive DATA-test scan.
 Neither phase introduces blanket rechecking after every primitive write or graph mutation.
 
@@ -738,12 +748,45 @@ the current activation under their ordinary block contract. Control-body selecti
 written groups, source parents, and the enclosing activation; it does not recursively unwrap
 all single-field groups or flatten nested scopes.
 
-R0 has no DATA or user actuals and is never launched over itself as artificial DATA. Its runtime
-scaffold and graph access remain implementation launch concerns. Its reached executable declarations
-and resolved receivers use ordinary CODE roles; DATA arguments still use their receiving contracts.
-An entry/source profile identifies what is launched and does not turn absent DATA into an implicit
-self-call or automatic invocation of every declared Structure. The
-[notes](implementation-notes.en.md#root-role-control) state this fixture boundary.
+<a id="root-activation"></a>
+Program startup always starts R0 as an ordinary L3 Thread beneath the stub parent
+and executes its CODE from the beginning. R0 has no DATA or user actuals and is
+never launched over itself as artificial DATA. `Thread.parent` records the stub
+relationship; it does not create a source-graph parent for R0. Internal Thread
+launch parameters and the native method's local graph pointer are runtime
+concerns, not user arguments or hidden graph fields.
+
+The existing common activation preparation accepts the selected CODE C and its
+optional **actual** DATA parent. Absence of that parent skips only the DATA/input
+pass; it does not suppress the CODE-local namespace or execution. The following
+sketch names existing stages, not new exported operations or a root-specific API:
+
+```text
+selected CODE: C
+optional DATA: the actual source parent(C), if present
+prepare the ordinary activation and Thread/control context
+if actual DATA is present:
+    perform the ordinary DATA/input pass for this call's actuals
+prepare C's ordinary CODE namespace with its normal visibility rules
+execute C's reached records in written order through ordinary dispatch
+perform ordinary cleanup and result/exit handling
+the enclosing Thread retains its ordinary turn handling
+```
+
+Namespace preparation does not evaluate unused initializers, expose a future
+local early, or recursively execute nested Structures. Local declarations become
+active under the existing sequential rules; callable/Structure names retain
+their existing visibility. For R0, the optional DATA is absent and there are no
+user actuals. Its local variables, arbitrary ordinary calls, handlers, control
+transfers, and exits still use the same workers. DATA-consuming actuals of those
+ordinary calls keep their receiving contracts.
+
+Neither `Main` discovery, a selected service function, a DATA-load profile, nor
+an automatic call to every declared Structure replaces startup. A named example
+or test case is called normally after the root has started. If the stub parent
+has arguments to deliver, it sends an ordinary message to the running root;
+there is no root call with user actuals or synthetic DATA. The
+[notes](implementation-notes.en.md#root-role-control) record the same boundary.
 
 If/else, while, for, until, and the ordinary nearest/named control transfers retain their language
 contracts. Inline loop conditions and bodies use the appropriate enclosing places. A while
@@ -904,9 +947,7 @@ transfers have no role. Keep common references, typed storage, and GC for indepe
 do not replace invalidation with dirty journals, version tracking, endturn hashing, or hidden
 compilation. An arbitrarily broken graph has no automatic repair guarantee.
 
-`sys\compile(S)` explicitly checks/builds the clean graph, performs its required build/test phase
-before C generation, translates through L1 and C, compiles and links, and registers successful
-variants in the existing call tables. The check phase can execute checkers and their candidate
+On the ahead-of-time (AOT) path, `sys\compile(S)` explicitly checks/builds the clean graph (from sources only when they are given; an already built runtime or clean graph is used as it is), translates through L1 and C, performs its required build/test phase in interpretation mode on the graph being accepted, and only after the tests pass compiles and links and registers successful variants in the existing call tables. The run-time path of the SLJIT module is described below. The check phase can execute checkers and their candidate
 calls through ordinary receiving contracts, without launching S's application entry or scanning
 all nested DATA for tests. Failure installs no new entry. `sys\translate(S)` returns L1 text and
 diagnostics, not LMX or installed native; it and `sys\check`/`sys\checkL3` do not execute application
@@ -919,10 +960,17 @@ boundary. Catch does not intercept this system exit; it neither returns to its c
 retains that stack continuation. The receiver itself changes neither running nor success and
 does not complete a Message. A later scheduled turn starts at its ordinary entry.
 
-Before the boundary, executable-edit timing may differ between interpreter and native. Successful
-explicit compilation followed by endturn guarantees the prepared update at the next entry.
-Endturn alone detects no changes, checks no graph, compiles nothing, and publishes no locals.
-Old native frames and their cleanups finish before their machine code is released.
+An edit is written straight into the clean graph, and an explicit read takes the current graph; the interpreter therefore sees the edit at once and goes on interpreting by the ordinary rules, with no automatic synchronization of the current frame. Only the acceptance of the prepared machine implementation waits: after a successful explicit compilation the next entry uses it at `endturn`. `endturn` alone detects no changes, checks no graph, compiles nothing and publishes no locals. This boundary concerns the native part only; it is not a universal sequence with an exception at its end. Old native frames and their cleanups finish before their machine code is released.
+
+<a id="acceptance-boundary"></a>
+Acceptance boundary: general semantics (the author's clarifications of 23 November 2026). Three things are kept apart. Direct graph access: an edit is written into the clean graph, an explicit read takes the current graph. Frame independence: local values and bindings of the current frame are not changed by a graph write through any automatic mechanism; there is no refresh, cache coherence, synchronization of the namespace with the graph, mandatory copy of the tree or forced snapshot for a test; «the interpreter sees an edit at once» means explicit references to the current graph plus ordinary interpretation, not carrying the edit into places already gathered into a frame. Machine installation: the new machine implementation is installed at `endturn` after a successful explicit compilation. Acceptance concerns the machine implementation only. The interpreter keeps the existing general checks of L3, proportionate, neither a full audit nor an automatic proof of correctness.
+
+Tests and copying. A `test` is interpreted by the general rules on the graph being accepted. Copying parts of the graph is a basic operation of the language: when a test needs isolation, the programmer copies explicitly (`copy`, `merge`). The system makes no mandatory candidate copy, snapshot, transaction, rollback or forced isolation. A failed test leaves machine compilation undone and installs no new native entry; it does not undo the effects of the code already executed, and it adds no new tracking or automatic retry.
+
+<a id="runtime-backend"></a>
+AOT and run-time paths. The chain above (clean graph, L1/C, interpreted tests, machine compilation) is the ahead-of-time (AOT) path. At run time the planned runtime backend is the separate SLJIT module, not the translator (a plan: the module is not built yet). It takes the graph being accepted through the common graph and its own lowering in this order: clean graph, preparation of the backend, interpreted tests, machine compilation and registration, acceptance of the changes at `endturn`. This path requires neither C text nor an external C compiler, so the AOT chain is not the only path to a native entry. L1/C paths appear in the native descriptor only if the path produces such artifacts, and `sys\translate(S)` keeps its explicit contract.
+
+Platforms and gates. The AOT targets are C99 (Windows, Ubuntu, macOS) and, from the generated C99, MIR, WASM linear memory and the RISC-V ISA. The backends JVM classfile, .NET CIL, WASM GC and Lua 5.4 are cancelled and are not requirements. The libraries of `third_party/` are the dependency list of the kernel build; the list is an inventory of dependencies and does not by itself prove that each library is integrated and working. L2 and L3 share one planned receiver gate to another language, `py.*`, and there is no other; `py.*` is a contract and a plan of receivers, not a grammar form. The `c.*` doors and the `include` abilities of L2 remain as its low-level interface and part of the C99 build; they are not another language, and L3 differs from L2 only by the absence of `c.*`.
 
 <a id="flush-receiver-contract"></a>
 ### 6.6. No local-frame publication
@@ -1098,9 +1146,10 @@ and observes that same intended state there. Native update tests respect explici
 the endturn boundary instead of expecting automatic refresh after a graph write.
 
 The observation tables of the primary documents provide the detailed distinguishing-case matrices. The inherited inline-local
-case is derived from the caller-source rules, and entry fixtures state their selected source
-role in the [implementation notes](implementation-notes.en.md#open-design). Neither requires a
-new language rule. P01 is now resolved by the author's zero-payload and graph-replacement rule;
+case is derived from the caller-source rules. Startup fixtures exercise ordinary R0 execution
+without DATA or user actuals; a named test call occurs only after that startup, as recorded in
+the [implementation notes](implementation-notes.en.md#root-role-control). Neither requires a
+root-specific parser or an alternate entry profile. P01 is now resolved by the author's zero-payload and graph-replacement rule;
 implementation checks must use that rule rather than the superseded reserved-cell oracle.
 Report an author question only for a genuine
 contradiction between applicable current requirements, with the conflicting clauses and a
@@ -1143,7 +1192,7 @@ entry to the same receiver and afterwards the absence of old calls is verified;
 this is not a reason to keep two semantics.
 
 Use the common signature extractor and descriptor builder for both `Name :: DATA`
-and the type-token constructor `signatureTypes`. Skip formal variable labels for compatibility; retain full
+and the type-token constructor `to`. Skip formal variable labels for compatibility; retain full
 nested type requirements, semantic order and exact result/void. Preserve the
 current named-signature/call relationship. All other operations must accept either
 description, including storage, argument transport, admission and adapters.
@@ -1156,8 +1205,10 @@ second name table, persistent arena-wide cache of concrete field/namespace admis
 target execution while extracting metadata. The required completed TYPE-pair table retains its
 separate metadata contract (§5.2).
 
-Construct real owner/DATA/CODE links, required/private generated inputs and
-private captured state. The initial target retains its original owner and
+Construct real owner/DATA/CODE links, generated inputs preserving the selected
+source policy, and private service/captured state. Requiredness, privacy, defaults
+and permitted autofill of public inputs come from the actual source contract;
+generation does not mark every input required or private. The initial target retains its original owner and
 dynamic binding contract. Captured primitive records survive the creating
 activation; captured references preserve identity. The vector of records is
 already a Structure/Array<@>, with no compulsory wrapper or second vector.
@@ -1177,11 +1228,12 @@ universal array at every following direct call.
 The generated inputs of an adapter follow the target contract of [Behavior of
 adapters and callable factories](LMX_semantics.en.md#adapter-behavior): where
 the original callable exists, its own defaults, `required`/`private` and
-autofill are kept, and `uncurry` takes the exact description of every stage. The
-present generation of `required`/`private` inputs and of intermediate results
-`Ti → @` is a limit of the present adapters, not a rule of the language; until
-the observations A01–A20 and B01–B11 are executed on the kernel, the
-preservation of every aspect of the interface is not declared.
+autofill are kept, and `uncurry` takes the exact description of every stage,
+including its precise result requirement and failures. The current source
+adapters implement policy-preserving preparation; a universal `Ti → @` stage
+or unconditional required/private input flags are not their publication contract.
+The observations A01–A20 and B01–B11 still require execution on the actual kernel;
+source agreement does not claim runtime preservation of every interface property.
 
 Generic record APIs expose FxCallFailure with the target's original declared
 failure and payload. Exact-signature generated wrappers may restore that exit

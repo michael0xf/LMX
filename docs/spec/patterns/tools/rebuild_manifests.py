@@ -7,9 +7,6 @@ import json
 PATTERNS = Path(__file__).resolve().parents[1]
 SPEC = PATTERNS.parent
 PACKAGE = PATTERNS / 'LMX_Fn_Receivers'
-BASE_SHA = '72eb7cc6e8ee8ede414b457184ce7a54807689a9068ab15e8e986a46e5b9a861'
-ORIGINAL_SHA = '4b142bab169cf7cc3fd89766da35b90561f913b68dca3ab1f0725793e4ecb932'
-SHORT_EXAMPLES_SHA = '59d38b4b5d20d5aa6d0e9dee785a75c86a7bc30ae7d261642aabf2f90344f2ba'
 
 
 def files(root, exclude):
@@ -34,6 +31,9 @@ def write(path, value):
 
 
 def main():
+    provenance = json.loads((PATTERNS / 'validation/restoration_baseline_20261123.json').read_text())
+    base = provenance['base_archive']
+    historical = provenance.get('historical_provenance', {})
     catalog = json.loads((PACKAGE / 'catalog.json').read_text())
     additions = json.loads((PACKAGE / 'CORE_ADDITIONS_20261123.json').read_text())
     current_additions = []
@@ -43,13 +43,12 @@ def main():
     assert not static['errors'], 'Fix source checks before publishing manifests'
     package_files = files(PACKAGE, {'MANIFEST.json'})
     write(PACKAGE / 'MANIFEST.json', {
-        'revision': 'restored-examples-standard-core-sbcl-2026-11-23',
-        'base_archive': '23-Nov-2026.tar.gz', 'base_archive_sha256': BASE_SHA,
-        'short_examples_archive': '22-Nov-2026-3.tar.gz', 'short_examples_archive_sha256': SHORT_EXAMPLES_SHA,
-        'original_project_archive': 'spec.tar.gz', 'original_project_archive_sha256': ORIGINAL_SHA,
+        'revision': 'integrated-spec-two-lmx-styles-fable-clarifications-2026-11-23',
+        'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
+        'historical_provenance': historical,
         'public_receivers': len(catalog),
-        'uploaded_public_operations_preserved': additions['input_archive_public_count'],
-        'public_additions': [row['name'] for row in current_additions],
+        'uploaded_public_operations_before_canonicalization': base['public_names'],
+        'historical_public_additions': [row['name'] for row in current_additions],
         'historical_original_public_count': additions['baseline_public_count'],
         'other_named_pattern_symbols': len(json.loads((PACKAGE / 'value_symbols.json').read_text())),
         'implementation_layer': 'single_current_core',
@@ -58,19 +57,22 @@ def main():
         'source_parts': static['source_parts'], 'source_lines': static['source_lines'],
         'prepared_assertions': static['prepared_assertions'],
         'named_signature_form': 'Name :: Signature through the ordinary Expression operand protocol; no separate Frame',
-        'type_constructor': 'signatureTypes',
+        'type_constructor': 'to: ordered TYPE inputs followed by the result TYPE',
         'postfix_type_forms': ['Struct@: ptr', 'type[]: array'],
         'runtime_executed': False, 'manifest_self_excluded': True,
         'files': package_files,
     })
+    sbcl = PATTERNS / 'examples/SBCL_comparison'
+    sbcl_files = files(sbcl, {'MANIFEST.sha256'})
+    (sbcl / 'MANIFEST.sha256').write_text(''.join(f"{row['sha256']}  {row['path']}\n" for row in sbcl_files))
     pattern_files = files(PATTERNS, {'MANIFEST.sha256'})
     (PATTERNS / 'MANIFEST.sha256').write_text(''.join(f"{row['sha256']}  {row['path']}\n" for row in pattern_files))
     spec_files = files(SPEC, {'ARCHIVE_MANIFEST.json'})
     write(SPEC / 'ARCHIVE_MANIFEST.json', {
-        'edition': '2026-11-23', 'base_archive': '23-Nov-2026.tar.gz', 'base_archive_sha256': BASE_SHA,
-        'short_examples_archive': '22-Nov-2026-3.tar.gz', 'short_examples_archive_sha256': SHORT_EXAMPLES_SHA,
-        'original_merge_base_archive': 'spec.tar.gz', 'original_merge_base_archive_sha256': ORIGINAL_SHA,
-        'scope': 'Complete spec directory; fable_merge is a separate sibling packet',
+        'edition': '2026-11-23', 'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
+        'historical_provenance': historical,
+        'scope': 'Complete current spec directory, including integrated contracts, sources, comparisons and answers to Fable.',
+        'fable_answers': 'FABLE_CLARIFICATIONS.md',
         'self_excluded': True, 'excluded_metadata': ['.DS_Store', '__pycache__', '*.pyc', '.git'],
         'file_count_without_manifest': len(spec_files), 'files': spec_files,
     })

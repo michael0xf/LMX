@@ -13,7 +13,7 @@ Postfix type constructors return ordinary int codes. Normalization reads an init
 | Source | Role |
 | --- | --- |
 | [kernel_contracts.lmx](src/kernel_contracts.lmx) | Thin existing analyzer/builder/call hooks and five phase hooks for ordinary invocation |
-| [fn_operand.lmx](src/fn_operand.lmx) | Existing `signatureTypes` operand using `OPERANDS_TEMPLATE` |
+| [fn_operand.lmx](src/fn_operand.lmx) | Existing `to` operand with explicitly composed left/right, mode and priority |
 | [generic_functions.lmx](src/generic_functions.lmx) | Exact signature construction, prefix admission, partial/curry/flip/uncurry |
 | [adapter_frames.lmx](src/adapter_frames.lmx) | Real source input policies, projection entries, one-place reads, observation and snapshots |
 | [generic_runtime.lmx](src/generic_runtime.lmx) | Ready-actual apply and wrapper entry without eager argument capture |
@@ -23,7 +23,17 @@ Postfix type constructors return ordinary int codes. Normalization reads an init
 | [collections.lmx](src/collections.lmx) | General collection algorithms through the shared typed sequence access |
 | [containers.lmx](src/containers.lmx) | Maybe/Result/List/Bounce algorithms |
 | [structures.lmx](src/structures.lmx) | Ordinary structural selection/composition operations |
-| [public.lmx](src/public.lmx) | Physical source owning-field exports into the one current kernel |
+| [coreGenericOperations.lmx](src/coreGenericOperations.lmx) | Shared projection/equality, value pipeline and result-based retry; exact public builders |
+| [monadic_forms.lmx](src/monadic_forms.lmx), [operation_forms.lmx](src/operation_forms.lmx) | Whole-value constructors, typed container families and role-preserving representations |
+| [sequence_profiles.lmx](src/sequence_profiles.lmx) | Explicit range/codec profiles and exact text defaults without a second algorithm |
+| [public_families.lmx](src/public_families.lmx), [public.lmx](src/public.lmx), [public_operands.lmx](src/public_operands.lmx) | Complete semantic families, receiver projection and VALUE operand construction |
+
+All receivers already enter Expression through P0. The translator supplies their existing semantic action under the original roles. Exact quoted names and ordinary spellings share identity; quoting does not select semantics. Built-in PLACE/control/type operations use the same role-aware path rather than the eager VALUE adapter. See [operation forms](../../OPERATION_FORMS.md) and [publication](PUBLICATION_CONTRACT.md).
+
+The ordinary `FxPreparedOperands` fragment supplies private `left/right` and
+ready prepared-value mode. Its consumers explicitly supply their own ready
+priority, input requiredness and result. No system template object or implicit
+priority is assumed; see [the exact declarations and priority table](PUBLICATION_CONTRACT.md#prepared-operand-data).
 
 ## Callable construction and call preservation
 
@@ -37,11 +47,19 @@ The source call's binding point is preparation of the generated callable from it
 
 Full algorithms and the exact frame lifecycle are in [ADAPTER_IMPLEMENTATION.md](ADAPTER_IMPLEMENTATION.md); the narrow provider obligations are in [KERNEL_REQUIREMENTS.md](KERNEL_REQUIREMENTS.md).
 
+## Whole-value construction, bind and value pipelines
+
+`FxRecordAdapter` is the single input capture algorithm. It accepts the actual complete T once and passes its record to one constructor position. `some/ok/err/done` retain exact reference results; `type` shares capture and then returns its actual physical int code. Internal ready-record calls do not apply capture again. Dynamic binding and copy preserve their ordinary roles.
+
+`bind` publishes distinct Maybe, Result and Array requirements under one name. The ordinary and operand paths share each family's existing body. Maybe and Result short-circuit; Array bind concatenates one level into the declared reference-record Array. No field-count test or speculative callback chooses a family. `then` belongs to generic Pattern composition.
+
+`compose` constructs a callable; `pipe(value; stages)` immediately applies stages. The internal engine returns a result record, while `FxPipeBuild` publishes exact T → R through `FxWrap`. `FxRetryBuild` similarly publishes the request's exact R for result-based `retry`. Preparation and execution retain separate finite failure contracts. `retryCall` repeats declared failures; `retryPost` owns its asynchronous Message state. See [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md).
+
 ## Partial and curry
 
 A written prefix is admitted under its real Ti before publication. Dense and reference-array inputs use typed access. Primitives are captured by value; targets of reference values retain identity and normal lifetime. The residual source namespace still contains captured positions, so dependent defaults work in the original context.
 
-Partial with an empty prefix keeps the ordinary mapped input behavior. A full prefix returns a nullary callable and does not invoke F immediately. Flip/permute move source policies with positions.
+Partial with an empty prefix, `partial(F; prefix := ())`, keeps the ordinary mapped input behavior. A full prefix returns a nullary callable and does not invoke F immediately. Flip/permute move source policies with positions.
 
 Curry keeps its stagewise meaning: a non-final stage consumes and captures its one current accepted input, then constructs a persistent next-stage graph. It keeps no expired frame. Future positions are not forced merely to return the next stage. Its own reference-valued middle-stage protocol does not become a restriction on independently supplied uncurry chains.
 
@@ -75,6 +93,6 @@ A sequence callback receives its stated number of actuals; additional optional f
 
 Factory state and caches are ordinary Message-local structures. The design does not share them secretly between Threads. A frame reference is borrowed service state, cannot be serialized or retained, and does not prolong a local lifetime. Native results use valid arena records or the normal direct ABI, never pointers into finished C stack slots.
 
-Known prepared native paths can use existing metadata and direct arguments. The general implementation does not demand boxing every native primitive, reparsing text per call or rebuilding the whole signature at each step. Graph edits and native validity use the existing explicit boundaries.
+Known prepared native paths can use existing metadata and direct arguments. The general implementation does not demand boxing every native primitive, reparsing text per call or rebuilding the whole signature at each step. Plain graph editing and subsequent interpretation use the current graph without compile/endturn. Explicit compilation and the turn boundary govern replacement of the machine implementation; editing the graph alone neither recompiles it nor patches old native callers.
 
-The current archive supplies source-level algorithms and concrete fixtures. The real kernel provider and runtime executions are not present. No A/B case is marked runtime PASS. The prior loaded source is preserved under reference, clearly excluded from current assembly and comparisons. The separately supplied priority task is reference material; current uploaded documentation remains authoritative for names and syntax.
+The current archive supplies source-level algorithms and concrete fixtures. The real kernel provider and runtime executions are not present. No A/B case is marked runtime PASS. The current sources and fixtures are self-contained; they do not depend on absent historical snapshots. The permanent [generic operation contracts](../../GENERIC_OPERATIONS.md), [monadic contracts](../../MONADIC_OPERATIONS.md) and [operation forms](../../OPERATION_FORMS.md) contain the complete algorithms, names and acceptance requirements.

@@ -1,6 +1,20 @@
+Ascii:
+    char: value
+    return: int
+    letter:
+        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
+
+
 Example:
     char[]: text
     return: int
     run:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))
+        if: length(text) = 0 || Ascii\letter(text[0]) = 0
+            return: 0
+        int: i 1
+        while: i < length(text)
+            char: value text[i]
+            if: Ascii\letter(value) = 0 && (value < '0' || value > '9') && value != '_'
+                return: 0
+            i += 1
+        return: 1

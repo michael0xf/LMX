@@ -19,86 +19,111 @@
       "case": "Construct without forcing",
       "expected": "target/action counter remains0",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC02",
       "case": "Force successful double result twice",
       "expected": "2.5,2.5; actual double preserved; target counter1",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC03",
       "case": "Force successful void/() result twice",
       "expected": "void is a successful cached result, not absence; counter1",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC04",
       "case": "First attempt throws declared/user failure, next succeeds",
       "expected": "original name/payload or exception retained; state resets; second attempt executes; counter2",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC05",
       "case": "Action recursively forces its own cache, failure uncaught in action",
       "expected": "FxLazyCycle/LazyCycle; outer reset permits later nonrecursive retry",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC06",
       "case": "Action catches inner recursive error and continues",
       "expected": "inner rejected call must not clear outer Busy state; another recursive force still rejects; outer may eventually publish Ready",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC07",
       "case": "once first input1 returns10, then input2",
       "expected": "both calls return10; target counter1; later inputs do not key a new cache entry",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC08",
       "case": "once input1 fails, input2 succeeds20, input3 afterward",
       "expected": "failure preserved;20,20; two actual target executions",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC09",
       "case": "Foreign owner attempt",
       "expected": "LMX transport/arena ownership forbids sharing mutable cache; Haskell LazyForeignOwner leaves cell untouched; owning caller remains valid",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC10",
       "case": "Haskell async failure during restored action, caught by owner harness",
       "expected": "Cold reset and same exception; same owner may retry; LMX analog is ordinary owner unwinding, not injected async exceptions",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC11",
       "case": "Failure while setting up the cache miss after guard registration",
       "expected": "LMX state does not remain Busy; registered finally resets unsuccessful state",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": "LC12",
       "case": "Cache hit with caller-side argument expressions/receiving validation",
       "expected": "ordinary preparation rules still apply; only target body execution is skipped",
       "lmx_status": "NOT_RUN",
-      "haskell_status": "NOT_RUN"
+      "haskell_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup"
     }
   ],
   "status": "NOT_RUN",
-  "no_runtime_claim": true
+  "no_runtime_claim": true,
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "root_accepts_user_arguments": false,
+    "local_declarations_and_calls": "The ordinary common language mechanism applies at the root and at later calls.",
+    "case_operation_phase": "after_root_startup",
+    "named_operation_is_startup": false,
+    "case_actuals": "invoke/inputs/args describe ordinary later case operations, not startup arguments for the root.",
+    "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
+    "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
+  },
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
 }

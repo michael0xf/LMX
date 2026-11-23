@@ -37,9 +37,7 @@
             "characters": 187,
             "nonblank_lines": 16,
             "utf8_bytes": 284,
-            "sha256": "39f7c5e5a4ff42658bc59a39629cab07be3e96f7ae5e0f2e15eff0bc8743c0a7",
-            "without_complex_throws_characters": 187,
-            "complex_throws_removed_characters": 0
+            "sha256": "39f7c5e5a4ff42658bc59a39629cab07be3e96f7ae5e0f2e15eff0bc8743c0a7"
           }
         },
         {
@@ -105,9 +103,7 @@
             "characters": 181,
             "nonblank_lines": 14,
             "utf8_bytes": 274,
-            "sha256": "ebba2b9c5532317e5cd4771feee68e47414904c202550ba3545229bc1f2a3a6c",
-            "without_complex_throws_characters": 181,
-            "complex_throws_removed_characters": 0
+            "sha256": "ebba2b9c5532317e5cd4771feee68e47414904c202550ba3545229bc1f2a3a6c"
           }
         },
         {
@@ -173,9 +169,7 @@
             "characters": 286,
             "nonblank_lines": 22,
             "utf8_bytes": 439,
-            "sha256": "d7daf87c4a1a840c0534aa17d932a4715a63afd465709ecb1d4e7419a6df0066",
-            "without_complex_throws_characters": 286,
-            "complex_throws_removed_characters": 0
+            "sha256": "d7daf87c4a1a840c0534aa17d932a4715a63afd465709ecb1d4e7419a6df0066"
           }
         },
         {
@@ -241,9 +235,7 @@
             "characters": 222,
             "nonblank_lines": 20,
             "utf8_bytes": 351,
-            "sha256": "e7778603e3ee6372d82b00ff6cadcb87448c8b21db6cec50285ead96d91dd662",
-            "without_complex_throws_characters": 222,
-            "complex_throws_removed_characters": 0
+            "sha256": "e7778603e3ee6372d82b00ff6cadcb87448c8b21db6cec50285ead96d91dd662"
           }
         },
         {
@@ -309,9 +301,7 @@
             "characters": 186,
             "nonblank_lines": 11,
             "utf8_bytes": 259,
-            "sha256": "e8d2f467a070511c7df62002c3a4827ea0286d9fb957887bce848bbe781d3953",
-            "without_complex_throws_characters": 186,
-            "complex_throws_removed_characters": 0
+            "sha256": "e8d2f467a070511c7df62002c3a4827ea0286d9fb957887bce848bbe781d3953"
           }
         },
         {
@@ -377,9 +367,7 @@
             "characters": 215,
             "nonblank_lines": 13,
             "utf8_bytes": 304,
-            "sha256": "8bb1e5e61b50af4a0be181bef04dfd01129e364f908e0e4c399ca59b5b39b81e",
-            "without_complex_throws_characters": 215,
-            "complex_throws_removed_characters": 0
+            "sha256": "8bb1e5e61b50af4a0be181bef04dfd01129e364f908e0e4c399ca59b5b39b81e"
           }
         },
         {
@@ -428,26 +416,24 @@
       "scenario_en": "For one item -3, normalize its sign, double it, then add 1.",
       "expected_ru": "7; промежуточные значения 3 и 6.",
       "expected_en": "7; intermediate values are 3 and 6.",
-      "lmx_notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
-      "lmx_notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.",
-      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.",
-      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.",
+      "lmx_notes_ru": "pipe применяет стадии к фактическому значению и сохраняет точный результат последней стадии; его операндная и обычная формы используют один алгоритм ядра. Стадии normalize/double/offset в данном доменном примере принимают int, но общий проход этим типом не ограничен. Каждая стадия вызывается один раз по порядку; неизвестные свободные имена сохраняют обычную динамическую связь. compose отдельно строит функцию. Подготовленный вход и полный договор ошибок отражены в throws.",
+      "lmx_notes_en": "pipe applies stages to the actual typed value and preserves the final stage's result requirement. Its receiver and operand forms share the core algorithm. These three application stages use int, while the common traversal is generic. Each stage is reached once in order and dynamic binding is preserved. compose separately constructs a callable; the complete reached failures are declared.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "Один int-поток в одном последовательном контексте; выбранный вход не переполняется. Стадии имеют один int-вход, int-результат и не объявляют recoverable failures. Очереди, backpressure и планировщик не включены. Тело Pipe не входит в клиентский размер, но полностью показано и измерено отдельно для всех трёх языков.",
       "limits_en": "One int flow in one sequential context; the fixture does not overflow. Stages have one int input and result and declare no recoverable failures. Queues, backpressure, and scheduling are excluded. Pipe implementation is excluded from client size but shown and measured separately for every language.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(-3)\n",
-          "notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
-          "notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.",
+          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        throws: copy(FxThrows\\call) FxArity FxRecordArity ReceiverIndex\n        return: value pipe normalize double offset\n    demo:\n        throws: copy(FxThrows\\call) FxArity FxRecordArity ReceiverIndex\n        return: pipeline(-3)\n",
+          "notes_ru": "pipe применяет стадии к фактическому значению и сохраняет точный результат последней стадии; его операндная и обычная формы используют один алгоритм ядра. Стадии normalize/double/offset в данном доменном примере принимают int, но общий проход этим типом не ограничен. Каждая стадия вызывается один раз по порядку; неизвестные свободные имена сохраняют обычную динамическую связь. compose отдельно строит функцию. Подготовленный вход и полный договор ошибок отражены в throws.",
+          "notes_en": "pipe applies stages to the actual typed value and preserves the final stage's result requirement. Its receiver and operand forms share the core algorithm. These three application stages use int, while the common traversal is generic. Each stage is reached once in order and dynamic binding is preserved. compose separately constructs a callable; the complete reached failures are declared.",
           "metrics": {
-            "characters": 202,
-            "nonblank_lines": 16,
-            "utf8_bytes": 334,
-            "sha256": "fd3a26e62b9518719a38bee42b76fdb377a888e8af63bdf151e2879eb326150e",
-            "without_complex_throws_characters": 202,
-            "complex_throws_removed_characters": 0
+            "characters": 302,
+            "nonblank_lines": 17,
+            "utf8_bytes": 450,
+            "sha256": "845a57dcfc75a68d5643d7aa31b906a624f8aece6ccca4ccaf4314ce3ca35b23"
           }
         },
         {
@@ -491,7 +477,8 @@
       "restoration": {
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
-      }
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 93,
@@ -502,32 +489,30 @@
       "usage_ids": [
         13
       ],
-      "summary_ru": "Реализовать импортируемую последовательную передачу значения по списку стадий.",
-      "summary_en": "Implement the imported sequential handoff through a stage list.",
+      "summary_ru": "Общий pipe применяет стадии к значению; его фактический тип может меняться между стадиями.",
+      "summary_en": "Generic pipe applies stages to a value whose actual type may change between stages.",
       "scenario_ru": "Получить начальный int и упорядоченный список callable int→int. Применить каждый один раз; при пустом списке вернуть исходное значение.",
       "scenario_en": "Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.",
       "expected_ru": "Для -3 и стадий normalize,double,offset результаты 3,6,7; пустой список сохраняет -3.",
       "expected_en": "For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.",
-      "lmx_notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
-      "lmx_notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.",
+      "lmx_notes_ru": "Точное текущее определение FxPipe извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxPipe definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
       "comparison_ru": "В LMX общий исполнитель формирует right, а библиотека явно выполняет обход. Java использует int-specialized functional interface, Go — обычные функции и variadic slice. Ни один вариант не импортирует готовый Pipe или готовый pipeline/fold для реализации самого Pipe. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/093_pipe_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
       "comparison_en": "The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
-      "limits_ru": "Показана прикладная библиотека для int, а не асинхронный stream framework. Политика ошибок, отмена и многопоточность не добавлены. Все три реализации используют только базовые вызовы и циклы; native/LMX исполнение здесь не заявлено.",
-      "limits_en": "This is an int application library, not an asynchronous stream framework. Error policy, cancellation, and concurrency are not added. All implementations use basic calls and loops; no native or LMX execution is claimed.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "PipeLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    pipe:\n        int: value \\left\n        int: i 0\n        while: i < length(right)\n            @: stage \\right[i]\n            value := stage(value)\n            i += 1\n        return: value\n",
-          "notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
-          "notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.",
+          "code": "FxPipe:\n    private:\n        @: value\n        @: stages\n    required: value stages\n    return: @\n    pipe:\n        throws: copy(FxThrows\\call) FxArity ReceiverIndex\n        FxSeqInfo\\get(stages)\n        private: @: current value\n        private: int: i 0\n        while: i < length(stages)\n            private: @: stage \\FxSeqRead\\read(stages; i)\n            private: @: shape FxKernel\\signature(stage)\n            if: length(shape\\inputTypes) != 1 || shape\\hasResult = 0\n                throw: FxArity()\n            current := FxApply\\apply(stage; FxOne\\make(current))\n            i += 1\n        return: current\n",
+          "notes_ru": "Точное текущее определение FxPipe извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxPipe definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
           "metrics": {
-            "characters": 145,
-            "nonblank_lines": 11,
-            "utf8_bytes": 252,
-            "sha256": "da214a5258c4ce607c326f65c8b1612245463e7dd290ca653caf7ebb369d4482",
-            "without_complex_throws_characters": 145,
-            "complex_throws_removed_characters": 0
+            "characters": 399,
+            "nonblank_lines": 19,
+            "utf8_bytes": 612,
+            "sha256": "e03ebf492b3987bc9e878af5e47541b3d1c0e17facd426f8571430cc795b0fd7"
           }
         },
         {
@@ -580,7 +565,13 @@
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
-      "extended_comparison": "extended_comparisons/093_pipe_implementation_generalized_comparision.md"
+      "extended_comparison": "extended_comparisons/093_pipe_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreGenericOperations.lmx",
+          "definition": "FxPipe"
+        }
+      ]
     },
     {
       "id": 14,
@@ -609,9 +600,7 @@
             "characters": 354,
             "nonblank_lines": 24,
             "utf8_bytes": 588,
-            "sha256": "67bddc01b33f147f1033a5f3a7247213cf31b529fa6834492cefbf371f91b345",
-            "without_complex_throws_characters": 354,
-            "complex_throws_removed_characters": 0
+            "sha256": "67bddc01b33f147f1033a5f3a7247213cf31b529fa6834492cefbf371f91b345"
           }
         },
         {
@@ -675,9 +664,7 @@
             "characters": 355,
             "nonblank_lines": 23,
             "utf8_bytes": 533,
-            "sha256": "43d60f407c3034e194ae82a75abb97641d9818b9b4edfa59a4ccf5f3e0ee8edb",
-            "without_complex_throws_characters": 355,
-            "complex_throws_removed_characters": 0
+            "sha256": "43d60f407c3034e194ae82a75abb97641d9818b9b4edfa59a4ccf5f3e0ee8edb"
           }
         },
         {
@@ -743,9 +730,7 @@
             "characters": 165,
             "nonblank_lines": 15,
             "utf8_bytes": 258,
-            "sha256": "b9cf0d7c215e2acc994972757c4f225599bf9294749395b0099375638218c45a",
-            "without_complex_throws_characters": 165,
-            "complex_throws_removed_characters": 0
+            "sha256": "b9cf0d7c215e2acc994972757c4f225599bf9294749395b0099375638218c45a"
           }
         },
         {
@@ -811,9 +796,7 @@
             "characters": 310,
             "nonblank_lines": 21,
             "utf8_bytes": 488,
-            "sha256": "bc1d5c3e79fc9589075cbae4fa351dacc540775a241f821446ed426666676042",
-            "without_complex_throws_characters": 310,
-            "complex_throws_removed_characters": 0
+            "sha256": "bc1d5c3e79fc9589075cbae4fa351dacc540775a241f821446ed426666676042"
           }
         },
         {

@@ -1,8 +1,8 @@
 # Universal sequence receivers: implementation and integration
 
 **Date:** 2026-11-22. **Basis:** the current uploaded archive, specifically
-[the sequence task](../../CORE_SEQUENCES_REGEX.en.md#sequences),
-[the priority core-type task](../../CORE_SEQUENCES_REGEX.en.md#types),
+[the sequence contract](../../CORE_SEQUENCES_REGEX.en.md#sequences),
+[the core-type contract](../../CORE_SEQUENCES_REGEX.en.md#types),
 and the existing sources in this directory. Earlier delivered archives are
 not used as a source of truth.
 
@@ -26,15 +26,7 @@ foldl/scanl/zipWith. Their own additional defaults, uninitialized inputs,
 required/private policies, full requirements, results, and declared exits
 remain those of the selected callable.
 
-The public collection operations remain ordinary receivers. Turning `map`,
-`slice`, or `replaceRange` into additional infix aliases would add competing
-forms without improving the task's named-argument examples. Existing numeric
-Expression operands already express pairwise arithmetic and scalar expansion;
-they reuse the same access primitives and the normal scalar type analysis.
-They keep the existing operand ABI and the single conditional opening of only
-the written anonymous RIGHT container. In particular, this work does not add
-`S map F`, `.*`, a slice grammar, recursive flattening, or automatic opening of
-returned arrays.
+Every collection operation has its ordinary receiver and common operand form under one canonical name. `map`, `slice` and `replaceRange` reuse the original body and full contract; the existing Expression mechanism and actor publication route the prepared roles. Existing numeric Expression operands retain their arithmetic/scalar-expansion semantics. Both forms keep the single conditional opening of the written anonymous RIGHT container and never recursively flatten returned arrays. See [operation forms](../../OPERATION_FORMS.md) and [publication](PUBLICATION_CONTRACT.md).
 
 `index` is the sequence search receiver. It returns the existing Maybe.
 It is distinct from Regex `find(source; pattern)`, whose result is a Match;
@@ -50,6 +42,10 @@ declaration selection and argument preparation apply.
 The new `splice(target; begin; end; values)` performs the same sequence
 replacement but returns a new container holding the removed values. It is a
 distinct result contract, not an alias of the target-returning `replaceRange`.
+The former target-returning spelling `splice` is migration history only.
+A caller which expects the target must use `replaceRange`; argument arity
+cannot distinguish the former meaning from the current removed-result call.
+No compatibility alias or implicit version selection is supplied.
 
 ## 2. Source organization
 
@@ -57,7 +53,7 @@ distinct result contract, not an alias of the target-returning `replaceRange`.
 | --- | --- |
 | [src/sequences_core.lmx](src/sequences_core.lmx) | Common layout inspection, one-element reads, checked allocation/growth, integer validation, record-vector construction |
 | [src/collections.lmx](src/collections.lmx) | Universal map/filter/foldl/scanl/zip/zipWith/traverse/transpose/groupBy |
-| [src/sequences_selection.lmx](src/sequences_selection.lmx) | Universal select/omit/reorder/project/list/flatMap |
+| [src/sequences_selection.lmx](src/sequences_selection.lmx) | Universal select/omit/reorder/project/list/bind |
 | [src/sequences.lmx](src/sequences.lmx) | range/slice/reverse/concat/compress and four ordered queries |
 | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | One replacement algorithm, removed-value splice, and append/insert/deleteAt entries |
 | [examples/sequence_examples.lmx](examples/sequence_examples.lmx) | Prepared assertions and named-failure probes |
@@ -99,12 +95,11 @@ Existing exports requiring new universal bodies are:
 | `reorder` | `FxSeqReorder\reorder` |
 | `project` | `FxSeqProject\project` |
 | `list` | `FxSeqList\list` |
-| `flatMap` | `FxSeqFlatMap\flatMap` |
+| `bind` | `FxSeqBind\bind` |
 
 The retained internal `RxSelect/RxOmit/RxReorder/RxProject` and
-`FxList/FxListBind` paths now delegate to those bodies. Their previous procedural
-implementations from the current uploaded archive are preserved under
-reference/pre_sequence_fix. Map, filter,
+`FxList/FxListBind` paths delegate to those bodies; the current package depends
+on no historical implementation directory. Map, filter,
 foldl, scanl, zip, zipWith, traverse, transpose,
 and groupBy retain their original `Fx*` paths in `collections.lmx`.
 
@@ -227,14 +222,14 @@ not change the actual source stride or permit writing B bytes into A storage.
 
 | Family | Storage/result behavior |
 | --- | --- |
-| map/scanl/zip/zipWith/flatMap/list | New ordinary `@[]`; arbitrary result types retained |
+| map/scanl/zip/zipWith/bind/list | New ordinary `@[]`; arbitrary result types retained |
 | filter/slice/reverse/select/compress/omit/reorder | New outer container preserving the source's physical element profile |
 | foldl | Last accumulator reference; empty input returns the original seed |
 | scanl | Seed followed by every returned state; no automatic deep snapshots |
 | zip/zipWith | Stop at the shorter input; zip pairs retain `first` and `second` fields |
 | transpose | First validate equal row lengths; result columns are ordinary `@[]` |
 | traverse | Existing Maybe; stop at first none; success contains `@[]` |
-| groupBy | Stable groups with key/items; one keyOf call per element and explicit sameKey |
+| groupBy | Stable groups with key/items; one selected keyOf call per element, or the item itself; optional sameKey uses shared equality by default |
 | project | Select followed by one ordinary copy operation and one shared copy map |
 | concat | Same complete dense T in all parts gives dense T; all other valid combinations give `@[]` |
 | replaceRange/append/insert/deleteAt | Mutate the existing target and return that same target |
@@ -361,7 +356,7 @@ the retained result. They do not assume that elementwise array `=` is a scalar
 reference-identity test.
 
 `FxSeqProbeRangeBoundary\run(maxInt)` additionally requires the real maximum
-from the target numeric profile. The complete task matrices remain normative:
+from the target numeric profile. The complete acceptance matrices remain normative:
 82 sequence cases and 58 core cases, including parent/lifetime, uninit,
 pointer depth, malformed types, graph code selection, and four interpreter/
 native combinations. The prepared probes do not replace those matrices.
@@ -393,3 +388,7 @@ transport and its defaults; apply the scalar-expansion profile in the existing
 numeric operand dispatcher; run the prepared fixtures against real kernels.
 No scalar operator implementation is concealed inside these new receivers,
 and no runtime PASS is claimed for that integration.
+
+## Profile-independent operations
+
+`range` keeps its exact integer profile and also accepts an explicit validated domain profile through `FxProfileRange`; output storage, step direction and progress remain part of that profile. `join`, `cycle`, `compare`, trim/pad/translate/remove operations and Pattern Array sources share existing sequence algorithms. Text defaults are adapters over those bodies. Generic selection and whole-value capture are specified in [GENERIC_OPERATIONS.md](../../GENERIC_OPERATIONS.md) and [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md).

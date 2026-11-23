@@ -2,26 +2,5 @@ TicketCode:
     char[]: candidate
     return: int
     accepts:
-        throws: RangeArity
-        if: length(candidate) != 5
-            return: 0
-        if: candidate[2] != '-'
-            return: 0
-        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
-
-# BEGIN ALTERNATIVE LMX (excluded from character counts)
-# Дополнительный LMX с Pattern — отдельный подход; вне основного размера.
-# TicketCode:
-#     char[]: candidate
-#     return: int
-#     accepts:
-#         throws:
-#             PatternArgument
-#             PatternEncoding
-#             PatternPosition
-#             SequenceSize
-#             ReceiverIndex
-#             FxKernelFailure
-#             FxTypeToken
-#         return: wholeMatch(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
-# END ALTERNATIVE LMX
+        throws: copy(RxMatches\matches\throws)
+        return: matches(byteText(candidate); (within("A"; "Z") times 2) then "-" then (asciiDigit times 2))

@@ -6,7 +6,7 @@ Edition: 2026-11-23. Client: [H06](../lmx/H06.lm3), [scenario](../../LMX_example
 
 Construction does not execute stages. The stored callable preserves the first input policy and receives the exact final result. Pure and effectful Haskell variants are separate contracts; all effectful stages execute in order.
 
-LMX public names: `pipe`, `compose`. These names belong to the proposed core; no user library import is needed.
+LMX public names: `compose`. These names belong to the proposed core; no user library import is needed.
 
 **Foreign usage client:** Native (.) for composition; Data.List.foldl' / Control.Monad.foldM for stage lists. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
 
@@ -15,15 +15,6 @@ LMX public names: `pipe`, `compose`. These names belong to the proposed core; no
 Complete entry definitions, with no omitted branch:
 
 ```lmx
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
-    pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)
-
 FxCompose:
     private:
         @: outer
@@ -46,6 +37,8 @@ FxCompose:
 Complete canonical source files for the entry and its LMX dependencies:
 
 - [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
+- [coreComparisonGroups.lmx](../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx)
+- [coreStandardLisp.lmx](../../LMX_Fn_Receivers/src/coreStandardLisp.lmx)
 - [coreStandardText.lmx](../../LMX_Fn_Receivers/src/coreStandardText.lmx)
 - [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
 - [generic_combinators.lmx](../../LMX_Fn_Receivers/src/generic_combinators.lmx)
@@ -53,9 +46,8 @@ Complete canonical source files for the entry and its LMX dependencies:
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 - [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
 - [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
-- [sequences_mutation.lmx](../../LMX_Fn_Receivers/src/sequences_mutation.lmx)
 
-The reachable roots are: `FxThrows`, `FxTry`, `FxApply`, `FxFrameAttempt`, `FxFrameApply`, `FxOne`, `FxCompositionEngine`, `FxCompositionState`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxAppend`, `FxFailures`, `FxIndices`, `FxInputPolicy`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxConcat`, `FxSeqAdmit`, `FxSeqReplaceRange`, `FxSeqAppend`, `FxSeqReverse`, `FxFormatInt`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxUnitRange`, `FxSameText`, `FxFailureFilter`, `FxStageFailures`, `FxWrap`, `FxCompose`, `FxPipe`.
+The reachable roots are: `FxThrows`, `FxTry`, `FxApply`, `FxFrameAttempt`, `FxFrameApply`, `FxOne`, `FxCompositionEngine`, `FxCompositionState`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxAppend`, `FxFailures`, `FxIndices`, `FxInputPolicy`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxConcat`, `FxSeqReverse`, `FxFormat`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxEqualityTypes`, `FxBooleanToken`, `FxPreparedOperands`, `FxRecordOperands`, `FxPredicateEngine`, `FxPredicateState`, `FxPredicate`, `FxSeqPredicate`, `FxTwo`, `FxValueSame`, `FxSequenceDifference`, `FxEqualFields`, `FxFailureFilter`, `FxStageFailures`, `FxWrap`, `FxCompose`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -88,13 +80,13 @@ pipeIO2 first second input = first input >>= second
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: | ---: |
-| LMX entry definitions shown above | 631 | 631 | 25 | 873 |
-| All reachable LMX source roots, counted once | 14161 | 13133 | 721 | 21657 |
-| Complete Haskell comparison module | 389 | — | 15 | 517 |
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: |
+| LMX entry definitions shown above | 507 | 17 | 686 |
+| All reachable LMX source roots, counted once | 14403 | 762 | 22038 |
+| Complete Haskell comparison module | 389 | 15 | 517 |
 
-The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.
 
 На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 

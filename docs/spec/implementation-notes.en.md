@@ -1,6 +1,6 @@
 # LMX implementation integration and historical notes
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 This file separates the desired implementation model from historical receipts. The operative
 contracts are the [semantics](LMX_semantics.en.md), [grammar](LMX_grammar.en.md),
@@ -8,7 +8,12 @@ contracts are the [semantics](LMX_semantics.en.md), [grammar](LMX_grammar.en.md)
 The standalone package has not inspected, built, or tested a current LMX repository. Consequently,
 no old “current”, “PASS”, “OPEN”, or commit/push statement below is a current acceptance claim.
 This revision records documentation reconciliation and the evidence Fable will need when applying
-it to code.
+it to code. Historical typed-declaration examples below use current postfix notation when explaining the same intended declaration; this notation update does not rerun a historical receipt or carry its obsolete allocation behavior into the current norm. The [current forms](TYPE_DECLARATION_FORMS.md) govern new sources.
+The latest author clarification also supersedes any historical selected-entry or
+DATA-load startup interpretation: startup always executes R0 as an ordinary L3
+Thread without DATA or user actuals. Named cases are ordinary later calls; the
+current [root control case](#root-role-control) and
+[implementation sketch](kernel-implementation.en.md#root-activation) govern.
 
 <a id="binding-callables-20261119"></a>
 ## Accepted model through 2026-11-21
@@ -136,7 +141,7 @@ persistent namespace or admission store.
 Candidate selection does not speculatively run assignments/defaults/converters/tests once per
 variant. A known interface does not waive a required receiving check or an actual-value range check.
 
-The separate build/test phase runs after clean-graph construction and before C generation.
+The separate build/test phase runs after clean-graph construction and L1/C generation and before machine compilation, in interpretation mode on the graph being accepted.
 `sys\compile` includes this phase: it may execute checkers and candidate calls required by the
 ordinary build/test contracts, without launching the selected graph's application entry.
 `sys\check`, `sys\checkL3`, and `sys\translate` do not execute application code or `test`.
@@ -255,18 +260,22 @@ answer, an eager default pass, or a new universal copy of outer locals.
 <a id="root-role-control"></a>
 ### 5.2. Source records at a unit root
 
-R0 is a procedural entry with no DATA, user actuals, artificial self binding, or empty DATA
-object. The [R0 entry rule](LMX_semantics.en.md#root-entry) explicitly retains its own executable declarations and ordinary access
-to references. Once an entry is selected, its reached records use the ordinary CODE head rules;
-a form supplied in a DATA argument is read under that receiving declaration's contract. Removing
-R0's DATA does not remove source-role classification or give import a special DATA-argument mode.
+Startup always starts R0 as an ordinary L3 Thread beneath the stub parent and
+executes its CODE from the beginning. It has no DATA, user actuals, artificial
+self binding, or empty DATA object. The [R0 entry rule](LMX_semantics.en.md#root-entry)
+retains ordinary local declarations, references, arbitrary calls, dispatch, and
+exits. The common activation accepts an optional real DATA parent; its absence
+skips only the input pass, while CODE namespace preparation and reached execution
+remain ordinary. The stub Thread parent is not a source DATA parent.
 
-A source-file/host profile must identify the selected entry and the role of any surrounding
-document it reads. Where a worked fragment does not supply that host profile, a fixture can
-prepare its explicitly DATA description and invoke the named body through the ordinary call
-path. This does not invent automatic main discovery, call every declared Structure, or assert
-that arbitrary top-level text has one new default profile. In particular, do not restore
-data=code or convert runtime launch settings into user formals.
+A form supplied to a DATA-consuming argument uses that receiver's existing
+contract. Import/copy/merge still consume ordinary CODE arguments. This is not a
+separate DATA-load startup profile. No `Main`, selected service function,
+synthetic DATA, or root-specific parser/registry replaces execution of R0. A
+named fixture body is called by an already running root or handler using the
+ordinary call mechanism. The stub parent may send its own arguments in an
+ordinary message to the running root; runtime graph/Thread launch parameters
+are not user formals. See the [common activation sketch](kernel-implementation.en.md#root-activation).
 
 Other old entries labeled OPEN—including implementation of call, source storage, precedence,
 selection, import policy, and native adapters—are implementation work or have explicit answers
@@ -486,7 +495,7 @@ The whole of M11.5г, root-frame work, computed ordinary declarations,
 M11.7/8 and M13/M14 remain OPEN. Witness 377 (original reference: `../steps/witnesses/m11-ordinary-nested-20261114/notes.md`).
 
 **Previous state, 2026-11-14, slice 376: accepted `9039fa89`.** After accepted receiving-context 374
-and physical reference code 375, canonical `@: p int` without a candidate preallocates wrapper8/cell5 before observations.
+and physical reference code 375, the historical typed-reference form (current spelling `int@: p`) without a candidate preallocated wrapper8/cell5 before observations. This historical allocation behavior is superseded by the current zero-payload uninitialized contract.
 A required formal8 uses reference-expression context3 and an independent admitted cell5 without reading signature
 payload. Frontend/dump and the single-address-map serializer are aligned; a type-only merge field is retained
 while its computed neighbor runs. Source04: 669, private36 in three modes and AFTER42/mutation24 passed.
@@ -505,7 +514,7 @@ All variable-size arrays share allocation/resizing, including service Thread.chi
 The header stays stable; storage may move. Remove separate inline capacity in DynamicArray.
 L2 indexing has no checks; L3 checks one linear index and holds the descriptor reference plus index.
 sys\descriptor returns three actual addresses; sys\native/sys\capacity query tables.
-Contract and status (original reference: `L2_spec_en.md#lmx`), plan (original reference: `../next_core_tasks_v3.md#flat-lmx-descriptor`).
+Contract and status (original reference: `L2_spec_en.md#lmx`), plan.
 
 `LmxThread` embeds `LmxMsg message` by value as its first field; a
 plain `LmxMsg` does not expose the Thread tail. The sole child List,
@@ -523,14 +532,14 @@ verification. A positive test of one cell does not establish every
 generator route, native/walker parity, or safety after freeing the source
 arena. `satisfies` builds address correspondence from actually required
 fields; a numeric position alone is not its contract. Current failures
-and checks are in the current kernel gate (original reference: `../next_core_tasks_v3.md`).
+and checks are in the current kernel gate.
 
 Historically the clean graph adopted parts `args/return/data/code` and the order `call: data code` in 354;
 355 executed sub-step 5а and 356 the first part of 5б, including launch by name over supplied data and named
 arguments of `call`/`fncall`. Later slices added the own-data declaration pass and computed fn/sub,
 and 372 extended shared named-head dispatch to the root and self. Their absence in 355/356 therefore
 does not describe the current kernel. Full M11.5г/M11.8 remain open; the working frontend retains
-the rules not yet migrated in step 8 of M11 (original reference: `../next_core_tasks_v3.md#m11`).
+the rules not yet migrated in step 8 of M11.
 
 The accepted P0 package (slice 359, 2026-11-13) uses one stream parser inside `()`, `[]` and `{}` and post-processes a nested document once; it recognizes lost closing brackets, the end of a comment at the Mix document boundary, and marks attached to an intact string atom. The L2 `parser-suite` command passed 139 cases, including five saved changes to historical inputs; 11 end-to-end graph cases passed interp/native/forced. Exact builds, bootstrap acceptance and limits are in the witness (original reference: `../steps/witnesses/p0-unified-documents-20261113/notes.md`). That slice still unwrapped a sole anonymous Structure and rejected bare `f:`; both limits are removed in M8, slice 366 (witness (original reference: `../steps/witnesses/m8-preserved-groups-20261113/notes.md`)). The working frontend still retains the former M11 semantics; the P0 fix does not migrate it.
 
@@ -628,9 +637,7 @@ The author's decision of 2026-11-10 (book (original reference: `LMX_semantics.en
 the form `receiver: arguments`, and a field written "name: type: value" (`a: int: 5`) is withdrawn. The slices below
 are described as they ran: with the field of a `merge` operand in the former form, which the translators still
 accept; under the norm it is written `(int: a 5)`. The same holds for the name that holds the result of a `merge`
-(`pack: merge(...)`) and for a formal or a field written as a structural form (`Q: q`): under the norm of 2026-11-11
-(book (original reference: `LMX_semantics.en.md#data-code-roles`)) they are declared `@: pack merge(...)` and `@: q Q`. Migrating the
-fixtures and changing the reading is in plan M9 (original reference: `../next_core_tasks_v3.md#m9`) and M11 (original reference: `../next_core_tasks_v3.md#m11`).
+(`pack: merge(...)`) and for a formal or field whose intended requirement is Q. In current notation the result reference is `@: pack merge(...)` and the uninitialized typed formal is `Q@: q`; `@: q Q` instead initializes a universal reference from the actual Q value. The historical fixture migration was tracked in M9 and M11.
 
 The author's decisions of 2026-11-18 on the two kinds of receivers and on choosing the declaration by the call
 (semantics (original reference: `LMX_semantics.en.md#two-kinds-of-receivers`),
@@ -644,7 +651,7 @@ Structure argument when it has exactly one field: `private: (int: x 10)` declare
 argument there is a Structure and is not unwrapped. A path passes through a modifier's record: with
 `Lib: private: int: x 10` the path `Lib\x` reads 10, while receivers are not executed in the graph and the
 field is read by the path `Lib\private\x`.
-The slices are in the plan (original reference: `../next_core_tasks_v3.md#two-kinds-of-receivers-plan`).
+The slices are in the plan.
 
 The rules are writing a known place (original reference: `LMX_semantics.en.md#assign-known`),
 named arguments (original reference: `LMX_semantics.en.md#named-actuals`) and
@@ -703,7 +710,7 @@ of the third:
   remain in the receipt (original reference: `../steps/witnesses/fix304-20261107/notes.md`).
   The current model stores input declarations and defaults in `f\data`, whereas the
   `args` of `call`/`fncall` contains actual supplied values.
-  This distinction and the common call path are an open M10/M14 migration (original reference: `../next_core_tasks_v3.md#m10`),
+  This distinction and the common call path are an open M10/M14 migration,
   not behaviour already implemented by slice 304.
 - The whole argument Structure from one Structure (slice 307,
   record (original reference: `../steps/witnesses/fix307-20261108/notes.md`); native and the
@@ -803,7 +810,7 @@ substitution), `**` as a common numeric operation of the kernel for both
 executors. To be clarified before the implementation: evaluating a place
 with effects once, the types and conversions of `**`/`**=`, a negative or
 fractional exponent, `0 ** 0`, the precedence of the assignments among
-operations (plan M5 (original reference: `../next_core_tasks_v3.md#m5-assign-operators`)).
+operations (plan M5).
 
 </details>
 
@@ -1095,8 +1102,8 @@ G2 graph SHA-256: 039e29be84a420aa7ace00c0ba6003472bb56146c3fb5a40093aba124d6d2f
 The whole of M11.5г, root-frame work, computed ordinary declarations, M11.7/8, M13 and ordinary native M14 remain OPEN.
 Witness 377 (original reference: `../steps/witnesses/m11-ordinary-nested-20261114/notes.md`).
 
-**Previous state, 2026-11-14, slice 376 -- accepted `9039fa89`.** Canonical `@: p int`
-without a candidate preallocates wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
+**Previous state, 2026-11-14, slice 376 -- accepted `9039fa89`.** The historical typed-reference form
+(current spelling `int@: p`) without a candidate preallocated wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
 reference cell through common admission. Source04: 669; runtime02/graph03, five pure cases, private36 in three modes,
 AFTER42/mutation24 passed. Actual native TypeOnly with physical8 in method.code was confirmed by GDB trace03
 in the private pipeline with a normal exit. Whole bootstrap01 quick passed: genuine G1/G2, nine smoke rows each,
@@ -1112,7 +1119,8 @@ Witness 376 (original reference: `../steps/witnesses/m11-uninit-reference-202611
 binds a retained raw `@` Frame with a candidate: three fields for an int reference, two for a Structure reference.
 Admission does not run the initializer. Reading or launching that place before a working write refuses with 5;
 the first write creates a working typed reference, and normal flush publishes it through the existing slot.
-Existing initialized cells and wrappers retain their contract. `@: p int` without a candidate is OPEN:
+Existing initialized cells and wrappers retain their contract. The historical uninitialized typed-reference form
+(current spelling `int@: p`) was OPEN in this slice:
 it requires kind5 and already allocated wrapper8/cell5; the form currently refuses explicitly with 5,
 is never treated as kind6 and does not allocate storage lazily. This is not refusal based on uninit:T contents.
 Runtime02/graph01 passed six pure-interpreter cases: places 41/13/30/23 with calls0; read and head -- 5
@@ -1300,8 +1308,7 @@ the copy `calls` = 3, `last` = 67 and `f` 0 and 0; `x: 4`, `x(1; 2)` give answer
 The next graph52/tool29/rt40 (original reference: `../steps/witnesses/clean-production-20261109/notes.md`), after Codex's review of 330 — the
 first production input of the clean path, the machine module `src/l2src/lmx_schedule.lm2` (whose L1 F now writes in
 build-runtime). With the existing command `G run`, graph50 stopped at construction (`graph: build answered 2`): the
-builder did not take the reference formal `@: s T`. Now a formal `@: name T` is built as the Frame `[@, name, T]`,
-named by field 1 (book :436), and printed; the C-door declarations `include:`/`predef:` are state words (`w_include`,
+builder did not take the typed reference formal (current spelling `T@: s`). The historical builder then represented such a formal by its former three-field `[@, name, T]` Frame, named by field 1 (book :436), and printed it. The current postfix form `T@: name` instead preserves the complete TYPE head followed by the NAME; the C-door declarations `include:`/`predef:` are state words (`w_include`,
 `w_predef`), their statements stay in the root and stand (the root runs nothing for them; the machine output will read
 them). The graph of `lmx_schedule` is built whole and prints the same before and after its root runs; so do `l2_libc`,
 `lmx_clock`, `os_native_path` and `tools/text`. The machine export from the clean graph (F's input instead of P0) is the
@@ -1324,10 +1331,10 @@ head that is a known place that is no Structure (an `int` place, a reference pla
 path `owner\field:` -- is refused: answer 8 of the interpreter, a stop of R0 in a program (since slice 356 a reference place to an ordinary Structure at the root and in a body launches it -- below; on a path `owner\field:` and for a place that refers to neither a callable nor a Structure the refusal stays); the translator names `:=` in
 its message and emits the refusal at the statement. A declaration of a Structure inside a running body and a repeated
 declaration through a path are not executed by the slice (5). The fields of a written operand of `merge` are declared
-by receivers -- `int: name value`, `@: name int value`; a field `name: tail` there is a description of a structure (5).
+by receivers -- in current notation `int: name value`, `int@: name value`; a field `name: tail` there is a description of a structure (5).
 The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` gives the dump `Struct2: a b c` and
 `Struct1: (Struct2 a b c)`. 99 graph-check runs × interp/native/forced PASS. The L3 lowering, the L2 machine path and
-the walker still accept the colon assignment -- section M7 of the plan (original reference: `../next_core_tasks_v3.md#m7`). The author's
+the walker still accept the colon assignment -- section M7 of the plan. The author's
 decisions of 2026-11-11 changed the norm of what this slice executes -- the binding of an atom of the tail at the
 declaration, the replacement of the content on a repetition, the name that receives the result of `merge`, the
 printing of the referent in the dump, the declaration of a Structure among executed forms itself and a form whose head
@@ -1368,7 +1375,7 @@ lifts a `merge` written as an argument of a call into a hidden declaration (`lm_
 statement whether it declares, and the reading of a declaration asks the places of the current method and keeps its
 answer for the node (`lm_compiler_declaration`; a repeated `@` receiver takes the requirement of the earlier
 declaration of its name). From the second registration round on the current method stayed the one the collection had
-ended with -- the last method of the unit -- and `@: p int @ x` of any other method was read as a repeat of the place
+ended with -- the last method of the unit -- and a typed reference declaration (current spelling `int@: p @x`) in any other method was read as a repeat of the place
 `p` of that method with two values: "a declaration takes one value". The refusal showed when the pointer of the same
 name in the last method stood nearer to the start of its file than the declaration to the start of its own, that is
 through a program part; that is how it was found -- by adding a part to the tool. The pass now reads every method as
@@ -1429,7 +1436,7 @@ and pointer variables declared by `@: ptr T` are assigned --, and the special na
 (book (original reference: `LMX_semantics.en.md#data-code-roles`)) (implementation of the former norm, before 2026-11-19; the special name
 `data` is removed -- `removed-builtins` (original reference: `LMX_semantics.en.md#removed-builtins`); replacement --
 section of this document (original reference: `#binding-callables-20261119`)); their migration is steps 3 and 8 of
-section M11 of the plan (original reference: `../next_core_tasks_v3.md#m11`).
+section M11 of the plan.
 
 The checks of slice 349: the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS. Of the 220 programs of the list
 212 have byte for byte the former L1; two (`whole_arguments`) differ only in the name of a lifted `merge`, which
@@ -1440,7 +1447,7 @@ of the list `smoke-kernel225` is the former one. A repeated census names no writ
 `driver.o` are those of slice 348. Not migrated: `tests/native_closure_values.lm2` -- no command of the tool
 translates it. The declarations keep the colon: written Structures and the records `Name: (fields)`
 (P2 (original reference: `../LMX_blog/q/colon-declares-answered-20261111.md`)), a place under a Structure in the head
-(P1), declarations through `merge` (P4), the composed form (M9 (original reference: `../next_core_tasks_v3.md#m9`)) and the second heads
+(P1), declarations through `merge` (P4), the composed form (M9) and the second heads
 in three refusal fixtures, which step 4 will revisit. In this slice the L3 lowering, the machine path and the walker
 still accepted a write with a colon.
 
@@ -1483,7 +1490,7 @@ form (`(a: int: 5)`); under the norm the same field is written `(int: a 5)`, and
 so.
 
 Slice 351 (original reference: `../steps/witnesses/composed-form-20261111/notes.md`) removed the composed reading from the working
-frontend (steps 1-3 of section M9 of the plan (original reference: `../next_core_tasks_v3.md#m9`); in the clean graph step 3 was done by
+frontend (steps 1-3 of section M9 of the plan; in the clean graph step 3 was done by
 slice 346). Two places of `l2_frontend_resolve.lm2` read the composed form: the reader of a declaration
 (`lm_compiler_declaration`) -- the outer head as the place, the receiver of the tail as an asserted requirement --
 and the role of the content (`lm_compiler_decl_content`, role 4: "the tail is consumed by a receiver"), under which
@@ -1532,7 +1539,7 @@ failures, the generations are the same; `l1trans`, `driver.o` and the graph tran
 is another (the export list of the frontend is one name shorter).
 
 Slice 352 (original reference: `../steps/witnesses/receiver-check-20261111/notes.md`) did step 4 of
-section M9 of the plan (original reference: `../next_core_tasks_v3.md#m9`) in the working frontend -- the one-argument forms of the
+section M9 of the plan in the working frontend -- the one-argument forms of the
 receivers of primitives (`int`, `char`, `size_t`, `unsigned`, `ulong`). The form with a name (`int: i`) and its
 repetition were executed before. Two lowerings by the shape of a form were added, both in `l2_frontend_core.lm2`.
 
@@ -1577,8 +1584,8 @@ journal (original reference: `../LMX_blog/2026-11-11.md#repeat-is-check-and-assi
 the book -- structural forms (original reference: `LMX_semantics.en.md#forms-declare-or-call`),
 names and paths (original reference: `LMX_semantics.en.md#fields`)). Both translators were measured against this clarification in the
 same witness; the divergences of the implementation found there were written down as step 5 of
-section M9 of the plan (original reference: `../next_core_tasks_v3.md#m9`) and moved into steps 5 and 8 of
-section M11 (original reference: `../next_core_tasks_v3.md#m11`): with a repetition in the explicit `var` of a method the working
+section M9 of the plan and moved into steps 5 and 8 of
+section M11: with a repetition in the explicit `var` of a method the working
 frontend silently reads the first occurrence; the clean graph did not write the place on a repetition at the root, and
 until slice 355 it selected the first occurrence by a bare path and did not build the path with the index of an
 occurrence (the last two were removed by slice 355, sub-step 5а). The root of a unit is launched as a Structure over itself, and an access without an index to a variable declared twice in it
@@ -1597,13 +1604,13 @@ section of this document (original reference: `#binding-callables-20261119`).)
 Slice 353 (original reference: `../steps/witnesses/call-receivers-20261111/notes.md`) executed in the clean graph the author's decision
 of 2026-11-11 on launching code over data (journal (original reference: `../LMX_blog/2026-11-11.md#call-receivers`); the book --
 the receivers `call` and `fncall` (original reference: `LMX_semantics.en.md#call-receivers`); steps 1-5 of
-section M10 of the plan (original reference: `../next_core_tasks_v3.md#m10`)). The working frontend does not read the new forms and
+section M10 of the plan). The working frontend does not read the new forms and
 reads the one-argument `call` as before; a name used above the line of its declaration it still rejects by the
 former rule of the book.
 
 The current launch receives actuals separately from the input description data. Explicit receivers and
 ordinary calls converge on one frame and execution worker; args is not read as formal declarations.
-Migration of the former LmxGraphFrame/work_open_parts belongs to M10 with M14 (original reference: `../next_core_tasks_v3.md#m10`).
+Migration of the former LmxGraphFrame/work_open_parts belongs to M10 with M14.
 The historical place-model changes367 are in their receipt (original reference: `../steps/witnesses/m11-ordinary-model-20261113/notes.md`).
 Slice 368 replaces the call of own data with a pass over its implemented root declaration
 receivers in the same frame (`lmx_graph_data_run`). Other fields, including assignments,
@@ -1687,7 +1694,7 @@ removed by slice 355 (sub-step 5а).
 
 Slice 355 (original reference: `../steps/witnesses/data-registry-atom-20261111/notes.md`) executed in the clean graph the registry of data,
 the atom-pointer with no expansion and visibility in data in both directions (sub-step 5а of
-section M11 of the plan (original reference: `../next_core_tasks_v3.md#m11`); the author's decisions of 2026-11-11 --
+section M11 of the plan; the author's decisions of 2026-11-11 --
 a mention is not expanded (original reference: `../LMX_blog/2026-11-11.md#known-name-not-expanded`),
 a repeated declaration (original reference: `../LMX_blog/2026-11-11.md#repeat-is-check-and-assignment`),
 the roles `data` and `code` (original reference: `../LMX_blog/2026-11-11.md#data-code-roles`),
@@ -1728,7 +1735,7 @@ head is the name of a place of the same level is not counted as an occurrence in
 is sub-step 5в); the dump expands a reference to a Structure whose parent is not the holder (the results of `merge`), and printing such a reference by name is a separate change. The working frontend does not execute these rules -- step 8.
 
 Slice 356 (original reference: `../steps/witnesses/callable-data-launch-by-name-20261111/notes.md`) executed in the clean graph the first
-part of sub-step 5б of section M11 of the plan (original reference: `../next_core_tasks_v3.md#m11`): the launch of a Structure by name, one
+part of sub-step 5б of section M11 of the plan: the launch of a Structure by name, one
 binder of forms, and the visibility from code of the parts of a callable and of the Structures of the data of a launch
 (the author's decisions of 2026-11-11 -- launching by name (original reference: `../LMX_blog/2026-11-11.md#structure-call-by-name`), the
 parts of a callable see one another (original reference: `../LMX_blog/2026-11-11.md#callable-parts-visibility`),
@@ -1760,7 +1767,7 @@ in the parts of `fn` and `sub` is removed by sub-step 5е; the word of the recei
 
 The author's decision of 2026-11-11 on the roles `data` and `code` (journal (original reference: `../LMX_blog/2026-11-11.md#data-code-roles`);
 the book -- the roles `data` and `code` (original reference: `LMX_semantics.en.md#data-code-roles`);
-section M11 of the plan (original reference: `../next_core_tasks_v3.md#m11`)) is executed by the clean graph so far only in part: the
+section M11 of the plan) is executed by the clean graph so far only in part: the
 names and the order (slice 354, step 4 of section M11) -- the parts of a callable are called `data` and `code`, the
 two-argument `call` is `call: data code`; sub-step 5а (slice 355) -- data is read as a whole, the registry of data, an
 atom-pointer with no expansion, a repeated declaration does not replace the former one, visibility in data in both

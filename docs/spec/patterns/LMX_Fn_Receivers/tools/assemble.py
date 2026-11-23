@@ -10,9 +10,11 @@ PARTS = [
     'src/adapter_frames.lmx',
     'src/generic_functions.lmx',
     'src/fn_operand.lmx',
+    'src/operation_forms.lmx',
     'src/generic_runtime.lmx',
     'src/reflection_bridges.lmx',
     'src/containers.lmx',
+    'src/monadic_forms.lmx',
     'src/sequences_core.lmx',
     'src/sequences_selection.lmx',
     'src/sequences.lmx',
@@ -21,11 +23,13 @@ PARTS = [
     'src/structures.lmx',
     'src/generic_combinators.lmx',
     'src/generic_wrappers.lmx',
+    'src/coreGenericOperations.lmx',
     'src/coreComparisonGroups.lmx',
     'src/coreComparisonExamples.lmx',
     'src/corePerlExamples.lmx',
     'src/regex/support.lmx',
     'src/regex/text.lmx',
+    'src/regex/source.lmx',
     'src/regex/primitives.lmx',
     'src/regex/values.lmx',
     'src/regex/combinators.lmx',
@@ -36,6 +40,9 @@ PARTS = [
     'src/coreStandardLisp.lmx',
     'src/coreStandardText.lmx',
     'src/coreStandardNumeric.lmx',
+    'src/sequence_profiles.lmx',
+    'src/public_operands.lmx',
+    'src/public_families.lmx',
     'src/public.lmx',
     'examples/generic_callable_examples.lmx',
     'examples/structure_examples.lmx',
@@ -53,7 +60,7 @@ HEADER = '''# LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕ�
 # {public_count} вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
 # FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
-# Name :: DATA и signatureTypes взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
+# Name :: DATA и to взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
 # Загружать сборку ИЛИ отдельные файлы, не оба варианта вместе.
 
@@ -74,4 +81,3 @@ if __name__ == '__main__':
     path.write_text(text, encoding='utf-8')
     print(json.dumps({'file': path.name, 'parts': len(PARTS),
                       'lines': len(text.splitlines()), 'bytes': path.stat().st_size}, ensure_ascii=False))
-

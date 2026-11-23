@@ -7,44 +7,43 @@
   ],
   "rationale_ru": "Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.",
   "rationale_en": "Haskell is a natural control for Maybe/Monad and currying. Scala combines functional constructs with JVM execution, explicit trampolines and ordinary resource handling. The selection follows mechanisms rather than a universal brevity ranking.",
-  "overview_ru": "Четыре прикладных сценария используют ядро LMX и реальные средства Haskell/Scala. Четыре соседних сравнения показывают самостоятельные реализации соответствующих компонентов; usage-клиенты их не импортируют. Сохранены только альтернативы с другим подходом.",
-  "overview_en": "Four usage scenarios call the LMX core and actual Haskell/Scala facilities. Four adjacent comparisons implement the corresponding components independently; clients do not import them. Only approach-level alternatives remain.",
+  "overview_ru": "Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют исходные контрольные программы. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.",
+  "overview_en": "Four tasks have complete procedural and functional LMX variants. Existing Haskell and Scala controls are unchanged. Four implementation comparisons each retain one common canonical LMX body.",
   "patterns": [
     {
       "id": 82,
       "name": "Monad",
       "slug": "monad",
       "scope": "core",
-      "summary_ru": "Две операции bind над обобщённым Maybe; прикладной half по-прежнему проверяет чётность целого числа.",
-      "summary_en": "Two bind operations over generic Maybe; the application half still checks an integer for evenness.",
-      "scenario_ru": "Вызвать half дважды через bind. В some хранится запись значения с его собственным типом, а next получает само значение по обычному контракту вызова. Для отсутствия продолжение не вызывается. Проверки остаются 8, 6 и 3.",
-      "scenario_en": "Apply half twice through bind. some retains a value record with its own type; next receives the payload through ordinary call admission. Absence skips the continuation. The probes remain 8, 6 and 3.",
+      "summary_ru": "Maybe: явная проверка промежуточного результата и компактная цепочка bind.",
+      "summary_en": "Maybe: explicit intermediate branching and a compact bind chain.",
+      "scenario_ru": "Выполнить some(x) bind half bind half. Значение хранится со своим фактическим типом, half получает его обычным вызовом. При None следующие продолжения пропускаются. Проверки остаются 8, 6, 3 и дополнительно 0.",
+      "scenario_en": "Evaluate some(x) bind half bind half. The payload keeps its actual type and half receives it through ordinary admission. None skips subsequent continuations. The probes include 8, 6, 3 and 0.",
       "expected_ru": "8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.",
       "expected_en": "8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.",
-      "lmx_notes_ru": "Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.",
-      "lmx_notes_en": "Operations belong to the current core and are available directly. No alternate library edition is loaded; shared implementation code is shown in companion comparisons and the dependency ledger.",
+      "lmx_notes_ru": "Оба варианта вызывают half по порядку и прекращают цепочку после none. Процедурный код проверяет present явно; функциональный использует общий bind. same/value capture остаётся общим конструктором ядра.",
+      "lmx_notes_en": "Both complete styles are compared, with their entire declarations and Throws.",
       "comparison_ru": "Готовый API используется только на уровне клиента; реализация соответствующего компонента сравнивается отдельной строкой. Небольшие изменения записи объясняются без повторного полного листинга.",
       "comparison_en": "Ready APIs are used by clients; component implementations are compared separately. Minor spelling differences are described without duplicate full listings.",
-      "limits_ru": "Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.",
-      "limits_en": "Generality covers payloads and A→Maybe<B>, not every possible Monad/IO/State. The application half takes int. Monad laws here concern pure total continuations and observable values, not addresses or external mutation.",
+      "limits_ru": "Чётность — конкретная задача над int; библиотечные конструкторы и bind этим типом не ограничены. Требуется подготовленный контекст публичных семейств и адаптивного входа. Законы монады относятся к допустимым чистым продолжениям и наблюдаемым значениям. Изменённый LMX-пример не исполнялся.",
+      "limits_en": "Evenness is an integer-specific application; the constructors and bind are generic. Public-family selection and adaptive value admission are part of the prepared context. Monad laws concern admissible pure continuations and observable values. The revised LMX example has not been executed.",
       "listings": [
         {
           "language": "LMX",
-          "code": "Example:\n    int: x\n    return: @\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(value := (x / 2 record))\n        return: none()\n    run:\n        throws: copy(FxThrows\\fixture) FxCallFailure\n        return: bind(bind(some(value := (x record)); half); half)\n",
-          "notes_ru": "Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.",
-          "notes_en": "Operations belong to the current core and are available directly. No alternate library edition is loaded; shared implementation code is shown in companion comparisons and the dependency ledger.",
+          "code": "Example:\n    int: x\n    return: FxMaybe@\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(x / 2)\n        return: none()\n    run:\n        throws: FxRecordArity copy(FxMaybeBindOperand\\bind\\throws)\n        return: some(x) bind half bind half\n",
+          "notes_ru": "some(x) захватывает одно фактическое значение через подготовленный адаптивный вход актора; пользователь не пишет record. Обычная и операндная формы bind используют одно Maybe-связывание. Цепочка выполняется слева направо и останавливается на None; ошибки callback не превращаются в отсутствие. Полный конечный throws сохранён. Построение адаптера относится к подготовке контекста; при ленивом построении его ошибки дополнительно входят в достигнутый вызов.",
+          "notes_en": "some(x) captures one actual typed value through the actor's prepared adaptive input. The receiver and operand spellings of bind use the same Maybe implementation. The chain is left-to-right, stops at None and does not convert callback failures into absence. The full finite throws contract is retained. Adapter construction belongs to context preparation; a lazy construction path also exposes its construction failures.",
           "depends_on": [
             91
           ],
-          "primary_variant": "core",
+          "primary_variant": "functional",
           "metrics": {
-            "characters": 195,
+            "characters": 180,
             "nonblank_lines": 11,
-            "utf8_bytes": 297,
-            "sha256": "670603b47be316f9c1b95f699e7b88bbd0a70b759e20807c129a56819fe7738f",
-            "without_complex_throws_characters": 182,
-            "complex_throws_removed_characters": 13
-          }
+            "utf8_bytes": 278,
+            "sha256": "452b560694a28dfd08c7896d930a74a4d55dbc2f146e38b837bbfa39637d8fd8"
+          },
+          "publication_role": "compatibility_mirror_not_separate_comparison"
         },
         {
           "language": "Haskell",
@@ -90,7 +89,8 @@
       ],
       "variants": {
         "LMX": {
-          "core": "Example:\n    int: x\n    return: @\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(value := (x / 2 record))\n        return: none()\n    run:\n        throws: copy(FxThrows\\fixture) FxCallFailure\n        return: bind(bind(some(value := (x record)); half); half)\n"
+          "procedural": "Example:\n    int: x\n    return: FxMaybe@\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(x / 2)\n        return: none()\n    run:\n        throws: copy(half\\throws)\n        @: result half(x)\n        if: result\\present = 0\n            return: result\n        return: half(\\result\\value)\n",
+          "functional": "Example:\n    int: x\n    return: FxMaybe@\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(x / 2)\n        return: none()\n    run:\n        throws: FxRecordArity copy(FxMaybeBindOperand\\bind\\throws)\n        return: some(x) bind half bind half\n"
         },
         "Haskell": {
           "standard": "module MonadExample where\n\nhalf :: Int -> Maybe Int\nhalf x = if even x then Just (x `div` 2) else Nothing\n\nrun :: Int -> Maybe Int\nrun x = Just x >>= half >>= half\n"
@@ -101,9 +101,13 @@
       },
       "variant_notes": {
         "LMX": {
-          "core": {
-            "notes_ru": "Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.",
-            "notes_en": "Operations belong to the current core and are available directly. No alternate library edition is loaded; shared implementation code is shown in companion comparisons and the dependency ledger."
+          "procedural": {
+            "notes_ru": "Оба варианта вызывают half по порядку и прекращают цепочку после none. Процедурный код проверяет present явно; функциональный использует общий bind. same/value capture остаётся общим конструктором ядра.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
+          },
+          "functional": {
+            "notes_ru": "Оба варианта вызывают half по порядку и прекращают цепочку после none. Процедурный код проверяет present явно; функциональный использует общий bind. same/value capture остаётся общим конструктором ядра.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           }
         },
         "Haskell": {
@@ -120,13 +124,14 @@
         }
       },
       "primary_variant": {
-        "LMX": "core",
+        "LMX": "functional",
         "Haskell": "standard",
         "Scala": "standard"
       },
       "eligible_variants": {
         "LMX": [
-          "core"
+          "procedural",
+          "functional"
         ],
         "Haskell": [
           "standard"
@@ -141,14 +146,50 @@
         "Scala": "LMX вызывает компонент текущего ядра; контрольный язык использует реальную стандартную библиотеку, установленный пакет или собственный синтаксис. Самописные модули соседнего сравнения не импортируются."
       },
       "alternative": {},
-      "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
+      "dedup_notes_ru": "Общий алгоритм не дублируется внутри каждого варианта. Две полные стилевые записи — самостоятельные сравниваемые клиенты; реализации091/092/098/099 остаются единственными общими телами.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "foreign_facilities": {
         "Haskell": "base: Maybe, Just, Nothing, (>>=)",
         "Scala": "scala-library: Option, Some, None, flatMap"
       },
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": "Обычная форма bind(bind(some(x); half); half) использует тот же алгоритм; она поясняется одной строкой, без повторного полного листинга.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Example:\n    int: x\n    return: FxMaybe@\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(x / 2)\n        return: none()\n    run:\n        throws: copy(half\\throws)\n        @: result half(x)\n        if: result\\present = 0\n            return: result\n        return: half(\\result\\value)\n",
+          "source_file": "examples/lmx/procedural/082_monad.lm3",
+          "contract_id": "functional/082",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 321,
+            "nonblank_lines": 14,
+            "utf8_bytes": 321,
+            "sha256": "0f77fd004e82a25de7d3891be3eeec3fb9ddb7d564d9e0fdac9c45c27447105a"
+          }
+        },
+        "functional": {
+          "code": "Example:\n    int: x\n    return: FxMaybe@\n    half:\n        throws: FxRecordArity\n        if: x % 2 = 0\n            return: some(x / 2)\n        return: none()\n    run:\n        throws: FxRecordArity copy(FxMaybeBindOperand\\bind\\throws)\n        return: some(x) bind half bind half\n",
+          "source_file": "examples/lmx/082_monad.lm3",
+          "contract_id": "functional/082",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 180,
+            "characters_with_whitespace": 278,
+            "nonblank_lines": 11,
+            "utf8_bytes": 278,
+            "sha256": "452b560694a28dfd08c7896d930a74a4d55dbc2f146e38b837bbfa39637d8fd8"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Оба варианта вызывают half по порядку и прекращают цепочку после none. Процедурный код проверяет present явно; функциональный использует общий bind. some/value capture остаётся общим конструктором ядра.",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 91,
@@ -195,17 +236,15 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "FxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    return: @\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: @\n    none:\n        return: (copy(FxMaybe))\n\nFxBind:\n    private:\n        FxMaybe@: input\n        @: next\n    return: @\n    bind:\n        throws: copy(FxThrows\\call)\n        if: input\\present = 0\n            return: input\n        private: @: record FxApply\\apply(next; FxOne\\make(input\\value))\n        private: FxMaybe@: result record\n        return: result\n",
+          "code": "FxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    required: value\n    return: FxMaybe@\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: FxMaybe@\n    none:\n        return: (copy(FxMaybe))\n\nFxBind:\n    private:\n        FxMaybe@: input\n        @: next\n    required: input next\n    return: FxMaybe@\n    bind:\n        throws: copy(FxThrows\\call)\n        if: input\\present = 0\n            return: input\n        private: @: record FxApply\\apply(next; FxOne\\make(input\\value))\n        private: FxMaybe@: result \\record\n        return: result\n",
           "notes_ru": "Основной листинг — точные определения FxMaybe, FxSome, FxNone, FxBind из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.",
           "notes_en": "The primary listing is the exact production definitions FxMaybe, FxSome, FxNone, FxBind. Public operations belong to the single core; shared dependencies are measured separately in the dependency ledger. No alternate library edition is selected. This component fragment is not presented as a standalone kernel implementation.",
           "primary_variant": "core",
           "metrics": {
-            "characters": 390,
-            "nonblank_lines": 27,
-            "utf8_bytes": 601,
-            "sha256": "fff42887d0f9ca717f597b217379dd99fe03f55ec613fea1f298e80cc29e0fd9",
-            "without_complex_throws_characters": 390,
-            "complex_throws_removed_characters": 0
+            "characters": 444,
+            "nonblank_lines": 29,
+            "utf8_bytes": 668,
+            "sha256": "33056ce1a7d4963ace179f2bb0295a0dbf61ed25dfd72e63622f48984bbb00d0"
           }
         },
         {
@@ -255,7 +294,7 @@
       ],
       "variants": {
         "LMX": {
-          "core": "FxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    return: @\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: @\n    none:\n        return: (copy(FxMaybe))\n\nFxBind:\n    private:\n        FxMaybe@: input\n        @: next\n    return: @\n    bind:\n        throws: copy(FxThrows\\call)\n        if: input\\present = 0\n            return: input\n        private: @: record FxApply\\apply(next; FxOne\\make(input\\value))\n        private: FxMaybe@: result record\n        return: result\n"
+          "core": "FxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    required: value\n    return: FxMaybe@\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: FxMaybe@\n    none:\n        return: (copy(FxMaybe))\n\nFxBind:\n    private:\n        FxMaybe@: input\n        @: next\n    required: input next\n    return: FxMaybe@\n    bind:\n        throws: copy(FxThrows\\call)\n        if: input\\present = 0\n            return: input\n        private: @: record FxApply\\apply(next; FxOne\\make(input\\value))\n        private: FxMaybe@: result \\record\n        return: result\n"
         },
         "Haskell": {
           "implementation": "module MaybeValue (MaybeValue(..), some, none, bind) where\n\ndata MaybeValue a = Absent | Present a deriving (Eq, Show)\n\nsome :: a -> MaybeValue a\nsome = Present\n\nnone :: MaybeValue a\nnone = Absent\n\ninfixl 1 `bind`\nbind :: MaybeValue a -> (a -> MaybeValue b) -> MaybeValue b\nbind Absent _ = Absent\nbind (Present value) next = next value\n"
@@ -309,21 +348,22 @@
       "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": [],
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 83,
       "name": "Trampoline",
       "slug": "trampoline",
       "scope": "core",
-      "summary_ru": "Взаимные even/odd шаги используют общий Bounce с nullary continuation, созданной partial.",
-      "summary_en": "Mutual even/odd steps use generic Bounce with a nullary continuation created by partial.",
+      "summary_ru": "Паритет: процедурный цикл и функциональный trampoline для конечного неотрицательного n.",
+      "summary_en": "Parity: an explicit loop and a functional trampoline for finite nonnegative n.",
       "scenario_ru": "Для неотрицательного n определить чётность. Незавершённый шаг возвращает more(partial(другой_шаг; (n−1))) без вызова другого шага. trampoline вызывает по одному сохранённому thunk до done.",
       "scenario_en": "For nonnegative n, compute parity. An unfinished step returns more(partial(otherStep; (n−1))) without invoking the other step. trampoline invokes one retained thunk at a time until done.",
       "expected_ru": "0 → true, 1 → false, 100001 → false; LMX возвращает 1, 0, 0. Каждый шаг возвращает управление драйверу; вложенная цепочка вызовов even/odd не накапливается.",
       "expected_en": "0 yields true, 1 false and 100001 false; LMX returns 1, 0, 0. Every step returns control to the driver; no nested even/odd call chain accumulates.",
-      "lmx_notes_ru": "Общий алгоритм шага находится в Steps\\code; even_step и odd_step задают локальные x и next, доступные по динамическому связыванию. Throws содержит список выходов один раз, четыре copy(Throws) входят в подсчёт. Входы: Steps\\Example\\run(0), Steps\\Example\\run(1), Steps\\Example\\run(100001). Выходы передаются вызывающему; это не корневой обработчик Message. [Разыменование и catch](FAILURE_BOUNDARIES.md#trampoline).",
-      "lmx_notes_en": "Steps\\code owns the shared step algorithm. even_step and odd_step supply local x and next through dynamic binding. Throws declares the exits once; all four copy(Throws) uses are counted. Entry points are Steps\\Example\\run(0), Steps\\Example\\run(1), and Steps\\Example\\run(100001). Exits propagate to the caller; this is not a root Message handler. [Dereference and catch](FAILURE_BOUNDARIES.md#trampoline).",
+      "lmx_notes_ru": "Договор клиента — parity конечного неотрицательного n: 0→1, 1→0, 100001→0. Процедурный цикл хранит состояние; функциональный вариант показывает настоящий trampoline и два шага с общим телом. Полная общая реализация trampoline остаётся отдельно в092.",
+      "lmx_notes_en": "Both complete styles are compared, with their entire declarations and Throws.",
       "comparison_ru": "Готовый API используется только на уровне клиента; реализация соответствующего компонента сравнивается отдельной строкой. Небольшие изменения записи объясняются без повторного полного листинга.",
       "comparison_en": "Ready APIs are used by clients; component implementations are compared separately. Minor spelling differences are described without duplicate full listings.",
       "limits_ru": "Ограничение n≥0 принадлежит задаче чётности. Общий trampoline не ограничивает результат int или bool. Это последовательный батут; Message, планирование и параллельное выполнение не добавлены. Создание thunk не вызывает исходный шаг.",
@@ -331,22 +371,21 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxThrows\\capture) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(value := (x record))\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
+          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
           "notes_ru": "Общий алгоритм шага находится в Steps\\code; even_step и odd_step задают локальные x и next, доступные по динамическому связыванию. Throws содержит список выходов один раз, четыре copy(Throws) входят в подсчёт. Входы: Steps\\Example\\run(0), Steps\\Example\\run(1), Steps\\Example\\run(100001). Выходы передаются вызывающему; это не корневой обработчик Message. [Разыменование и catch](FAILURE_BOUNDARIES.md#trampoline).",
-          "notes_en": "Steps\\code owns the shared step algorithm. even_step and odd_step supply local x and next through dynamic binding. Throws declares the exits once; all four copy(Throws) uses are counted. Entry points are Steps\\Example\\run(0), Steps\\Example\\run(1), and Steps\\Example\\run(100001). Exits propagate to the caller; this is not a root Message handler. [Dereference and catch](FAILURE_BOUNDARIES.md#trampoline).",
+          "notes_en": "Steps\\code owns the shared step algorithm. even_step and odd_step supply local x and next through dynamic binding. Throws declares the exits once; all four copy(Throws) uses are counted. After root startup, ordinary case calls are Steps\\Example\\run(0), Steps\\Example\\run(1), and Steps\\Example\\run(100001). Exits propagate to the caller; this is not a root Message handler. [Dereference and catch](FAILURE_BOUNDARIES.md#trampoline).",
           "depends_on": [
             92,
             99
           ],
-          "primary_variant": "shared_body",
+          "primary_variant": "functional",
           "metrics": {
-            "characters": 361,
+            "characters": 354,
             "nonblank_lines": 25,
-            "utf8_bytes": 596,
-            "sha256": "c1aedc29781c15fb8aa297951913f6254af65b5d328376eb22a3519b5c259664",
-            "without_complex_throws_characters": 348,
-            "complex_throws_removed_characters": 13
-          }
+            "utf8_bytes": 586,
+            "sha256": "883797ce9f7b227b73f488083e1349c681b3d3343dc148f65f68ac2674d28a01"
+          },
+          "publication_role": "compatibility_mirror_not_separate_comparison"
         },
         {
           "language": "Haskell",
@@ -393,7 +432,8 @@
       ],
       "variants": {
         "LMX": {
-          "shared_body": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxThrows\\capture) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(value := (x record))\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n"
+          "procedural": "Steps:\n    Example:\n        int: n\n        return: int\n        run:\n            int: value 1\n            while: n > 0\n                value := 1 - value\n                n -= 1\n            return: value\n",
+          "functional": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n"
         },
         "Haskell": {
           "standard": "module TrampolineExample where\nimport Control.Monad.Free (Free(..), iter)\nimport Data.Functor.Identity (Identity(..))\n\nevenStep, oddStep :: Int -> Free Identity Bool\nevenStep 0 = Pure True\nevenStep n = Free (Identity (oddStep (n - 1)))\noddStep 0 = Pure False\noddStep n = Free (Identity (evenStep (n - 1)))\n\nparity :: Int -> Bool\nparity = iter runIdentity . evenStep\n"
@@ -404,9 +444,13 @@
       },
       "variant_notes": {
         "LMX": {
-          "shared_body": {
-            "notes_ru": "Общий алгоритм шага находится в Steps\\code; even_step и odd_step задают локальные x и next, доступные по динамическому связыванию. Throws содержит список выходов один раз, четыре copy(Throws) входят в подсчёт. Входы: Steps\\Example\\run(0), Steps\\Example\\run(1), Steps\\Example\\run(100001). Выходы передаются вызывающему; это не корневой обработчик Message. [Разыменование и catch](FAILURE_BOUNDARIES.md#trampoline).",
-            "notes_en": "Steps\\code owns the shared step algorithm. even_step and odd_step supply local x and next through dynamic binding. Throws declares the exits once; all four copy(Throws) uses are counted. Entry points are Steps\\Example\\run(0), Steps\\Example\\run(1), and Steps\\Example\\run(100001). Exits propagate to the caller; this is not a root Message handler. [Dereference and catch](FAILURE_BOUNDARIES.md#trampoline)."
+          "procedural": {
+            "notes_ru": "Договор клиента — parity конечного неотрицательного n: 0→1, 1→0, 100001→0. Процедурный цикл хранит состояние; функциональный вариант показывает настоящий trampoline и два шага с общим телом. Полная общая реализация trampoline остаётся отдельно в092.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
+          },
+          "functional": {
+            "notes_ru": "Договор клиента — parity конечного неотрицательного n: 0→1, 1→0, 100001→0. Процедурный цикл хранит состояние; функциональный вариант показывает настоящий trampoline и два шага с общим телом. Полная общая реализация trampoline остаётся отдельно в092.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           }
         },
         "Haskell": {
@@ -423,13 +467,14 @@
         }
       },
       "primary_variant": {
-        "LMX": "shared_body",
+        "LMX": "functional",
         "Haskell": "standard",
         "Scala": "standard"
       },
       "eligible_variants": {
         "LMX": [
-          "shared_body"
+          "procedural",
+          "functional"
         ],
         "Haskell": [
           "standard"
@@ -449,14 +494,50 @@
         "en": "Declared exits, handlers, and example boundary"
       },
       "alternative": {},
-      "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
+      "dedup_notes_ru": "Общий алгоритм не дублируется внутри каждого варианта. Две полные стилевые записи — самостоятельные сравниваемые клиенты; реализации091/092/098/099 остаются единственными общими телами.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "foreign_facilities": {
         "Haskell": "free 5.2: Control.Monad.Free; base: Identity",
         "Scala": "scala-library: scala.util.control.TailCalls"
       },
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": [],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Steps:\n    Example:\n        int: n\n        return: int\n        run:\n            int: value 1\n            while: n > 0\n                value := 1 - value\n                n -= 1\n            return: value\n",
+          "source_file": "examples/lmx/procedural/083_trampoline.lm3",
+          "contract_id": "functional/083",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 82,
+            "characters_with_whitespace": 202,
+            "nonblank_lines": 10,
+            "utf8_bytes": 202,
+            "sha256": "77b276c0c5842d3cce0a6c1e672b5e27d74f23a1f3fd4e59855b42b3e74cf8ec"
+          }
+        },
+        "functional": {
+          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
+          "source_file": "examples/lmx/083_trampoline.lm3",
+          "contract_id": "functional/083",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 586,
+            "nonblank_lines": 25,
+            "utf8_bytes": 586,
+            "sha256": "883797ce9f7b227b73f488083e1349c681b3d3343dc148f65f68ac2674d28a01"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Договор клиента — parity конечного неотрицательного n: 0→1, 1→0, 100001→0. Процедурный цикл хранит состояние; функциональный вариант показывает настоящий trampoline и два шага с общим телом. Полная общая реализация trampoline остаётся отдельно в092.",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 92,
@@ -509,17 +590,15 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "FxBounce:\n    int: done 0\n    @: value 0\n    @: next 0\n\nFxDone:\n    private: @: value\n    return: @\n    done:\n        private: @: result (copy(FxBounce))\n        result\\done := 1\n        result\\value := value\n        return: result\n\nFxMore:\n    private: @: thunk\n    return: @\n    more:\n        throws: FxArity FxKernelFailure FxTypeToken\n        private: @: shape FxKernel\\signature(subject := thunk)\n        if: length(shape\\inputTypes) != 0\n            throw: FxArity()\n        private: @: result (copy(FxBounce))\n        result\\next := thunk\n        return: result\n\nFxTrampoline:\n    private: FxBounce@: current\n    return: @\n    trampoline:\n        throws: copy(FxThrows\\call)\n        private: @: empty (copy(()))\n        while: current\\done = 0\n            private: @: record FxApply\\apply(current\\next; empty)\n            current := \\record\n        return: current\\value\n",
+          "code": "FxBounce:\n    int: done 0\n    @: value 0\n    @: next 0\n\nFxDone:\n    private: @: value\n    required: value\n    return: FxBounce@\n    done:\n        private: @: result (copy(FxBounce))\n        result\\done := 1\n        result\\value := value\n        return: result\n\nFxMore:\n    private: @: thunk\n    return: @\n    more:\n        throws: FxArity FxKernelFailure FxTypeToken\n        private: @: shape FxKernel\\signature(subject := thunk)\n        if: length(shape\\inputTypes) != 0\n            throw: FxArity()\n        private: @: result (copy(FxBounce))\n        result\\next := thunk\n        return: result\n\nFxTrampoline:\n    private: FxBounce@: current\n    return: @\n    trampoline:\n        throws: copy(FxThrows\\call)\n        private: @: empty (copy(()))\n        while: current\\done = 0\n            private: @: record FxApply\\apply(current\\next; empty)\n            current := \\record\n        return: current\\value\n",
           "notes_ru": "Основной листинг — точные определения FxBounce, FxDone, FxMore, FxTrampoline из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.",
           "notes_en": "The primary listing is the exact production definitions FxBounce, FxDone, FxMore, FxTrampoline. Public operations belong to the single core; shared dependencies are measured separately in the dependency ledger. No alternate library edition is selected. This component fragment is not presented as a standalone kernel implementation.",
           "primary_variant": "core",
           "metrics": {
-            "characters": 591,
-            "nonblank_lines": 33,
-            "utf8_bytes": 878,
-            "sha256": "ad15abc3b8de5c973da608d50bb78a312eaeb4f4813dd75ce6aaf4115f6dcc69",
-            "without_complex_throws_characters": 565,
-            "complex_throws_removed_characters": 26
+            "characters": 613,
+            "nonblank_lines": 34,
+            "utf8_bytes": 906,
+            "sha256": "b697ec1e7b4e46e5c83f1d89183b718038d2997bb10fd391ac2c1c2c1b9afb75"
           }
         },
         {
@@ -569,7 +648,7 @@
       ],
       "variants": {
         "LMX": {
-          "core": "FxBounce:\n    int: done 0\n    @: value 0\n    @: next 0\n\nFxDone:\n    private: @: value\n    return: @\n    done:\n        private: @: result (copy(FxBounce))\n        result\\done := 1\n        result\\value := value\n        return: result\n\nFxMore:\n    private: @: thunk\n    return: @\n    more:\n        throws: FxArity FxKernelFailure FxTypeToken\n        private: @: shape FxKernel\\signature(subject := thunk)\n        if: length(shape\\inputTypes) != 0\n            throw: FxArity()\n        private: @: result (copy(FxBounce))\n        result\\next := thunk\n        return: result\n\nFxTrampoline:\n    private: FxBounce@: current\n    return: @\n    trampoline:\n        throws: copy(FxThrows\\call)\n        private: @: empty (copy(()))\n        while: current\\done = 0\n            private: @: record FxApply\\apply(current\\next; empty)\n            current := \\record\n        return: current\\value\n"
+          "core": "FxBounce:\n    int: done 0\n    @: value 0\n    @: next 0\n\nFxDone:\n    private: @: value\n    required: value\n    return: FxBounce@\n    done:\n        private: @: result (copy(FxBounce))\n        result\\done := 1\n        result\\value := value\n        return: result\n\nFxMore:\n    private: @: thunk\n    return: @\n    more:\n        throws: FxArity FxKernelFailure FxTypeToken\n        private: @: shape FxKernel\\signature(subject := thunk)\n        if: length(shape\\inputTypes) != 0\n            throw: FxArity()\n        private: @: result (copy(FxBounce))\n        result\\next := thunk\n        return: result\n\nFxTrampoline:\n    private: FxBounce@: current\n    return: @\n    trampoline:\n        throws: copy(FxThrows\\call)\n        private: @: empty (copy(()))\n        while: current\\done = 0\n            private: @: record FxApply\\apply(current\\next; empty)\n            current := \\record\n        return: current\\value\n"
         },
         "Haskell": {
           "implementation": "module Bounce (Bounce, done, more, run) where\n\ndata Bounce a = Done a | More (() -> Bounce a)\n\ndone :: a -> Bounce a\ndone = Done\n\nmore :: (() -> Bounce a) -> Bounce a\nmore = More\n\nrun :: Bounce a -> a\nrun (Done answer) = answer\nrun (More next) = run (next ())\n"
@@ -623,21 +702,22 @@
       "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": [],
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 84,
       "name": "Execute Around",
       "slug": "execute_around",
       "scope": "core",
-      "summary_ru": "Переданные acquire/action/release исполняются вокруг защищённого использования ресурса. Основной кратчайший клиент использует общий bracket; полный короткий авторский Around из22-Nov сохранён отдельным подходом.",
-      "summary_en": "Supplied acquire/action/release callbacks surround protected resource use. The shortest complete client uses core bracket; the full short author Around from22-Nov is retained as a distinct approach.",
-      "scenario_ru": "Ресурс содержит 42. acquire добавляет в журнал 1, action — 2, release — 3. Режим 0 успешен, режим 1 падает в action, режим 2 — в acquire. Основной клиент вызывает встроенный bracket / Control.Exception.bracket / Using.resource: освобождает только полученный ресурс и наблюдает ошибку вместе с журналом.",
-      "scenario_en": "The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. Use core bracket, Haskell Control.Exception.bracket, or Scala Using.resource; each releases only an acquired resource and the client observes the failure and log.",
+      "summary_ru": "Полный локальный Around и функциональный bracket сохраняют один ресурсный жизненный цикл.",
+      "summary_en": "The complete local Around and functional bracket preserve one resource lifecycle.",
+      "scenario_ru": "Ресурс содержит42. acquire/action/release добавляют1/2/3 в журнал. Оба полных LMX-варианта сохраняют режимы успеха, отказа action и отказа acquire; освобождается только полученный ресурс.",
+      "scenario_en": "The resource holds42. acquire/action/release append1/2/3 to the trace. Both complete LMX styles preserve success, action failure and acquisition failure; only an acquired resource is released.",
       "expected_ru": "run(0) → 42123: результат 42, журнал 123. run(1) → −123: ошибка тела дошла до клиента и release выполнен. run(2) → −1: acquisition отказал, release не выполнен. Ресурс не используется после cleanup.",
       "expected_en": "run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure reaches the client after release. run(2) yields −1: acquisition failed and no release ran. The resource is not used after cleanup.",
-      "lmx_notes_ru": "В этом закрытом наборе Acquire/Action объявляют только ResourceFailure, Release не объявляет отказов. FxApply оборачивает только объявленные отказы своего target, а инфраструктурные отказы bracket идут отдельно. Поэтому здесь FxCallFailure означает именно ResourceFailure; проверка его имени и повторный throw не нужны. Payload принимается обычным @-параметром error, чтобы сохранить арность handler. FxCallFailure полностью обработан и не повторяется в outward throws. Общий клиент с произвольными callbacks обязан анализировать свой набор отказов. Доказательство: review/084_failure_boundary.md.",
-      "lmx_notes_en": "This closed callback set declares only ResourceFailure in acquire/action and no release failures. FxApply wraps only the target-declared failures; bracket infrastructure failures propagate under their separate names. Consequently this handler needs no failure-name comparison or rethrow. Its ordinary @ payload parameter preserves handler arity. FxCallFailure is fully handled and omitted from outward throws. A generic caller must review its own callback failure set; see review/084_failure_boundary.md.",
+      "lmx_notes_ru": "Процедурный вариант содержит весь Around и использует finally/catch с исходным ResourceFailure. Функциональный вызывает общий bracket; его закрытый набор callback-ошибок обрабатывается без сравнения имени. Порядок acquire/action/release и журналы одинаковы.",
+      "lmx_notes_en": "Both complete styles are compared, with their entire declarations and Throws.",
       "comparison_ru": "Готовый API используется только на уровне клиента; реализация соответствующего компонента сравнивается отдельной строкой. Небольшие изменения записи объясняются без повторного полного листинга.",
       "comparison_en": "Ready APIs are used by clients; component implementations are compared separately. Minor spelling differences are described without duplicate full listings.",
       "limits_ru": "Общие наблюдения проверяют ошибку получения и действия. В 098 дополнительно описаны ошибка освобождения и остановка. Haskell маскирует асинхронные исключения при организации/освобождении ресурса; Scala объединяет два исключения по приоритету; LMX использует штатные finally и владение Message. Разные политики ошибок указаны явно.",
@@ -651,15 +731,14 @@
           "depends_on": [
             98
           ],
-          "primary_variant": "core",
+          "primary_variant": "functional",
           "metrics": {
             "characters": 586,
             "nonblank_lines": 45,
             "utf8_bytes": 1057,
-            "sha256": "436de050ce2c6cafb5bc733357ef6b78f78588c7e153bcaa89bf0ad8f71cf2ab",
-            "without_complex_throws_characters": 586,
-            "complex_throws_removed_characters": 0
-          }
+            "sha256": "436de050ce2c6cafb5bc733357ef6b78f78588c7e153bcaa89bf0ad8f71cf2ab"
+          },
+          "publication_role": "compatibility_mirror_not_separate_comparison"
         },
         {
           "language": "Haskell",
@@ -705,8 +784,8 @@
       ],
       "variants": {
         "LMX": {
-          "core": "Resource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            throws: copy(FxThrows\\sequence)\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value \\bracket(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: FxCallFailure (@: error)\n                return: -Trace\\events\n",
-          "local_callbacks": "Around:\n    @: acquire\n    @: release\n    @: action\n    return: int\n    use:\n        throws: ResourceFailure\n        @: resource acquire()\n        finally:\n            release(resource := resource)\n        return: action(resource := resource)\n\nResource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value Around\\use(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: ResourceFailure ()\n                return: -Trace\\events\n"
+          "procedural": "Around:\n    @: acquire\n    @: release\n    @: action\n    return: int\n    use:\n        throws: ResourceFailure\n        @: resource acquire()\n        finally:\n            release(resource := resource)\n        return: action(resource := resource)\n\nResource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value Around\\use(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: ResourceFailure ()\n                return: -Trace\\events\n",
+          "functional": "Resource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            throws: copy(FxThrows\\sequence)\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value \\bracket(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: FxCallFailure (@: error)\n                return: -Trace\\events\n"
         },
         "Haskell": {
           "standard": "module ExecuteAroundExample where\nimport Control.Exception (Exception, bracket, throwIO, try)\nimport Data.IORef (newIORef, modifyIORef', readIORef)\n\nnewtype Resource = Resource Int\ndata ResourceFailure = ResourceFailure deriving Show\ninstance Exception ResourceFailure\n\nrun :: Int -> IO Int\nrun mode = do\n  events <- newIORef 0\n  let note n = modifyIORef' events (\\x -> x * 10 + n)\n      failure = throwIO ResourceFailure\n      acquire = do\n        note 1\n        if mode == 2 then failure else pure (Resource 42)\n      action (Resource value) = do\n        note 2\n        if mode == 1 then failure else pure value\n      release _ = note 3\n  result <- try (bracket acquire release action) :: IO (Either ResourceFailure Int)\n  logValue <- readIORef events\n  pure (either (const (-logValue)) (\\value -> value * 1000 + logValue) result)\n"
@@ -717,13 +796,13 @@
       },
       "variant_notes": {
         "LMX": {
-          "core": {
-            "notes_ru": "В этом закрытом наборе Acquire/Action объявляют только ResourceFailure, Release не объявляет отказов. FxApply оборачивает только объявленные отказы своего target, а инфраструктурные отказы bracket идут отдельно. Поэтому здесь FxCallFailure означает именно ResourceFailure; проверка его имени и повторный throw не нужны. Payload принимается обычным @-параметром error, чтобы сохранить арность handler. FxCallFailure полностью обработан и не повторяется в outward throws. Общий клиент с произвольными callbacks обязан анализировать свой набор отказов. Доказательство: review/084_failure_boundary.md.",
-            "notes_en": "This closed callback set declares only ResourceFailure in acquire/action and no release failures. FxApply wraps only the target-declared failures; bracket infrastructure failures propagate under their separate names. Consequently this handler needs no failure-name comparison or rethrow. Its ordinary @ payload parameter preserves handler arity. FxCallFailure is fully handled and omitted from outward throws. A generic caller must review its own callback failure set; see review/084_failure_boundary.md."
+          "procedural": {
+            "notes_ru": "Процедурный вариант содержит весь Around и использует finally/catch с исходным ResourceFailure. Функциональный вызывает общий bracket; его закрытый набор callback-ошибок обрабатывается без сравнения имени. Порядок acquire/action/release и журналы одинаковы.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           },
-          "local_callbacks": {
-            "notes_ru": "Восстановлен полный короткий листинг 22-Nov: Around объявлен перед клиентом, Trace\\eval и Trace\\code переиспользуются всеми тремя действиями. Свободные x, mode и events передаются штатным динамическим связыванием; отсутствие их лексического объявления в вызывающем helper не запрещает этот код. Все определения включены в размер.",
-            "notes_en": "Restored the complete short 22-Nov listing, including Around. All actions reuse Trace\\eval and Trace\\code through ordinary dynamic binding. Every definition is counted."
+          "functional": {
+            "notes_ru": "Процедурный вариант содержит весь Around и использует finally/catch с исходным ResourceFailure. Функциональный вызывает общий bracket; его закрытый набор callback-ошибок обрабатывается без сравнения имени. Порядок acquire/action/release и журналы одинаковы.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           }
         },
         "Haskell": {
@@ -740,14 +819,14 @@
         }
       },
       "primary_variant": {
-        "LMX": "core",
+        "LMX": "functional",
         "Haskell": "standard",
         "Scala": "standard"
       },
       "eligible_variants": {
         "LMX": [
-          "local_callbacks",
-          "core"
+          "procedural",
+          "functional"
         ],
         "Haskell": [
           "standard"
@@ -769,7 +848,7 @@
           "local_callbacks": "Полный авторский Around с непосредственным ResourceFailure и общим кодом Trace из 22-Nov сохранён как принципиально другой подход; весь helper входит в709 символов."
         }
       },
-      "dedup_notes_ru": "Восстановлен основной короткий Around из 22-Nov. Общие Trace\\eval и Trace\\code написаны один раз. Варианты, отличающиеся только дублированием этого тела, исключены; второй подход — общий bracket.",
+      "dedup_notes_ru": "Общий алгоритм не дублируется внутри каждого варианта. Две полные стилевые записи — самостоятельные сравниваемые клиенты; реализации091/092/098/099 остаются единственными общими телами.",
       "dedup_notes_en": "Restored the short complete Around from 22-Nov. Shared trace logic occurs once. Generic bracket remains a distinct alternative.",
       "foreign_facilities": {
         "Haskell": "base: Control.Exception.bracket",
@@ -779,7 +858,43 @@
       "inline_current_lmx_variants": [
         "local_callbacks",
         "core"
-      ]
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Around:\n    @: acquire\n    @: release\n    @: action\n    return: int\n    use:\n        throws: ResourceFailure\n        @: resource acquire()\n        finally:\n            release(resource := resource)\n        return: action(resource := resource)\n\nResource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value Around\\use(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: ResourceFailure ()\n                return: -Trace\\events\n",
+          "source_file": "examples/lmx/procedural/084_execute_around.lm3",
+          "contract_id": "functional/084",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 709,
+            "characters_with_whitespace": 1253,
+            "nonblank_lines": 55,
+            "utf8_bytes": 1253,
+            "sha256": "0deea91ebcc1a22bd52330325ebf709216d9daf1a0cdde5d6d16daa41336c687"
+          }
+        },
+        "functional": {
+          "code": "Resource:\n    int: value 42\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            int: x 2\n            code(1)\n        return: resource\\value\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n    Example:\n        int: mode\n        return: int\n        run:\n            throws: copy(FxThrows\\sequence)\n            Trace\\mode := mode\n            Trace\\events := 0\n            int: value \\bracket(Acquire\\open; Release\\close; Action\\use)\n            return: value * 1000 + Trace\\events\n            catch: FxCallFailure (@: error)\n                return: -Trace\\events\n",
+          "source_file": "examples/lmx/084_execute_around.lm3",
+          "contract_id": "functional/084",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 586,
+            "characters_with_whitespace": 1057,
+            "nonblank_lines": 45,
+            "utf8_bytes": 1057,
+            "sha256": "436de050ce2c6cafb5bc733357ef6b78f78588c7e153bcaa89bf0ad8f71cf2ab"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант содержит весь Around и использует finally/catch с исходным ResourceFailure. Функциональный вызывает общий bracket; его закрытый набор callback-ошибок обрабатывается без сравнения имени. Порядок acquire/action/release и журналы одинаковы.",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 98,
@@ -826,9 +941,7 @@
             "characters": 316,
             "nonblank_lines": 16,
             "utf8_bytes": 462,
-            "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b",
-            "without_complex_throws_characters": 316,
-            "complex_throws_removed_characters": 0
+            "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b"
           }
         },
         {
@@ -925,21 +1038,22 @@
       "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": [],
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 85,
       "name": "Currying",
       "slug": "currying",
       "scope": "core",
-      "summary_ru": "Прямой partial строит add5 и add100 из обычной функции; процедура копирования окружения вынесена в общую реализацию.",
-      "summary_en": "Direct partial builds add5 and add100 from an ordinary function; environment copying belongs to the generic implementation.",
+      "summary_ru": "Независимые сохранённые префиксы: прямое окружение и общий curry.",
+      "summary_en": "Independent captured prefixes: direct environments and the common curry operation.",
       "scenario_ru": "Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.",
       "scenario_en": "Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.",
       "expected_ru": "6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.",
       "expected_en": "6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.",
-      "lmx_notes_ru": "Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.",
-      "lmx_notes_en": "One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099.",
+      "lmx_notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+      "lmx_notes_en": "Both complete styles are compared, with their entire declarations and Throws.",
       "comparison_ru": "Готовый API используется только на уровне клиента; реализация соответствующего компонента сравнивается отдельной строкой. Небольшие изменения записи объясняются без повторного полного листинга.",
       "comparison_en": "Ready APIs are used by clients; component implementations are compared separately. Minor spelling differences are described without duplicate full listings.",
       "limits_ru": "int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.",
@@ -947,21 +1061,20 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxThrows\\capture) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
           "notes_ru": "Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.",
           "notes_en": "One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099.",
           "depends_on": [
             99
           ],
-          "primary_variant": "core_curry",
+          "primary_variant": "functional",
           "metrics": {
-            "characters": 236,
+            "characters": 244,
             "nonblank_lines": 15,
-            "utf8_bytes": 358,
-            "sha256": "8b07fe5770986877be3ca73579f200e90c9c0bfe3e0f9d44fb012444df2b8014",
-            "without_complex_throws_characters": 223,
-            "complex_throws_removed_characters": 13
-          }
+            "utf8_bytes": 366,
+            "sha256": "aae58a4a61e01f861df4f106d8627b73768965a8a2cb88c369342a84b8bd73e9"
+          },
+          "publication_role": "compatibility_mirror_not_separate_comparison"
         },
         {
           "language": "Haskell",
@@ -1007,8 +1120,8 @@
       ],
       "variants": {
         "LMX": {
-          "core_curry": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxThrows\\capture) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
-          "core": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxThrows\\capture) FxCallFailure\n        @: add5 partial(Addition\\apply; (5))\n        @: add100 partial(Addition\\apply; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n"
+          "procedural": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\apply; 5)\n        @: add100 Curry\\capture(Addition\\apply; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "functional": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n"
         },
         "Haskell": {
           "standard": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = add 5\n           add100 = add 100\n           saved = 1000\n       in add5 1 * 1000000 + add100 1 * 1000 + add5 1\n"
@@ -1019,13 +1132,13 @@
       },
       "variant_notes": {
         "LMX": {
-          "core_curry": {
-            "notes_ru": "Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.",
-            "notes_en": "One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099."
+          "procedural": {
+            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           },
-          "core": {
-            "notes_ru": "Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.",
-            "notes_en": "Operations belong to the current core and are available directly. No alternate library edition is loaded; shared implementation code is shown in companion comparisons and the dependency ledger."
+          "functional": {
+            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+            "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           }
         },
         "Haskell": {
@@ -1042,14 +1155,14 @@
         }
       },
       "primary_variant": {
-        "LMX": "core_curry",
+        "LMX": "functional",
         "Haskell": "standard",
         "Scala": "standard"
       },
       "eligible_variants": {
         "LMX": [
-          "core_curry",
-          "core"
+          "procedural",
+          "functional"
         ],
         "Haskell": [
           "standard"
@@ -1087,7 +1200,7 @@
           "core": "Прямое связывание двух независимых префиксов через partial; основной curry строит поэтапный интерфейс. Это разные способы построить callable."
         }
       },
-      "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
+      "dedup_notes_ru": "Общий алгоритм не дублируется внутри каждого варианта. Две полные стилевые записи — самостоятельные сравниваемые клиенты; реализации091/092/098/099 остаются единственными общими телами.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "foreign_facilities": {
         "Haskell": "language: ordinary curried application",
@@ -1096,7 +1209,43 @@
       "variant_descriptions": {},
       "inline_current_lmx_variants": [
         "core"
-      ]
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\apply; 5)\n        @: add100 Curry\\capture(Addition\\apply; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "examples/lmx/procedural/085_currying.lm3",
+          "contract_id": "functional/085",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 493,
+            "characters_with_whitespace": 739,
+            "nonblank_lines": 31,
+            "utf8_bytes": 739,
+            "sha256": "8d77eafb2834507ac5bc069593ad9b290683b84325d49daa90d92372ffecf7ac"
+          }
+        },
+        "functional": {
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "examples/lmx/085_currying.lm3",
+          "contract_id": "functional/085",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 244,
+            "characters_with_whitespace": 366,
+            "nonblank_lines": 15,
+            "utf8_bytes": 366,
+            "sha256": "aae58a4a61e01f861df4f106d8627b73768965a8a2cb88c369342a84b8bd73e9"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+      "lmx_operation_phase": "after_root_startup"
     },
     {
       "id": 99,
@@ -1144,9 +1293,7 @@
             "characters": 533,
             "nonblank_lines": 17,
             "utf8_bytes": 713,
-            "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e",
-            "without_complex_throws_characters": 533,
-            "complex_throws_removed_characters": 0
+            "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e"
           }
         },
         {
@@ -1238,7 +1385,8 @@
       "dedup_notes_ru": "Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.",
       "dedup_notes_en": "Import-only, spelling-only, repeated-body and int-specialization duplicates were removed. These differences do not define a separate current algorithm; the original edition remains the diff baseline.",
       "variant_descriptions": {},
-      "inline_current_lmx_variants": []
+      "inline_current_lmx_variants": [],
+      "lmx_operation_phase": "after_root_startup"
     }
   ],
   "display_order": [
@@ -1257,5 +1405,18 @@
     "excluded": "Other approach-level variants are separate, uncounted alternatives. One-line and type-only historical duplicates were removed.",
     "implementation_boundary": "Full scoped API with common LMX dependencies reported separately; clients import real standard/existing facilities."
   },
-  "selection_policy": "For each comparable usage layer choose the shortest eligible core/real-library client. Implementation comparisons use full scoped APIs separately. Keep only genuinely different approaches; one-line or type-only alternatives are notes. The source upload is the merge baseline."
+  "selection_policy": "Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.",
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "root_accepts_user_arguments": false,
+    "local_declarations_and_calls": "The ordinary common language mechanism applies at the root and at later calls.",
+    "case_operation_phase": "after_root_startup",
+    "named_operation_is_startup": false,
+    "case_actuals": "invoke/inputs/args describe ordinary later case operations, not startup arguments for the root.",
+    "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
+    "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
+  },
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
 }

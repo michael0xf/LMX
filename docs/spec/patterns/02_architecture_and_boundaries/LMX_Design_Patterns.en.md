@@ -83,11 +83,11 @@ Independent transformations are connected in an ordered data flow.
 
 **Observation:** 7; intermediate values are 3 and 6.
 
-The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 093. [Pipe — implementation](093_pipe_implementation_comparision.md)
 
-Implement the imported sequential handoff through a stage list.
+Generic pipe applies stages to a value whose actual type may change between stages.
 
 **Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 

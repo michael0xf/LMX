@@ -1,15 +1,3 @@
-Around:
-    @: acquire
-    @: release
-    @: action
-    return: int
-    use:
-        throws: ResourceFailure
-        @: resource acquire()
-        finally:
-            release(resource := resource)
-        return: action(resource := resource)
-
 Resource:
     int: value 42
     int: width 8
@@ -28,7 +16,7 @@ Trace:
     Acquire:
         return: @
         open:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 1
             code(2)
         return: Resource
@@ -36,7 +24,7 @@ Trace:
         @: resource
         return: int
         use:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 2
             code(1)
         return: resource\value + resource\width
@@ -51,9 +39,10 @@ Example:
     int: mode
     return: @
     run:
+        throws: copy(FxAround\around\throws)
         Trace\mode := mode
         Trace\events := 0
-        int: value Around\use(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
+        int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
         return: (value; Trace\events)
-        catch: ResourceFailure ()
+        catch: FxCallFailure (@: failure)
             return: (0; Trace\events)

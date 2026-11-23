@@ -129,7 +129,6 @@ Checks:
         int: zero add5(1; y := 0)
         return: omitted * 10000 + overridden * 100 + zero
 ```
-
 Run `Checks\demo()`. Expect **62601**, encoding `6`, `26`, `1`. The copied data still declares both `x` and `y`; explicit `y := 25` remains admissible. The caller's `y = 100` cannot replace the ready default 5. Zero is explicitly supplied, not omitted. The original `Addition\y` remains uninitialized; changing the copied default must not initialize it.
 
 This replaces the historical ambiguous `merge(add; y: 5)` illustration: here the source explicitly composes the data containing the formal, and then selects its nested implementation. It does not compose a body and silently invent an input.
@@ -159,7 +158,6 @@ Checks:
         int: b copied\methods\lexical(1)
         return: a * 100 + b
 ```
-
 With a fresh source, `Checks\demo()` returns **2606**. The free `y` gets the immediate caller's local 25; `node\y` reaches the copy's lexical value 5. Afterwards `Source\y = 8` and `copied\y = 5`. `node\` is lexical selection, not “one parent hop.”
 
 Also reject `copied\methods\dynamic(1; y := 25)` as an explicit call with an unknown formal: `y` is a free name here; the actual data of `dynamic` only declares `x`. A dynamic source is not silently added to the explicit signature.
@@ -189,7 +187,6 @@ Checks:
         Free\step()
         return: y
 ```
-
 | Call | Expected result | Actual write destination |
 |---|---:|---|
 | `Checks\own_copy()` | 0 | Own working place of `Own\step`, initially autofilled with 0 |
@@ -224,7 +221,6 @@ Checks:
         Actions\connected()
         return: value
 ```
-
 Expect **5** from `through_fallback()` and **8** from `through_place()`. `transit` never consumes `value`, so the retained older transitive channel gives `change` an own local copy. `required: value` in `connected` consumes and checks the visible local place; its call forwards the established alias. It does not declare a new variable.
 
 The harness must also inspect write identity in both cases, not merely allow these two numbers to arise from delayed copy-out.
@@ -251,7 +247,6 @@ Checks:
         Actions\replace()
         return: selected\marker
 ```
-
 Expect **9**. `selected` remains an ordinary reference variable in LMX; the hidden native address must address that variable's cell, not merely the previously selected Structure. `First\marker` remains 4. A second fixture giving `replace` an own declared `selected` input must leave the caller pointing at `First`.
 
 **Basis:** [own place and caller's place](../LMX_semantics.en.md#binding-places); [the transparent caller place](../LMX_semantics.en.md#binding-caller-place); the [observation B06](../LMX_semantics.en.md#binding-observations).
@@ -286,7 +281,6 @@ Checks:
         int: x 7
         return: PrivateSink\has_value(x := x)
 ```
-
 Expect **0, 1, 0, 1**, respectively. No other `x` source is present in each isolated fixture. `private` filters implicit binding in both directions; it does not reject explicit supply. The comparisons use the existing uninitialized-value `nil` rule; do not replace an uninitialized integer with 0.
 
 Separate positive source-access check: the actual graph path through the modifier remains `PrivateSink\private\x`; binding must not flatten it into `PrivateSink\x`. An explicit write through a permitted graph path follows the ordinary mutability rules.
@@ -310,7 +304,6 @@ LocalCode:
         i := 12
         return: i
 ```
-
 Starting with `Producer\calls = 0`, run `LocalCode\demo()` twice. Both calls return **12** and the persistent counter becomes **2**. The source declaration in `LocalCode\demo` continues to contain the call `Producer\make()`. Neither call publishes 12 into the source code or replaces the initializer. The second call must therefore still execute `make` once.
 
 Compare the written code occurrences, initializer expression and their reference identities before and after the two runs using the existing graph inspector. Do not recursively equate all external pointee state: the explicitly mutated `Producer\calls` is an expected change. If serialization traverses that external graph, compare the relevant syntax fragment rather than asserting equality of the whole serialization. No dirty flags, writeback phase, automatic initializer destruction, or extra source graph is required to explain the behavior.
@@ -337,7 +330,6 @@ Deferred:
     twice:
         return: value + value
 ```
-
 Run these as independent cases from counter 0:
 
 | Call | Result | `Producer\calls` afterwards |
@@ -366,7 +358,6 @@ Other:
     demo:
         return: alias()
 ```
-
 Expect **4** from `Other\demo()`, even though the caller's data has a ready value 90. `Original\read` has its own ready input default 4 and its original parent. Storing its reference in `Other` does not reparent it. With the explicit call `alias(value := 90)`, expect 90 through ordinary actual supply, still without changing either graph value.
 
 Also compare direct `Original\read()` with the unambiguous explicit dispatcher form `call(code := Original\read)`: same actual parent, same default, same result 4.
@@ -391,7 +382,6 @@ Checks:
         PairSignature@: chosen Backend\encode
         return: chosen(left := 2; right := 7)
 ```
-
 Expect **27**, not 72. The signature's `left` is external position 1, which maps to candidate `right`; signature `right` maps to candidate `left`. A direct `Backend\encode(left := 2; right := 7)` returns **72** because it uses the candidate's own labels.
 
 This is deliberately a noncommutative operation; addition would conceal the incorrect name-based remapping.
@@ -417,7 +407,6 @@ Checks:
         int: b chosen(publicValue := 0)
         return: a * 10 + b
 ```
-
 Expect **80**. The first call uses the candidate's default 8; the second explicitly supplies 0. The default 1 in the `fn` description is not installed in the candidate. Reject `chosen(actualValue := 3)` as an unknown external label, while direct `Backend\read(actualValue := 3)` returns 3.
 
 Variant with `required: int: actualValue` and no default: signature compatibility can still be positive, but `chosen()` is inadmissible even if the caller has a local `actualValue`. The call's missing required actual is decided before autofill. Supplying `publicValue := 3` passes the positional actual explicitly.
@@ -443,7 +432,6 @@ Reordered:
     choose:
         return: count
 ```
-
 - Accept `SelectionSignature@: selected Compatible\choose`.
 - `selected(text := "abc"; count := 6)` returns 6.
 - Reject `SelectionSignature@: selected Reordered\choose`: the candidate type order is `Array<char>, int`.
@@ -475,7 +463,6 @@ Structural:
     read:
         return: object\x
 ```
-
 | Call | Selection and expected result |
 |---|---|
 | `Numeric\read(Arg)` | W cannot supply a Structure to int; E supplies its single `x = 9`; result 9 |
@@ -524,7 +511,6 @@ cycles:
                 break
             body()
 ```
-
 Run `stream\demo()`. Expect **22** and `stream\calls = 4`.
 
 | Step | `next` result | Body's `item` after `+= 3` | Added to `total` |
@@ -550,7 +536,6 @@ cycles\iterate(
     iteration := int(item stream\next())
 )
 ```
-
 Expect the same **22**, four `next()` calls and three body executions. Passing `body` first does not execute it first; `iterate` controls that order.
 
 The following on-position named actual followed by a positional actual is also admissible:
@@ -558,19 +543,16 @@ The following on-position named actual followed by a positional actual is also a
 ```lmx
 cycles\iterate(iteration := int(item stream\next()); (item += 3; total += item; total += item))
 ```
-
 Reject this off-position named actual followed by an unnamed actual:
 
 ```lmx
 cycles\iterate(body := (); int(item stream\next()))
 ```
-
 The rejection precedes initializer execution. With the valid empty-body variant below, expect four `next()` calls and no body effects; empty Structure is a supplied value:
 
 ```lmx
 cycles\iterate(body := (); iteration := int(item stream\next()))
 ```
-
 **Basis:** [positional counter](../LMX_semantics.en.md#named-actuals) and the [named record of the same call](../LMX_semantics.en.md#declaration-arguments).
 
 ### D-03 — A declaration is passed positionally as DATA; its internal name is not matched
@@ -593,7 +575,6 @@ Receiver:
         first()
         return: 4
 ```
-
 Run from counter 0 in separate fixtures:
 
 | Call | Result | Producer calls | Meaning |
@@ -634,7 +615,6 @@ Use:
         TransformSignature@: chosen Transform\apply
         return: chosen(4) + factor
 ```
-
 Expect **15**. `factor`, `Inputs`, `TransformSignature` and `Transform` become imported names. `mutableValue` and `selected` do not. Nested `n`, `return` and `apply` are not lifted into `Use`; the actual parent of the chosen callable remains `Library\Transform`. This is namespace import, not graph copying or parent replacement.
 
 Negative fixtures directly reading bare `mutableValue` or `selected` in `Use\demo`, with no other source in scope, must fail at the ordinary reached name resolution. Do not claim a negative test from a dead branch.
@@ -659,7 +639,6 @@ Worker:
             required: x
         return: x
 ```
-
 Invoke `Worker\work()` from a caller with no local `x`. **Expected:** the inner place is `uninit:int`, and the reached `required: x` refuses; there is no normal numeric result. Do not read an uninitialized integer to test this rule and do not silently substitute either 0 or the outer value 5. The outer place retains 5.
 
 **Positive control:** change only the inner declaration to `int: x 9`. The required check then succeeds and `Worker\work()` returns **5**, because leaving the inline block reveals the unchanged outer place. Inspect distinct place identities while the block is active. This derives the earlier bounded control example without adding lexical-area autofill, an entry initialization pass or publication of inner locals.
@@ -690,7 +669,6 @@ CoordinateProbe:
         view\x := 9
         return: before * 100 + view\x * 10 + view\y
 ```
-
 Run `CoordinateProbe\run()` from the written initial graph. Expect **4797**.
 Afterward `Scrambled\x = 9`, `Scrambled\y = 7`, and `Scrambled\extra = 91`.
 The typed reference transports the same candidate, without an implicit copy.
@@ -741,7 +719,6 @@ BehaviorProbe:
         int: bad Checker\at_zero(candidate := second)
         return: good * 10 + bad
 ```
-
 Run `BehaviorProbe\run()`. Expect **10**. Both reference initializations satisfy
 the same positional fn requirement: one integer input and an integer result.
 The methods have different formal names and different bodies. The ordinary
@@ -776,7 +753,6 @@ Both:
     int: x 12
     int: spare 100
 ```
-
 Invoke the public `satisfies` receiver explicitly in the harness, preserving
 the distinction between success and the receiver's implementation-specific
 representation of its result:
@@ -822,7 +798,6 @@ UseProbe:
     run:
         return: XReader\read(object := Point) * 100 + XReader\read(object := LargerPoint)
 ```
-
 Run `UseProbe\run()`. Expect **1227**. `XReader` consumes the field it actually
 uses. No full `Richer` requirement from T03 has been supplied here, so the
 program does not demand an unrelated `y`. The extra candidate field has no
@@ -863,7 +838,6 @@ PresenceProbe:
         int: value 7
         return: Presence\is_set(value := nil)
 ```
-
 Run `missing` from a context with no other available `value` source. Expected
 results are respectively **0, 1, 1, 0**. Explicitly supplied zero is initialized;
 explicit nil is supplied and must not be replaced through omitted-input autofill.
@@ -950,7 +924,6 @@ arithmetic:
         import: numeric_ops
         return: 30 subtract 4 subtract 3
 ```
-
 Expected:
 
 | Entry | Result | Distinguishing requirement |
@@ -981,7 +954,6 @@ several:
         import: several_ops
         return: (2 weighted 3 5 7)
 ```
-
 `several\demo()` returns **2357**. The actual operand invocation has two input
 places: `left` addresses `2`, and `right` is an array of three references addressing
 `3`, `5`, `7`, in that order. It is not four positional method inputs, and `2` is
@@ -1064,7 +1036,6 @@ evaluation:
         import: raw_ops
         return: (meter\next() twice 0)
 ```
-
 | Sequence, beginning with `meter\calls = 0` | Returned values | Final calls |
 |---|---|---:|
 | `evaluation\prepared()` twice | `2`, then `4` | 2 |
@@ -1106,7 +1077,6 @@ selection:
         import: selection_ops
         return: (0 select_value meter\next() 23)
 ```
-
 `selection\first()` returns **19**; `selection\second()` returns **23**.
 Both leave `meter\calls = 0`. The unused right occurrence remains unexecuted,
 including when a walker later visits its physical record.
@@ -1140,7 +1110,6 @@ origin:
         import: origin_ops
         return: (0 original n)
 ```
-
 `origin\read(6)` returns **6** and `origin\read(11)` returns **11**. Neither
 the operator's `n = 700` nor the helper's `n = 900` captures the source name.
 The source context must identify the particular live invocation, not just its
@@ -1173,7 +1142,6 @@ references:
         @: selected (17 keep_left 99)
         return: \selected
 ```
-
 `references\demo()` returns **17**. Before the explicit dereference, `selected`
 is a reference to the prepared left value. The operand application must not
 automatically turn a `return: @` into an arbitrary logical value, nor add a second
@@ -1201,7 +1169,6 @@ actions:
         int: result selected()
         return: before * 100 + result
 ```
-
 With a fresh graph, `actions\demo()` returns **1** and `actions\calls` becomes
 **1**. Capturing the reference performs no first call. An ordinary dereference
 of a callable reference likewise does not execute its body.
@@ -1211,7 +1178,6 @@ Separate address-expression probe, with a graph Structure `S` supplied:
 ```lmx
 (@S + 1) - @S
 ```
-
 Expected numeric result: **1**, under the explicit numeric-address rule of this
 directive. `@: p S` instead creates an ordinary reference. This probe does not
 dereference the fabricated address `@S + 1`.
@@ -1240,7 +1206,6 @@ expressions:
         int: result sink\inspect(2 + (scratch := 3) * 4)
         return: result * 100 + scratch
 ```
-
 | Entry | `sink.inspect` receives | Its `scratch` | Caller `scratch` | Result |
 |---|---:|---:|---:|---:|
 | `expressions\ungrouped()` | one actual, `x = 14` | 12 | 77 | 141277 |
@@ -1293,7 +1258,6 @@ demand:
     demo:
         return: sink\inspect(10 * scratch := source\next() + 3)
 ```
-
 From a fresh graph, two successive `demand\demo()` calls return **4004** and
 **5005**; `source\reads` becomes **2**. Each call calculates its whole assignment
 RHS, records `4` or `5`, and supplies `40` or `50` as its one positional actual.
@@ -1315,7 +1279,6 @@ effects:
         int: b 1 || tick()
         return: a * 10 + b
 ```
-
 `effects\demo()` returns **1**, leaving `effects\calls = 0`.
 
 Add two source-level expression cases with an existing local `x = 8`:
@@ -1352,7 +1315,6 @@ scanning:
             total += c
         return: total * 100 + stream\reads * 10 + (c = -1)
 ```
-
 With a fresh stream, `scanning\demo()` returns **3041**:
 three body executions add `5 + 10 + 15 = 30`; four condition evaluations call
 `next`; the final `c` is `-1`. Each condition evaluation performs one assignment
@@ -1413,7 +1375,6 @@ sys\name(`two words`)
 sys\name(`a``b`)
 sys\name(``)
 ```
-
 Each result is one ordinary `Array<char>`, with its exact length and no additional
 NUL element. Passing the result as an actual passes one array, not one actual per
 character. Do not assert address identity between independently obtained strings;
@@ -1432,7 +1393,6 @@ With OP01's `numeric_ops` imported:
 ```lmx
 sys\priority("subtract") = sys\priority("+")
 ```
-
 Expected **1**. Repeat the right query as
 ``sys\priority(sys\name(`+`))``; the result must be the addition priority, not a
 unary-plus priority guessed from query context.
@@ -1475,7 +1435,6 @@ Separate positive fn test:
 ```lmx
 OperandPair :: (@: first; @[]: rest; return: int)
 ```
-
 A candidate whose input types are `@`, then `Array<@>`, whose real names are
 `lhs/rhs`, and whose result is `int`, may satisfy this positional requirement.
 Through an accepted fn reference, `rest := makeRest(); first := makeFirst()` maps
@@ -1556,7 +1515,6 @@ TicketCode:
             position += 1
         return: 1
 ```
-
 | Direct invocation | Expected result | What it distinguishes |
 |---|---:|---|
 | `TicketCode\accepts("AB-09")` | 1 | Accepted shape and values |
@@ -1603,7 +1561,6 @@ SamplingCheck:
         int: result candidate(gain := 4)
         return: result = 28 && node\calls = 1
 ```
-
 | Direct invocation | Verdict | `SamplingCheck\calls` afterward |
 |---|---:|---:|
 | `SamplingCheck\check(candidate := Measurement\sample)` | 1 | 1 |
@@ -1637,7 +1594,6 @@ FailureCheck:
         catch: NoSample ()
             return: 1
 ```
-
 `FailureCheck\check(candidate := UnavailableSensor\read)` returns **1**. Replacing the candidate by `UnavailableSensor\zero` returns **0**: a normal return is not the expected failure. A different declared failure is not silently treated as success; test it through the normal failure/exit contract.
 
 The handler is adjacent to the code it checks. There is no wrapping `try` construct, and a diagnostic assertion is not used for ordinary candidate rejection.
@@ -1686,7 +1642,6 @@ Commissioning:
         int: off_seen candidate\observe()
         return: on_ack = 1 && on_seen = 1 && off_ack = 1 && off_seen = 0
 ```
-
 For each row, create a fresh candidate with `@: device (merge(Indicator; (int: fault F)))`, where F is the row's fault value, and call `Commissioning\check(candidate := device)` with that reference.
 
 | Fault | Meaning in this fixture | Verdict | Final `commanded` | Final `sensed` | Writes / reads | Trace |
@@ -1763,7 +1718,6 @@ LoopTools:
                 break
             body()
 ```
-
 **Entry:** `EvenSamples\demo()` → **6**, on repeated runs as well. Three body executions receive 0, 1, 2 before doubling; final stored `position=3`, `requests=4`, including the exhaustion call. Passing the declaration must not eagerly execute `next`. **Basis:** [P1] §1; declaration-argument directive §3.
 
 ### P02 — Strategy: explicit selection versus a ready default
@@ -1786,7 +1740,6 @@ Pricing:
         int: ordinary_again apply(4)
         return: ordinary * 100 + explicit * 10 + ordinary_again
 ```
-
 **Entry:** `Pricing\demo()` → **928**, encoding results **8, 12, 8**. The caller's local `operation=thrice` affects the explicit actual; it does not implicitly replace `apply`'s ready `twice` default. **Basis:** [P1] §2; binding directive §6.1.
 
 ### P03 — Factory Method: retained products outlive prototype changes
@@ -1818,7 +1771,6 @@ PacketClient:
         Packet\payload := 99
         return: consume(first) + consume(second)
 ```
-
 **Entry:** `PacketClient\demo()` → **22**. The retained products read **6** and **14**, despite the prototype's final payload **99**; another demo call repeats the same result. **Basis:** [P1] §3; explicit store before copy, ordinary const-declaration import.
 
 ### P04 — Adapter: equal types do not erase positional meaning
@@ -1842,7 +1794,6 @@ Difference:
         int: direct OldDifference\calculate(13; 5)
         return: adapted * 10 + direct
 ```
-
 **Entry:** `Difference\demo()` → **72**, from adapted **8** and direct **−8**. The adapter delegates with reverse actual positions; it must not be optimized into forwarding the original positional list unchanged. **Basis:** [P1] §4.
 
 ### P05 — Observer: duplicate subscriptions remain two calls
@@ -1878,7 +1829,6 @@ Events:
         notify(7)
         return: subtotal * 100 + node\last * 10 + node\total
 ```
-
 **Entry:** `Events\demo()` → **373**. After the first two events, `(last,total,deliveries)=(5,3,4)`; after notifying two stored `remember` references, the final state is **(7,3,6)**. There is no implicit deduplication of equal callable references. **Basis:** [P1] §5.
 
 ### P06 — Decorator: copied inputs along a wrapper chain
@@ -1897,7 +1847,6 @@ Filters:
         int: first finish(4)
         return: first + finish(4)
 ```
-
 **Entry:** `Filters\demo()` → **54**; `Filters\finish(4)` → **27**. Each chain yields **8 → 9 → 27**, using immediate-caller autofill, with no publication of activation-local `sample` into the graph. **Basis:** [P1] §6.
 
 ### P07 — Command: a writable caller place through an intermediary
@@ -1919,7 +1868,6 @@ Edits:
         invoke(command := twice)
         return: value
 ```
-
 **Entry:** `Edits\demo()` → **14**, again on repeat. One original caller-local place changes **5 → 7 → 14**; `required: value` establishes the intermediary's connection before it calls the action. **Basis:** [P1] §7; binding directive §§6.2–6.4.
 
 ### P08 — Template Method: replace one step, preserve the sequence
@@ -1944,7 +1892,6 @@ Transform:
         finish := square
         return: first + execute(2)
 ```
-
 **Entry:** `Transform\demo()` → **15**. The two calls prepare **3**, then return **6** and **9**; the second call begins with explicit **2**, not the first call's modified local value. **Basis:** [P1] §8.
 
 ### P09 — Visitor: caller action and lexical fallback
@@ -1987,7 +1934,6 @@ Summing:
             result := -1
         return: result
 ```
-
 **Entry:** `Summing\demo()` → **15**, from 6 + 9. In a separate negative fixture remove only `Summing\on_number`; the same entry then returns **−1** through the lexical `NoAction` fallback, without substituting `on_pair`. **Basis:** [P1] §9.
 
 ### P10 — State: the state is a caller-local callable reference
@@ -2009,7 +1955,6 @@ Gate:
         result += state()
         return: result
 ```
-
 **Entry:** `Gate\demo()` → **2**. Four separate calls yield **0,1,0,1**, and the local reference ends at `closed`; another demo has a fresh local state and repeats the sequence. **Basis:** [P2] §10.
 
 ### P11 — Chain of Responsibility: prove the skipped call
@@ -2043,7 +1988,6 @@ Router:
         int: c dispatch(7)
         return: a * 100 + b * 10 + c
 ```
-
 **Entry:** `Router\demo()` → **120**, encoding **1,2,0**; final stored trace is **1212**. The first two requests enter only their first selected handler, while the final request enters both. **Basis:** [P2] §11.
 
 ### P12 — Composite: changing the original leaf does not change the tree
@@ -2071,7 +2015,6 @@ Bundle:
         c\value := 100
         return: tree\total()
 ```
-
 **Entry:** `Bundle\demo()` → **11**, while the separately retained local `c` reads **100**. Before insertion, `c` is explicitly set to its copied `total` method's actual parent; the later write therefore changes the original leaf's real DATA, not only a grouping-wrapper slot. Copying the used graph redirects the tree's links to copies; an implementation that keeps its mutable leaf link pointing at original `c` would incorrectly return 105. **Basis:** [P2] §12; semantics §20's common source-to-copy map.
 
 ### P13 — Proxy: refusal must skip delegation
@@ -2096,7 +2039,6 @@ Requests:
         request := real
         return: denied + allowed + request(-4)
 ```
-
 **Entry:** `Requests\demo()` → **4**, from **0 + 12 − 8**; final `real_calls=2`. Its intermediate count is **0** after refusal and **1** after the accepted proxy call. **Basis:** [P2] §13.
 
 ### P14 — Facade: explicit zero remains a supplied input
@@ -2118,7 +2060,6 @@ DeliveryQuote:
         int: first quote(2; 7; 4; 2)
         return: first + quote(0; 7; 4; 2)
 ```
-
 **Entry:** `DeliveryQuote\demo()` → **50**, from quotes **32** and **18**. In the second call, quantity is explicitly zero; the subtotal is zero and the fee remains 18. **Basis:** [P2] §14; binding directive §6.1.
 
 ### P15 — Builder: finished results keep their dimensions
@@ -2150,7 +2091,6 @@ Panel:
         builder\set_width(99)
         return: first\area() + second\area()
 ```
-
 **Entry:** `Panel\demo()` → **29**, from retained areas **14** and **15**. The workpiece ends at width99, height3; its own area297 must not replace either result's area. **Basis:** [P2] §15.
 
 ### P16 — Prototype: original and replica diverge in both directions
@@ -2171,7 +2111,6 @@ Coordinate:
         original\x := 9
         return: original\score() + replica\score()
 ```
-
 **Entry:** `Coordinate\demo()` → **119**. The original ends at **(9,8)** and returns98; the replica ends at **(2,1)** and returns21; source `Coordinate` remains **(2,8)**. **Basis:** [P2] §16.
 
 After each grouped copy, the reference is deliberately set to the copied method's actual parent. Graph writes and `score` therefore use the same copied owner. The stream-collecting wrapper is a different Structure with its own cells; replacement of its primitive slot does not update the owner's slot.
@@ -2206,7 +2145,6 @@ Cursor:
         history\restore(snapshot := first)
         return: restored_second * 10 + read()
 ```
-
 **Entry:** `Cursor\demo()` → **84**; final source state is4. Restoring the second snapshot produces8, then the first produces4; the snapshots retain their saved4 and8 rather than following later source writes. **Basis:** [P2] §17.
 
 ### P18 — Bridge: independently vary both selected behaviors
@@ -2236,7 +2174,6 @@ Audio:
         output := radio
         return: total + control(2)
 ```
-
 **Entry:** `Audio\demo()` → **25**, from **4,6,9,6**. The four calls supply level2 separately; boost modifies its own local value, and replacing one selected behavior does not replace the other. **Basis:** [P2] §18.
 
 ### P19 — Singleton: both references observe direct writes
@@ -2258,7 +2195,6 @@ SharedConfiguration:
         second\value := 4
         return: seen_from_second * 10 + first\value
 ```
-
 **Entry:** `SharedConfiguration\demo()` → **114**, from observations11 and4; source `Configuration\value` ends at4. Returning and storing the reference does not implicitly copy its referent. **Basis:** [P3] §19; one provider in one Message is the fixture's scope.
 
 ### P20 — Abstract Factory: family selection and independent products
@@ -2307,7 +2243,6 @@ Screen:
             return: -1
         return: total
 ```
-
 **Entry:** `Screen\demo()` → **77**, from Day33 and Night44. Two retained Day badges start at3; explicitly changing the first to9 leaves the second at3. **Basis:** [P3] §20.
 
 ### P21 — Flyweight: shared intrinsic data, distinct use positions
@@ -2334,7 +2269,6 @@ Glyphs:
             @: third get(1)
             return: render(first; -1) + render(second; 4) + render(third; 2)
 ```
-
 **Entry:** `Glyphs\drawing\demo()` → **75**, from **19,24,32**. `first` and `second` have the same referent, `third` has a different one; a separate negative fixture attempting `first\width := 99` must be rejected by the immutable contract. **Basis:** [P3] §21; negative position is ordinary arithmetic, not an array index.
 
 ### P22 — Mediator: copied wiring and two independent rooms
@@ -2373,12 +2307,11 @@ Rooms:
             return: -1
         return: on
 ```
-
 **Entry:** `Rooms\demo()` → **11**. First room flags are **(1,1)** after the first toggle and **(0,0)** after the second and stop; second room and prototype remain **(0,0)**. Mediator path stores cause no new notifications or recursive notification loop. **Basis:** [P3] §22.
 
 ### P23 — Interpreter: copied header, one expression, several activation contexts
 
-The [Interpreter comparison](23_interpreter_comparison.md) shows the kernel's `sys\OPERANDS_TEMPLATE` separately. It supplies generic `left` and `right` reference inputs and the ready constant mode/priority properties, with **no result declaration**. The concrete parent below declares `return: int` once. For this independent fixture, provide that same kernel header; neither an extra result occurrence nor a general DATA last-declaration-wins rule is implied.
+The [Interpreter comparison](23_interpreter_comparison.md) shows the supplied `sys\OPERANDS_TEMPLATE` DATA fragment separately. It supplies generic `left` and `right` reference inputs and the ready constant mode/priority properties, with **no result declaration**. The concrete parent below declares `return: int` once. For this independent fixture, provide that same DATA fragment; neither an extra result occurrence nor a general DATA last-declaration-wins rule is implied.
 
 ```lmx
 Operands:
@@ -2400,7 +2333,6 @@ Operands:
                 return: -999
             return: zero + negative + positive
 ```
-
 **Entry:** `Operands\Calculation\demo()` → **22**. The calls yield **4, −2, 20, 20**. The calculated expression is the regression variant `(n + 4) + n`; the compact comparison's `(n + 3) + n` with inputs `2` and `5` yields `7 + 13 = 20`.
 
 The nested calculation finds `add` through the ordinary lexical namespace. `copy` consumes the header reference through the same CODE-source algorithm as elsewhere and contributes its fields through namespace; its written record remains in the source graph. Prepared mode supplies the computed numeric operands by reference. `left` is the left reference; `right[0]` is the first right reference; explicit dereferencing obtains their values. There is no separate operand registration and no permanent cache of one activation's `n` in the expression graph.
@@ -2441,7 +2373,6 @@ ComputedProbe:
         int: second ComputedInput\changeLocal()
         return: first * 100 + second
 ```
-
 **Invoke:** `ComputedProbe\run()`.
 
 **Expected:** `4142`; `ReadSource\calls = 2`. Each call has its own `value`. The written initializer `ReadSource\next()` remains in the source graph, and neither local assignment stores `99` into that initializer. Compare the written declaration, executable bodies and their source reference identities before and after. A serializer may follow the reference to `ReadSource`, whose counter intentionally changes: do not require equality of that entire reachable serialization. Ignore native registration metadata when comparing source forms.
@@ -2462,7 +2393,6 @@ LocalInitialization:
         i += 3
         return: i
 ```
-
 **Expected:** `LocalInitialization\run()` returns `44`; the producer runs once. No field named `i` is added to `LocalInitialization`, to `ReadSource`, or to a hidden persistent data graph. The source already contains the declaration and assignment forms; inspecting them does not reveal an activation's stored `44`.
 
 **Negative variant:** remove `int: i` and provide no valid own, caller, or fallback place named `i`. `i := ...` must not invent a field or declaration. Refuse the unresolved assignment under the ordinary rules.
@@ -2486,7 +2416,6 @@ SharingProbe:
         copied\left\value := 21
         return: copied\right\value * 100 + SharedValue\value
 ```
-
 **Expected:** `SharingProbe\run()` returns `2107`. In the copied graph, `left` and `right` designate the same copied target. That target is distinct from `SharedValue`; `SharedValue\value` remains `7`.
 
 Preserving the internal relationship does **not** mean retaining a reference to the original mutable target. This case rejects both a shallow copy and two unrelated copies of the shared target.
@@ -2508,7 +2437,6 @@ RingProbe:
         copied\self\value := 8
         return: copied\self\value * 10 + Ring\value
 ```
-
 **Expected:** `RingProbe\run()` returns `83`; `copied\self` designates the copied Ring node and a second self traversal returns to that same copied node, never to the mutable original. The write follows `copied\self` to the copied Ring descriptor, so it replaces that owner's `value` fragment directly. The explicit grouping wrapper is a distinct Structure with its own cells: its separate `copied\value` remains **3**, while `copied\self\value` becomes **8**. The original self-reference still designates `Ring`. Traversal terminates and allocates one copy per copied source node. Grouping neither deep-copies the completed graph again nor reparents its existing relationships.
 
 ### G05 — Composition replaces a model field and appends new material
@@ -2530,7 +2458,6 @@ RecordProbe:
         @: result (merge(RecordModel; RecordPatch))
         return: result\width * 100 + result\height * 10 + result\depth
 ```
-
 **Expected:** `RecordProbe\run()` returns `257`; the original fields remain `2`, `3`, `5`, and `7` in their respective source Structures. In the composed model, `width` retains its model position, `height` replaces the matching model field, and `depth` is appended. There is no second competing `height` created by the override.
 
 **Historical analogue:** the case establishes copied composition and replacement of the matching model field. Installing this new Structure into an application branch requires a separate explicit reference assignment; independently retained copies elsewhere do not silently update.
@@ -2646,7 +2573,6 @@ ReturnedMethodProbe:
         int: b plus9(1)
         return: a * 100 + b
 ```
-
 **Expected:** `ReturnedMethodProbe\run()` returns `610`, encoding `6` and `10`. The two returned methods retain their respective copied lexical graphs after both factory activations have ended. The prototype now holds `99`, and the caller's unrelated `saved = 1000` does not override explicit `node\saved`.
 
 `saved` is outside the methods' immediate input data. Consequently `plus5(1; saved := 40)` is an unknown-explicit-input rejection, unlike the true formal-default example B-01. The reference returned by `create` is not an address of its temporary local variable `instance`. The state entered the copy through the explicit `AdderPrototype\saved := increment`; `copy` did not capture the factory activation automatically.
@@ -2685,7 +2611,6 @@ UninitializedGraph:
         required: nullReference
         return: nullReference != nil
 ```
-
 The harness invokes the listed methods without supplying unrelated same-named caller locals. Keep the graph fresh for the main sequence; run rejection variants separately.
 
 | Step | Required observations |
@@ -2721,7 +2646,6 @@ EditableBranch:
             node\ticks += 1
         return: node\ticks
 ```
-
 On a fresh graph, `EditableBranch\act()` returns **1**. In a separate fresh fixture, replace the written `if` occurrence in `act` with the terminal integer fragment `{int 5}` through the ordinary graph operations. The whole selected fragment is now that integer; the old conditional and increment are absent at that position. After the normal explicit compilation and reset/endturn restart for the changed unit, `act()` returns **0**, because an ordinary standalone integer statement does not increment `ticks`. There is no rule that reserves graph replacement for a separate narrow debugger-only API or forbids replacing a receiver merely because it used to be executable.
 
 Repeat the representation-level replacement with each selected receiver kind and with an ordinary data Structure, using a differently shaped valid graph fragment. Structural replacement itself is allowed; subsequent interpretation, admission or compilation applies the ordinary rules of the new consumer context. A replacement that makes a required argument incompatible can be rejected when consumed without redefining the graph operation as “only replace with the old shape.” Do not execute a stale compiled unit before its specified update boundary or invent automatic repair of old native/raw pointers.
@@ -2768,7 +2692,6 @@ RevisionUnit:
     caller:
         return: target() + 1
 ```
-
 1. Explicitly compile `RevisionUnit` and enter through `caller`; expect `8`.
 2. Through ordinary graph editing, replace `target`'s executable return expression with the expression returning `9`. Keep the target occurrence and compatible call contract. Record that the graph changed.
 3. Verify that this write itself neither clears native entries nor invokes compilation. **Do not assert an intermediate call result:** the documents leave pre-boundary executable-edit timing unspecified.

@@ -1,3 +1,6 @@
+Status 2026-11-23: this note does not make TinyCC a runtime. The runtime backend
+is SLJIT (the runtime lowering/compilation backend instead of the AOT translation module).
+
 Lingvamyxa TinyCC (libtcc) Integration Plan
 ==========================================
 
@@ -12,8 +15,9 @@ Goal
 
 Not a foreign language ecosystem -- a way to compile and run C at
 runtime, in-process. Lingvamyxa can accept a C snippet, JIT it with
-libtcc, link it against the already-bundled C libraries (curl, sqlite,
-gmp, sodium, pcre2, zlib, yyjson, decNumber) and call the result. The
+libtcc, link it against the C libraries vendored in third_party/ (gmp, zlib,
+decNumber, libsodium as sodium) and call the result. curl, sqlite, pcre2
+and yyjson are not vendored in the tree (checked 2026-11-23). The
 tightest possible "call any C library" glue, and a fast path for hot
 numeric kernels a user writes inline.
 

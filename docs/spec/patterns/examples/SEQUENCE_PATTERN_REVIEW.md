@@ -64,8 +64,7 @@ where their full behavior can be exercised without weakening these probes.
 
 [variants.json](variants.json) contains complete source only for different approaches.
 The [deduplication decisions](validation/dedup_decisions_20261123.json) identify small
-variants compacted to notes. [select_variants.py](tools/select_variants.py) selects
-the shortest eligible complete source and permits a single retained variant.
+variants compacted to notes. The current [style index](haskell/comparison_index.json) and [client review](OPTIMIZATION_REVIEW.md) publish both complete LMX styles for every scenario. The earlier optimization decisions below do not authorize removing either style because of length. A documented same_minimal_form uses one shared source and two equal metric entries. The historical selection script [select_variants.py](tools/select_variants.py) is not the authority for dropping a required style.
 [expected_results.json](expected_results.json) preserves scenario observations.
 
 The client [Cabal component](haskell/lmx-examples.cabal) depends on base, array and

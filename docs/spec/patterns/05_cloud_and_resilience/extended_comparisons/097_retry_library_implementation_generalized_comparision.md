@@ -1,6 +1,6 @@
-# 097. RetryPost — asynchronous retry implementation: отдельный расширенный договор
+# 097. RetryPost — asynchronous retry implementation: общий договор
 
-Сохранена самостоятельная обобщённая реализация 23-Nov. Она решает более широкую задачу, чем восстановленная основная пара 22-Nov, и не участвует в её сумме или выборе кратчайшего листинга.
+Действующие общие определения извлечены из единого ядра. Эта отдельная пара сохраняет свой договор; её размер не подменяет размер клиентского вызова.
 
 ## Договор
 
@@ -13,21 +13,6 @@
 ## LMX
 
 ```lmx
-# retryPost: asynchronous bounded retry over the existing Message post API.
-# Each job is persistent DATA in its sender Message arena, not a captured frame.
-# The caller retains the handle until its owner Message can release all waits.
-# post itself correlates each response; no numeric request-id registry is built.
-# Timeout/cancel stop this policy, NOT an operation already running elsewhere.
-# Late replies only drain pending; they cannot publish a second result.
-# Result.read() exposes the persisted outcome even if notification is undelivered.
-# Control.settled() describes attempt/delay completion, not permission to free
-# an arena still retained by any ordinary post route. timeoutMs > maxDelay
-# leaves an explicit configured window for a delayed acknowledgement.
-# complete is a nonthrowing procedure under the selected protocol; notification
-# is one send attempt, not a promise of exactly-once external delivery.
-
-# These internal bridge failures have the explicitly empty () payload.
-# User failures retain their original name and typed payload in FxOutcome.
 FxRetryEmptyFailure:
     private: char[]: name
     return: @
@@ -207,14 +192,6 @@ FxRetryPostJob:
                 return
             job\dispatch()
 
-# request is an addressed nullary Message method returning an FxOutcome.
-# retryOn(outcome)->int decides explicitly which completed results/failures to
-# repeat. A timeout or undelivered request is terminal, so the library never
-# silently repeats an operation with an unknown completion state.
-# delay(ms)->int is the addressed timer worker acknowledgement, not a void call.
-# complete(result)->void is an addressed completion consumer; no ACK is invented.
-# Clock waiting belongs to the existing host delay port (MESSAGE_HTTP_PROFILE).
-# The complete LMX worker below adapts that port into ordinary Message replies.
 FxRetryPost:
     private:
         @: request
@@ -243,10 +220,6 @@ FxRetryPost:
         job\dispatch()
         return: job
 
-# These are explicit Message templates. The existing host/lifecycle launches
-# them as Threads with their own arenas; copying a Structure alone does not.
-# The worker and its operation are owned by the SAME receiving Message. Passing
-# a remote raw operation pointer here never makes a legal cross-owner call.
 FxRetryOperationMessage:
     @: operation
     @: arguments ()
@@ -266,7 +239,7 @@ FxRetryDelayMessage:
 
 [Исходник](source/lmx/097_retry_library_implementation_generalized.lm3)
 
-Полная policy owner-Message: конечный budget, capped backoff, обработка service errors, timeout попытки/таймера, cancel, сохранённый finalResult, один terminal переход и не более одной отправки уведомления. Late reply только уменьшает pending; корреляция штатная post. Result.read доступен при отказе уведомления. Control.settled — завершение attempt/delay, не разрешение освободить арену с другими mail routes.
+Точные общие определения FxRetryEmptyFailure, FxRetryPostResult, FxRetryPostJob, FxRetryPost, FxRetryOperationMessage, FxRetryDelayMessage из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.
 
 ## Go
 
@@ -495,10 +468,12 @@ public sealed class RetryJob<T> {
 
 | Язык | Непробельные символы |
 | --- | ---: |
-| LMX | 6081 |
+| LMX | 4384 |
 | Go | 2456 |
 | C# | 3462 |
 
-[Основная узкая пара](../097_retry_library_implementation_comparision.md). [Норма LMX](../../../LMX_semantics.en.md).
+Полный текст каждого листинга включает все объявления, заголовки Throws, аргументы и ссылки; исключений из подсчёта нет.
 
-LMX здесь не выполнялся. Это сохранение исходников и их договора, а не новый отчёт о runtime-проверке.
+[Основная пара](../097_retry_library_implementation_comparision.md). [Единые формы](../../UNIFIED_OPERATIONS.md).
+
+Результаты языкового выполнения изменённых исходников не заявлены.

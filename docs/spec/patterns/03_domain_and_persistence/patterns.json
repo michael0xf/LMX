@@ -20,26 +20,24 @@
       "scenario_en": "Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.",
       "expected_ru": "Первое обращение возвращает исходный объект id=9; второе — отсутствие. Сам поиск не создаёт новый экземпляр.",
       "expected_en": "Return the existing account 9, then absence; do not create a second instance.",
-      "lmx_notes_ru": "Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.",
-      "lmx_notes_en": "Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row.",
-      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.",
-      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.",
+      "lmx_notes_ru": "findFirst выполняет единственный общий поиск; локальный Match задаёт только доменное равенство id. Свободный id берётся из действующего вызова Repository через обычную динамическую связь. Общий поиск не ограничен типом ключа. Maybe явно преобразуется в прежний договор клиента: исходная ссылка при успехе и нулевая ссылка при отсутствии. Тело обхода в клиенте не повторяется.",
+      "lmx_notes_en": "findFirst performs the shared search; local Match supplies only the domain id predicate. Its free id keeps the current Repository dynamic binding. The generic search does not restrict the key type. The client explicitly converts Maybe to its established result: the original reference or a null reference, with no copied traversal.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "In-memory последовательность, совпадение по одному целочисленному id и первая запись при дубликатах. Возвращается исходный объект, не snapshot. Это не общий LINQ engine, не ORM и не индекс БД. Dataclass/record в клиенте описывает поля Account; алгоритм поиска реализован отдельно и полностью.",
       "limits_en": "This is an in-memory sequence matched by one integer id, returning the first duplicate. The original object is returned, not a snapshot. It is not a LINQ engine, ORM, or database index. Client dataclass/record declarations describe Account fields; the complete search algorithm is separately implemented.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Repository:\n    @[]: rows\n    int: id\n    return: @\n    find:\n        throws: OperandArity\n        import: FindLibrary\n        return: rows findById id\n",
-          "notes_ru": "Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.",
-          "notes_en": "Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row.",
+          "code": "Repository:\n    @[]: rows\n    int: id\n    return: @\n    Match:\n        @: row\n        return: int\n        accepts:\n            return: row\\id = id\n    find:\n        throws: copy(FxThrows\\predicate)\n        @: found findFirst(rows; Match\\accepts)\n        if: found\\present != 0\n            return: \\found\\value\n        @: missing 0\n        return: missing\n",
+          "notes_ru": "findFirst выполняет единственный общий поиск; локальный Match задаёт только доменное равенство id. Свободный id берётся из действующего вызова Repository через обычную динамическую связь. Общий поиск не ограничен типом ключа. Maybe явно преобразуется в прежний договор клиента: исходная ссылка при успехе и нулевая ссылка при отсутствии. Тело обхода в клиенте не повторяется.",
+          "notes_en": "findFirst performs the shared search; local Match supplies only the domain id predicate. Its free id keeps the current Repository dynamic binding. The generic search does not restrict the key type. The client explicitly converts Maybe to its established result: the original reference or a null reference, with no copied traversal.",
           "metrics": {
-            "characters": 96,
-            "nonblank_lines": 8,
-            "utf8_bytes": 152,
-            "sha256": "6853fac9aef087f0845643276e85cc59ffc3bacd19fbc1465d5f15cc5d3b6b19",
-            "without_complex_throws_characters": 96,
-            "complex_throws_removed_characters": 0
+            "characters": 212,
+            "nonblank_lines": 16,
+            "utf8_bytes": 355,
+            "sha256": "6d88e5dced8915af713094a8d695913cfd4ca27e06070762b1f005fbd713101a"
           }
         },
         {
@@ -89,7 +87,8 @@
       "restoration": {
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
-      }
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 94,
@@ -100,32 +99,30 @@
       "usage_ids": [
         16
       ],
-      "summary_ru": "Реализовать импортируемый поиск первой записи по целочисленному id.",
-      "summary_en": "Implement imported first-record lookup by integer id.",
+      "summary_ru": "Общий findFirst возвращает Maybe первого элемента по переданному предикату.",
+      "summary_en": "Generic findFirst returns Maybe of the first element accepted by the supplied predicate.",
       "scenario_ru": "Просмотреть упорядоченную последовательность записей, вернуть первую с нужным id или отсутствие.",
       "scenario_en": "Scan an ordered record sequence and return the first matching id or absence.",
       "expected_ru": "Для id 7 возвращается исходная запись 7; при повторном id возвращается первая; неизвестный id и пустой список дают отсутствие.",
       "expected_en": "Id 7 returns its original record; duplicate ids return the first; unknown ids and empty sequences return absence.",
-      "lmx_notes_ru": "FindLibrary использует copy: sys\\OPERANDS_TEMPLATE: mode 0 и приоритет + готовы до анализа. Бинарный контракт проверяется length(right)=1. \\left получает reference-value целой последовательности, \\right[0] — int-значение id. Цикл читает каждую запись до первого совпадения, возвращая её исходную ссылку; пустая последовательность и отсутствие дают 0. Никакого captured predicate и сохранённого frame нет.",
-      "lmx_notes_en": "FindLibrary copies sys\\OPERANDS_TEMPLATE, making mode 0 and additive priority ready before analysis. length(right)=1 checks the binary contract. \\left reads the whole sequence reference value, and \\right[0] the integer id. The loop visits rows until the first match and returns that original reference; empty/no-match cases return 0. No captured predicate or retained frame is involved.",
+      "lmx_notes_ru": "Точное текущее определение FxFindFirst извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxFindFirst definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
       "comparison_ru": "Во всех трёх языках написаны собственный цикл, сравнение id, ранний return и ветвь отсутствия. Python next/filter и C# FirstOrDefault не используются для реализации helper. LMX и Python требуют поле id структурно, C# выражает тот же нужный доступ через IIdentified. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/094_find_by_id_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
       "comparison_en": "All implementations explicitly show their own loop, id comparison, early return, and absence branch. Python next/filter and C# FirstOrDefault are not used to implement the helper. LMX/Python require id structurally; C# exposes that required access through IIdentified. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
-      "limits_ru": "Узкий helper одного ключа; без произвольных predicate/context, lazy query planner, SQL или индекса. Последовательность не изменяется и не перечисляется дальше первого совпадения. Lifetime найденной записи остаётся у владельца коллекции/Message; возврат ссылки её не копирует.",
-      "limits_en": "This is a narrow single-key helper without arbitrary predicates/contexts, a lazy query planner, SQL, or an index. It neither mutates the sequence nor enumerates past the first match. The collection/Message owner retains the record lifetime; returning its reference does not copy it.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "FindLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: @\n    findById:\n        throws: OperandArity\n        if: length(right) != 1\n            throw: OperandArity()\n        @: rows \\left\n        int: id \\right[0]\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            if: row\\id = id\n                return: row\n            i += 1\n        @: missing 0\n        return: missing\n",
-          "notes_ru": "FindLibrary использует copy: sys\\OPERANDS_TEMPLATE: mode 0 и приоритет + готовы до анализа. Бинарный контракт проверяется length(right)=1. \\left получает reference-value целой последовательности, \\right[0] — int-значение id. Цикл читает каждую запись до первого совпадения, возвращая её исходную ссылку; пустая последовательность и отсутствие дают 0. Никакого captured predicate и сохранённого frame нет.",
-          "notes_en": "FindLibrary copies sys\\OPERANDS_TEMPLATE, making mode 0 and additive priority ready before analysis. length(right)=1 checks the binary contract. \\left reads the whole sequence reference value, and \\right[0] the integer id. The loop visits rows until the first match and returns that original reference; empty/no-match cases return 0. No captured predicate or retained frame is involved.",
+          "code": "FxFindFirst:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    findFirst:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(items; i)\n            private: @: accepted FxApply\\apply(accepts; FxOne\\make(value))\n            if: FxSeqPredicate\\truth(accepted) != 0\n                return: FxSome\\some(value := value)\n            i += 1\n        return: FxNone\\none()\n",
+          "notes_ru": "Точное текущее определение FxFindFirst извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxFindFirst definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
           "metrics": {
-            "characters": 227,
-            "nonblank_lines": 17,
-            "utf8_bytes": 411,
-            "sha256": "a58896e8b6c00f340238eda626409581ec50e1bc1c3c42bda7c33b201a2ddb41",
-            "without_complex_throws_characters": 227,
-            "complex_throws_removed_characters": 0
+            "characters": 371,
+            "nonblank_lines": 18,
+            "utf8_bytes": 565,
+            "sha256": "741ee730c1940f0fd1e17d74de1312f39ec2c5aee70105582b30eeab577eb129"
           }
         },
         {
@@ -166,7 +163,13 @@
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
-      "extended_comparison": "extended_comparisons/094_find_by_id_implementation_generalized_comparision.md"
+      "extended_comparison": "extended_comparisons/094_find_by_id_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxFindFirst"
+        }
+      ]
     },
     {
       "id": 17,
@@ -195,9 +198,7 @@
             "characters": 226,
             "nonblank_lines": 18,
             "utf8_bytes": 379,
-            "sha256": "2617072d1926f46feac8bd69ab0973c4d6d11e31bbb8c41089bf1c1df6bae7e9",
-            "without_complex_throws_characters": 226,
-            "complex_throws_removed_characters": 0
+            "sha256": "2617072d1926f46feac8bd69ab0973c4d6d11e31bbb8c41089bf1c1df6bae7e9"
           }
         },
         {
@@ -261,9 +262,7 @@
             "characters": 244,
             "nonblank_lines": 17,
             "utf8_bytes": 370,
-            "sha256": "5b2a03261fc32a681ac15e777218accfb0d6e912bc045ce865da8b6e862a4d61",
-            "without_complex_throws_characters": 244,
-            "complex_throws_removed_characters": 0
+            "sha256": "5b2a03261fc32a681ac15e777218accfb0d6e912bc045ce865da8b6e862a4d61"
           }
         },
         {
@@ -327,9 +326,7 @@
             "characters": 159,
             "nonblank_lines": 12,
             "utf8_bytes": 257,
-            "sha256": "7199c300dca6ed89e6985f697c54917401dd41313ba1c0094d98d01da2f81e54",
-            "without_complex_throws_characters": 159,
-            "complex_throws_removed_characters": 0
+            "sha256": "7199c300dca6ed89e6985f697c54917401dd41313ba1c0094d98d01da2f81e54"
           }
         },
         {
@@ -393,9 +390,7 @@
             "characters": 169,
             "nonblank_lines": 9,
             "utf8_bytes": 243,
-            "sha256": "a5c5fc7aed4a3047ab10ffcd607bda706421b945f7c6abe5b0ce866b9e6e720d",
-            "without_complex_throws_characters": 169,
-            "complex_throws_removed_characters": 0
+            "sha256": "a5c5fc7aed4a3047ab10ffcd607bda706421b945f7c6abe5b0ce866b9e6e720d"
           }
         },
         {
@@ -459,9 +454,7 @@
             "characters": 121,
             "nonblank_lines": 7,
             "utf8_bytes": 174,
-            "sha256": "00ded1dd56e712611ed6b8cb26777e19b26843c4e9316aa5c76adf2aece79a36",
-            "without_complex_throws_characters": 121,
-            "complex_throws_removed_characters": 0
+            "sha256": "00ded1dd56e712611ed6b8cb26777e19b26843c4e9316aa5c76adf2aece79a36"
           }
         },
         {
@@ -525,9 +518,7 @@
             "characters": 198,
             "nonblank_lines": 17,
             "utf8_bytes": 304,
-            "sha256": "00e195e51d60beea20b15171d00fd4f3414cb24b6eaf9e337bd94008cc5926b7",
-            "without_complex_throws_characters": 198,
-            "complex_throws_removed_characters": 0
+            "sha256": "00e195e51d60beea20b15171d00fd4f3414cb24b6eaf9e337bd94008cc5926b7"
           }
         },
         {
@@ -591,9 +582,7 @@
             "characters": 136,
             "nonblank_lines": 8,
             "utf8_bytes": 187,
-            "sha256": "7e16425b871af37557f75ce43d51cc586e067eb7c33615ef8a602a6e16724a25",
-            "without_complex_throws_characters": 136,
-            "complex_throws_removed_characters": 0
+            "sha256": "7e16425b871af37557f75ce43d51cc586e067eb7c33615ef8a602a6e16724a25"
           }
         },
         {
@@ -651,15 +640,13 @@
         {
           "language": "LMX",
           "code": "Account:\n    int: balance 100\n    int: amount\n    return: int\n    debit:\n        throws: Funds\n        if: amount < 0 || amount > node\\balance\n            throw: Funds()\n        node\\balance -= amount\n        return: node\\balance\n",
-          "notes_ru": "node\balance — явное доменное состояние выбранного экземпляра. Обычное balance := ... изменяло бы локальное место вызова.",
+          "notes_ru": "node\\balance — явное доменное состояние выбранного экземпляра. Обычное balance := ... изменяло бы локальное место вызова.",
           "notes_en": "node\\balance selects instance state. An unqualified assignment would update the invocation local.",
           "metrics": {
             "characters": 144,
             "nonblank_lines": 10,
             "utf8_bytes": 230,
-            "sha256": "978cf1e89025b53e9d5d4142def62bb10c8afd918ef5cf33db6a2365ad5dfebb",
-            "without_complex_throws_characters": 144,
-            "complex_throws_removed_characters": 0
+            "sha256": "978cf1e89025b53e9d5d4142def62bb10c8afd918ef5cf33db6a2365ad5dfebb"
           }
         },
         {
@@ -723,9 +710,7 @@
             "characters": 232,
             "nonblank_lines": 15,
             "utf8_bytes": 368,
-            "sha256": "cfda4ba228aa3c6ccabde42fd4c8fbe8069bc676a78c64168ec87cbfeffdb512",
-            "without_complex_throws_characters": 232,
-            "complex_throws_removed_characters": 0
+            "sha256": "cfda4ba228aa3c6ccabde42fd4c8fbe8069bc676a78c64168ec87cbfeffdb512"
           }
         },
         {
@@ -789,9 +774,7 @@
             "characters": 131,
             "nonblank_lines": 11,
             "utf8_bytes": 240,
-            "sha256": "3c69481976530d82bbd2520b71e2cb395e053eac4ab84ee9c822e12eb861908b",
-            "without_complex_throws_characters": 131,
-            "complex_throws_removed_characters": 0
+            "sha256": "3c69481976530d82bbd2520b71e2cb395e053eac4ab84ee9c822e12eb861908b"
           }
         },
         {
@@ -855,9 +838,7 @@
             "characters": 179,
             "nonblank_lines": 11,
             "utf8_bytes": 258,
-            "sha256": "73eb117cdca509f4913e24fe5fa773e6681f8c3107879f4258510d060eefbb2a",
-            "without_complex_throws_characters": 179,
-            "complex_throws_removed_characters": 0
+            "sha256": "73eb117cdca509f4913e24fe5fa773e6681f8c3107879f4258510d060eefbb2a"
           }
         },
         {
@@ -921,9 +902,7 @@
             "characters": 98,
             "nonblank_lines": 9,
             "utf8_bytes": 162,
-            "sha256": "1e76895134732b990a03cec2d49af2ecb1d3458018edca94f96a8438f0f57f18",
-            "without_complex_throws_characters": 98,
-            "complex_throws_removed_characters": 0
+            "sha256": "1e76895134732b990a03cec2d49af2ecb1d3458018edca94f96a8438f0f57f18"
           }
         },
         {
@@ -987,9 +966,7 @@
             "characters": 133,
             "nonblank_lines": 11,
             "utf8_bytes": 230,
-            "sha256": "4764422ba9e23e78090461984d1000897a65706531f8182f46c5a57af1d9931b",
-            "without_complex_throws_characters": 133,
-            "complex_throws_removed_characters": 0
+            "sha256": "4764422ba9e23e78090461984d1000897a65706531f8182f46c5a57af1d9931b"
           }
         },
         {
@@ -1053,9 +1030,7 @@
             "characters": 178,
             "nonblank_lines": 10,
             "utf8_bytes": 265,
-            "sha256": "3217e15262c7b530245b6d5613a9c676bc60ed71f77f58e02346fd5dbc33c3bf",
-            "without_complex_throws_characters": 178,
-            "complex_throws_removed_characters": 0
+            "sha256": "3217e15262c7b530245b6d5613a9c676bc60ed71f77f58e02346fd5dbc33c3bf"
           }
         },
         {
@@ -1102,26 +1077,24 @@
       "scenario_en": "Combine nonnegative and below100 with AND; test -1,50,100.",
       "expected_ru": "Результаты false,true,false. Правый предикат не вызывается, если левый дал false.",
       "expected_en": "Results are false,true,false; the right predicate is skipped when the left is false.",
-      "lmx_notes_ru": "Клиент импортирует готовый both из SpecificationLibrary\\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.",
-      "lmx_notes_en": "The client imports ready both from SpecificationLibrary\\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.",
-      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.",
-      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.",
+      "lmx_notes_ru": "allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.",
+      "lmx_notes_en": "allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не satisfies. Короткий клиент и полный код combinator измеряются отдельно.",
       "limits_en": "Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from satisfies. Client and complete combinator implementation are measured separately.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Predicates:\n    int: value\n    return: int\n    nonnegative:\n        return: value >= 0\n    below100:\n        return: value < 100\n\nSpecificationExample:\n    return: @\n    build:\n        throws: OperandArity\n        import: SpecificationLibrary\\Operators\n        return: Predicates\\nonnegative both Predicates\\below100\n",
-          "notes_ru": "Клиент импортирует готовый both из SpecificationLibrary\\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.",
-          "notes_en": "The client imports ready both from SpecificationLibrary\\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.",
+          "code": "Predicates:\n    int: value\n    return: int\n    nonnegative:\n        return: value >= 0\n    below100:\n        return: value < 100\n\nSpecificationExample:\n    return: @\n    build:\n        throws: copy(FxThrows\\adapter)\n        return: allOf(predicates := (Predicates\\nonnegative; Predicates\\below100))\n",
+          "notes_ru": "allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.",
+          "notes_en": "allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.",
           "metrics": {
-            "characters": 225,
-            "nonblank_lines": 13,
-            "utf8_bytes": 317,
-            "sha256": "0d6ee9870082b9379044dc27a63c944eff02983f1891cee7b667e917b2ffd46a",
-            "without_complex_throws_characters": 225,
-            "complex_throws_removed_characters": 0
+            "characters": 216,
+            "nonblank_lines": 12,
+            "utf8_bytes": 299,
+            "sha256": "79e54f011d49d512690b733ff25cfe05b5d9c349ab25dcffbb8bfb766a81e359"
           }
         },
         {
@@ -1171,7 +1144,8 @@
       "restoration": {
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
-      }
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 95,
@@ -1182,32 +1156,30 @@
       "usage_ids": [
         31
       ],
-      "summary_ru": "Реализовать импортируемую бинарную композицию двух предикатов с коротким замыканием.",
-      "summary_en": "Implement imported binary predicate composition with short-circuiting.",
+      "summary_ru": "Общий allOf строит callable произвольной совместимой сигнатуры с коротким замыканием.",
+      "summary_en": "Generic allOf builds a short-circuit callable with the actual compatible signature.",
       "scenario_ru": "Сохранить две callable-ссылки и вернуть новый int-предикат. При каждом вызове проверить левую часть; правую вызывать только после true.",
       "scenario_en": "Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.",
       "expected_ru": "nonnegative both below100 даёт false,true,false для -1,50,100. При false слева счётчик правых вызовов не растёт. Повторный вызов использует сохранённые ссылки.",
       "expected_en": "nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.",
-      "lmx_notes_ru": "Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent. Сокращение 23-Nov: One composition copies the predicate fields and supplies both callables; its lexical input owner is still the copied AndData.",
-      "lmx_notes_en": "AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver.",
+      "lmx_notes_ru": "Точное текущее определение FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
       "comparison_ru": "LMX явно строит сохраняемый граф и выбирает владельца; Python closure и C# lambda сохраняют ссылки средствами языка. Все три тела показывают собственный AND через &&/and и не вызывают готовый both. Ни SQL-expression builder, ни скрытый AST evaluator не используется. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/095_specification_combinator_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
       "comparison_en": "LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
-      "limits_ru": "Только одна целочисленная аргументная позиция и два предиката. Ссылки должны оставаться допустимыми в одном Message/контексте; raw occurrences и сохранение завершённых активаций не применяются. В LMX лишние правые операнды дают OperandArity; это не автоматический fold.",
-      "limits_en": "There is one integer argument position and two predicates. References must remain valid in one Message/context; raw occurrences and retention of finished activations are not used. Extra right operands cause OperandArity in LMX; there is no automatic fold.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "SpecificationLibrary:\n    independent: AndData:\n        @: first 0\n        @: second 0\n        inputs:\n            int: value\n            return: int\n            accepts:\n                return: node\\first(value) && node\\second(value)\n    ---\n    Operators:\n        copy: sys\\OPERANDS_TEMPLATE\n        return: @\n        both:\n            throws: OperandArity\n            if: length(right) != 1\n                throw: OperandArity()\n            @: instance (merge(AndData; (@: first \\left; @: second \\right[0])))\n            return: instance\\inputs\\accepts\n",
-          "notes_ru": "Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent. Сокращение 23-Nov: One composition copies the predicate fields and supplies both callables; its lexical input owner is still the copied AndData.",
-          "notes_en": "AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver.",
+          "code": "FxAllOfTypeToken:\n    integer:\n        int: value\n\nFxAllOfState:\n    @: predicates 0\n\nFxAllOfEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        private: int: i 0\n        while: i < length(state\\predicates)\n            private: @: predicate \\state\\predicates[i]\n            private: @: flag FxApplyPlaces\\apply(predicate; frame)\n            if: FxSeqPredicate\\truth(flag) = 0\n                return: (0 FxRecordOperands\\record)\n            i += 1\n        return: (1 FxRecordOperands\\record)\n\nFxAllOf:\n    private:\n        @: predicates\n        @: contract 0\n    required: predicates\n    return: @\n    allOf:\n        throws: copy(FxThrows\\adapter)\n        private: @: values FxSeqRecords\\make(source := predicates)\n        private: @: selected contract\n        private: @: integerType FxKernel\\normalizeType(FxAllOfTypeToken\\integer[0])\n        private: @: policy 0\n        if: selected = 0\n            if: length(values) = 0\n                throw: FxArity()\n            private: @: first \\values[0]\n            private: @: info FxKernel\\signature(first)\n            selected := FxSignatures\\make(info\\inputTypes; integerType)\n            policy := FxFullPolicy\\make(first)\n        else:\n            policy := FxOwnPolicy\\make(selected)\n        private: @: shape FxKernel\\signature(selected)\n        if: shape\\hasResult = 0\n            throw: FxTypeToken()\n        if: \\shape\\resultType != \\integerType\n            throw: FxTypeToken()\n        private: @: failures (copy(()))\n        private: int: i 0\n        while: i < length(values)\n            private: @: operation \\values[i]\n            private: @: info FxKernel\\signature(operation)\n            if: info\\hasResult = 0 || length(info\\inputTypes) != length(shape\\inputTypes)\n                throw: FxTypeToken()\n            if: \\info\\resultType != \\integerType\n                throw: FxTypeToken()\n            private: int: position 0\n            while: position < length(shape\\inputTypes)\n                if: \\info\\inputTypes[position] != \\shape\\inputTypes[position]\n                    throw: FxTypeToken()\n                position += 1\n            failures := FxFailures\\union(failures; info\\throws)\n            i += 1\n        private: @: state (copy(FxAllOfState))\n        state\\predicates := values\n        return: FxWrap\\make(selected; FxAllOfEngine\\run; state; failures; policy)\n",
+          "notes_ru": "Точное текущее определение FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
           "metrics": {
-            "characters": 335,
-            "nonblank_lines": 19,
-            "utf8_bytes": 556,
-            "sha256": "45ebb027566e887e1704a97e03ce698afadaf7ee83fff947280e81b71de3aedb",
-            "without_complex_throws_characters": 335,
-            "complex_throws_removed_characters": 0
+            "characters": 1673,
+            "nonblank_lines": 65,
+            "utf8_bytes": 2472,
+            "sha256": "08e554b84ccf16464e44a58e725a36fcd1876d0f1b0cc328f2287a5693e41e13"
           }
         },
         {
@@ -1260,7 +1232,25 @@
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
-      "extended_comparison": "extended_comparisons/095_specification_combinator_implementation_generalized_comparision.md"
+      "extended_comparison": "extended_comparisons/095_specification_combinator_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfTypeToken"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfState"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfEngine"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOf"
+        }
+      ]
     },
     {
       "id": 32,
@@ -1272,26 +1262,24 @@
       "scenario_en": "Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.",
       "expected_ru": "Первые два значения равны, третье отличается. demo кодирует эти две проверки как 10; идентичность объектов для равенства не требуется.",
       "expected_en": "The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.",
-      "lmx_notes_ru": "Demo\\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\\immutable\\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.",
-      "lmx_notes_en": "Demo\\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\\immutable\\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden.",
-      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.",
-      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.",
+      "lmx_notes_ru": "equals использует единственный общий выбор равенства и явно переданную проекцию MoneyFields. Проекция выбирает только cents/currency, вычисляется один раз для каждого достигнутого значения и возвращает целые поля. Общее equalFields не применяется ко всей Money-структуре вместо предметного отношения. run возвращает 10, как раньше; copy/merge создают новые значения и не меняют существующие. Профиль Money является частью клиента, алгоритм равенства — частью ядра.",
+      "lmx_notes_en": "equals reuses the common equality dispatch with an explicit MoneyFields projection, evaluated once per reached value. The projection selects only cents and currency; equality over every physical Money field is not substituted for this domain relation. run still yields 10. copy/merge construct new values without changing the originals; Money is the client profile and the equality algorithm belongs to the core.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "Сравниваются только cents и currency двух уже допустимых Money-значений. Компоненты неизменяемы; низкоуровневая замена графовых фрагментов не является API компонента. Арифметика валют, хеширование и округление не включены. Клиент и полная реализация учитываются раздельно; типы и правила хранения языков не приравниваются.",
       "limits_en": "Only cents and currency of already admissible Money values are compared. Components are read-only; low-level graph-fragment replacement is not part of the component API. Currency arithmetic, hashing, and rounding are excluded. Client and full implementation are counted separately; language type and storage guarantees are not equated.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Demo:\n    return: int\n    run:\n        throws: OperandArity\n        import: MoneyLibrary\\Equality\n        @: money MoneyLibrary\\immutable\\Money\n        @: first (copy(money))\n        @: second (copy(money))\n        @: third (merge(money; immutable: (int: currency 978)))\n        return: (first equals second) * 10 + (first equals third)\n",
-          "notes_ru": "Demo\\run() возвращает 10: истина для first/second и ложь для first/third. Все клиенты используют готовый конкретный Money; его полная реализация и сравнение двух компонентов даны рядом. В исходном графе Money находится под сохранённым immutable, поэтому явные пути включают MoneyLibrary\\immutable\\Money. Внутри Money поля cents/currency — прямые terminal int; квалификация всего прототипа делает их значения immutable. copy создаёт отдельные контейнеры из этих полей. В merge второй источник — вызов immutable с одним анонимным контейнером (int: currency 978): результат имеет прямое immutable-поле currency и совместим с моделью. Это создание нового значения, без изменения существующего. equals наследует mode 0 и приоритет +, проверяет бинарную арность; скобки отделяют сравнения от арифметики. Встроенное сравнение ссылок не переопределяется.",
-          "notes_en": "Demo\\run() returns 10: true for first/second, false for first/third. All clients use the ready concrete Money whose full two-component implementation is shown beside them. Money is under a retained immutable receiver, so explicit source paths include MoneyLibrary\\immutable\\Money. Its cents/currency children are direct terminal int declarations; qualifying the whole prototype makes their values immutable. copy constructs distinct containing Structures from those fields. The second merge source calls immutable with one anonymous Structure (int: currency 978); its result has a direct immutable currency field matching the model. This constructs a new value without mutating an existing one. equals inherits mode 0 and additive priority and checks binary arity; groups separate comparison from arithmetic. Built-in reference comparison is not overridden.",
+          "code": "MoneyLibrary:\n    immutable: Money:\n        int: cents 100\n        int: currency 840\n\nMoneyFields:\n    @: value\n    return: @\n    select:\n        return: (value\\cents; value\\currency)\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxThrows\\predicate) FxRecordArity\n        @: money MoneyLibrary\\immutable\\Money\n        @: first (copy(money))\n        @: second (copy(money))\n        @: third (merge(money; immutable: (int: currency 978)))\n        return: equals(first; second; MoneyFields\\select) * 10 + equals(first; third; MoneyFields\\select)\n",
+          "notes_ru": "equals использует единственный общий выбор равенства и явно переданную проекцию MoneyFields. Проекция выбирает только cents/currency, вычисляется один раз для каждого достигнутого значения и возвращает целые поля. Общее equalFields не применяется ко всей Money-структуре вместо предметного отношения. run возвращает 10, как раньше; copy/merge создают новые значения и не меняют существующие. Профиль Money является частью клиента, алгоритм равенства — частью ядра.",
+          "notes_en": "equals reuses the common equality dispatch with an explicit MoneyFields projection, evaluated once per reached value. The projection selects only cents and currency; equality over every physical Money field is not substituted for this domain relation. run still yields 10. copy/merge construct new values without changing the originals; Money is the client profile and the equality algorithm belongs to the core.",
           "metrics": {
-            "characters": 239,
-            "nonblank_lines": 10,
-            "utf8_bytes": 337,
-            "sha256": "588922c2d5aab0e8931b9d6dc299dd9a2608c9cee892b8c3577218ad6f7743f1",
-            "without_complex_throws_characters": 239,
-            "complex_throws_removed_characters": 0
+            "characters": 401,
+            "nonblank_lines": 18,
+            "utf8_bytes": 550,
+            "sha256": "3a4a5a0fbf469854e659a6b7781cf7db017d539ce2e7aa5971ea854cb41a8ecd"
           }
         },
         {
@@ -1341,7 +1329,8 @@
       "restoration": {
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
-      }
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 96,
@@ -1352,32 +1341,30 @@
       "usage_ids": [
         32
       ],
-      "summary_ru": "Полностью показать конкретный двухкомпонентный Money и его импортируемое равенство.",
-      "summary_en": "Fully show the concrete two-component Money representation and imported equality.",
+      "summary_ru": "Общий equals сравнивает значения через явную проекцию и единое равенство.",
+      "summary_en": "Generic equals applies an explicit projection and the shared equality dispatch.",
       "scenario_ru": "Хранить read-only cents/currency и сравнить обе компоненты в указанном порядке. Defaults 100/840, альтернативная currency 978.",
       "scenario_en": "Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.",
       "expected_ru": "Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.",
       "expected_en": "Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.",
-      "lmx_notes_ru": "Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\\cents и a\\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.",
-      "lmx_notes_en": "Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\\cents and a\\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.",
+      "lmx_notes_ru": "Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
       "comparison_ru": "Python использует базовый immutable tuple, запрещает instance dictionary через __slots__ и предоставляет read-only properties; same написан вручную. C# использует readonly struct/get-only properties и ручной Same. LMX использует готовые immutable primitive records и ручной оператор. Вспомогательная библиотека равенства не импортируется собственной реализацией; dataclass/record equality не подменяют показанный алгоритм. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/096_money_value_equality_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
       "comparison_en": "Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
-      "limits_ru": "Это библиотека одного типа с двумя int-компонентами, не реализация Python dataclasses, C# records или универсального schema compiler. Принимаются корректные Money-значения; произвольные неверные типы и метапрограммное изменение классов/графа не сравниваются. В LMX защищены значения полей, как и в исходном примере; отдельная ретроактивная заморозка внешнего контейнера не добавлена.",
-      "limits_en": "This implements one type with two int components, not Python dataclasses, C# records, or a universal schema compiler. Inputs are valid Money values; invalid foreign types and metaprogrammatic class/graph mutation are outside scope. LMX protects field values as in the original example; no retroactive freezing of the outer container is added.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "MoneyLibrary:\n    immutable: Money:\n        int: cents 100\n        int: currency 840\n    Equality:\n        copy: sys\\OPERANDS_TEMPLATE\n        return: int\n        equals:\n            throws: OperandArity\n            if: length(right) != 1\n                throw: OperandArity()\n            @: a \\left\n            @: b \\right[0]\n            return: a\\cents = b\\cents && a\\currency = b\\currency\n",
-          "notes_ru": "Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\\cents и a\\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.",
-          "notes_en": "Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\\cents and a\\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.",
+          "code": "FxEquals:\n    private:\n        @: first\n        @: second\n        @: projection 0\n        @: same 0\n    required: first second\n    return: int\n    equals:\n        throws: copy(FxThrows\\predicate)\n        private: @: a FxProjectValue\\get(first; projection)\n        private: @: b FxProjectValue\\get(second; projection)\n        return: FxValueSame\\test(a; b; same)\n",
+          "notes_ru": "Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
           "metrics": {
-            "characters": 231,
-            "nonblank_lines": 14,
-            "utf8_bytes": 392,
-            "sha256": "df064626f95273b53c9a6f3de3b95ff28ee7488bb024c58b84ec84ceb5e9d840",
-            "without_complex_throws_characters": 231,
-            "complex_throws_removed_characters": 0
+            "characters": 248,
+            "nonblank_lines": 13,
+            "utf8_bytes": 362,
+            "sha256": "ad3cce9383d79bcf2ba56ed6efd8ff80b2b0c5e317cd3a076c7cef34d04a959a"
           }
         },
         {
@@ -1436,7 +1423,13 @@
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
-      "extended_comparison": "extended_comparisons/096_money_value_equality_implementation_generalized_comparision.md"
+      "extended_comparison": "extended_comparisons/096_money_value_equality_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreGenericOperations.lmx",
+          "definition": "FxEquals"
+        }
+      ]
     },
     {
       "id": 33,
@@ -1465,9 +1458,7 @@
             "characters": 114,
             "nonblank_lines": 9,
             "utf8_bytes": 182,
-            "sha256": "75a24463eb702522d1ba6c934aa88a8c24a1215d8b004c849c08e75caf15ea39",
-            "without_complex_throws_characters": 114,
-            "complex_throws_removed_characters": 0
+            "sha256": "75a24463eb702522d1ba6c934aa88a8c24a1215d8b004c849c08e75caf15ea39"
           }
         },
         {
@@ -1531,9 +1522,7 @@
             "characters": 200,
             "nonblank_lines": 14,
             "utf8_bytes": 294,
-            "sha256": "70450368b9bdd61f916d2f4e7bb3f823984ed74f95e6337c035efcaa9e568ca0",
-            "without_complex_throws_characters": 200,
-            "complex_throws_removed_characters": 0
+            "sha256": "70450368b9bdd61f916d2f4e7bb3f823984ed74f95e6337c035efcaa9e568ca0"
           }
         },
         {

@@ -2,14 +2,20 @@ ProducerMessage:
     int[]: items
     @: worker
     @: collector
-    start:
-        int: i 0
-        while: i < length(items)
+    Send:
+        int: state
+        int: value
+        return: int
+        send:
             post:
                 ask:
-                    worker\Add\add(value := items[i])
+                    worker\Add\add(value := value)
             ---
-            i += 1
+            return: state
+    ---
+    start:
+        throws: copy(foldl\throws) copy(record\throws)
+        (foldl items (0 record) Send\send)
         post:
             ask:
                 worker\Finish\finish()

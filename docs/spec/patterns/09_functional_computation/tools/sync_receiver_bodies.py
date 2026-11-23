@@ -5,25 +5,17 @@ import re,json,hashlib
 ROOT=Path(__file__).resolve().parents[1]
 import sys
 sys.path.insert(0,str(ROOT.parent/'tools'))
-from throws_metrics import measure_throws
+from lmx_style_variants import measure as measure_full
+from canonical_operations import definitions
 LIB=ROOT.parent/'LMX_Fn_Receivers'
+COMPANIONS={91:['FxRecordConstructor','FxRecordAdapterState','FxRecordAdapter','FxCaptureOne','FxBindOperandTail','FxBindChain','FxMaybeActive','FxMaybeBindOperand'],92:['FxRecordConstructor','FxRecordAdapterState','FxRecordAdapter','FxCaptureOne']}
 SELECT={91:['FxMaybe','FxSome','FxNone','FxBind'],92:['FxBounce','FxDone','FxMore','FxTrampoline'],98:['FxAround'],99:['FxPartial']}
 def canon(s):return s.strip()+'\n'
-THROWS_DETAILS={}
 def metrics(s):
- detail=measure_throws(s,ROOT.parent);THROWS_DETAILS[hashlib.sha256(s.encode()).hexdigest()]=detail
- return {'characters':sum(not c.isspace() for c in s),'lines':sum(bool(x.strip()) for x in s.splitlines()),'utf8_bytes':len(s.encode()),'without_complex_throws_characters':detail['without_complex_throws_characters'],'complex_throws_removed_characters':detail['removed_characters']}
+ m=measure_full(s)
+ return {'characters':m['characters'],'lines':m['nonblank_lines'],'utf8_bytes':m['utf8_bytes']}
 def blocks():
- found={}
- for path in sorted((LIB/'src').glob('*.lmx')):
-  text=path.read_text()
-  for chunk in text.split('\n\n'):
-   match=re.search(r'^((?:Fx|Rx)[A-Za-z0-9_]+):[^\n]*\n',chunk,re.M)
-   if match:
-    body=canon(chunk[match.start():]);name=match.group(1)
-    if name in found:raise ValueError('Duplicate production definition '+name)
-    found[name]={'code':body,'source':path.relative_to(LIB).as_posix()}
- return found
+ return definitions(LIB)
 def dependencies(names,available):
  seen=set();stack=list(names)
  while stack:
@@ -47,7 +39,7 @@ def main():
   code='\n'.join(available[n]['code'] for n in names)
   listing=next(x for x in by[ident]['listings'] if x['language']=='LMX');by[ident]['variants']['LMX']['core']=code
   listing['code']=code
-  closure=dependencies(names,available);shared=closure-set(names)
+  closure=dependencies(names+COMPANIONS.get(ident,[]),available);shared=closure-set(names)
   all_required|=closure;all_primary.update(names)
   definitions=[{'name':n,'source':available[n]['source'],**metrics(available[n]['code']),'sha256':hashlib.sha256(available[n]['code'].encode()).hexdigest()} for n in sorted(closure)]
   unknown=sorted(set(re.findall(r'\b(?:Fx|Rx)[A-Za-z0-9_]+\b','\n'.join(available[n]['code'] for n in closure)))-set(available))
@@ -73,24 +65,32 @@ def main():
  alias_paths=[p for p in (LIB/'src').glob('*.lmx') if re.search(r'^fun:\s*$',p.read_text(),re.M)]
  report['public_bundle']=[{'source':p.relative_to(LIB).as_posix(),**metrics(p.read_text()),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in alias_paths]
  (ROOT/'patterns.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
- report['throws_metrics_by_source_sha256']=THROWS_DETAILS
  (ROOT/'implementation_dependencies.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
- lines=['# Стоимость общих зависимостей функциональных примеров','Редакция 2026-11-23. Текущие общие тела ядра 091/092/098/099 извлечены непосредственно из [пакета ресиверов](../LMX_Fn_Receivers/README.md). Пример использования не оплачивает библиотеку при каждом обращении; сама библиотека также не объявляется бесплатной.','## Что входит в числа','Первичная таблица сравнения содержит клиент или собственное тело компонента. Эта таблица добавляет транзитивно вызываемые LMX-определения. Каждое определение считается целиком один раз внутри своей строки: Unicode-символы без пробелов и непустые строки; комментарии внутри определения включены. Между строками общие определения пересекаются, поэтому складывать столбец зависимостей без устранения повторов нельзя.','| ID | Основное тело, символы / строки | Общие LMX-зависимости, символы / строки | Сумма внутри компонента | Без сложного Throws: тело + зависимости |\n| ---: | ---: | ---: | ---: | ---: |']
+ lines=['# Полная стоимость общих зависимостей функциональных примеров',
+        'Клиенты082–085 имеют две стилевые записи. Каждая общая реализация091/092/098/099 сохраняет одно точное LMX-тело. Здесь подсчитаны полные транзитивные определения ядра; объявления и Throws не исключаются.',
+        '| ID | Основное тело | Общие зависимости | Полная сумма компонента |',
+        '| --- | ---: | ---: | ---: |']
  for rec in report['components']:
-  a=rec['primary'];b=rec['shared']
-  lines[-1]+=f"\n| {rec['id']:03d} | {a['characters']} / {a['lines']} | {b['characters']} / {b['lines']} | {a['characters']+b['characters']} / {a['lines']+b['lines']} | {a['without_complex_throws_characters']} + {b['without_complex_throws_characters']} |"
+  a=rec['primary']['characters'];b=rec['shared']['characters']
+  lines.append(f"| {rec['id']:03d} | {a} | {b} | {a+b} |")
  total=report['unique_required_total']
- lines+=['Все перечисленные реализации, включая companion curry для 085, с устранением повторов: **'+str(total['characters'])+' непробельных символов / '+str(total['lines'])+' непустых строк**. Это исходники выбранного набора определений, не размер бинарника или всего runtime.','Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.','Дополнительная цена всего уникального множества без сложного Throws: **'+str(total['without_complex_throws_characters'])+'** символов.','## Публичный набор имён']
- if report['public_bundle']:
-  for a in report['public_bundle']:lines.append(f"- [{a['source']}](../LMX_Fn_Receivers/{a['source']}): {a['characters']} символов / {a['lines']} строк. Общая таблица открывает все публичные имена; её следует считать один раз при загрузке полного набора.")
- else:lines.append('Публичный alias bundle должен быть синхронизирован перед окончательной публикацией; повторно запустить этот инструмент после его добавления.')
- lines+=['## Интерфейсы ядра и границы обобщения','[KERNEL_REQUIREMENTS](../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md) и [контракты](../LMX_Fn_Receivers/src/kernel_contracts.lmx) описывают требуемое семантическое отражение, построение обычного DATA/CODE, обычную подготовку вызова и выбранных мест без eager capture, время жизни результата и передачу failures. Реализация этих интерфейсов не приложена в виде работающего ядра и не получает фиктивный нулевой размер. Подсчёт выше включает алгоритмы, действительно написанные на LMX; для полного системного сравнения добавляется реализация provider и runtime каждого языка.','Структуры используются непосредственно как Array<@>: префикс partial, actuals, списки и последовательности результатов не требуют отдельного поля items. Плотный Array<T> принимается через фактический typed access; он не переинтерпретируется как вектор указателей. Метки состояния контейнеров, индексы и коды типов закономерно имеют тип int; полезные типы и арность этим не ограничены.','В Haskell и Scala обычные вызовы, lambda, generic-типы и исключения являются инфраструктурой языка; их компиляторы и runtime также не входят в размеры листингов. В 099 все три реализации поддерживают произвольный типизированный префикс N входов, включая k=0,k=N и void/Unit. Haskell использует Args/Callable, Scala — Tuple/Callable. LMX дополнительно сохраняет обычный DATA/defaults/binding существующего callable; эти возможности не объявляются тождественными статическому векторному API.','Сценарий 085 также имеет допустимый короткий вариант curry. Его полные тела и отдельный реестр дополнительных зависимостей приведены в [CURRY_ADAPTER_VARIANT.md](CURRY_ADAPTER_VARIANT.md); они не скрыты внутри цены одного partial.','## Точные определения и ссылки']
+ lines += ['',f"Все уникальные необходимые определения: **{total['characters']}** символов / **{total['lines']}** непустых строк. Между компонентами зависимости пересекаются: их нельзя повторно суммировать как разные реализации.",'',
+           '## Публичная публикация','']
+ for item in report['public_bundle']:
+  lines.append(f"- [{item['source']}](../LMX_Fn_Receivers/{item['source']}): {item['characters']} символов. Общая таблица экспортов считается один раз.")
+ lines += ['','## Реальная граница ядра','',
+           '[KERNEL_REQUIREMENTS](../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md) и [контракты](../LMX_Fn_Receivers/src/kernel_contracts.lmx) описывают отражение сигнатур, построение обычного DATA/CODE, подготовку вызова и выбранных мест без eager capture, lifetime результата и передачу failures. Native реализация этих мостов не объявляется работающей или бесплатной.',
+           'Структуры используются непосредственно как последовательности ссылок на фактические типизированные записи. Плотный Array<T> читается через настоящий typed access и не переинтерпретируется как массив указателей. Служебные int для индексов/длин/флагов не ограничивают тип полезных данных.',
+           'В099 все реализации поддерживают произвольный типизированный префикс, включая пустой/полный и void/Unit. Haskell использует Args/Callable, Scala — Tuple/Callable. LMX дополнительно сохраняет DATA/defaults и действующий binding-контекст; полная эквивалентность разных систем типов не заявляется.',
+           'Функциональный клиент085 использует curry. [Его дополнительные тела](CURRY_ADAPTER_VARIANT.md) и зависимости явно подсчитаны один раз; процедурный клиент полностью показывает собственное окружение.',
+           '','## Точные источники','']
  for rec in report['components']:
   lines.append('### '+f"{rec['id']:03d}")
-  lines.append('Основное тело: '+', '.join('`'+n+'`' for n in rec['primary_definitions'])+'.')
-  lines.append('\n'.join(f"- `{x['name']}` — [{x['source']}](../LMX_Fn_Receivers/{x['source']}), {x['characters']} символов / {x['lines']} строк." for x in rec['definitions'] if x['name'] in rec['shared_definitions']))
-  lines.append('Внешние интерфейсы и имена failures: '+', '.join('`'+x+'`' for x in rec['external_or_failure_identifiers'])+'.')
- lines+=['## Воспроизводимость','`python3 tools/sync_receiver_bodies.py` извлекает тела и строит этот реестр; `python3 tools/select_shortest.py` выбирает короткий допустимый алгоритм текущего контракта; `python3 tools/regenerate_publication.py` синхронизирует тексты и показатели. Полный машинный отчёт со SHA-256 каждого определения: [implementation_dependencies.json](implementation_dependencies.json). Ни один из этих инструментов не исполняет LMX.']
- (ROOT/'IMPLEMENTATION_DEPENDENCIES.md').write_text('\n\n'.join(x for x in lines if x)+'\n')
+  for item in rec['definitions']:
+   lines.append(f"- `{item['name']}` — [{item['source']}](../LMX_Fn_Receivers/{item['source']}), {item['characters']} символов / {item['lines']} строк.")
+  lines.append('Внешние границы и имена failures: '+', '.join('`'+n+'`' for n in rec['external_or_failure_identifiers'])+'.')
+ lines += ['','## Воспроизведение','',
+           '`python3 tools/sync_receiver_bodies.py` извлекает точные тела; `select_shortest.py` сохраняет обе клиентские формы, `regenerate_publication.py` обновляет публикацию. [Машинный реестр](implementation_dependencies.json). LMX runtime: NOT_RUN.']
+ (ROOT/'IMPLEMENTATION_DEPENDENCIES.md').write_text('\n'.join(lines)+'\n')
  print(json.dumps({'components':len(report['components']),'unique_definitions':len(all_required),'total':total},ensure_ascii=False))
 if __name__=='__main__':main()

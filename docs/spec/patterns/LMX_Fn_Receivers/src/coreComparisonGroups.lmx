@@ -29,25 +29,21 @@ FxEqualFields:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second
     return: int
     equalFields:
         throws: copy(FxThrows\predicate)
         FxSeqInfo\get(first)
         FxSeqInfo\get(second)
-        private: int: count length(first)
-        if: count != length(second)
+        if: length(first) != length(second)
             return: 0
-        private: int: i 0
-        while: i < count
-            private: @: a FxSeqRead\read(first; i)
-            private: @: b FxSeqRead\read(second; i)
-            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
-            if: FxSeqPredicate\truth(accepted) = 0
-                return: 0
-            i += 1
-        return: 1
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0
 
 FxAllOfTypeToken:
     integer:
@@ -380,7 +376,8 @@ FxRetryDelayMessage:
 # its dedicated implementation comparison, not once per client.
 
 PipeLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: int
     pipe:
         int: value \left
@@ -392,7 +389,8 @@ PipeLibrary:
         return: value
 
 FindLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: @
     findById:
         throws: OperandArity
@@ -420,9 +418,10 @@ SpecificationLibrary:
                 return: node\first(value) && node\second(value)
     ---
     Operators:
-        copy: sys\OPERANDS_TEMPLATE
+        copy: FxPreparedOperands
+        const: int: PRIORITY sys\priority("+")
         return: @
-        both:
+        allOf:
             throws: OperandArity
             if: length(right) != 1
                 throw: OperandArity()
@@ -434,7 +433,8 @@ MoneyLibrary:
         int: cents 100
         int: currency 840
     Equality:
-        copy: sys\OPERANDS_TEMPLATE
+        copy: FxPreparedOperands
+        const: int: PRIORITY sys\priority("+")
         return: int
         equals:
             throws: OperandArity
@@ -445,7 +445,8 @@ MoneyLibrary:
             return: a\cents = b\cents && a\currency = b\currency
 
 RetryLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: int
     retry:
         throws: Attempts

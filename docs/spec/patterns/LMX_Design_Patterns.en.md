@@ -70,7 +70,6 @@ cycles:
                 break
             body()
 ```
-
 **Call:** `numbers\demo()`. **Expected result: 12.**
 
 The iterator owns its position, while `cycles\iterate` repeatedly executes a supplied declaration and body. The demonstration belongs alongside `next` in `numbers`.
@@ -104,7 +103,6 @@ strategy:
         selected := thrice
         return: first + apply(5; selected)
 ```
-
 **Call:** `strategy\demo()`. **Expected result: 25.**
 
 The Python functions `twice`, `thrice`, `apply`, and `demo` become methods of one group. Its DATA describes the numeric input, the default operation reference, and the result.
@@ -146,7 +144,6 @@ add1:
         int: first execute(create\small())
         return: first + execute(create\large())
 ```
-
 **Call:** `add1\demo()`. **Expected result: 32.**
 
 The author's `Product` structure supplies the prototype, its reader, and two factory methods. The consumer and its demonstration share `add1`.
@@ -180,7 +177,6 @@ adapter:
     demo:
         return: subtract(8; 3)
 ```
-
 **Call:** `adapter\demo()`. **Expected result: 5.**
 
 The legacy method declares `right` before `left`. The adapter presents `left` before `right`, retaining two DATA descriptions because the different orders are the interface mismatch being resolved.
@@ -219,7 +215,6 @@ observer:
         notify(8)
         return: node\total
 ```
-
 **Call:** `observer\demo()`. **Expected result: 11.**
 
 The state, handlers, stored references, notifier, and demonstration form one `observer` group, following the Python scenario's two handlers over one state.
@@ -249,7 +244,6 @@ transform:
     demo:
         return: with_three(10)
 ```
-
 **Call:** `transform\demo()`. **Expected result: 63.**
 
 This is the author's 128-character example. The methods share one declaration of `value` and the numeric result.
@@ -283,7 +277,6 @@ commands:
         invoke(command := twice)
         return: value
 ```
-
 **Call:** `commands\demo()`. **Expected result: 4.**
 
 The driver creates local `value = 0`. `invoke()` executes its default `add_two`, then an explicit command selects `twice`; both modify that same variable, producing 4.
@@ -320,7 +313,6 @@ pipeline:
         finish := square
         return: first + execute(4)
 ```
-
 **Call:** `pipeline\demo()`. **Expected result: 35.**
 
 The arithmetic steps, `execute`, and `demo` share one group. The driver declares ordinary references `prepare` and `finish`, then changes only the latter between runs.
@@ -373,7 +365,6 @@ Actions:
             result := -1
         return: result
 ```
-
 **Call:** `Actions\demo()`. **Expected result: 12.**
 
 `Actions` directly contains `on_number`, `on_pair`, and `demo`. The method names are available in the caller's root namespace; creating extra reference variables for them is unnecessary.
@@ -415,19 +406,19 @@ The metric is **non-whitespace characters**, calculated as `sum(not ch.isspace()
 
 The following figures come from all 72 programs in the nine companion files. The LMX blocks above are identical to their measured counterparts. The ratio row divides each language's combined total by 2097; a value above 1 means a longer combined listing.
 
-| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust | LMX without complex Throws |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Iterator | 285 | 363 | 524 | 375 | 389 | 413 | 391 | 424 | 285 |
-| Strategy | 201 | 204 | 428 | 304 | 360 | 345 | 318 | 305 | 201 |
-| Factory | 306 | 328 | 411 | 297 | 395 | 394 | 390 | 364 | 306 |
-| Adapter | 163 | 160 | 203 | 165 | 209 | 217 | 179 | 165 | 163 |
-| Observer | 220 | 425 | 565 | 469 | 552 | 543 | 468 | 662 | 220 |
-| Decorator | 128 | 140 | 197 | 153 | 203 | 213 | 176 | 151 | 128 |
-| Command | 152 | 185 | 317 | 252 | 250 | 210 | 214 | 281 | 152 |
-| Template Method | 228 | 305 | 543 | 376 | 458 | 478 | 397 | 381 | 228 |
-| Visitor | 398 | 482 | 717 | 627 | 597 | 619 | 716 | 713 | 398 |
-| **Total** | **2081** | **2592** | **3905** | **3018** | **3413** | **3432** | **3249** | **3446** | **2081** |
-| **Total / LMX** | 1.000× | 1.246× | 1.877× | 1.450× | 1.640× | 1.649× | 1.561× | 1.656× | — |
+| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Iterator | 285 | 363 | 524 | 375 | 389 | 413 | 391 | 424 |
+| Strategy | 201 | 204 | 428 | 304 | 360 | 345 | 318 | 305 |
+| Factory | 306 | 328 | 411 | 297 | 395 | 394 | 390 | 364 |
+| Adapter | 163 | 160 | 203 | 165 | 209 | 217 | 179 | 165 |
+| Observer | 220 | 425 | 565 | 469 | 552 | 543 | 468 | 662 |
+| Decorator | 128 | 140 | 197 | 153 | 203 | 213 | 176 | 151 |
+| Command | 152 | 185 | 317 | 252 | 250 | 210 | 214 | 281 |
+| Template Method | 228 | 305 | 543 | 376 | 458 | 478 | 397 | 381 |
+| Visitor | 398 | 482 | 717 | 627 | 597 | 619 | 716 | 713 |
+| **Total** | **2081** | **2592** | **3905** | **3018** | **3413** | **3432** | **3249** | **3446** |
+| **Total / LMX** | 1.000× | 1.246× | 1.877× | 1.450× | 1.640× | 1.649× | 1.561× | 1.656× |
 
 These numbers describe the displayed programs. Names are not normalized, Python omits optional annotations, and identical static guarantees are not claimed. The examples compare concrete scenarios: two Observer subscriptions, a fixed Decorator chain, two Visitor visits, and one numeric field in Factory products.
 

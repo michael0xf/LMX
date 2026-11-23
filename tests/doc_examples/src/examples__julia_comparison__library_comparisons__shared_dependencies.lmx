@@ -10,6 +10,30 @@ FxApply:
             throw: FxCallFailure(outcome)
         return: outcome\value
 
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: length(first) != length(second)
+            return: 0
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0
+
+FxEqualityTypes:
+    array:
+        []: value
+
 FxOne:
     private: @: value
     return: @
@@ -18,6 +42,24 @@ FxOne:
         sys\resize(out; 1)
         out[0] := value
         return: out
+
+FxPreparedOperands:
+    private:
+        @: left
+        @[]: right
+    const: int: PASS_ARGS_AS_IS 0
+
+FxProjectValue:
+    private:
+        @: value
+        @: projection 0
+    required: value
+    return: @
+    get:
+        throws: copy(FxThrows\call)
+        if: projection = 0
+            return: value
+        return: FxApply\apply(projection; FxOne\make(value))
 
 FxSeqAdmit:
     private:
@@ -142,6 +184,37 @@ FxSeqStore:
         throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement
         private: @: ready FxSeqAdmit\admit(target; value)
         FxKernel\arrayWrite(target := target; index := index; value := ready)
+
+FxSequenceDifference:
+    private:
+        @: first
+        @: second
+        @: same 0
+        int: firstStart 0
+        int: count
+        int: secondStart 0
+    required: first second count
+    return: int
+    find:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: firstStart < 0 || secondStart < 0 || count < 0
+            throw: ReceiverIndex()
+        if: firstStart > length(first) || secondStart > length(second)
+            throw: ReceiverIndex()
+        if: count > length(first) - firstStart || count > length(second) - secondStart
+            throw: ReceiverIndex()
+        private: int: i 0
+        while: i < count
+            if: FxValueSame\test(
+                FxSeqRead\read(first; firstStart + i);
+                FxSeqRead\read(second; secondStart + i);
+                same
+            ) = 0
+                return: i
+            i += 1
+        return: -1
 
 FxThrows:
     adapter:
@@ -275,6 +348,21 @@ FxThrows:
         FxTypeToken
         ReceiverIndex
         SequenceSize
+    pattern:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+        PatternArgument
+        PatternEncoding
+        PatternPosition
 
 FxTry:
     private:
@@ -297,3 +385,28 @@ FxTwo:
         out[0] := first
         out[1] := second
         return: out
+
+FxValueSame:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    test:
+        throws: copy(FxThrows\predicate)
+        if: same != 0
+            return: FxSeqPredicate\truth(FxApply\apply(same; FxTwo\make(first; second)))
+        private: int: firstArray FxKernel\acceptsRequirement(
+            candidate := first;
+            requirement := FxEqualityTypes\array[0]
+        )
+        private: int: secondArray FxKernel\acceptsRequirement(
+            candidate := second;
+            requirement := FxEqualityTypes\array[0]
+        )
+        if: firstArray != secondArray
+            return: 0
+        if: firstArray != 0
+            return: FxEqualFields\equalFields(first; second)
+        return: \first = \second

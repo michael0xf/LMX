@@ -2,19 +2,15 @@
 
 Haskell is a natural control for Maybe/Monad and currying. Scala combines functional constructs with JVM execution, explicit trampolines and ordinary resource handling. The selection follows mechanisms rather than a universal brevity ranking.
 
-Four usage scenarios call the LMX core and actual Haskell/Scala facilities. Four adjacent comparisons implement the corresponding components independently; clients do not import them. Only approach-level alternatives remain.
+Four tasks have complete procedural and functional LMX variants. Existing Haskell and Scala controls are unchanged. Four implementation comparisons each retain one common canonical LMX body.
 
-## Files
-
-[Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv) · [Implementations](IMPLEMENTATION_DEPENDENCIES.md)
-
-## Catalog
+## Каталог / Catalog
 
 ### [082. Monad](082_monad_comparision.md)
 
-Two bind operations over generic Maybe; the application half still checks an integer for evenness.
+Maybe: explicit intermediate branching and a compact bind chain.
 
-Apply half twice through bind. some retains a value record with its own type; next receives the payload through ordinary call admission. Absence skips the continuation. The probes remain 8, 6 and 3.
+Evaluate some(x) bind half bind half. The payload keeps its actual type and half receives it through ordinary admission. None skips subsequent continuations. The probes include 8, 6, 3 and 0.
 
 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
 
@@ -28,7 +24,7 @@ some of zero remains present zero; some of null remains present null. none does 
 
 ### [083. Trampoline](083_trampoline_comparision.md)
 
-Mutual even/odd steps use generic Bounce with a nullary continuation created by partial.
+Parity: an explicit loop and a functional trampoline for finite nonnegative n.
 
 For nonnegative n, compute parity. An unfinished step returns more(partial(otherStep; (n−1))) without invoking the other step. trampoline invokes one retained thunk at a time until done.
 
@@ -44,9 +40,9 @@ trampoline(done(record)) returns that result record without invoking a continuat
 
 ### [084. Execute Around](084_execute_around_comparision.md)
 
-Supplied acquire/action/release callbacks surround protected resource use. The shortest complete client uses core bracket; the full short author Around from22-Nov is retained as a distinct approach.
+The complete local Around and functional bracket preserve one resource lifecycle.
 
-The resource contains 42. acquire appends 1 to a log, action 2 and release 3. Mode 0 succeeds, mode 1 fails in action and mode 2 in acquisition. Use core bracket, Haskell Control.Exception.bracket, or Scala Using.resource; each releases only an acquired resource and the client observes the failure and log.
+The resource holds42. acquire/action/release append1/2/3 to the trace. Both complete LMX styles preserve success, action failure and acquisition failure; only an acquired resource is released.
 
 run(0) yields 42123: result 42 and log 123. run(1) yields −123: body failure reaches the client after release. run(2) yields −1: acquisition failed and no release ran. The resource is not used after cleanup.
 
@@ -60,7 +56,7 @@ Success: log 123 and the action result. Body failure: log 123 and propagation. A
 
 ### [085. Currying](085_currying_comparision.md)
 
-Direct partial builds add5 and add100 from an ordinary function; environment copying belongs to the generic implementation.
+Independent captured prefixes: direct environments and the common curry operation.
 
 Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.
 
@@ -74,8 +70,10 @@ Implement arbitrary typed prefix binding with no int-only values or fixed binary
 
 The general case retains input order/types, exact R and declared failures. The addition client yields 6,101,6. N=0 produces a nullary callable; k>N fails before publishing a result.
 
-## Counting boundary
+## Методика / Method
 
-For each comparable usage layer choose the shortest eligible core/real-library client. Implementation comparisons use full scoped APIs separately. Keep only genuinely different approaches; one-line or type-only alternatives are notes. The source upload is the merge baseline.
+Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.
 
-Runtime status: LMX, Haskell and Scala NOT_RUN. Prepared edge cases are in [acceptance_cases.json](acceptance_cases.json).
+[Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv)
+
+Runtime LMX: NOT_RUN.

@@ -1,12 +1,14 @@
 # P24. Освобождение ресурса при успехе и исключении
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Ресурс содержит value=42 и width=8. Журнал: 1 acquire, 2 action, 3 release. mode=0 возвращает [50,123], mode=1 — отказ action и [0,123], mode=2 — отказ acquire и [0,1]. Release после успешного acquire выполняется ровно один раз.
 
-Общий Trace\eval обновляет журнал один раз; Trace\code объединяет наблюдение и проверку режима. Основным выбран кратчайший полный вариант по nonwhitespace. Локальный Around ловит исходный ResourceFailure; общий bracket возвращает FxCallFailure. В данном сценарии все отказы acquire/action — ResourceFailure, release не бросает. Оба варианта и Perl defer освобождают только успешно приобретённый ресурс; полный local helper входит в размер.
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
 
-## Вход и ожидаемый результат
+Процедурный вариант непосредственно вызывает acquire/action и освобождает ресурс через finally внутри Use, до чтения итогового журнала. Функциональный использует bracket. Оба сохраняют исходные события, однократное освобождение и три исхода режима; копии throws взяты у действительных вызываемых методов.
+
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -20,22 +22,17 @@
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 764 | 1264 | 54 |
+| LMX функциональный | 650 | 1085 | 46 |
+| Perl | 365 | 521 | 18 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 1064 | 629 | 629 | 46 |
-| Perl | 521 | 365 | 365 | 18 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
-
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
-
-## LMX
-
-[Исходник](source/lmx/P24.lm3).
+## LMX — процедурный
 
 ```lmx
 Resource:
@@ -56,7 +53,7 @@ Trace:
     Acquire:
         return: @
         open:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 1
             code(2)
         return: Resource
@@ -64,7 +61,73 @@ Trace:
         @: resource
         return: int
         use:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
+            int: x 2
+            code(1)
+        return: resource\value + resource\width
+    Release:
+        @: resource
+        close:
+            int: x 3
+            eval()
+        end: close
+
+
+Use:
+    return: int
+    run:
+        throws: copy(Trace\Acquire\open\throws) copy(Trace\Action\use\throws)
+        @: resource Trace\Acquire\open()
+        finally:
+            Trace\Release\close(resource)
+        return: Trace\Action\use(resource)
+
+
+Example:
+    int: mode
+    return: @
+    run:
+        throws: copy(Use\run\throws)
+        Trace\mode := mode
+        Trace\events := 0
+        int: value Use\run()
+        return: (value; Trace\events)
+        catch: ResourceFailure()
+            return: (0; Trace\events)
+```
+
+[Полный исходник](source/lmx/procedural/P24.lm3). 764 непробельных символов; 54 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Resource:
+    int: value 42
+    int: width 8
+
+Trace:
+    int: mode 0
+    int: events 0
+    eval:
+        Trace\events := events * 10 + x
+    code:
+        throws: ResourceFailure
+        eval()
+        if: Trace\mode = mode
+            throw: ResourceFailure()
+    end: code
+    Acquire:
+        return: @
+        open:
+            throws: copy(Trace\code\throws)
+            int: x 1
+            code(2)
+        return: Resource
+    Action:
+        @: resource
+        return: int
+        use:
+            throws: copy(Trace\code\throws)
             int: x 2
             code(1)
         return: resource\value + resource\width
@@ -79,7 +142,7 @@ Example:
     int: mode
     return: @
     run:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxAround\around\throws)
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
@@ -88,9 +151,11 @@ Example:
             return: (0; Trace\events)
 ```
 
+[Полный исходник](source/lmx/P24.lm3). 650 непробельных символов; 46 непустых строк. Все объявления и Throws включены.
+
 ## Perl
 
-[Исходник](source/perl/P24.pl).
+[Полный исходник](source/perl/P24.pl).
 
 ```perl
 use strict;
@@ -113,81 +178,15 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - bracket: [PI06](library_comparisons/PI06_comparision.md)
 
-Штатные средства Perl: feature defer, CORE::eval, CORE::die.
-
-## Другой подход: Обычные вызовы и локальный Around
-
-Полный вариант: 750 символов без пробельных; без сложного Throws: 750. Локальный helper и весь сценарий входят в счёт.
-
-```lmx
-Around:
-    @: acquire
-    @: release
-    @: action
-    return: int
-    use:
-        throws: ResourceFailure
-        @: resource acquire()
-        finally:
-            release(resource := resource)
-        return: action(resource := resource)
-
-Resource:
-    int: value 42
-    int: width 8
-
-Trace:
-    int: mode 0
-    int: events 0
-    eval:
-        Trace\events := events * 10 + x
-    code:
-        throws: ResourceFailure
-        eval()
-        if: Trace\mode = mode
-            throw: ResourceFailure()
-    end: code
-    Acquire:
-        return: @
-        open:
-            throws: ResourceFailure
-            int: x 1
-            code(2)
-        return: Resource
-    Action:
-        @: resource
-        return: int
-        use:
-            throws: ResourceFailure
-            int: x 2
-            code(1)
-        return: resource\value + resource\width
-    Release:
-        @: resource
-        close:
-            int: x 3
-            eval()
-        end: close
-
-Example:
-    int: mode
-    return: @
-    run:
-        Trace\mode := mode
-        Trace\events := 0
-        int: value Around\use(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
-        return: (value; Trace\events)
-        catch: ResourceFailure ()
-            return: (0; Trace\events)
-```
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

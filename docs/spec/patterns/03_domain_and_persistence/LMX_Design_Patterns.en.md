@@ -23,11 +23,11 @@ Domain collection access hides retrieval details.
 
 **Observation:** Return the existing account 9, then absence; do not create a second instance.
 
-The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 094. [FindById — implementation](094_find_by_id_implementation_comparision.md)
 
-Implement imported first-record lookup by integer id.
+Generic findFirst returns Maybe of the first element accepted by the supplied predicate.
 
 **Usage examples:** [016. Repository](016_repository_comparision.md)
 
@@ -187,11 +187,11 @@ Compose predicates independently of their candidate values.
 
 **Observation:** Results are false,true,false; the right predicate is skipped when the left is false.
 
-The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 095. [Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
 
-Implement imported binary predicate composition with short-circuiting.
+Generic allOf builds a short-circuit callable with the actual compatible signature.
 
 **Usage examples:** [031. Specification](031_specification_comparision.md)
 
@@ -211,11 +211,11 @@ Equality follows component values rather than object identity.
 
 **Observation:** The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.
 
-The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 096. [Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
 
-Fully show the concrete two-component Money representation and imported equality.
+Generic equals applies an explicit projection and the shared equality dispatch.
 
 **Usage examples:** [032. Value Object](032_value_object_comparision.md)
 

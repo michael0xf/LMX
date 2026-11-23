@@ -4,6 +4,7 @@
 # Internal cursors return the existing Maybe. Public eachMatch uses yield / Stop.
 
 TextView:
+    @: prepare RxTextPrepareSource\make
     int: profile
     char[]: source
 
@@ -17,23 +18,25 @@ RxPreparedText:
     int[]: byteOffsets
 
 Span:
-    TextView@: source
+    @: source
     int: begin
     int: end
-    private: RxPreparedText@: prepared
+    private: RxPreparedSource@: prepared
 
 Match:
-    TextView@: source
+    @: source
     int: begin
     int: end
     @: captures
-    private: RxPreparedText@: prepared
+    private: RxPreparedSource@: prepared
 
-Pattern :: (RxPreparedText@: source; int: position; @: captures; return: @)
+Pattern :: (RxPreparedSource@: source; int: position; @: captures; return: @)
 
 RxPredicate :: (int: unit; return: int)
 
-RxReplacement :: (Match@: matched; return: char[])
+RxReplacementArgument :: (Match@: matched)
+
+# The actual replacement callable supplies its own exact result requirement.
 
 PatternArgument:
 
@@ -100,7 +103,7 @@ RxCaptureLatest:
     find:
         private: @: cursor captures
         while: cursor != 0
-            if: FxSameText\same(cursor\name; name) != 0
+            if: FxEqualFields\equalFields(cursor\name; name) != 0
                 return: FxSome\some(value := cursor)
             cursor := cursor\previous
         return: FxNone\none()
@@ -113,7 +116,7 @@ RxPatternOwner:
         @: config 0
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -163,32 +166,30 @@ RxIsPattern:
     private: @: value
     return: int
     test:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         # Read the existing directed interface check without trial execution.
         # Unresolved compatibility is a service failure, never a false result.
         return: FxKernel\acceptsRequirement(candidate := value; requirement := Pattern)
 
 RxNormalize:
     private: @: value
+    required: value
     return: @
     make:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         if: RxIsPattern\test(value := value) != 0
             return: value
-        # Ordinary admission performs the rejection for numbers, arbitrary
-        # Structures and absent values. It does not turn a number into a char.
-        private: char[]: text \value
-        return: RxLiteral\literal(text := text)
+        return: RxLiteral\literal(value := value)
 
 RxOpen:
     private:
         Pattern@: pattern
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
     open:
-        throws: PatternPosition
+        throws: copy(FxThrows\pattern)
         if: position < 0 || position > length(source\units)
             throw: PatternPosition()
         # The signature-qualified reference applies its ordinary label map.
@@ -196,7 +197,7 @@ RxOpen:
 
 RxSpanMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: begin
         int: end
     return: @
@@ -210,7 +211,7 @@ RxSpanMake:
 
 RxMatchMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: begin
         @: candidate
     return: @

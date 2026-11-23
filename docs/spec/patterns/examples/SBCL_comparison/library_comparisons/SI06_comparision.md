@@ -6,7 +6,7 @@
 
 Это две общие реализации linear-cache memoize с пользовательским равенством, а не подмена ими клиентского hash-table. CL reference сохраняет native multiple values. LMX использует один типизированный результат/void и стандартный frame snapshot; исходные тела его адаптера включены в зависимости.
 
-Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. В S23 основной вариант сравнивает явный кеш; эта пара относится к отдельно сохранённому варианту с memoize, потому что стандарт CL не содержит такого ресивера.
+Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. S23 показывает явный процедурный кеш и функциональный вызов memoize. Общие реализации ниже учитываются один раз. Дополнительное LMX-равенство по умолчанию использует общий equality-контракт; эта пара проверяет профиль с явно переданным сравнением полного ключа.
 
 Эта самостоятельная reference-реализация не является исходником SBCL и не импортируется ни одним клиентским примером. Сравниваются показанные алгоритмы в указанном профиле; весь ANSI Common Lisp API не заявлен.
 
@@ -28,15 +28,12 @@ FxMemoEngine:
         @: frame
     return: @
     run:
-        throws: copy(FxThrows\snapshot)
+        throws: copy(FxThrows\snapshot) FxPredicate
         private: @: key FxFrameSnapshot\snapshot(frame)
         private: int: i 0
         while: i < length(state\entries)
             private: FxMemoEntry@: entry state\entries[i]
-            private: @: equalityArgs FxTwo\make(FxRecords\reference(entry\key); FxRecords\reference(key))
-            private: @: flagRecord FxApply\apply(state\sameKey; equalityArgs)
-            private: int: flag \flagRecord
-            if: flag != 0
+            if: FxValueSame\test(entry\key; key; state\sameKey) != 0
                 return: entry\value
             i += 1
         private: @: value FxFrameApply\apply(frame)
@@ -51,18 +48,21 @@ FxMemoEngine:
 FxMemo:
     private:
         @: operation
-        @: sameKey
+        @: sameKey 0
+    required: operation
     return: @
     memo:
         throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
-        private: @: equality FxKernel\signature(subject := sameKey)
         private: @: state (copy(FxMemoState))
         state\operation := operation
         state\sameKey := sameKey
         state\entries := (copy(()))
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
-        private: @: failures FxFailures\union(info\throws; equality\throws)
+        private: @: failures info\throws
+        if: sameKey != 0
+            private: @: equality FxKernel\signature(subject := sameKey)
+            failures := FxFailures\union(failures; equality\throws)
         return: FxWrap\make(contract; FxMemoEngine\run; state; failures; FxFullPolicy\make(operation))
 ```
 
@@ -89,10 +89,10 @@ FxMemo:
 
 ## Размер исходников
 
-| Язык | Полный без пробельных | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 1211 | 1211 | 48 | 1700 |
-| Common Lisp | 508 | — | 15 | 680 |
+| Язык | Без пробельных | Непустые строки | Все Unicode-символы |
+| --- | ---: | ---: | ---: |
+| LMX | 1136 | 48 | 1616 |
+| Common Lisp | 508 | 15 | 680 |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
 
@@ -104,8 +104,8 @@ FxMemo:
 
 - `FxMemoEntry` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `a02ea4be4da7690ed48b6aeebca2fa34f7d189fe1f09a6faf72168429884773f`.
 - `FxMemoState` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `b3c19624a4ad39492e9235a8a5ef0b0664d18ab16eac71b83a37417c0a48f10e`.
-- `FxMemoEngine` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `61280b245abcadd82b6e78b853f82dc3722c5628bba4045e96543cec6b0faec8`.
-- `FxMemo` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `6b326fa53fee173d06175b6d378c02c06a6e1ee024475981a26b95356e0fa3a8`.
+- `FxMemoEngine` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `0a9237a564ac157eebd56b2d1ec93e1c323ba523668e14abfbc25800d06988db`.
+- `FxMemo` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `dc6b312c30db379b2bcf5e45a723e7b66cd5aaf36bbfbf194af57abe4b442083`.
 
 ## Первичные источники Common Lisp
 

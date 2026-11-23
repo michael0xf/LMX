@@ -1,6 +1,22 @@
+Ascii:
+    char: value
+    return: int
+    letter:
+        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
+
+
 Example:
     char[]: text
     return: int
     run:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        return: matches(byteText(text); (then capture("word"; (asciiLetter atLeast 1)) " " sameAs("word")))
+        int: at 0
+        while: at < length(text) && Ascii\letter(text[at]) != 0
+            at += 1
+        if: at = 0 || at = length(text) || text[at] != ' ' || length(text) - at - 1 != at
+            return: 0
+        int: i 0
+        while: i < at
+            if: text[i] != text[at + 1 + i]
+                return: 0
+            i += 1
+        return: 1

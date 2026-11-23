@@ -1,14 +1,7 @@
-Add:
-    int: left
-    int: right
-    return: int
-    add:
-        return: left + right
-
 Example:
     int[]: xs
     int: seed
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex SequenceSize
-        return: scanl(xs; (seed record); Add\add)
+        throws: copy(FxScan\scan\throws) copy(FxRecordOperands\record\throws)
+        return: scanl(xs; (seed record); `+`)

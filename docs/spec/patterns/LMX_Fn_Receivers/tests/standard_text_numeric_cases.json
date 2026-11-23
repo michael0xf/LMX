@@ -120,7 +120,7 @@
     },
     {
       "id": "TN_TEXT_ORDER",
-      "operation": "compareText",
+      "operation": "compare",
       "inputs": {
         "first": "a",
         "second": "aa"
@@ -131,7 +131,7 @@
     },
     {
       "id": "TN_OCTET_ORDER",
-      "operation": "compareText",
+      "operation": "compare",
       "inputs": {
         "first_bytes": [
           255
@@ -198,10 +198,11 @@
     },
     {
       "id": "TN_REPEAT_ZERO",
-      "operation": "repeatText",
+      "operation": "cycle",
       "inputs": {
         "text": "ab",
-        "count": 0
+        "count": 0,
+        "rejectNegative": 1
       },
       "expected": "",
       "reason": "Zero repeats keeps char[] profile.",
@@ -209,10 +210,11 @@
     },
     {
       "id": "TN_REPEAT_THREE",
-      "operation": "repeatText",
+      "operation": "cycle",
       "inputs": {
         "text": "ab",
-        "count": 3
+        "count": 3,
+        "rejectNegative": 1
       },
       "expected": "ababab",
       "reason": "Shared generic cycle body.",
@@ -220,10 +222,11 @@
     },
     {
       "id": "TN_REPEAT_NEGATIVE",
-      "operation": "repeatText",
+      "operation": "cycle",
       "inputs": {
         "text": "ab",
-        "count": -1
+        "count": -1,
+        "rejectNegative": 1
       },
       "expected": {
         "failure": "SequenceSize"
@@ -233,10 +236,11 @@
     },
     {
       "id": "TN_REPEAT_EMPTY",
-      "operation": "repeatText",
+      "operation": "cycle",
       "inputs": {
         "text": "",
-        "count": "MAX_INT"
+        "count": "MAX_INT",
+        "rejectNegative": 1
       },
       "expected": "",
       "reason": "Empty input avoids multiplication.",
@@ -358,7 +362,7 @@
     },
     {
       "id": "TN_FORMAT_ZERO",
-      "operation": "formatInt",
+      "operation": "format",
       "inputs": {
         "value": 0,
         "base": 2
@@ -369,7 +373,7 @@
     },
     {
       "id": "TN_FORMAT_NEGATIVE",
-      "operation": "formatInt",
+      "operation": "format",
       "inputs": {
         "value": -255,
         "base": 16
@@ -380,7 +384,7 @@
     },
     {
       "id": "TN_FORMAT_HUGE",
-      "operation": "formatInt",
+      "operation": "format",
       "inputs": {
         "value": "1208925819614629174706176",
         "base": 10
@@ -391,7 +395,7 @@
     },
     {
       "id": "TN_PARSE_PLUS",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "+FF",
         "base": 16
@@ -402,7 +406,7 @@
     },
     {
       "id": "TN_PARSE_NEGATIVE",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "-101",
         "base": 2
@@ -413,7 +417,7 @@
     },
     {
       "id": "TN_PARSE_EMPTY",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "",
         "base": 10
@@ -426,7 +430,7 @@
     },
     {
       "id": "TN_PARSE_SIGN",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "-",
         "base": 10
@@ -439,7 +443,7 @@
     },
     {
       "id": "TN_PARSE_SPACE",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": " 1",
         "base": 10
@@ -452,7 +456,7 @@
     },
     {
       "id": "TN_PARSE_TAIL",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "1x",
         "base": 10
@@ -465,7 +469,7 @@
     },
     {
       "id": "TN_PARSE_PREFIX",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "0x10",
         "base": 10
@@ -478,7 +482,7 @@
     },
     {
       "id": "TN_PARSE_BAD_BASE",
-      "operation": "parseInt",
+      "operation": "parse",
       "inputs": {
         "text": "1",
         "base": 37
@@ -805,6 +809,6 @@
     "Dynamic caller places must remain visible through unrelated intermediary methods.",
     "Verify original finite throws outcomes, no arbitrary catch-all or dropped failure.",
     "Confirm every catalog/public export and the actual source body are the same version.",
-    "FxUnitRange has free unitSource/unitPart places. Run from char[] and int[] callers, both directly and through an unrelated intermediary with no such declarations; ordinary indexing must retain the caller actual Array element type. No private filter hides those two places."
+    "Shared FxSequenceDifference compares actual Array units; callbacks and passed records retain ordinary dynamic binding through unrelated intermediary methods. No text/int duplicate comparison loop."
   ]
 }

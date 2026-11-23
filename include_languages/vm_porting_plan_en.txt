@@ -7,22 +7,26 @@ they are not permission to restore old layouts, pointer-only merge, unchanged
 copied node links, or a new arbitrary capacity limit. Non-copying adoption and
 shared METHOD/eternal terminals retain addresses under their separate contracts.
 
-Current overall product priority (the second column is the existing detailed section):
+Current overall product priority (2026-11-23; the second column is the detailed section):
     1    section 1    MIR            L1    MIR.md + C API        L1/L2 #2
-    2    section 4    JVM classfile  L3    JVMS                  L3 #1
-    3    section 7    .NET CIL       L3    ECMA-335 III          L3 #3
-    4    section 2    WASM linear    L1    W3C core + binary     L1/L2 #1
-    5    section 5    WASM GC        L3    W3C GC (Wasm 3.0)     L3 #2
-    6    section 3    RISC-V ISA     L1    unprivileged spec     L1/L2 #5
-    7    section 6    Lua 5.4        L3    lopcodes / manual     L3 #5
+    2    section 2    WASM linear    L1    W3C core + binary     L1/L2 #1
+    3    section 3    RISC-V ISA     L1    unprivileged spec     L1/L2 #5
+
+Cancelled 2026-11-23 (history sections only, no commitment):
+    section 4    JVM classfile  (L3)
+    section 5    WASM GC        (L3)
+    section 6    Lua 5.4        (L3)
+    section 7    .NET CIL       (L3)
+
+Runtime backend: SLJIT (third_party/sljit.zip) is the runtime lowering/compilation
+backend instead of the AOT translation module. Supported machines follow the local
+SLJIT build, not a separate LMX list.
 
 MIR remains first because both its C99 bring-up and native-host manager seam are cheap.
-JVM establishes the first managed L3 compiler and CIL reuses its lessons.  WASM linear
-then provides the already-proven C99 route and the host experience required before WASM
-GC.  RISC-V stays late because its full-product UI/process environment is separate from
-its cheap CLI bring-up.  Lua is last overall: source emission is a cheap smoke, but the
-real version-locked register-bytecode backend, tagged table model and native UI host are
-the most idiosyncratic combined target.
+WASM linear then provides the already-proven C99 route and the host experience.
+RISC-V stays late because its full-product UI/process environment is separate from
+its cheap CLI bring-up. The managed targets of the 2026-09 order (JVM, CIL, WASM GC,
+Lua 5.4) are cancelled 2026-11-23.
 
 Struck:
 More a multi-platform language than a platform for languages;
@@ -46,11 +50,25 @@ commitment to a second backend. Distilled from:
 
 Russian text: vm_porting_plan_ru.txt
 
+Update 2026-11-23 (author's decision):
+- JVM classfile, .NET CIL, WASM GC and Lua 5.4 are cancelled as LMX targets:
+  no port, no commitment. Sections 4-7 below are history.
+- MIR, WASM linear and RISC-V stay as LMX targets on the Translator-L1 route.
+  WASM linear as an execution target is not the same as embedding a foreign
+  WASM runtime (include_wasm.txt).
+- SLJIT is the runtime lowering/compilation backend instead of the AOT translation
+  module. Supported machines follow the local SLJIT build.
+- The C doors (c.* and include) stay: the low-level interface of L2, not
+  deprecated and not cancelled.
+- py.* is the one external gateway for L2 and L3, through the kernel. It is a
+  contract in this plan, not finished words. c.* / include and py.* are
+  different roles.
+
 This file is an *implementation* order, not a popularity ranking and
 not the technical-fit order of the L1/L2/L3 notes. The header above is
 the current cross-track product priority. Detailed sections keep their
 historical numbering: sections 1-3 are Path A (generated C99 into a
-stock tool, no new printer), while sections 4-7 need an L3 bytecode
+stock tool, no new printer), while sections 4-7 (cancelled 2026-11-23) would need an L3 bytecode
 printer. BEAM and LLVM stay in the roster as refusals.
 
 Generated C from Translator-L1 is ANSI C99 (L1_spec.txt, `-std=c99`),
@@ -73,20 +91,22 @@ kernel is a VM for L1 (Layer M).
   Path B -- a second printer inside l1trans.lm1. Not a new language.
   Worth it only if the C step is the problem.
 
-L3 is a different surface (spec 1.4): no address arithmetic, no
-prefix `@`. Ordinary L3 values are Structure/callable references,
-Array-descriptor references and primitives -- not C pointers.
-Items 4-7 are L3 printers plus an Lmx runtime library on that VM.
+The L3 source surface equals the L2 source surface except the direct c.* doors
+(author decision 2026-11-23). Checked wrappers do not remove `@`, pointers or arrays.
+Items 4-7 (L3 printers) are cancelled 2026-11-23; no bytecode printers for
+these four cancelled targets are planned.
 The VM's objects/tables/terms are *not* L3. L3 ontology is Lmx
 `{node, len, data}`: child count is fixed at construction; `merge`
 copies into a new root (19.17, 21.11); ordinary assignment changes
 the reference a field holds, never `len`; identity is the
 occurrence, not a Java class or Lua table.
 
+History of the managed route cancelled 2026-11-23 with items 4-7. The managed-route
+paragraphs below (up to the Mix paragraph) are history: they create no requirement for L3.
 Managed route: L3 -> target bytecode + target Lmx runtime, not through an L2
 machine tree. Reject L2-only source before managed lowering. An L3 callable
 contract needs a provider for this target; native-only availability is a target
-build/link error, not permission to compile its L2 implementation into JVM.
+build/link error, not permission to compile its L2 implementation into the target.
 Native `{addr, sig}` is one representation of semantic `{entry, sig}`.
 
 Managed references preserve observable identity even if GC moves objects.
@@ -95,16 +115,16 @@ arena per Message, no concurrent mutable cross-owner graph aliases, and local
 delivery by ownership transfer without cloning. Failed-arena adoption requires
 quiescence, cleanup and retained roots (spec 19.29.8); managed GC changes physical
 reclamation, not this contract. These are target requirements, not implemented
-JVM support or an instruction to postpone the native Message/self-host work.
+managed-target support (cancelled 2026-11-23) or an instruction to postpone the native Message/self-host work.
 
 Mix is not a Java ISA. com.mtk.map is a template of overlapping
 trees, not Mix. Target rewrite: cooperating Messages in a
 Smalltalk-style model (spec 19.29.2.1, WorldWideMix.txt). Mix is
-library/runtime on the chosen VM, independent of JVM/CIL.
+library/runtime on the chosen VM.
 
-Do not collapse mappings. WASM linear memory is the L1 heap;
-wasm-gc is the L3 heap. CIL in this plan is L3 managed only
-(unmanaged L1 CIL is not pursued). JVM and Lua 5.4 have no L1 row.
+Do not collapse mappings. WASM linear memory is the L1 heap.
+wasm-gc, CIL, JVM and Lua 5.4 were L3 targets, cancelled 2026-11-23;
+they have no L1 row.
 
 L2 still matters as a *runtime* on an L1 VM: bump arenas,
 non-moving nodes, FIFO Message turns. Linear WASM and C VMs
@@ -203,7 +223,7 @@ no host FILE* identity; WASI p1 has no networking; guest/host
 pointers copy (include_wasm.txt §5.4). L2: linear memory does not
 relocate -- Lmx identity is native. L3: only as L3 -> L1 -> C ->
 wasi-sdk; more machine than L3 source needs. For L3 WASM see
-item 5.
+item 5 (cancelled 2026-11-23).
 
 Process:
 
@@ -310,8 +330,10 @@ ISA docs:
     RV32/RV64I Base Integer Instruction Set chapters.
 
 
-4. JVM classfile  (include_openjdk.txt)  [L3]  -- first L3 printer
------------------------------------------------------------------
+4. JVM classfile  (include_openjdk.txt)  [L3]  -- CANCELLED 2026-11-23
+----------------------------------------------------------------------
+
+Status 2026-11-23: cancelled as an LMX target. Kept as history only; no port and no commitment.
 Most used application bytecode VM. JVMS documents the classfile
 and the instruction set. Public writers: javac, ASM, BCEL, every
 JVM language (Kotlin, Scala, Clojure, Groovy). Android ART runs
@@ -381,8 +403,10 @@ Bytecode docs:
     https://docs.oracle.com/javase/specs/
 
 
-5. WASM GC  [L3]  -- L3 on the item-2 host
+5. WASM GC  [L3]  -- CANCELLED 2026-11-23
 -----------------------------------------
+
+Status 2026-11-23: cancelled as an LMX target. Kept as history only; no port and no commitment.
 Same W3C VM as item 2, different heap: reference types, structs,
 arrays; the host GC manages them. Standardized in Wasm 3.0. Host
 can still be Wasmtime / WAMR from include_wasm.txt. Not wasm32
@@ -435,8 +459,10 @@ Process:
 Bytecode docs: same W3C core spec, GC chapters.
 
 
-6. Lua 5.4  (include_lua.txt)  [L3]  -- games as embed culture
--------------------------------------------------------------
+6. Lua 5.4  (include_lua.txt)  [L3]  -- CANCELLED 2026-11-23
+------------------------------------------------------------
+
+Status 2026-11-23: cancelled as an LMX target. Kept as history only; no port and no commitment.
 Documented opcode VM (lopcodes, lua_dump / lua_load). Small C
 tree (~250 KB). Tables can host a graph; no pointers required.
 PUC Lua GC is irrelevant as an L3 stability rule. Coroutines are
@@ -486,8 +512,10 @@ Process:
 Bytecode docs: Lua 5.4 manual + lopcodes.h / ldump.c.
 
 
-7. .NET CIL  (include_dotnet.txt)  [L3]  -- last, weak extra door
+7. .NET CIL  (include_dotnet.txt)  [L3]  -- CANCELLED 2026-11-23
 ----------------------------------------------------------------
+
+Status 2026-11-23: cancelled as an LMX target. Kept as history only; no port and no commitment.
 Real bytecode VM. ECMA-335 Partition III = CIL; Partition II =
 metadata. Public writers: ilasm, ildasm, System.Reflection.Emit,
 Mono.Cecil, dnlib. CoreCLR MIT (dotnet/runtime). This plan uses
@@ -606,8 +634,10 @@ bytecode"):
 
     TinyCC / libtcc   shortest in-process run of L1 C99
     QBE               native SSA backend
-    sljit             already vendored; JIT assembler
     Cranelift etc.    codegen / JIT libraries
+
+    sljit is not listed here: it is the runtime lowering/compilation backend
+    instead of the AOT translation module, not a bytecode target.
 
 Not recommended as an ISA for L1 or L3:
 
@@ -616,27 +646,30 @@ Not recommended as an ISA for L1 or L3:
     com.mtk.map as an ISA (template, not Mix)
 
 Does not exist yet: dedicated L2/L3 bytecode (Layer I). Would
-run *on* items 1-7.
+run *on* items 1-3 (the kept targets).
 
 
-10. Scoreboard (this file's order)
-----------------------------------
+10. Scoreboard (history, 2026-09; not the active order)
+-------------------------------------------------------
+
+Status 2026-11-23: history only. The active priority is the table at the top of this file.
     #    Target         Surface  Writer spec           Notes
     --   -------------  -------  --------------------  -----
     1    MIR            L1       MIR.md + C API        Path A, first experiment
     2    WASM linear    L1       W3C core + binary     Path A, first product
     3    RISC-V ISA     L1       unprivileged spec     Path A, not a product
-    4    JVM classfile  L3       JVMS                  first L3 printer
-    5    WASM GC        L3       W3C GC (Wasm 3.0)     L3 on item 2
-    6    Lua 5.4        L3       lopcodes / manual     games, sketch ISA
-    7    .NET CIL       L3       ECMA-335 III          weak extra door
+    4    JVM classfile  L3       JVMS                  CANCELLED 2026-11-23
+    5    WASM GC        L3       W3C GC (Wasm 3.0)     CANCELLED 2026-11-23
+    6    Lua 5.4        L3       lopcodes / manual     CANCELLED 2026-11-23
+    7    .NET CIL       L3       ECMA-335 III          CANCELLED 2026-11-23
 
     *    BEAM           L3       OTP beam format       refused: language in bytecode
     *    LLVM IR        L1       LangRef               refused: too heavy
 
 Tech-fit numbers in the TOC are ranks in L1_to_vm_research_en.txt
-/ L2 Layer M, or L3_to_vm_research_en.txt. Do not implement in
-popularity order; this table is the work order.
+/ L2 Layer M, or L3_to_vm_research_en.txt (history, 2026-09).
+This table is the 2026-09 order, kept as history; it is not the active
+queue. The active priority is the table at the top of this file.
 
     ---- not in this plan ----
 
@@ -648,7 +681,7 @@ popularity order; this table is the work order.
 
 11. If a backend is ever tried
 ------------------------------
-Follow the TOC. Do not mix surfaces.
+Follow the priority table at the top of this file (kept items 1-3). Do not mix surfaces.
 
   L1 (items 1-3), Path A:
 
@@ -661,24 +694,16 @@ Follow the TOC. Do not mix surfaces.
   4. RISC-V (item 3): same C through a riscv gcc, QEMU or Spike.
   5. Do not start L1 with CIL, JVM, Lua, wasm-gc, BEAM, or LLVM.
 
-  L3 (items 4-7), printers:
+  L3 (items 4-7), printers: cancelled 2026-11-23. No bytecode printers for these four
+  cancelled targets are planned.
+  The cancelled managed route creates no requirement for L3.
 
-  6. Preserve the common L1/L2 core's nonmoving addresses when hosting L3.
-     A distinct VM-native representation requires its own equivalence proof;
-     no implicit moving GC is authorized. Preserve fixed child count, used-graph
-     merge/node fixups, shared methods/eternal terminals and occurrence identity.
-  7. First printer: hello.lm3 -> JVM classfiles (item 4).
-  8. Second, if item 2 exists: hello.lm3 -> wasm-gc (item 5).
-  9. Lua (item 6) as a small emitter / game-embed experiment,
-     not instead of JVM.
-  10. CIL (item 7) only if a C# shop is the point.
-  11. Mix is cooperating Messages (19.29.2.1), library on the
-      VM, not Java leftover.
-  12. Do not write L3-to-BEAM. Do not adopt LLVM as the runtime.
+  Mix is cooperating Messages (19.29.2.1), a library on the chosen VM, not Java leftover.
+  Do not write L3-to-BEAM. Do not adopt LLVM as the runtime.
 
 Path A reuses the self-host. Path B is a second printer in
-l1trans.lm1. An L3-to-JVM / L3-to-wasm-gc printer is a new
-profile, not the current P-L1text gate.
+l1trans.lm1. L3-to-JVM and L3-to-wasm-gc printers are cancelled 2026-11-23
+(none in this plan).
 
 
 12. References

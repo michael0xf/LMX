@@ -1,0 +1,59 @@
+Resource:
+    int: value 42
+    int: width 8
+
+Trace:
+    int: mode 0
+    int: events 0
+    eval:
+        Trace\events := events * 10 + x
+    code:
+        throws: ResourceFailure
+        eval()
+        if: Trace\mode = mode
+            throw: ResourceFailure()
+    end: code
+    Acquire:
+        return: @
+        open:
+            throws: copy(Trace\code\throws)
+            int: x 1
+            code(2)
+        return: Resource
+    Action:
+        @: resource
+        return: int
+        use:
+            throws: copy(Trace\code\throws)
+            int: x 2
+            code(1)
+        return: resource\value + resource\width
+    Release:
+        @: resource
+        close:
+            int: x 3
+            eval()
+        end: close
+
+
+Use:
+    return: int
+    run:
+        throws: copy(Trace\Acquire\open\throws) copy(Trace\Action\use\throws)
+        @: resource Trace\Acquire\open()
+        finally:
+            Trace\Release\close(resource)
+        return: Trace\Action\use(resource)
+
+
+Example:
+    int: mode
+    return: @
+    run:
+        throws: copy(Use\run\throws)
+        Trace\mode := mode
+        Trace\events := 0
+        int: value Use\run()
+        return: (value; Trace\events)
+        catch: ResourceFailure()
+            return: (0; Trace\events)

@@ -16,7 +16,7 @@ Trace:
     Acquire:
         return: @
         open:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 1
             code(2)
         return: Resource
@@ -24,7 +24,7 @@ Trace:
         @: resource
         return: int
         use:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 2
             code(1)
         return: resource\value + resource\width
@@ -35,14 +35,25 @@ Trace:
             eval()
         end: close
 
+
+Use:
+    return: int
+    run:
+        throws: copy(Trace\Acquire\open\throws) copy(Trace\Action\use\throws)
+        @: resource Trace\Acquire\open()
+        finally:
+            Trace\Release\close(resource)
+        return: Trace\Action\use(resource)
+
+
 Example:
     int: mode
     return: @
     run:
-        throws: copy(FxThrows\sequence)
+        throws: copy(Use\run\throws)
         Trace\mode := mode
         Trace\events := 0
-        int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
+        int: value Use\run()
         return: (value; Trace\events)
-        catch: FxCallFailure (@: failure)
+        catch: ResourceFailure()
             return: (0; Trace\events)

@@ -28,7 +28,7 @@ RxPrimitiveMake:
 RxPrimitiveOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -54,110 +54,112 @@ RxPrimitiveStep:
             return: FxNone\none()
         return: FxSome\some(value := RxCandidateMake\make(end; state\captures))
 
-RxTextConfig:
-    char[]: text ""
-
 RxLiteral:
-    private: char[]: text
-    required: text
+    private: @: value
+    required: value
     return: @
     literal:
-        private: @: payload (copy(RxTextConfig))
-        payload\text := text
-        return: RxPrimitiveMake\make(RxLiteralProbe\probe; payload)
+        return: RxPrimitiveMake\make(RxLiteralProbe\probe; value)
 
 RxLiteralProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        private: @: text RxTextBuild\make(payload\text; source\profile)
-        int[]: unitSource source\units
-        int[]: unitPart text\units
-        if: FxUnitRange\equal(position) = 0
+        throws: copy(FxThrows\pattern)
+        private: @: prepare source\domain\literalUnits
+        private: @: part prepare(value := payload; profile := source\profile)
+        private: int: count length(part)
+        if: count > length(source\units) - position
             return: -1
-        return: position + length(text\units)
+        if: FxSequenceDifference\find(source\units; part; 0; position; count) >= 0
+            return: -1
+        return: position + count
 
 RxClassConfig:
-    char[]: text ""
+    @: values 0
     int: inverted 0
 
-RxChars:
-    private: char[]: text
-    required: text
+RxClassMake:
+    private:
+        @: values
+        int: inverted
+    required: values inverted
+    return: @
+    make:
+        private: @: config (copy(RxClassConfig))
+        config\values := values
+        config\inverted := inverted
+        return: RxPrimitiveMake\make(RxClassProbe\probe; config)
+
+RxMembers:
+    private: @: values
+    required: values
     return: @
     oneOf:
-        private: @: payload (copy(RxClassConfig))
-        payload\text := text
-        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+        return: RxClassMake\make(values; 0)
     noneOf:
-        private: @: payload (copy(RxClassConfig))
-        payload\text := text
-        payload\inverted := 1
-        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+        return: RxClassMake\make(values; 1)
 
 RxClassProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxClassConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        # Decode before the end test: invalid pattern text is an error even
-        # when this attempted match has no remaining source character.
-        private: @: text RxTextBuild\make(payload\text; source\profile)
+        throws: copy(FxThrows\pattern)
+        private: @: prepare source\domain\literalUnits
+        private: @: values prepare(value := payload\values; profile := source\profile)
         if: position = length(source\units)
             return: -1
-        private: int: found 0
-        private: int: i 0
-        while: i < length(text\units)
-            if: source\units[position] = text\units[i]
-                found := 1
-                break
-            i += 1
+        private: @: item FxSeqRead\read(source\units; position)
+        private: int: found FxKeyIndex\find(values; item) >= 0
         if: found = payload\inverted
             return: -1
         return: position + 1
 
-RxRangeConfig:
-    char[]: first ""
-    char[]: last ""
+RxWithinConfig:
+    @: first 0
+    @: last 0
+    @: order 0
 
-RxRange:
+RxWithin:
     private:
-        char[]: first
-        char[]: last
+        @: first
+        @: last
+        @: order 0
     required: first last
     return: @
-    charRange:
-        private: @: payload (copy(RxRangeConfig))
+    within:
+        private: @: payload (copy(RxWithinConfig))
         payload\first := first
         payload\last := last
-        return: RxPrimitiveMake\make(RxRangeProbe\probe; payload)
+        payload\order := order
+        return: RxPrimitiveMake\make(RxWithinProbe\probe; payload)
 
-RxRangeProbe:
+RxWithinProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxWithinConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        throws: PatternArgument
-        private: @: first RxTextBuild\make(payload\first; source\profile)
-        private: @: last RxTextBuild\make(payload\last; source\profile)
-        if: length(first\units) != 1 || length(last\units) != 1
-            throw: PatternArgument()
-        if: first\units[0] > last\units[0]
+        throws: copy(FxThrows\pattern)
+        private: @: bound source\domain\rangeUnit
+        private: @: first bound(value := payload\first; profile := source\profile)
+        private: @: last bound(value := payload\last; profile := source\profile)
+        if: FxValueOrder\compare(first; last; payload\order) > 0
             throw: PatternArgument()
         if: position = length(source\units)
             return: -1
-        private: int: code source\units[position]
-        if: code < first\units[0] || code > last\units[0]
+        private: @: item FxSeqRead\read(source\units; position)
+        if: FxValueOrder\compare(item; first; payload\order) < 0 || FxValueOrder\compare(item; last; payload\order) > 0
             return: -1
         return: position + 1
 
@@ -165,53 +167,56 @@ RxPredicateConfig:
     @: predicate 0
 
 RxSatisfy:
-    private: RxPredicate@: predicate
+    private: @: predicate
     required: predicate
     return: @
     satisfy:
-        private: @: payload (copy(RxPredicateConfig))
-        payload\predicate := predicate
-        return: RxPrimitiveMake\make(RxPredicateProbe\probe; payload)
+        throws: copy(FxThrows\pattern)
+        return: RxPrimitiveMake\make(
+            RxPredicateProbe\probe;
+            FxUnaryPredicate\check(predicate)
+        )
 
 RxPredicateProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        throws: copy(FxThrows\pattern)
         if: position = length(source\units)
             return: -1
-        private: RxPredicate@: predicate payload\predicate
-        if: predicate(source\units[position]) = 0
+        private: @: item FxSeqRead\read(source\units; position)
+        private: @: accepted FxApply\apply(payload; FxOne\make(item))
+        if: FxSeqPredicate\truth(accepted) = 0
             return: -1
         return: position + 1
 
 RxBoundaryOf:
-    private: RxPredicate@: predicate
+    private: @: predicate
     required: predicate
     return: @
     boundaryOf:
-        private: @: payload (copy(RxPredicateConfig))
-        payload\predicate := predicate
-        return: RxPrimitiveMake\make(RxBoundaryProbe\probe; payload)
+        throws: copy(FxThrows\pattern)
+        return: RxPrimitiveMake\make(RxBoundaryProbe\probe; FxUnaryPredicate\check(predicate))
 
 RxBoundaryProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPredicate@: predicate payload\predicate
+        throws: copy(FxThrows\pattern)
         private: int: before 0
         private: int: after 0
         if: position > 0
-            before := predicate(source\units[position - 1]) != 0
+            before := FxSeqPredicate\truth(FxApply\apply(payload; FxOne\make(FxSeqRead\read(source\units; position - 1))))
         if: position < length(source\units)
-            after := predicate(source\units[position]) != 0
+            after := FxSeqPredicate\truth(FxApply\apply(payload; FxOne\make(FxSeqRead\read(source\units; position))))
         if: before != after
             return: position
         return: -1
@@ -230,12 +235,13 @@ RxSameAs:
 
 RxSameAsProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxNameConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        throws: copy(FxThrows\pattern)
         private: @: found RxCaptureLatest\find(captures; payload\name)
         if: found\present = 0
             return: -1
@@ -243,17 +249,14 @@ RxSameAsProbe:
         private: int: count capture\end - capture\begin
         if: count > length(source\units) - position
             return: -1
-        private: int: i 0
-        while: i < count
-            if: source\units[position + i] != source\units[capture\begin + i]
-                return: -1
-            i += 1
+        if: FxSequenceDifference\find(source\units; source\units; 0; position; count; capture\begin) >= 0
+            return: -1
         return: position + count
 
 RxEmptyProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -263,7 +266,7 @@ RxEmptyProbe:
 RxNeverProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -273,7 +276,7 @@ RxNeverProbe:
 RxAnyProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -285,11 +288,12 @@ RxAnyProbe:
 RxLineCharProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -300,11 +304,12 @@ RxLineCharProbe:
 RxLineBreakProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -322,10 +327,10 @@ RxLineBreakProbe:
             return: position + 1
         return: -1
 
-RxTextStartProbe:
+RxStartProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -334,10 +339,10 @@ RxTextStartProbe:
             return: position
         return: -1
 
-RxTextEndProbe:
+RxEndProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -349,11 +354,12 @@ RxTextEndProbe:
 RxLineStartProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = 0
             return: position
         private: int: before source\units[position - 1]
@@ -370,11 +376,12 @@ RxLineStartProbe:
 RxLineEndProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: position
         private: int: after source\units[position]
@@ -411,3 +418,26 @@ RxAsciiSpace:
     return: int
     test:
         return: unit = 32 || (unit >= 9 && unit <= 13)
+
+
+RxElement:
+    private: @: value
+    required: value
+    return: @
+    element:
+        return: RxPrimitiveMake\make(RxElementProbe\probe; value)
+
+RxElementProbe:
+    private:
+        @: payload
+        RxPreparedSource@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        throws: copy(FxThrows\pattern)
+        if: position = length(source\units)
+            return: -1
+        if: FxValueSame\test(FxSeqRead\read(source\units; position); payload) = 0
+            return: -1
+        return: position + 1

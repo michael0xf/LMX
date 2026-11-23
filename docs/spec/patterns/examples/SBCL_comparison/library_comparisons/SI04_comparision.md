@@ -119,10 +119,10 @@ FxSeqReplaceRange:
 
 ## Размер исходников
 
-| Язык | Полный без пробельных | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 1729 | 1729 | 58 | 2583 |
-| Common Lisp | 1262 | — | 38 | 1732 |
+| Язык | Без пробельных | Непустые строки | Все Unicode-символы |
+| --- | ---: | ---: | ---: |
+| LMX | 1729 | 58 | 2583 |
+| Common Lisp | 1262 | 38 | 1732 |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
 

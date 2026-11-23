@@ -29,13 +29,14 @@ Filters:
     offset:
         return: value + 1
     pipeline:
-        import: PipeLibrary
+        throws: copy(FxThrows\call) FxArity FxRecordArity ReceiverIndex
         return: value pipe normalize double offset
     demo:
+        throws: copy(FxThrows\call) FxArity FxRecordArity ReceiverIndex
         return: pipeline(-3)
 ```
 
-Вызов Filters\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\priority("+") из sys\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.
+pipe применяет стадии к фактическому значению и сохраняет точный результат последней стадии; его операндная и обычная формы используют один алгоритм ядра. Стадии normalize/double/offset в данном доменном примере принимают int, но общий проход этим типом не ограничен. Каждая стадия вызывается один раз по порядку; неизвестные свободные имена сохраняют обычную динамическую связь. compose отдельно строит функцию. Подготовленный вход и полный договор ошибок отражены в throws.
 
 [Отдельный листинг](examples/lmx/013_pipe_and_filter.lm3)
 
@@ -76,23 +77,23 @@ func demo() int { return pipeline(-3) }
 
 ## Разбор LMX
 
-Вызов Filters\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\priority("+") из sys\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.
+pipe применяет стадии к фактическому значению и сохраняет точный результат последней стадии; его операндная и обычная формы используют один алгоритм ядра. Стадии normalize/double/offset в данном доменном примере принимают int, но общий проход этим типом не ограничен. Каждая стадия вызывается один раз по порядку; неизвестные свободные имена сохраняют обычную динамическую связь. compose отдельно строит функцию. Подготовленный вход и полный договор ошибок отражены в throws.
 
 ## Сопоставление
 
-Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.
+Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 202 | 16 | 202 |
-| Java | 374 | 11 | — |
-| Go | 246 | 6 | — |
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 302 | 17 |
+| Java | 374 | 11 |
+| Go | 246 | 6 |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Все объявления, аргументы и ссылки на общий банк ошибок учитываются целиком.
 
 ## English explanation
 
@@ -104,15 +105,15 @@ Independent transformations are connected in an ordered data flow.
 
 **Expected observation.** 7; intermediate values are 3 and 6.
 
-**LMX.** Call Filters\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\priority("+") from sys\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.
+**LMX.** pipe applies stages to the actual typed value and preserves the final stage's result requirement. Its receiver and operand forms share the core algorithm. These three application stages use int, while the common traversal is generic. Each stage is reached once in order and dynamic binding is preserved. compose separately constructs a callable; the complete reached failures are declared.
 
-**Comparison.** The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+**Comparison.** The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 **Scope and limitations.** One int flow in one sequential context; the fixture does not overflow. Stages have one int input and result and declare no recoverable failures. Queues, backpressure, and scheduling are excluded. Pipe implementation is excluded from client size but shown and measured separately for every language.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Call Filters\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\priority("+") from sys\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.
+- **LMX:** pipe applies stages to the actual typed value and preserves the final stage's result requirement. Its receiver and operand forms share the core algorithm. These three application stages use int, while the common traversal is generic. Each stage is reached once in order and dynamic binding is preserved. compose separately constructs a callable; the complete reached failures are declared.
 - **Java:** Uses the real java.util.function.IntUnaryOperator.andThen. The implementation in093 is not imported here.
 - **Go:** Ordinary nested calls express this fixed pipeline; no custom pipe package is imported.
 

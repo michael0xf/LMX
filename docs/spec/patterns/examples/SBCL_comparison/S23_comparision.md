@@ -1,6 +1,6 @@
 # S23. Мемоизация через HASH-TABLE
 
-Полная пара в указанном ниже договоре.
+Полное сравнение на указанном домене.
 
 ## Общий договор
 
@@ -60,18 +60,17 @@
 ]
 ```
 
-## Размер основного варианта
+## Размер полных вариантов
 
-| Источник | Полный, без пробельных | Без сложного Throws | Все символы | Непустые строки |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 368 | 368 | 657 | 28 |
-| Common Lisp / SBCL | 231 | — | 353 | 8 |
+| Источник | Без пробельных | Все символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX — процедурный | 368 | 657 | 28 |
+| LMX — функциональный | 230 | 346 | 16 |
+| Common Lisp / SBCL | 231 | 353 | 8 |
 
-Учитывается полный основной листинг. Тестовый стенд и отдельные реализации ядра в него не входят; их файлы и размеры приведены отдельно.
+Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
-## LMX
-
-[Исходник](source/lmx/S23.lm3).
+## LMX — процедурный
 
 ```lmx
 Memo:
@@ -105,42 +104,9 @@ Example:
         return: (result; calls)
 ```
 
-## Common Lisp / SBCL
+[Полный исходник](source/lmx/procedural/S23.lm3). 368 непробельных символов; 28 непустых строк. Все объявления и Throws включены.
 
-[Исходник](source/common-lisp/S23.lisp).
-
-```common-lisp
-(defun example (items)
-  (let ((cache (make-hash-table :test #'eql)) (calls 0))
-    (flet ((square (x)
-             (multiple-value-bind (value present) (gethash x cache)
-               (if present value
-                   (progn (incf calls)
-                          (setf (gethash x cache) (* x x)))))))
-      (list (mapcar #'square items) calls))))
-```
-
-## Почему эти варианты сопоставимы
-
-Исходный полный вариант; нормы и конечные эффекты проверены.
-
-В стандартном Common Lisp нет функции MEMOIZE: показана полная прикладная реализация через штатный HASH-TABLE. Основной LMX-вариант должен тоже содержать кеш; отдельный вариант с LMX memoize учитывается отдельно.
-
-Основной вариант содержит прикладной кеш, как CL-пример с HASH-TABLE. Каждая строка кеша — обычная структура (key; value), уже @[]; один массив cache заменяет две параллельные таблицы и два resize. Линейный поиск не имитирует хеш-таблицу. cache/calls живут в текущем Example и доступны Memo по динамическому связыванию. Нулевое значение не означает промах. Вариант с готовым memoize вынесен отдельно из-за иного уровня абстракции.
-
-Средства Common Lisp/SBCL: `CL:MAKE-HASH-TABLE`, `CL:GETHASH`, `CL:MAPCAR`.
-
-## Реализации используемых функций
-
-Основной листинг использует базовые средства языка и полностью приведённые прикладные определения.
-
-Common Lisp-клиент не загружает сравнительные reference-реализации.
-
-## Другой подход: LMX с готовым ядром memoize: другой уровень абстракции
-
-В стандартном Common Lisp нет MEMOIZE: CL-клиент содержит прикладную реализацию. Этот более высокий уровень отдельно связан с SI06 и не уменьшает основной сравнительный размер.
-
-[Исходник](alternatives/lmx/S23_core_memoize.lm3). В основной коэффициент не входит.
+## LMX — функциональный
 
 ```lmx
 State:
@@ -153,31 +119,52 @@ Square:
         State\calls += 1
         return: value * value
 
-Keys:
-    @: first
-    @: second
-    return: int
-    same:
-        return: \first[0] = \second[0]
-
 Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxThrows\sequencefixture)
+        throws: copy(memoize\throws) copy(map\throws)
         State\calls := 0
-        @: cached memoize(Square\run; Keys\same)
-        @: result map(items; cached)
+        @: result (map items (memoize Square\run))
         return: (result; State\calls)
 ```
 
-`memoize`: [SI06](library_comparisons/SI06_comparision.md).
+[Полный исходник](source/lmx/S23.lm3). 230 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
 
-`map`: [SI01](library_comparisons/SI01_comparision.md).
+## Common Lisp / SBCL
+
+[Полный исходник](source/common-lisp/S23.lisp).
+
+```common-lisp
+(defun example (items)
+  (let ((cache (make-hash-table :test #'eql)) (calls 0))
+    (flet ((square (x)
+             (multiple-value-bind (value present) (gethash x cache)
+               (if present value
+                   (progn (incf calls)
+                          (setf (gethash x cache) (* x x)))))))
+      (list (mapcar #'square items) calls))))
+```
+
+## Соответствие стилей договору
+
+Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+
+В стандартном Common Lisp нет функции MEMOIZE: показана полная прикладная реализация через штатный HASH-TABLE. Основной LMX-вариант должен тоже содержать кеш; отдельный вариант с LMX memoize учитывается отдельно.
+
+Основной вариант содержит прикладной кеш, как CL-пример с HASH-TABLE. Каждая строка кеша — обычная структура (key; value), уже @[]; один массив cache заменяет две параллельные таблицы и два resize. Линейный поиск не имитирует хеш-таблицу. cache/calls живут в текущем Example и доступны Memo по динамическому связыванию. Нулевое значение не означает промах. Вариант с готовым memoize вынесен отдельно из-за иного уровня абстракции.
+
+## Общие операции и реализации
+
+- `memoize`: [тело ядра](../../LMX_Fn_Receivers/src/generic_combinators.lmx); отдельное сравнение [SI06](library_comparisons/SI06_comparision.md).
+
+- `map`: [тело ядра](../../LMX_Fn_Receivers/src/collections.lmx); отдельное сравнение [SI01](library_comparisons/SI01_comparision.md).
+
+Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). LMX: **NOT_RUN**; структурная проверка текста не доказывает исполнение.
+SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
 
 ## Первичные источники
 

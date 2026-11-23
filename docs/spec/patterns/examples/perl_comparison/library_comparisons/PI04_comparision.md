@@ -10,12 +10,10 @@
 
 ## Размер
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 1284 | 782 | 716 | 37 |
-| Perl | 827 | 568 | 568 | 26 |
-
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 697 | 1176 | 36 |
+| Perl | 568 | 827 | 26 |
 
 ## LMX
 
@@ -29,25 +27,24 @@ FxGroup:
 FxGroupBy:
     private:
         @: items
-        @: keyOf
-        @: sameKey
-    required: items keyOf sameKey
+        @: keyOf 0
+        @: sameKey 0
+    required: items
     return: @
     groupBy:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
-            private: @: key FxApply\apply(keyOf; FxOne\make(item))
+            private: @: key FxProjectValue\get(item; keyOf)
             private: @: group 0
             private: int: j 0
             while: j < length(result)
                 private: FxGroup@: candidate result[j]
-                private: @: flagRecord FxApply\apply(sameKey; FxTwo\make(candidate\key; key))
-                private: int: flag \flagRecord
+                private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
                     break

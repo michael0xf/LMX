@@ -6,8 +6,8 @@ blanket fixture failures. This tool preserves those authored declarations; it
 does not prove that they are minimal, complete, caught, or executable. Source
 formatting is preserved by default. The optional --normalize legacy pass factors
 equal lists through qualified copy streams; it is never required for a valid
-contract. The additional size metric belongs to tools/throws_metrics.py and
-does not edit these declarations.
+contract. Published comparisons count the complete source, including every
+authored declaration; this tool introduces no alternative Throws metric.
 
 The existing effect_contracts.json is a preservation guard, not an inference
 input. An intentional contract edit must update that reviewed declaration

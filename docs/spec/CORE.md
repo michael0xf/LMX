@@ -1,12 +1,12 @@
 # LMX core architecture
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
 > documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
 > order of 2026-11-21); only link targets were adapted to repository paths.
-> The implementation state of this repository is recorded in [READ.ME](../../READ.ME), the
-> [plan](../../next_core_tasks_v3.md) and the [current pipeline](../../steps/current.md), not in this map.
+> The implementation state of this repository is recorded in READ.ME (historical repository reference `../../READ.ME`), the
+> [current implementation contract](kernel-implementation.en.md) and the current pipeline (historical repository reference `../../steps/current.md`), not in this map.
 
 This is the architecture map for the standalone English documentation packet. The
 [L2 specification](L2_spec_en.md), [L3 semantics](LMX_semantics.en.md),
@@ -105,7 +105,7 @@ One Message owns one logical arena, which may consist of several chunks. An
 ordinary reference does not acquire a longer lifetime merely because another
 namespace can see it.
 
-A model is checked through `implements`. A user model does not create a new
+A model is checked through `satisfies`. A user model does not create a new
 per-model C layout, physical kind code, or hidden runtime tag. Primitive cells,
 reference cells, descriptors, and typed backing each retain their own access
 contract.
@@ -176,17 +176,23 @@ a semantic role and may be an ordinary user name.
 
 ### 3.2 R0 and return
 
-R0 is a procedural entry without DATA and without user actual arguments.
-It receives no artificial `D = C`, empty DATA Structure, or synthetic `data`
-field. Host launch parameters and internal access to the graph remain runtime
-details, not user signature inputs.
+Program startup always starts R0 as an ordinary L3 Thread beneath the stub parent
+and executes its CODE from the beginning. R0 has no DATA and no user actual
+arguments. It receives no artificial `D = C`, empty DATA Structure, or synthetic
+`data` field. Internal Thread launch parameters and access to the graph remain
+runtime details, not user signature inputs. The Thread's parent relation does not
+create a source-graph DATA parent.
 
-The selected entry's source records retain their ordinary roles. In R0's executed
-CODE, reached executable declarations and resolved receivers use the common CODE
-rules; a form supplied as DATA is read under that receiving contract. The absence
-of DATA removes an input source, not this classification mechanism. A source-file
-or host entry profile must state which entry it selects; it does not implicitly
-call every declared Structure or turn R0 into its own DATA. See the
+The common activation mechanism skips only the absent DATA/input pass. R0 keeps
+ordinary CODE namespace preparation, local variables, arbitrary ordinary calls,
+dispatch, cleanup, and exits. Reached executable declarations and resolved
+receivers use their common contracts; a form passed to a DATA-consuming argument
+uses that argument's ordinary receiving contract. No `Main` discovery, selected
+service function, alternate source profile, or automatic invocation of every
+declared Structure replaces startup. A named test case is an ordinary call made
+after R0 has started. If the stub parent has arguments to deliver, it sends an
+ordinary message to R0; they are not actuals of a root call. See the
+[implementation sketch](kernel-implementation.en.md#root-activation) and
 [derived review cases](REVIEW_NOTES.md#open-questions).
 
 A result is described by `return` in DATA. This declaration assigns no result
@@ -304,7 +310,7 @@ A subsequent `sumPtr(first := 2; second := 3)` maps the public signature names
 to positions and then to the candidate's `a` and `b`. Named passing does not
 rename the candidate or change RHS effect order.
 
-The common `implements` has two distinct requirements:
+The common `satisfies` has two distinct requirements:
 
 | Requirement | Compared material |
 | --- | --- |
@@ -368,23 +374,32 @@ The positional cursor follows the accepted rule: a named actual at its own
 next position remains positional; an out-of-position named actual ends positional
 counting, after which only named actuals are allowed.
 
-The common `implements` supplies structural/signature admission and the required
+The common `satisfies` supplies structural/signature admission and the required
 behavioral checks. Construction checks a known candidate's interface without
 running its body, initializers, or `test`. The interpreter invokes standard
-`implements` at reached call admissions; prepared native calls use their prepared
-contracts without an automatic runtime `implements` call. An explicitly written
-`implements` runs in either path. Reused admission facts belong to `implements`
+`satisfies` at reached call admissions; prepared native calls use their prepared
+contracts without an automatic runtime `satisfies` call. An explicitly written
+`satisfies` runs in either path. Reused admission facts belong to `satisfies`
 within the established operation/reception scope, not to a new persistent
 namespace or resolution store.
 
-The build/test phase after clean-graph construction and before C generation runs
-the checks reached through the ordinary build/test receiver contracts. It does
+The build/test phase runs after clean-graph construction and L1/C generation and before machine compilation,
+in interpretation mode on the graph being accepted. It executes the checks reached through the ordinary build/test receiver contracts. It does
 not recursively discover every nested `test` in DATA. A reached actual admission
 performs its required receiving checks; a false check stops later checks. This is
 not a blanket rerun on every graph mutation or native primitive store. Actual-value
 conversion/range checks retain their own contract.
 
 ## 5. Expressions and ordinary operand methods
+
+Every receiver is already parsed in Expression. The translator consumes its
+existing role-aware form and shares the same semantic operation with ordinary
+receiver spelling. Symbolic names use existing exact identifiers such as
+`` `+`(a; b) ``; no colon suffix or new token-length limit is introduced.
+The complete [operation-form contract](OPERATION_FORMS.md) includes declarations,
+control, graph/Message operations, typed values and attached unary variants.
+Two forms do not erase NAME/TYPE/DATA/RAW/PLACE, void, field-stream or control
+results, and do not add a callable activation around `return` or cleanup.
 
 An operand name resolves to an ordinary method. Its DATA supplies the structural
 input contract and constant properties:
@@ -565,8 +580,8 @@ or implicit compilation on a failed native lookup. The current
 [call-frame contract](LMX_semantics.en.md#call-frame-20261115) and
 [editing API](LMX_semantics.en.md#edit-api) define the detailed boundary.
 
-`sys\compile` explicitly checks/prepares the selected graph, runs its required
-build/test phase, translates through L1/C, invokes the host toolchain, and installs
+`sys\compile` explicitly checks/prepares the selected graph, translates through L1/C, runs its required
+build/test phase in interpretation mode on the graph being accepted, and only after the tests pass invokes the host toolchain and installs
 successful native descriptors in the call tables. That check phase may execute
 checkers and their candidate calls; compile does not launch the selected graph's
 application entry. `sys\translate` produces L1 text and diagnostics, and
@@ -614,6 +629,13 @@ artifact evidence. The documentation rewrite makes no claim that such a run
 was performed.
 
 ## 10. Document map
+
+The detailed core library contracts are part of this specification:
+[generic operations and profiles](GENERIC_OPERATIONS.md),
+[generic equality/unique](GENERIC_EQUALITY.md),
+[monadic constructors and bind](MONADIC_OPERATIONS.md), and
+[receiver/operand lowering](OPERATION_FORMS.md). They include full reference
+algorithms and acceptance observations rather than relying on external plans.
 
 | Concern | Primary document |
 | --- | --- |

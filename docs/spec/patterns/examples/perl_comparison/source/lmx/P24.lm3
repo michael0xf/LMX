@@ -16,7 +16,7 @@ Trace:
     Acquire:
         return: @
         open:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 1
             code(2)
         return: Resource
@@ -24,7 +24,7 @@ Trace:
         @: resource
         return: int
         use:
-            throws: ResourceFailure
+            throws: copy(Trace\code\throws)
             int: x 2
             code(1)
         return: resource\value + resource\width
@@ -39,7 +39,7 @@ Example:
     int: mode
     return: @
     run:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxAround\around\throws)
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)

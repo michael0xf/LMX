@@ -59,7 +59,7 @@ No mass rewrite in this ticket.
 After interpreter gate + L2 replacement of supported L1:
 
 - Graph walk / callable body execution currently sketched under `dev/l3_interp/` (`l3_exec`, `l3_admit`, role/path).
-- Future managed Path B printers (JVM / wasm-gc / Lua / CIL) per `include_languages/vm_porting_plan_en.txt` items 4–7 — **not** Path A MIR/WASM-linear/RISC-V.
+- Managed Path B printers (JVM / wasm-gc / Lua / CIL) per `include_languages/vm_porting_plan_en.txt` items 4–7 — **cancelled by the author 2026-11-23**, history only; Path A (MIR/WASM-linear/RISC-V over generated C99) is retained.
 
 ---
 

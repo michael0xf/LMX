@@ -2,11 +2,11 @@
 
 ## Область реализации
 
-Конечные последовательности, произвольные типы полезных значений, упорядоченные callbacks в одной Message. map/flatMap/scan/zip возвращают записи значений; filter сохраняет исходный профиль. Предикаты возвращают int LMX, Bool/Int Julia. Ошибка callback распространяется; callback не изменяет входную последовательность. Частичный результат не выдаётся. index различает отсутствие и индекс 0. record сохраняет принятое значение, а не копирует граф.
+Конечные последовательности, произвольные типы полезных значений, упорядоченные callbacks в одной Message. map/bind/scan/zip возвращают записи значений; filter сохраняет исходный профиль. Предикаты возвращают int LMX, Bool/Int Julia. Ошибка callback распространяется; callback не изменяет входную последовательность. Частичный результат не выдаётся. index различает отсутствие и индекс 0. record сохраняет принятое значение, а не копирует граф.
 
-Это полная реализация объявленных операций в указанном профиле, а не весь Julia Base. Foreign comparison-модуль не импортируется клиентами. Зависимости Julia: нет дополнительных Julia comparison-модулей; тела находятся рядом. LMX-тела извлечены из текущего ядра; [общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) составляют их явное дополнение.
+Единое LMX-тело используется обеими клиентскими формами. Julia comparison-модуль клиенты не импортируют. Зависимости Julia: нет дополнительных Julia comparison-модулей.
 
-Публичные операции: `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `flatMap`, `any`, `all`, `index`, `count`, `record`.
+[Общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) дополняют эти тела.
 
 ## LMX: действующие тела
 
@@ -150,21 +150,22 @@ FxZipWith:
 
 FxListBind:
     private:
-        @: items
+        []: input
         @: next
-    required: items next
-    return: @
-    flatMap:
+    required: input next
+    return: @[]
+    bind:
         throws: copy(FxThrows\traversal)
-        return: FxSeqFlatMap\flatMap(items; next)
+        private: @: result FxSeqBind\bind(items := input; next := next)
+        return: \result
 
-FxSeqFlatMap:
+FxSeqBind:
     private:
         @: items
         @: next
     required: items next
     return: @
-    flatMap:
+    bind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
@@ -264,7 +265,8 @@ FxSeqCount:
         return: matched
 
 FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     record:
@@ -279,7 +281,8 @@ FxMaybe:
 
 FxSome:
     private: @: value
-    return: @
+    required: value
+    return: FxMaybe@
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -287,12 +290,12 @@ FxSome:
         return: result
 
 FxNone:
-    return: @
+    return: FxMaybe@
     none:
         return: (copy(FxMaybe))
 ```
 
-## Julia: самостоятельная семантическая реализация
+## Julia: самостоятельная реализация
 
 ```julia
 module JuliaOrderedReference
@@ -423,14 +426,14 @@ end
 end
 ```
 
-## Размеры компонентов
+## Полный размер компонентов
 
-| Язык | Без пробельных | Без сложного Throws | Непустые строки | Все символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 5123 | 5021 | 263 | 7887 |
-| Julia | 2758 | 2758 | 125 | 3610 |
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 5207 | 8001 | 266 |
+| Julia | 2758 | 3610 | 125 |
 
-Колонка «Без сложного Throws» исключает только аргументы после первого; copy(Throws) сохраняется целиком. Исходник не изменяется. Размер общих зависимостей приводится отдельно: складывать его для каждой строки повторно нельзя. Подготовлены empty/error/alias/callback cases в validation; runtime execution NOT_RUN.
+Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.
 
 ## Исходники LMX
 
@@ -442,7 +445,7 @@ end
 - `FxZip` — [../../LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx)
 - `FxZipWith` — [../../LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx)
 - `FxListBind` — [../../LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx)
-- `FxSeqFlatMap` — [../../LMX_Fn_Receivers/src/sequences_selection.lmx](../../../LMX_Fn_Receivers/src/sequences_selection.lmx)
+- `FxSeqBind` — [../../LMX_Fn_Receivers/src/sequences_selection.lmx](../../../LMX_Fn_Receivers/src/sequences_selection.lmx)
 - `FxSeqAny` — [../../LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx)
 - `FxSeqAll` — [../../LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx)
 - `FxSeqIndex` — [../../LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx)
@@ -452,8 +455,8 @@ end
 - `FxSome` — [../../LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx)
 - `FxNone` — [../../LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx)
 
-## Первичные источники семантики Julia
+## Первичные источники
 
-- [https://docs.julialang.org/en/v1/base/collections/](https://docs.julialang.org/en/v1/base/collections/)
-- [https://docs.julialang.org/en/v1/base/iterators/](https://docs.julialang.org/en/v1/base/iterators/)
-- [https://docs.julialang.org/en/v1/base/arrays/](https://docs.julialang.org/en/v1/base/arrays/)
+- <https://docs.julialang.org/en/v1/base/collections/>
+- <https://docs.julialang.org/en/v1/base/iterators/>
+- <https://docs.julialang.org/en/v1/base/arrays/>

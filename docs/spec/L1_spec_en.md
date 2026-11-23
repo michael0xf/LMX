@@ -1,6 +1,6 @@
 # L1 Specification
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 L1 is the generated intermediate representation used to lower the kernel to C99. Graph-language rules belong to [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md); only the C projection remains here. Current translator status and transitional hand-written L1 belong to the [implementation notes](implementation-notes.en.md).
 
@@ -17,7 +17,7 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed storage and common resizing apply to all Arrays; capacity resides in the arena table. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed storage and common resizing apply to all Arrays; capacity resides in the arena table. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [current implementation contract](kernel-implementation.en.md). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
 Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the three actual header fields: `Lmx **`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
 
@@ -46,7 +46,7 @@ Use common Structure/Array<@> addressing without an additional index table.
 <a id="type-by-range"></a>
 ## 4. Type by range
 
-The norm (the author's decision of 2026-11-16, [L2 §3](L2_spec_en.md#value-record)): the physical type of a value is the code in its record, standing immediately before the value; an arena has one stream of records, and no type is learned from an address. User models do not create one C type per Structure. An ordinary and an `immutable` Structure differ by the code of the record while retaining a compatible physical record. Today's code still classifies addresses through `LmxRange` and the arena index and keeps separate pools; that is the former scheme, removed by [plan M15](../../next_core_tasks_v3.md#typed-value-records).
+The norm (the author's decision of 2026-11-16, [L2 §3](L2_spec_en.md#value-record)): the physical type of a value is the code in its record, standing immediately before the value; an arena has one stream of records, and no type is learned from an address. User models do not create one C type per Structure. An ordinary and an `immutable` Structure differ by the code of the record while retaining a compatible physical record. Today's code still classifies addresses through `LmxRange` and the arena index and keeps separate pools; that is the former scheme, removed by [current implementation contract](kernel-implementation.en.md).
 
 <a id="pool"></a>
 ## 5. Pool
@@ -82,7 +82,20 @@ Lmx and variable-size typed storage; separate List growth and embedded capacity 
 <a id="root-close"></a>
 ### 9.1. R0
 
-R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: it is a procedural entry without arguments, without an artificial self-binding of data to code (`data = code`), an empty service Structure or a field `data`. Runtime launch parameters belong to the scaffold rather than hidden R0 graph fields and are not user actuals. In which role the records of the unit root are read when R0 has no data, `sub` is removed and `Name :: DATA` describes a signature without an executable body is decided by the derivation of the edition of 2026-11-21: the record R0 executes is read as code, and a Structure is declared by a description of data whose body the launch names ([question and derivation](../../LMX_blog/q/unit-root-roles-answered-20261121.md)). Shutdown cascades through the sole child List; a host watchdog enforces the whole subtree timeout. See [L2 §8.1](L2_spec_en.md#root-close).
+Program startup always starts R0 as an ordinary L3 Thread beneath the stub parent
+and executes its CODE from the beginning. R0 has no DATA or user actuals; there
+is no artificial `data = code`, empty service DATA Structure, or field `data`.
+Internal Thread launch parameters are not user actuals or hidden source fields,
+and the Thread's stub parent does not become a source-graph DATA parent.
+
+The common activation mechanism skips only the absent input pass. R0 retains
+ordinary CODE-local declarations, calls, dispatch, and exits. A named case or
+handler is invoked normally after startup; neither a `Main` name nor a
+host-selected service function replaces the root. The stub parent may deliver
+its own arguments by an ordinary message to the running root. Shutdown cascades
+through the sole child List; a host watchdog enforces the whole subtree timeout.
+See [L2 §8.1](L2_spec_en.md#root-close) and the
+[implementation sketch](kernel-implementation.en.md#root-activation).
 
 <a id="mailbox"></a>
 ## 10. Mailbox
@@ -93,7 +106,7 @@ R0 and the upper host scaffold use the common Thread mechanism. R0 has no data: 
 ## 11. Local call frame
 
 The norm of 2026-11-19 (binding and callables) was accepted by the author (the [decisions R01–R19](LMX_semantics.en.md#binding-decisions)) and is in force in the edition of 2026-11-21; its
-application is recorded in the [plan](../../next_core_tasks_v3.md#docs-20261121). This section states the new norm in the
+application is recorded in the [current implementation contract](kernel-implementation.en.md). This section states the new norm in the
 same words as [L2 §11](L2_spec_en.md#call).
 
 <a id="call-receivers"></a>
@@ -200,7 +213,7 @@ order of a bare name. A read through a path executes nothing; the RHS is execute
 
 <a id="inline-declaration-control"></a>
 One case remains with the executor's reading ([the control example](LMX_semantics.en.md#inline-declaration-control),
-[Р106](../../LMX_blog/q/fable-self-answers-20261110.md)): a new `int: x` without a right part in a nested inline scope
+Р106 (historical repository reference `../../LMX_blog/q/fable-self-answers-20261110.md`)): a new `int: x` without a right part in a nested inline scope
 where there is no new call of a callee, with an outer `x = 5`, remains `uninit:int`, because autofill is defined
 between the caller's local context and the callee's place at the call, while an inline scope stays within the same
 activation; the value 5 would need a new rule, and the binding rules introduce none. This is not an author's decision.
@@ -270,8 +283,8 @@ hidden arguments. Arranging this call needs no graph, call-table lookup, univers
 or trampoline. Dynamic calls select variants in call tables; their internal ABI is not mandatory
 packaging for all static calls.
 
-sys\compile(S) explicitly performs clean-graph construction/checking → L1 → C → machine compilation
-and entry registration; sys\translate returns only L1 and diagnostics. Graph writes are not tracked
+sys\compile(S) explicitly performs clean-graph construction/checking → L1 → C → the required build/test phase (interpreted) → machine compilation,
+only if the tests passed, and entry registration; sys\translate returns only L1 and diagnostics. Graph writes are not tracked
 for native: no automatic reset, reverse invalidation, or rebuild. For a direct A→B chain, updating A
 requires compiling the unit with A and the needed B, not merely replacing B's table record.
 The maintained compiler source remains L2/L3; L1/C are generated artifacts.

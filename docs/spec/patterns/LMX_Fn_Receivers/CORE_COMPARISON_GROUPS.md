@@ -12,14 +12,10 @@ second namespace, or second scheduler is introduced.
 | --- | --- | --- | --- |
 | `findFirst` | `items; accepts` | Visit each actual typed element until true. Return `some(record)` or `none`; an initialized null or uninitialized typed record, if admitted by the predicate, remains a present value. A reference element retains identity; dense primitive access uses the existing stable value-record contract. No predicate runs after the first match. | [094](../03_domain_and_persistence/094_find_by_id_implementation_comparision.md) |
 | `allOf` | `predicates; contract=0` | Construct an exact-signature callable returning int truth. Validate the finite predicate collection before publishing it. Without explicit contract, take the first predicate’s real input policy; with a contract, use that explicit policy. Empty predicates require a contract and produce true without reading arguments. Every candidate has the same canonical ordered input/result codes. Forward ordinary places through `FxApplyPlaces`, stop at false/failure, and do not eagerly read omitted/default inputs. | [095](../03_domain_and_persistence/095_specification_combinator_implementation_comparision.md) |
-| `equalFields` | `first; second; same` | Compare lengths first and then each ordered pair with the explicit comparator. Empty equals empty; a length mismatch makes no comparator call. Dense arrays and Structure/@[] use their actual typed access. There is no hidden field-name matching, serializer, recursive graph traversal, or identity-based replacement of the supplied relation. | [096](../03_domain_and_persistence/096_money_value_equality_implementation_comparision.md) |
+| `equalFields` | `first; second; same=0` | Compare lengths first and then ordered pairs through the shared scalar/deep Array equality or an optional explicit comparator. Empty equals empty; a length mismatch makes no comparator call. Dense arrays and Structure/@[] use their actual typed access. There is no hidden field-name matching, serializer, cyclic graph traversal, or replacement of an explicit relation. | [096](../03_domain_and_persistence/096_money_value_equality_implementation_comparision.md) |
 | `retryPost` | `request; retryOn; attempts; delay; firstDelay; maxDelay; timeoutMs; complete` | Create persistent job DATA in the sender Message’s arena and start the first ordinary `post`. Return its handle. Attempts are finite and at least1; `0 <= firstDelay <= maxDelay < timeoutMs`. Backoff doubles to its cap without overflowing. Timeout/refusal/cancel never implicitly repeat an uncertain operation. See the full protocol below. | [097](../05_cloud_and_resilience/097_retry_library_implementation_comparision.md) |
 
-`pipe` is reused unchanged from [generic_combinators.lmx](src/generic_combinators.lmx).
-[093](../02_architecture_and_boundaries/093_pipe_implementation_comparision.md)
-now compares that general composition with generic Java/Go implementations. The
-int-only `PipeLibrary` is not a second core operation. Money remains application
-DATA; its cents/currency fields are not installed as a domain-specific builtin.
+`compose(outer; inner)` constructs an ordinary composed callable. `pipe(value; stages)` applies a finite sequence of stages immediately and retains the actual final result type. [coreGenericOperations.lmx](src/coreGenericOperations.lmx) supplies the one pipeline engine and exact-signature builder; [093](../02_architecture_and_boundaries/093_pipe_implementation_comparision.md) compares its complete value-application contract. `equals(first; second; projection=0; same=0)` reuses the shared equality after at most one projection per value. Money remains application DATA. `retry(operation; retryOn; limit; delay=0; arguments=())` is ordinary result-based retry; asynchronous Message retry remains `retryPost`.
 
 `allOf(predicates := (first; second))` intentionally names the entire sequence.
 The optional second `contract` input must not accidentally reinterpret a two-field
@@ -120,3 +116,5 @@ current JSON,273 source mirrors,91 comparison pages and eight catalogs. It remov
 minor source variants authorized in this edition; it does not reapply an older
 archive or run LMX. [The revision report](../validation/group_library_revision_20261123.json)
 records all26 removed minor variants and all five retained implementation pairs.
+
+Both forms of each canonical operation use the same body and exact role. See [publication](PUBLICATION_CONTRACT.md) and [generic operations](../../GENERIC_OPERATIONS.md).

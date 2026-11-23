@@ -4,9 +4,9 @@
 
 Один общий алгоритм replaceRange, splice возвращает удалённые элементы, append возвращает исходный target. Обе reference-реализации полностью подготавливают вставку до первой записи, в том числе при перекрытии. Обычное принятие типа и исчерпание ресурсов остаются правилами respective runtime; обещания общей транзакции нет. Сравнение клиентов J17/J18 ограничено совместимыми неперекрывающимися входами, поскольку Base.splice! предупреждает о разделяемой памяти.
 
-Это полная реализация объявленных операций в указанном профиле, а не весь Julia Base. Foreign comparison-модуль не импортируется клиентами. Зависимости Julia: JI02; тела находятся рядом. LMX-тела извлечены из текущего ядра; [общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) составляют их явное дополнение.
+Единое LMX-тело используется обеими клиентскими формами. Julia comparison-модуль клиенты не импортируют. Зависимости Julia: JI02.
 
-Публичные операции: `append`, `splice`, `replaceRange`.
+[Общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) дополняют эти тела.
 
 ## LMX: действующие тела
 
@@ -103,7 +103,7 @@ FxSeqAppend:
         return: FxSeqReplaceRange\replaceRange(target; end; end; values)
 ```
 
-## Julia: самостоятельная семантическая реализация
+## Julia: самостоятельная реализация
 
 ```julia
 module JuliaMutationReference
@@ -159,14 +159,14 @@ end
 end
 ```
 
-## Размеры компонентов
+## Полный размер компонентов
 
-| Язык | Без пробельных | Без сложного Throws | Непустые строки | Все символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 2522 | 2522 | 88 | 3684 |
-| Julia | 1230 | 1230 | 50 | 1668 |
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 2522 | 3684 | 88 |
+| Julia | 1230 | 1668 | 50 |
 
-Колонка «Без сложного Throws» исключает только аргументы после первого; copy(Throws) сохраняется целиком. Исходник не изменяется. Размер общих зависимостей приводится отдельно: складывать его для каждой строки повторно нельзя. Подготовлены empty/error/alias/callback cases в validation; runtime execution NOT_RUN.
+Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.
 
 ## Исходники LMX
 
@@ -174,6 +174,6 @@ end
 - `FxSeqSplice` — [../../LMX_Fn_Receivers/src/sequences_mutation.lmx](../../../LMX_Fn_Receivers/src/sequences_mutation.lmx)
 - `FxSeqAppend` — [../../LMX_Fn_Receivers/src/sequences_mutation.lmx](../../../LMX_Fn_Receivers/src/sequences_mutation.lmx)
 
-## Первичные источники семантики Julia
+## Первичные источники
 
-- [https://docs.julialang.org/en/v1/base/collections/](https://docs.julialang.org/en/v1/base/collections/)
+- <https://docs.julialang.org/en/v1/base/collections/>

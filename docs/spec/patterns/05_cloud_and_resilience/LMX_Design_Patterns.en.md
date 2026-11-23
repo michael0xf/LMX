@@ -33,11 +33,11 @@ Bounded retry of a transient failure with delay between attempts.
 
 **Observation:** Final status 200; three calls and two delays. Status 400 stops retries immediately.
 
-The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.
+The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 097. [Retry Library — Implementation](097_retry_library_implementation_comparision.md)
 
-A shared application implementation of bounded HTTP-503 retry for the Retry and Ambassador clients.
+Generic retry preserves the actual result and uses explicit retryOn/delay/limit policies.
 
 **Usage examples:** [039. Retry](039_retry_comparision.md), [045. Ambassador](045_ambassador_comparision.md)
 
@@ -97,7 +97,7 @@ A local network proxy hides the remote endpoint and retry policy from its client
 
 **Observation:** The client receives 200; the remote provider is called twice with the same endpoint and route.
 
-The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.
+The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 ### 049. [Cache-Aside](049_cache_aside_comparision.md)
 

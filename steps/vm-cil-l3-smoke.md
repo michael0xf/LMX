@@ -1,5 +1,7 @@
 # vm-cil-l3-smoke — CIL/PE L3
 
+**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — отменены полностью и сняты из очереди; сохраняются Path A (C99, MIR, WASM linear, RISC-V ISA). Всё, что ниже об этих четырёх целях, — история, а не требования и не очередь; ссылки на пункты 4–7 плана портирования считать снятыми. Основание: [план](../next_core_tasks_v3.md#backends-20261123).
+
 Tickets: BASELINE-101, PHYSICAL-CALL-102, LOCALS-WHILE-103.
 
 Isolated under `dev/vm_cil/**`. No `dev/vm_jvm` edits.

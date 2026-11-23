@@ -1,7 +1,5 @@
 # LMX grammar
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
-
 - [1. Scope and sources](#scope)
 - [2. Structures, fields, and Frames](#structure)
 - [3. Source bytes, lines, and coordinates](#positions)
@@ -36,7 +34,9 @@
 
 ## 1. Scope and sources
 
-This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The accepted author clarifications through 2026-11-22 govern this revision. The field-stream rule makes `import`, `copy`, and `merge` consume ordinary CODE arguments everywhere, including when a DATA context accepts their results ([composition](LMX_semantics.en.md#composition)). The full source representation, including terminal typed leaves with zero payload for uninit, and ordinary replacement of graph fragments are stated in [program representation](LMX_semantics.en.md#program-representation) and [graph assignment](LMX_semantics.en.md#graph-fragment-assignment). [Source comparison](source-comparison.en.md) records provenance. Extracts attributed to the former `Lingvamyxa_spec.txt` illustrate unchanged lexical rules or are explicitly historical; they do not establish an alternative current language.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
+This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The accepted author clarifications through 2026-11-23 govern this revision. The field-stream rule makes `import`, `copy`, and `merge` consume ordinary CODE arguments everywhere, including when a DATA context accepts their results ([composition](LMX_semantics.en.md#composition)). The full source representation, including terminal typed leaves with zero payload for uninit, and ordinary replacement of graph fragments are stated in [program representation](LMX_semantics.en.md#program-representation) and [graph assignment](LMX_semantics.en.md#graph-fragment-assignment). [Source comparison](source-comparison.en.md) records provenance. Extracts attributed to the former `Lingvamyxa_spec.txt` illustrate unchanged lexical rules or are explicitly historical; they do not establish an alternative current language.
 
 <a id="structure"></a>
 
@@ -50,11 +50,11 @@ P0 builds ordered Structures, Frames with their complete written heads, atoms, a
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `if:`, `int:`, `[]:`, and user heads use the same form. Named signature declarations use the ordinary expression operand `::`, described below; it is not another colon-Frame form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
-`name :: data` uses the ordinary expression operand `::` to declare a signature. The left occurrence is the declaration identifier and the defined single-template form receives one complete DATA description on the right. The right side describes ordered input types and, when present, a `return` result. The left identifier is consumed as a name to declare, not resolved as an existing value. `::` is recognized as one operator token before the single colon. Common expression rules form its operands: `Name :: A B` has two right arguments; `Name :: (A B)` has one Structure argument. The single-colon Frame rule is unchanged, and neither short-form nor compact-call argument interpretation is substituted for the expression contract. This is the only current named-signature spelling; the former named receiver is removed without an alias. For example, `SumSignature :: (int: a; int: b; return: int)` creates a named signature description, not executable code. A selected callable is an ordinary Structure `C`, and its actual `parent(C)` supplies DATA. `sub`, executable `fn`, `fncall`, and a separately supplied call-data parameter are withdrawn. `catch` retains its handler contract under this common data/call model. P0 preserves every written receiver and group; it does not resolve a signature, prepare a namespace, or execute initializers. Qualified helper heads such as `sys\check(S)` and `sys\translate(S)` use ordinary paths and Frames. See [named signatures](LMX_semantics.en.md#fn-signature) and [structural calls](LMX_semantics.en.md#call-receivers).
+`name :: data` uses the ordinary expression operand `::` to declare a signature. The left occurrence is the declaration identifier and the defined single-template form receives one complete DATA description on the right. The right side describes ordered input types and, when present, a `return` result. The left identifier is consumed as a name to declare, not resolved as an existing value. `::` is recognized as one operator token before the single colon. Whitespace is not required around that token: `Name::A`, `Name ::A`, `Name:: A`, and `Name :: A` have the same operator and operand boundaries. They are not two nested single-colon Frames. Common expression rules form its operands: `Name :: A B` has two right arguments; `Name :: (A B)` has one Structure argument. The single-colon Frame rule is unchanged, and neither short-form nor compact-call argument interpretation is substituted for the expression contract. This is the only current named-signature spelling; the former named receiver is removed without an alias. For example, `SumSignature :: (int: a; int: b; return: int)` creates a named signature description, not executable code. A selected callable is an ordinary Structure `C`, and its actual `parent(C)` supplies DATA. `sub`, executable `fn`, `fncall`, and a separately supplied call-data parameter are withdrawn. `catch` retains its handler contract under this common data/call model. P0 preserves every written receiver and group; it does not resolve a signature, prepare a namespace, or execute initializers. Qualified helper heads such as `sys\check(S)` and `sys\translate(S)` use ordinary paths and Frames. See [named signatures](LMX_semantics.en.md#fn-signature) and [structural calls](LMX_semantics.en.md#call-receivers).
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a b) := (copy(Pair))`. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. This does not introduce a nonempty Structure as a Frame head before a colon: `(): value` remains a distinct empty-head form ([§14](#bounded)). Group positional assignment, including `(a b) := (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0.
+The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a b) := (copy(Pair))`. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. That assignment case is separate from a group in a Frame head: the common head grammar admits a written bounded group, including a nonempty one, before `:` with zero or more postfixes. Thus `(Model): p` is retained as a Frame with the complete grouped head; the head consumer decides whether that description is admissible. `(): value` retains its ordinary empty-head form ([§14](#bounded)). Group positional assignment, including `(a b) := (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -110,6 +110,15 @@ Integer and floating literal forms follow ANSI C/C99: decimal, octal, and hexade
 <a id="identifiers"></a>
 
 ## 5. Bare and exact identifiers
+
+A bare name and the same admissible name written in backticks have one canonical
+identity. Exact identifier content is decoded once and remains atomic in every
+receiver or Expression position. For example, `` `@name` `` is one name, and
+`` `++counter` `` is one name; neither is re-tokenized by the translator.
+The existing `@` receiver needs no quoting. P0 already admits every receiver
+in Expression through its common structural rules; the translator preserves
+the receiver's argument roles. [Operation forms](OPERATION_FORMS.md) specifies
+the shared semantic handling without another scanner or a quotation flag.
 
 Sources: §§3.4.2–3.4.3.
 
@@ -258,6 +267,8 @@ Sources: §§4.0–4.3.
 Horizontal whitespace and commas separate fields of the current tail. A single physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. A blank physical line is the separate full-block boundary defined in [§15](#levels). Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
 The two-field `int: i 5` and typed-head `Model@: ptr Other` use ordinary Frames. P0 retains the complete head and tail without choosing field roles from the spelling. `@: ptr Model: Other` instead contains a nested Frame in its tail; it does not acquire a typed requirement/candidate meaning. The current receiver contract consumes NAME/TYPE/VALUE roles after the common parse. Composed typed heads use this same mechanism, not a dedicated []/@ parser.
+
+The type requirement in a declaration is entirely before the colon: `Model@: p` and `int@: left` are typed reference declarations; `Model[]: arr` and `int[]: values` are typed array declarations. Array receivers accept both a NAME followed by a square initializer and an anonymous square initializer: `Model[]: arr [Model Model]`, `Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]`. The square group supplies initializer elements under the receiver contract; it is not an index attached to an inferred declaration name. These [eight positive forms](TYPE_DECLARATION_FORMS.md#1-eight-author-approved-forms) use the same Frames and preserve the complete head, source group and ordinary element admission.
 
 The same frames describe field-stream receivers. `import` has one or more admitted sources, `copy` exactly one, and `merge` at least two. All three read their source arguments as CODE, regardless of where the receiver is written. The common translator/consumer algorithm performs ordinary W/E selection and then checks admitted source arity. P0 must therefore not reject `merge(S)` merely for one written Structure: E may supply multiple sources. In DATA, `Struct: merge(A B)` is an ordinary declaration of `Struct`, with a receiver in its body. Its namespace consumes the result; `Struct` is not an implicit source or model. Several such operations retain their written order and separate operation maps.
 
@@ -761,6 +772,14 @@ P0 does not reduce active entries to one flat table of winning values. A rendere
 
 ## 21. Operator tokens and expression boundaries
 
+Receiver spelling can use the same canonical symbolic name in backticks,
+for example `` `+`(a; b) ``. Colon is the existing structural delimiter and
+is not appended to an operator name. One-argument attached applications select
+the complete variants `++var`, `var++`, `--var` and `var--` from their already
+parsed placement. `var` denotes the one argument position, not a variable name
+to substitute into an identifier. Existing whitespace and source-grouping rules
+are unchanged; graph-created applications need no original byte spans.
+
 Sources: §§4.2.2, 4.7, 6.1–6.4, 20.3.
 
 Operator symbols are not bare identifiers. P0 splits compact unquoted spellings such as `a+b*c==d` into ordinary fields and operator tokens. Exact identifiers are not split. An operator field is not by itself a named head and requires no colon.
@@ -816,6 +835,12 @@ Compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=
 ## 22. Address, index, and path forms
 
 Heads `@:`, `@@:`, `@@@:` and further depths use one parameterized ordinary receiver mechanism. Postfix type heads include `T[]:`, `T@:`, `(Model)[]:`, and `(Model)@@:`; their complete written left descriptions are preserved. A type constructor returns an int code even without a following colon; the colon begins an ordinary declaration Frame with that resolved head. `Model@: ptr Candidate` is the current typed reference declaration, and `@: ptr Model` is ordinary universal-reference initialization. The old three-argument requirement/candidate shorthand is withdrawn. `int@: p @value` has a TYPE head, a raw declaration NAME, and an address VALUE initializer. `F(T@; @x)` has two actuals separated by ordinary syntax. Neither future signatures nor trial execution determine those boundaries. `@(name)` equals `@: name`, and `[](name)` equals `[]: name`; neither compact form constructs a type code.
+
+A bounded group used as a head may occupy several physical lines; P0 retains the complete group, its source positions and internal boundaries. The optional postfix sequence may be empty, so `(Model): p` is structurally a Frame without a suffix. This is a parsing statement, not a promise that every arbitrary group normalizes to an admissible receiver or type. Parentheses are not silently discarded.
+
+For `@`, postfix attachment is to the completed operand immediately on its left. The fragment `T@x` therefore contains the postfix application `T@` followed by the separate occurrence `x`; it is not `T` followed by the prefix address application `@x`, and it does not merge the two names. In `T @x` the space separates T from the following prefix occurrence. At the start of a required VALUE expression, `@x` remains the address operation. No callable signature or trial evaluation changes these source boundaries.
+
+The full declaration head and postfix order are retained for `int@[]: pointers`, `int[]@: arrayPtr`, `int[][]: rows`, and arbitrary supported finite pointer depth. A square declaration initializer is an admitted array-construction form in addition to type suffixes and index suffixes; the name is optional only where that receiver contract explicitly permits the anonymous form. See the [positive forms and composition matrix](TYPE_DECLARATION_FORMS.md).
 
 Prefix `@x`, postfix `T@`, and `\x` differ from declaration heads `@:` and paths `x\field`. `@x` explicitly obtains a numeric address; ordinary references do not require it. `\x` dereferences and does not execute code. Reserved `node` is lexical and stays fixed across nested bodies; it is not a synonym for the current DATA/stream recipient or a dynamically selected namespace. Field and index chains bind tighter than prefix operators. L2 indexing of any rank computes an offset without checks, including negative indexes. L3 reduces adjacent indexes to one linear index with one length check; this is common index-path semantics, not a separate P0 parse. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure in the role of data, it is the zero-based Nth occurrence of the name `field` at its root level, not an Array field; bare `s\field` is allowed only with one occurrence. A repeated declaration in data, including repeated declarations accepted from separate receiver streams, neither replaces the former one nor writes into it — it is one more occurrence of the name: after it the name is addressed only with the index of an occurrence, and access without an index is an error ([semantics](LMX_semantics.en.md#fields)). Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
 
@@ -1101,7 +1126,7 @@ Source: §15.1. This describes the parse result, not a second surface grammar or
 
 `FrameTrailer` is separate from argument fields. Comma appends/separates tail fields; semicolon first completes the short form at the current depth. A bounded closer closes its matching context; level transitions, blank-line full closure, EOF, and receiver-admitted closers retain their distinct completion reasons. An ordinary item at a smaller level remains ordinary after the preceding form closes; its text does not automatically become a closing receiver.
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9051–9109.
+**Current structural-result projection** — derived from `Lingvamyxa_spec.txt`, 9051–9109, with the current head, group and completion rules incorporated. This is adapted specification text, not a verbatim quotation.
 
 ````text
     SourceFile
@@ -1213,7 +1238,7 @@ consumed through the standard `OPERANDS_TEMPLATE`; the named declaration
 with `call`. All other uses accept both descriptions interchangeably. Parameter
 labels do not alter positional type compatibility. Dispatch on the resolved
 receiver's contract follows structural parsing and does not change written
-boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `signatureTypes` is another entry to the same signature kind.
+boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `to` is another entry to the same signature kind.
 
 The sole operand-opening rule has three simultaneous conditions: `left` is
 an unnamed Structure, `right` has exactly one argument, and that argument is

@@ -1,6 +1,6 @@
 {
-  "package": "regex high-level source, current Core postfix revision",
-  "execution_status": "pending_integration_and_LMX_runtime",
+  "package": "One Pattern engine over finite typed sources and explicit text profiles",
+  "execution_status": "NOT_RUN",
   "exports": [
     {
       "name": "literal",
@@ -10,19 +10,19 @@
     },
     {
       "name": "oneOf",
-      "target": "RxChars\\oneOf",
+      "target": "RxMembers\\oneOf",
       "role": "builder",
       "source": "src/regex/primitives.lmx"
     },
     {
       "name": "noneOf",
-      "target": "RxChars\\noneOf",
+      "target": "RxMembers\\noneOf",
       "role": "builder",
       "source": "src/regex/primitives.lmx"
     },
     {
-      "name": "charRange",
-      "target": "RxRange\\charRange",
+      "name": "within",
+      "target": "RxWithin\\within",
       "role": "builder",
       "source": "src/regex/primitives.lmx"
     },
@@ -45,8 +45,8 @@
       "source": "src/regex/primitives.lmx"
     },
     {
-      "name": "sequence",
-      "target": "RxSequence\\sequence",
+      "name": "then",
+      "target": "RxSequence\\then",
       "role": "builder",
       "source": "src/regex/combinators.lmx"
     },
@@ -165,8 +165,8 @@
       "source": "src/regex/operations.lmx"
     },
     {
-      "name": "matchedText",
-      "target": "RxMatchedText\\matchedText",
+      "name": "matchedValue",
+      "target": "RxMatchedValue\\matchedValue",
       "role": "receiver",
       "source": "src/regex/operations.lmx"
     },
@@ -183,14 +183,14 @@
       "source": "src/regex/operations.lmx"
     },
     {
-      "name": "captureText",
-      "target": "RxCaptureText\\captureText",
+      "name": "captureValue",
+      "target": "RxCaptureValue\\captureValue",
       "role": "receiver",
       "source": "src/regex/operations.lmx"
     },
     {
-      "name": "captureTexts",
-      "target": "RxCaptureTexts\\captureTexts",
+      "name": "captureValues",
+      "target": "RxCaptureValues\\captureValues",
       "role": "receiver",
       "source": "src/regex/operations.lmx"
     },
@@ -302,8 +302,8 @@
       "bare_name_is_call": false
     },
     {
-      "name": "anyChar",
-      "target": "anyChar",
+      "name": "anyElement",
+      "target": "anyElement",
       "role": "ready_pattern",
       "source": "src/regex/values.lmx",
       "bare_name_is_call": false
@@ -323,15 +323,15 @@
       "bare_name_is_call": false
     },
     {
-      "name": "textStart",
-      "target": "textStart",
+      "name": "start",
+      "target": "start",
       "role": "ready_pattern",
       "source": "src/regex/values.lmx",
       "bare_name_is_call": false
     },
     {
-      "name": "textEnd",
-      "target": "textEnd",
+      "name": "end",
+      "target": "end",
       "role": "ready_pattern",
       "source": "src/regex/values.lmx",
       "bare_name_is_call": false
@@ -444,6 +444,18 @@
       "target": "PatternPosition",
       "role": "declared_failure",
       "source": "src/regex/support.lmx"
+    },
+    {
+      "name": "arrayView",
+      "target": "RxArrayView\\arrayView",
+      "source": "src/regex/source.lmx",
+      "role": "source_profile"
+    },
+    {
+      "name": "element",
+      "target": "RxElement\\element",
+      "source": "src/regex/primitives.lmx",
+      "role": "builder"
     }
   ],
   "existing_operand_extensions": [
@@ -460,6 +472,7 @@
   "assembly_order": [
     "src/regex/support.lmx",
     "src/regex/text.lmx",
+    "src/regex/source.lmx",
     "src/regex/primitives.lmx",
     "src/regex/values.lmx",
     "src/regex/combinators.lmx",
@@ -469,7 +482,7 @@
   "depends_on": [
     "FxMaybe/FxSome/FxNone",
     "FxRecords",
-    "FxSameText",
+    "FxValueSame/FxEqualFields/FxSequenceDifference",
     "FxSeqInfo",
     "FxSeqRead",
     "FxSeqPush",
@@ -485,9 +498,9 @@
   ],
   "text_view_preparation": {
     "public_view": "profile + original source descriptor",
-    "per_operation": "one ordinary RxPreparedText with current units/offsets, reused for all internal steps and iterator resumes",
-    "result_identity": "Match.source and Span.source are the original public TextView; private prepared metadata retain the chosen index",
-    "mutation": "inter-operation reuse allowed; source must remain unchanged during operation, suspension and result access per TZ"
+    "per_operation": "One RxPreparedSource retains actual units, domain and profile; text profile contains its current decoded units/byte offsets",
+    "result_identity": "Match.source and Span.source retain original view; generic private prepared metadata retain the chosen index and exact domain",
+    "mutation": "Inter-operation reuse allowed; source remains unchanged during matching, suspension and result access under the lifetime contract"
   },
   "boolean_text_predicates": {
     "contains": "any start; a tail may remain",
@@ -495,6 +508,6 @@
     "hasSuffix": "some valid start; end equals source length; enumerate end-filtered candidates at every start on one prepared source",
     "matches": "start 0 and end equals source length; delegate to wholeMatch",
     "result": "int 1 or 0; empty successful matches count as present; failures propagate",
-    "text_replacement": "RxReplace\\replace(source; pattern; replacement) returns a new char[]; source is not mutated"
+    "text_replacement": "replace returns a fresh value using the selected source slice/append profile; char[] for text and actual Array profile for ArrayView"
   }
 }

@@ -1,12 +1,39 @@
-# Expression: пересмотр всех 24 LMX-клиентов
+# Expression и два полных LMX-стиля
 
-Во всех случаях действует один общий шаблон операнда. `(myOp 1 2 3 4 5)` и `(1 myOp 2 3 4 5)` — два положения одного метода; типа или отдельного режима «префиксный» нет. Сохранён главный критерий: кратчайший полный основной листинг на одинаковом уровне задачи.
+Для всех 24 договоров опубликованы процедурный и функциональный исходники. Оба входят в сравнение; меньший размер не удаляет другой стиль. Общие операции ядра имеют канонические обычную и операндную формы. Настройка нового пользовательского операнда показана отдельно ниже, без её повторения в каждом клиенте.
 
-Обычный callable не становится операндом от перестановки скобки. `asOperand` действительно строит его DATA с left/right и готовыми свойствами; стоимость настройки видна ниже. Если один прямой вызов уже короче полного адаптера, он остаётся основным.
+Единственный общий OPERANDS_TEMPLATE допускает `(myOp 1 2 3 4 5)` и `(1 myOp 2 3 4 5)`. Отдельного типа «префиксный» и дополнительного Lisp-парсера нет. Functional-варианты используют Expression, общие обходы, адаптацию и контейнерные операции с сохранением short-circuit, порядка эффектов и реальных значений.
 
-## Полный пример одной настройки
+| ID | Процедурный | Функциональный | Соответствие договору |
+| --- | ---: | ---: | --- |
+| [S01](S01_comparision.md) | [146](source/lmx/procedural/S01.lm3) | [49](source/lmx/S01.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S02](S02_comparision.md) | [165](source/lmx/procedural/S02.lm3) | [88](source/lmx/S02.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S03](S03_comparision.md) | [102](source/lmx/procedural/S03.lm3) | [174](source/lmx/S03.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S04](S04_comparision.md) | [174](source/lmx/procedural/S04.lm3) | [168](source/lmx/S04.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S05](S05_comparision.md) | [218](source/lmx/procedural/S05.lm3) | [268](source/lmx/S05.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S06](S06_comparision.md) | [94](source/lmx/procedural/S06.lm3) | [187](source/lmx/S06.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S07](S07_comparision.md) | [242](source/lmx/procedural/S07.lm3) | [166](source/lmx/S07.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S08](S08_comparision.md) | [202](source/lmx/procedural/S08.lm3) | [75](source/lmx/S08.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S09](S09_comparision.md) | [227](source/lmx/procedural/S09.lm3) | [168](source/lmx/S09.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S10](S10_comparision.md) | [260](source/lmx/procedural/S10.lm3) | [165](source/lmx/S10.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S11](S11_comparision.md) | [101](source/lmx/procedural/S11.lm3) | [55](source/lmx/S11.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S12](S12_comparision.md) | [170](source/lmx/S12.lm3) | [170](source/lmx/S12.lm3) | Оба стиля сохраняют непосредственные именованные actuals, их обратный порядок и отсутствие height во втором вызове. Это уже минимальная форма проверки default/omission; позиционный адаптер изменил бы демонстрируемый договор. |
+| [S13](S13_comparision.md) | [198](source/lmx/S13.lm3) | [198](source/lmx/S13.lm3) | Оба стиля используют те же реальные свободные имена и forwarding-call для наблюдения динамического связывания и восстановления внешнего scale. Отдельный context object или передача scale аргументом изменили бы этот договор. |
+| [S14](S14_comparision.md) | [125](source/lmx/S14.lm3) | [125](source/lmx/S14.lm3) | Договор явно требует локальный рекурсивный helper, принадлежащий Example. Обе формы сохраняют его и тот же scalar Expression; замена рекурсии product/range означала бы другой механизм. |
+| [S15](S15_comparision.md) | [98](source/lmx/S15.lm3) | [98](source/lmx/S15.lm3) | Скалярные remainder/division и обычная Structure результата уже составляют минимальное выражение. Оба стиля сохраняют вычисление целого quotient на заявленном int-домене без подмены его bigint-профилем. |
+| [S16](S16_comparision.md) | [75](source/lmx/S16.lm3) | [75](source/lmx/S16.lm3) | Обычные пути полей сохраняют точную форму [a,[b,c]] без автоматического рекурсивного раскрытия. Один скалярный Expression является минимальной формой обоих стилей. |
+| [S17](S17_comparision.md) | [134](source/lmx/procedural/S17.lm3) | [118](source/lmx/S17.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S18](S18_comparision.md) | [371](source/lmx/S18.lm3) | [371](source/lmx/S18.lm3) | Объекты с полями и реальными methods создаются и вызываются полностью. Функциональная свёртка по двум заранее известным объектам добавила бы обход, не сокращая object/dispatch договор; обе формы оставлены минимальными. |
+| [S19](S19_comparision.md) | [306](source/lmx/S19.lm3) | [306](source/lmx/S19.lm3) | Обновление настоящего width в скопированном владельце и чтение height/area входят в договор. Последовательность этих stateful операций уже минимальна, поэтому обе формы совпадают. |
+| [S20](S20_comparision.md) | [139](source/lmx/procedural/S20.lm3) | [121](source/lmx/S20.lm3) | Один сохранённый результат, использованный дважды, и одно вычисление producer с умножением на 2 дают одинаковый int-результат и число вызовов на заявленном домене; произвольный macroexpand не сравнивается. |
+| [S21](S21_comparision.md) | [187](source/lmx/procedural/S21.lm3) | [352](source/lmx/S21.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S22](S22_comparision.md) | [489](source/lmx/procedural/S22.lm3) | [699](source/lmx/S22.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S23](S23_comparision.md) | [368](source/lmx/procedural/S23.lm3) | [230](source/lmx/S23.lm3) | Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма. |
+| [S24](S24_comparision.md) | [435](source/lmx/procedural/S24.lm3) | [528](source/lmx/S24.lm3) | Оба стиля используют один owning Message и тот же FIFO post/reply. Функциональный foldl только обходит конечный вход, каждый Send посылает один Add; Finish идёт после него. S24 остаётся протокольной аналогией, runtime NOT_RUN. |
 
-[Исходник](source/lmx/Expression_examples.lm3). Ожидаемый результат: `[15,15]`; исполнение LMX — **NOT_RUN**.
+## Полный пример явной настройки пользовательского операнда
+
+[Исходник](source/lmx/Expression_examples.lm3). Ожидание `[15,15]`; LMX **NOT_RUN**. Эта иллюстрация находится вне итоговых 23 сопоставимых договоров.
 
 ```lmx
 Numbers:
@@ -22,48 +49,19 @@ Numbers:
 Example:
     return: @
     run:
-        throws: copy(FxThrows\selection)
+        throws: copy(asOperand\throws)
         @: myOp asOperand(Numbers\add; sys\priority("+"))
         return: ((myOp 1 2 3 4 5); (1 myOp 2 3 4 5))
 ```
 
-| Что учитывается | Полный размер без пробельных | Без сложного Throws |
-| --- | ---: | ---: |
-| Полный E01, настройка включена | 191 | 191 |
-| Единственное тело фабрики asOperand | 1228 | 1228 |
-| Уникальное замыкание asOperand, включая фабрику (19 определений) | 7599 | 6621 |
+| Что учитывается | Полный размер без пробельных |
+| --- | ---: |
+| Иллюстрация, настройка включена | 189 |
+| Единственное тело asOperand | 1222 |
+| Уникальное замыкание (19 определений) | 7764 |
 
-Замыкание не прибавляется ко всем примерам повторно. В него входят уже существующие общие типовые/вызовные функции и общий left/right collector; нативный FxKernel остаётся внешней границей, его реализация не оценена нулём. E01 не подставлен в коэффициент 23 полных сравнительных пар.
+В стандартной публикации обе формы подготавливает общий actor/translator контекст. Граница этой явной фабрики не превращается в обязательную клиентскую обвязку. Одно ядровое тело не размножается по стилям и строкам.
 
-## Решение по каждой строке
+Скалярные и Array-выражения не открывают готовые значения рекурсивно: где нужен поток полей, он указан явным `copy`. S03 использует настоящий левый foldl; предварительная сумма не меняет порядок промежуточных вычислений. S04 сохраняет остановку по меньшей длине. S05 сохраняет два независимых счётчика короткого замыкания. S22 сохраняет все пять путей finally/ошибок. S24 остаётся протокольной аналогией с тем же owning Message/FIFO-профилем.
 
-| ID | Решение | Почему |
-| --- | --- | --- |
-| [S01](S01_comparision.md) | Existing Array arithmetic | items * 3 already is ordinary Expression; changing only operand placement adds punctuation without removing logic. |
-| [S02](S02_comparision.md) | Ready compress callable | Vector comparison forms the mask; a local asOperand used once would lengthen the full listing. |
-| [S03](S03_comparision.md) | Ordered left subtraction | Keep the short full left fold. Variadic + does not prove a variadic subtraction contract; summing first could change intermediate overflow. |
-| [S04](S04_comparision.md) | Shortest truncating pair loop | Equal-length Array multiplication alone loses the shorter-input stop rule; the complete zipWith alternative remains separate. |
-| [S05](S05_comparision.md) | One shared short-circuit traversal | Any/all traces share Query; no repeated predicate body. Converting a call spelling does not remove the trace requirement. |
-| [S06](S06_comparision.md) | Shortest first-match loop | A result sentinel is part of this narrow task; the Maybe/index core alternative includes its full conversion. |
-| [S07](S07_comparision.md) | Ready sort callable | Comparator arithmetic is Expression; configuring an operand for this one sort call would add setup. |
-| [S08](S08_comparision.md) | Ready unique callable | One equality body; full first-occurrence semantics. Local operand configuration would be longer. |
-| [S09](S09_comparision.md) | Ready replaceRange callable | The required independent outer result uses explicit copy; mutation/length contract remains complete. |
-| [S10](S10_comparision.md) | One partial factory | partial is the common general capture factory; a syntax adapter adds cost. The copied-owner alternative remains a different implementation. |
-| [S11](S11_comparision.md) | Explicit variadic Expression | (+ 0 copy(items)) consumes the explicit field stream and retains the empty-input neutral value; the loop is eliminated. |
-| [S12](S12_comparision.md) | Named actuals and defaults | Ordinary named calls are needed to demonstrate named order and omission. asOperand transports ready positional values, not fictitious named entries. |
-| [S13](S13_comparision.md) | Native dynamic binding | The free value crosses a forwarding function that does not declare or use it; no context object or forwarding parameter. |
-| [S14](S14_comparision.md) | Local recursive callable | Native conditional/arithmetic Expression already applies. An operand adapter would not remove recursion or local ownership. |
-| [S15](S15_comparision.md) | Structured multiple result | Native division/remainder expressions and one ordinary result Structure; no new values runtime. |
-| [S16](S16_comparision.md) | Explicit shape paths | Ordinary field/index arithmetic is shortest; no invented recursive operand argument expansion. |
-| [S17](S17_comparision.md) | Mask plus explicit variadic Expression | One compress selects odd values before squaring; (+ 0 copy(odd * odd)) removes the accumulator loop without evaluating excluded squares. |
-| [S18](S18_comparision.md) | Native structural object methods | Keep full object creation, copied method ownership and both calls. A prefix-shaped arithmetic-only driver would omit the object task. |
-| [S19](S19_comparision.md) | Native stateful accessor task | Preserve the actual copied owner, unchanged height and updated width. Operand placement cannot substitute for these observations. |
-| [S20](S20_comparision.md) | One computed binding | Producer runs once, the saved value is reused; arbitrary macroexpansion is not claimed. |
-| [S21](S21_comparision.md) | Exact declared failure | Catch only InputFailure with ordinary typed flow; eager asOperand does not manufacture a control-flow operator. |
-| [S22](S22_comparision.md) | One Event body and finally | Acquire/action/release differ only in data; exact ResourceFailure carries phase, with release overriding action failure as required. |
-| [S23](S23_comparision.md) | Explicit cache at the same comparison level | One cache implementation, fresh per call. Ready memoize remains separately costed and is not compared as an ANSI builtin. |
-| [S24](S24_comparision.md) | Existing Message protocol | No spawn/await/parser mode invented. Full host fixture remains pending; notation changes do not erase its cost. |
-
-S11 использует именно явный поток `copy(items)`, а не неявное раскрытие готового Array. S17 сначала отбирает значения, поэтому не вычисляет потенциально лишние квадраты чётных элементов. У короткого замыкания, объектов, исключений и Message сохраняются все наблюдаемые части договора.
-
-Основания: [Expression](../../../LMX_semantics.en.md#assignment-inside-expression), [структурный operand](../../../LMX_semantics.en.md#operand-receiver), [prepared values](../../../LMX_semantics.en.md#prepared-operands), [явный stream](../../../LMX_semantics.en.md#stream-or-group). [Точная машинная запись и hashes](validation/expression_review.json); [ТЗ и runtime-приёмка](TZ_Standard_Lisp_and_Expression.md).
+Основания: [общие формы](../../../OPERATION_FORMS.md), [Expression](../../../LMX_semantics.en.md#assignment-inside-expression), [prepared values](../../../LMX_semantics.en.md#prepared-operands), [явный stream](../../../LMX_semantics.en.md#stream-or-group), [публикация](../../LMX_Fn_Receivers/PUBLICATION_CONTRACT.md).

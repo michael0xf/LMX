@@ -71,7 +71,8 @@ FxSeqIndex:
         return: FxNone\none()
 
 FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     record:
@@ -86,7 +87,8 @@ FxMaybe:
 
 FxSome:
     private: @: value
-    return: @
+    required: value
+    return: FxMaybe@
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -94,7 +96,7 @@ FxSome:
         return: result
 
 FxNone:
-    return: @
+    return: FxMaybe@
     none:
         return: (copy(FxMaybe))
 ```
@@ -134,10 +136,10 @@ FxNone:
 
 ## Размер исходников
 
-| Язык | Полный без пробельных | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 1402 | 1339 | 78 | 2163 |
-| Common Lisp | 674 | — | 24 | 843 |
+| Язык | Без пробельных | Непустые строки | Все Unicode-символы |
+| --- | ---: | ---: | ---: |
+| LMX | 1462 | 80 | 2237 |
+| Common Lisp | 674 | 24 | 843 |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
 
@@ -150,10 +152,10 @@ FxNone:
 - `FxSeqAny` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `278519a8df43775d8d50fe278ac4ffeef91d96d6745e19734a9ada8ed0312a9b`.
 - `FxSeqAll` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `6ea407232d91cd061f26a24cf4b233c9d00c9c8735ce78449bf9527ced5cff6c`.
 - `FxSeqIndex` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `22227604f0bf6fc90aff292e178e982ca54056678eea94ef212ee58ca841b1dd`.
-- `FxRecordOperands` — [patterns/LMX_Fn_Receivers/src/generic_functions.lmx](../../../LMX_Fn_Receivers/src/generic_functions.lmx), SHA-256 `d837d5b291ce5c4bace36acb94bf5b164ce969dc3062f7459142d142658c6d03`.
+- `FxRecordOperands` — [patterns/LMX_Fn_Receivers/src/generic_functions.lmx](../../../LMX_Fn_Receivers/src/generic_functions.lmx), SHA-256 `bc9eea7b1ed13fbf19ba9dab65a8d66ba156fb32509a24c21eacc0144df7a51a`.
 - `FxMaybe` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `664720047844572e08d51e3c2c789c38ae145175e1ebefa63cc034bdecf2f2b5`.
-- `FxSome` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `773382b57e1f9271e4226f59ff65f75e60f2a14d022f53168d866496cddb2991`.
-- `FxNone` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `740805d3653f10eee80cd7f96913329d6336ce9a3ce2d1b47816f667199e712c`.
+- `FxSome` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `fb78deb916d609a09a4dbefa2e8207df6d8ffca340107df945c3a7feacc63b24`.
+- `FxNone` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `c93c036c8fbbde7bfa342be789407c605f3e7978914b1fc099b949d094e31065`.
 
 ## Первичные источники Common Lisp
 

@@ -26,19 +26,19 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 The main metric counts non-whitespace characters in each complete displayed program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns.
 
-| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust | LMX without complex Throws |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 | 152 |
-| Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 | 295 |
-| Composite | 296 | 295 | 480 | 453 | 469 | 499 | 312 | 379 | 296 |
-| Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 | 191 |
-| Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 | 170 |
-| Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 | 355 |
-| Prototype | 180 | 209 | 280 | 165 | 273 | 219 | 199 | 225 | 180 |
-| Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 | 333 |
-| Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 | 276 |
-| **Total** | **2248** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** | **2248** |
-| **Total / LMX** | 1.000× | 1.179× | 1.750× | 1.311× | 1.578× | 1.536× | 1.399× | 1.459× | — |
+| Pattern | LMX | Python | Java | C++ | C# | TypeScript | Go | Rust |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| State | 152 | 250 | 326 | 307 | 267 | 283 | 325 | 340 |
+| Chain of Responsibility | 295 | 297 | 549 | 361 | 461 | 437 | 441 | 434 |
+| Composite | 296 | 295 | 480 | 453 | 469 | 499 | 312 | 379 |
+| Proxy | 191 | 181 | 346 | 209 | 274 | 256 | 217 | 220 |
+| Facade | 170 | 204 | 274 | 236 | 286 | 316 | 244 | 235 |
+| Builder | 355 | 499 | 574 | 436 | 581 | 514 | 543 | 565 |
+| Prototype | 180 | 209 | 280 | 165 | 273 | 219 | 199 | 225 |
+| Memento | 333 | 396 | 460 | 381 | 450 | 440 | 450 | 456 |
+| Bridge | 276 | 320 | 645 | 399 | 487 | 490 | 413 | 425 |
+| **Total** | **2248** | **2651** | **3934** | **2947** | **3548** | **3454** | **3144** | **3279** |
+| **Total / LMX** | 1.000× | 1.179× | 1.750× | 1.311× | 1.578× | 1.536× | 1.399× | 1.459× |
 
 ## 10. State
 
@@ -60,7 +60,6 @@ machine:
         result += state()
         return: result
 ```
-
 **Invocation:** `machine\demo()`. **Expected result: 1.**
 
 demo starts with state = closed. The first call returns 0 and selects opened, the second returns 1 and selects closed, and the third returns 0. Three statements make effect order explicit. Their sum is 1.
@@ -101,7 +100,6 @@ chain:
         result += dispatch(-2; even; negative)
         return: result
 ```
-
 **Invocation:** `chain\demo()`. **Expected result: 5.**
 
 With the default order, requests -2, 4, 3 yield 1, 2, 0. An explicit reverse order yields 2 for the same -2. Their sum is 5. Once the first handler accepts a request, the second is not invoked.
@@ -137,7 +135,6 @@ Pair:
         @: tree derive(Pair; (@: left a; @: right inner))
         return: tree\total()
 ```
-
 Each derive applies the same structural construction as the former collected merge: it takes the model and overlay, producing one object for the corresponding reference variable. The core implementation is disclosed alongside the receiver sources; all original fields and construction values remain present.
 
 **Invocation:** `Pair\demo()`. **Expected result: 10.**
@@ -174,8 +171,6 @@ Pair:
         @: tree (merge(Pair; (@: left a; @: right inner)))
         return: tree\total()
 ```
-
-
 ## 13. Proxy
 
 The proxy and service share one interface. The proxy rejects a negative request and delegates an admitted one.
@@ -197,7 +192,6 @@ requests:
         request := real
         return: denied + allowed + request(-3)
 ```
-
 **Invocation:** `requests\demo()`. **Expected result: 8.**
 
 Through proxy, request(-3) returns 0 without calling real. request(7) delegates and returns 14. After request is replaced by real, the same negative request returns −6. The demo totals 0 + 14 − 6 = 8.
@@ -228,7 +222,6 @@ checkout:
     demo:
         return: quote(3; 10; 2; 1)
 ```
-
 **Invocation:** `checkout\demo()`. **Expected result: 39.**
 
 quote(3; 10; 2; 1) obtains subtotal = 30 and fee = 9, then returns 39. The additional case quote(1; 8; 3; 2) returns 24.
@@ -269,7 +262,6 @@ Rectangle:
         @: second builder\finish()
         return: first\area() + second\area()
 ```
-
 **Invocation:** `Rectangle\demo()`. **Expected result: 22.**
 
 After the first two steps, first has dimensions 3 and 4. Updating the workpiece to 5 and 2 does not change first: finish creates a separate graph. The areas are 12 and 10. Every demo sets both dimensions before its first finish, so repeated runs also return 22.
@@ -298,7 +290,6 @@ Point:
         @: replica bindFields(original; (int: y 9))
         return: original() + replica()
 ```
-
 **Invocation:** `Point\demo()`. **Expected result: 153.**
 
 The DATA of original contains (7,4), while replica owns (7,9). The references now denote the copied score methods; their actual owners are parent(original) and parent(replica). bindFields clones the real DATA and overlays defaults while retaining its method, so the second copy still comes from the configured first instance. Intermediate states before the old explicit x/y writes were not observed. No closure over a completed activation is introduced.
@@ -328,7 +319,6 @@ Point:
         replica\y := 9
         return: original\score() + replica\score()
 ```
-
 The complete bindFields/composeData implementation and its separate cost appear in the [Prototype comparison](16_prototype_comparison.md). The main client uses 180 characters rather than 226, including required throws; the shared core implementation cost is displayed separately.
 
 ## 17. Memento
@@ -363,7 +353,6 @@ Editor:
         history\restore(snapshot := second)
         return: low * 10 + read()
 ```
-
 **Invocation:** `Editor\demo()`. **Expected result: 59.**
 
 The first save captures 5 and the second captures 9. set(13) changes only the current Editor. restore(first) restores 5, retained in low; restore(second) restores 9. The result is 5×10+9. The caretaker uses only save, restore and the current object’s ordinary read operation.
@@ -403,7 +392,6 @@ bridge:
         output := radio
         return: total + control(4)
 ```
-
 **Invocation:** `bridge\demo()`. **Expected result: 45.**
 
 At level = 4, basic/radio returns 8, basic/speaker 12, boost/speaker 15 and boost/radio 10. Their sum is 45. Replacing output does not require replacing control, and vice versa.

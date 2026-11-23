@@ -1,6 +1,6 @@
 # S09. REPLACE: ограниченный диапазон
 
-Полная пара в указанном ниже договоре.
+Полное сравнение на указанном домене.
 
 ## Общий договор
 
@@ -77,18 +77,17 @@
 ]
 ```
 
-## Размер основного варианта
+## Размер полных вариантов
 
-| Источник | Полный, без пробельных | Без сложного Throws | Все символы | Непустые строки |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 168 | 168 | 238 | 10 |
-| Common Lisp / SBCL | 96 | — | 112 | 2 |
+| Источник | Без пробельных | Все символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX — процедурный | 227 | 405 | 17 |
+| LMX — функциональный | 168 | 239 | 10 |
+| Common Lisp / SBCL | 96 | 112 | 2 |
 
-Учитывается полный основной листинг. Тестовый стенд и отдельные реализации ядра в него не входят; их файлы и размеры приведены отдельно.
+Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
-## LMX
-
-[Исходник](source/lmx/S09.lm3).
+## LMX — процедурный
 
 ```lmx
 Example:
@@ -98,39 +97,63 @@ Example:
     int[]: replacement
     return: @
     run:
-        throws: copy(FxThrows\mutation)
+        int[]: result []
+        sys\resize(result; length(items))
+        int: i 0
+        while: i < length(items)
+            if: i >= start && i < end
+                result[i] := replacement[i - start]
+            else:
+                result[i] := items[i]
+            i += 1
+        return: result
+```
+
+[Полный исходник](source/lmx/procedural/S09.lm3). 227 непробельных символов; 17 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Example:
+    int[]: items
+    int: start
+    int: end
+    int[]: replacement
+    return: @
+    run:
+        throws: copy(replaceRange	hrows)
         int[]: result [copy(items)]
         return: replaceRange(result; start; end; replacement)
 ```
 
+[Полный исходник](source/lmx/S09.lm3). 168 непробельных символов; 10 непустых строк. Все объявления и Throws включены.
+
 ## Common Lisp / SBCL
 
-[Исходник](source/common-lisp/S09.lisp).
+[Полный исходник](source/common-lisp/S09.lisp).
 
 ```common-lisp
 (defun example (items start end replacement)
   (replace (copy-list items) replacement :start1 start :end1 end))
 ```
 
-## Почему эти варианты сопоставимы
+## Соответствие стилей договору
 
-Исходный полный вариант; нормы и конечные эффекты проверены.
+Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
 
 CL REPLACE не меняет длину последовательности. Общий контракт здесь ограничен равной длиной удаляемого и вставляемого диапазонов; это не утверждение тождества всему LMX replaceRange.
 
 Используется только общая область с равной длиной замены. Полный replaceRange умеет менять размер; CL REPLACE этого не обещает. Копирование здесь необходимо для неизменности исходного массива.
 
-Средства Common Lisp/SBCL: `CL:REPLACE`, `CL:COPY-LIST`.
+## Общие операции и реализации
 
-## Реализации используемых функций
+- `replaceRange`: [тело ядра](../../LMX_Fn_Receivers/src/sequences_mutation.lmx); отдельное сравнение [SI04](library_comparisons/SI04_comparision.md).
 
-- `replaceRange`: [SI04](library_comparisons/SI04_comparision.md)
-
-Common Lisp-клиент не загружает сравнительные reference-реализации.
+Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). LMX: **NOT_RUN**; структурная проверка текста не доказывает исполнение.
+SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
 
 ## Первичные источники
 

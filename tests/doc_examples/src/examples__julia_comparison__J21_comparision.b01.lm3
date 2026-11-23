@@ -1,13 +1,15 @@
-Equal:
-    int: left
-    int: right
-    return: int
-    same:
-        return: left = right
-
 Example:
     int[]: xs
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxPredicate FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        return: unique(xs; Equal\same)
+        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        int[]: out []
+        int: i 0
+        while: i < length(xs)
+            int: j 0
+            while: j < length(out) && out[j] != xs[i]
+                j += 1
+            if: j = length(out)
+                FxSeqPush\append(out; (xs[i] record))
+            i += 1
+        return: out

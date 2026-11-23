@@ -8,6 +8,7 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1]
 from rebuild import production, metrics, public_roots, closure
+from lmx_style_variants import get_variants, validate_variants
 
 def lmx_checks(text):
     errors=[];stack=[];last=None;quote=None;escaped=False
@@ -47,6 +48,9 @@ def main():
         lmx=(ROOT/ex["lmx_file"]).read_text()
         perl=(ROOT/ex["foreign_file"]).read_text()
         errors=lmx_checks(lmx)
+        errors.extend(validate_variants(ex,ROOT))
+        for style,variant in get_variants(ex):
+            errors.extend(style+': '+error for error in lmx_checks(variant["code"]))
         if lmx!=ex["lmx"] or perl!=ex["foreign"]:
             errors.append("rendered source differs from examples.json")
         imports=re.findall(r"^\s*(?:use|require)\s+([A-Za-z_:]\w*(?:::\w+)*)",perl,re.M)
@@ -63,13 +67,14 @@ def main():
                 passed=answer["ok"] and answer["result"]==case["expected"] and (ex.get("input_mutation") or answer["input_unchanged"])
                 outcomes.append({"case":i,"args":case["args"],"expected":case["expected"],"actual":answer["result"],"input_unchanged":answer["input_unchanged"],"status":"PASS" if passed else "FAIL","error":answer["error"]})
                 if not passed: failures.append(f"{ex['id']} fixture {i}")
-        source_rows.append({"id":ex["id"],"lmx_status":"NOT_RUN","limited_source_status":"PASS" if not errors else "FAIL","errors":errors,"perl_imports":imports,"lmx_sha256":hashlib.sha256(lmx.encode()).hexdigest(),"foreign_sha256":hashlib.sha256(perl.encode()).hexdigest()})
+        source_rows.append({"id":ex["id"],"lmx_status":"NOT_RUN","limited_source_status":"PASS" if not errors else "FAIL","errors":errors,"perl_imports":imports,"lmx_sha256":hashlib.sha256(lmx.encode()).hexdigest(),"lmx_variants":{style:{"source":variant["source_file"],"sha256":variant["metrics"]["sha256"]} for style,variant in get_variants(ex)},"foreign_sha256":hashlib.sha256(perl.encode()).hexdigest()})
         client_rows.append({"id":ex["id"],"syntax":"PASS" if not compiled.returncode else "FAIL","cases":outcomes})
         failures.extend(f"{ex['id']}: {e}" for e in errors)
     available=production(); aliases=public_roots(available)
     dependencies=json.loads((ROOT/"validation/implementation_dependencies.json").read_text())
     current_stats=json.loads((ROOT/"statistics.json").read_text())
     by_stats={(r['id'],r['language']):r for r in current_stats['rows']}
+    by_style={(r['id'],r['style']):r for r in current_stats['comparison_rows']}
     dependency_checks=[]
     for definition in dependencies['definitions']:
         name=definition['name']
@@ -77,6 +82,11 @@ def main():
         if not okay:failures.append('shared production source drift: '+name)
         dependency_checks.append({'name':name,'status':'PASS' if okay else 'FAIL'})
     for ex in data['examples']:
+        aliases=public_roots(available,ex.get('core_families'))
+        for style,variant in get_variants(ex):
+            row=by_style.get((ex['id'],style),{})
+            for field,value in variant['metrics'].items():
+                if row.get(field)!=value:failures.append(ex['id']+': '+style+' stale full-source metric '+field)
         for name, source in ex['core_sources'].items():
             if aliases.get(name)!=source['root']:failures.append(ex['id']+': wrong canonical source '+name)
             if source['root'] not in available:failures.append(ex['id']+': missing canonical source '+name)
@@ -90,6 +100,8 @@ def main():
         folder=ROOT/'library_comparisons' if item['id'].startswith('PI') else ROOT
         md=(folder/(item['id']+'_comparision.md')).read_text()
         md_ok=all('```'+language+'\n'+item[key]+'```' in md for language,key in [('lmx','lmx'),('perl','foreign')])
+        if 'lmx_variants' in item:
+            md_ok=md_ok and all('```lmx\n'+variant['code']+'```' in md for _,variant in get_variants(item))
         if not md_ok:failures.append(item['id']+': Markdown source block mismatch')
         md_entries.append({'id':item['id'],'json_md_source_statistics':'PASS' if md_ok else 'FAIL'})
         for language,key in [('LMX','lmx'),('Perl','foreign')]:

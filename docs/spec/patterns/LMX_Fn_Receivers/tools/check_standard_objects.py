@@ -24,7 +24,7 @@ def main():
     check(not metadata['new_kernel_primitives'],'no new kernel primitives')
     check(not cases['runtime_executed'] and len(cases['cases'])==50 and all(c['status']=='NOT_RUN' for c in cases['cases']),'50 prepared cases with honest runtime status')
     check(source.count('while:')==1 and source.count('copy(FxFieldArguments)')==3,'one field scan and copied common inputs')
-    check(source.index('candidate != nil')<source.index('FxSameText\\same(candidate; label)'),'nil observed before string payload comparison')
+    check(source.index('candidate != nil')<source.index('FxEqualFields\\equalFields(candidate; label)'),'nil observed before string payload comparison')
     check('FxMaybe@: result \\record' not in source and 'FxResult@: result \\record' not in source,'no unconditional container dereference')
     fold=definitions['FxFoldResult']
     check(fold.index('input\\reason')>fold.index('else:') and fold.count('FxApply\\apply')==1 and fold.index('input\\value')>fold.index('if: input\\ok'),'foldResult reads only the chosen payload and invokes one shared call')
@@ -32,7 +32,7 @@ def main():
     known=set(re.findall(r'(?m)^(?:independent:\s*)?((?:Fx|Rx)\w+)\s*:',all_source))|{'FxKernel'}
     dependencies=set(re.findall(r'\b((?:Fx|Rx)\w+)(?=\\|@)',source))
     check(dependencies<=known,'all named implementation dependencies exist')
-    for name in ['CORE_STANDARD_OBJECTS.md','CORE_STANDARD_OBJECTS_TZ.md']:
+    for name in ['CORE_STANDARD_OBJECTS.md','CORE_STANDARD_OBJECTS_CONTRACT.md']:
         for link in re.findall(r'\[[^\]]*\]\(([^\s)]+)\)',(ROOT/name).read_text()):
             if re.match(r'https?://',link):continue
             target=link.split('#',1)[0]

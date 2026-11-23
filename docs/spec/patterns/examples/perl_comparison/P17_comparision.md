@@ -1,12 +1,14 @@
 # P17. Глобальное извлечение слов
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.
 
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+
 Perl собирает список встроенным /g. LMX материализует источник Stop общим collect, затем читает тексты общим map; оба результата конечны и упорядочены. Нулевое/пустое значение не используется как признак завершения. Общий collect сохраняет остальные объявленные отказы источника в FxCallFailure; фактический пример сравнивает успешные ASCII-входы.
 
-## Вход и ожидаемый результат
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -21,35 +23,69 @@ Perl собирает список встроенным /g. LMX материал
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 506 | 887 | 28 |
+| LMX функциональный | 317 | 364 | 6 |
+| Perl | 75 | 99 | 6 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 238 | 193 | 148 | 6 |
-| Perl | 99 | 75 | 75 | 6 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+## LMX — процедурный
 
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
+```lmx
+Ascii:
+    char: value
+    return: int
+    letter:
+        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
-## LMX
 
-[Исходник](source/lmx/P17.lm3).
+Example:
+    char[]: text
+    return: @
+    run:
+        throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        @[]: out []
+        int: i 0
+        while: i < length(text)
+            while: i < length(text) && Ascii\letter(text[i]) = 0
+                i += 1
+            int: begin i
+            while: i < length(text) && Ascii\letter(text[i]) != 0
+                i += 1
+            if: i > begin
+                char[]: word []
+                sys\resize(word; i - begin)
+                int: j 0
+                while: j < length(word)
+                    word[j] := text[begin + j]
+                    j += 1
+                FxSeqPush\append(out; (word record))
+        ---
+        return: out
+```
+
+[Полный исходник](source/lmx/procedural/P17.lm3). 506 непробельных символов; 28 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
 
 ```lmx
 Example:
     char[]: text
     return: @
     run:
-        throws: copy(FxThrows\sequencefixture) PatternArgument PatternEncoding PatternPosition
-        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedText)
+        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxEachMatch\eachMatch\throws) copy(FxStdCollect\collect\throws) copy(FxMap\map\throws) copy(RxMatchedValue\matchedValue\throws)
+        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)
 ```
+
+[Полный исходник](source/lmx/P17.lm3). 317 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
-[Исходник](source/perl/P17.pl).
+[Полный исходник](source/perl/P17.pl).
 
 ```perl
 use strict;
@@ -60,20 +96,18 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - eachMatch: [PI07](library_comparisons/PI07_comparision.md)
-- matchedText: [PI07](library_comparisons/PI07_comparision.md)
-- collect: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx); [транзитивные зависимости](library_comparisons/shared_dependencies.lmx). Отдельная Perl-пара этой операции не написана.
+- matchedValue: [PI07](library_comparisons/PI07_comparision.md)
+- collect: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx); [общие зависимости](library_comparisons/shared_dependencies.lmx).
 - map: [PI01](library_comparisons/PI01_comparision.md)
 
-Штатные средства Perl: regex /g in list context.
-
-Построение Pattern/TextView: byteText, atLeast, asciiLetter. Общий строитель regex-профиля отдельно показан в [PI07](library_comparisons/PI07_comparision.md).
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

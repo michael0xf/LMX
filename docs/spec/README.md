@@ -1,53 +1,53 @@
-# Lingvamyxa — English documentation for Fable review
+# Lingvamyxa — current specification and examples
 
-> **Repository note.** This directory holds the edition of 2026-11-21 in the layout of the author's packet
-> (it lay in `new_parts/newdocs/` and was removed there as a duplicate on the author's order of 2026-11-21)
-> with the author's edition of 2026-11-22 merged into it ([plan](../../next_core_tasks_v3.md#docs-20261122)).
-> The uploaded base preserved those texts apart from placement links. The present
-> review additionally applies the core-function and comparison changes listed below. Since 2026-11-23 the primary documents stand in `docs/spec`, with [CORE.md](CORE.md) and the
-> [developer instruction](L2_L3_CODING_INSTRUCTION.md) among them, and the documents of patterns and
-> examples in `docs/spec/patterns` (formerly `docs/new_parts`); the author's task documents stay in
-> `docs/tasks` as history. In this repository the semantics and the grammar are generated from
-> `provenance/semantics-book.md` and `provenance/grammar.json` together with their Russian halves, which are
-> translations of the English text (completed on 2026-11-21). The other Russian documents
-> (`L2_spec_ru.md`, `LMX_semantics_guide.ru.md`, `kernel-implementation.ru.md`, `implementation-notes.ru.md`,
-> `source-comparison.ru.md`) are translations of the English edition as well (completed on 2026-11-21,
-> [plan](../../next_core_tasks_v3.md#docs-20261121)). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not
-> part of the packet and is kept as it was.
-
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current core:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 This is the documentation layout of the current uploaded archive. Historical notes
 inside individual files can refer to the author's wider repository; those paths do
 not change the layout or the source of this edition. The current work is summarized
 in the [revision report](REVISION_2026-11-22.md), including the [naming decisions](NAMING_2026-11-22.md).
 
-**Review edition: 2026-11-23, restored examples.** This edition starts from the
-author's `23-Nov-2026.tar.gz`, restores short examples from `22-Nov-2026-3.tar.gz`,
-and then removes repeated algorithms using the current LMX semantics. The
-[restoration report](RESTORATION_2026-11-23.md) records the inputs, actual changes,
-counting rules, and verification limits. The Fable packet applies the final result
-directly to the independently verified original `spec.tar.gz` project baseline.
+**Integrated edition: 2026-11-23.** The uploaded `spec` documentation and its
+parser-checked examples are the base of this edition. Canonical names,
+generalized library contracts, adaptive constructors and both operation forms
+are incorporated into the permanent chapters and current examples. Historical
+restoration records remain provenance; they do not replace the current source.
+
+**Answers to Fable are included in this archive:**
+[FABLE_CLARIFICATIONS.md](FABLE_CLARIFICATIONS.md) answers every item in the supplied findings,
+states the concrete corrections and identifies the remaining narrow R0 design question.
+The rules are also corrected in their permanent chapters. See the
+[integration and verification report](INTEGRATION_REPORT.md) for the completed scope and execution limits.
 
 **Current implementation work:** [direct core functions](CORE_FUNCTIONS.md) and
 [library-use and implementation comparisons](patterns/CORE_COMPARISONS_2026-11-23.md). Control-language clients
 use real language/library facilities; their separately authored implementations
 remain comparison material. LMX clients use the corresponding direct kernel
-functions. Only meaningfully different approaches retain full alternative code.
+functions. Functional comparisons publish both a complete procedural LMX client and
+a complete functional LMX client for the same observable contract; shared library
+implementations remain single canonical bodies.
 
 The [standard-operation review](patterns/LMX_Fn_Receivers/CORE_STANDARD_REVIEW_20261123.md)
-adds 89 implemented public operations to the 123 supplied names, for 212 in one
-current core. The [Common Lisp/SBCL comparison](patterns/examples/SBCL_comparison/README.md)
-is included in full. PDF and XLSX tables show the supplementary **«без сложного
-Throws»** metric and green minima for comparable rows, while preserving full-source
-counts and their ratios.
+and [current catalog](patterns/LMX_Fn_Receivers/CATALOG.md) describe one core.
+The [Common Lisp/SBCL comparison](patterns/examples/SBCL_comparison/README.md)
+is included in full. PDF/XLSX comparisons count each complete procedural and
+functional LMX source independently, including every written declaration and
+`copy(target\throws)` reference. Green cells mark the actual minimum full count
+in each comparable row. There is no statistical reduction of Throws.
+
+**Author clarification — postfix declarations:** typed pointers use `Model@: p`
+and `int@: left`; typed arrays place `T[]` before the colon. Both named and
+anonymous square initialization are valid, including `Model[]: arr [Model Model]`,
+`Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]`.
+The [eight positive forms and composition checks](TYPE_DECLARATION_FORMS.md)
+cover these declarations without rewriting genuine universal-reference initializers.
 
 **Author clarification — declaration arguments:** a supplied declaration is a DATA Structure,
 not an automatically executed call. Its internal name never selects an input. Unnamed actuals
 use ordinary positions; only an outer `name := value` names a destination. See the
 [merge note and complete numbers/cycles example](LMX_semantics.en.md#declaration-arguments).
 
-The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `Struct@: ptr` and `type[]: array`. See the [task-to-documentation review](patterns/TZ_APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
+The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `Struct@: ptr` and `type[]: array`. See the [application review](patterns/APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
 
 This edition integrates the requested
 receiver rename, general functional library, containers and signature interchangeability.
@@ -88,7 +88,22 @@ and the other contents are represented by the Lmx pointer array and referenced
 records. Ordinary runtime bookkeeping remains; a working/expanded/callable graph,
 static DATA replica, or namespace-shaped program copy does not.
 
+**Root startup clarification:** execution always starts at the root as an ordinary L3 Thread, without DATA or user actuals. CODE locals and calls use the common mechanisms. A parent stub with arguments may send an ordinary Message to the root; it does not select Main as an alternate entry. See [the startup contract and observations](LMX_semantics.en.md#source-entry-profiles).
+
 ## Reading order
+
+The subject chapters are self-contained normative documentation:
+
+| Chapter | Contract and implementation design |
+| --- | --- |
+| [Operation forms](OPERATION_FORMS.md) | All receiver/operand classes, exact names, roles, shared lowering and unary variants |
+| [Generic operations](GENERIC_OPERATIONS.md) | Unified names, publication, type/to, common comparison, Pattern sources and explicit profiles |
+| [Generic equality](GENERIC_EQUALITY.md) | Default equality, unique, equalFields, identity, errors and one range traversal |
+| [Monadic operations](MONADIC_OPERATIONS.md) | Adaptive whole-value constructors, exact result types and one bind chain |
+
+These chapters are part of the specification, alongside the English grammar,
+semantics and implementation chapters. Source-only and reference-model checks
+are identified separately from LMX runtime execution.
 
 | Document | Purpose |
 | --- | --- |
@@ -164,6 +179,6 @@ background sources rather than repository build dependencies.
 ## Archive contents
 
 This directory contains the current specifications, reading guides, revision reports,
-implementation tasks, and the complete patterns/example package. Source code for
+implementation contracts, and the complete patterns/example package. Source code for
 the proposed core receivers, publication tools, and scoped verification reports are
 provided under `patterns/`; an executable LMX kernel is not included.

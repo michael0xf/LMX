@@ -28,12 +28,11 @@ Predicates:
 SpecificationExample:
     return: @
     build:
-        throws: OperandArity
-        import: SpecificationLibrary\Operators
-        return: Predicates\nonnegative both Predicates\below100
+        throws: copy(FxThrows\adapter)
+        return: allOf(predicates := (Predicates\nonnegative; Predicates\below100))
 ```
 
-Клиент импортирует готовый both из SpecificationLibrary\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.
+allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.
 
 [Отдельный листинг](examples/lmx/031_specification.lm3)
 
@@ -72,23 +71,23 @@ public static class Specifications {
 
 ## Разбор LMX
 
-Клиент импортирует готовый both из SpecificationLibrary\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.
+allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.
 
 ## Сопоставление
 
-Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор.
+Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 225 | 13 | 225 |
-| Python | 140 | 4 | — |
-| C# | 274 | 10 | — |
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 216 | 12 |
+| Python | 140 | 4 |
+| C# | 274 | 10 |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Все объявления, аргументы и ссылки на общий банк ошибок учитываются целиком.
 
 ## English explanation
 
@@ -100,15 +99,15 @@ Compose predicates independently of their candidate values.
 
 **Expected observation.** Results are false,true,false; the right predicate is skipped when the left is false.
 
-**LMX.** The client imports ready both from SpecificationLibrary\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.
+**LMX.** allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.
 
-**Comparison.** The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract.
+**Comparison.** The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.
 
 **Scope and limitations.** Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from satisfies. Client and complete combinator implementation are measured separately.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** The client imports ready both from SpecificationLibrary\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.
+- **LMX:** allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.
 - **Python:** Real builtin all with a lazy generator; no specification.py import.
 - **C#:** Real Enumerable.All preserves short-circuit evaluation.
 

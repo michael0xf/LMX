@@ -40,3 +40,11 @@ Sources for client interfaces:
 Sources are cited for the contracts. The reference algorithms are independent
 comparison code, not copied complete library sources. Runtime verification remains
 pending where the corresponding compiler/runtime is unavailable.
+
+## Запуск корня и дальнейшие операции
+
+Всегда запускается корень R0 как L3 Thread. У корня нет DATA и пользовательских аргументов. Локальные объявления и вызовы обрабатываются общим механизмом языка.
+
+Именованные операции из invoke, inputs и тестовых cases выполняются корнем или обычным обработчиком уже после старта. Main и Example\run не являются альтернативными точками запуска программы. Заглушка-родитель может иметь собственные аргументы и отправить корню сообщение; эти аргументы не становятся DATA корня.
+
+load_before обозначает необходимые определения фикстуры. Отдельного режима запуска через загрузку в DATA он не вводит; import открывает доступные имена. Для короткого фрагмента явно задаётся принимающий контекст последующей обычной операции. Новая команда CLI или API запуска здесь не определяется. LMX runtime: NOT_RUN. [Норма запуска](../../../LMX_semantics.en.md#source-entry-profiles).

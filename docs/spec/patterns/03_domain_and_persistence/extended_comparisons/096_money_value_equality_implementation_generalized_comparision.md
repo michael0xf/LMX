@@ -1,6 +1,6 @@
-# 096. EqualFields — value equality implementation: отдельный расширенный договор
+# 096. EqualFields — value equality implementation: общий договор
 
-Сохранена самостоятельная обобщённая реализация 23-Nov. Она решает более широкую задачу, чем восстановленная основная пара 22-Nov, и не участвует в её сумме или выборе кратчайшего листинга.
+Действующие общие определения извлечены из единого ядра. Эта отдельная пара сохраняет свой договор; её размер не подменяет размер клиентского вызова.
 
 ## Договор
 
@@ -17,30 +17,26 @@ FxEqualFields:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second
     return: int
     equalFields:
         throws: copy(FxThrows\predicate)
         FxSeqInfo\get(first)
         FxSeqInfo\get(second)
-        private: int: count length(first)
-        if: count != length(second)
+        if: length(first) != length(second)
             return: 0
-        private: int: i 0
-        while: i < count
-            private: @: a FxSeqRead\read(first; i)
-            private: @: b FxSeqRead\read(second; i)
-            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
-            if: FxSeqPredicate\truth(accepted) = 0
-                return: 0
-            i += 1
-        return: 1
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0
 ```
 
 [Исходник](source/lmx/096_money_value_equality_implementation_generalized.lm3)
 
-Общий цикл работает с любыми длинами и типами, используя переданный comparator. Immutable Money является обычным механизмом языка и показан в032.
+Точные общие определения FxEqualFields из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.
 
 ## Python
 
@@ -110,10 +106,12 @@ public readonly struct Money : IEquatable<Money> {
 
 | Язык | Непробельные символы |
 | --- | ---: |
-| LMX | 427 |
+| LMX | 293 |
 | Python | 637 |
 | C# | 1037 |
 
-[Основная узкая пара](../096_money_value_equality_implementation_comparision.md). [Норма LMX](../../../LMX_semantics.en.md).
+Полный текст каждого листинга включает все объявления, заголовки Throws, аргументы и ссылки; исключений из подсчёта нет.
 
-LMX здесь не выполнялся. Это сохранение исходников и их договора, а не новый отчёт о runtime-проверке.
+[Основная пара](../096_money_value_equality_implementation_comparision.md). [Единые формы](../../UNIFIED_OPERATIONS.md).
+
+Результаты языкового выполнения изменённых исходников не заявлены.

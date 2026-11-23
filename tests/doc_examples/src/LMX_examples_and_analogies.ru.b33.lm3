@@ -2,9 +2,17 @@ TicketCode:
     char[]: candidate
     return: int
     accepts:
-        throws: RangeArity
         if: length(candidate) != 5
             return: 0
-        if: candidate[2] != '-'
-            return: 0
-        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
+        int: i 0
+        while: i < 5
+            if: i != 2
+                char: first '0'
+                char: last '9'
+                if: i < 2
+                    first := 'A'
+                    last := 'Z'
+                if: candidate[i] < first || candidate[i] > last
+                    return: 0
+            i += 1
+        return: candidate[2] = '-'

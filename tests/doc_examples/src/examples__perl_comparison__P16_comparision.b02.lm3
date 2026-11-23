@@ -1,0 +1,11 @@
+Example:
+    char[]: text
+    return: @
+    run:
+        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxCapture\capture\throws) copy(RxThenOperand\then\throws) copy(RxWholeMatch\wholeMatch\throws) copy(RxCaptureValue\captureValue\throws)
+        @: parsed wholeMatch(byteText(text); (then capture("key"; (asciiLetter atLeast 1)) "=" capture("value"; (asciiDigit atLeast 1))))
+        if: parsed\present = 0
+            return: (0; ""; "")
+        @: key captureValue(parsed\value; "key")
+        @: value captureValue(parsed\value; "value")
+        return: (1; \key\value; \value\value)

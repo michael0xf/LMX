@@ -4,7 +4,7 @@
 # 212 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
 # FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
-# Name :: DATA и signatureTypes взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
+# Name :: DATA и to взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
 # Загружать сборку ИЛИ отдельные файлы, не оба варианта вместе.
 
@@ -271,6 +271,21 @@ FxThrows:
         FxTypeToken
         ReceiverIndex
         SequenceSize
+    pattern:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+        PatternArgument
+        PatternEncoding
+        PatternPosition
 
 # SOURCE: src/reflection.lmx
 # ФИЗИЧЕСКИЕ ТИПЫ ПОЛЕЙ: сохранены три прежних ядерных варианта.
@@ -688,12 +703,23 @@ FxForwardEngine:
 # FxKernel\callable(contract; labels; bodyGraph; state; failures; policy) формирует
 # обычный граф; внутри тела node\private\state даёт именно переданный state.
 
+# Ordinary shared DATA fragment for prepared-value operands. Copying it supplies
+# the real fields; structural operand checking supplies nothing implicitly.
+# Each consumer adds its own ready PRIORITY and required/result contract.
+# The private transport inputs cannot autofill from a helper's local variables.
+FxPreparedOperands:
+    private:
+        @: left
+        @[]: right
+    const: int: PASS_ARGS_AS_IS 0
+
 # Снимок уже принятого значения через существующий prepared operand protocol.
 # Ресивер принимает указатель на значение слева; RHS не разворачивает его.
 # Для postfix (value record) общий handler передаёт present empty right Array.
 # Поддержка lifetime проверяется отдельно в приёмке для четырёх комбинаций executors.
 FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     record:
@@ -749,7 +775,7 @@ FxDecimal:
         throws: copy(FxThrows\selection)
         if: number < 0
             throw: FxIndex()
-        return: FxFormatInt\formatInt(number)
+        return: FxFormat\format(number)
 
 # Для сгенерированных публичных имён используется только ASCII p + digits.
 # Отдельное точное имя пригодится клиентам строителя для произвольных labels.
@@ -811,7 +837,7 @@ FxSlice:
         return: FxSeqSlice\slice(source := values; begin := start; end := start + count)
 
 # Name :: DATA создаёт описание сигнатуры, не исполняемое тело.
-# Used by the existing signatureTypes operand and the general factories.
+# Used by the existing to operand and the general factories.
 # Normalized @ references point to canonical int type-code records; the current
 # type registry retains full models, and no public boxed Type kind is added.
 FxSignatures:
@@ -843,29 +869,56 @@ FxBuild:
             selectedPolicy := FxOwnPolicy\make(contract)
         return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures; selectedPolicy)
 
-FxCaptureState:
-    @: record 0
-
 # Получатель Ti -> @ использует штатное принятие аргумента, затем возвращает
 # запись уже принятого значения. Здесь нет независимого алгоритма conversion.
+FxRecordConstructor :: (@: value; return: @)
+
+FxRecordAdapterState:
+    @: record 0
+    FxRecordConstructor@: constructor
+
+FxRecordAdapter:
+    private:
+        @: typeToken
+        FxRecordConstructor@: constructor 0
+    required: typeToken
+    return: @
+    make:
+        throws: copy(FxThrows\selection)
+        private: @: inputType FxKernel\normalizeType(typeToken)
+        private: @: noResult FxKernel\normalizeType(void)
+        private: @: inputs FxKernel\signatureData(
+            FxOne\make(inputType);
+            noResult;
+            FxLabels\labels(1)
+        )
+        private: @: state (copy(FxRecordAdapterState))
+        state\record := FxRecordOperands\record
+        private: @: resultType FxKernel\normalizeType(FxTypeTokens\reference[0])
+        private: @: failures FxCaptureFailures\names()
+        private: char[]: body "return: (p0 node\\private\\state\\record)\n"
+        if: constructor != 0
+            state\constructor := constructor
+            private: @: shape FxKernel\signature(constructor)
+            resultType := shape\resultType
+            failures := FxFailures\union(failures; shape\throws)
+            body := "return: node\\private\\state\\constructor((p0 node\\private\\state\\record))\n"
+        private: @: outputs FxKernel\signatureData((); resultType; ())
+        Captured :: (
+            private: copy(inputs)
+            required: p0
+            copy(outputs)
+        )
+        return: FxBuild\make(Captured; body; state; failures)
+
 FxCaptureOne:
     private:
         @: requirement
         @: sourceRecord
     return: @
     capture:
-        throws: FxIndex FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex SequenceSize
-        private: @: inputTypes (copy(()))
-        sys\resize(inputTypes; 1)
-        inputTypes[0] := requirement
-        private: @: referenceType FxKernel\normalizeType(token := FxTypeTokens\reference[0])
-        private: @: contract FxSignatures\make(inputTypes; referenceType)
-        private: @: state (copy(FxCaptureState))
-        state\record := FxRecordOperands\record
-        private: @: failures FxCaptureFailures\names()
-        # FxRecordArity невозможно при написанном пустом RHS, но имя включается
-        # в явный контракт тела как объявленный исход используемого операнда.
-        private: @: receiver FxBuild\make(contract; "return: (p0 node\\private\\state\\record)\n"; state; failures)
+        throws: copy(FxThrows\selection) FxRecordArity
+        private: @: receiver FxRecordAdapter\make(requirement)
         return: receiver(p0 := \sourceRecord)
 
 FxCapturePrefix:
@@ -1057,27 +1110,15 @@ FxUncurry:
         return: FxWrap\make(flatContract; FxUncurryEngine\run; state; failures; FxOwnPolicy\make(flatContract))
 
 # SOURCE: src/fn_operand.lmx
-# SIGNATURETYPES КАК ЯДЕРНЫЙ ОПЕРАНД: left — тип результата; right — типы входов.
-# Именованное объявление теперь пишется Name :: Signature. Прежний declaration
-# receiver полностью удалён, совместимый alias не сохраняется.
-# signatureTypes — обычное ядерное имя type-token конструктора, не отдельный reserved
-# declaration head. Его обнаружение идёт по общей структуре OPERANDS_TEMPLATE.
-# Созданное описание совместимо с Name :: Signature по общим правилам типов.
-#
-# copy стоит первым. Готовые PASS_ARGS_AS_IS=0 и PRIORITY унаследованы
-# из sys\OPERANDS_TEMPLATE; повторного объявления этих const-полей нет.
-# Публичный результат — @ на обычное описание сигнатуры, а не новая функция.
-# right подготовлен общим обработчиком по текущим правилам uploaded docs.
-# При левом type-токене справа остаётся цепочка написанных операндов.
-# Одиночная (T0 T1) не превращается автоматически в список типов: это один
-# контейнер-токен. Исключение: написанный anonymous left, right.length=1,
-# right[0] — написанная anonymous Structure. Снимается только внешний RHS-уровень;
-# left целиком, вложенный RHS повторно не открывается, function result не открывается.
-# Обычный make(left := token; right := typeRecords) явно передаёт вектор.
-# normalizeType читает ровно переданную запись: int payload как type code,
-# uninit:T как T без payload, void либо полное существующее требование.
+# Shared signature construction. Public to uses inputs first and result last.
+# FxSignatureOperand is the private result/inputs engine; FxToTypes and
+# FxToTokens map both public forms into that one body. TYPE tokens remain
+# complete requirements, including uninitialised records and exact void.
+# Name :: DATA is the distinct named declaration role. See PUBLICATION_CONTRACT.md.
+
 FxSignatureOperand:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     make:
@@ -1092,6 +1133,83 @@ FxSignatureOperand:
             inputTypes[i] := FxKernel\normalizeType(token := right[i])
             i += 1
         return: FxSignatures\make(inputs := inputTypes; result := resultType)
+
+
+
+FxToTypes:
+    private:
+        @[]: inputs
+        @: result
+    required: inputs result
+    return: @
+    to:
+        throws: copy(FxThrows\selection)
+        return: FxSignatureOperand\make(
+            left := result;
+            right := inputs
+        )
+
+FxToTokens:
+    private: @[]: tokens
+    required: tokens
+    return: @
+    to:
+        throws: FxArity copy(FxThrows\selection)
+        if: length(tokens) = 0
+            throw: FxArity()
+        private: int: last length(tokens) - 1
+        private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
+        return: FxToTypes\to(inputs := inputs; result := tokens[last])
+
+FxToOperand:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: @
+    to:
+        throws: FxArity copy(FxThrows\selection)
+        return: FxToTokens\to(
+            tokens := RxLogicalArguments\collect(left := left; right := right)
+        )
+
+# SOURCE: src/operation_forms.lmx
+# Ordinary operation forms; the translator preserves actual roles.
+# Descriptors are consumed by the existing actor publication context.
+
+FxOperationForms:
+    @: call 0
+    @: operand 0
+
+FxForms:
+    private:
+        @: operation
+        int: priority
+    required: operation priority
+    return: @
+    make:
+        throws: copy(FxThrows\selection)
+        private: @: forms (copy(FxOperationForms))
+        forms\call := operation
+        forms\operand := FxAsOperand\asOperand(operation; priority)
+        return: forms
+
+FxValueType:
+    private: @: value
+    required: value
+    return: int
+    type:
+        return: sys\typeof(value)
+
+FxTypeOperand:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: int
+    type:
+        throws: FxRecordArity
+        return: FxValueType\type(
+            value := FxRecordOperands\record(left := left; right := right)
+        )
 
 # SOURCE: src/generic_runtime.lmx
 # ОБЩИЙ ТИПИЗИРОВАННЫЙ ПРОТОКОЛ ЗНАЧЕНИЙ.
@@ -1232,37 +1350,10 @@ FxFailures:
 # One comparison body, bound to the caller's real typed Array places.
 # unitSource/unitPart are ordinary non-private dynamic places declared by
 # each caller as char[] or int[]; no @[] cast or scalar dereference occurs.
-FxUnitRange:
-    private: int: at
-    return: int
-    equal:
-        if: at < 0 || at > length(unitSource)
-            return: 0
-        if: length(unitPart) > length(unitSource) - at
-            return: 0
-        private: int: i 0
-        while: i < length(unitPart)
-            if: unitSource[at + i] != unitPart[i]
-                return: 0
-            i += 1
-        return: 1
-
 # Internal exact name comparison, not a new public text operation.
 # Public literal equality is matches(byteText(first); second).
 # Отфильтрована внутренняя ПОЙМАННАЯ оболочка engine; исходные target failures
 # добавляются отдельно, поэтому target по-прежнему может сам бросать FxCallFailure.
-FxSameText:
-    private:
-        char[]: first
-        char[]: second
-    return: int
-    same:
-        if: length(first) != length(second)
-            return: 0
-        char[]: unitSource first
-        char[]: unitPart second
-        return: FxUnitRange\equal(0)
-
 FxFailureFilter:
     private:
         @: names
@@ -1275,12 +1366,61 @@ FxFailureFilter:
         private: int: i 0
         while: i < length(names)
             private: char[]: name \names[i]
-            if: FxSameText\same(name; excluded) = 0
+            if: FxEqualFields\equalFields(name; excluded) = 0
                 out[used] := names[i]
                 used += 1
             i += 1
         sys\resize(out; used)
         return: out
+
+
+FxEqualityTypes:
+    array:
+        []: value
+
+FxValueSame:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    test:
+        throws: copy(FxThrows\predicate)
+        if: same != 0
+            return: FxSeqPredicate\truth(FxApply\apply(same; FxTwo\make(first; second)))
+        private: int: firstArray FxKernel\acceptsRequirement(
+            candidate := first;
+            requirement := FxEqualityTypes\array[0]
+        )
+        private: int: secondArray FxKernel\acceptsRequirement(
+            candidate := second;
+            requirement := FxEqualityTypes\array[0]
+        )
+        if: firstArray != secondArray
+            return: 0
+        if: firstArray != 0
+            return: FxEqualFields\equalFields(first; second)
+        return: \first = \second
+
+
+FxUnaryPredicate:
+    private: @: operation
+    required: operation
+    return: @
+    check:
+        throws: copy(FxThrows\selection) FxArity
+        private: @: shape FxKernel\signature(operation)
+        if: length(shape\inputTypes) != 1
+            throw: FxArity()
+        if: shape\hasResult = 0
+            throw: FxTypeToken()
+        private: @: integerType FxKernel\normalizeType(
+            FxAllOfTypeToken\integer[0]
+        )
+        if: \shape\resultType != \integerType
+            throw: FxTypeToken()
+        return: operation
 
 # SOURCE: src/reflection_bridges.lmx
 # СЕМАНТИЧЕСКАЯ СИГНАТУРА И ИМЕНА СУЩЕСТВУЮЩЕГО ЧИСТОГО ГРАФА.
@@ -1345,7 +1485,8 @@ FxMaybe:
 
 FxSome:
     private: @: value
-    return: @
+    required: value
+    return: FxMaybe@
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -1353,7 +1494,7 @@ FxSome:
         return: result
 
 FxNone:
-    return: @
+    return: FxMaybe@
     none:
         return: (copy(FxMaybe))
 
@@ -1361,14 +1502,17 @@ FxBind:
     private:
         FxMaybe@: input
         @: next
-    return: @
+    required: input next
+    return: FxMaybe@
     bind:
         throws: copy(FxThrows\call)
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxMaybe@: result record
+        private: FxMaybe@: result \record
         return: result
+
+# Result также не фиксирует тип полезного значения или причины неуспеха.
 
 # Result также не фиксирует тип полезного значения или причины неуспеха.
 FxResult:
@@ -1378,7 +1522,8 @@ FxResult:
 
 FxOk:
     private: @: value
-    return: @
+    required: value
+    return: FxResult@
     ok:
         private: @: result (copy(FxResult))
         result\ok := 1
@@ -1387,7 +1532,8 @@ FxOk:
 
 FxErr:
     private: @: reason
-    return: @
+    required: reason
+    return: FxResult@
     err:
         private: @: result (copy(FxResult))
         result\reason := reason
@@ -1397,14 +1543,19 @@ FxBindResult:
     private:
         FxResult@: input
         @: next
-    return: @
-    bindResult:
+    required: input next
+    return: FxResult@
+    bind:
         throws: copy(FxThrows\call)
         if: input\ok = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxResult@: result record
+        private: FxResult@: result \record
         return: result
+
+# List — последовательность записей, а не неизменяемый связный список.
+# Список копируется поверхностно: типы и цели ссылочных значений сохранены.
+# Its input is now any admitted Array, including dense values, via one @.
 
 # List — последовательность записей, а не неизменяемый связный список.
 # Список копируется поверхностно: типы и цели ссылочных значений сохранены.
@@ -1420,13 +1571,14 @@ FxList:
 
 FxListBind:
     private:
-        @: items
+        []: input
         @: next
-    required: items next
-    return: @
-    flatMap:
+    required: input next
+    return: @[]
+    bind:
         throws: copy(FxThrows\traversal)
-        return: FxSeqFlatMap\flatMap(items; next)
+        private: @: result FxSeqBind\bind(items := input; next := next)
+        return: \result
 
 # Bounce stores either a final value record or an ordinary nullary callable.
 # This is synchronous stack control, not a future or task. To run it asynchronously,
@@ -1441,7 +1593,8 @@ FxBounce:
 
 FxDone:
     private: @: value
-    return: @
+    required: value
+    return: FxBounce@
     done:
         private: @: result (copy(FxBounce))
         result\done := 1
@@ -1470,6 +1623,74 @@ FxTrampoline:
             private: @: record FxApply\apply(current\next; empty)
             current := \record
         return: current\value
+
+# SOURCE: src/monadic_forms.lmx
+# Shared typed constructor and binding representations.
+# Public role/family selection is specified in ../../../MONADIC_OPERATIONS.md.
+
+FxMaybeActive:
+    private: FxMaybe@: input
+    required: input
+    return: int
+    active:
+        return: input\present
+
+FxResultActive:
+    private: FxResult@: input
+    required: input
+    return: int
+    active:
+        return: input\ok
+
+FxBindChain:
+    private:
+        @: current
+        @[]: steps
+        @: step
+        @: active
+    required: current steps step active
+    return: @
+    run:
+        throws: copy(FxThrows\call) FxArity
+        if: length(steps) = 0
+            throw: FxArity()
+        private: int: i 0
+        while: i < length(steps)
+            if: active(input := current) = 0
+                return: current
+            current := step(input := current; next := \steps[i])
+            i += 1
+        return: current
+
+FxBindOperandTail:
+    private: @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+
+FxMaybeBindOperand:
+    private: FxMaybe@@: left
+    copy: FxBindOperandTail
+    required: left
+    return: FxMaybe@
+    bind:
+        throws: copy(FxThrows\call) FxArity
+        return: FxBindChain\run(\left; right; FxBind\bind; FxMaybeActive\active)
+
+FxResultBindOperand:
+    private: FxResult@@: left
+    copy: FxBindOperandTail
+    required: left
+    return: FxResult@
+    bind:
+        throws: copy(FxThrows\call) FxArity
+        return: FxBindChain\run(\left; right; FxBindResult\bind; FxResultActive\active)
+
+MonadBindings:
+    import: FxBind FxBindResult FxMaybeBindOperand FxResultBindOperand
+
+ArrayBinding:
+    const: @: bind FxAsOperand\asOperand(FxListBind\bind; sys\priority("+"))
 
 # SOURCE: src/sequences_core.lmx
 # UNIVERSAL ARRAY ACCESS. These are common value/layout helpers, not a new
@@ -1779,13 +2000,13 @@ FxSeqList:
         throws: copy(FxThrows\sequence)
         return: FxSeqRecords\make(values)
 
-FxSeqFlatMap:
+FxSeqBind:
     private:
         @: items
         @: next
     required: items next
     return: @
-    flatMap:
+    bind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
@@ -2382,25 +2603,24 @@ FxGroup:
 FxGroupBy:
     private:
         @: items
-        @: keyOf
-        @: sameKey
-    required: items keyOf sameKey
+        @: keyOf 0
+        @: sameKey 0
+    required: items
     return: @
     groupBy:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
-            private: @: key FxApply\apply(keyOf; FxOne\make(item))
+            private: @: key FxProjectValue\get(item; keyOf)
             private: @: group 0
             private: int: j 0
             while: j < length(result)
                 private: FxGroup@: candidate result[j]
-                private: @: flagRecord FxApply\apply(sameKey; FxTwo\make(candidate\key; key))
-                private: int: flag \flagRecord
+                private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
                     break
@@ -2677,15 +2897,6 @@ FxCompose:
         private: @: failures FxFailures\union(a\throws; b\throws)
         return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
 
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
-    pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)
-
 FxIdentity:
     private: @: typeToken
     return: @
@@ -2742,15 +2953,12 @@ FxMemoEngine:
         @: frame
     return: @
     run:
-        throws: copy(FxThrows\snapshot)
+        throws: copy(FxThrows\snapshot) FxPredicate
         private: @: key FxFrameSnapshot\snapshot(frame)
         private: int: i 0
         while: i < length(state\entries)
             private: FxMemoEntry@: entry state\entries[i]
-            private: @: equalityArgs FxTwo\make(FxRecords\reference(entry\key); FxRecords\reference(key))
-            private: @: flagRecord FxApply\apply(state\sameKey; equalityArgs)
-            private: int: flag \flagRecord
-            if: flag != 0
+            if: FxValueSame\test(entry\key; key; state\sameKey) != 0
                 return: entry\value
             i += 1
         private: @: value FxFrameApply\apply(frame)
@@ -2762,7 +2970,8 @@ FxMemoEngine:
         state\entries[count] := entry
         return: value
 
-# sameKey receives two complete, accepted key snapshots and returns int.
+# sameKey optionally receives two complete, accepted key snapshots and returns int.
+# Without it, the shared ordinary/deep Array equality compares those snapshots.
 # Omitted/default/autofill positions are resolved by an explicit key read;
 # omission alone never yields a cache hit. Snapshot occurs before body writes.
 # Кеш линейный; ключи должны оставаться стабильны для выбранного равенства.
@@ -2770,18 +2979,21 @@ FxMemoEngine:
 FxMemo:
     private:
         @: operation
-        @: sameKey
+        @: sameKey 0
+    required: operation
     return: @
     memo:
         throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
-        private: @: equality FxKernel\signature(subject := sameKey)
         private: @: state (copy(FxMemoState))
         state\operation := operation
         state\sameKey := sameKey
         state\entries := (copy(()))
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
-        private: @: failures FxFailures\union(info\throws; equality\throws)
+        private: @: failures info\throws
+        if: sameKey != 0
+            private: @: equality FxKernel\signature(subject := sameKey)
+            failures := FxFailures\union(failures; equality\throws)
         return: FxWrap\make(contract; FxMemoEngine\run; state; failures; FxFullPolicy\make(operation))
 
 FxFixState:
@@ -3263,6 +3475,180 @@ FxTrace:
         state\sink := sink
         return: FxWrap\make(contract; FxTraceEngine\run; state; failures; FxFullPolicy\make(operation))
 
+# SOURCE: src/coreGenericOperations.lmx
+# One algorithm per semantic action. Public input/output adapters preserve the
+# actual value records and publish the exact result of the selected profile.
+# Ordinary call and Expression use these same bodies.
+
+FxProjectValue:
+    private:
+        @: value
+        @: projection 0
+    required: value
+    return: @
+    get:
+        throws: copy(FxThrows\call)
+        if: projection = 0
+            return: value
+        return: FxApply\apply(projection; FxOne\make(value))
+
+FxEquals:
+    private:
+        @: first
+        @: second
+        @: projection 0
+        @: same 0
+    required: first second
+    return: int
+    equals:
+        throws: copy(FxThrows\predicate)
+        private: @: a FxProjectValue\get(first; projection)
+        private: @: b FxProjectValue\get(second; projection)
+        return: FxValueSame\test(a; b; same)
+
+FxPipe:
+    private:
+        @: value
+        @: stages
+    required: value stages
+    return: @
+    pipe:
+        throws: copy(FxThrows\call) FxArity ReceiverIndex
+        FxSeqInfo\get(stages)
+        private: @: current value
+        private: int: i 0
+        while: i < length(stages)
+            private: @: stage \FxSeqRead\read(stages; i)
+            private: @: shape FxKernel\signature(stage)
+            if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+                throw: FxArity()
+            current := FxApply\apply(stage; FxOne\make(current))
+            i += 1
+        return: current
+
+# Exact prepared pipe T -> R, for publication when the stage list is fixed.
+# The same engine is used; FxWrap supplies true result R, never a false @ ABI.
+FxPipeState:
+    @: stages 0
+
+FxPipeEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: copy(FxThrows\call) FxArity ReceiverIndex
+        private: @: slot FxKernel\frameSlot(frame; 0; 1)
+        return: FxPipe\pipe(slot\value; state\stages)
+
+FxPipeBuild:
+    private:
+        @: inputType
+        @: stages
+    required: inputType stages
+    return: @
+    make:
+        throws: copy(FxThrows\adapter)
+        private: @: resultType FxKernel\normalizeType(inputType)
+        private: @: failures (copy(()))
+        private: int: i 0
+        while: i < length(stages)
+            private: @: operation \FxSeqRead\read(stages; i)
+            private: @: shape FxKernel\signature(operation)
+            if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+                throw: FxArity()
+            resultType := shape\resultType
+            failures := FxFailures\union(failures; shape\throws)
+            i += 1
+        private: @: input FxKernel\normalizeType(inputType)
+        private: @: contract FxSignatures\make(FxOne\make(input); resultType)
+        private: @: state (copy(FxPipeState))
+        state\stages := FxSeqRecords\make(stages)
+        return: FxWrap\make(contract; FxPipeEngine\run; state; failures)
+
+FxRetryValue:
+    private:
+        @: operation
+        @: retryOn
+        int: limit
+        @: delay 0
+        @: arguments ()
+    required: operation retryOn limit
+    return: @
+    retry:
+        throws: copy(FxThrows\call) FxArity FxPredicate FxRecordArity ReceiverIndex
+        if: limit < 1
+            throw: FxArity()
+        private: int: attempt 1
+        while: 1
+            private: @: result FxApply\apply(operation; arguments)
+            if: attempt = limit
+                return: result
+            private: @: retryArgs FxTwo\make(result; (attempt FxRecordOperands\record))
+            if: FxSeqPredicate\truth(FxApply\apply(retryOn; retryArgs)) = 0
+                return: result
+            if: delay != 0
+                FxApply\apply(delay; FxOne\make((attempt FxRecordOperands\record)))
+            attempt += 1
+
+# retry decides on ordinary results. retryCall owns declared-exception retry;
+# retryPost owns asynchronous Message completion. Their effects stay distinct.
+
+FxRetryValueState:
+    @: operation 0
+    @: retryOn 0
+    int: limit
+    @: delay 0
+    @: arguments ()
+
+FxRetryValueEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: copy(FxThrows\call) FxArity FxPredicate FxRecordArity ReceiverIndex
+        return: FxRetryValue\retry(
+            state\operation;
+            state\retryOn;
+            state\limit;
+            state\delay;
+            state\arguments
+        )
+
+FxRetryBuild:
+    private:
+        @: operation
+        @: retryOn
+        int: limit
+        @: delay 0
+        @: arguments ()
+    required: operation retryOn limit
+    return: @
+    make:
+        throws: copy(FxThrows\adapter)
+        private: @: shape FxKernel\signature(operation)
+        if: shape\hasResult = 0 || limit < 1
+            throw: FxArity()
+        private: @: selected FxKernel\signature(retryOn)
+        if: length(selected\inputTypes) != 2
+            throw: FxArity()
+        private: @: failures FxFailures\union(shape\throws; selected\throws)
+        if: delay != 0
+            private: @: delayShape FxKernel\signature(delay)
+            if: length(delayShape\inputTypes) != 1
+                throw: FxArity()
+            failures := FxFailures\union(failures; delayShape\throws)
+        ---
+        private: @: contract FxSignatures\make((); shape\resultType)
+        private: @: state (copy(FxRetryValueState))
+        state\operation := operation
+        state\retryOn := retryOn
+        state\limit := limit
+        state\delay := delay
+        state\arguments := arguments
+        return: FxWrap\make(contract; FxRetryValueEngine\run; state; failures)
+
 # SOURCE: src/coreComparisonGroups.lmx
 # DIRECT CORE OPERATIONS EXTRACTED FROM THE IMPLEMENTATION COMPARISONS.
 # No example-local import is required. These bodies use the existing typed
@@ -3295,25 +3681,21 @@ FxEqualFields:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second
     return: int
     equalFields:
         throws: copy(FxThrows\predicate)
         FxSeqInfo\get(first)
         FxSeqInfo\get(second)
-        private: int: count length(first)
-        if: count != length(second)
+        if: length(first) != length(second)
             return: 0
-        private: int: i 0
-        while: i < count
-            private: @: a FxSeqRead\read(first; i)
-            private: @: b FxSeqRead\read(second; i)
-            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
-            if: FxSeqPredicate\truth(accepted) = 0
-                return: 0
-            i += 1
-        return: 1
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0
 
 FxAllOfTypeToken:
     integer:
@@ -3646,7 +4028,8 @@ FxRetryDelayMessage:
 # its dedicated implementation comparison, not once per client.
 
 PipeLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: int
     pipe:
         int: value \left
@@ -3658,7 +4041,8 @@ PipeLibrary:
         return: value
 
 FindLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: @
     findById:
         throws: OperandArity
@@ -3686,9 +4070,10 @@ SpecificationLibrary:
                 return: node\first(value) && node\second(value)
     ---
     Operators:
-        copy: sys\OPERANDS_TEMPLATE
+        copy: FxPreparedOperands
+        const: int: PRIORITY sys\priority("+")
         return: @
-        both:
+        allOf:
             throws: OperandArity
             if: length(right) != 1
                 throw: OperandArity()
@@ -3700,7 +4085,8 @@ MoneyLibrary:
         int: cents 100
         int: currency 840
     Equality:
-        copy: sys\OPERANDS_TEMPLATE
+        copy: FxPreparedOperands
+        const: int: PRIORITY sys\priority("+")
         return: int
         equals:
             throws: OperandArity
@@ -3711,7 +4097,8 @@ MoneyLibrary:
             return: a\cents = b\cents && a\currency = b\currency
 
 RetryLibrary:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     return: int
     retry:
         throws: Attempts
@@ -3742,7 +4129,7 @@ RetryLibrary:
 # No mutable declaration, callback or namespace is shared across Message arenas.
 
 FxBetween:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
     const: int: PRIORITY sys\priority("<=")
     return: int
     between:
@@ -3765,7 +4152,7 @@ FxIterateUntilStop:
         while: 1
             private: @: step FxKernel\attemptAccepted(iteration)
             if: step\ok = 0
-                if: FxSameText\same(step\failure; "Stop")
+                if: FxEqualFields\equalFields(step\failure; "Stop")
                     break
                 throw: FxCallFailure(step)
             private: @: result FxKernel\attemptAccepted(body)
@@ -3850,18 +4237,11 @@ FxSort:
 FxUnique:
     private:
         @: items
-        @: same
-    required: items same
+        @: same 0
+    required: items
     return: @
     unique:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -3873,8 +4253,7 @@ FxUnique:
             private: int: j 0
             while: j < used
                 private: @: previous FxSeqRead\read(result; j)
-                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
-                if: FxSeqPredicate\truth(answer) != 0
+                if: FxValueSame\test(previous; item; same) != 0
                     duplicate := 1
                     break
                 j += 1
@@ -3892,6 +4271,7 @@ FxUnique:
 # Internal cursors return the existing Maybe. Public eachMatch uses yield / Stop.
 
 TextView:
+    @: prepare RxTextPrepareSource\make
     int: profile
     char[]: source
 
@@ -3905,23 +4285,25 @@ RxPreparedText:
     int[]: byteOffsets
 
 Span:
-    TextView@: source
+    @: source
     int: begin
     int: end
-    private: RxPreparedText@: prepared
+    private: RxPreparedSource@: prepared
 
 Match:
-    TextView@: source
+    @: source
     int: begin
     int: end
     @: captures
-    private: RxPreparedText@: prepared
+    private: RxPreparedSource@: prepared
 
-Pattern :: (RxPreparedText@: source; int: position; @: captures; return: @)
+Pattern :: (RxPreparedSource@: source; int: position; @: captures; return: @)
 
 RxPredicate :: (int: unit; return: int)
 
-RxReplacement :: (Match@: matched; return: char[])
+RxReplacementArgument :: (Match@: matched)
+
+# The actual replacement callable supplies its own exact result requirement.
 
 PatternArgument:
 
@@ -3988,7 +4370,7 @@ RxCaptureLatest:
     find:
         private: @: cursor captures
         while: cursor != 0
-            if: FxSameText\same(cursor\name; name) != 0
+            if: FxEqualFields\equalFields(cursor\name; name) != 0
                 return: FxSome\some(value := cursor)
             cursor := cursor\previous
         return: FxNone\none()
@@ -4001,7 +4383,7 @@ RxPatternOwner:
         @: config 0
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4051,32 +4433,30 @@ RxIsPattern:
     private: @: value
     return: int
     test:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         # Read the existing directed interface check without trial execution.
         # Unresolved compatibility is a service failure, never a false result.
         return: FxKernel\acceptsRequirement(candidate := value; requirement := Pattern)
 
 RxNormalize:
     private: @: value
+    required: value
     return: @
     make:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         if: RxIsPattern\test(value := value) != 0
             return: value
-        # Ordinary admission performs the rejection for numbers, arbitrary
-        # Structures and absent values. It does not turn a number into a char.
-        private: char[]: text \value
-        return: RxLiteral\literal(text := text)
+        return: RxLiteral\literal(value := value)
 
 RxOpen:
     private:
         Pattern@: pattern
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
     open:
-        throws: PatternPosition
+        throws: copy(FxThrows\pattern)
         if: position < 0 || position > length(source\units)
             throw: PatternPosition()
         # The signature-qualified reference applies its ordinary label map.
@@ -4084,7 +4464,7 @@ RxOpen:
 
 RxSpanMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: begin
         int: end
     return: @
@@ -4098,7 +4478,7 @@ RxSpanMake:
 
 RxMatchMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: begin
         @: candidate
     return: @
@@ -4120,7 +4500,7 @@ RxMatchMake:
 # builds one RxPreparedText from CURRENT bytes, retained for the operation or
 # iterator. The same TextView may be reused after inter-operation mutation.
 # Match/Span.source is the original view; private prepared data retain offsets.
-# Source must remain unchanged during search/suspension/result access per TZ.
+# Source must remain unchanged during search/suspension/result access under the source lifetime contract.
 
 RxOctet:
     private:
@@ -4139,7 +4519,7 @@ RxTextBuild:
         int: profile
     return: @
     make:
-        throws: PatternArgument PatternEncoding
+        throws: copy(FxThrows\pattern)
         private: @: info FxSeqInfo\get(source := source)
         if: info\elementBits != 8
             throw: PatternEncoding()
@@ -4253,50 +4633,252 @@ RxTextSlice:
         int: end
     return: char[]
     copyText:
-        throws: PatternPosition
+        throws: copy(FxThrows\pattern)
         if: begin < 0 || end < begin || end > length(source\units)
             throw: PatternPosition()
-        private: int: first source\byteOffsets[begin]
-        private: int: last source\byteOffsets[end]
-        private: char[]: out []
-        sys\resize(out; last - first)
-        private: int: i first
-        while: i < last
-            out[i - first] := source\source[i]
-            i += 1
-        return: out
+        return: \FxSeqSlice\slice(source\source; source\byteOffsets[begin]; source\byteOffsets[end])
 
-RxTextAppend:
-    private:
-        char[]: target
-        char[]: fragment
-    append:
-        private: int: oldLength length(target)
-        private: @: info FxSeqInfo\get(source := target)
-        private: int: needed FxSeqSize\sum(oldLength; length(fragment); info\maxLength)
-        sys\resize(target; needed)
-        private: int: i 0
-        while: i < length(fragment)
-            target[oldLength + i] := fragment[i]
-            i += 1
+# SOURCE: src/regex/source.lmx
+# General finite typed sources for the single Pattern engine.
 
-RxTextAppendSpan:
+RxSourceDomain:
+    @: literalUnits 0
+    @: rangeUnit 0
+    @: slice 0
+
+RxPreparedSource:
+    @: view 0
+    @: units 0
+    RxSourceDomain@: domain 0
+    @: profile 0
+
+ArrayView:
+    @: items 0
+    @: prepare RxArrayPrepare\make
+
+RxArrayProfile:
+
+RxArrayView:
+    private: @: items
+    required: items
+    return: @
+    arrayView:
+        throws: copy(FxThrows\pattern)
+        FxSeqInfo\get(items)
+        private: @: view (copy(ArrayView))
+        view\items := items
+        return: view
+
+RxSourceMake:
     private:
-        char[]: target
-        RxPreparedText@: source
+        @: view
+        @: units
+        RxSourceDomain@: domain
+        @: profile
+    required: view units domain profile
+    return: @
+    make:
+        private: @: source (copy(RxPreparedSource))
+        source\view := view
+        source\units := units
+        source\domain := domain
+        source\profile := profile
+        return: source
+
+RxArrayLiteralUnits:
+    private:
+        @: value
+        @: profile
+    required: value profile
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        FxSeqInfo\get(value)
+        return: value
+
+RxTextLiteralUnits:
+    private:
+        @: value
+        RxPreparedText@: profile
+    required: value profile
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        private: char[]: text \value
+        private: @: prepared RxTextBuild\make(text; profile\profile)
+        return: prepared\units
+
+RxArrayDomain:
+    @: literalUnits RxArrayLiteralUnits\make
+    @: rangeUnit RxArrayRangeUnit\get
+    @: slice RxArraySourceSlice\copyValue
+
+RxTextDomain:
+    @: literalUnits RxTextLiteralUnits\make
+    @: rangeUnit RxTextRangeUnit\get
+    @: slice RxTextSourceSlice\copyValue
+
+RxArrayPrepare:
+    private: ArrayView@: source
+    required: source
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        FxSeqInfo\get(source\items)
+        return: RxSourceMake\make(
+            source;
+            source\items;
+            RxArrayDomain;
+            RxArrayProfile
+        )
+
+RxTextPrepareSource:
+    private: TextView@: source
+    required: source
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        private: @: text RxPrepare\make(source)
+        return: RxSourceMake\make(source; text\units; RxTextDomain; text)
+
+# Public views explicitly carry their preparing operation. No classification by
+# guessed field contents and no global source-domain registry is used.
+RxPrepareSource:
+    private: @: source
+    required: source
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        private: @: prepare source\prepare
+        return: prepare(source := source)
+
+RxArrayRangeUnit:
+    private:
+        @: value
+        @: profile
+    required: value profile
+    return: @
+    get:
+        return: value
+
+RxTextRangeUnit:
+    private:
+        @: value
+        RxPreparedText@: profile
+    required: value profile
+    return: @
+    get:
+        throws: copy(FxThrows\pattern)
+        private: @: units RxTextLiteralUnits\make(value; profile)
+        if: length(units) != 1
+            throw: PatternArgument()
+        return: FxSeqRead\read(units; 0)
+
+RxArraySourceSlice:
+    private:
+        RxPreparedSource@: source
         int: begin
         int: end
+    required: source begin end
+    return: @
+    copyValue:
+        throws: copy(FxThrows\pattern)
+        return: FxSeqSlice\slice(source\units; begin; end)
+
+RxTextSourceSlice:
+    private:
+        RxPreparedSource@: source
+        int: begin
+        int: end
+    required: source begin end
+    return: @
+    copyValue:
+        throws: copy(FxThrows\pattern)
+        private: RxPreparedText@: text source\profile
+        if: begin < 0 || end < begin || end > length(text\units)
+            throw: PatternPosition()
+        return: FxSeqSlice\slice(text\source; text\byteOffsets[begin]; text\byteOffsets[end])
+
+RxSourceSlice:
+    private:
+        RxPreparedSource@: source
+        int: begin
+        int: end
+    required: source begin end
+    return: @
+    copyValue:
+        throws: copy(FxThrows\pattern)
+        private: @: slice source\domain\slice
+        return: slice(source := source; begin := begin; end := end)
+
+RxSourceAppend:
+    private:
+        @: target
+        @: fragment
+        RxPreparedSource@: source
+    required: target fragment source
     append:
-        private: int: first source\byteOffsets[begin]
-        private: int: last source\byteOffsets[end]
-        private: int: oldLength length(target)
-        private: @: info FxSeqInfo\get(source := target)
-        private: int: needed FxSeqSize\sum(oldLength; last - first; info\maxLength)
-        sys\resize(target; needed)
-        private: int: i first
-        while: i < last
-            target[oldLength + i - first] := source\source[i]
-            i += 1
+        throws: copy(FxThrows\pattern)
+        private: @: validate source\domain\literalUnits
+        validate(value := fragment; profile := source\profile)
+        FxSeqAppend\append(target; fragment)
+
+RxSourceAppendSpan:
+    private:
+        @: target
+        RxPreparedSource@: source
+        int: begin
+        int: end
+    required: target source begin end
+    append:
+        throws: copy(FxThrows\pattern)
+        FxSeqAppend\append(target; RxSourceSlice\copyValue(source; begin; end))
+
+# A public replacement is accepted in the chosen literal/callable role before
+# matching. These two adapters are ordinary actor-context entries.
+RxReplacementInput:
+    @: literal 0
+    @: operation 0
+
+RxReplacementLiteral:
+    private: @: value
+    required: value
+    return: @
+    accept:
+        throws: copy(FxThrows\pattern)
+        FxSeqInfo\get(value)
+        private: @: result (copy(RxReplacementInput))
+        result\literal := value
+        return: result
+
+RxReplacementCallable:
+    private: @: operation
+    required: operation
+    return: @
+    accept:
+        throws: copy(FxThrows\pattern)
+        private: @: shape FxKernel\signature(operation)
+        if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+            throw: FxArity()
+        private: @: result (copy(RxReplacementInput))
+        result\operation := operation
+        return: result
+
+RxReplacementValue:
+    private:
+        RxReplacementInput@: replacement
+        Match@: matched
+    required: replacement matched
+    return: @
+    make:
+        throws: copy(FxThrows\pattern)
+        private: @: result replacement\literal
+        if: replacement\operation != 0
+            result := FxApply\apply(replacement\operation; FxOne\make(matched))
+        private: RxPreparedSource@: source matched\private\prepared
+        private: @: validate source\domain\literalUnits
+        validate(value := result; profile := source\profile)
+        return: result
 
 # SOURCE: src/regex/primitives.lmx
 # Elementary recognizers: a probe returns its new position or internal -1.
@@ -4329,7 +4911,7 @@ RxPrimitiveMake:
 RxPrimitiveOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -4355,110 +4937,112 @@ RxPrimitiveStep:
             return: FxNone\none()
         return: FxSome\some(value := RxCandidateMake\make(end; state\captures))
 
-RxTextConfig:
-    char[]: text ""
-
 RxLiteral:
-    private: char[]: text
-    required: text
+    private: @: value
+    required: value
     return: @
     literal:
-        private: @: payload (copy(RxTextConfig))
-        payload\text := text
-        return: RxPrimitiveMake\make(RxLiteralProbe\probe; payload)
+        return: RxPrimitiveMake\make(RxLiteralProbe\probe; value)
 
 RxLiteralProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        private: @: text RxTextBuild\make(payload\text; source\profile)
-        int[]: unitSource source\units
-        int[]: unitPart text\units
-        if: FxUnitRange\equal(position) = 0
+        throws: copy(FxThrows\pattern)
+        private: @: prepare source\domain\literalUnits
+        private: @: part prepare(value := payload; profile := source\profile)
+        private: int: count length(part)
+        if: count > length(source\units) - position
             return: -1
-        return: position + length(text\units)
+        if: FxSequenceDifference\find(source\units; part; 0; position; count) >= 0
+            return: -1
+        return: position + count
 
 RxClassConfig:
-    char[]: text ""
+    @: values 0
     int: inverted 0
 
-RxChars:
-    private: char[]: text
-    required: text
+RxClassMake:
+    private:
+        @: values
+        int: inverted
+    required: values inverted
+    return: @
+    make:
+        private: @: config (copy(RxClassConfig))
+        config\values := values
+        config\inverted := inverted
+        return: RxPrimitiveMake\make(RxClassProbe\probe; config)
+
+RxMembers:
+    private: @: values
+    required: values
     return: @
     oneOf:
-        private: @: payload (copy(RxClassConfig))
-        payload\text := text
-        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+        return: RxClassMake\make(values; 0)
     noneOf:
-        private: @: payload (copy(RxClassConfig))
-        payload\text := text
-        payload\inverted := 1
-        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+        return: RxClassMake\make(values; 1)
 
 RxClassProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxClassConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        # Decode before the end test: invalid pattern text is an error even
-        # when this attempted match has no remaining source character.
-        private: @: text RxTextBuild\make(payload\text; source\profile)
+        throws: copy(FxThrows\pattern)
+        private: @: prepare source\domain\literalUnits
+        private: @: values prepare(value := payload\values; profile := source\profile)
         if: position = length(source\units)
             return: -1
-        private: int: found 0
-        private: int: i 0
-        while: i < length(text\units)
-            if: source\units[position] = text\units[i]
-                found := 1
-                break
-            i += 1
+        private: @: item FxSeqRead\read(source\units; position)
+        private: int: found FxKeyIndex\find(values; item) >= 0
         if: found = payload\inverted
             return: -1
         return: position + 1
 
-RxRangeConfig:
-    char[]: first ""
-    char[]: last ""
+RxWithinConfig:
+    @: first 0
+    @: last 0
+    @: order 0
 
-RxRange:
+RxWithin:
     private:
-        char[]: first
-        char[]: last
+        @: first
+        @: last
+        @: order 0
     required: first last
     return: @
-    charRange:
-        private: @: payload (copy(RxRangeConfig))
+    within:
+        private: @: payload (copy(RxWithinConfig))
         payload\first := first
         payload\last := last
-        return: RxPrimitiveMake\make(RxRangeProbe\probe; payload)
+        payload\order := order
+        return: RxPrimitiveMake\make(RxWithinProbe\probe; payload)
 
-RxRangeProbe:
+RxWithinProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxWithinConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        throws: PatternArgument
-        private: @: first RxTextBuild\make(payload\first; source\profile)
-        private: @: last RxTextBuild\make(payload\last; source\profile)
-        if: length(first\units) != 1 || length(last\units) != 1
-            throw: PatternArgument()
-        if: first\units[0] > last\units[0]
+        throws: copy(FxThrows\pattern)
+        private: @: bound source\domain\rangeUnit
+        private: @: first bound(value := payload\first; profile := source\profile)
+        private: @: last bound(value := payload\last; profile := source\profile)
+        if: FxValueOrder\compare(first; last; payload\order) > 0
             throw: PatternArgument()
         if: position = length(source\units)
             return: -1
-        private: int: code source\units[position]
-        if: code < first\units[0] || code > last\units[0]
+        private: @: item FxSeqRead\read(source\units; position)
+        if: FxValueOrder\compare(item; first; payload\order) < 0 || FxValueOrder\compare(item; last; payload\order) > 0
             return: -1
         return: position + 1
 
@@ -4466,53 +5050,56 @@ RxPredicateConfig:
     @: predicate 0
 
 RxSatisfy:
-    private: RxPredicate@: predicate
+    private: @: predicate
     required: predicate
     return: @
     satisfy:
-        private: @: payload (copy(RxPredicateConfig))
-        payload\predicate := predicate
-        return: RxPrimitiveMake\make(RxPredicateProbe\probe; payload)
+        throws: copy(FxThrows\pattern)
+        return: RxPrimitiveMake\make(
+            RxPredicateProbe\probe;
+            FxUnaryPredicate\check(predicate)
+        )
 
 RxPredicateProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        throws: copy(FxThrows\pattern)
         if: position = length(source\units)
             return: -1
-        private: RxPredicate@: predicate payload\predicate
-        if: predicate(source\units[position]) = 0
+        private: @: item FxSeqRead\read(source\units; position)
+        private: @: accepted FxApply\apply(payload; FxOne\make(item))
+        if: FxSeqPredicate\truth(accepted) = 0
             return: -1
         return: position + 1
 
 RxBoundaryOf:
-    private: RxPredicate@: predicate
+    private: @: predicate
     required: predicate
     return: @
     boundaryOf:
-        private: @: payload (copy(RxPredicateConfig))
-        payload\predicate := predicate
-        return: RxPrimitiveMake\make(RxBoundaryProbe\probe; payload)
+        throws: copy(FxThrows\pattern)
+        return: RxPrimitiveMake\make(RxBoundaryProbe\probe; FxUnaryPredicate\check(predicate))
 
 RxBoundaryProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPredicate@: predicate payload\predicate
+        throws: copy(FxThrows\pattern)
         private: int: before 0
         private: int: after 0
         if: position > 0
-            before := predicate(source\units[position - 1]) != 0
+            before := FxSeqPredicate\truth(FxApply\apply(payload; FxOne\make(FxSeqRead\read(source\units; position - 1))))
         if: position < length(source\units)
-            after := predicate(source\units[position]) != 0
+            after := FxSeqPredicate\truth(FxApply\apply(payload; FxOne\make(FxSeqRead\read(source\units; position))))
         if: before != after
             return: position
         return: -1
@@ -4531,12 +5118,13 @@ RxSameAs:
 
 RxSameAsProbe:
     private:
-        @: payload
-        RxPreparedText@: source
+        RxNameConfig@: payload
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        throws: copy(FxThrows\pattern)
         private: @: found RxCaptureLatest\find(captures; payload\name)
         if: found\present = 0
             return: -1
@@ -4544,17 +5132,14 @@ RxSameAsProbe:
         private: int: count capture\end - capture\begin
         if: count > length(source\units) - position
             return: -1
-        private: int: i 0
-        while: i < count
-            if: source\units[position + i] != source\units[capture\begin + i]
-                return: -1
-            i += 1
+        if: FxSequenceDifference\find(source\units; source\units; 0; position; count; capture\begin) >= 0
+            return: -1
         return: position + count
 
 RxEmptyProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -4564,7 +5149,7 @@ RxEmptyProbe:
 RxNeverProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -4574,7 +5159,7 @@ RxNeverProbe:
 RxAnyProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -4586,11 +5171,12 @@ RxAnyProbe:
 RxLineCharProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -4601,11 +5187,12 @@ RxLineCharProbe:
 RxLineBreakProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -4623,10 +5210,10 @@ RxLineBreakProbe:
             return: position + 1
         return: -1
 
-RxTextStartProbe:
+RxStartProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -4635,10 +5222,10 @@ RxTextStartProbe:
             return: position
         return: -1
 
-RxTextEndProbe:
+RxEndProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -4650,11 +5237,12 @@ RxTextEndProbe:
 RxLineStartProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = 0
             return: position
         private: int: before source\units[position - 1]
@@ -4671,11 +5259,12 @@ RxLineStartProbe:
 RxLineEndProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
     probe:
+        private: RxPreparedText@: profile source\profile
         if: position = length(source\units)
             return: position
         private: int: after source\units[position]
@@ -4713,6 +5302,29 @@ RxAsciiSpace:
     test:
         return: unit = 32 || (unit >= 9 && unit <= 13)
 
+
+RxElement:
+    private: @: value
+    required: value
+    return: @
+    element:
+        return: RxPrimitiveMake\make(RxElementProbe\probe; value)
+
+RxElementProbe:
+    private:
+        @: payload
+        RxPreparedSource@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        throws: copy(FxThrows\pattern)
+        if: position = length(source\units)
+            return: -1
+        if: FxValueSame\test(FxSeqRead\read(source\units; position); payload) = 0
+            return: -1
+        return: position + 1
+
 # SOURCE: src/regex/values.lmx
 # Ready Pattern values; none of these names invokes a nullary method.
 
@@ -4723,7 +5335,7 @@ RxReadyEmptyPatternConfig:
 RxReadyEmptyPattern:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4740,7 +5352,7 @@ RxReadyNeverPatternConfig:
 RxReadyNeverPattern:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4750,22 +5362,22 @@ RxReadyNeverPattern:
 
 const: @: neverPattern RxReadyNeverPattern\Call\open
 
-RxReadyAnyCharConfig:
+RxReadyAnyElementConfig:
     @: probe RxAnyProbe\probe
     @: payload 0
 
-RxReadyAnyChar:
+RxReadyAnyElement:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyAnyCharConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyAnyElementConfig; source := source; position := position; captures := captures)
 
-const: @: anyChar RxReadyAnyChar\Call\open
+const: @: anyElement RxReadyAnyElement\Call\open
 
 RxReadyLineCharConfig:
     @: probe RxLineCharProbe\probe
@@ -4774,7 +5386,7 @@ RxReadyLineCharConfig:
 RxReadyLineChar:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4791,7 +5403,7 @@ RxReadyLineBreakConfig:
 RxReadyLineBreak:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4801,39 +5413,39 @@ RxReadyLineBreak:
 
 const: @: lineBreak RxReadyLineBreak\Call\open
 
-RxReadyTextStartConfig:
-    @: probe RxTextStartProbe\probe
+RxReadyStartConfig:
+    @: probe RxStartProbe\probe
     @: payload 0
 
-RxReadyTextStart:
+RxReadyStart:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyTextStartConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyStartConfig; source := source; position := position; captures := captures)
 
-const: @: textStart RxReadyTextStart\Call\open
+const: @: start RxReadyStart\Call\open
 
-RxReadyTextEndConfig:
-    @: probe RxTextEndProbe\probe
+RxReadyEndConfig:
+    @: probe RxEndProbe\probe
     @: payload 0
 
-RxReadyTextEnd:
+RxReadyEnd:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyTextEndConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyEndConfig; source := source; position := position; captures := captures)
 
-const: @: textEnd RxReadyTextEnd\Call\open
+const: @: end RxReadyEnd\Call\open
 
 RxReadyLineStartConfig:
     @: probe RxLineStartProbe\probe
@@ -4842,7 +5454,7 @@ RxReadyLineStartConfig:
 RxReadyLineStart:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4859,7 +5471,7 @@ RxReadyLineEndConfig:
 RxReadyLineEnd:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4869,17 +5481,14 @@ RxReadyLineEnd:
 
 const: @: lineEnd RxReadyLineEnd\Call\open
 
-RxReadyAsciiDigitPredicate:
-    @: predicate RxAsciiDigit\test
-
 RxReadyAsciiDigitConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiDigitPredicate
+    @: payload RxAsciiDigit\test
 
 RxReadyAsciiDigit:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4889,17 +5498,14 @@ RxReadyAsciiDigit:
 
 const: @: asciiDigit RxReadyAsciiDigit\Call\open
 
-RxReadyAsciiLetterPredicate:
-    @: predicate RxAsciiLetter\test
-
 RxReadyAsciiLetterConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiLetterPredicate
+    @: payload RxAsciiLetter\test
 
 RxReadyAsciiLetter:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4909,17 +5515,14 @@ RxReadyAsciiLetter:
 
 const: @: asciiLetter RxReadyAsciiLetter\Call\open
 
-RxReadyAsciiWordPredicate:
-    @: predicate RxAsciiWord\test
-
 RxReadyAsciiWordConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiWordPredicate
+    @: payload RxAsciiWord\test
 
 RxReadyAsciiWord:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4929,17 +5532,14 @@ RxReadyAsciiWord:
 
 const: @: asciiWord RxReadyAsciiWord\Call\open
 
-RxReadyAsciiSpacePredicate:
-    @: predicate RxAsciiSpace\test
-
 RxReadyAsciiSpaceConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiSpacePredicate
+    @: payload RxAsciiSpace\test
 
 RxReadyAsciiSpace:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4949,17 +5549,14 @@ RxReadyAsciiSpace:
 
 const: @: asciiSpace RxReadyAsciiSpace\Call\open
 
-RxReadyWordBoundaryPredicate:
-    @: predicate RxAsciiWord\test
-
 RxReadyWordBoundaryConfig:
     @: probe RxBoundaryProbe\probe
-    @: payload RxReadyWordBoundaryPredicate
+    @: payload RxAsciiWord\test
 
 RxReadyWordBoundary:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -4981,7 +5578,7 @@ RxPartsPrepare:
     private: @: patterns
     return: @
     prepare:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: info FxSeqInfo\get(source := patterns)
         private: @[]: parts []
         sys\resize(parts; length(patterns))
@@ -4999,8 +5596,8 @@ RxSequence:
     private: @: patterns
     required: patterns
     return: @
-    sequence:
-        throws: copy(FxThrows\kernel)
+    then:
+        throws: copy(FxThrows\pattern)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: emptyPattern
@@ -5013,7 +5610,7 @@ RxChoice:
     required: patterns
     return: @
     choice:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: neverPattern
@@ -5033,7 +5630,7 @@ RxSequenceFrame:
 
 RxSequenceFrameMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         @: parts
         int: index
         @: candidate
@@ -5049,7 +5646,7 @@ RxSequenceFrameMake:
 RxSequenceOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -5089,7 +5686,7 @@ RxChoiceState:
 RxChoiceOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -5132,7 +5729,7 @@ RxRepeated:
     required: pattern
     return: @
     repeated:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         if: minimum < 0
             throw: PatternArgument()
         if: order != extendFirst && order != stopFirst
@@ -5182,7 +5779,7 @@ RxRepeatFrameMake:
 RxRepeatOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -5236,7 +5833,7 @@ RxAtomic:
     required: pattern
     return: @
     atomic:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxUnaryConfig))
         config\pattern := RxNormalize\make(value := pattern)
         return: RxPatternFactory\make(RxAtomicOpen\open; config)
@@ -5248,7 +5845,7 @@ RxAtomicState:
 RxAtomicOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -5278,7 +5875,7 @@ RxCapture:
     required: name pattern
     return: @
     capture:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxCaptureConfig))
         config\name := name
         config\pattern := RxNormalize\make(value := pattern)
@@ -5292,7 +5889,7 @@ RxCaptureState:
 RxCaptureOpen:
     private:
         @: config
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: @
@@ -5323,7 +5920,7 @@ RxLookConfig:
 RxLookProbe:
     private:
         @: payload
-        RxPreparedText@: source
+        RxPreparedSource@: source
         int: position
         @: captures
     return: int
@@ -5358,7 +5955,7 @@ RxAhead:
     required: pattern
     return: @
     ahead:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -5370,7 +5967,7 @@ RxNotAhead:
     required: pattern
     return: @
     notAhead:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -5382,7 +5979,7 @@ RxBehind:
     required: pattern
     return: @
     behind:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1
@@ -5394,7 +5991,7 @@ RxNotBehind:
     required: pattern
     return: @
     notBehind:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1
@@ -5407,7 +6004,7 @@ RxNotBehind:
 
 RxSelectAt:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         Pattern@: pattern
         int: position
         int: whole 0
@@ -5431,26 +6028,26 @@ RxSelectAt:
 
 RxMatchAt:
     private:
-        TextView@: source
+        @: source
         @: pattern
         int: position
     required: source pattern position
     return: @
     matchAt:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := position)
 
 RxWholeMatch:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     wholeMatch:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := 0; whole := 1)
 
@@ -5463,7 +6060,7 @@ RxFindState:
 
 RxFindStateMake:
     private:
-        RxPreparedText@: source
+        RxPreparedSource@: source
         Pattern@: pattern
     return: @
     make:
@@ -5503,13 +6100,13 @@ RxFindNext:
 
 RxFind:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     find:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
         return: RxFindNext\step(state := state)
@@ -5530,13 +6127,13 @@ RxFindAllOwner:
 
 RxEachMatch:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     eachMatch:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: owner (copy(RxFindAllOwner))
         owner\private\state := RxFindStateMake\make(prepared; ready)
@@ -5544,35 +6141,35 @@ RxEachMatch:
 
 RxContains:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: int
     contains:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: found RxFind\find(source := source; pattern := pattern)
         return: found\present
 
 RxHasPrefix:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: int
     hasPrefix:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: found RxMatchAt\matchAt(source := source; pattern := pattern; position := 0)
         return: found\present
 
 RxHasSuffix:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: int
     hasSuffix:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: int: position 0
         private: int: end length(prepared\units)
@@ -5589,12 +6186,12 @@ RxHasSuffix:
 
 RxMatches:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: int
     matches:
-        throws: copy(FxThrows\kernel)
+        throws: copy(FxThrows\pattern)
         private: @: found RxWholeMatch\wholeMatch(source := source; pattern := pattern)
         return: found\present
 
@@ -5605,12 +6202,12 @@ RxMatchedSpan:
     matchedSpan:
         return: RxSpanMake\make(result\private\prepared; result\begin; result\end)
 
-RxMatchedText:
+RxMatchedValue:
     private: Match@: result
     required: result
-    return: char[]
-    matchedText:
-        return: RxTextSlice\copyText(result\private\prepared; result\begin; result\end)
+    return: @
+    matchedValue:
+        return: RxSourceSlice\copyValue(result\private\prepared; result\begin; result\end)
 
 RxCaptureSpans:
     private:
@@ -5622,14 +6219,14 @@ RxCaptureSpans:
         private: int: count 0
         private: @: cursor result\captures
         while: cursor != 0
-            if: FxSameText\same(cursor\name; name) != 0
+            if: FxEqualFields\equalFields(cursor\name; name) != 0
                 count += 1
             cursor := cursor\previous
         private: @[]: spans []
         sys\resize(spans; count)
         cursor := result\captures
         while: cursor != 0
-            if: FxSameText\same(cursor\name; name) != 0
+            if: FxEqualFields\equalFields(cursor\name; name) != 0
                 count -= 1
                 spans[count] := RxSpanMake\make(result\private\prepared; cursor\begin; cursor\end)
             cursor := cursor\previous
@@ -5648,128 +6245,98 @@ RxLastCapture:
         private: @: entry latest\value
         return: FxSome\some(value := RxSpanMake\make(result\private\prepared; entry\begin; entry\end))
 
-RxCaptureText:
+RxCaptureValue:
     private:
         Match@: result
         char[]: name
     required: result name
     return: @
-    captureText:
+    captureValue:
         private: @: latest RxLastCapture\lastCapture(result; name)
         if: latest\present = 0
             return: latest
         private: @: span latest\value
-        private: char[]: text RxTextSlice\copyText(span\private\prepared; span\begin; span\end)
-        return: FxSome\some(value := FxRecords\reference(value := text))
+        private: @: text RxSourceSlice\copyValue(span\private\prepared; span\begin; span\end)
+        return: FxSome\some(value := text)
 
-RxCaptureTexts:
+RxCaptureValues:
     private:
         Match@: result
         char[]: name
     required: result name
     return: @
-    captureTexts:
+    captureValues:
         private: @: spans RxCaptureSpans\captureSpans(result; name)
         private: @[]: texts []
         sys\resize(texts; length(spans))
         private: int: i 0
         while: i < length(spans)
             private: @: span spans[i]
-            private: char[]: text RxTextSlice\copyText(span\private\prepared; span\begin; span\end)
-            texts[i] := FxRecords\reference(value := text)
+            private: @: text RxSourceSlice\copyValue(span\private\prepared; span\begin; span\end)
+            texts[i] := text
             i += 1
         return: texts
 
-RxReplacementAccept:
-    private: @: replacement
-    required: replacement
-    return: @
-    accept:
-        throws: copy(FxThrows\kernel)
-        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
-            private: char[]: text \replacement
-            return: replacement
-        private: RxReplacement@: operation replacement
-        return: operation
-
-RxReplacementText:
-    private:
-        @: replacement
-        Match@: matched
-    return: char[]
-    make:
-        throws: copy(FxThrows\kernel)
-        private: char[]: text
-        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
-            text := \replacement
-        else:
-            private: RxReplacement@: operation replacement
-            # The callback is reached once, after selection, with one whole
-            # Match by named actual. Its ordinary failure is never a mismatch.
-            text := operation(matched := matched)
-        private: @: checked RxTextBuild\make(text; matched\private\prepared\profile)
-        return: text
-
 RxReplaceFirst:
     private:
-        TextView@: source
+        @: source
         @: pattern
-        @: replacement
+        RxReplacementInput@: replacement
     required: source pattern replacement
-    return: char[]
+    return: @
     replaceFirst:
-        throws: copy(FxThrows\kernel)
-        private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: admittedReplacement replacement
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
         private: @: selected RxFindNext\step(state := state)
         if: selected\present = 0
-            return: RxTextSlice\copyText(prepared; 0; length(prepared\units))
+            return: RxSourceSlice\copyValue(prepared; 0; length(prepared\units))
         private: @: matched selected\value
-        private: char[]: replacementText RxReplacementText\make(admittedReplacement; matched)
-        private: char[]: out []
-        RxTextAppendSpan\append(out; prepared; 0; matched\begin)
-        RxTextAppend\append(out; replacementText)
-        RxTextAppendSpan\append(out; prepared; matched\end; length(prepared\units))
+        private: @: replacementValue RxReplacementValue\make(admittedReplacement; matched)
+        private: @: out RxSourceSlice\copyValue(prepared; 0; 0)
+        RxSourceAppendSpan\append(out; prepared; 0; matched\begin)
+        RxSourceAppend\append(out; replacementValue; prepared)
+        RxSourceAppendSpan\append(out; prepared; matched\end; length(prepared\units))
         return: out
 
 RxReplace:
     private:
-        TextView@: source
+        @: source
         @: pattern
-        @: replacement
+        RxReplacementInput@: replacement
     required: source pattern replacement
-    return: char[]
+    return: @
     replace:
-        throws: copy(FxThrows\kernel)
-        private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: admittedReplacement replacement
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
-        private: char[]: out []
+        private: @: out RxSourceSlice\copyValue(prepared; 0; 0)
         private: int: copiedUntil 0
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
             private: @: matched selected\value
-            private: char[]: replacementText RxReplacementText\make(admittedReplacement; matched)
-            RxTextAppendSpan\append(out; prepared; copiedUntil; matched\begin)
-            RxTextAppend\append(out; replacementText)
+            private: @: replacementValue RxReplacementValue\make(admittedReplacement; matched)
+            RxSourceAppendSpan\append(out; prepared; copiedUntil; matched\begin)
+            RxSourceAppend\append(out; replacementValue; prepared)
             copiedUntil := matched\end
             selected := RxFindNext\step(state := state)
         # Search position and source-copy position remain separate.
-        RxTextAppendSpan\append(out; prepared; copiedUntil; length(prepared\units))
+        RxSourceAppendSpan\append(out; prepared; copiedUntil; length(prepared\units))
         return: out
 
 RxSplit:
     private:
-        TextView@: source
+        @: source
         @: pattern
     required: source pattern
     return: @
     split:
-        throws: copy(FxThrows\kernel)
-        private: @: prepared RxPrepare\make(source := source)
+        throws: copy(FxThrows\pattern)
+        private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
         private: @[]: parts []
@@ -5777,12 +6344,12 @@ RxSplit:
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
             private: @: matched selected\value
-            private: char[]: text RxTextSlice\copyText(prepared; copiedUntil; matched\begin)
-            FxSeqPush\append(parts; FxRecords\reference(value := text))
+            private: @: text RxSourceSlice\copyValue(prepared; copiedUntil; matched\begin)
+            FxSeqPush\append(parts; text)
             copiedUntil := matched\end
             selected := RxFindNext\step(state := state)
-        private: char[]: tail RxTextSlice\copyText(prepared; copiedUntil; length(prepared\units))
-        FxSeqPush\append(parts; FxRecords\reference(value := tail))
+        private: @: tail RxSourceSlice\copyValue(prepared; copiedUntil; length(prepared\units))
+        FxSeqPush\append(parts; tail)
         return: parts
 
 # SOURCE: src/regex/operands.lmx
@@ -5819,11 +6386,11 @@ RxThenOperand:
     const: int: PRIORITY sys\priority("+")
     return: @
     then:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) < 2
             throw: PatternArgument()
-        return: RxSequence\sequence(patterns := args)
+        return: RxSequence\then(patterns := args)
 
 RxRepeatOperands:
     private:
@@ -5834,21 +6401,21 @@ RxRepeatOperands:
     const: int: PRIORITY sys\priority("*")
     return: @
     times:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
     atLeast:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count)
     atMost:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
@@ -5857,7 +6424,7 @@ RxRepeatOperands:
             throw: PatternArgument()
         return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
     optional:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 1
             throw: PatternArgument()
@@ -5878,7 +6445,7 @@ RxAlternativeDispatch:
     required: right
     return: @
     probe:
-        throws: FxKernelFailure FxTypeToken PatternArgument
+        throws: copy(FxThrows\pattern)
         private: @: out (copy(RxAlternativeDispatchResult))
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         private: int: hasPattern 0
@@ -6102,13 +6669,13 @@ FxStdIntersperse:
             i += 1
         return: out
 
-FxStdIntercalate:
+FxStdJoin:
     private:
         @: parts
         @: separator
     required: parts separator
     return: @
-    intercalate:
+    join:
         throws: copy(FxThrows\mutation)
         FxSeqInfo\get(parts)
         FxSeqInfo\get(separator)
@@ -6245,9 +6812,9 @@ FxStdMapAccum:
 FxStdGroupAdjacent:
     private:
         @: items
-        @: keyOf
-        @: sameKey
-    required: items keyOf sameKey
+        @: keyOf 0
+        @: sameKey 0
+    required: items
     return: @
     groupAdjacent:
         throws: copy(FxThrows\sequencefixture)
@@ -6258,11 +6825,10 @@ FxStdGroupAdjacent:
         private: int: begin 0
         private: int: i 0
         while: i < length(items)
-            private: @: key FxApply\apply(keyOf; FxOne\make(FxSeqRead\read(items; i)))
+            private: @: key FxProjectValue\get(FxSeqRead\read(items; i); keyOf)
             private: int: starts i = 0
             if: starts = 0
-                private: @: flag FxApply\apply(sameKey; FxTwo\make(previous; key))
-                starts := FxSeqPredicate\truth(flag) = 0
+                starts := FxValueSame\test(previous; key; sameKey) = 0
             if: starts != 0
                 if: i != 0
                     group\items := FxSeqSlice\slice(items; begin; i)
@@ -6298,10 +6864,13 @@ FxStdCycle:
     private:
         @: items
         int: count
+        int: rejectNegative 0
     required: items count
     return: @
     cycle:
         throws: copy(FxThrows\sequence)
+        if: rejectNegative != 0 && count < 0
+            throw: SequenceSize()
         private: @: info FxSeqInfo\get(items)
         if: count <= 0 || length(items) = 0
             return: FxSeqEmpty\make(items)
@@ -6370,7 +6939,7 @@ FxStdCollect:
         while: limit = -1 || length(out) < limit
             private: @: outcome FxTry\attempt(next; ())
             if: outcome\ok = 0
-                if: FxSameText\same(outcome\failure; sys\name(Stop)) != 0
+                if: FxEqualFields\equalFields(outcome\failure; sys\name(Stop)) != 0
                     return: out
                 throw: FxCallFailure(outcome)
             FxSeqPush\append(out; outcome\value)
@@ -6382,26 +6951,19 @@ FxStdMembership:
     private:
         @: items
         @: value
-        @: same
-    required: items value same
+        @: same 0
+    required: items value
     return: int
     includes:
-        throws: copy(FxThrows\predicate)
-        FxSeqInfo\get(items)
-        private: int: i 0
-        while: i < length(items)
-            private: @: flag FxApply\apply(same; FxTwo\make(FxSeqRead\read(items; i); value))
-            if: FxSeqPredicate\truth(flag) != 0
-                return: 1
-            i += 1
-        return: 0
+        throws: copy(FxThrows\predicate) FxShape
+        return: FxKeyIndex\find(items; value; same) >= 0
 
 FxStdAdjoin:
     private:
         @: items
         @: value
-        @: same
-    required: items value same
+        @: same 0
+    required: items value 
     return: @
     adjoin:
         throws: copy(FxThrows\sequencefixture)
@@ -6415,9 +6977,9 @@ FxStdSetSelect:
     private:
         @: items
         @: other
-        @: same
+        @: same 0
         int: keepPresent
-    required: items other same keepPresent
+    required: items other  keepPresent
     return: @
     select:
         throws: copy(FxThrows\sequencefixture)
@@ -6436,8 +6998,8 @@ FxStdSets:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second 
     return: @
     union:
         throws: copy(FxThrows\sequencefixture)
@@ -6456,8 +7018,8 @@ FxStdSubset:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second 
     return: int
     isSubset:
         throws: copy(FxThrows\sequencefixture)
@@ -6679,7 +7241,7 @@ FxFindField:
         while: i < length(labels)
             private: char[]: candidate \labels[i]
             if: candidate != nil
-                if: FxSameText\same(candidate; label) != 0
+                if: FxEqualFields\equalFields(candidate; label) != 0
                     if: matched = occurrence
                         return: FxSome\some(FxSeqRead\read(source; i))
                     matched += 1
@@ -6709,19 +7271,8 @@ FxGetField:
 # ASSOCIATION / PROPERTY LISTS OVER ORDINARY LMX ARRAYS.
 # One search visits keys; assoc, get/set/removeProperty and getProperties reuse
 # it. Complete typed records and referenced objects retain their identity.
-# Equality is explicit, must be an equivalence relation, and must not mutate
-# a traversed input. These are Array contracts, not emulated Lisp cons cells.
-
-FxValueSame:
-    private:
-        @: first
-        @: second
-        @: same
-    required: first second same
-    return: int
-    test:
-        throws: copy(FxThrows\predicate)
-        return: FxSeqPredicate\truth(FxApply\apply(same; FxTwo\make(first; second)))
+# Equality defaults to the shared ordinary/deep Array policy. An explicit
+# comparator must be an equivalence relation and must not mutate traversed input. These are Array contracts, not emulated Lisp cons cells.
 
 FxKeyShape:
     private:
@@ -6745,10 +7296,10 @@ FxKeyIndex:
     private:
         @: source
         @: key
-        @: same
+        @: same 0
         int: stride 1
         int: field -1
-    required: source key same
+    required: source key
     return: int
     find:
         throws: copy(FxThrows\predicate) FxShape
@@ -6765,7 +7316,7 @@ FxKeyIndex:
                     candidate := FxSeqRead\read(candidate; field)
             ---
             if: usable != 0
-                if: FxValueSame\test(key; candidate; same)
+                if: FxValueSame\test(key; candidate; same) != 0
                     return: i
             ---
             i += stride
@@ -6775,9 +7326,9 @@ FxAssoc:
     private:
         @: rows
         @: key
-        @: same
+        @: same 0
         int: keyIndex 0
-    required: rows key same
+    required: rows key 
     return: @
     assoc:
         throws: copy(FxThrows\predicate) FxShape
@@ -6807,8 +7358,8 @@ FxGetProperty:
     private:
         @: properties
         @: key
-        @: same
-    required: properties key same
+        @: same 0
+    required: properties key 
     return: @
     getProperty:
         throws: copy(FxThrows\predicate) FxShape
@@ -6822,8 +7373,8 @@ FxSetProperty:
         @: properties
         @: key
         @: value
-        @: same
-    required: properties key value same
+        @: same 0
+    required: properties key value 
     return: @
     setProperty:
         throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
@@ -6837,8 +7388,8 @@ FxRemoveProperty:
     private:
         @: properties
         @: key
-        @: same
-    required: properties key same
+        @: same 0
+    required: properties key 
     return: int
     removeProperty:
         throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
@@ -6857,8 +7408,8 @@ FxGetProperties:
     private:
         @: properties
         @: indicators
-        @: same
-    required: properties indicators same
+        @: same 0
+    required: properties indicators 
     return: @
     getProperties:
         throws: copy(FxThrows\predicate) FxShape
@@ -6882,16 +7433,29 @@ FxSequenceDifference:
     private:
         @: first
         @: second
-        @: same
-        int: firstStart
+        @: same 0
+        int: firstStart 0
         int: count
-    required: first second same firstStart count
+        int: secondStart 0
+    required: first second count
     return: int
     find:
         throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: firstStart < 0 || secondStart < 0 || count < 0
+            throw: ReceiverIndex()
+        if: firstStart > length(first) || secondStart > length(second)
+            throw: ReceiverIndex()
+        if: count > length(first) - firstStart || count > length(second) - secondStart
+            throw: ReceiverIndex()
         private: int: i 0
         while: i < count
-            if: FxValueSame\test(FxSeqRead\read(first; firstStart + i); FxSeqRead\read(second; i); same) = 0
+            if: FxValueSame\test(
+                FxSeqRead\read(first; firstStart + i);
+                FxSeqRead\read(second; secondStart + i);
+                same
+            ) = 0
                 return: i
             i += 1
         return: -1
@@ -6900,8 +7464,8 @@ FxMismatch:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second 
     return: @
     mismatch:
         throws: copy(FxThrows\predicate) FxRecordArity
@@ -6921,36 +7485,28 @@ FxSearchSequence:
     private:
         @: items
         @: pattern
-        @: same
+        @: same 0
         int: start 0
-    required: items pattern same
+    required: items pattern
     return: @
     searchSequence:
         throws: copy(FxThrows\predicate) FxRecordArity
         FxSeqInfo\get(items)
-        FxSeqInfo\get(pattern)
         private: int: size length(items)
         if: start < 0 || start > size
             throw: ReceiverIndex()
-        private: int: count length(pattern)
-        if: count > size - start
+        private: int: i FxSequenceSearch\search(items; pattern; start; 0; same)
+        if: i < 0
             return: FxNone\none()
-        private: int: i start
-        while: i <= size - count
-            if: FxSequenceDifference\find(items; pattern; same; i; count) < 0
-                return: FxSome\some(value := (i FxRecordOperands\record))
-            if: i = size - count
-                break
-            i += 1
-        return: FxNone\none()
+        return: FxSome\some(value := (i FxRecordOperands\record))
 
 FxSubstitute:
     private:
         @: items
         @: oldValue
         @: newValue
-        @: same
-    required: items oldValue newValue same
+        @: same 0
+    required: items oldValue newValue 
     return: @
     substitute:
         throws: copy(FxThrows\predicate) SequenceElement SequenceSize
@@ -6990,7 +7546,7 @@ FxAsOperand:
         private: @: noResult FxKernel\normalizeType(void)
         private: @: inputs FxKernel\signatureData(inputTypes; noResult; ("left"; "right"))
         private: @: output FxKernel\signatureData((); source\resultType; ())
-        private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormatInt\formatInt(priority))
+        private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormat\format(priority))
         private: @: readyProperties sys\fromLmx(properties)
         private: @: data (
             private: copy(inputs)
@@ -7008,22 +7564,23 @@ FxAsOperand:
         return: FxBuild\make(Operand; body; operation; failures)
 
 # SOURCE: src/coreStandardText.lmx
-# Ordinary text algorithms. Public names are wired in public.lmx.
-# The input is char[] and positions/counts are octets in the declared byte
-# profile, not grapheme/display-column positions. There is no implicit locale.
-# Existing UTF-8 TextView/Pattern operations remain the Unicode search route.
-# Exact equality already exists as matches(byteText(first); second).
+# Sequence algorithms with explicit comparison/encoding profiles.
+# Public value adapters retain exact Array/result types; internal @ values are
+# complete typed records. Text defaults apply only in the text representation.
 
-FxTextSearch:
+FxSequenceSearch:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start
         int: backwards
+        @: same 0
+    required: text part start backwards
     return: int
     search:
-        char[]: unitSource text
-        char[]: unitPart part
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(part)
         if: length(part) > length(text)
             return: -1
         private: int: last length(text) - length(part)
@@ -7043,7 +7600,7 @@ FxTextSearch:
                 return: -1
         ---
         while: 1
-            if: FxUnitRange\equal(at) != 0
+            if: FxSequenceDifference\find(text; part; same; at; length(part)) < 0
                 return: at
             if: at = stop
                 return: -1
@@ -7051,202 +7608,274 @@ FxTextSearch:
 
 FxIndexOf:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start 0
+        @: same 0
+    required: text part
     return: int
     indexOf:
-        return: FxTextSearch\search(text; part; start; 0)
+        throws: copy(FxThrows\predicate)
+        return: FxSequenceSearch\search(text; part; start; 0; same)
 
 FxLastIndexOf:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start length(text)
+        @: same 0
+    required: text part
     return: int
     lastIndexOf:
-        return: FxTextSearch\search(text; part; start; 1)
+        throws: copy(FxThrows\predicate)
+        return: FxSequenceSearch\search(text; part; start; 1; same)
 
-FxCompareText:
+FxValueOrder:
     private:
-        char[]: first
-        char[]: second
+        @: first
+        @: second
+        @: order 0
+    required: first second
     return: int
-    compareText:
-        throws: copy(FxThrows\kernel)
+    compare:
+        throws: copy(FxThrows\call)
+        if: order != 0
+            private: @: record FxApply\apply(order; FxTwo\make(first; second))
+            private: int: result \record
+            return: (result > 0) - (result < 0)
+        return: (\first > \second) - (\first < \second)
+
+FxByteOrder:
+    private:
+        char: first
+        char: second
+    required: first second
+    return: int
+    compare:
+        private: int: a first
+        private: int: b second
+        if: a < 0
+            a += 256
+        if: b < 0
+            b += 256
+        return: (a > b) - (a < b)
+
+FxCompare:
+    private:
+        @: first
+        @: second
+        @: order 0
+    required: first second
+    return: int
+    compare:
+        throws: copy(FxThrows\traversal)
         private: @: a FxSeqInfo\get(first)
         private: @: b FxSeqInfo\get(second)
-        if: a\elementBits != 8 || b\elementBits != 8
-            throw: FxTypeToken()
+        private: @: selected order
+        if: selected = 0 && a\elementType = char && b\elementType = char
+            selected := FxByteOrder\compare
         private: int: i 0
         while: i < length(first) && i < length(second)
-            private: int: x RxOctet\read(first; i)
-            private: int: y RxOctet\read(second; i)
-            if: x != y
-                return: (x > y) - (x < y)
+            private: int: compared FxValueOrder\compare(FxSeqRead\read(first; i); FxSeqRead\read(second; i); selected)
+            if: compared != 0
+                return: compared
             i += 1
         return: (length(first) > length(second)) - (length(first) < length(second))
 
-FxCharIndex:
+FxTrimMember:
     private:
-        char[]: chars
-        char: value
+        @: item
+        @: members
+        @: predicate 0
+        @: same 0
+    required: item members
     return: int
-    index:
-        private: int: i 0
-        while: i < length(chars)
-            if: chars[i] = value
-                return: i
-            i += 1
-        return: -1
+    test:
+        throws: copy(FxThrows\predicate) FxShape
+        if: predicate != 0
+            return: FxSeqPredicate\truth(FxApply\apply(predicate; FxOne\make(item)))
+        return: FxKeyIndex\find(members; item; same) >= 0
 
-FxTextTrim:
+FxSequenceTrim:
     private:
-        char[]: text
-        char[]: chars
+        @: text
+        @: members
         int: side
-    return: char[]
+        @: predicate 0
+        @: same 0
+    required: text members side
+    return: @
     trim:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(members)
         private: int: begin 0
         private: int: end length(text)
         if: side != 2
             while: begin < end
-                if: FxCharIndex\index(chars; text[begin]) < 0
+                if: FxTrimMember\test(FxSeqRead\read(text; begin); members; predicate; same) = 0
                     break
                 begin += 1
         ---
         if: side != 1
             while: end > begin
-                if: FxCharIndex\index(chars; text[end - 1]) < 0
+                if: FxTrimMember\test(FxSeqRead\read(text; end - 1); members; predicate; same) = 0
                     break
                 end -= 1
         ---
-        return: \FxSeqSlice\slice(text; begin; end)
+        return: FxSeqSlice\slice(text; begin; end)
 
 FxTrimInputs:
     private:
-        char[]: text
-        char[]: chars " \t\r\n\v\f"
-    return: char[]
+        @: text
+        @: chars
+        @: predicate 0
+        @: same 0
+    required: text chars
+    return: @
 
 FxTrim:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 0)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 0; predicate; same)
 
 FxTrimStart:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 1)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 1; predicate; same)
 
 FxTrimEnd:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 2)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 2; predicate; same)
 
-# Repetition delegates to the single storage-preserving generic cycle body.
-# This text contract rejects negative counts before using that shared body.
-FxRepeatText:
+FxSequencePad:
     private:
-        char[]: text
-        int: count
-    return: char[]
-    repeatText:
-        throws: copy(FxThrows\sequence)
-        if: count < 0
-            throw: SequenceSize()
-        return: \FxStdCycle\cycle(text; count)
-
-FxTextPad:
-    private:
-        char[]: text
+        @: text
         int: width
-        char[]: fill
+        @: fill
         int: right
-    return: char[]
+    required: text width fill right
+    return: @
     pad:
         throws: copy(FxThrows\sequence)
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(fill)
         if: width <= length(text)
-            return: \FxSeqSlice\slice(text; 0; length(text))
+            return: FxSeqSlice\slice(text; 0; length(text))
         private: int: missing width - length(text)
         if: length(fill) = 0
             throw: SequenceSize()
         private: int: count missing / length(fill)
         private: int: rest missing % length(fill)
-        private: char[]: padding FxRepeatText\repeatText(fill; count)
-        private: char[]: tail \FxSeqSlice\slice(fill; 0; rest)
-        private: char[]: extra \FxSeqConcat\concat((padding; tail))
+        private: @: padding FxStdCycle\cycle(fill; count)
+        private: @: tail FxSeqSlice\slice(fill; 0; rest)
+        private: @: extra FxSeqConcat\concat((padding; tail))
         if: right != 0
-            return: \FxSeqConcat\concat((text; extra))
-        return: \FxSeqConcat\concat((extra; text))
+            return: FxSeqConcat\concat((text; extra))
+        return: FxSeqConcat\concat((extra; text))
 
 FxPadInputs:
     private:
-        char[]: text
+        @: text
         int: width
-        char[]: fill " "
-    return: char[]
+        @: fill
+    required: text width fill
+    return: @
 
 FxPadLeft:
     copy: FxPadInputs
     pad:
         throws: copy(FxThrows\sequence)
-        return: FxTextPad\pad(text; width; fill; 0)
+        return: FxSequencePad\pad(text; width; fill; 0)
 
 FxPadRight:
     copy: FxPadInputs
     pad:
         throws: copy(FxThrows\sequence)
-        return: FxTextPad\pad(text; width; fill; 1)
+        return: FxSequencePad\pad(text; width; fill; 1)
 
-# Translation is literal and simultaneous. Duplicate source characters use
-# their first mapping; unmapped characters survive. No regex interpolation.
 FxTranslate:
     private:
-        char[]: text
-        char[]: from
-        char[]: to
-    return: char[]
+        @: text
+        @: from
+        @: to
+        @: same 0
+    required: text from to
+    return: @
     translate:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(from)
+        FxSeqInfo\get(to)
         if: length(from) != length(to)
             throw: SequenceSize()
-        private: char[]: out \FxSeqSlice\slice(text; 0; length(text))
+        private: @: out FxSeqSlice\slice(text; 0; length(text))
         private: int: i 0
         while: i < length(text)
-            private: int: found FxCharIndex\index(from; text[i])
+            private: int: found FxKeyIndex\find(from; FxSeqRead\read(text; i); same)
             if: found >= 0
-                out[i] := to[found]
+                FxSeqStore\write(out; i; FxSeqRead\read(to; found))
             i += 1
         return: out
 
-# A caller supplies already rendered text parts. The generic intercalate
-# algorithm owns separator placement, allocation and overflow checks.
-FxJoin:
+FxRemoveAffix:
     private:
-        @: parts
-        char[]: separator ""
-    return: char[]
-    join:
-        throws: copy(FxThrows\mutation)
-        return: \FxStdIntercalate\intercalate(parts; separator)
+        @: text
+        @: affix
+        int: suffix
+        @: same 0
+    required: text affix suffix
+    return: @
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(affix)
+        private: int: begin 0
+        private: int: end length(text)
+        private: int: at 0
+        if: length(affix) <= end
+            if: suffix != 0
+                at := end - length(affix)
+            if: FxSequenceDifference\find(text; affix; same; at; length(affix)) < 0
+                if: suffix != 0
+                    end -= length(affix)
+                else:
+                    begin := length(affix)
+        ---
+        return: FxSeqSlice\slice(text; begin; end)
 
-# Existing hasPrefix, hasSuffix, matches, replace and split already accept
-# literal text patterns. Clients choose byteText/utf8Text explicitly; there are
-# no parallel public string-equality, prefix, suffix or replacement algorithms.
+FxAffixInputs:
+    private:
+        @: text
+        @: affix
+        @: same 0
+    required: text affix
+    return: @
 
-# Exact signed integer formatting. This also owns the decimal digit algorithm
-# used by graph/callable builders; they do not keep another copy of that loop.
-FxFormatInt:
+FxRemovePrefix:
+    copy: FxAffixInputs
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        return: FxRemoveAffix\remove(text; affix; 0; same)
+
+FxRemoveSuffix:
+    copy: FxAffixInputs
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        return: FxRemoveAffix\remove(text; affix; 1; same)
+
+# Exact integer encoding is one explicit format/parse profile.
+
+FxFormat:
     private:
         bigint: value
         int: base 10
     return: char[]
-    formatInt:
+    format:
         throws: copy(FxThrows\selection)
         if: base < 2 || base > 36
             throw: FxIndex()
@@ -7270,13 +7899,13 @@ FxFormatInt:
             out := \FxSeqConcat\concat((out; "-"))
         return: \FxSeqReverse\reverse(out)
 
-FxParseInt:
+FxParse:
     private:
         char[]: text
         int: base 10
     return: bigint
-    parseInt:
-        throws: NumericDomain
+    parse:
+        throws: NumericDomain copy(FxThrows\predicate) FxShape FxRecordArity
         if: base < 2 || base > 36 || length(text) = 0
             throw: NumericDomain()
         private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -7292,7 +7921,7 @@ FxParseInt:
             private: char: value text[at]
             if: value >= 'A' && value <= 'Z'
                 value := value - 'A' + 'a'
-            private: int: digit FxCharIndex\index(digits; value)
+            private: int: digit FxKeyIndex\find(digits; (value FxRecordOperands\record))
             if: digit < 0 || digit >= base
                 throw: NumericDomain()
             result := result * base + digit
@@ -7300,47 +7929,6 @@ FxParseInt:
         if: negative != 0
             result := -result
         return: result
-
-FxRemoveAffix:
-    private:
-        char[]: text
-        char[]: affix
-        int: suffix
-    return: char[]
-    remove:
-        throws: copy(FxThrows\sequence)
-        char[]: unitSource text
-        char[]: unitPart affix
-        private: int: begin 0
-        private: int: end length(text)
-        private: int: at 0
-        if: suffix != 0
-            at := end - length(affix)
-        if: FxUnitRange\equal(at) != 0
-            if: suffix != 0
-                end -= length(affix)
-            else:
-                begin := length(affix)
-        ---
-        return: \FxSeqSlice\slice(text; begin; end)
-
-FxAffixInputs:
-    private:
-        char[]: text
-        char[]: affix
-    return: char[]
-
-FxRemovePrefix:
-    copy: FxAffixInputs
-    remove:
-        throws: copy(FxThrows\sequence)
-        return: FxRemoveAffix\remove(text; affix; 0)
-
-FxRemoveSuffix:
-    copy: FxAffixInputs
-    remove:
-        throws: copy(FxThrows\sequence)
-        return: FxRemoveAffix\remove(text; affix; 1)
 
 # SOURCE: src/coreStandardNumeric.lmx
 # Numeric conveniences use the selected scalar arithmetic/comparison profile.
@@ -7534,25 +8122,1462 @@ FxDivMod:
             remainder += divisor
         return: (quotient; remainder)
 
+# SOURCE: src/sequence_profiles.lmx
+# A finite half-open range over an explicit value/ordering profile.
+# The built-in exact-int representation retains FxSeqRange's bigint preflight;
+# other representations use the same ordinary sequence storage and callbacks.
+FxRangeProfile:
+    int: arrayType
+    int: direction
+    @: advance
+    @: order
+    @: validate
+
+FxProfileRange:
+    private:
+        @: start
+        @: stop
+        @: step
+        FxRangeProfile@: profile
+    required: start stop step profile
+    return: @
+    range:
+        throws: copy(FxThrows\traversal) FxPredicate SequenceElement SequenceStep
+        if: profile\direction != 1 && profile\direction != -1
+            throw: SequenceStep()
+        FxApply\apply(profile\validate; (start; stop; step))
+        private: @: out FxSeqAllocate\make(profile\arrayType; 0)
+        private: @: current start
+        while: FxValueOrder\compare(current; stop; profile\order) * profile\direction < 0
+            FxSeqPush\append(out; current)
+            private: @: following FxApply\apply(profile\advance; FxTwo\make(current; step))
+            if: FxValueOrder\compare(following; current; profile\order) != profile\direction
+                throw: SequenceStep()
+            current := following
+        return: out
+
+# The profile is explicit when no built-in exact representation is selected.
+# Rounded arithmetic must prove actual progress at every reached step. The
+# output's own maxLength and element admission remain FxSeqPush's checks.
+
+FxCodecApply:
+    private:
+        @: value
+        @: operation
+        @: arguments ()
+    required: value operation
+    return: @
+    apply:
+        throws: copy(FxThrows\traversal)
+        return: FxApply\apply(operation; FxSeqConcat\concat((FxOne\make(value); arguments)))
+
+FxProfileFormat:
+    private:
+        @: value
+        @: profile
+        @: arguments ()
+    required: value profile
+    return: @
+    format:
+        throws: copy(FxThrows\traversal)
+        return: FxCodecApply\apply(value; profile; arguments)
+
+FxProfileParse:
+    private:
+        @: source
+        @: profile
+        @: arguments ()
+    required: source profile
+    return: @
+    parse:
+        throws: copy(FxThrows\traversal)
+        return: FxCodecApply\apply(source; profile; arguments)
+
+# These exact public text representations supply defaults only for text. They
+# delegate to the single generic algorithm and preserve the actual char[] R.
+FxTextTrim:
+    private:
+        char[]: text
+        char[]: chars " \t\r\n\v\f"
+        @: predicate 0
+        @: same 0
+    required: text
+    return: char[]
+    trim:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 0; predicate; same)
+    trimStart:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 1; predicate; same)
+    trimEnd:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 2; predicate; same)
+
+FxTextPad:
+    private:
+        char[]: text
+        int: width
+        char[]: fill " "
+    required: text width
+    return: char[]
+    padLeft:
+        throws: copy(FxThrows\sequence)
+        return: \FxSequencePad\pad(text; width; fill; 0)
+    padRight:
+        throws: copy(FxThrows\sequence)
+        return: \FxSequencePad\pad(text; width; fill; 1)
+
+FxTextJoin:
+    private:
+        @: parts
+        char[]: separator ""
+    required: parts
+    return: char[]
+    join:
+        throws: copy(FxThrows\mutation)
+        return: \FxStdJoin\join(parts; separator)
+
+FxTextCycle:
+    private:
+        char[]: items
+        int: count
+        int: rejectNegative 0
+    required: items count
+    return: char[]
+    cycle:
+        throws: copy(FxThrows\sequence)
+        return: \FxStdCycle\cycle(items; count; rejectNegative)
+
+# SOURCE: src/public_operands.lmx
+# Prepared ordinary-value forms. Built once in the actor/library
+# context before grouping; actual algorithms remain in the original methods.
+
+StandardOperands:
+    const:
+        @: types FxAsOperand\asOperand(RxTypes\types; sys\priority("+"))
+        @: names FxAsOperand\asOperand(RxNames\names; sys\priority("+"))
+        @: signature FxAsOperand\asOperand(RxSignature\signature; sys\priority("+"))
+        @: curry FxAsOperand\asOperand(FxLambda\lambda; sys\priority("+"))
+        @: apply FxAsOperand\asOperand(FxApply\apply; sys\priority("+"))
+        @: partial FxAsOperand\asOperand(FxPartial\partial; sys\priority("+"))
+        @: flip FxAsOperand\asOperand(FxFlip\flip; sys\priority("+"))
+        @: compose FxAsOperand\asOperand(FxCompose\compose; sys\priority("+"))
+        @: map FxAsOperand\asOperand(FxMap\map; sys\priority("+"))
+        @: filter FxAsOperand\asOperand(FxFilter\filter; sys\priority("+"))
+        @: foldl FxAsOperand\asOperand(FxFold\fold; sys\priority("+"))
+        @: zip FxAsOperand\asOperand(FxZip\zip; sys\priority("+"))
+        @: zipWith FxAsOperand\asOperand(FxZipWith\zipWith; sys\priority("+"))
+        @: scanl FxAsOperand\asOperand(FxScan\scan; sys\priority("+"))
+        @: traverse FxAsOperand\asOperand(FxTraverse\traverse; sys\priority("+"))
+        @: memoize FxAsOperand\asOperand(FxMemo\memo; sys\priority("+"))
+        @: fix FxAsOperand\asOperand(FxFix\fix; sys\priority("+"))
+        @: select FxAsOperand\asOperand(RxSelect\select; sys\priority("+"))
+        @: omit FxAsOperand\asOperand(RxOmit\omit; sys\priority("+"))
+        @: rename FxAsOperand\asOperand(RxRename\rename; sys\priority("+"))
+        @: reorder FxAsOperand\asOperand(RxReorder\reorder; sys\priority("+"))
+        @: project FxAsOperand\asOperand(RxProject\project; sys\priority("+"))
+        @: defaults FxAsOperand\asOperand(RxDefaults\defaults; sys\priority("+"))
+        @: diff FxAsOperand\asOperand(RxDiff\diff; sys\priority("+"))
+        @: patch FxAsOperand\asOperand(RxPatch\patch; sys\priority("+"))
+        @: bindFields FxAsOperand\asOperand(RxBindFields\bindFields; sys\priority("+"))
+        @: derive FxAsOperand\asOperand(RxDerive\derive; sys\priority("+"))
+        @: transpose FxAsOperand\asOperand(FxTranspose\transpose; sys\priority("+"))
+        @: groupBy FxAsOperand\asOperand(FxGroupBy\groupBy; sys\priority("+"))
+        @: lazy FxAsOperand\asOperand(FxLazy\lazy; sys\priority("+"))
+        @: force FxAsOperand\asOperand(FxForce\force; sys\priority("+"))
+        @: once FxAsOperand\asOperand(FxOnce\once; sys\priority("+"))
+        @: repeat FxAsOperand\asOperand(FxRepeat\repeat; sys\priority("+"))
+        @: runUntil FxAsOperand\asOperand(FxUntil\runUntil; sys\priority("+"))
+        @: retryCall FxAsOperand\asOperand(FxRetry\retryCall; sys\priority("+"))
+        @: bracket FxAsOperand\asOperand(FxAround\around; sys\priority("+"))
+        @: recover FxAsOperand\asOperand(FxRecover\recover; sys\priority("+"))
+        @: adapter FxAsOperand\asOperand(FxAdapter\adapter; sys\priority("+"))
+        @: permute FxAsOperand\asOperand(FxPermute\permute; sys\priority("+"))
+        @: overload FxAsOperand\asOperand(FxOverload\overload; sys\priority("+"))
+        @: predicate FxAsOperand\asOperand(FxPredicate\predicate; sys\priority("+"))
+        @: guard FxAsOperand\asOperand(FxGuard\guard; sys\priority("+"))
+        @: trace FxAsOperand\asOperand(FxTrace\trace; sys\priority("+"))
+        @: contract FxAsOperand\asOperand(FxContract\contract; sys\priority("+"))
+        @: composeData FxAsOperand\asOperand(RxComposeData\composeData; sys\priority("+"))
+        @: some FxAsOperand\asOperand(FxSome\some; sys\priority("+"))
+        @: none FxAsOperand\asOperand(FxNone\none; sys\priority("+"))
+        @: ok FxAsOperand\asOperand(FxOk\ok; sys\priority("+"))
+        @: err FxAsOperand\asOperand(FxErr\err; sys\priority("+"))
+        @: list FxAsOperand\asOperand(FxList\list; sys\priority("+"))
+        @: done FxAsOperand\asOperand(FxDone\done; sys\priority("+"))
+        @: more FxAsOperand\asOperand(FxMore\more; sys\priority("+"))
+        @: trampoline FxAsOperand\asOperand(FxTrampoline\trampoline; sys\priority("+"))
+        @: range_default FxAsOperand\asOperand(FxSeqRange\range; sys\priority("+"))
+        @: range_profile FxAsOperand\asOperand(FxProfileRange\range; sys\priority("+"))
+        @: slice FxAsOperand\asOperand(FxSeqSlice\slice; sys\priority("+"))
+        @: reverse FxAsOperand\asOperand(FxSeqReverse\reverse; sys\priority("+"))
+        @: concat FxAsOperand\asOperand(FxSeqConcat\concat; sys\priority("+"))
+        @: compress FxAsOperand\asOperand(FxSeqCompress\compress; sys\priority("+"))
+        @: any FxAsOperand\asOperand(FxSeqAny\any; sys\priority("+"))
+        @: all FxAsOperand\asOperand(FxSeqAll\all; sys\priority("+"))
+        @: index FxAsOperand\asOperand(FxSeqIndex\index; sys\priority("+"))
+        @: count FxAsOperand\asOperand(FxSeqCount\count; sys\priority("+"))
+        @: replaceRange FxAsOperand\asOperand(FxSeqReplaceRange\replaceRange; sys\priority("+"))
+        @: splice FxAsOperand\asOperand(FxSeqSplice\splice; sys\priority("+"))
+        @: append FxAsOperand\asOperand(FxSeqAppend\append; sys\priority("+"))
+        @: insert FxAsOperand\asOperand(FxSeqInsert\insert; sys\priority("+"))
+        @: deleteAt FxAsOperand\asOperand(FxSeqDeleteAt\deleteAt; sys\priority("+"))
+        @: literal FxAsOperand\asOperand(RxLiteral\literal; sys\priority("+"))
+        @: oneOf FxAsOperand\asOperand(RxMembers\oneOf; sys\priority("+"))
+        @: noneOf FxAsOperand\asOperand(RxMembers\noneOf; sys\priority("+"))
+        @: within FxAsOperand\asOperand(RxWithin\within; sys\priority("+"))
+        @: satisfy FxAsOperand\asOperand(RxSatisfy\satisfy; sys\priority("+"))
+        @: boundaryOf FxAsOperand\asOperand(RxBoundaryOf\boundaryOf; sys\priority("+"))
+        @: sameAs FxAsOperand\asOperand(RxSameAs\sameAs; sys\priority("+"))
+        @: choice FxAsOperand\asOperand(RxChoice\choice; sys\priority("+"))
+        @: repeated FxAsOperand\asOperand(RxRepeated\repeated; sys\priority("+"))
+        @: atomic FxAsOperand\asOperand(RxAtomic\atomic; sys\priority("+"))
+        @: capture FxAsOperand\asOperand(RxCapture\capture; sys\priority("+"))
+        @: ahead FxAsOperand\asOperand(RxAhead\ahead; sys\priority("+"))
+        @: notAhead FxAsOperand\asOperand(RxNotAhead\notAhead; sys\priority("+"))
+        @: behind FxAsOperand\asOperand(RxBehind\behind; sys\priority("+"))
+        @: notBehind FxAsOperand\asOperand(RxNotBehind\notBehind; sys\priority("+"))
+        @: utf8Text FxAsOperand\asOperand(RxUtf8Text\utf8Text; sys\priority("+"))
+        @: byteText FxAsOperand\asOperand(RxByteText\byteText; sys\priority("+"))
+        @: matchAt FxAsOperand\asOperand(RxMatchAt\matchAt; sys\priority("+"))
+        @: wholeMatch FxAsOperand\asOperand(RxWholeMatch\wholeMatch; sys\priority("+"))
+        @: find FxAsOperand\asOperand(RxFind\find; sys\priority("+"))
+        @: eachMatch FxAsOperand\asOperand(RxEachMatch\eachMatch; sys\priority("+"))
+        @: contains FxAsOperand\asOperand(RxContains\contains; sys\priority("+"))
+        @: hasPrefix FxAsOperand\asOperand(RxHasPrefix\hasPrefix; sys\priority("+"))
+        @: hasSuffix FxAsOperand\asOperand(RxHasSuffix\hasSuffix; sys\priority("+"))
+        @: matches FxAsOperand\asOperand(RxMatches\matches; sys\priority("+"))
+        @: matchedSpan FxAsOperand\asOperand(RxMatchedSpan\matchedSpan; sys\priority("+"))
+        @: matchedValue FxAsOperand\asOperand(RxMatchedValue\matchedValue; sys\priority("+"))
+        @: captureSpans FxAsOperand\asOperand(RxCaptureSpans\captureSpans; sys\priority("+"))
+        @: lastCapture FxAsOperand\asOperand(RxLastCapture\lastCapture; sys\priority("+"))
+        @: captureValue FxAsOperand\asOperand(RxCaptureValue\captureValue; sys\priority("+"))
+        @: captureValues FxAsOperand\asOperand(RxCaptureValues\captureValues; sys\priority("+"))
+        @: split FxAsOperand\asOperand(RxSplit\split; sys\priority("+"))
+        @: findFirst FxAsOperand\asOperand(FxFindFirst\findFirst; sys\priority("+"))
+        @: allOf FxAsOperand\asOperand(FxAllOf\allOf; sys\priority("+"))
+        @: equalFields FxAsOperand\asOperand(FxEqualFields\equalFields; sys\priority("+"))
+        @: retryPost FxAsOperand\asOperand(FxRetryPost\retryPost; sys\priority("+"))
+        @: sort FxAsOperand\asOperand(FxSort\sort; sys\priority("+"))
+        @: unique FxAsOperand\asOperand(FxUnique\unique; sys\priority("+"))
+        @: take FxAsOperand\asOperand(FxStdCut\take; sys\priority("+"))
+        @: drop FxAsOperand\asOperand(FxStdCut\drop; sys\priority("+"))
+        @: splitAt FxAsOperand\asOperand(FxStdCut\splitAt; sys\priority("+"))
+        @: takeWhile FxAsOperand\asOperand(FxStdPrefix\takeWhile; sys\priority("+"))
+        @: dropWhile FxAsOperand\asOperand(FxStdPrefix\dropWhile; sys\priority("+"))
+        @: span FxAsOperand\asOperand(FxStdPrefix\span; sys\priority("+"))
+        @: partition FxAsOperand\asOperand(FxStdPartition\partition; sys\priority("+"))
+        @: enumerate FxAsOperand\asOperand(FxStdEnumerate\enumerate; sys\priority("+"))
+        @: windows FxAsOperand\asOperand(FxStdWindows\windows; sys\priority("+"))
+        @: chunks FxAsOperand\asOperand(FxStdChunks\chunks; sys\priority("+"))
+        @: intersperse FxAsOperand\asOperand(FxStdIntersperse\intersperse; sys\priority("+"))
+        @: join_Array FxAsOperand\asOperand(FxStdJoin\join; sys\priority("+"))
+        @: join_text FxAsOperand\asOperand(FxTextJoin\join; sys\priority("+"))
+        @: unzip FxAsOperand\asOperand(FxStdUnzip\unzip; sys\priority("+"))
+        @: foldr FxAsOperand\asOperand(FxStdRightFold\foldr; sys\priority("+"))
+        @: scanr FxAsOperand\asOperand(FxStdRightFold\scanr; sys\priority("+"))
+        @: filterMap FxAsOperand\asOperand(FxStdMaybeMap\filterMap; sys\priority("+"))
+        @: mapWhile FxAsOperand\asOperand(FxStdMaybeMap\mapWhile; sys\priority("+"))
+        @: findMap FxAsOperand\asOperand(FxStdMaybeMap\findMap; sys\priority("+"))
+        @: mapAccumL FxAsOperand\asOperand(FxStdMapAccum\mapAccumL; sys\priority("+"))
+        @: mapAccumR FxAsOperand\asOperand(FxStdMapAccum\mapAccumR; sys\priority("+"))
+        @: groupAdjacent FxAsOperand\asOperand(FxStdGroupAdjacent\groupAdjacent; sys\priority("+"))
+        @: replicate FxAsOperand\asOperand(FxStdReplicate\replicate; sys\priority("+"))
+        @: cycle_default FxAsOperand\asOperand(FxStdCycle\cycle; sys\priority("+"))
+        @: cycle_text FxAsOperand\asOperand(FxTextCycle\cycle; sys\priority("+"))
+        @: starmap FxAsOperand\asOperand(FxStdStarMap\starmap; sys\priority("+"))
+        @: zipLongest FxAsOperand\asOperand(FxStdZipLongest\zipLongest; sys\priority("+"))
+        @: collect FxAsOperand\asOperand(FxStdCollect\collect; sys\priority("+"))
+        @: includes FxAsOperand\asOperand(FxStdMembership\includes; sys\priority("+"))
+        @: adjoin FxAsOperand\asOperand(FxStdAdjoin\adjoin; sys\priority("+"))
+        @: union FxAsOperand\asOperand(FxStdSets\union; sys\priority("+"))
+        @: intersection FxAsOperand\asOperand(FxStdSets\intersection; sys\priority("+"))
+        @: difference FxAsOperand\asOperand(FxStdSets\difference; sys\priority("+"))
+        @: symmetricDifference FxAsOperand\asOperand(FxStdSets\symmetricDifference; sys\priority("+"))
+        @: isSubset FxAsOperand\asOperand(FxStdSubset\isSubset; sys\priority("+"))
+        @: mapOption FxAsOperand\asOperand(FxMapOption\mapOption; sys\priority("+"))
+        @: filterOption FxAsOperand\asOperand(FxFilterOption\filterOption; sys\priority("+"))
+        @: orElse FxAsOperand\asOperand(FxOrElse\orElse; sys\priority("+"))
+        @: orElseGet FxAsOperand\asOperand(FxOrElseGet\orElseGet; sys\priority("+"))
+        @: orElseOption FxAsOperand\asOperand(FxOrElseOption\orElseOption; sys\priority("+"))
+        @: foldOption FxAsOperand\asOperand(FxFoldOption\foldOption; sys\priority("+"))
+        @: flattenOption FxAsOperand\asOperand(FxFlattenOption\flattenOption; sys\priority("+"))
+        @: mapResult FxAsOperand\asOperand(FxMapResult\mapResult; sys\priority("+"))
+        @: mapErr FxAsOperand\asOperand(FxMapErr\mapErr; sys\priority("+"))
+        @: orElseResult FxAsOperand\asOperand(FxOrElseResult\orElseResult; sys\priority("+"))
+        @: foldResult FxAsOperand\asOperand(FxFoldResult\foldResult; sys\priority("+"))
+        @: attempt FxAsOperand\asOperand(FxAttemptResult\attempt; sys\priority("+"))
+        @: tap FxAsOperand\asOperand(FxTap\tap; sys\priority("+"))
+        @: findField FxAsOperand\asOperand(FxFindField\findField; sys\priority("+"))
+        @: hasField FxAsOperand\asOperand(FxHasField\hasField; sys\priority("+"))
+        @: getField FxAsOperand\asOperand(FxGetField\getField; sys\priority("+"))
+        @: assoc FxAsOperand\asOperand(FxAssoc\assoc; sys\priority("+"))
+        @: pairlis FxAsOperand\asOperand(FxPairlis\pairlis; sys\priority("+"))
+        @: getProperty FxAsOperand\asOperand(FxGetProperty\getProperty; sys\priority("+"))
+        @: setProperty FxAsOperand\asOperand(FxSetProperty\setProperty; sys\priority("+"))
+        @: removeProperty FxAsOperand\asOperand(FxRemoveProperty\removeProperty; sys\priority("+"))
+        @: getProperties FxAsOperand\asOperand(FxGetProperties\getProperties; sys\priority("+"))
+        @: asOperand FxAsOperand\asOperand(FxAsOperand\asOperand; sys\priority("+"))
+        @: mismatch FxAsOperand\asOperand(FxMismatch\mismatch; sys\priority("+"))
+        @: searchSequence FxAsOperand\asOperand(FxSearchSequence\searchSequence; sys\priority("+"))
+        @: substitute FxAsOperand\asOperand(FxSubstitute\substitute; sys\priority("+"))
+        @: indexOf FxAsOperand\asOperand(FxIndexOf\indexOf; sys\priority("+"))
+        @: lastIndexOf FxAsOperand\asOperand(FxLastIndexOf\lastIndexOf; sys\priority("+"))
+        @: compare FxAsOperand\asOperand(FxCompare\compare; sys\priority("+"))
+        @: trim_default FxAsOperand\asOperand(FxTrim\trim; sys\priority("+"))
+        @: trim_text FxAsOperand\asOperand(FxTextTrim\trim; sys\priority("+"))
+        @: trimStart_default FxAsOperand\asOperand(FxTrimStart\trim; sys\priority("+"))
+        @: trimStart_text FxAsOperand\asOperand(FxTextTrim\trimStart; sys\priority("+"))
+        @: trimEnd_default FxAsOperand\asOperand(FxTrimEnd\trim; sys\priority("+"))
+        @: trimEnd_text FxAsOperand\asOperand(FxTextTrim\trimEnd; sys\priority("+"))
+        @: padLeft_default FxAsOperand\asOperand(FxPadLeft\pad; sys\priority("+"))
+        @: padLeft_text FxAsOperand\asOperand(FxTextPad\padLeft; sys\priority("+"))
+        @: padRight_default FxAsOperand\asOperand(FxPadRight\pad; sys\priority("+"))
+        @: padRight_text FxAsOperand\asOperand(FxTextPad\padRight; sys\priority("+"))
+        @: translate FxAsOperand\asOperand(FxTranslate\translate; sys\priority("+"))
+        @: format_default FxAsOperand\asOperand(FxFormat\format; sys\priority("+"))
+        @: format_profile FxAsOperand\asOperand(FxProfileFormat\format; sys\priority("+"))
+        @: parse_default FxAsOperand\asOperand(FxParse\parse; sys\priority("+"))
+        @: parse_profile FxAsOperand\asOperand(FxProfileParse\parse; sys\priority("+"))
+        @: removePrefix FxAsOperand\asOperand(FxRemovePrefix\remove; sys\priority("+"))
+        @: removeSuffix FxAsOperand\asOperand(FxRemoveSuffix\remove; sys\priority("+"))
+        @: sum FxAsOperand\asOperand(FxSum\sum; sys\priority("+"))
+        @: product FxAsOperand\asOperand(FxProduct\product; sys\priority("+"))
+        @: minimum FxAsOperand\asOperand(FxMinimum\minimum; sys\priority("+"))
+        @: maximum FxAsOperand\asOperand(FxMaximum\maximum; sys\priority("+"))
+        @: argMin FxAsOperand\asOperand(FxArgMin\argMin; sys\priority("+"))
+        @: argMax FxAsOperand\asOperand(FxArgMax\argMax; sys\priority("+"))
+        @: extrema FxAsOperand\asOperand(FxExtrema\extrema; sys\priority("+"))
+        @: min FxAsOperand\asOperand(FxMin\min; sys\priority("+"))
+        @: max FxAsOperand\asOperand(FxMax\max; sys\priority("+"))
+        @: minMax FxAsOperand\asOperand(FxMinMax\minMax; sys\priority("+"))
+        @: clamp FxAsOperand\asOperand(FxClamp\clamp; sys\priority("+"))
+        @: sign FxAsOperand\asOperand(FxSign\sign; sys\priority("+"))
+        @: gcd FxAsOperand\asOperand(FxGcd\gcd; sys\priority("+"))
+        @: lcm FxAsOperand\asOperand(FxLcm\lcm; sys\priority("+"))
+        @: divMod FxAsOperand\asOperand(FxDivMod\divMod; sys\priority("+"))
+        @: arrayView FxAsOperand\asOperand(RxArrayView\arrayView; sys\priority("+"))
+        @: element FxAsOperand\asOperand(RxElement\element; sys\priority("+"))
+        @: equals FxAsOperand\asOperand(FxEquals\equals; sys\priority("+"))
+
+# SOURCE: src/public_families.lmx
+# Explicit ordinary graph data for actor-context family publication.
+# Role, declared semantic family and full requirements select the same body.
+# This is not a callable kind, definition-order fallback or runtime registry.
+
+PublishedFamilies:
+    types:
+        default:
+            @: call RxTypes\types
+            @: operand StandardOperands\types
+    ---
+    names:
+        default:
+            @: call RxNames\names
+            @: operand StandardOperands\names
+    ---
+    signature:
+        default:
+            @: call RxSignature\signature
+            @: operand StandardOperands\signature
+    ---
+    to:
+        default:
+            @: call FxToTokens\to
+            @: operand FxToOperand\to
+    ---
+    curry:
+        default:
+            @: call FxLambda\lambda
+            @: operand StandardOperands\curry
+    ---
+    apply:
+        default:
+            @: call FxApply\apply
+            @: operand StandardOperands\apply
+    ---
+    partial:
+        default:
+            @: call FxPartial\partial
+            @: operand StandardOperands\partial
+    ---
+    uncurry:
+        default:
+            @: call FxUncurry\uncurry
+            @: operand FxUncurry\uncurry
+    ---
+    flip:
+        default:
+            @: call FxFlip\flip
+            @: operand StandardOperands\flip
+    ---
+    compose:
+        default:
+            @: call FxCompose\compose
+            @: operand StandardOperands\compose
+    ---
+    identity:
+        default:
+            @: call FxIdentity\identity
+            @: operand FxIdentity\identity
+    ---
+    map:
+        default:
+            @: call FxMap\map
+            @: operand StandardOperands\map
+    ---
+    filter:
+        default:
+            @: call FxFilter\filter
+            @: operand StandardOperands\filter
+    ---
+    foldl:
+        default:
+            @: call FxFold\fold
+            @: operand StandardOperands\foldl
+    ---
+    zip:
+        default:
+            @: call FxZip\zip
+            @: operand StandardOperands\zip
+    ---
+    zipWith:
+        default:
+            @: call FxZipWith\zipWith
+            @: operand StandardOperands\zipWith
+    ---
+    scanl:
+        default:
+            @: call FxScan\scan
+            @: operand StandardOperands\scanl
+    ---
+    bind:
+        Maybe:
+            @: call FxBind\bind
+            @: operand FxMaybeBindOperand\bind
+        Result:
+            @: call FxBindResult\bind
+            @: operand FxResultBindOperand\bind
+        Array:
+            @: call FxListBind\bind
+            @: operand ArrayBinding\bind
+    ---
+    traverse:
+        default:
+            @: call FxTraverse\traverse
+            @: operand StandardOperands\traverse
+    ---
+    memoize:
+        default:
+            @: call FxMemo\memo
+            @: operand StandardOperands\memoize
+    ---
+    fix:
+        default:
+            @: call FxFix\fix
+            @: operand StandardOperands\fix
+    ---
+    select:
+        default:
+            @: call RxSelect\select
+            @: operand StandardOperands\select
+    ---
+    omit:
+        default:
+            @: call RxOmit\omit
+            @: operand StandardOperands\omit
+    ---
+    rename:
+        default:
+            @: call RxRename\rename
+            @: operand StandardOperands\rename
+    ---
+    reorder:
+        default:
+            @: call RxReorder\reorder
+            @: operand StandardOperands\reorder
+    ---
+    project:
+        default:
+            @: call RxProject\project
+            @: operand StandardOperands\project
+    ---
+    defaults:
+        default:
+            @: call RxDefaults\defaults
+            @: operand StandardOperands\defaults
+    ---
+    diff:
+        default:
+            @: call RxDiff\diff
+            @: operand StandardOperands\diff
+    ---
+    patch:
+        default:
+            @: call RxPatch\patch
+            @: operand StandardOperands\patch
+    ---
+    bindFields:
+        default:
+            @: call RxBindFields\bindFields
+            @: operand StandardOperands\bindFields
+    ---
+    derive:
+        default:
+            @: call RxDerive\derive
+            @: operand StandardOperands\derive
+    ---
+    transpose:
+        default:
+            @: call FxTranspose\transpose
+            @: operand StandardOperands\transpose
+    ---
+    groupBy:
+        default:
+            @: call FxGroupBy\groupBy
+            @: operand StandardOperands\groupBy
+    ---
+    lazy:
+        default:
+            @: call FxLazy\lazy
+            @: operand StandardOperands\lazy
+    ---
+    force:
+        default:
+            @: call FxForce\force
+            @: operand StandardOperands\force
+    ---
+    once:
+        default:
+            @: call FxOnce\once
+            @: operand StandardOperands\once
+    ---
+    repeat:
+        default:
+            @: call FxRepeat\repeat
+            @: operand StandardOperands\repeat
+    ---
+    runUntil:
+        default:
+            @: call FxUntil\runUntil
+            @: operand StandardOperands\runUntil
+    ---
+    retryCall:
+        default:
+            @: call FxRetry\retryCall
+            @: operand StandardOperands\retryCall
+    ---
+    bracket:
+        default:
+            @: call FxAround\around
+            @: operand StandardOperands\bracket
+    ---
+    recover:
+        default:
+            @: call FxRecover\recover
+            @: operand StandardOperands\recover
+    ---
+    adapter:
+        default:
+            @: call FxAdapter\adapter
+            @: operand StandardOperands\adapter
+    ---
+    permute:
+        default:
+            @: call FxPermute\permute
+            @: operand StandardOperands\permute
+    ---
+    overload:
+        default:
+            @: call FxOverload\overload
+            @: operand StandardOperands\overload
+    ---
+    predicate:
+        default:
+            @: call FxPredicate\predicate
+            @: operand StandardOperands\predicate
+    ---
+    guard:
+        default:
+            @: call FxGuard\guard
+            @: operand StandardOperands\guard
+    ---
+    trace:
+        default:
+            @: call FxTrace\trace
+            @: operand StandardOperands\trace
+    ---
+    contract:
+        default:
+            @: call FxContract\contract
+            @: operand StandardOperands\contract
+    ---
+    composeData:
+        default:
+            @: call RxComposeData\composeData
+            @: operand StandardOperands\composeData
+    ---
+    record:
+        default:
+            @: call FxRecordOperands\record
+            @: operand FxRecordOperands\record
+    ---
+    some:
+        default:
+            @: call FxSome\some
+            @: operand StandardOperands\some
+    ---
+    none:
+        default:
+            @: call FxNone\none
+            @: operand StandardOperands\none
+    ---
+    ok:
+        default:
+            @: call FxOk\ok
+            @: operand StandardOperands\ok
+    ---
+    err:
+        default:
+            @: call FxErr\err
+            @: operand StandardOperands\err
+    ---
+    list:
+        default:
+            @: call FxList\list
+            @: operand StandardOperands\list
+    ---
+    done:
+        default:
+            @: call FxDone\done
+            @: operand StandardOperands\done
+    ---
+    more:
+        default:
+            @: call FxMore\more
+            @: operand StandardOperands\more
+    ---
+    trampoline:
+        default:
+            @: call FxTrampoline\trampoline
+            @: operand StandardOperands\trampoline
+    ---
+    range:
+        default:
+            @: call FxSeqRange\range
+            @: operand StandardOperands\range_default
+        profile:
+            @: call FxProfileRange\range
+            @: operand StandardOperands\range_profile
+    ---
+    slice:
+        default:
+            @: call FxSeqSlice\slice
+            @: operand StandardOperands\slice
+    ---
+    reverse:
+        default:
+            @: call FxSeqReverse\reverse
+            @: operand StandardOperands\reverse
+    ---
+    concat:
+        default:
+            @: call FxSeqConcat\concat
+            @: operand StandardOperands\concat
+    ---
+    compress:
+        default:
+            @: call FxSeqCompress\compress
+            @: operand StandardOperands\compress
+    ---
+    any:
+        default:
+            @: call FxSeqAny\any
+            @: operand StandardOperands\any
+    ---
+    all:
+        default:
+            @: call FxSeqAll\all
+            @: operand StandardOperands\all
+    ---
+    index:
+        default:
+            @: call FxSeqIndex\index
+            @: operand StandardOperands\index
+    ---
+    count:
+        default:
+            @: call FxSeqCount\count
+            @: operand StandardOperands\count
+    ---
+    replaceRange:
+        default:
+            @: call FxSeqReplaceRange\replaceRange
+            @: operand StandardOperands\replaceRange
+    ---
+    splice:
+        default:
+            @: call FxSeqSplice\splice
+            @: operand StandardOperands\splice
+    ---
+    append:
+        default:
+            @: call FxSeqAppend\append
+            @: operand StandardOperands\append
+    ---
+    insert:
+        default:
+            @: call FxSeqInsert\insert
+            @: operand StandardOperands\insert
+    ---
+    deleteAt:
+        default:
+            @: call FxSeqDeleteAt\deleteAt
+            @: operand StandardOperands\deleteAt
+    ---
+    literal:
+        default:
+            @: call RxLiteral\literal
+            @: operand StandardOperands\literal
+    ---
+    oneOf:
+        default:
+            @: call RxMembers\oneOf
+            @: operand StandardOperands\oneOf
+    ---
+    noneOf:
+        default:
+            @: call RxMembers\noneOf
+            @: operand StandardOperands\noneOf
+    ---
+    within:
+        default:
+            @: call RxWithin\within
+            @: operand StandardOperands\within
+    ---
+    satisfy:
+        default:
+            @: call RxSatisfy\satisfy
+            @: operand StandardOperands\satisfy
+    ---
+    boundaryOf:
+        default:
+            @: call RxBoundaryOf\boundaryOf
+            @: operand StandardOperands\boundaryOf
+    ---
+    sameAs:
+        default:
+            @: call RxSameAs\sameAs
+            @: operand StandardOperands\sameAs
+    ---
+    then:
+        Pattern:
+            @: call RxSequence\then
+            @: operand RxThenOperand\then
+    ---
+    choice:
+        default:
+            @: call RxChoice\choice
+            @: operand StandardOperands\choice
+    ---
+    repeated:
+        default:
+            @: call RxRepeated\repeated
+            @: operand StandardOperands\repeated
+    ---
+    atomic:
+        default:
+            @: call RxAtomic\atomic
+            @: operand StandardOperands\atomic
+    ---
+    capture:
+        default:
+            @: call RxCapture\capture
+            @: operand StandardOperands\capture
+    ---
+    ahead:
+        default:
+            @: call RxAhead\ahead
+            @: operand StandardOperands\ahead
+    ---
+    notAhead:
+        default:
+            @: call RxNotAhead\notAhead
+            @: operand StandardOperands\notAhead
+    ---
+    behind:
+        default:
+            @: call RxBehind\behind
+            @: operand StandardOperands\behind
+    ---
+    notBehind:
+        default:
+            @: call RxNotBehind\notBehind
+            @: operand StandardOperands\notBehind
+    ---
+    utf8Text:
+        default:
+            @: call RxUtf8Text\utf8Text
+            @: operand StandardOperands\utf8Text
+    ---
+    byteText:
+        default:
+            @: call RxByteText\byteText
+            @: operand StandardOperands\byteText
+    ---
+    matchAt:
+        default:
+            @: call RxMatchAt\matchAt
+            @: operand StandardOperands\matchAt
+    ---
+    wholeMatch:
+        default:
+            @: call RxWholeMatch\wholeMatch
+            @: operand StandardOperands\wholeMatch
+    ---
+    find:
+        default:
+            @: call RxFind\find
+            @: operand StandardOperands\find
+    ---
+    eachMatch:
+        default:
+            @: call RxEachMatch\eachMatch
+            @: operand StandardOperands\eachMatch
+    ---
+    contains:
+        default:
+            @: call RxContains\contains
+            @: operand StandardOperands\contains
+    ---
+    hasPrefix:
+        default:
+            @: call RxHasPrefix\hasPrefix
+            @: operand StandardOperands\hasPrefix
+    ---
+    hasSuffix:
+        default:
+            @: call RxHasSuffix\hasSuffix
+            @: operand StandardOperands\hasSuffix
+    ---
+    matches:
+        default:
+            @: call RxMatches\matches
+            @: operand StandardOperands\matches
+    ---
+    matchedSpan:
+        default:
+            @: call RxMatchedSpan\matchedSpan
+            @: operand StandardOperands\matchedSpan
+    ---
+    matchedValue:
+        default:
+            @: call RxMatchedValue\matchedValue
+            @: operand StandardOperands\matchedValue
+    ---
+    captureSpans:
+        default:
+            @: call RxCaptureSpans\captureSpans
+            @: operand StandardOperands\captureSpans
+    ---
+    lastCapture:
+        default:
+            @: call RxLastCapture\lastCapture
+            @: operand StandardOperands\lastCapture
+    ---
+    captureValue:
+        default:
+            @: call RxCaptureValue\captureValue
+            @: operand StandardOperands\captureValue
+    ---
+    captureValues:
+        default:
+            @: call RxCaptureValues\captureValues
+            @: operand StandardOperands\captureValues
+    ---
+    replaceFirst:
+        default:
+            @: call RxReplaceFirst\replaceFirst
+            @: operand RxReplaceFirst\replaceFirst
+    ---
+    replace:
+        default:
+            @: call RxReplace\replace
+            @: operand RxReplace\replace
+    ---
+    split:
+        default:
+            @: call RxSplit\split
+            @: operand StandardOperands\split
+    ---
+    times:
+        default:
+            @: call RxRepeatOperands\times
+            @: operand RxRepeatOperands\times
+    ---
+    atLeast:
+        default:
+            @: call RxRepeatOperands\atLeast
+            @: operand RxRepeatOperands\atLeast
+    ---
+    atMost:
+        default:
+            @: call RxRepeatOperands\atMost
+            @: operand RxRepeatOperands\atMost
+    ---
+    optional:
+        default:
+            @: call RxRepeatOperands\optional
+            @: operand RxRepeatOperands\optional
+    ---
+    findFirst:
+        default:
+            @: call FxFindFirst\findFirst
+            @: operand StandardOperands\findFirst
+    ---
+    allOf:
+        default:
+            @: call FxAllOf\allOf
+            @: operand StandardOperands\allOf
+    ---
+    equalFields:
+        default:
+            @: call FxEqualFields\equalFields
+            @: operand StandardOperands\equalFields
+    ---
+    retryPost:
+        default:
+            @: call FxRetryPost\retryPost
+            @: operand StandardOperands\retryPost
+    ---
+    between:
+        default:
+            @: call FxBetween\between
+            @: operand FxBetween\between
+    ---
+    iterateUntilStop:
+        default:
+            @: call FxIterateUntilStop\iterateUntilStop
+            @: operand FxIterateUntilStop\iterateUntilStop
+    ---
+    sort:
+        default:
+            @: call FxSort\sort
+            @: operand StandardOperands\sort
+    ---
+    unique:
+        default:
+            @: call FxUnique\unique
+            @: operand StandardOperands\unique
+    ---
+    take:
+        default:
+            @: call FxStdCut\take
+            @: operand StandardOperands\take
+    ---
+    drop:
+        default:
+            @: call FxStdCut\drop
+            @: operand StandardOperands\drop
+    ---
+    splitAt:
+        default:
+            @: call FxStdCut\splitAt
+            @: operand StandardOperands\splitAt
+    ---
+    takeWhile:
+        default:
+            @: call FxStdPrefix\takeWhile
+            @: operand StandardOperands\takeWhile
+    ---
+    dropWhile:
+        default:
+            @: call FxStdPrefix\dropWhile
+            @: operand StandardOperands\dropWhile
+    ---
+    span:
+        default:
+            @: call FxStdPrefix\span
+            @: operand StandardOperands\span
+    ---
+    partition:
+        default:
+            @: call FxStdPartition\partition
+            @: operand StandardOperands\partition
+    ---
+    enumerate:
+        default:
+            @: call FxStdEnumerate\enumerate
+            @: operand StandardOperands\enumerate
+    ---
+    windows:
+        default:
+            @: call FxStdWindows\windows
+            @: operand StandardOperands\windows
+    ---
+    chunks:
+        default:
+            @: call FxStdChunks\chunks
+            @: operand StandardOperands\chunks
+    ---
+    intersperse:
+        default:
+            @: call FxStdIntersperse\intersperse
+            @: operand StandardOperands\intersperse
+    ---
+    join:
+        Array:
+            @: call FxStdJoin\join
+            @: operand StandardOperands\join_Array
+        text:
+            @: call FxTextJoin\join
+            @: operand StandardOperands\join_text
+    ---
+    unzip:
+        default:
+            @: call FxStdUnzip\unzip
+            @: operand StandardOperands\unzip
+    ---
+    foldr:
+        default:
+            @: call FxStdRightFold\foldr
+            @: operand StandardOperands\foldr
+    ---
+    scanr:
+        default:
+            @: call FxStdRightFold\scanr
+            @: operand StandardOperands\scanr
+    ---
+    filterMap:
+        default:
+            @: call FxStdMaybeMap\filterMap
+            @: operand StandardOperands\filterMap
+    ---
+    mapWhile:
+        default:
+            @: call FxStdMaybeMap\mapWhile
+            @: operand StandardOperands\mapWhile
+    ---
+    findMap:
+        default:
+            @: call FxStdMaybeMap\findMap
+            @: operand StandardOperands\findMap
+    ---
+    mapAccumL:
+        default:
+            @: call FxStdMapAccum\mapAccumL
+            @: operand StandardOperands\mapAccumL
+    ---
+    mapAccumR:
+        default:
+            @: call FxStdMapAccum\mapAccumR
+            @: operand StandardOperands\mapAccumR
+    ---
+    groupAdjacent:
+        default:
+            @: call FxStdGroupAdjacent\groupAdjacent
+            @: operand StandardOperands\groupAdjacent
+    ---
+    replicate:
+        default:
+            @: call FxStdReplicate\replicate
+            @: operand StandardOperands\replicate
+    ---
+    cycle:
+        default:
+            @: call FxStdCycle\cycle
+            @: operand StandardOperands\cycle_default
+        text:
+            @: call FxTextCycle\cycle
+            @: operand StandardOperands\cycle_text
+    ---
+    starmap:
+        default:
+            @: call FxStdStarMap\starmap
+            @: operand StandardOperands\starmap
+    ---
+    zipLongest:
+        default:
+            @: call FxStdZipLongest\zipLongest
+            @: operand StandardOperands\zipLongest
+    ---
+    collect:
+        default:
+            @: call FxStdCollect\collect
+            @: operand StandardOperands\collect
+    ---
+    includes:
+        default:
+            @: call FxStdMembership\includes
+            @: operand StandardOperands\includes
+    ---
+    adjoin:
+        default:
+            @: call FxStdAdjoin\adjoin
+            @: operand StandardOperands\adjoin
+    ---
+    union:
+        default:
+            @: call FxStdSets\union
+            @: operand StandardOperands\union
+    ---
+    intersection:
+        default:
+            @: call FxStdSets\intersection
+            @: operand StandardOperands\intersection
+    ---
+    difference:
+        default:
+            @: call FxStdSets\difference
+            @: operand StandardOperands\difference
+    ---
+    symmetricDifference:
+        default:
+            @: call FxStdSets\symmetricDifference
+            @: operand StandardOperands\symmetricDifference
+    ---
+    isSubset:
+        default:
+            @: call FxStdSubset\isSubset
+            @: operand StandardOperands\isSubset
+    ---
+    mapOption:
+        default:
+            @: call FxMapOption\mapOption
+            @: operand StandardOperands\mapOption
+    ---
+    filterOption:
+        default:
+            @: call FxFilterOption\filterOption
+            @: operand StandardOperands\filterOption
+    ---
+    orElse:
+        default:
+            @: call FxOrElse\orElse
+            @: operand StandardOperands\orElse
+    ---
+    orElseGet:
+        default:
+            @: call FxOrElseGet\orElseGet
+            @: operand StandardOperands\orElseGet
+    ---
+    orElseOption:
+        default:
+            @: call FxOrElseOption\orElseOption
+            @: operand StandardOperands\orElseOption
+    ---
+    foldOption:
+        default:
+            @: call FxFoldOption\foldOption
+            @: operand StandardOperands\foldOption
+    ---
+    flattenOption:
+        default:
+            @: call FxFlattenOption\flattenOption
+            @: operand StandardOperands\flattenOption
+    ---
+    mapResult:
+        default:
+            @: call FxMapResult\mapResult
+            @: operand StandardOperands\mapResult
+    ---
+    mapErr:
+        default:
+            @: call FxMapErr\mapErr
+            @: operand StandardOperands\mapErr
+    ---
+    orElseResult:
+        default:
+            @: call FxOrElseResult\orElseResult
+            @: operand StandardOperands\orElseResult
+    ---
+    foldResult:
+        default:
+            @: call FxFoldResult\foldResult
+            @: operand StandardOperands\foldResult
+    ---
+    attempt:
+        default:
+            @: call FxAttemptResult\attempt
+            @: operand StandardOperands\attempt
+    ---
+    tap:
+        default:
+            @: call FxTap\tap
+            @: operand StandardOperands\tap
+    ---
+    findField:
+        default:
+            @: call FxFindField\findField
+            @: operand StandardOperands\findField
+    ---
+    hasField:
+        default:
+            @: call FxHasField\hasField
+            @: operand StandardOperands\hasField
+    ---
+    getField:
+        default:
+            @: call FxGetField\getField
+            @: operand StandardOperands\getField
+    ---
+    assoc:
+        default:
+            @: call FxAssoc\assoc
+            @: operand StandardOperands\assoc
+    ---
+    pairlis:
+        default:
+            @: call FxPairlis\pairlis
+            @: operand StandardOperands\pairlis
+    ---
+    getProperty:
+        default:
+            @: call FxGetProperty\getProperty
+            @: operand StandardOperands\getProperty
+    ---
+    setProperty:
+        default:
+            @: call FxSetProperty\setProperty
+            @: operand StandardOperands\setProperty
+    ---
+    removeProperty:
+        default:
+            @: call FxRemoveProperty\removeProperty
+            @: operand StandardOperands\removeProperty
+    ---
+    getProperties:
+        default:
+            @: call FxGetProperties\getProperties
+            @: operand StandardOperands\getProperties
+    ---
+    asOperand:
+        default:
+            @: call FxAsOperand\asOperand
+            @: operand StandardOperands\asOperand
+    ---
+    mismatch:
+        default:
+            @: call FxMismatch\mismatch
+            @: operand StandardOperands\mismatch
+    ---
+    searchSequence:
+        default:
+            @: call FxSearchSequence\searchSequence
+            @: operand StandardOperands\searchSequence
+    ---
+    substitute:
+        default:
+            @: call FxSubstitute\substitute
+            @: operand StandardOperands\substitute
+    ---
+    indexOf:
+        default:
+            @: call FxIndexOf\indexOf
+            @: operand StandardOperands\indexOf
+    ---
+    lastIndexOf:
+        default:
+            @: call FxLastIndexOf\lastIndexOf
+            @: operand StandardOperands\lastIndexOf
+    ---
+    compare:
+        default:
+            @: call FxCompare\compare
+            @: operand StandardOperands\compare
+    ---
+    trim:
+        default:
+            @: call FxTrim\trim
+            @: operand StandardOperands\trim_default
+        text:
+            @: call FxTextTrim\trim
+            @: operand StandardOperands\trim_text
+    ---
+    trimStart:
+        default:
+            @: call FxTrimStart\trim
+            @: operand StandardOperands\trimStart_default
+        text:
+            @: call FxTextTrim\trimStart
+            @: operand StandardOperands\trimStart_text
+    ---
+    trimEnd:
+        default:
+            @: call FxTrimEnd\trim
+            @: operand StandardOperands\trimEnd_default
+        text:
+            @: call FxTextTrim\trimEnd
+            @: operand StandardOperands\trimEnd_text
+    ---
+    padLeft:
+        default:
+            @: call FxPadLeft\pad
+            @: operand StandardOperands\padLeft_default
+        text:
+            @: call FxTextPad\padLeft
+            @: operand StandardOperands\padLeft_text
+    ---
+    padRight:
+        default:
+            @: call FxPadRight\pad
+            @: operand StandardOperands\padRight_default
+        text:
+            @: call FxTextPad\padRight
+            @: operand StandardOperands\padRight_text
+    ---
+    translate:
+        default:
+            @: call FxTranslate\translate
+            @: operand StandardOperands\translate
+    ---
+    format:
+        default:
+            @: call FxFormat\format
+            @: operand StandardOperands\format_default
+        profile:
+            @: call FxProfileFormat\format
+            @: operand StandardOperands\format_profile
+    ---
+    parse:
+        default:
+            @: call FxParse\parse
+            @: operand StandardOperands\parse_default
+        profile:
+            @: call FxProfileParse\parse
+            @: operand StandardOperands\parse_profile
+    ---
+    removePrefix:
+        default:
+            @: call FxRemovePrefix\remove
+            @: operand StandardOperands\removePrefix
+    ---
+    removeSuffix:
+        default:
+            @: call FxRemoveSuffix\remove
+            @: operand StandardOperands\removeSuffix
+    ---
+    sum:
+        default:
+            @: call FxSum\sum
+            @: operand StandardOperands\sum
+    ---
+    product:
+        default:
+            @: call FxProduct\product
+            @: operand StandardOperands\product
+    ---
+    minimum:
+        default:
+            @: call FxMinimum\minimum
+            @: operand StandardOperands\minimum
+    ---
+    maximum:
+        default:
+            @: call FxMaximum\maximum
+            @: operand StandardOperands\maximum
+    ---
+    argMin:
+        default:
+            @: call FxArgMin\argMin
+            @: operand StandardOperands\argMin
+    ---
+    argMax:
+        default:
+            @: call FxArgMax\argMax
+            @: operand StandardOperands\argMax
+    ---
+    extrema:
+        default:
+            @: call FxExtrema\extrema
+            @: operand StandardOperands\extrema
+    ---
+    min:
+        default:
+            @: call FxMin\min
+            @: operand StandardOperands\min
+    ---
+    max:
+        default:
+            @: call FxMax\max
+            @: operand StandardOperands\max
+    ---
+    minMax:
+        default:
+            @: call FxMinMax\minMax
+            @: operand StandardOperands\minMax
+    ---
+    clamp:
+        default:
+            @: call FxClamp\clamp
+            @: operand StandardOperands\clamp
+    ---
+    sign:
+        default:
+            @: call FxSign\sign
+            @: operand StandardOperands\sign
+    ---
+    gcd:
+        default:
+            @: call FxGcd\gcd
+            @: operand StandardOperands\gcd
+    ---
+    lcm:
+        default:
+            @: call FxLcm\lcm
+            @: operand StandardOperands\lcm
+    ---
+    divMod:
+        default:
+            @: call FxDivMod\divMod
+            @: operand StandardOperands\divMod
+    ---
+    type:
+        default:
+            @: call FxValueType\type
+            @: operand FxTypeOperand\type
+    ---
+    arrayView:
+        default:
+            @: call RxArrayView\arrayView
+            @: operand StandardOperands\arrayView
+    ---
+    element:
+        default:
+            @: call RxElement\element
+            @: operand StandardOperands\element
+    ---
+    equals:
+        default:
+            @: call FxEquals\equals
+            @: operand StandardOperands\equals
+    ---
+    pipe:
+        default:
+            @: call FxPipe\pipe
+            @: operand FxPipeBuild\make
+    ---
+    retry:
+        default:
+            @: call FxRetryValue\retry
+            @: operand FxRetryBuild\make
+
 # SOURCE: src/public.lmx
-# ВНУТРЕННИЙ НАБОР ЭКСПОРТОВ ЕДИНОГО ЯДРА: fun.
-# Ядро включает fun/const в штатные корневые объявления; клиенты пишут прямые имена.
-# Один const-блок даёт root-constant экспорты общего namespace; CODE не копируется.
-# signatureTypes — обычный ядерный type-token оператор; declaration head удалён.
-# Name :: DATA — единственная именованная форма того же вида сигнатуры.
+# Canonical receiver projections. Complete family/role publication uses
+# PublishedFamilies and PUBLICATION_CONTRACT.md; this const projection
+# alone does not choose between semantic families or input roles.
 fun:
     const:
         @: types RxTypes\types
         @: names RxNames\names
         @: signature RxSignature\signature
-        @: signatureTypes FxSignatureOperand\make
+        @: to FxToTokens\to
         @: curry FxLambda\lambda
         @: apply FxApply\apply
         @: partial FxPartial\partial
         @: uncurry FxUncurry\uncurry
         @: flip FxFlip\flip
         @: compose FxCompose\compose
-        @: pipe FxPipe\pipe
         @: identity FxIdentity\identity
         @: map FxMap\map
         @: filter FxFilter\filter
@@ -7597,9 +9622,7 @@ fun:
         @: none FxNone\none
         @: ok FxOk\ok
         @: err FxErr\err
-        @: bindResult FxBindResult\bindResult
         @: list FxList\list
-        @: flatMap FxListBind\flatMap
         @: done FxDone\done
         @: more FxMore\more
         @: trampoline FxTrampoline\trampoline
@@ -7618,13 +9641,13 @@ fun:
         @: insert FxSeqInsert\insert
         @: deleteAt FxSeqDeleteAt\deleteAt
         @: literal RxLiteral\literal
-        @: oneOf RxChars\oneOf
-        @: noneOf RxChars\noneOf
-        @: charRange RxRange\charRange
+        @: oneOf RxMembers\oneOf
+        @: noneOf RxMembers\noneOf
+        @: within RxWithin\within
         @: satisfy RxSatisfy\satisfy
         @: boundaryOf RxBoundaryOf\boundaryOf
         @: sameAs RxSameAs\sameAs
-        @: sequence RxSequence\sequence
+        @: then RxSequence\then
         @: choice RxChoice\choice
         @: repeated RxRepeated\repeated
         @: atomic RxAtomic\atomic
@@ -7644,15 +9667,14 @@ fun:
         @: hasSuffix RxHasSuffix\hasSuffix
         @: matches RxMatches\matches
         @: matchedSpan RxMatchedSpan\matchedSpan
-        @: matchedText RxMatchedText\matchedText
+        @: matchedValue RxMatchedValue\matchedValue
         @: captureSpans RxCaptureSpans\captureSpans
         @: lastCapture RxLastCapture\lastCapture
-        @: captureText RxCaptureText\captureText
-        @: captureTexts RxCaptureTexts\captureTexts
+        @: captureValue RxCaptureValue\captureValue
+        @: captureValues RxCaptureValues\captureValues
         @: replaceFirst RxReplaceFirst\replaceFirst
         @: replace RxReplace\replace
         @: split RxSplit\split
-        @: then RxThenOperand\then
         @: times RxRepeatOperands\times
         @: atLeast RxRepeatOperands\atLeast
         @: atMost RxRepeatOperands\atMost
@@ -7676,7 +9698,7 @@ fun:
         @: windows FxStdWindows\windows
         @: chunks FxStdChunks\chunks
         @: intersperse FxStdIntersperse\intersperse
-        @: intercalate FxStdIntercalate\intercalate
+        @: join FxStdJoin\join
         @: unzip FxStdUnzip\unzip
         @: foldr FxStdRightFold\foldr
         @: scanr FxStdRightFold\scanr
@@ -7726,17 +9748,15 @@ fun:
         @: substitute FxSubstitute\substitute
         @: indexOf FxIndexOf\indexOf
         @: lastIndexOf FxLastIndexOf\lastIndexOf
-        @: compareText FxCompareText\compareText
+        @: compare FxCompare\compare
         @: trim FxTrim\trim
         @: trimStart FxTrimStart\trim
         @: trimEnd FxTrimEnd\trim
-        @: repeatText FxRepeatText\repeatText
         @: padLeft FxPadLeft\pad
         @: padRight FxPadRight\pad
         @: translate FxTranslate\translate
-        @: join FxJoin\join
-        @: formatInt FxFormatInt\formatInt
-        @: parseInt FxParseInt\parseInt
+        @: format FxFormat\format
+        @: parse FxParse\parse
         @: removePrefix FxRemovePrefix\remove
         @: removeSuffix FxRemoveSuffix\remove
         @: sum FxSum\sum
@@ -7754,6 +9774,12 @@ fun:
         @: gcd FxGcd\gcd
         @: lcm FxLcm\lcm
         @: divMod FxDivMod\divMod
+        @: type FxValueType\type
+        @: arrayView RxArrayView\arrayView
+        @: element RxElement\element
+        @: equals FxEquals\equals
+        @: pipe FxPipe\pipe
+        @: retry FxRetryValue\retry
 
 # SOURCE: examples/generic_callable_examples.lmx
 # ПРИМЕРЫ ОБЩЕГО СЕМЕЙСТВА (не выполнены ядром).
@@ -7966,8 +9992,8 @@ RxStructureExamples:
 # SOURCE: examples/fn_and_assignment.lmx
 # Подготовленные проверки приёмки, а не отчёт о выполненном прогоне ядра.
 # Нужны generic_functions.lmx, fn_operand.lmx и поставщик FxKernel из KERNEL_REQUIREMENTS.md.
-# Реальный метод операнда — FxSignatureOperand\make. Каноническое написание
-# R signatureTypes T0 T1 — обычное ядерное имя в стандартном namespace ядра.
+# Реальный метод операнда — FxToOperand\to. Каноническое написание
+# T0 to T1 R — обычное ядерное имя в стандартном namespace ядра.
 # Именованное объявление полностью перенесено в Name :: Signature.
 # Пустые строки разделяют только корневые формы.
 # Каждый run возвращает 1 при выполнении всех проверок.
@@ -8002,19 +10028,19 @@ FxFnMixedTarget:
         throws: copy(FxThrows\fixture)
         return: number
 
-# Старое двухаргументное объявление остаётся доступным в том же документе.
+# Именованное объявление сохраняет свой собственный DATA-контракт.
 FxFnExpectedMixed :: (int: p0; double: p1; @: p2; return: int)
 
 # 1. Настоящее операндное применение квалифицированного метода.
-# left = запись готового int-кода результата int.
-# right = три записи int-кодов: int, double, @ — именно в этом порядке.
+# left = запись int-кода первого входа int.
+# right = типы остальных входов double, @ и последний тип результата int.
 # Проверка приёма target выявляет ошибку «все токены сами являются int,
-# значит все входы должны быть int»; последний правый токен остаётся входом.
+# значит все входы должны быть int»; последний правый токен задаёт результат.
 FxFnReadyCodesExample:
     return: int
     run:
         throws: copy(FxThrows\fixture)
-        @: made (sys\typeof(FxFnReadySamples[0]) FxSignatureOperand\make sys\typeof(FxFnReadySamples[0]) sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]))
+        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\to sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -8025,9 +10051,9 @@ FxFnReadyCodesExample:
         return: 1
 
 # 2. Обычный explicit named call того же метода.
-# left и элементы tokens уже содержат указатели на записи, поэтому здесь
+# result и элементы inputs уже содержат указатели на записи, поэтому здесь
 # не требуется prepared boxing и нет операции разыменования их payload.
-# Не следует заменять left := ...[0] адресным выражением @...[0]: это иной уровень.
+# Не следует заменять result := ...[0] адресным выражением @...[0]: это иной уровень.
 FxFnUninitExample:
     return: int
     run:
@@ -8040,7 +10066,7 @@ FxFnUninitExample:
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
         tokens[2] := FxFnUninitSamples\reference[0]
-        @: made FxSignatureOperand\make(left := FxFnUninitSamples\integral[0]; right := tokens)
+        @: made FxToTypes\to(inputs := tokens; result := FxFnUninitSamples\integral[0])
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -8072,7 +10098,7 @@ FxFnProcedureExample:
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
         @[]: tokens []
-        @: made FxSignatureOperand\make(left := original\resultType; right := tokens)
+        @: made FxToTypes\to(inputs := tokens; result := original\resultType)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
@@ -8139,7 +10165,7 @@ FxFnAndAssignmentExamples:
 # - инструментировать чтение uninit: ни make, ни normalizeType не читают payload;
 # - проверить qualified operand в interpreter/native и всех переходах между ними;
 # - обеспечить lifetime материализованных ready int-токенов;
-# - повторить операндный пример с прямым ядерным именем signatureTypes и проверить
+# - повторить операндный пример с прямым ядерным именем to и проверить
 #   совместимость с FxFnExpectedMixed :: (...);
 # - неизвестный код типа отказывает с FxTypeToken, не создавая успешный descriptor;
 # - mismatch длины в групповом присваивании обнаруживается до первой записи;
@@ -8166,7 +10192,7 @@ FxFnEquivalenceExamples:
         throws: copy(FxThrows\capture)
         private: @: empty (copy(()))
         private: @: originalInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
-        private: @: tokenContract FxSignatureOperand\make(left := originalInfo\resultType; right := originalInfo\inputTypes)
+        private: @: tokenContract FxToTypes\to(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
         # Новое fn-требование принимает callable с прежним именованным DATA.
         private: tokenContract@: acceptsNamed FxMixedTarget\evaluate
         sys\assert(acceptsNamed(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
@@ -8183,7 +10209,7 @@ FxFnEquivalenceExamples:
         sys\assert(generatedForToken(p0 := 1; p1 := 2.0; p2 := "x") = 3.0)
         # void остаётся отсутствием return, не @0, int0 или пустой Structure.
         private: @: procedureInfo FxKernel\signature(subject := FxProcedureTarget\run)
-        private: @: procedureType FxSignatureOperand\make(left := procedureInfo\resultType; right := procedureInfo\inputTypes)
+        private: @: procedureType FxToTypes\to(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
         private: procedureType@: newAcceptsOldProcedure FxProcedureTarget\run
         private: @: generatedProcedure FxPartial\partial(FxProcedureTarget\run; prefix := empty)
         private: FxLegacyProcedureContract@: oldAcceptsNewProcedure generatedProcedure
@@ -8193,7 +10219,7 @@ FxFnEquivalenceExamples:
         sys\assert(FxGenericCounter\calls = before + 8)
         # Нулевая арность не подменяется одним фиктивным void-параметром.
         private: @: nullaryInfo FxKernel\signature(subject := FxNullaryTarget\value)
-        private: @: nullaryType FxSignatureOperand\make(left := nullaryInfo\resultType; right := empty)
+        private: @: nullaryType FxToTypes\to(inputs := empty; result := nullaryInfo\resultType)
         private: nullaryType@: typedNullary FxNullaryTarget\value
         private: @: generatedNullary FxPartial\partial(FxNullaryTarget\value; prefix := empty)
         private: FxLegacyNullaryContract@: legacyNullary generatedNullary
@@ -8391,7 +10417,7 @@ FxSeqProbeNumeric:
         private: @: listed FxSeqList\list(input)
         input[0] := 100
         FxSeqProbeEqualInts\check(listed; (1; 2; 3))
-        private: @: flattened FxSeqFlatMap\flatMap((1; 2); FxSeqProbeDuplicate\run)
+        private: @: flattened FxSeqBind\bind((1; 2); FxSeqProbeDuplicate\run)
         FxSeqProbeEqualInts\check(flattened; (1; 1; 2; 2))
         private: @: zipped FxZip\zip(first := (1; 2; 3); second := (10; 20))
         sys\assert(length(zipped) = 2)

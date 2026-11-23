@@ -62,18 +62,11 @@ FxSort:
 FxUnique:
     private:
         @: items
-        @: same
-    required: items same
+        @: same 0
+    required: items
     return: @
     unique:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -85,8 +78,7 @@ FxUnique:
             private: int: j 0
             while: j < used
                 private: @: previous FxSeqRead\read(result; j)
-                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
-                if: FxSeqPredicate\truth(answer) != 0
+                if: FxValueSame\test(previous; item; same) != 0
                     duplicate := 1
                     break
                 j += 1

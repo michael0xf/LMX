@@ -1,6 +1,6 @@
 # LMX semantics
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 **Normative edition: 21 November 2026.** This is a standalone specification. The latest author decisions prevail where they revise an earlier rule; they supersede older physical-record and graph-editing prose. Earlier accepted corrections remain applicable where unchanged. Examples specify required behavior; this documentation revision makes no claim that a runtime implements them or that execution tests have passed.
 
@@ -58,7 +58,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [35. Cryptographic operation contracts](#crypto-operations)
 - [36. Mutating debug API for an AI chat](#edit-api)
 - [37. General functional receivers and containers](#functional-receivers)
-- [38. Unified type and text-pattern profile](#unified-core)
+- [38. Unified type, sequence and Pattern profiles](#unified-core)
 
 <a id="scope"></a>
 ## 1. Language scope and execution modes
@@ -71,11 +71,20 @@ Every language rule is universal within its declared domain and applies uniforml
 
 L3 retains graph mutation, structural calls, tables, messages and local actors. Of everything [L2](L2_spec_en.md) has, L3 lacks only `c.*`, the raw machine interfaces. Every other low-level operation of L2 is written in L3 as well and goes through a wrapper that checks it: an array element is checked against the explicitly stored length, pointers are wrapped. The level distinction does not by itself establish computational purity, user authority or a separate security system.
 
-The current source profiles are `.lm2` for L2 and `.lm3` for L3; L1 is the generated intermediate stage before C99. Historical wrapperless `.lm1` input belongs to a separately selected former profile, not a required current source path. L2 code is written under the receiver `L2:`; its record lies in the graph as written, and by it the translator and the interpreter learn the level of the code. The spellings `L1` and `L3` do not themselves select a profile and remain ordinary names. An `.lm2` file by itself is as if wrapped in this receiver (the author's decision of 2026-11-17). `.lm4` and `.lm5` do not select current profiles. The file is itself a Structure: its root body is an L3 Structure executed from the start in every profile, including `.lm2`, where that body is the record `L2:` with the contents of the file; there is no `main` function. L3 is compiled into native code as L2 is, and a constructed graph of either level may be executed by the interpreter. The interpreter executes L2 code with the same checks as L3 code; an address operation that L3 does not have at all it executes with checks of its own; native L2 code is compiled without these checks (the author's decision of 2026-11-18). That is not the only difference of the levels: L3 has data types of its own, without external address arithmetic. Access to an element of an array is checked against the current length ([index](#structure-index)); pointers to Structures and to methods do not change their numeric value arbitrarily -- they are assigned only to one another and nulled; pointers to data are wrappers (the author's clarification of 2026-11-17). A suitable entry in call tables selects native execution; in its absence the interpreter executes the body. The rule that native execution is enabled only inside methods is withdrawn. A Thread has no "interpreted / native" modes -- the registered native variant for the particular call or the walker is selected; known native calls lower directly to C. The value of executing a file (its exit code) is the value of the root body's last evaluated expression; the root is an entry without data ([R0](#root-entry)), declares no result, and `return` in it is bare only. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
+The current source profiles are `.lm2` for L2 and `.lm3` for L3; L1 is the generated intermediate stage before C99. Historical wrapperless `.lm1` input belongs to a separately selected former profile, not a required current source path. L2 code is written under the receiver `L2:`; its record lies in the graph as written, and by it the translator and the interpreter learn the level of the code. The spellings `L1` and `L3` do not themselves select a profile and remain ordinary names. An `.lm2` file by itself is as if wrapped in this receiver (the author's decision of 2026-11-17). `.lm4` and `.lm5` do not select current profiles. The file is itself a Structure: its root body is an L3 Structure executed from the start in every profile, including `.lm2`, where that body is the record `L2:` with the contents of the file; there is no `main` function. L3 is compiled into native code as L2 is, and a constructed graph of either level may be executed by the interpreter. The interpreter executes L2 code with the same checks as L3 code; an address operation that L3 does not have at all it executes with checks of its own; native L2 code is compiled without these checks (the author's decision of 2026-11-18). That is not the only difference of the levels: L3 has data types of its own, without external address arithmetic. Access to an element of an array is checked against the current length ([index](#structure-index)); pointers to Structures and to methods do not change their numeric value arbitrarily -- they are assigned only to one another and nulled; pointers to data are wrappers (the author's clarification of 2026-11-17). A suitable entry in call tables selects native execution; in its absence the interpreter executes the body. The rule that native execution is enabled only inside methods is withdrawn. A Thread has no "interpreted / native" modes -- the registered native variant for the particular call or the walker is selected; known native calls lower directly to C. The value of executing a file (its exit code) is the value of the root body's last evaluated expression; the root is an entry without data ([R0](#root-entry)), declares no result, and `return` in it is bare only. Execution always begins at that root, started as an ordinary L3 Thread after its environment and graph are prepared. There is no alternative process entry selected by `Main`, `start`, a service profile, or a host-chosen method. The parent stub may send the root an ordinary Message when it has arguments to deliver; those values do not become user actuals or DATA of R0. Subsequent ordinary calls and message handling use the common mechanisms.
 
 The model supports interpretation of the constructed graph and translation preserving the same semantics. The interpreter executes the constructed graph, not source text and not L1. The interpreter's implementation does not expand the language of the interpreted program. L2 defines machine mechanisms, L3 defines high-level programs, and L1 is an intermediate lowering stage toward C99. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
 
 The levels relate as sets: L3 is a subset of L2. Structural values and named or anonymous bodies use the same graph model. Outwardly the levels differ in one thing: `c.*` is written only under `L2:`. The unchecked form of an operation is what native L2 code compiles; L3 code, native or interpreted, and interpreted L2 code go through the checked wrappers. The declaration receiver `@` can retain a Structure or method reference in L3 without numeric address arithmetic. Prefix address-taking is a distinct operation under [§9](#method-reference-assignment); its use and raw memory access remain subject to the selected level's contract. A graph built from any profile can be supplied to the interpreter, which applies the appropriate checks.
+
+Where the checks stand follows from the level of the code and the way it is executed:
+
+| Code | Interpreted | Native |
+| --- | --- | --- |
+| L3 | checks: the L3 wrappers | checks: the same wrappers |
+| L2 | checks: the same L3 wrappers; a `c.*` door, which L3 lacks, is a call across the C/ABI boundary with the interpreter's own checks of the call | none: the operation as written, as in C |
+
+The wrappers are L3 code and the one place of the checks; the interpreter uses the same code for interpreted L2, so there is no second set of checks. They make arrays and pointers safe by the real mechanism of the [address operations](L2_spec_en.md#lowlevel-address): an array index is checked against the explicitly stored length (adjacent indices reduce to one linear index and one check), and an L3 pointer to an element is a wrapper holding the Array-descriptor reference and the explicit index, so moving storage needs no pointer traversal. The source of L3 and its set of operands differ from L2 only by the absence of the direct `c.*` doors (the author's clarification of 23 November 2026). The `c.*` doors and the `include` abilities of L2 remain: they are the low-level interface of L2 itself and part of the C99 build, not another language. A `c.*` call is a call across the adapter boundary of the [ABI](L2_spec_en.md#lowlevel-abi): the checks above govern LMX operations and the LMX side of the call, and the body of the called C function is not instrumented, sandboxed or intercepted; no allocator or memory function of C is wrapped.
 
 <a id="program-representation"></a>
 ### The full graph and compiled methods
@@ -89,6 +98,8 @@ as a cache, checkpoint or prepared representation does not make it part of this 
 Removing the working graph is the primary requirement. There is no second working graph for execution. Renaming it does not satisfy this requirement: an expanded execution graph, separate callable graph, graph-shaped namespace replica, hidden program-data graph, or automatic copy of the executable program at entry would still be a working graph.
 
 Both the walker and compiled methods use the complete program graph and the ordinary current execution places. A frame may hold local values and bindings; it must not become a disguised reconstruction of the program graph. The rule is not satisfied merely by discarding such a reconstruction at the end of a call.
+
+One source of data (the author's clarification of 23 November 2026). The auxiliary structure that survived for months and was called the working graph must not exist. The program is the clean graph built from sources into LMX data structures: `parent` and `length` are computed from the sources, the clean graph already holds ordinary LMX references from the descriptors of native implementations, so the binary lies beside it, and the clean graph itself is a local variable of a C method (R0). Nothing stands in the generated C besides the methods and the includes: no second scheme of data for execution and no shadow graph for L3, under any name. The interpreter works on all this as an ordinary LMX program; a call frame holds ordinary local values and bindings, not a copy of the graph. A runtime structure or the arena is not a working graph by name alone: only a second scheme of data for execution is, and it is found by reading the actual producers and consumers.
 
 <a id="graph-and-methods-binary"></a>
 The source's structural relationships and element count logically determine `parent` and `length`.
@@ -111,7 +122,7 @@ Ordinary execution frames, registers, and the already specified runtime services
 <a id="l3-receiver"></a>
 ### L3 receiving expression
 
-The L3 receiving expression defines the contract for consuming a constructed graph as an L3 program. It determines the supported subset and the selected profile's entry point; the mere presence of a syntax tree does not establish program admissibility. An unsupported operation does not become admissible because a machine implementation address exists. A restricted execution profile must explicitly report an unsupported construct rather than silently skip it or execute it as L2. This profile restriction does not replace the [single candidate-admission mechanism](#admission).
+The L3 receiving expression defines the contract for consuming a constructed graph as an L3 program. It determines the supported subset; the mere presence of a syntax tree does not establish program admissibility. Program startup always executes the graph's root as an ordinary L3 Thread without DATA or user actuals, under the [common root-startup contract](#source-entry-profiles). Selecting a supported subset does not select another process entry. An unsupported operation does not become admissible because a machine implementation address exists. A restricted execution profile must explicitly report an unsupported construct rather than silently skip it or execute it as L2. This profile restriction does not replace the [single candidate-admission mechanism](#admission).
 
 The walker executes the current binary graph rather than source text. A simple word head of a written Frame is a word primitive: a cell with the pointer to the single reused string of its spelling; the walker recognizes the receiver by comparing the address of that string with the address of a language word's string (the author's decisions of 2026-11-08, which replaced the spelling codes of 2026-11-07) -- without a separate opcode in the graph, without numeric codes and without reading the bytes of spellings. Once the head is recognized, operands and data places are found by name through the service tables of the current traversal and then by graph addresses; those tables are kept nowhere outside a traversal. The translator consumes the same built graph and resolves the same head when generating code; completed `native` needs no name when invoked, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
 
@@ -155,9 +166,7 @@ These are normative receiver contracts, not a runtime availability report.
 Compilation is the entire explicitly requested chain: clean-graph construction and checking, lowering to L1
 and C, machine compilation, and registration of resulting entries. `sys\compile(S)` applies it to selected
 root S and returns the result and diagnostics through the common mechanism; failure installs no new native.
-It does not launch S's application entry or run automatically on a write. After clean-graph construction,
-the separate required build-test phase may execute checking expressions and the candidate calls they
-explicitly make before final C compilation ([test phases](#admission)). It is not an initializer pass.
+It does not launch S's application entry or run automatically on a write. After clean-graph construction and L1/C generation, the separate required build-test phase interprets the graph being accepted and may execute checking expressions and the candidate calls they explicitly make; machine compilation follows only if the tests passed ([test phases](#admission)). It is not an initializer pass.
 `sys\translate` still returns only L1 and executes neither the application nor these build tests.
 [Native and turn-boundary contract](#explicit-compilation).
 
@@ -178,6 +187,7 @@ nested Structures nor graph references. Structure and Array<@> use one mechanism
 elements. Reuse existing addressing; no reverse-index table or per-write maintenance is needed.
 
 
+<a id="parent-receiver"></a>
 ### Receivers parent, length, sys\native, sys\storage
 
 These ordinary non-declaring receivers accept one Structure S, including an Array, or operate without an argument:
@@ -225,6 +235,15 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 <a id="references"></a>
 <a id="fields"></a>
 ## 4. Names and paths
+
+Bare and exact spellings of the same identifier resolve to one canonical name
+through the existing name table. Backticks are removed and doubled internal
+backticks decoded once; the resulting content is never parsed as another
+expression. Thus `` `@name` `` and `` `a+b` `` are whole names. The same
+identity governs fields, imports, overloads, method references, `sys\name`,
+`sys\priority` and serialization. No case folding, Unicode normalization,
+quotation-specific dispatch or extra operator registry is introduced.
+The ordinary `@` receiver retains its existing unquoted form.
 
 Source entity names are not stored inside graph cells. A primitive or Lmx name comes from the address → name table; name is the address of the one canonical string for that spelling in the typed arena. Identifiers, service operators and receivers are compared by those string addresses, without separate numeric codes. Atom is a parser term; physical graph elements include both Lmx Structures and directly encoded primitives. The walker recognizes a simple word head by its canonical pointer and resolves a composed head through the common expression/head path; the translator consumes that same clean graph and emits native. The name table stores neither variable resolution nor prior traversal state: each traversal creates and discards its own namespace. Graph copying transfers names for copied addresses, interning spellings at the receiving boundary. Anonymous and positional values need no synthetic names. The physical model is specified in the [implementation specification](kernel-implementation.en.md); current-graph serialization is defined by the [sys\toLmx contract](#source-codec).
 
@@ -306,7 +325,7 @@ Candidate admission uses one mechanism: interface checking by directional `satis
 
 Clean-graph construction checks statically known candidates without running their bodies or computed initializers. Prepared native execution does not add automatic runtime `satisfies`; an explicit `satisfies` written in the program still executes. The interpreter uses the standard `satisfies` automatically at reached calls, not an independent validator, and does not pre-walk unexecuted branches. A reception retains its established correspondence for that reception's operations; a later traversal obtains its own information from the graph. Neither mechanism adds a persistent cache of concrete field/namespace admissions or automatic graph-write tracking. The common kernel separately maintains the required table of completed directed TYPE-pair checks: stable full requirements reuse their result under the applicable type/conversion context, including between calls. This table does not replace a current reception's field map, value-dependent test, range, lifetime, or access checks. Prepared machine entries change only through [explicit compilation](#explicit-compilation).
 
-After the clean graph is constructed, the interpreter executes the build's required `test` receivers before the final C compilation step. The ordinary build and receiver contracts reach these tests; this is not a search that executes arbitrary `test` forms in nested DATA merely because they exist. A failed test prevents acceptance and compilation of that build. This test phase is distinct from constructing the graph and from speculatively executing argument/default/test code while enumerating call candidates. Dynamic reception and explicitly requested checks retain their ordinary reached-execution behavior. The checking expression and the candidate/helper calls it makes use ordinary dispatch; interpreter-led testing does not force every nested call onto the walker. No unspecified analysis of future values or behavior is added.
+After the clean graph is constructed and L1/C generated, the interpreter executes the build's required `test` receivers on the graph being accepted, before machine compilation. The ordinary build and receiver contracts reach these tests; this is not a search that executes arbitrary `test` forms in nested DATA merely because they exist. A failed test prevents acceptance and compilation of that build. This test phase is distinct from constructing the graph and from speculatively executing argument/default/test code while enumerating call candidates. Dynamic reception and explicitly requested checks retain their ordinary reached-execution behavior. The checking expression and the candidate/helper calls it makes use ordinary dispatch; interpreter-led testing does not force every nested call onto the walker. No unspecified analysis of future values or behavior is added.
 
 <a id="analytical-tree"></a>
 ### Used interface checking
@@ -333,7 +352,7 @@ Conversion is distinct from interface checking. Receiving a numeric value still 
 <a id="graph-tests"></a>
 ### Analytical part test
 
-Where the admission contract requires analytical checks, it executes the receiving expression's explicitly stated checks against the constructed graph. Interface matching itself runs none of those checks or candidate bodies. Graph construction performs no `test` execution; the separate pre-C build-test phase and reached runtime checks use the common executor. Without explicit Consumer, checks belong to the receiving description `bVar`, not to candidate `aVar`. No specified tests means no additional analysis, not proof of behavior. The first result 0 stops admission; remaining checks do not execute, and success requires all specified checks to succeed. Declared failures use ordinary throw/catch. Checks are not watchers on every graph write.
+Where the admission contract requires analytical checks, it executes the receiving expression's explicitly stated checks against the constructed graph. Interface matching itself runs none of those checks or candidate bodies. Graph construction performs no `test` execution; the separate build-test phase (interpreted, after L1/C generation and before machine compilation) and reached runtime checks use the common executor. Without explicit Consumer, checks belong to the receiving description `bVar`, not to candidate `aVar`. No specified tests means no additional analysis, not proof of behavior. The first result 0 stops admission; remaining checks do not execute, and success requires all specified checks to succeed. Declared failures use ordinary throw/catch. Checks are not watchers on every graph write.
 
 <a id="test-receiver-contract"></a>
 #### The `test:` receiver
@@ -507,6 +526,8 @@ A bare atom does not add an unwritten receiver or callable invocation. If the re
 
 Two-field `int: x 5` declares place `x` with an `int` requirement and value `5`: in data it creates the place, in code it is a call of the receiver -- a check of the type with an assignment to the local namespace place `x` ([the roles `data` and `code`](#data-code-roles)). Unary `int: x` describes place `x` with an `int` requirement and no invented initial value: a first definition creates the place; with an already known `x` the same form in code checks its compatibility by ordinary admission without a new write or second field, and in data it stays one more occurrence of the name, which is addressed only with the index of an occurrence after that. An uninitialized graph place contains only the distinct type code `uninit:int`, with `sizeof(value) = 0`, not a reserved int cell, numeric zero or an external initialization mark; every primitive has such a type, alike in code, data and a signature, where it distinguishes a formal without a default `int: q` from the default `int: q 0`: such a formal is not mandatory -- an input without a value, to which no value is supplied, does not make the call refuse: it is filled by [autofill](#binding-autofill), and where that is inapplicable it holds this type (the author's decision of 2026-11-16), and the receiver [`required`](#required-receiver) checks that a given field is initialized; [explicit graph assignment](#graph-fragment-assignment) (`D\a := 5`) replaces the fragment at that structural place: `{uninit_int}` becomes `{int 5}`. It does not retag a preallocated T cell, require in-place expansion, or preserve a raw payload address across replacement ([L2 §3.1](L2_spec_en.md#uninit-record-control)). An assignment to a local of the call -- `a := 5` for a formal that received no value -- writes into the place of the call: the graph does not change and the data are not published. The absence of a value is written as a value of that separate type: `nil: T` (`nil: int`; any other primitive type in place of `int`), and simply `nil` where possible. `int: var` declares a variable without initialization, and a separate type exists for that; it was introduced for passing arguments and stays needed with `required`. A variable can be compared with `nil` by its absence state; no numeric sentinel or imaginary value bytes are introduced. The graph holds nothing but Structures and primitives: a primitive is the declaration of its type with a value or with the absence of a value, and everything else is written as Structures. The null pointer stays `0` where that is possible; a pointer declared without a value (`@: ptr`) is not zero and is written with the same `nil` (the author's decision of 2026-11-17). Every receiver that used to be written without arguments in the place of a type has a one-argument form: `int: i` is written instead of `i: int` (the author's decision of 2026-11-10). With `i` already declared, `int: i` in code is not an error but a check that the type conforms: repeated declarations are allowed. The one-argument form given the primitive itself instead of a name, `int: 54554878477838734`, returns the number in an expression or throws a failure that `catch` receives. In a signature these forms describe a formal, and a written value supplies a default when an actual argument is absent; describing a formal does not execute it as a body. This is one mechanism for primitives, references, Structures, and callables, with no parser branch for a receiver's name. The constructed source graph fixes its physical slots until an explicit graph operation changes them. Logical namespace places and bare-name visibility follow sequential declarations, lexical scopes and explicit receiver-stream consumption; reaching a branch does not append a hidden slot to the source `Lmx`.
 
+The author-approved postfix forms are `Model@: p`, `int@: left`, `Model[]: arr`, `int[]: values`, `Model[]: arr [Model Model]`, `Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]`. Each is a separate declaration example. In particular, a typed pointer places its requirement only in the head before the colon; neither `@: p int` nor `@: int p` means an uninitialized pointer-to-int declaration. Genuine `@: model Model` remains a universal-reference initialization from the existing Model value. A named or anonymous square initializer uses the same element admission and preserves the actual values, reference identities and supported storage profile, without a cast or auxiliary constructor. The [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md) includes absence versus empty, Model identity and pointer/array composition.
+
 The named declaration contract is `R: name [initializer]`, with the complete requirement supplied by the resolved head R. A raw NAME is consumed before lookup; the optional initializer follows the ordinary value/admission contract. `int: x`, `[]: pending`, `T[]: pending`, `@: p`, and `T@: p` preserve uninitialized absence when no value is supplied. The array receivers additionally accept their explicit anonymous square-group forms; this is their declared contract, not a P0 rewrite. A reference requirement belongs in a postfix head such as `Model@: ptr Candidate`; it is not a third argument to @. `@: ptr Model` remains a universal-reference initialization with Model. Repeated declarations, const/immutable writes, and DATA/CODE roles remain ordinary. An existing name cannot change how the receiver classifies a written declaration name.
 
 A typed reference declaration is `Model@: ptr Other`, and `Model@: ptr 0` initializes a null pointer of that requirement. The old `@: ptr Model Other` reading is withdrawn. `@: ptr Model: Other` contains a nested call in a CODE-reading position, not a special typed-candidate pair. Normal admission neither writes to Model nor invents an addressable temporary target. The candidate is evaluated once before the ordinary binding/write. An outer `ptr: ...` remains a DATA declaration of a Structure or a CODE call; it does not replace the reference receiver's own declared NAME role.
@@ -661,6 +682,16 @@ A declaration *executed inside an expression* retains ordinary declaration/admis
 
 <a id="operand-receiver"></a>
 ### User operands: structural discovery and ordinary results
+
+Every receiver is already structurally admitted in Expression. Translation
+routes its parsed occurrence to the existing semantic consumer; ordinary
+receiver and operand forms share one canonical operation and one algorithm.
+VALUE, NAME, TYPE, DATA, BODY/RAW and PLACE roles remain distinct, and void,
+field-stream, control-transfer and suspension results keep their own contracts.
+No eager VALUE conversion or extra callable activation is inserted merely to
+support another spelling. A built-in `return` or `finally` retains the source
+activation and cleanup scope. [Operation forms](OPERATION_FORMS.md) gives the
+complete class matrix and executable lowering reference.
 
 A user operand is an ordinary executable method found by normal name resolution. Its name is its operator name. Its actual DATA remains `parent(C)`; import, references, shadowing and two-way `private` apply normally. **There is no `sys\operand` registration or separate operand-name registry.** A temporary derived index during analysis is permitted, but it is not another source graph or persistent environment.
 
@@ -997,12 +1028,29 @@ mechanism is introduced.
 <a id="compound-assign"></a>
 #### Compound assignments and the power
 
+Attached one-argument updates have the canonical variants below. Each argument
+is one complete PLACE, including a field/index expression. Resolve that place
+once, retain its previous typed value, perform the selected profile's step and
+one successful store. Before-atom forms return the stored new value; after-atom
+forms return the previous value. A failed step or admission propagates its real
+failure without returning a partial success.
+
+| Operand form | Receiver form | Result |
+| --- | --- | --- |
+| `++x` | `` `++var`(x) `` | Stored new value |
+| `x++` | `` `var++`(x) `` | Previous value |
+| `--x` | `` `--var`(x) `` | Stored new value |
+| `x--` | `` `var--`(x) `` | Previous value |
+
+The literal `var` in the canonical operation name denotes one argument slot;
+it is not a wildcard for lookup and is independent of x's actual name.
+
 The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `satisfies` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The associativity and precedence of `**` are Python's (the author's clarification of 2026-11-07): `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
 
 <a id="group-assign"></a>
 #### Group positional assignment
 
-Author's decisions of 2026-11-10. The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, and a Structure as the head of a Frame before a colon is not introduced. All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. The left side is an unnamed Structure and remains whole. The unnamed Structure written on the right is the sole `right` argument of `:=`, so exactly its one outer level is opened and its immediate positions populate `right`; the left container is not opened. When the left side is not an unnamed Structure, the parentheses on the right are not opened: `struct := (copy(args))` assigns one Structure to the reference `struct` (the author's decision of 2026-11-22). This is an assignment between unnamed Structures, the general case of assignment and not a special form (the author's decisions of 2026-11-16 and 2026-11-21). A Structure returned from a function is not opened: in `(a, b, c) := myFn()` the right side is one value ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). A field stream is written inside an explicit group, which is opened the same way: `(a b) := (copy(Pair))` assigns the two resulting fields by position; the bare stream `(a b) := copy(Pair)` is an error (the author's decision of 2026-11-21). The right side of a group assignment is one unnamed Structure written in parentheses, the form `() := ()`; several values written without the group are an error (the author's decision of 2026-11-21). In `(c b d a) := (a b c d)`, starting from a=1, b=2, c=3, d=4, the final values are c=1, b=2, d=3, a=4. All RHS values precede the first write; this promises no rollback of effects already produced while computing them. The names of the right-hand fields do not change the positional correspondence.
+Author's decisions of 2026-11-10. The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, this assignment rule does not give a grouped colon head assignment semantics. Grouped heads themselves follow the ordinary [head grammar](LMX_grammar.en.md#structure). All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. The left side is an unnamed Structure and remains whole. The unnamed Structure written on the right is the sole `right` argument of `:=`, so exactly its one outer level is opened and its immediate positions populate `right`; the left container is not opened. When the left side is not an unnamed Structure, the parentheses on the right are not opened: `struct := (copy(args))` assigns one Structure to the reference `struct` (the author's decision of 2026-11-22). This is an assignment between unnamed Structures, the general case of assignment and not a special form (the author's decisions of 2026-11-16 and 2026-11-21). A Structure returned from a function is not opened: in `(a, b, c) := myFn()` the right side is one value ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). A field stream is written inside an explicit group, which is opened the same way: `(a b) := (copy(Pair))` assigns the two resulting fields by position; the bare stream `(a b) := copy(Pair)` is an error (the author's decision of 2026-11-21). The right side of a group assignment is one unnamed Structure written in parentheses, the form `() := ()`; several values written without the group are an error (the author's decision of 2026-11-21). In `(c b d a) := (a b c d)`, starting from a=1, b=2, c=3, d=4, the final values are c=1, b=2, d=3, a=4. All RHS values precede the first write; this promises no rollback of effects already produced while computing them. The names of the right-hand fields do not change the positional correspondence.
 
 <a id="qualification"></a>
 ## 10. const, immutable and independent
@@ -1148,6 +1196,32 @@ Both calls execute because x is an ordinary optional input: omission with no ini
 #### R0: entry without data
 
 R0 is an ordinary C method with a local pointer to the R0 graph. The interpreter also runs on the compiled binary and has this binary R0. At the language boundary R0 starts as a procedure without DATA and without user actuals. No artificial D=C relation, empty service DATA Structure or synthetic data field compensates for its absence. R0 may contain executable declarations and use ordinary accessible references; internal runtime launch parameters and native-root graph access do not become user arguments. The absence of DATA affects input binding, not the common classification of written forms: executable declaration receivers and calls follow their ordinary CODE contracts, and a form received as DATA follows that receiver's DATA contract. No root-specific parser, implicit self-call or replacement DATA object is introduced.
+
+<a id="source-entry-profiles"></a>
+**One root startup, one execution mechanism (author clarification, 2026-11-23).** A program always starts by bringing up its root as an ordinary L3 Thread under the existing parent stub. That root executes from its beginning as CODE, without DATA and without user actuals. `Main` has no launch meaning, and loading a DATA description does not establish an alternative entry. If the parent stub has arguments to deliver, it may send the root an ordinary Message. The usual message contract supplies those values to the reached receiving operation; it neither supplies R0 launch arguments nor creates hidden root DATA. The stub's supervisory parent relationship is distinct from lexical `node`.
+
+<a id="null-parent"></a>
+**Null parent (the author's clarifications of 23 November 2026).** `parent` equal to 0 is an ordinary state of a Structure, not a property of R0 alone. The R0 of every Thread has it, a Structure built under `independent` has it, and so does any other Structure that has no parent. One set of rules governs `parent`, DATA and the lexical context when the parent is null: there is no special Root type, no fictitious parent substituted for the null one (the calling or the parent Thread is not put in place of a null `parent`), and no separate «R0 without a parent» mode; dynamic binding and explicit arguments keep their existing contracts, and nothing is added for the binder. R0 has no parent because a C method has none from which one could come; an `independent` Structure has none because the qualifier cuts the external lexical parent ([independent](#qualification)). What such a Structure lacks is its parent only; its own fields, its internal tree and its CODE namespace are ordinary. A scenario that depends on a parent is run by an ordinary Structure that has a real parent, for example by R0 making an ordinary call to a child Structure or method; tests match the actual context of what they test, and no question remains open about it. A null `parent` needs no processing: it is permitted, not an error, and it is not checked on entry. Reading the value of `parent` is distinct from going through it. In native L2 an access through 0 is an ordinary C operation, with no automatic ban and no language-level `throw` guarantee. In interpreted L2 and in checked L3 an impossible access through 0 gives an ordinary `throw` through the existing L3 wrappers, and it ends by the ordinary route of an exception out of an L3 Thread, including the ordinary exit of that Thread (the author's clarifications of 23 November 2026). A program may null the `parent` of a Structure even inside a `catch`, and nothing is fixed, replaced or linked for it: there is no guarantee that `parent` is non-null or that a catcher is available, no rule that every `throw` must be caught, and no special error channel. No separate check, mode, table or channel for `parent`, `independent` or R0, no pre-validation of every independent or root Structure and no fictitious lexical parent for the propagation of a `throw` is added, and binding is unchanged.
+
+<a id="thread-independence"></a>
+**Thread independence (the author's clarification of 23 November 2026).** Every L3 Thread exists independently of the others, in the lexical C sense and in memory, even when the Threads are assembled together and stand in the relation of parent and children. The supervisory relation of `Thread.parent` and `Thread.children` is not a lexical or structural parent of R0, not a common frame and not a common graph; a parent stub or a sender Thread is not turned into `parent(R0)` when the stub or an ordinary Message is described ([null parent](#null-parent)). An ordinary lexical parent inside a Thread's own graph in its own arena is kept by the general rules. A shared binary shares machine methods and does not make the state of Threads common: there is no hidden shared R0 context in shared-library or native code, and assembling Threads together captures no foreign context. No new isolation infrastructure, pointer restriction or state vocabulary follows; this is a clarification of the existing rule.
+
+Absence of DATA removes only that activation's input-description/binding pass. It does not remove its ordinary CODE namespace, local declarations, local values, calls, control bodies, or failure handling. The same executor/translator prepares CODE locals and reaches the same receiver and call contracts for R0 as for any other activation. No root-specific parser, declaration syntax, special `Main` wrapper, or second dispatch mechanism is added. An ordinary `Name:` in reached CODE applies its resolved head, while declaration receivers declare their ordinary places. An unnamed leading group is a reached CODE body; groups used as values or arguments retain their actual receiving contract.
+
+Library and comparison listings can be DATA fragments describing ordinary callables; such a fragment is not a replacement program entry. A published test invocation such as `Example\run()` is an ordinary call made by already running root code or a reached message handler after the relevant data/dependencies are available through ordinary mechanisms. The file suffix and the test metadata do not authorize a loader to skip root startup and jump to that body. Complete launch fixtures must include the ordinary root/Thread setup; absent production runner code is marked as unverified integration, not filled with a new host-entry convention.
+
+<a id="root-startup-observations"></a>
+| ID | Observation | Required result |
+| --- | --- | --- |
+| R001 | Start a complete program containing a callable named Main | Execute the root from its beginning; the spelling Main is not selected as an entry. |
+| R002 | Root declares a local value, changes it, and reaches a callable through an available reference | The common local-place, binding and call mechanisms work without root DATA. |
+| R003 | Root has no DATA and a receiver requests an omitted DATA-default argument | Do not invent empty DATA, DATA=CODE, or an implicit self argument. |
+| R004 | The parent stub has input values for the root | Delivery uses an ordinary Message; R0's launch still has no user actuals. |
+| R005 | The running root reaches a nested call or message receiver with its own actual parent | That operation uses its actual DATA and ordinary admission; root startup does not replace the operation's parent. |
+| R006 | Interpret or execute prepared native code for these cases | Preserve the same root/Thread, local-place, call, exit and message contracts; no alternate Main launch is introduced. |
+
+<a id="root-reference-boundary"></a>
+**Obtaining the root reference.** If an accessible Structure `child` is an immediate structural child of the root, `parent(child)` returns that root under the ordinary parent contract. A reference obtained this way can address its fields and physical slots. This is conditional on that actual parent relationship; it does not construct a child or declare one merely by writing a CODE call. `node` still starts above the selected method, so R0 with no lexical parent has no `node` target. `parent()` and `sys\descriptor()` default to DATA and therefore provide no implicit R0 self-reference. `code` is the ordinary parameter of `call`, not a newly reserved root name. The current norm defines no universal source spelling for R0 itself, and none is needed (the author's decision of 23 November 2026, [A3](FABLE_CLARIFICATIONS.md#a3)): R0 has no parent, like every Structure whose `parent` is null ([null parent](#null-parent)), so a test of R0 is written for R0 without a parent, and a scenario that depends on a parent is run by an ordinary call from R0 to a child Structure or method that has one. There is no `Main` entry, no `root()`, `data` or new `self` for an unsuitable old test and no additional mechanism; existing reference-based access needs no new operation.
 
 <a id="removed-builtins"></a>
 #### What is withdrawn by the norm of 2026-11-19
@@ -1302,7 +1376,7 @@ The receiving variable is chosen by the same positional and explicit-name rules 
 | `name := declaration` | The variable selected by the ordinary outer name `name` | The complete declaration Structure on the right, with its internal name unchanged |
 | `name := S` or `name := value` | The variable selected by the same ordinary outer name | The supplied Structure or other value under that variable's contract |
 
-After selecting a receiving position, the call attempts the ordinary assignment/admission of the supplied Structure to that variable. It does not select a different variable by looking inside the declaration, substitute the initializer's result for the Structure, or execute the declaration to make an incompatible argument fit. If no receiving position exists or admission fails, the ordinary call error applies. There is no special naming syntax for declarations: `name := ...` names the actual regardless of the kind of value on its right.
+After selecting a receiving position, the call attempts the ordinary assignment/admission of the supplied Structure to that variable. It does not select a different variable by looking inside the declaration, substitute the initializer's result for the Structure, or execute the declaration to make an incompatible argument fit. If no receiving position exists or admission fails, the ordinary call error applies. The receiving formal keeps its own requirement: the type mentioned inside the supplied declaration does not replace that requirement, and its initializer value is not substituted for the whole Structure. Any applicable ordinary conversion is a conversion of the supplied material under the selected receiving contract, not an implicit execution of that initializer. Excess actuals reject a candidate during call-shape checking; this includes a declaration actual for a zero-input callable, and the excess declaration's initializer is not executed. There is no special naming syntax for declarations: `name := ...` names the actual regardless of the kind of value on its right.
 
 For a receiver with reference inputs `a`, then `b`, `g(int: b producer())` supplies the declaration Structure to **`a`**, even though a receiving input named `b` exists. Its internal name is still `b`; `producer()` has not run. A following unnamed argument uses the next position normally. To put that same form into `b`, write `g(b := int: b producer())`. The outer name selects `b`; changing the internal name to `item` changes the retained declaration, not the selected receiving variable. Through a signature-constrained reference, only the ordinary outer actual name uses the public-label-to-position map.
 
@@ -1394,6 +1468,8 @@ These are the criteria of agreement of the normative text and of the future chec
 | A19 | Rename only the internal name of a supplied declaration, including to an existing formal name | The selected receiving position and positional counter are unchanged |
 | A20 | The selected receiving variable rejects the supplied declaration Structure | Ordinary admission fails; there is no name-based remapping or execution of the initializer to obtain another argument value |
 | A21 | The associated body executes `total += item` in the complete example | It writes the existing live `total` place of `numbers\demo`, not a fresh fallback copy; `item` is the place established by `iteration()` |
+| A22 | One receiving position with two declaration actuals, or zero positions with one declaration actual | Reject the candidate for excess actuals before their initializers run; internal names do not create or select additional positions |
+| A23 | A supplied declaration mentions int internally while its selected formal has another requirement | Check the whole declaration Structure against the formal's unchanged requirement; do not substitute its initializer value or replace the formal's type by name |
 | I01 | `import: cycles` in the data of the called `test` | The constant declaration `iterate` is imported; the variables `iteration` and `body` stay in `cycles` and keep setting the inputs of the method |
 | I02 | A root const declaration of a primitive or a reference | It is imported by the same common rule |
 | I03 | A root declaration of an ordinary variable | It is not imported |
@@ -1766,6 +1842,24 @@ The decisions R01–R19 of the norm of 2026-11-19 and the required observations 
 
 For the control example of a new place in a nested block, add one separate control fixture after the exact derivation is established; do not replace it by an arbitrary expected number.
 
+<a id="own-default-root-example"></a>
+#### An own default and a caller-local assignment
+
+This fragment describes ordinary callables as DATA. In the observation, already running root code or a reached message handler performs the ordinary call `Main()` after that fragment is available. The name Main is not a startup entry, and this DATA fragment is not the complete R0 program.
+
+```lmx
+int: seen 0
+int: x 5
+C:
+    node\seen := x
+Main:
+    x := 9
+    C()
+```
+
+Both bodies have the root description as their actual parent. `Main` changes its own input place `x` to 9; it does not write back to the root's written `x`. When `C()` is entered, C's own ready default is still 5, so the explicit graph write sets `seen` to 5. Three distinct changes have distinct effects: `C(x := 9)` supplies an explicit actual and C sees 9; replacing the root declaration by `int: x` allows permitted autofill from Main's initialized place and C sees 9; changing Main's assignment to `node\x := 9` explicitly changes the source field, so a subsequent fresh C activation sees that changed default. No process-global bare variable is inferred from a root declaration. The rule retains dynamic binding for eligible empty inputs and free names, including forwarding across a caller that does not consume the name.
+
+
 <a id="required-receiver"></a>
 ### Receiver required: checking that a field is initialized
 
@@ -1843,13 +1937,9 @@ Boundaries. Load-dirty, `flush`, publication of local frames and copying back at
 <a id="explicit-compilation"></a>
 ### Explicit compilation, native, and endturn
 
-Compilation of an explicitly selected root includes clean-graph construction and checking without program
-calls, the separate required build-test phase on that clean graph, lowering to L1 and C, machine compilation,
-and entry registration in `call` tables. The tests use their ordinary receiver and call contracts; the
-application entry is not launched merely to compile it.
-`sys\compile(S)` invokes this shared chain; `sys\translate(S)` stops at L1 text.
-Failure returns diagnostics and provides no new native entry. The runtime operation reuses the
-required parts of the same builder chain, without a second compiler.
+Compilation of an explicitly selected root proceeds in this order. The clean graph is constructed from sources and checked without program calls, but only when sources are given: an already built runtime or clean graph is used as it is. L1 and from it C are generated. The separate required build-test phase then runs the `test` receivers in interpretation mode on the graph being accepted; the tests use their ordinary receiver and call contracts, and the application entry is not launched merely to compile it. Only if the tests pass does machine compilation follow, with registration of the entry in the `call` tables. Changes made at run time are accepted at `endturn`: `sys\compile(S)` prepares the update and `sys\endturn` brings it in (the author's clarification of 23 November 2026). `sys\compile(S)` invokes this shared chain; `sys\translate(S)` stops at L1 text. If a test fails, machine compilation is not reached and no new native entry is installed; the diagnostics are kept in the ordinary way, with no promise about the state of the generated L1 and C text.
+
+This chain through L1 and C99 with an external C compiler is the ahead-of-time (AOT, build) path. At run time the planned runtime backend, the separate SLJIT module (a plan: the module is not built yet), takes the graph being accepted through the common graph and its own lowering, in this order: clean graph, preparation of the backend, interpreted tests, machine compilation and registration, acceptance at `endturn`. That path requires neither C text nor an external C compiler, so the AOT chain is not the only way to a native entry; L1 or C paths appear in the native descriptor only when the path produces such artifacts. Choosing the runtime backend does not cancel `sys\translate(S)`, which keeps its explicit contract: L1 text and diagnostics.
 
 Native is an explicit descriptor: an ordinary Structure containing machine-entry variants and signatures, binary-module/entry references, and available L1/C source paths. Its primary storage is the arena's call tables shared by methods and ordinary executable Structures. `sys\native(S)` queries those tables without running S. The Lmx header has parent/length/storage and no native field.
 
@@ -1876,18 +1966,18 @@ prepared update. Endturn alone neither detects edits nor checks or compiles the 
 The scheme (the author's decision of 2026-11-18).
 The translator constructs the full clean graph and emits C for the compiled methods; it does not
 emit a second data graph as static C state. There is no working graph. The binary includes R0 and
-the interpreter methods; R0 holds its graph pointer locally. The interpreter starts only on the clean graph and executes the build's required receivers `test` under the
-ordinary build/receiver contracts before the final C compilation. This is not recursive discovery of
+the interpreter methods; R0 holds its graph pointer locally. The interpreter starts only on the clean graph and executes the build's required receivers `test` under the ordinary build/receiver contracts, on the graph being accepted, after L1/C generation and before machine compilation. This is not recursive discovery of
 every `test` form in DATA, and nested calls keep ordinary native/walker dispatch. At run time the
 scheme is the same: the interpreter works on the clean graph, and changes of the
-graph do not affect that; the next cycle of generating C and compiling is performed only by the
-mechanism described here -- explicit compilation and the endturn boundary. Scripts attached later are
-interpreted by the built kernel by the same scheme: C is generated, and the full compilation is
-performed only at the request of user code; a script arrives as an ordinary Message.
+graph do not affect that; the next cycle of translation and compilation is performed only by the mechanism described here -- explicit compilation and the endturn boundary. Scripts attached later are
+interpreted by the built kernel by the same scheme: the full compilation is performed only at the request of user code; a script arrives as an ordinary Message.
+
+Three things are kept apart (the author's clarifications of 23 November 2026). First, direct graph access: an edit is written straight into the clean graph, and an explicit read takes the current graph. Second, frame independence: the current frame's local values and bindings are not changed by a graph write through any automatic mechanism; there is no automatic refresh or cache coherence, no synchronization of the namespace with the graph, no mandatory copy of the tree and no forced snapshot for a test. The words «the interpreter sees an edit at once» mean that explicit references to the current graph see it and that interpretation then follows the ordinary rules; they do not mean that the edit is carried into places already gathered into a frame. Third, machine installation: a new machine implementation is installed at `endturn` after a successful explicit compilation. This is a clarification of the existing difference between frame and graph, not a new mechanism.
+
+The acceptance of changes concerns the machine implementation only (the author's clarification of 23 November 2026). The clean graph is edited as it is, so the interpreter needs checks, proportionate and not to the point of absurdity: they are the existing general checks of L3, not a full audit and not an automatic proof of correctness. Copying parts of the graph is a basic operation of the language; inside `test` receivers the programmer may copy whatever the tests need (`copy`, `merge`), and the system forces nothing, because the programmer must still write the `test` itself correctly. Accordingly there is no mandatory candidate copy or snapshot, no transaction or rollback of the graph and no forced isolation. A test is interpreted by the general rules; when it needs isolation, the programmer copies explicitly. A failed test leaves machine compilation undone and installs no new native entry; it does not undo the effects of the code already executed, and it adds no new tracking and no automatic retry.
 
 A direct C call A→B belongs to compiled A. Recompiling only B does not rewrite old A: updating that chain
-requires explicitly compiling a common unit containing the needed callers and targets. This is compilation
-work, without observing assignments or looking up native before each direct call. Old active machine frames,
+requires explicitly compiling a common unit containing the needed callers and targets. This is compilation work, without observing assignments or looking up native before each direct call. Code that the planned SLJIT module produces at run time follows the same rule: it is published only by explicit compilation and endturn, with no automatic tracking of callers and no reverse tables. Old active machine frames,
 including finally, must finish before their machine code is released.
 
 
@@ -1961,6 +2051,8 @@ A finite failure list may be written once and reused with `throws: copy(SharedFa
 
 Use a source name distinct from the receiving `throws`, or qualify it explicitly. For a list stored in `Steps\throws`, write `throws: copy(Steps\throws)` in each consumer. An unqualified `throws` is resolved by the ordinary namespace rules, not a special reference to a parent's list. Sharing a list does not inherit a `catch` or suppress the caller's obligations. A callable may deliberately pass its declared failures outward; a complete handling example must also show the caller that handles them. A name handled on every relevant path need not be repeated in the outward list merely because a callee declares it; a handler that rethrows or another uncovered path retains the ordinary obligation.
 
+A selected operation exposes its actual finite recoverable-failure description at `target\throws`, including ordinary methods, published operands and system receivers. Thus `throws: copy(sys\resize\throws)` copies the contract of the same `sys\resize` operation that the body calls; reading this path neither calls resize nor supplies an empty substitute for a native implementation. The system contract view must contain the real names and associated DATA used by its executor. An overload family is not resolved by picking its first member: name the selected handler (for example `FxListBind\bind\throws`) or explicitly compose the finite union of reachable contracts. Any public adaptation failures remain part of the outward contract. This metadata view changes neither the existing implicit-failure propagation policy nor translation diagnostics into recoverable exits. The [operation-contract publication requirements](OPERATION_FORMS.md#operation-contract-throws) define implementation and acceptance obligations; native/runtime publication remains unverified in this standalone package.
+
 `throw: Name(arguments)` evaluates an explicit payload and leaves the current activation under the [exit rules](#exits), without returning its declared result. The selected `catch: Name (...)` parameters receive the payload. A handler's repeat call begins a new activation from the start and does not resume the abandoned frame.
 
 `catch` is a landing pad in the caller's block, not an ordinary nested callable Structure ([`catch` in the common model](#catch-common-model)). Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end. The handler covers every call of its block, including calls made from statement blocks nested inside it (`if`, `while`, `for`, an anonymous `---`): a handler, like named Structures and callables, is visible throughout its block in both directions. A sibling block is not covered. This is bidirectional visibility of a callable name, not of all data places. Variables, including `const` and variables holding method pointers, are visible sequentially; names of named Structures and callables are visible in both directions under the [common visibility rule](#declaration-visibility).
@@ -1970,6 +2062,10 @@ Two same-named handlers in one block are prohibited; separate nested blocks can 
 Language operators whose `throws` list the programmer does not see written out (for example `merge`) also throw a named failure, but catching it is optional: a `catch: merge` handler -- before the call, after it, or in a separate nested block -- handles it in the ordinary way and nothing flies anywhere; an uncaught implicit failure flies to the root of the executing Message and the Thread stops (`running = 0`). The only placement constraint is the one declared names have: two same-named `catch` handlers cannot compete at one level.
 
 If the interpreter detects an error in an operation while executing a correctly constructed graph, it raises an ordinary implicit failure with the single name `interpreter`. `catch: interpreter ()` receives it under the same scope and propagation rules as other implicit failures; there is no separate interpreter-exception channel. An error while constructing the source graph during translation, a malformed graph, or a violated kernel invariant is not such a failure: it is a diagnostic of the corresponding stage, which the executing program's `catch` cannot intercept.
+
+<a id="admission-failure-name"></a>
+An automatic admission refusal detected by the interpreter at a reached call in an otherwise correctly constructed graph follows that `interpreter` rule. The internal use of standard `satisfies` does not rename this failure to `satisfies`. This statement concerns that automatic interpreter check: an explicitly invoked receiver follows its own contract, and an explicit failure raised by a reached test or converter retains its declared name and payload. A known incompatibility found while constructing/translating the graph remains a stage diagnostic. Prepared native calls acquire no new automatic runtime admission check from this clarification ([admission stages](#admission)).
+
 
 <a id="catch-common-model"></a>
 ### `catch` in the common model of data and call
@@ -2063,7 +2159,7 @@ moving an earlier obtained address along with storage.
 `length(array)` reads the Array's element count; for a rectangular Array this is the total count, not its first dimension. Physical backing need not retain dimensions and cannot reconstruct them from the total element count. The containing Structure's field count, Array length and service-pool size are distinct.
 
 <a id="structure-index"></a>
-A Structure and `Array<@>` are addressed identically. `S[i]` reads a `void*` from physical `storage`; `S[i] := p` stores another `void*` there. This operation neither checks nor transfers a former field's requirement, name, or cell kind: it is simply a write of a value into the array, without checks (the author's clarification of 2026-11-17). Slot count and addresses do not change. Names and types are interpreted from current content when subsequently needed; the write itself does not assign a name to the slot. `S\[N]field` and `voidarray\[N]field` structurally select the Nth occurrence under the named field contract. An ordinary typed `Array<T>` retains its element representation. `length(S)` reads the element count. Index writes require no former-slot requirement table or associated publication/checking mechanism.
+A Structure and `Array<@>` are addressed identically. `S[i]` reads a `void*` from physical `storage`; `S[i] := p` stores another `void*` there. This operation neither checks nor transfers a former field's requirement, name, or cell kind: it is simply a write of a value into the array, without those field, name and requirement checks (the author's clarification of 2026-11-17). This concerns the slot's former requirement only: the ordinary L3 checks of Arrays and pointers (the final-element check against the stored length) apply to L3 code and to interpreted L2 code as usual, and only native L2 adds no check at all; `S[i]` stays an access to an `Array<@>`. Slot count and addresses do not change. Names and types are interpreted from current content when subsequently needed; the write itself does not assign a name to the slot. `S\[N]field` and `voidarray\[N]field` structurally select the Nth occurrence under the named field contract. An ordinary typed `Array<T>` retains its element representation. `length(S)` reads the element count. Index writes require no former-slot requirement table or associated publication/checking mechanism.
 
 <a id="get-type"></a>
 `sys\typeof(arg)` returns the type code of the selected typed record; an `uninit:T` record supplies its code without any value read. After graph-fragment replacement, a fresh lookup through the structural place selects the replacement record, without a promise about an old raw address: `sys\typeof(S[i])` identifies the selected field value, `sys\typeof(@i)` the addressed cell of i, and `sys\typeof(S)` the Structure descriptor. It consumes an address or reference, not an arbitrary scalar pretending to be one. Zero or an address outside the Message's arena gives the no-type code under this receiver's contract. Codes come from the kernel's named region-type constants; numeric code values are not fixed by this specification. The interpreter and native execution use the same result contract. Ordinary native locals have no arena prefix: their logical place/type metadata cannot be obtained by blindly reading before a C address ([binding executors](#binding-executors)).
@@ -2083,7 +2179,7 @@ An Array copy has separate backing; passing a reference does not itself create i
 
 Array arithmetic and comparisons are elementwise. `*` is elementwise multiplication; `matmul`, `dot`, tensor `contract`, and `outer` are separate operations. Two sequence inputs must have equal lengths. Array/scalar operations evaluate the scalar once and preserve operand order. Both dense and reference-array inputs use the actual element type, never a numeric interpretation of pointer bits. When every sequence input is dense, dense R is produced only when the scalar contract already establishes complete R; otherwise the result is `@[]`. A Structure input also yields `@[]`. No first-element probe, truncation, singleton broadcasting, implicit float promotion, or inferred shape is added. See [the exact arithmetic profile](CORE_SEQUENCES_REGEX.en.md#expressions).
 
-`reduce` and inclusive/exclusive `scan` retain their explicitly selected numeric contracts. The ordinary `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `flatMap`, `traverse`, `groupBy`, and `transpose` receivers now accept dense Arrays and Structures through one universal @ access path. Their callbacks run sequentially, left to right, in one Message, preserving effects, defaults, and failures. Pure arithmetic/numeric profiles may optimize only while preserving their own observables. `scanl` includes the seed and all accumulated values; it differs from the inclusive numeric scan example.
+`reduce` and inclusive/exclusive `scan` retain their explicitly selected numeric contracts. The ordinary `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `bind`, `traverse`, `groupBy`, and `transpose` receivers now accept dense Arrays and Structures through one universal @ access path. Their callbacks run sequentially, left to right, in one Message, preserving effects, defaults, and failures. Pure arithmetic/numeric profiles may optimize only while preserving their own observables. `scanl` includes the seed and all accumulated values; it differs from the inclusive numeric scan example.
 
 New direct receivers are `range`, `slice`, `reverse`, `concat`, `compress`, `any`, `all`, `index`, `count`, `replaceRange`, `splice`, `append`, `insert`, and `deleteAt`. `replaceRange` returns the same changed target; `splice` performs the range replacement and returns the removed elements in a separate shallow container. Text `replace` retains its separate result contract. Existing `select/omit/reorder/project` use the same actual-type access. No new container kind, implicit spread, or `toArray` is required. [Complete contracts and mutation rules](CORE_SEQUENCES_REGEX.en.md#sequences), [LMX bodies](patterns/LMX_Fn_Receivers/SEQUENCES_IMPLEMENTATION.md), and [root sequence specification](CORE_SEQUENCES_REGEX.en.md#sequences-details) govern results, aliases, bounds, and errors. Qualified references resolve genuine name collisions; they are not a restriction to record-only sources.
 
@@ -2388,7 +2484,7 @@ R0 is an ordinary L3 Thread in this tree and has no functions unavailable to ano
 
 An L3 Thread is a logical serial lane, not a promise of a dedicated OS thread. Both a dedicated thread and parent/platform-driven turns are possible. L2 implementation defines the API and mapping policy; this does not permit two simultaneous turns of one owner. Parent-liveness polling and self-maintenance are needed even by a childless actor.
 
-The process's initial graph belongs to the root Message. Launch service data and initial settings are held by the already defined R0 parent stub; settings references and user input are passed explicitly at entry, without adding implicit fields to the program's source graph; subsequent coordination uses Messages. Grouping Mix roles, cursors, pages and notifications into Messages remains a design choice: neither one actor for the whole document nor a separate actor for every cell is required.
+The process's initial graph belongs to the root Message. Initial settings and launch service data may be held by the existing parent stub. If it has values to deliver, the stub sends the root an ordinary Message; they are not passed as user actuals at R0 entry and do not create implicit source fields or root DATA. The root starts through the same ordinary L3 Thread mechanism; subsequent coordination also uses Messages. Grouping Mix roles, cursors, pages and notifications into Messages remains a design choice: neither one actor for the whole document nor a separate actor for every cell is required.
 
 <a id="addressing"></a>
 <a id="delivery"></a>
@@ -2416,6 +2512,9 @@ Current-turn outgoing letters are staged separately from the published queue. A 
 An executing Message's `success` is set only by user code: the system never resets it to 0, not even on failure, and never sets it to 1 itself; `success = 1` is a sufficient condition for stopping the Thread at end turn. The system sets `success = 1` only for a plain letter, at its delivery. An empty mailbox is not success. Once `success` is set, the Message's main algorithm receives no next turn; finishing local child maintenance depends on implementation. `running = 0` during execution may be a stop request: physical storage-handoff safety is established by a separate protocol, not inferred from one flag.
 
 A child checks parent liveness and begins its own orderly close after sustained lack of response. Forced closure from above is the second, emergency path. A parent services physical addressees from the sole reference Array of its direct children held by `Thread.children` rather than arbitrarily managing grandchildren. Each child repeats the cascade for its own child Array; closing propagates through the family instead of retaining a released branch forever.
+
+<a id="thread-poll-native"></a>
+**Native code and a stuck Thread (the author's clarification of 23 November 2026).** The mutual polling with the parent applies to native implementations as well: sooner or later it removes a stuck or otherwise non-working arena and its Thread. This mechanism already exists in the implementation and, by the author's statement, was tested in its time on this implementation; it is not a new project. This is a lifecycle mechanism of Threads and arenas, not a check on each native L2 operation, not a restoration of a graph or of a parent, and not a shadow graph. The parent Thread of this protocol is separate from the structural `Lmx.parent`, which may be 0 (an `independent` Structure, R0). The language promises neither that undefined behavior of native L2 becomes a catchable `throw` nor an automatic repair of memory; the cleanup of an arena and its Thread is one general consumer of the same polling.
 
 A running child can survive parent closure only through explicit supervision handoff to another live parent with suitable authority. It retains its arena, mail and turn; supervision and scheduling placement change. This is not storage adoption. Storage transfer ends the non-executing source's separate life; new children created from adopted content belong to the receiver.
 
@@ -2802,7 +2901,7 @@ receiver structures. These application operations add no restriction making exec
 and require no second graph or special mutation protocol. Existing ownership/protection contracts still apply.
 
 Graph edits are not tracked to clear native. Explicit sys\compile prepares a machine update through
-clean-graph construction/checking → the required build/test phase → L1/C → compilation/registration.
+clean-graph construction/checking → L1/C → the required build/test phase, interpreted on the graph being accepted → machine compilation/registration, only if the tests passed.
 The build/test phase executes checks reached through ordinary receiving contracts and may call candidates;
 it does not launch the selected application's entry or recursively enumerate all nested DATA tests. sys\endturn runs registered
 finally blocks to the ordinary turn boundary; catch does not intercept it and it does not return
@@ -3019,16 +3118,17 @@ identity. A named callable with different parameter names still matches by the
 existing positional rule. Neither form becomes executable merely by describing
 a signature, and existing named-signature/call dispatch is not altered.
 
-The type-token form uses the standard operand contract. In the chosen form
-`R signatureTypes T0 T1 ...`, the left token is the result requirement and the right tokens
-are the ordered input requirements. The actual builder can also be called by
-its qualified ordinary reference with explicit `left` and `right` arguments.
-The named declaration is now written `Name :: DATA`; this completely replaces
-the former declaration receiver. The standard type-token constructor and this
-named declaration use the same normalized descriptor builder. The type-token constructor is named `signatureTypes`; no public `fn`
-receiver or compatibility alias remains. `signature(operation := C)` instead
-reflects an existing callable. A raw anonymous type vector does not silently
-choose its first or last element as the result requirement. A declaration does not become assignment to an existing Name.
+The type-token form uses the standard operand contract and canonical name `to`.
+`to(A0; A1; R)` and `A0 to A1 R` construct the same signature: the last full TYPE
+token is the result requirement and preceding tokens are ordered input
+requirements. `to(R)` constructs a nullary signature. A token is consumed whole;
+a nested model or signature is not expanded into fields. `A to (B to C)` retains
+the explicit nested result. The common descriptor builder is unchanged.
+`Name :: DATA` remains the named signature declaration, and `signature(C)`
+reflects an existing callable. `type(x)` instead captures one value and returns
+its actual physical type code through `sys\typeof`; `x type` uses the same
+consumer. None of these meanings replaces DATA/CODE `return`. Superseded
+constructor spellings are not retained as callable aliases.
 
 An initialized integer token denotes the type code in its payload. An
 `uninit:T` token denotes T from its code without reading nonexistent value
@@ -3039,11 +3139,26 @@ null and void are not aliases.
 ### Containers
 
 Maybe uses `present` plus a value-record reference. Result uses `ok` plus a
-value-record or reason-record reference. Their flags encode the selected case,
-not the payload type. `none()` skips a continuation without reading a value;
-`some` can hold a zero, a reference, a Structure, a callable or any other admitted
-value record. Result's `err` is an ordinary container value, distinct from
-throwing `FxCallFailure`.
+value-record or reason-record reference. The public constructors `some(x)`,
+`ok(x)`, `err(x)` and `done(x)` capture one whole actual value exactly once
+through the actor's existing adaptive conversion context. The common
+`FxRecordAdapter` retains the full actual requirement and the target's exact
+result (`FxMaybe@` or `FxResult@` where applicable). No user `record` call,
+per-type factory or extra reference box is required. Internal constructors
+that explicitly consume an already prepared record keep that protocol.
+Omitted input is rejected; 0, null, an empty string and an empty Array remain
+present values. `err(x)` is a value, not an exception.
+
+`bind(m; f)` and `m bind f` select the same Maybe, Result or sequence family
+under its full receiving contract. Maybe/Result stop at the first None/Err,
+preserving that container and its reason. A callback failure remains the
+declared `FxCallFailure` path, never an implicit None/Err conversion. Sequence
+binding concatenates one result level into the established new `@[]`.
+The context selects call/operand representation before normal overload
+selection; physical Structure/Array overlap grants no hidden preference to
+Maybe, Result or a generic sequence. Genuine ambiguity is reported without
+trial execution. [Monadic operations](MONADIC_OPERATIONS.md) defines the shared
+adapter, one chain implementation, exact results and all admission cases.
 
 List is the ordinary reference sequence described above. Bounce stores either
 `done` with a result record or `more` with a nullary callable. `trampoline`
@@ -3054,7 +3169,7 @@ a scheduler or shares an arena with another Message implicitly.
 
 ### Receiver catalog
 
-The following table is exhaustive for this revision. Source declarations and
+The following table records the established core families; the linked catalog is the complete current inventory. Source declarations and
 the [public API](patterns/LMX_Fn_Receivers/API.md) specify argument order,
 failure policy and the documented boundaries of each operation.
 
@@ -3063,14 +3178,14 @@ failure policy and the documented boundaries of each operation.
 | `types` | physical field type codes; int[] by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `signatureTypes` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `to` | Complete TYPE tokens, ordered inputs followed by the result; same signature kind | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
 | `curry` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `apply` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
 | `partial` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `uncurry` | explicit full target contract and stage failures, callable result preserved | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `flip` | swap first two positions of N>=2 with full input types | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `compose` | inner arbitrary arity; outer consumes its one result; exact final R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `pipe` | compose(second; first), exact callable signature | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `pipe` | Apply stages to one whole typed value; exact final result; `compose` constructs a callable | [coreGenericOperations.lmx](patterns/LMX_Fn_Receivers/src/coreGenericOperations.lmx) |
 | `identity` | typed T -> T for any valid value type | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
 | `map` | universal sequence, ordinary callback admission/defaults, result reference vector | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
 | `filter` | universal sequence; stable storage-preserving selection and int predicate | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
@@ -3115,9 +3230,9 @@ failure policy and the documented boundaries of each operation.
 | `none` | Maybe absence, distinct from present empty/null value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `ok` | Result success carrying any typed value record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `err` | Result failure carrying any typed reason record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `bindResult` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bind` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `list` | universal sequence input, shallow copied reference vector | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `flatMap` | universal sequence bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bind` | universal sequence bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `done` | terminal Bounce with result record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `more` | suspended nullary callable, arbitrary captures via partial | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `trampoline` | iterate Bounce until done, never execute callable final result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
@@ -3138,11 +3253,11 @@ failure policy and the documented boundaries of each operation.
 | `literal` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
 | `oneOf` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
 | `noneOf` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `charRange` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `within` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
 | `satisfy` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
 | `boundaryOf` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
 | `sameAs` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `sequence` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `then` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
 | `choice` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
 | `repeated` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
 | `atomic` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
@@ -3162,11 +3277,11 @@ failure policy and the documented boundaries of each operation.
 | `hasPrefix` | int 1/0 for a candidate starting at 0 | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `hasSuffix` | int 1/0 for a candidate at any valid start ending at source end | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `matchedSpan` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `matchedText` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `matchedValue` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `captureSpans` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `lastCapture` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `captureText` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `captureTexts` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `captureValue` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `captureValues` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `replaceFirst` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `replace` | text replacement producing new text; source is not mutated | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `split` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
@@ -3177,14 +3292,21 @@ failure policy and the documented boundaries of each operation.
 | `optional` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `findFirst` | First accepted typed element as Maybe; ordered short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 | `allOf` | Compose a finite predicate sequence with preserved input places and short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
-| `equalFields` | Ordered typed field equality through an explicit comparator | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `equalFields` | Ordered sequence equality; optional `same=0` selects scalar/default recursive comparison through one range algorithm | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 | `retryPost` | Message-owned bounded retry; timeout, policy cancellation and late-reply draining | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 | `between` | Prepared inclusive bounds operand, ordinary comparison types and priority | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
 | `iterateUntilStop` | Execute accepted declaration DATA and body with live receiving places; source Stop ends the loop | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
 | `sort` | Stable nonmutating sequence sort with explicit three-way comparator; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
-| `unique` | Stable first-occurrence selection with explicit equality; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
+| `unique` | Stable first-occurrence selection; optional `same=0`; preserves the actual outer profile and first representative | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
 
-The table above retains the **123 callable/operand names** of the uploaded 23-Nov edition, including its eight earlier comparison-derived additions. The current catalog contains **212 unique callable/operand names**, with **89 further functional, object, Lisp, text and numeric operations** described in the [standard-library review](patterns/LMX_Fn_Receivers/CORE_STANDARD_REVIEW_20261123.md). Their complete signatures and sources are listed in [CORE_FUNCTIONS.md](CORE_FUNCTIONS.md). The **24 ready Pattern/configuration values, ordinary models and named failures** are listed separately in [the full catalog](patterns/LMX_Fn_Receivers/CATALOG.md); their names do not imply calls. Postfix types use the existing core resolver, and the Pattern branch of `|` extends its existing implementation.
+The complete current names, signatures, receiving roles and implementation
+sources are maintained in [CORE_FUNCTIONS.md](CORE_FUNCTIONS.md) and the
+[core catalog](patterns/LMX_Fn_Receivers/CATALOG.md). The generic functional,
+object, Lisp, sequence, Pattern and numeric families belong to one core.
+Ready Pattern/configuration values, structural models and named failures are
+listed separately; reading their names does not imply a call. Every receiver
+and operand class is covered by [the common form contract](OPERATION_FORMS.md),
+including declarations and control operations.
 
 <a id="range-replacement-results"></a>
 ### Range replacement and returned values
@@ -3279,7 +3401,7 @@ Defaults are not taken from an arbitrary named signature template: a template do
 not replace the rules of the actual candidate. In a call through a named requirement
 the public names of actuals are mapped to positions by the earlier rules, and
 permitted autofill uses the candidate's own names and declarations, not the
-arbitrary `pN` of a generator. `Name :: DATA` and `signatureTypes` remain
+arbitrary `pN` of a generator. `Name :: DATA` and `to` remain
 descriptions of one signature kind; no public `fn` returns; the existing
 relationship of a named signature with `call` is not rewritten.
 
@@ -3618,6 +3740,6 @@ the full contracts of the control languages are stated in [the catalog of
 receivers](patterns/RECEIVERS.md).
 
 <a id="unified-core"></a>
-## 38. Unified type and text-pattern profile
+## 38. Unified type, sequence and Pattern profiles
 
 The [current unified chapter](CORE_SEQUENCES_REGEX.en.md) applies postfix type expressions, full derived requirements, the directed checked-type table, universal sequence operations, and ordinary Pattern values. New composed Frame heads are resolved by the common head mechanism; a complete written head is not forced into a canonical word cell. Literal word occurrences still use their one canonical spelling address. The five Pattern operands and the added Pattern branch of `|` use the existing Expression ABI and right-only opening rule. No old type spelling, array-only helper, or blanket prohibition on metadata caches overrides this chapter. Runtime graph edits and subsequent interpretation remain independent of optional native recompilation.

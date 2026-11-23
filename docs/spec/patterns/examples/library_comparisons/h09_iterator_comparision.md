@@ -43,7 +43,7 @@ FxIterateUntilStop:
         while: 1
             private: @: step FxKernel\attemptAccepted(iteration)
             if: step\ok = 0
-                if: FxSameText\same(step\failure; "Stop")
+                if: FxEqualFields\equalFields(step\failure; "Stop")
                     break
                 throw: FxCallFailure(step)
             private: @: result FxKernel\attemptAccepted(body)
@@ -53,11 +53,19 @@ FxIterateUntilStop:
 
 Complete canonical source files for the entry and its LMX dependencies:
 
+- [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
 - [coreComparisonExamples.lmx](../../LMX_Fn_Receivers/src/coreComparisonExamples.lmx)
+- [coreComparisonGroups.lmx](../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx)
+- [coreStandardLisp.lmx](../../LMX_Fn_Receivers/src/coreStandardLisp.lmx)
+- [coreStandardText.lmx](../../LMX_Fn_Receivers/src/coreStandardText.lmx)
 - [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
+- [generic_combinators.lmx](../../LMX_Fn_Receivers/src/generic_combinators.lmx)
+- [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
+- [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
+- [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
 
-The reachable roots are: `FxUnitRange`, `FxSameText`, `FxThrows`, `FxIterateUntilStop`.
+The reachable roots are: `FxThrows`, `FxSeqInfo`, `FxSeqRead`, `FxTry`, `FxApply`, `FxEqualityTypes`, `FxBooleanToken`, `FxIndices`, `FxInputPolicy`, `FxSeqAllocate`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxFrameAttempt`, `FxFrameApply`, `FxPreparedOperands`, `FxRecordOperands`, `FxPredicateEngine`, `FxPredicateState`, `FxSeqSize`, `FxSeqConcat`, `FxConcat`, `FxSeqReverse`, `FxFormat`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxFailureFilter`, `FxAppend`, `FxFailures`, `FxStageFailures`, `FxWrap`, `FxPredicate`, `FxSeqPredicate`, `FxTwo`, `FxValueSame`, `FxSequenceDifference`, `FxEqualFields`, `FxIterateUntilStop`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -93,14 +101,14 @@ whileJust next body = iterateUntilStop (convert <$> next) body
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: | ---: |
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: |
 | Primary complete Cycles helper | 73 | 9 | 159 |
-| Optional adapter entry | 303 | 303 | 14 | 481 |
-| Optional adapter and all reachable LMX roots | 2182 | 1303 | 172 | 3732 |
-| Complete Haskell comparison module | 644 | — | 19 | 830 |
+| Optional adapter entry | 313 | 14 | 491 |
+| Optional adapter and all reachable LMX roots | 13904 | 739 | 21388 |
+| Complete Haskell comparison module | 644 | 19 | 830 |
 
-The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.
 
 На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 

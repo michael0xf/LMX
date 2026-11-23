@@ -1,12 +1,14 @@
 # P15. Проверка полного ASCII-идентификатора
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Принять целиком строку вида [A-Za-z][A-Za-z0-9_]* и вернуть 0/1. Пустая строка и конечный перевод строки не допускаются.
 
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+
 Используются именно \A и \z; проверка не ослаблена до поиска подстроки или до конца перед последним переводом строки.
 
-## Вход и ожидаемый результат
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -17,35 +19,59 @@
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 296 | 497 | 18 |
+| LMX функциональный | 237 | 283 | 6 |
+| Perl | 92 | 118 | 6 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 252 | 203 | 122 | 6 |
-| Perl | 118 | 92 | 92 | 6 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+## LMX — процедурный
 
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
+```lmx
+Ascii:
+    char: value
+    return: int
+    letter:
+        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
-## LMX
 
-[Исходник](source/lmx/P15.lm3).
+Example:
+    char[]: text
+    return: int
+    run:
+        if: length(text) = 0 || Ascii\letter(text[0]) = 0
+            return: 0
+        int: i 1
+        while: i < length(text)
+            char: value text[i]
+            if: Ascii\letter(value) = 0 && (value < '0' || value > '9') && value != '_'
+                return: 0
+            i += 1
+        return: 1
+```
+
+[Полный исходник](source/lmx/procedural/P15.lm3). 296 непробельных символов; 18 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
 
 ```lmx
 Example:
     char[]: text
     return: int
     run:
-        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
+        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxThenOperand\then\throws) copy(RxMatches\matches\throws)
         return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))
 ```
 
+[Полный исходник](source/lmx/P15.lm3). 237 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
+
 ## Perl
 
-[Исходник](source/perl/P15.pl).
+[Полный исходник](source/perl/P15.pl).
 
 ```perl
 use strict;
@@ -56,17 +82,15 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - matches: [PI07](library_comparisons/PI07_comparision.md)
 
-Штатные средства Perl: regex anchors, regex character classes.
-
-Построение Pattern/TextView: byteText, then, atLeast, asciiLetter, asciiWord. Общий строитель regex-профиля отдельно показан в [PI07](library_comparisons/PI07_comparision.md).
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

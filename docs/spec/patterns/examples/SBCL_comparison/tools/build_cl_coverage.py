@@ -66,7 +66,7 @@ matching(r'STREAM|^OPEN$|^CLOSE$|^LISTEN$|^READ-(?:BYTE|CHAR|CHAR-NO-HANG|LINE|S
          'Resource control is available; actual stream I/O, buffering, encoding, interactive behavior and Gray-style extension need provider contracts. L07.')
 matching(r'PPRINT|^PRINT|^PRIN[1C]$|^PRIN[1C]-TO-STRING$|^FORMAT$|^FORMATTER$|^TERPRI$|^FRESH-LINE$|^WRITE$|^WRITE-TO-STRING$',
          'printing and FORMAT', 'provider_or_library_gap',
-         'toLmx / formatInt / limited positional format / explicit text operations',
+         'toLmx / format / limited positional format / explicit text operations',
          'These shorten serialization/display tasks, but full CL FORMAT directives, pretty-printer dispatch and readably round-tripping arbitrary Lisp objects are not implemented by positional format. L06.')
 matching(r'TIME|^SLEEP$|^RANDOM|^MAKE-RANDOM-STATE$|^MACHINE-|^SOFTWARE-|^LISP-IMPLEMENTATION-|^SHORT-SITE-NAME$|^LONG-SITE-NAME$',
          'time randomness and host identity', 'provider_gap',
@@ -94,7 +94,7 @@ matching(r'^CHAR|^BASE-CHAR$|^BASE-STRING$|^STANDARD-CHAR|^EXTENDED-CHAR$|^ALPHA
          'Byte and Unicode scalar profiles are distinct. Complete Unicode properties and contextual case conversion require versioned tables; ASCII mapping is not advertised as Unicode. L11.')
 assign('STRING STRINGP STRING-CAPITALIZE STRING-DOWNCASE STRING-UPCASE NSTRING-CAPITALIZE NSTRING-DOWNCASE NSTRING-UPCASE STRING-EQUAL STRING-GREATERP STRING-LESSP STRING-NOT-EQUAL STRING-NOT-GREATERP STRING-NOT-LESSP STRING-LEFT-TRIM STRING-RIGHT-TRIM STRING-TRIM STRING/= STRING< STRING<= STRING= STRING> STRING>= SIMPLE-BASE-STRING SIMPLE-STRING SIMPLE-STRING-P BASE-STRING MAKE-STRING SCHAR',
          'text operations', 'core_with_limits',
-         'sameText / compareText / trim / trimStart / trimEnd / replaceText / splitText / join / text profiles',
+         'equalFields / compare / trim / trimStart / trimEnd / replaceText / splitText / join / text profiles',
          'Content/trim operations use documented text profiles; CL string designators, destructive NSTRING case operations and locale/Unicode case rules are not universally covered. L11.')
 matching(r'^(?:ACOS|ACOSH|ASIN|ASINH|ATAN|ATANH|COS|COSH|SIN|SINH|TAN|TANH|EXP|LOG|SQRT|ISQRT|CIS|CONJUGATE|PHASE|IMAGPART|REALPART|CEILING|FCEILING|FLOOR|FFLOOR|ROUND|FROUND|TRUNCATE|FTRUNCATE|SCALE-FLOAT|DECODE-FLOAT|INTEGER-DECODE-FLOAT)$',
          'mathematical functions', 'provider_or_library_gap',
@@ -152,8 +152,8 @@ assign('+ - * / /= < <= = > >= 1+ 1- INCF DECF EXPT MOD REM ZEROP PLUSP MINUSP E
        'Use the native operation on the agreed numeric domain. CL MOD vs REM signs, division exactness, unary/variadic arity and overflow profiles must match; they are not silently identical.')
 for names, target in [
     ('GCD','gcd'), ('LCM','lcm'), ('MIN','min / minimum'), ('MAX','max / maximum'),
-    ('SIGNUM','sign'), ('PARSE-INTEGER','parseInt'),
-    ('STRING=','sameText'), ('STRING< STRING> STRING<= STRING>= STRING/=','compareText'),
+    ('SIGNUM','sign'), ('PARSE-INTEGER','parse'),
+    ('STRING=','equalFields'), ('STRING< STRING> STRING<= STRING>= STRING/=','compare'),
     ('STRING-TRIM','trim'), ('STRING-LEFT-TRIM','trimStart'), ('STRING-RIGHT-TRIM','trimEnd'),
     ('ASSOC RASSOC','assoc'), ('PAIRLIS','pairlis'), ('GETF','getProperty / setProperty'),
     ('REMF','removeProperty'), ('GET-PROPERTIES','getProperties'),
@@ -176,7 +176,7 @@ for names, target in [
 matching(r'(?:UPCASE|DOWNCASE|CAPITALIZE)$|^(?:STRING-EQUAL|STRING-LESSP|STRING-GREATERP|STRING-NOT-EQUAL|STRING-NOT-LESSP|STRING-NOT-GREATERP)$',
          'Unicode case and case-insensitive text', 'provider_or_library_gap',
          'versioned Unicode property/case tables and explicit text profile',
-         'Case folding, expansions, titlecase and contextual rules are not supplied by byte-wise sameText/compareText or positional format. L11.')
+         'Case folding, expansions, titlecase and contextual rules are not supplied by byte-wise equalFields/compare or positional format. L11.')
 
 assign('DEFGENERIC SHARED-INITIALIZE UNBOUND-SLOT', 'CLOS and object protocol',
        'native_with_gap', 'ordinary Structure methods and named failure payloads',

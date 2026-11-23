@@ -24,18 +24,18 @@ A physical blank line closes the entire root syntax block. An inner `---` is use
 
 [Excel with formulas](LMX_Comparison_19-23.xlsx) · [PDF](LMX_Comparison_19-23.pdf)
 
-The main metric counts non-whitespace characters in each main application program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns. The separate explanatory kernel template in Interpreter is excluded; its application-side copy line is counted.
+The main metric counts non-whitespace characters in each main application program, including declarations, imports, necessary wrappers and demo. External invocation, main, printing, test harnesses and runtime code are excluded. Identifiers are not normalized; Python omits optional type annotations. Ratios are calculated from language totals, not averaged across patterns. The separate explanatory DATA fragment in Interpreter is excluded; its application-side copy line is counted.
 
-| Language | Total non-whitespace characters, 19–23 | Relative to LMX | LMX without complex Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 1345 | 1.00× | 1345 |
-| Python | 1627 | 1.21× | — |
-| Java | 1970 | 1.46× | — |
-| C++ | 1778 | 1.32× | — |
-| C# | 2144 | 1.59× | — |
-| TypeScript | 1957 | 1.46× | — |
-| Go | 1848 | 1.37× | — |
-| Rust | 2165 | 1.61× | — |
+| Language | Total non-whitespace characters, 19–23 | Relative to LMX |
+| --- | ---: | ---: |
+| LMX | 1345 | 1.00× |
+| Python | 1627 | 1.21× |
+| Java | 1970 | 1.46× |
+| C++ | 1778 | 1.32× |
+| C# | 2144 | 1.59× |
+| TypeScript | 1957 | 1.46× |
+| Go | 1848 | 1.37× |
+| Rust | 2165 | 1.61× |
 
 ## 19. Singleton
 
@@ -56,7 +56,6 @@ Demo:
         first\value := 7
         return: second\value
 ```
-
 **Invocation:** `Demo\run()`. **Expected result: 7.**
 
 Both get calls return the same Settings. The direct write through first changes its field, so second reads 7. Each demo explicitly writes 7, making repeated runs deterministic. An additional check writes through the second reference and reads through the first.
@@ -106,7 +105,6 @@ Client:
     demo:
         return: render(factory := Light) + render(factory := Dark)
 ```
-
 Each factory method explicitly groups its merge stream before returning one product. The factory DATA is not a source of that composition.
 
 **Invocation:** `Client\demo()`. **Expected result: 33.**
@@ -162,7 +160,6 @@ Client:
     demo:
         return: render(factory := Light) + render(factory := Dark)
 ```
-
 ## 21. Flyweight
 
 Repeated requests for a kind return one shared object; each use supplies its own external state.
@@ -190,7 +187,6 @@ glyphs:
             @: third get(1)
             return: render(first 3) + render(second 7) + render(third 1)
 ```
-
 **Invocation:** `glyphs\drawing\demo()`. **Expected result: 81.**
 
 `first` and `second` refer to the same `thin`; `third` refers to the distinct `thick` object. `render` reads the named `width` field and receives a separate position: `23 + 27 + 31 = 81`. Python uses the same named-field model through `@dataclass(frozen=True)` with `width: int`, replacing the one-element tuple.
@@ -230,7 +226,6 @@ glyphs:
             @: third get(1)
         return: render(first 3) + render(second 7) + render(third 1)
 ```
-
 ## 22. Mediator
 
 Two components report their actions to a mediator; only the mediator determines the other component’s response.
@@ -265,7 +260,6 @@ Demo:
         room\fan\stop()
         return: first * 10 + room\control\enabled
 ```
-
 **Invocation:** `Demo\run()`. **Expected result: 10.**
 
 After toggle, both flags equal 1, so first = 1. Calling stop clears running and makes the mediator clear enabled. The result is 1 × 10 + 0 = 10. The reverse reaction demonstrates coordination in both directions through the mediator.
@@ -297,7 +291,6 @@ operands:
         demo:
             return: calculate(2) + calculate(5)
 ```
-
 **Invocation:** `operands\example\demo()`. **Expected result: 20.** The external invocation is excluded from the count.
 
 `calculate(2)` evaluates `(2 + 3) + 2 = 7`; `calculate(5)` evaluates `(5 + 3) + 5 = 13`; `demo` adds the results. Both methods use the nested `example` group as DATA. That group sees `add` lexically, so no separate import is needed. The DATA of `add` itself is `operands`.
@@ -315,7 +308,6 @@ sys:
         const: int: PASS_ARGS_AS_IS 0
         const: int: PRIORITY priority("+")
 ```
-
 The template uses general `@` references rather than constraining the arguments to `int`. Inside `sys`, the priority method is available as `priority("+")`. The template supplies no `return`: the concrete result is declared once in the application's `operands` as `return: int`. No repeated DATA declaration needs overriding, and no special copy rule is introduced.
 
 The application count includes the line that uses the template. Its definition belongs to the kernel and is excluded just as Python's and other languages' standard-library internals are excluded. It is shown here to make the origins of `left`, `right`, and the settings visible.

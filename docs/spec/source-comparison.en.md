@@ -1,6 +1,6 @@
 # Source specification comparison and provenance
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 This note preserves the reported comparison of two historical source files on 2026-09-19:
 
@@ -61,7 +61,7 @@ Reported source SHA-256 values:
 | --- | --- |
 | `satisfies` | Current spelling of ordinary directional admission, with unchanged Consumer and positional signature-matching rules |
 | `Name :: DATA` | Existing named signature description; its relationship with call is unchanged |
-| Type-token `signatureTypes` operand | The same signature kind through the standard operand contract; interchangeable in other uses |
+| `to(A; B)` / `A to B` | Same signature kind; input TYPE tokens precede the final result TYPE token; interchangeable in other uses |
 | `import: fun` then `curry`, `partial`, `map`, etc. | Ordinary direct receiver names referring to their actual owners |
 | A Structure used as an argument/result vector | The existing Array<@> storage, without an items wrapper |
 | `(value record)` | A reference to a prepared typed value record with ordinary lifetime rules |

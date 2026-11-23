@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT.parents[2]
 LIB = SPEC / 'patterns/LMX_Fn_Receivers'
 sys.path.insert(0, str(SPEC / 'patterns/tools'))
-from throws_metrics import measure_throws
+from canonical_operations import definitions
 CLHS = 'https://www.lispworks.com/documentation/HyperSpec/Body/'
 COMPONENTS = [
     dict(id='SI01', title='Обходы, фильтрация и свёртка',
@@ -33,7 +33,7 @@ COMPONENTS = [
          dependency_role='selected_clients'),
     dict(id='SI03', title='Устойчивая сортировка и первые уникальные элементы',
          core_functions=['sort','unique'], owners=['FxSort','FxUnique'],
-         contract='Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по явному равенству. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.',
+         contract='Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по общему равенству по умолчанию или явному same. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.',
          boundary='CL reference не вызывает sort/stable-sort/remove-duplicates. Обе реализации показывают алгоритмы; общая инфраструктура профиля последовательности перечислена отдельно.',
          limitations='Generic unique линейно ищет в уже принятой части и имеет O(n²), sort имеет O(n log n). Это не замер скорости SBCL и не описание внутреннего алгоритма его стандартной библиотеки. CL native remove-duplicates может разделять внешнюю последовательность с входом, а reference здесь всегда строит результат по договору LMX; клиент S08 не наблюдает идентичность внешнего контейнера.',
          sources=[CLHS+'f_sort_.htm',CLHS+'f_rm_dup.htm'],
@@ -56,9 +56,9 @@ COMPONENTS = [
          core_functions=['memoize'], owners=['FxMemoEntry','FxMemoState','FxMemoEngine','FxMemo'],
          contract='Любое конечное число принятых позиционных аргументов, включая ноль; равенство получает весь ключ. Сохраняется внешний снимок аргументов, ссылочные цели не копируются. Кешируются только успешные результаты; nil, отсутствие значений и ссылочный результат сохраняются различимо. Результат ошибки и ошибка сравнения не превращаются в успешную запись.',
          boundary='Это две общие реализации linear-cache memoize с пользовательским равенством, а не подмена ими клиентского hash-table. CL reference сохраняет native multiple values. LMX использует один типизированный результат/void и стандартный frame snapshot; исходные тела его адаптера включены в зависимости.',
-         limitations='Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. В S23 основной вариант сравнивает явный кеш; эта пара относится к отдельно сохранённому варианту с memoize, потому что стандарт CL не содержит такого ресивера.',
+         limitations='Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. S23 показывает явный процедурный кеш и функциональный вызов memoize. Общие реализации ниже учитываются один раз. Дополнительное LMX-равенство по умолчанию использует общий equality-контракт; эта пара проверяет профиль с явно переданным сравнением полного ключа.',
          sources=[CLHS+'f_gethas.htm',CLHS+'f_apply.htm',CLHS+'s_fn.htm'],
-         dependency_role='retained_core_variant_only'),
+         dependency_role='functional_clients'),
 ]
 
 def canonical(code):
@@ -68,11 +68,8 @@ def sha(code):
     return hashlib.sha256(code.encode('utf-8')).hexdigest()
 
 def metrics(code):
-    throws=measure_throws(code,patterns_root=SPEC/'patterns')
     return dict(characters_with_whitespace=len(code),
                 characters_without_whitespace=sum(not c.isspace() for c in code),
-                without_complex_throws_characters=throws['without_complex_throws_characters'],
-                complex_throws_removed_characters=throws['removed_characters'],
                 nonblank_lines=sum(bool(x.strip()) for x in code.splitlines()),
                 utf8_bytes=len(code.encode('utf-8')))
 
@@ -80,24 +77,17 @@ def write_json(path, data):
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
 
 def production():
-    found={}
-    for path in sorted((LIB/'src').rglob('*.lmx')):
-        source=path.read_text()
-        for part in source.split('\n\n'):
-            match=re.search(r'^((?:Fx|Rx)[A-Za-z0-9_]+):[^\n]*\n',part,re.M)
-            if match:
-                name=match[1]
-                if name in found:
-                    raise ValueError('Duplicate owner '+name)
-                code=canonical(part[match.start():])
-                found[name]=dict(code=code,source_spec_relative=path.relative_to(SPEC).as_posix(),
-                                 file_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),sha256=sha(code))
+    found=definitions(LIB)
+    for item in found.values():
+        path=LIB/item.pop('source')
+        item.update(source_spec_relative=path.relative_to(SPEC).as_posix(),file_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),sha256=sha(item['code']))
     return found
 
 def refs(code):
     source='\n'.join(x for x in code.splitlines() if not x.lstrip().startswith('#'))
     return (set(re.findall(r'\b((?:Fx|Rx)[A-Za-z0-9_]+)(?=\\|@)',source)) |
-            set(re.findall(r'copy\(((?:Fx|Rx)[A-Za-z0-9_]+)\)',source)))
+            set(re.findall(r'copy\(((?:Fx|Rx)[A-Za-z0-9_]+)\)',source)) |
+            set(re.findall(r'\bcopy\s*:\s*((?:Fx|Rx)[A-Za-z0-9_]+)\b',source)))
 
 def closure(owners,available):
     result=set(); external=set(); stack=list(owners)
@@ -192,10 +182,10 @@ def main():
 
 ## Размер исходников
 
-| Язык | Полный без пробельных | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | {lm['characters_without_whitespace']} | {lm['without_complex_throws_characters']} | {lm['nonblank_lines']} | {lm['characters_with_whitespace']} |
-| Common Lisp | {cl['characters_without_whitespace']} | — | {cl['nonblank_lines']} | {cl['characters_with_whitespace']} |
+| Язык | Без пробельных | Непустые строки | Все Unicode-символы |
+| --- | ---: | ---: | ---: |
+| LMX | {lm['characters_without_whitespace']} | {lm['nonblank_lines']} | {lm['characters_with_whitespace']} |
+| Common Lisp | {cl['characters_without_whitespace']} | {cl['nonblank_lines']} | {cl['characters_with_whitespace']} |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
 

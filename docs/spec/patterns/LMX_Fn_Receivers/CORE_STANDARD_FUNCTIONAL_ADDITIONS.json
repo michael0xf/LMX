@@ -26,7 +26,46 @@
         "SF_take_normal",
         "SF_take_negative",
         "SF_take_large"
-      ]
+      ],
+      "definition": "FxStdCut",
+      "characters": 364,
+      "sha256": "714a6a1e768cc7cdc279d0d83775ed44d8b2f195352c17dbb27a7d471267865e",
+      "family": "default",
+      "call": {
+        "target": "FxStdCut\\take",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\take",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: count"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items count"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "drop",
@@ -51,7 +90,47 @@
       "acceptance": [
         "SF_drop_negative",
         "SF_drop_large"
-      ]
+      ],
+      "definition": "FxStdCut",
+      "characters": 364,
+      "sha256": "714a6a1e768cc7cdc279d0d83775ed44d8b2f195352c17dbb27a7d471267865e",
+      "family": "default",
+      "call": {
+        "target": "FxStdCut\\drop",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\drop",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: count",
+          "throws: copy(FxThrows\\sequence)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items count"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @\n    take:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; 0; FxStdCutIndex\\get(items; count))"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "splitAt",
@@ -75,7 +154,48 @@
       ],
       "acceptance": [
         "SF_splitAt_middle"
-      ]
+      ],
+      "definition": "FxStdCut",
+      "characters": 364,
+      "sha256": "714a6a1e768cc7cdc279d0d83775ed44d8b2f195352c17dbb27a7d471267865e",
+      "family": "default",
+      "call": {
+        "target": "FxStdCut\\splitAt",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\splitAt",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: count",
+          "throws: copy(FxThrows\\sequence)",
+          "throws: copy(FxThrows\\sequence)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items count"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @\n    take:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; 0; FxStdCutIndex\\get(items; count))\n    drop:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; FxStdCutIndex\\get(items; count); length(items))"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "takeWhile",
@@ -100,7 +220,48 @@
       ],
       "acceptance": [
         "SF_takeWhile_stop"
-      ]
+      ],
+      "definition": "FxStdPrefix",
+      "characters": 411,
+      "sha256": "b39809b6b27d3ad680674b9fc1f44ccfde5821b4d329356d70cb0682c74a6d45",
+      "family": "default",
+      "call": {
+        "target": "FxStdPrefix\\takeWhile",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\takeWhile",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: accepts"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items accepts"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "dropWhile",
@@ -125,7 +286,49 @@
       ],
       "acceptance": [
         "SF_dropWhile_stop"
-      ]
+      ],
+      "definition": "FxStdPrefix",
+      "characters": 411,
+      "sha256": "b39809b6b27d3ad680674b9fc1f44ccfde5821b4d329356d70cb0682c74a6d45",
+      "family": "default",
+      "call": {
+        "target": "FxStdPrefix\\dropWhile",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\dropWhile",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: accepts",
+          "throws: copy(FxThrows\\predicate) SequenceSize"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items accepts"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    takeWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\take(items; FxStdPrefixIndex\\get(items; accepts))"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "span",
@@ -149,7 +352,50 @@
       ],
       "acceptance": [
         "SF_span_stop"
-      ]
+      ],
+      "definition": "FxStdPrefix",
+      "characters": 411,
+      "sha256": "b39809b6b27d3ad680674b9fc1f44ccfde5821b4d329356d70cb0682c74a6d45",
+      "family": "default",
+      "call": {
+        "target": "FxStdPrefix\\span",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\span",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: accepts",
+          "throws: copy(FxThrows\\predicate) SequenceSize",
+          "throws: copy(FxThrows\\predicate) SequenceSize"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items accepts"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    takeWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\take(items; FxStdPrefixIndex\\get(items; accepts))\n    dropWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\drop(items; FxStdPrefixIndex\\get(items; accepts))"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "partition",
@@ -175,7 +421,55 @@
       "acceptance": [
         "SF_partition_stable",
         "SF_partition_typedEmpty"
-      ]
+      ],
+      "definition": "FxStdPartition",
+      "characters": 441,
+      "sha256": "12d6d0e2223be33d0a24503e0b4ddad1f7dcee791b86226e2e45f6e07f3c5e27",
+      "family": "default",
+      "call": {
+        "target": "FxStdPartition\\partition",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\partition",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: accepts"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items accepts"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdPartition:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "enumerate",
@@ -200,7 +494,55 @@
       "acceptance": [
         "SF_enumerate_offset",
         "SF_enumerate_overflow"
-      ]
+      ],
+      "definition": "FxStdEnumerate",
+      "characters": 438,
+      "sha256": "db27a14bbad24b8393440be7cbdc12924e10476edc5da72655d0cfdb04a5c1f1",
+      "family": "default",
+      "call": {
+        "target": "FxStdEnumerate\\enumerate",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\enumerate",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: start 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdEnumerate:\n    private:\n        @: items\n        int: start 0\n    required: items\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "windows",
@@ -228,7 +570,50 @@
         "SF_windows_partial",
         "SF_windows_noRedundantSuffix",
         "SF_windows_zeroWidth"
-      ]
+      ],
+      "definition": "FxStdWindows",
+      "characters": 509,
+      "sha256": "c3e297f7bc06530a2de1a3d14a9a7ab60a9b1627e43799d9d519dc3bdb1d198d",
+      "family": "default",
+      "call": {
+        "target": "FxStdWindows\\windows",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\windows",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: width 2",
+          "int: step 1",
+          "int: partial 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdWindows:\n    private:\n        @: items\n        int: width 2\n        int: step 1\n        int: partial 0\n    required: items\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "chunks",
@@ -255,7 +640,50 @@
         "SF_chunks_tail",
         "SF_chunks_strict",
         "SF_chunks_zeroSize"
-      ]
+      ],
+      "definition": "FxStdChunks",
+      "characters": 274,
+      "sha256": "ee131c9f97bf91660167d0540ed09db6fc55e3fd308698757f6974253909cece",
+      "family": "default",
+      "call": {
+        "target": "FxStdChunks\\chunks",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\chunks",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: size",
+          "int: strict 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items size"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdChunks:\n    private:\n        @: items\n        int: size\n        int: strict 0\n    required: items size\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "intersperse",
@@ -280,11 +708,51 @@
         "SF_intersperse_normal",
         "SF_intersperse_empty",
         "SF_intersperse_singleton"
-      ]
+      ],
+      "definition": "FxStdIntersperse",
+      "characters": 621,
+      "sha256": "c061a7ed9c9a65d54796de2b66a79cdf1303db197effb47ac63b08d339d7ef90",
+      "family": "default",
+      "call": {
+        "target": "FxStdIntersperse\\intersperse",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\intersperse",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: separator"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items separator"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdIntersperse:\n    private:\n        @: items\n        @: separator\n    required: items separator\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
-      "name": "intercalate",
-      "api": "FxStdIntercalate\\intercalate",
+      "name": "join",
+      "api": "FxStdJoin\\join",
       "signature": "parts; separator -> Array under existing concat profile",
       "arguments": "parts; separator",
       "source": "coreStandardFunctional",
@@ -304,7 +772,47 @@
       "acceptance": [
         "SF_intercalate_normal",
         "SF_intercalate_empty"
-      ]
+      ],
+      "definition": "FxStdJoin",
+      "characters": 288,
+      "sha256": "c500423c2781d4ef77a3d19000f95691ea13f6a991632d4484181fed99201f1c",
+      "family": "Array",
+      "call": {
+        "target": "FxStdJoin\\join",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\join_Array",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: parts",
+          "@: separator"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "parts separator"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdJoin:\n    private:\n        @: parts\n        @: separator\n    required: parts separator\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "unzip",
@@ -329,7 +837,45 @@
       "acceptance": [
         "SF_unzip_zipRoundTrip",
         "SF_unzip_empty"
-      ]
+      ],
+      "definition": "FxStdUnzip",
+      "characters": 368,
+      "sha256": "3beb1876af3836eedbea70d4994c17d619d311093b008632aaf6d6517826068e",
+      "family": "default",
+      "call": {
+        "target": "FxStdUnzip\\unzip",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\unzip",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "private: @: pairs"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "pairs"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdUnzip:\n    private: @: pairs\n    required: pairs\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "foldr",
@@ -354,7 +900,56 @@
       "acceptance": [
         "SF_foldr_nonCommutative",
         "SF_foldr_empty"
-      ]
+      ],
+      "definition": "FxStdRightFold",
+      "characters": 320,
+      "sha256": "12b8e9df9aa33923ef30cc7f0f232e28980ff058eb9f3b8091d9db9d017b288a",
+      "family": "default",
+      "call": {
+        "target": "FxStdRightFold\\foldr",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\foldr",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: seed",
+          "@: step"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items seed step"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdRightFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "scanr",
@@ -379,7 +974,57 @@
       "acceptance": [
         "SF_scanr_nonCommutative",
         "SF_scanr_empty"
-      ]
+      ],
+      "definition": "FxStdRightFold",
+      "characters": 320,
+      "sha256": "12b8e9df9aa33923ef30cc7f0f232e28980ff058eb9f3b8091d9db9d017b288a",
+      "family": "default",
+      "call": {
+        "target": "FxStdRightFold\\scanr",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\scanr",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: seed",
+          "@: step",
+          "throws: copy(FxThrows\\sequencefixture)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items seed step"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdRightFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    foldr:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxFold\\fold(FxSeqReverse\\reverse(items); seed; FxFlip\\flip(step))"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "filterMap",
@@ -405,7 +1050,48 @@
         "SF_filterMap_zeroPresent",
         "SF_filterMap_directNullReference",
         "SF_filterMap_directReferenceIdentity"
-      ]
+      ],
+      "definition": "FxStdMaybeMap",
+      "characters": 389,
+      "sha256": "6d0b6fcc60657811c9b6dbdc3d4baa89bb0c6562a9cf4ce26e6b4f318249ffa6",
+      "family": "default",
+      "call": {
+        "target": "FxStdMaybeMap\\filterMap",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\filterMap",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: transform"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "mapWhile",
@@ -429,7 +1115,49 @@
       "acceptance": [
         "SF_mapWhile_shortCircuit",
         "SF_mapWhile_directNone"
-      ]
+      ],
+      "definition": "FxStdMaybeMap",
+      "characters": 389,
+      "sha256": "6d0b6fcc60657811c9b6dbdc3d4baa89bb0c6562a9cf4ce26e6b4f318249ffa6",
+      "family": "default",
+      "call": {
+        "target": "FxStdMaybeMap\\mapWhile",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapWhile",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: transform",
+          "throws: copy(FxThrows\\traversal) SequenceElement"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    filterMap:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 0; 0)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "findMap",
@@ -453,7 +1181,50 @@
       "acceptance": [
         "SF_findMap_first",
         "SF_findMap_absent"
-      ]
+      ],
+      "definition": "FxStdMaybeMap",
+      "characters": 389,
+      "sha256": "6d0b6fcc60657811c9b6dbdc3d4baa89bb0c6562a9cf4ce26e6b4f318249ffa6",
+      "family": "default",
+      "call": {
+        "target": "FxStdMaybeMap\\findMap",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\findMap",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: transform",
+          "throws: copy(FxThrows\\traversal) SequenceElement",
+          "throws: copy(FxThrows\\traversal) SequenceElement"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    filterMap:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 0; 0)\n    mapWhile:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 1; 0)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "mapAccumL",
@@ -477,7 +1248,48 @@
       "acceptance": [
         "SF_mapAccumL_stateAndOutput",
         "SF_mapAccumL_directPairMixedTypes"
-      ]
+      ],
+      "definition": "FxStdMapAccum",
+      "characters": 251,
+      "sha256": "c0ec01f9d13fcc87ae2a014df30b32fcf3222becc8d4d7974a1ac98b53e4a044",
+      "family": "default",
+      "call": {
+        "target": "FxStdMapAccum\\mapAccumL",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapAccumL",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: seed",
+          "@: step"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items seed step"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMapAccum:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "mapAccumR",
@@ -500,16 +1312,58 @@
       ],
       "acceptance": [
         "SF_mapAccumR_stateAndOutput"
-      ]
+      ],
+      "definition": "FxStdMapAccum",
+      "characters": 251,
+      "sha256": "c0ec01f9d13fcc87ae2a014df30b32fcf3222becc8d4d7974a1ac98b53e4a044",
+      "family": "default",
+      "call": {
+        "target": "FxStdMapAccum\\mapAccumR",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapAccumR",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: seed",
+          "@: step",
+          "throws: copy(FxThrows\\traversal)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items seed step"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMapAccum:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    mapAccumL:\n        throws: copy(FxThrows\\traversal)\n        return: FxStdMapAccumEngine\\run(items; seed; step; 0)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "groupAdjacent",
       "api": "FxStdGroupAdjacent\\groupAdjacent",
       "signature": "items; keyOf; sameKey -> Array of FxGroup(key,items)",
-      "arguments": "items; keyOf; sameKey",
+      "arguments": "items; keyOf=0; sameKey=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
-      "scope": "Consecutive equal-key runs; keyOf once per item and sameKey once per adjacent pair.",
+      "scope": "stable grouping; optional identity projection and shared equality, each key computed once",
       "contracts": {
         "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
         "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
@@ -525,7 +1379,56 @@
       "acceptance": [
         "SF_groupAdjacent_separateRuns",
         "SF_groupAdjacent_empty"
-      ]
+      ],
+      "definition": "FxStdGroupAdjacent",
+      "characters": 625,
+      "sha256": "0ed9557c4725af01c4fa163539d8b039fd8733eaff82ed5f5390152c4d28f0cc",
+      "family": "default",
+      "call": {
+        "target": "FxStdGroupAdjacent\\groupAdjacent",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\groupAdjacent",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: keyOf 0",
+          "@: sameKey 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdGroupAdjacent:\n    private:\n        @: items\n        @: keyOf 0\n        @: sameKey 0\n    required: items\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "replicate",
@@ -551,13 +1454,51 @@
         "SF_replicate_finite",
         "SF_replicate_negative",
         "SF_replicate_referenceIdentity"
-      ]
+      ],
+      "definition": "FxStdReplicate",
+      "characters": 252,
+      "sha256": "f2dea9685a101340b709e3b33dd1a61aed9a4b7827c5a5a38574ebf5ccf80e90",
+      "family": "default",
+      "call": {
+        "target": "FxStdReplicate\\replicate",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\replicate",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: value",
+          "int: count"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "value count"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdReplicate:\n    private:\n        @: value\n        int: count\n    required: value count\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "cycle",
       "api": "FxStdCycle\\cycle",
       "signature": "items; count -> same-profile Array",
-      "arguments": "items; count",
+      "arguments": "items; count; rejectNegative=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Required finite repetition count; nonpositive count gives empty; preflight result size.",
@@ -578,7 +1519,47 @@
         "SF_cycle_typedEmpty",
         "SF_cycle_negative",
         "SF_cycle_overflow"
-      ]
+      ],
+      "definition": "FxStdCycle",
+      "characters": 378,
+      "sha256": "4bffbedfc949deda96c4720017feb3b3cb11add7292b26620acf58c7963ff7a6",
+      "family": "default",
+      "call": {
+        "target": "FxStdCycle\\cycle",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\cycle_default",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "int: count",
+          "int: rejectNegative 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items count"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdCycle:\n    private:\n        @: items\n        int: count\n        int: rejectNegative 0\n    required: items count\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "starmap",
@@ -602,7 +1583,47 @@
       "acceptance": [
         "SF_starmap_rows",
         "SF_starmap_oneWholeArrayActual"
-      ]
+      ],
+      "definition": "FxStdStarMap",
+      "characters": 313,
+      "sha256": "a5ef89bbee53a85dd635e3e2a77d0ebeb02638d5a23910ba8e7d09522109359b",
+      "family": "default",
+      "call": {
+        "target": "FxStdStarMap\\starmap",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\starmap",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: rows",
+          "@: operation"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "rows operation"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdStarMap:\n    private:\n        @: rows\n        @: operation\n    required: rows operation\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "zipLongest",
@@ -626,7 +1647,47 @@
       "acceptance": [
         "SF_zipLongest_fill",
         "SF_zipLongest_empty"
-      ]
+      ],
+      "definition": "FxStdZipLongest",
+      "characters": 463,
+      "sha256": "3dc0172f4ff8026180ebdcdf5b16e4a7c041d11764c478d2d57e17792a375397",
+      "family": "default",
+      "call": {
+        "target": "FxStdZipLongest\\zipLongest",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\zipLongest",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: fill"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second fill"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdZipLongest:\n    private:\n        @: first\n        @: second\n        @: fill\n    required: first second fill\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "collect",
@@ -656,13 +1717,54 @@
         "SF_collect_typedPayloads",
         "SF_collect_kernelFailure",
         "SF_collect_badLimit"
-      ]
+      ],
+      "definition": "FxStdCollect",
+      "characters": 412,
+      "sha256": "3bb238f29cb523c804b1e68d87c03489f948f921690cdb146edb2a6f3957583c",
+      "family": "default",
+      "call": {
+        "target": "FxStdCollect\\collect",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\collect",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: next",
+          "int: limit -1"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "next"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceElement",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdCollect:\n    private:\n        @: next\n        int: limit -1\n    required: next\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "includes",
       "api": "FxStdMembership\\includes",
       "signature": "items; valueRecord; same -> int truth",
-      "arguments": "items; valueRecord; same",
+      "arguments": "items; valueRecord; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Ordered short-circuit membership with explicit typed equality; no conflict with regex contains.",
@@ -681,13 +1783,55 @@
       "acceptance": [
         "SF_includes_shortCircuit",
         "SF_includes_empty"
-      ]
+      ],
+      "definition": "FxStdMembership",
+      "characters": 164,
+      "sha256": "8ec412b626b3e3f75a14bae6b9d3ddb34aa5be63bb661e9aa8112dea4f31bf6b",
+      "family": "default",
+      "call": {
+        "target": "FxStdMembership\\includes",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\includes",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: value",
+          "@: same 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items value"
+        ],
+        "result_declaration": "int",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdMembership:\n    private:\n        @: items\n        @: value\n        @: same 0\n    required: items value\n    return: int"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "adjoin",
       "api": "FxStdAdjoin\\adjoin",
       "signature": "items; valueRecord; same -> Array",
-      "arguments": "items; valueRecord; same",
+      "arguments": "items; valueRecord; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Return original source if already present; otherwise return a fresh same-profile Array with the new value prepended.",
@@ -705,13 +1849,62 @@
       "acceptance": [
         "SF_adjoin_prepend",
         "SF_adjoin_identityWhenPresent"
-      ]
+      ],
+      "definition": "FxStdAdjoin",
+      "characters": 277,
+      "sha256": "27d704416e34cfe3d63948b376be61014639a13ead86cfd3a68cd9ddb7b3d7c8",
+      "family": "default",
+      "call": {
+        "target": "FxStdAdjoin\\adjoin",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\adjoin",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: items",
+          "@: value",
+          "@: same 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "items value "
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdAdjoin:\n    private:\n        @: items\n        @: value\n        @: same 0\n    required: items value \n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "union",
       "api": "FxStdSets\\union",
       "signature": "first; second; same -> Array under concat profile",
-      "arguments": "first; second; same",
+      "arguments": "first; second; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Unique first occurrences from first then second; pure equivalence relation required.",
@@ -729,13 +1922,62 @@
       ],
       "acceptance": [
         "SF_union_stable"
-      ]
+      ],
+      "definition": "FxStdSets",
+      "characters": 515,
+      "sha256": "e6e697320629cbd6e14c36d552ee831054013b9217d20c75b5503b81ffef8711",
+      "family": "default",
+      "call": {
+        "target": "FxStdSets\\union",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\union",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: same 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second "
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "intersection",
       "api": "FxStdSets\\intersection",
       "signature": "first; second; same -> first-profile Array",
-      "arguments": "first; second; same",
+      "arguments": "first; second; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Unique first-source values present in second, preserving first-source order.",
@@ -753,13 +1995,63 @@
       ],
       "acceptance": [
         "SF_intersection_stable"
-      ]
+      ],
+      "definition": "FxStdSets",
+      "characters": 515,
+      "sha256": "e6e697320629cbd6e14c36d552ee831054013b9217d20c75b5503b81ffef8711",
+      "family": "default",
+      "call": {
+        "target": "FxStdSets\\intersection",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\intersection",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: same 0",
+          "throws: copy(FxThrows\\sequencefixture)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second "
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "difference",
       "api": "FxStdSets\\difference",
       "signature": "first; second; same -> first-profile Array",
-      "arguments": "first; second; same",
+      "arguments": "first; second; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Unique first-source values absent from second; set difference, not Haskell list multiset subtraction.",
@@ -777,13 +2069,64 @@
       ],
       "acceptance": [
         "SF_difference_setNotMultiset"
-      ]
+      ],
+      "definition": "FxStdSets",
+      "characters": 515,
+      "sha256": "e6e697320629cbd6e14c36d552ee831054013b9217d20c75b5503b81ffef8711",
+      "family": "default",
+      "call": {
+        "target": "FxStdSets\\difference",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\difference",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: same 0",
+          "throws: copy(FxThrows\\sequencefixture)",
+          "throws: copy(FxThrows\\sequencefixture)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second "
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)\n    intersection:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 1)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "symmetricDifference",
       "api": "FxStdSets\\symmetricDifference",
       "signature": "first; second; same -> Array under concat profile",
-      "arguments": "first; second; same",
+      "arguments": "first; second; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "First-only values then second-only values, each once; use existing difference and concat.",
@@ -801,13 +2144,65 @@
       ],
       "acceptance": [
         "SF_symmetricDifference_stable"
-      ]
+      ],
+      "definition": "FxStdSets",
+      "characters": 515,
+      "sha256": "e6e697320629cbd6e14c36d552ee831054013b9217d20c75b5503b81ffef8711",
+      "family": "default",
+      "call": {
+        "target": "FxStdSets\\symmetricDifference",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\symmetricDifference",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: same 0",
+          "throws: copy(FxThrows\\sequencefixture)",
+          "throws: copy(FxThrows\\sequencefixture)",
+          "throws: copy(FxThrows\\sequencefixture)"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second "
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)\n    intersection:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 1)\n    difference:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 0)"
+      },
+      "runtime_status": "NOT_RUN"
     },
     {
       "name": "isSubset",
       "api": "FxStdSubset\\isSubset",
       "signature": "first; second; same -> int truth",
-      "arguments": "first; second; same",
+      "arguments": "first; second; same=0",
       "source": "coreStandardFunctional",
       "source_file": "src/coreStandardFunctional.lmx",
       "scope": "Every equivalence class from first appears in second; multiplicity is ignored.",
@@ -827,7 +2222,56 @@
         "SF_isSubset_duplicates",
         "SF_isSubset_missing",
         "SF_isSubset_empty"
-      ]
+      ],
+      "definition": "FxStdSubset",
+      "characters": 198,
+      "sha256": "249a59c168ff0c19155285d5f2ecde7146dcc66e9935998fe313d57d8eda107e",
+      "family": "default",
+      "call": {
+        "target": "FxStdSubset\\isSubset",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\isSubset",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardFunctional.lmx",
+        "declared_inputs": [
+          "@: first",
+          "@: second",
+          "@: same 0"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "first second "
+        ],
+        "result_declaration": "int",
+        "declared_throws": [
+          "FxArity",
+          "FxCallFailure",
+          "FxIndex",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxRecordArity",
+          "FxShape",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "ReceiverPermutation",
+          "SequenceElement",
+          "SequenceSize",
+          "SequenceStep"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxStdSubset:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: int"
+      },
+      "runtime_status": "NOT_RUN"
     }
   ],
   "new_public_count": 33,
@@ -840,7 +2284,7 @@
     "filter",
     "foldl",
     "scanl",
-    "flatMap",
+    "bind",
     "traverse",
     "zip",
     "zipWith",
@@ -875,5 +2319,8 @@
     "The existing callback failure envelope is documented; collect consumes Stop and preserves other producer names/payloads in FxCallFailure."
   ],
   "operator_contract": "No prefix-only operator kind is introduced. Any operand wrapper must use ordinary OPERANDS_TEMPLATE left/right and the existing common prefix/infix rules. This file adds ordinary receivers, not parser special cases.",
-  "source_sha256": "da6e465f3ef57b12aa5e121533e2dd80d484817da13c927cf0b16bf7220a54c1"
+  "source_sha256": "da6e465f3ef57b12aa5e121533e2dd80d484817da13c927cf0b16bf7220a54c1",
+  "canonical_inventory": "catalog.json",
+  "canonical_migration": "CANONICAL_MIGRATION.json",
+  "runtime_executed": false
 }

@@ -1,6 +1,6 @@
 # 093. Pipe — implementation
 
-Реализовать импортируемую последовательную передачу значения по списку стадий.
+Общий pipe применяет стадии к значению; его фактический тип может меняться между стадиями.
 
 **Примеры использования:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
@@ -10,27 +10,35 @@
 
 **Ожидаемое наблюдение:** Для -3 и стадий normalize,double,offset результаты 3,6,7; пустой список сохраняет -3.
 
-**Граница сравнения:** Реализация библиотеки. Показана прикладная библиотека для int, а не асинхронный stream framework. Политика ошибок, отмена и многопоточность не добавлены. Все три реализации используют только базовые вызовы и циклы; native/LMX исполнение здесь не заявлено.
+**Граница сравнения:** Реализация библиотеки. LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.
 
 Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.
 
 ## LMX
 
 ```lmx
-PipeLibrary:
-    copy: sys\OPERANDS_TEMPLATE
-    return: int
+FxPipe:
+    private:
+        @: value
+        @: stages
+    required: value stages
+    return: @
     pipe:
-        int: value \left
-        int: i 0
-        while: i < length(right)
-            @: stage \right[i]
-            value := stage(value)
+        throws: copy(FxThrows\call) FxArity ReceiverIndex
+        FxSeqInfo\get(stages)
+        private: @: current value
+        private: int: i 0
+        while: i < length(stages)
+            private: @: stage \FxSeqRead\read(stages; i)
+            private: @: shape FxKernel\signature(stage)
+            if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+                throw: FxArity()
+            current := FxApply\apply(stage; FxOne\make(current))
             i += 1
-        return: value
+        return: current
 ```
 
-copy: sys\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \left получает подготовленное значение; \right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.
+Точное текущее определение FxPipe извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.
 
 [Отдельный листинг](examples/lmx/093_pipe_implementation.lm3)
 
@@ -67,7 +75,7 @@ func Apply(value int, stages ...func(int) int) int {
 
 ## Разбор LMX
 
-copy: sys\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \left получает подготовленное значение; \right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.
+Точное текущее определение FxPipe извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.
 
 ## Сопоставление
 
@@ -79,19 +87,19 @@ copy: sys\OPERANDS_TEMPLATE явно предоставляет left, right и �
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 145 | 11 | 145 |
-| Java | 215 | 8 | — |
-| Go | 111 | 5 | — |
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 399 | 19 |
+| Java | 215 | 8 |
+| Go | 111 | 5 |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Все объявления, аргументы и ссылки на общий банк ошибок учитываются целиком.
 
 ## English explanation
 
-Implement the imported sequential handoff through a stage list.
+Generic pipe applies stages to a value whose actual type may change between stages.
 
 **Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
@@ -99,15 +107,15 @@ Implement the imported sequential handoff through a stage list.
 
 **Expected observation.** For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.
 
-**LMX.** copy: sys\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \left reads the prepared value; \right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.
+**LMX.** The exact current FxPipe definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.
 
 **Comparison.** The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.
 
-**Scope and limitations.** This is an int application library, not an asynchronous stream framework. Error policy, cancellation, and concurrency are not added. All implementations use basic calls and loops; no native or LMX execution is claimed.
+**Scope and limitations.** LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** copy: sys\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \left reads the prepared value; \right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.
+- **LMX:** The exact current FxPipe definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.
 - **Java:** Complete examplelib/Pipe.java. IntUnaryOperator supplies the call contract only; iteration is implemented here.
 - **Go:** Complete pipe/pipe.go in module example; Apply uses no ready pipeline function.
 

@@ -1,6 +1,6 @@
 # LMX: 90 patterns and library implementations
 
-All 85 supplied entries and five additions remain. 9 component-implementation comparisons sit beside their clients: 99 comparisons and 297 listings in total. The original 23 root GoF examples remain separate.
+All 85 supplied entries and five additions remain. 9 component-implementation comparisons sit beside their clients: 99 entries in total. Functional clients 082–085 publish both LMX styles; the former 297 listings described the original three-language layout and are not the current count of all published sources. The original 23 root GoF examples remain separate.
 
 ## Groups
 

@@ -1,21 +1,18 @@
-# ВНУТРЕННИЙ НАБОР ЭКСПОРТОВ ЕДИНОГО ЯДРА: fun.
-# Ядро включает fun/const в штатные корневые объявления; клиенты пишут прямые имена.
-# Один const-блок даёт root-constant экспорты общего namespace; CODE не копируется.
-# signatureTypes — обычный ядерный type-token оператор; declaration head удалён.
-# Name :: DATA — единственная именованная форма того же вида сигнатуры.
+# Canonical receiver projections. Complete family/role publication uses
+# PublishedFamilies and PUBLICATION_CONTRACT.md; this const projection
+# alone does not choose between semantic families or input roles.
 fun:
     const:
         @: types RxTypes\types
         @: names RxNames\names
         @: signature RxSignature\signature
-        @: signatureTypes FxSignatureOperand\make
+        @: to FxToTokens\to
         @: curry FxLambda\lambda
         @: apply FxApply\apply
         @: partial FxPartial\partial
         @: uncurry FxUncurry\uncurry
         @: flip FxFlip\flip
         @: compose FxCompose\compose
-        @: pipe FxPipe\pipe
         @: identity FxIdentity\identity
         @: map FxMap\map
         @: filter FxFilter\filter
@@ -60,9 +57,7 @@ fun:
         @: none FxNone\none
         @: ok FxOk\ok
         @: err FxErr\err
-        @: bindResult FxBindResult\bindResult
         @: list FxList\list
-        @: flatMap FxListBind\flatMap
         @: done FxDone\done
         @: more FxMore\more
         @: trampoline FxTrampoline\trampoline
@@ -81,13 +76,13 @@ fun:
         @: insert FxSeqInsert\insert
         @: deleteAt FxSeqDeleteAt\deleteAt
         @: literal RxLiteral\literal
-        @: oneOf RxChars\oneOf
-        @: noneOf RxChars\noneOf
-        @: charRange RxRange\charRange
+        @: oneOf RxMembers\oneOf
+        @: noneOf RxMembers\noneOf
+        @: within RxWithin\within
         @: satisfy RxSatisfy\satisfy
         @: boundaryOf RxBoundaryOf\boundaryOf
         @: sameAs RxSameAs\sameAs
-        @: sequence RxSequence\sequence
+        @: then RxSequence\then
         @: choice RxChoice\choice
         @: repeated RxRepeated\repeated
         @: atomic RxAtomic\atomic
@@ -107,15 +102,14 @@ fun:
         @: hasSuffix RxHasSuffix\hasSuffix
         @: matches RxMatches\matches
         @: matchedSpan RxMatchedSpan\matchedSpan
-        @: matchedText RxMatchedText\matchedText
+        @: matchedValue RxMatchedValue\matchedValue
         @: captureSpans RxCaptureSpans\captureSpans
         @: lastCapture RxLastCapture\lastCapture
-        @: captureText RxCaptureText\captureText
-        @: captureTexts RxCaptureTexts\captureTexts
+        @: captureValue RxCaptureValue\captureValue
+        @: captureValues RxCaptureValues\captureValues
         @: replaceFirst RxReplaceFirst\replaceFirst
         @: replace RxReplace\replace
         @: split RxSplit\split
-        @: then RxThenOperand\then
         @: times RxRepeatOperands\times
         @: atLeast RxRepeatOperands\atLeast
         @: atMost RxRepeatOperands\atMost
@@ -139,7 +133,7 @@ fun:
         @: windows FxStdWindows\windows
         @: chunks FxStdChunks\chunks
         @: intersperse FxStdIntersperse\intersperse
-        @: intercalate FxStdIntercalate\intercalate
+        @: join FxStdJoin\join
         @: unzip FxStdUnzip\unzip
         @: foldr FxStdRightFold\foldr
         @: scanr FxStdRightFold\scanr
@@ -189,17 +183,15 @@ fun:
         @: substitute FxSubstitute\substitute
         @: indexOf FxIndexOf\indexOf
         @: lastIndexOf FxLastIndexOf\lastIndexOf
-        @: compareText FxCompareText\compareText
+        @: compare FxCompare\compare
         @: trim FxTrim\trim
         @: trimStart FxTrimStart\trim
         @: trimEnd FxTrimEnd\trim
-        @: repeatText FxRepeatText\repeatText
         @: padLeft FxPadLeft\pad
         @: padRight FxPadRight\pad
         @: translate FxTranslate\translate
-        @: join FxJoin\join
-        @: formatInt FxFormatInt\formatInt
-        @: parseInt FxParseInt\parseInt
+        @: format FxFormat\format
+        @: parse FxParse\parse
         @: removePrefix FxRemovePrefix\remove
         @: removeSuffix FxRemoveSuffix\remove
         @: sum FxSum\sum
@@ -217,3 +209,9 @@ fun:
         @: gcd FxGcd\gcd
         @: lcm FxLcm\lcm
         @: divMod FxDivMod\divMod
+        @: type FxValueType\type
+        @: arrayView RxArrayView\arrayView
+        @: element RxElement\element
+        @: equals FxEquals\equals
+        @: pipe FxPipe\pipe
+        @: retry FxRetryValue\retry

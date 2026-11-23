@@ -1,10 +1,20 @@
+MoneyLibrary:
+    immutable: Money:
+        int: cents 100
+        int: currency 840
+
+MoneyFields:
+    @: value
+    return: @
+    select:
+        return: (value\cents; value\currency)
+
 Demo:
     return: int
     run:
-        throws: OperandArity
-        import: MoneyLibrary\Equality
+        throws: copy(FxThrows\predicate) FxRecordArity
         @: money MoneyLibrary\immutable\Money
         @: first (copy(money))
         @: second (copy(money))
         @: third (merge(money; immutable: (int: currency 978)))
-        return: (first equals second) * 10 + (first equals third)
+        return: equals(first; second; MoneyFields\select) * 10 + equals(first; third; MoneyFields\select)

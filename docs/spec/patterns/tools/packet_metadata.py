@@ -11,16 +11,26 @@ def addition_metadata(library):
     """
     records = {}
     documents = []
+    catalog_path=Path(library)/'catalog.json'
+    catalog={entry['name']:entry for entry in json.loads(catalog_path.read_text())} if catalog_path.is_file() else {}
     for path in sorted(Path(library).glob('*ADDITIONS*.json')):
         document = json.loads(path.read_text())
         entries = document.get('entries', [])
         documents.append({'file': path.name, 'document': document})
         for entry in entries:
             name = entry['name']
-            if name in records and records[name]['api'] != entry['api']:
+            canonical=catalog.get(name,{})
+            admitted={canonical.get('api')} | {v.get('api') for v in canonical.get('variants',[])}
+            if name in records and records[name]['api'] != entry['api'] and not {records[name]['api'],entry['api']} <= admitted:
                 raise ValueError(f"Conflicting addition target for {name}: {path.name}")
             if name not in records:
                 records[name] = dict(entry, metadata_files=[])
+                records[name]['variant_apis']=[]
+            if entry['api'] not in records[name]['variant_apis']:
+                records[name]['variant_apis'].append(entry['api'])
+            if canonical:
+                records[name]['api']=canonical['api']
+                records[name]['source_file']=canonical['source']
             records[name]['metadata_files'].append(path.name)
     return list(records.values()), documents
 

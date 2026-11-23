@@ -1,76 +1,99 @@
 # J08. Все промежуточные суммы с начальным значением
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Вернуть seed, затем результат каждого последовательного прибавления. Длина результата length(xs)+1; на пустом входе [seed].
 
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+
 accumulate не возвращает init отдельным первым элементом; его добавление явно входит в Julia-код.
 
-Вход:
+## Вход и ожидаемое наблюдение
 
 ```json
 {
-  "xs": [
-    1,
-    2,
-    3
-  ],
-  "seed": 10
+  "arguments": {
+    "xs": [
+      1,
+      2,
+      3
+    ],
+    "seed": 10
+  },
+  "result": [
+    10,
+    11,
+    13,
+    16
+  ]
 }
 ```
 
-Ожидаемое наблюдение:
+## Размер полных клиентов
 
-```json
-[
-  10,
-  11,
-  13,
-  16
-]
-```
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 250 | 396 | 15 |
+| LMX функциональный | 136 | 184 | 7 |
+| Julia | 50 | 57 | 1 |
 
-## LMX
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
+
+## LMX — процедурный
 
 ```lmx
-Add:
-    int: left
-    int: right
-    return: int
-    add:
-        return: left + right
-
 Example:
     int[]: xs
     int: seed
     return: @
     run:
-        throws: FxCallFailure FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex SequenceSize
-        return: scanl(xs; (seed record); Add\add)
+        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        @[]: out []
+        int: total seed
+        FxSeqPush\append(out; (total record))
+        int: i 0
+        while: i < length(xs)
+            total += xs[i]
+            FxSeqPush\append(out; (total record))
+            i += 1
+        return: out
 ```
 
+[Полный исходник](source/lmx/procedural/J08.lm3). 250 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Example:
+    int[]: xs
+    int: seed
+    return: @
+    run:
+        throws: copy(FxScan\scan\throws) copy(FxRecordOperands\record\throws)
+        return: scanl(xs; (seed record); `+`)
+```
+
+[Полный исходник](source/lmx/J08.lm3). 136 непробельных символов; 7 непустых строк. Все объявления и Throws включены.
+
 ## Julia
+
+[Полный исходник](source/julia/J08.jl).
 
 ```julia
 example(xs, seed) = [seed; accumulate(+, xs; init=seed)]
 ```
 
-## Размер полного клиента
-
-| Язык | Без пробельных символов | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 209 | 145 | 13 | 298 |
-| Julia | 50 | 50 | 1 | 57 |
-
-Дополнительная колонка оставляет заголовок и первый аргумент Throws; copy(Throws) сохраняется целиком. Полный исходник и его основной счёт не изменяются.
-
-## Реализации использованного ядра
+## Общие библиотечные реализации
 
 - `scanl`: [полная пара реализации](library_comparisons/JI01_comparision.md)
 - `record`: [полная пара реализации](library_comparisons/JI01_comparision.md)
 
-Julia-клиент использует реальные Base/пакет; реализации из library_comparisons он не импортирует. [Общие зависимости и границы](library_comparisons/README.md) учитываются отдельно. Код проверен как текст и по договорам; исполнение LMX/Julia здесь не заявлено.
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
+
+## Проверка
+
+LMX и Julia: **NOT_RUN** в этой сборке. Проверяются обе LMX-формы как текст и общий независимый oracle; это не языковое исполнение.
 
 ## Первичные источники
 
-- [https://docs.julialang.org/en/v1/base/arrays/](https://docs.julialang.org/en/v1/base/arrays/)
+- <https://docs.julialang.org/en/v1/base/arrays/>

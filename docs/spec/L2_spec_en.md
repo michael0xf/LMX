@@ -1,6 +1,6 @@
 # L2 Specification
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 L2 defines the kernel mechanisms and machine operations. L3 semantics are in the
 [LMX specification](LMX_semantics.en.md), syntax in the [grammar](LMX_grammar.en.md),
@@ -21,6 +21,14 @@ source graph includes both all written receivers and direct primitive leaves. Re
 
 <a id="scope"></a>
 ## 1. Scope
+
+Both operation forms use the same typed-record, actual-place and call
+boundaries. An exact identifier is decoded only by the base name mechanism;
+translation does not re-open its content as operators. VALUE/NAME/TYPE/DATA,
+RAW/BODY and PLACE keep their receiving roles. Native code and the walker must
+agree on the four one-PLACE update variants, including one destination
+evaluation and the returned old/new typed value. See
+[operation forms](OPERATION_FORMS.md) for the full lowering contract.
 
 The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored graph: L2 code with the same checks as L3 code, through the same wrappers of the low-level operations — L3 lacks only `c.*`. Native L3 code calls the wrappers; native L2 code is compiled without these checks ([semantics, §1](LMX_semantics.en.md#scope)).
 
@@ -279,7 +287,29 @@ variable-sized Array storage mechanism. This is Thread state, not a `message.gra
 <a id="root-close"></a>
 ### 8.1. R0 and shutdown
 
-R0 is an ordinary child Thread of the top host scaffold. Its executable entry is an ordinary C method with a local pointer to the R0 graph, including for interpreter execution. This creates no persistent global root pointer or hidden graph-data repository. R0 has no data: it is a procedural entry without user arguments. There is no artificial self-binding of data to code (`data = code`), no empty service Structure and no artificial field `data` for it; R0 may have its own executable declarations and ordinary accessible references ([norm](LMX_semantics.en.md#root-entry)). Runtime launch parameters and settings belong to the scaffold and are passed to R0 explicitly; they are not added to R0's source graph and are not user actuals. The absence of DATA changes input binding, not the common DATA/CODE role rules: reached declaration receivers and calls use their normal contracts, including explicit DATA-consuming arguments. It requires no root-specific parser or implicit self-call. The top scaffold has no parent but gains no special API. Shutdown cascades through each Thread's sole direct-child List. A host watchdog controls the whole subtree's timeout; expiry terminates the process rather than declaring partial shutdown successful.
+Program startup always starts R0 as an ordinary child L3 Thread of the top stub
+parent and executes its CODE from the beginning. Its executable entry is an
+ordinary C method with a local pointer to the R0 graph, including for interpreter
+execution. This creates no persistent global root pointer or hidden graph-data
+repository. R0 has no DATA and no user actuals: no artificial `data = code`, empty
+service DATA Structure, or field `data` is supplied. The stub Thread parent is not a source-graph DATA parent, and no Thread has another Thread as a lexical C parent: Threads are independent in the lexical C sense and in memory even when assembled together ([Thread independence](LMX_semantics.en.md#thread-independence)). Internal Thread launch parameters and settings
+belong to runtime preparation; they are neither source fields nor user formals.
+
+The common activation mechanism accepts the selected CODE's optional actual DATA
+parent and skips only the input pass when that DATA is absent. R0 retains
+ordinary CODE namespace preparation, local declarations, arbitrary calls,
+dispatch, cleanup, and exits. Reached forms follow their ordinary contracts,
+including DATA-consuming arguments of ordinary calls ([norm](LMX_semantics.en.md#root-entry)).
+No root-specific parser, registry, synthetic DATA, `Main` discovery, or selected
+service function replaces root startup. A named test invocation is an ordinary
+call after startup. If the stub parent has arguments to deliver, it sends an
+ordinary message to the running root; it does not invoke R0 with user actuals.
+See the [common activation sketch](kernel-implementation.en.md#root-activation).
+
+The top scaffold has no parent but gains no special API. Shutdown cascades
+through each Thread's sole direct-child List. A host watchdog controls the whole
+subtree's timeout; expiry terminates the process rather than declaring partial
+shutdown successful.
 
 <a id="mailbox"></a>
 ## 9. Mailbox
@@ -672,14 +702,7 @@ and on a separate substitution of data is removed. [Norm](LMX_semantics.en.md#ca
 <a id="explicit-compilation"></a>
 ### 11.1. Explicit compilation and direct native calls
 
-`sys\compile(S)` includes clean-graph construction/checking, L1/C generation, the required build
-tests on the clean graph before final C compilation, machine compilation, and registration of
-resulting variants in call tables. Construction/checking executes no program, initializer or test;
-the separate test phase executes only the checks reached through ordinary build/receiver contracts,
-with normal dispatch for their candidate/helper calls. Compilation does not launch S's application
-entry. Reuse working builder code;
-runtime receives only the parts needed for this concrete operation. sys\translate returns L1 and errors,
-not LMX or installed native. Failed compilation installs no new entry.
+`sys\compile(S)` includes clean-graph construction/checking (from sources only when they are given; an already built runtime or clean graph is used as it is), L1/C generation, the required build tests, which run in interpretation mode on the graph being accepted, and only after they pass machine compilation and registration of resulting variants in call tables. Construction/checking executes no program, initializer or test; the separate test phase interprets the graph being accepted and executes only the checks reached through ordinary build/receiver contracts; the candidate and helper calls of a check follow ordinary dispatch inside that interpreted run, which is not a bypass of the interpreted mode. Compilation does not launch S's application entry. The build chain reuses working builder code; at run time the translation and machine compilation are planned to be done by the separate SLJIT module ([runtime backend](kernel-implementation.en.md#runtime-backend)). sys\translate returns L1 and errors, not LMX or installed native. Failed compilation, including a failed test, installs no new entry and does not undo the effects of the code already executed; no candidate copy, snapshot or rollback of the graph is made, and a test copies explicitly when it needs isolation ([acceptance boundary](kernel-implementation.en.md#acceptance-boundary)).
 
 Known native code calls the known variant directly in C with actual and hidden arguments.
 That call needs no graph packaging, call-table lookup, or universal trampoline.
@@ -693,8 +716,7 @@ versions, per-endturn hashing, or a universal journal. Ordinary memory mechanism
 for their actual purposes. Without explicit compilation machine code need not refresh.
 
 For a direct A→B link, compiling only B does not rewrite old A. Updating that chain requires explicit
-compilation of a common unit containing the needed callers and targets. This is builder work,
-not a check at every call. Ready binaries of the corresponding ABI can bind to a restored clean
+compilation of a common unit containing the needed callers and targets. This is builder work, not a check at every call. Code that the planned SLJIT module produces at run time follows the same rule: it is published only by explicit compilation and endturn, without automatic tracking of callers and without reverse tables. Ready binaries of the corresponding ABI can bind to a restored clean
 graph without retranslating it. ToLmx saves the selected Structure; for an L3 Thread this includes
 all tables of its arena, including call/native. The arena owns them, not R0's fields
 (R0 has no data and no artificial fields, [§8.1](#root-close)); external tables are not automatically attached to arbitrary S.
@@ -849,9 +871,7 @@ Admission follows the same stages as [L3 §7](LMX_semantics.en.md#admission):
 - The interpreter uses the standard `satisfies` automatically at reached calls. It neither runs
   a second validator nor pre-walks unused branches. Dynamic reception uses this same admission
   contract rather than a permanent certificate for all future calls.
-- After clean-graph construction, required build tests run through ordinary build/receiver contracts
-  before final C compilation. Required runtime tests run at their reached admission sites. Test,
-  candidate and helper calls keep ordinary native/walker dispatch. Merely storing a `test` form
+- After clean-graph construction and L1/C generation, required build tests run in interpretation mode on the graph being accepted through ordinary build/receiver contracts, before machine compilation. Required runtime tests run at their reached admission sites. Test, candidate and helper calls made inside that interpreted run follow ordinary dispatch; it is not a bypass of the interpreted mode. Merely storing a `test` form
   in nested DATA does not execute it or add a discovery pass.
 
 Interface selection does not run defaults, converters or tests speculatively for every W/E or

@@ -137,21 +137,22 @@ FxZipWith:
 
 FxListBind:
     private:
-        @: items
+        []: input
         @: next
-    required: items next
-    return: @
-    flatMap:
+    required: input next
+    return: @[]
+    bind:
         throws: copy(FxThrows\traversal)
-        return: FxSeqFlatMap\flatMap(items; next)
+        private: @: result FxSeqBind\bind(items := input; next := next)
+        return: \result
 
-FxSeqFlatMap:
+FxSeqBind:
     private:
         @: items
         @: next
     required: items next
     return: @
-    flatMap:
+    bind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
@@ -251,7 +252,8 @@ FxSeqCount:
         return: matched
 
 FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     record:
@@ -266,7 +268,8 @@ FxMaybe:
 
 FxSome:
     private: @: value
-    return: @
+    required: value
+    return: FxMaybe@
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -274,6 +277,6 @@ FxSome:
         return: result
 
 FxNone:
-    return: @
+    return: FxMaybe@
     none:
         return: (copy(FxMaybe))

@@ -1,19 +1,8 @@
 # ASSOCIATION / PROPERTY LISTS OVER ORDINARY LMX ARRAYS.
 # One search visits keys; assoc, get/set/removeProperty and getProperties reuse
 # it. Complete typed records and referenced objects retain their identity.
-# Equality is explicit, must be an equivalence relation, and must not mutate
-# a traversed input. These are Array contracts, not emulated Lisp cons cells.
-
-FxValueSame:
-    private:
-        @: first
-        @: second
-        @: same
-    required: first second same
-    return: int
-    test:
-        throws: copy(FxThrows\predicate)
-        return: FxSeqPredicate\truth(FxApply\apply(same; FxTwo\make(first; second)))
+# Equality defaults to the shared ordinary/deep Array policy. An explicit
+# comparator must be an equivalence relation and must not mutate traversed input. These are Array contracts, not emulated Lisp cons cells.
 
 FxKeyShape:
     private:
@@ -37,10 +26,10 @@ FxKeyIndex:
     private:
         @: source
         @: key
-        @: same
+        @: same 0
         int: stride 1
         int: field -1
-    required: source key same
+    required: source key
     return: int
     find:
         throws: copy(FxThrows\predicate) FxShape
@@ -57,7 +46,7 @@ FxKeyIndex:
                     candidate := FxSeqRead\read(candidate; field)
             ---
             if: usable != 0
-                if: FxValueSame\test(key; candidate; same)
+                if: FxValueSame\test(key; candidate; same) != 0
                     return: i
             ---
             i += stride
@@ -67,9 +56,9 @@ FxAssoc:
     private:
         @: rows
         @: key
-        @: same
+        @: same 0
         int: keyIndex 0
-    required: rows key same
+    required: rows key 
     return: @
     assoc:
         throws: copy(FxThrows\predicate) FxShape
@@ -99,8 +88,8 @@ FxGetProperty:
     private:
         @: properties
         @: key
-        @: same
-    required: properties key same
+        @: same 0
+    required: properties key 
     return: @
     getProperty:
         throws: copy(FxThrows\predicate) FxShape
@@ -114,8 +103,8 @@ FxSetProperty:
         @: properties
         @: key
         @: value
-        @: same
-    required: properties key value same
+        @: same 0
+    required: properties key value 
     return: @
     setProperty:
         throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
@@ -129,8 +118,8 @@ FxRemoveProperty:
     private:
         @: properties
         @: key
-        @: same
-    required: properties key same
+        @: same 0
+    required: properties key 
     return: int
     removeProperty:
         throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
@@ -149,8 +138,8 @@ FxGetProperties:
     private:
         @: properties
         @: indicators
-        @: same
-    required: properties indicators same
+        @: same 0
+    required: properties indicators 
     return: @
     getProperties:
         throws: copy(FxThrows\predicate) FxShape
@@ -174,16 +163,29 @@ FxSequenceDifference:
     private:
         @: first
         @: second
-        @: same
-        int: firstStart
+        @: same 0
+        int: firstStart 0
         int: count
-    required: first second same firstStart count
+        int: secondStart 0
+    required: first second count
     return: int
     find:
         throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: firstStart < 0 || secondStart < 0 || count < 0
+            throw: ReceiverIndex()
+        if: firstStart > length(first) || secondStart > length(second)
+            throw: ReceiverIndex()
+        if: count > length(first) - firstStart || count > length(second) - secondStart
+            throw: ReceiverIndex()
         private: int: i 0
         while: i < count
-            if: FxValueSame\test(FxSeqRead\read(first; firstStart + i); FxSeqRead\read(second; i); same) = 0
+            if: FxValueSame\test(
+                FxSeqRead\read(first; firstStart + i);
+                FxSeqRead\read(second; secondStart + i);
+                same
+            ) = 0
                 return: i
             i += 1
         return: -1
@@ -192,8 +194,8 @@ FxMismatch:
     private:
         @: first
         @: second
-        @: same
-    required: first second same
+        @: same 0
+    required: first second 
     return: @
     mismatch:
         throws: copy(FxThrows\predicate) FxRecordArity
@@ -213,36 +215,28 @@ FxSearchSequence:
     private:
         @: items
         @: pattern
-        @: same
+        @: same 0
         int: start 0
-    required: items pattern same
+    required: items pattern
     return: @
     searchSequence:
         throws: copy(FxThrows\predicate) FxRecordArity
         FxSeqInfo\get(items)
-        FxSeqInfo\get(pattern)
         private: int: size length(items)
         if: start < 0 || start > size
             throw: ReceiverIndex()
-        private: int: count length(pattern)
-        if: count > size - start
+        private: int: i FxSequenceSearch\search(items; pattern; start; 0; same)
+        if: i < 0
             return: FxNone\none()
-        private: int: i start
-        while: i <= size - count
-            if: FxSequenceDifference\find(items; pattern; same; i; count) < 0
-                return: FxSome\some(value := (i FxRecordOperands\record))
-            if: i = size - count
-                break
-            i += 1
-        return: FxNone\none()
+        return: FxSome\some(value := (i FxRecordOperands\record))
 
 FxSubstitute:
     private:
         @: items
         @: oldValue
         @: newValue
-        @: same
-    required: items oldValue newValue same
+        @: same 0
+    required: items oldValue newValue 
     return: @
     substitute:
         throws: copy(FxThrows\predicate) SequenceElement SequenceSize
@@ -282,7 +276,7 @@ FxAsOperand:
         private: @: noResult FxKernel\normalizeType(void)
         private: @: inputs FxKernel\signatureData(inputTypes; noResult; ("left"; "right"))
         private: @: output FxKernel\signatureData((); source\resultType; ())
-        private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormatInt\formatInt(priority))
+        private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormat\format(priority))
         private: @: readyProperties sys\fromLmx(properties)
         private: @: data (
             private: copy(inputs)

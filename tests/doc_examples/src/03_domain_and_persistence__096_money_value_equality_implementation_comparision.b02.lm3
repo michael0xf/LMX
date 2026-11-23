@@ -1,14 +1,13 @@
-MoneyLibrary:
-    immutable: Money:
-        int: cents 100
-        int: currency 840
-    Equality:
-        copy: sys\OPERANDS_TEMPLATE
-        return: int
-        equals:
-            throws: OperandArity
-            if: length(right) != 1
-                throw: OperandArity()
-            @: a \left
-            @: b \right[0]
-            return: a\cents = b\cents && a\currency = b\currency
+FxEquals:
+    private:
+        @: first
+        @: second
+        @: projection 0
+        @: same 0
+    required: first second
+    return: int
+    equals:
+        throws: copy(FxThrows\predicate)
+        private: @: a FxProjectValue\get(first; projection)
+        private: @: b FxProjectValue\get(second; projection)
+        return: FxValueSame\test(a; b; same)

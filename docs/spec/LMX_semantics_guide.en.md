@@ -1,6 +1,6 @@
 # LMX semantics: worked explanations
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 These worked explanations consolidate the accepted requirements through 2026-11-21. The
 [semantics](LMX_semantics.en.md) and [grammar](LMX_grammar.en.md) define the language contracts.
@@ -69,7 +69,7 @@ already been performed. See [grammar §15](LMX_grammar.en.md#levels).
 | Stage or execution path | What happens |
 |---|---|
 | Graph construction, known candidate | Applicable interface requirements are checked without executing the candidate body, initializers, or `test`. |
-| Build/test phase, after the clean graph and before C | Checks reached through the ordinary build/test receiver contracts execute; their checkers may call candidates. This is not recursive discovery of every nested DATA test. |
+| Build/test phase, interpreted on the graph being accepted, after the clean graph and L1/C and before machine compilation | Checks reached through the ordinary build/test receiver contracts execute; their checkers may call candidates. This is not recursive discovery of every nested DATA test. |
 | Reached interpreted call | The interpreter invokes standard `satisfies` for admission, including the checks required at that receiving site. Concrete field maps and value-dependent admission facts remain scoped to their operation/reception. |
 | Prepared native call | The prepared contract is used without an automatic runtime `satisfies` call. Required actual-value conversion checks retain their contract. |
 | Explicit `satisfies` | The written operation executes in both native and interpreted code. |
@@ -112,6 +112,24 @@ int: x 5       # int with value 5
 @: ptr 0       # void reference with an explicit null address
 @: ptr Model   # a reference to an existing Structure, no longer an empty void pointer
 ```
+
+Typed requirements are written before the colon. These are again independent examples; the two Model initializer positions refer to the existing Model value, preserving its identity:
+
+```lmx
+Model@: p
+int@: left
+
+Model[]: arr
+int[]: values
+
+Model[]: arr [Model Model]
+Model[]: [Model Model]
+
+int[]: values [1 2 3]
+int[]: [1 2 3]
+```
+
+A square initializer is valid for both named and anonymous arrays. The anonymous forms yield one array without inventing a variable name; an omitted initializer preserves uninitialized absence. The requirement, including compositions such as `int@[]`, `int[]@`, `int[][]` and `int@@`, stays in the complete left head. Generic `@: ptr Model` above still initializes a universal reference from a value and is not a hidden typed declaration. See the [eight positive forms and complete composition matrix](TYPE_DECLARATION_FORMS.md).
 
 A first definition establishes the place; in code a repeated form with a
 candidate writes after admission, and a repeated form without a candidate
@@ -255,6 +273,8 @@ R0 is a procedural entry without DATA and without user arguments. It receives no
 empty service Structure, or special field data. Its executable declarations and ordinary accessible references
 remain available; runtime launch parameters are not user actuals.
 See [R0](LMX_semantics.en.md#root-entry).
+
+Startup always executes the root as an ordinary L3 Thread, without DATA or user actuals. CODE locals and calls use the common execution mechanism. A parent stub with values to deliver may send the root an ordinary Message. There is no alternate host-selected Main or library-body entry. A published test invocation such as `Example\run()` is an ordinary later call by already running root code or a reached message handler; DATA fragments and dependencies are not replacement entries. See [root startup and observations](LMX_semantics.en.md#source-entry-profiles). An accessible direct child gives an ordinary route to its root through `parent(child)`. Without such a reference the norm defines no universal source-level R0 self-name; zero-argument DATA queries and lexical `node` do not supply one ([root reference boundary](LMX_semantics.en.md#root-reference-boundary)).
 
 <a id="removed-builtins"></a>
 Removed built-in meanings are the special data name, a separate call-DATA parameter, fncall, sub, and executable
@@ -732,8 +752,10 @@ interpreter → interpreter give one observable behavior: autofill is lowered as
 caller place as the hidden address of the cell, and the fallback gives an own place; a native local place has no
 arena header `[type][value]`. Methods and ordinary Structures share compilation; distinct actual supplies produce
 distinct C signatures. Known native calls known native directly in C. Graph writes do not clear native: updating it
-requires explicit compilation and an endturn boundary. Before that boundary the time at which executable graph
-changes take effect is unspecified. There is no hidden compilation, permanent cache of source-expression results,
+requires explicit compilation and an endturn boundary. Before that boundary, the point at which an updated
+machine-code implementation becomes active is unspecified. A direct read of the graph observes an explicit
+write immediately under ordinary alias/order rules, and subsequent interpreter execution reads the changed
+graph; neither observation waits for native recompilation. There is no hidden compilation, permanent cache of source-expression results,
 shared local-publication cache, or copy-out on exit. Ordinary activation values and scoped admission correspondences
 retain their separate contracts. A transparent link does not extend lifetime, and at `yield` the selected link
 is not rebound to the same-named place of a new caller.
@@ -760,13 +782,15 @@ copy and merge retain permitted reusable native implementation references under 
 not implicitly compile a new implementation or register a call-table binding; explicit compilation or restoration
 establishes the binding. A common implementation address does not replace the selected occurrence's lexical links.
 
-`sys\compile(S)` builds/checks the clean graph, runs the required build/test phase before C generation, translates
-to L1/C, compiles/links machine code, registers a successful result, and returns diagnostics. That test phase may
+`sys\compile(S)` builds/checks the clean graph, translates to L1/C, runs the required build/test phase in interpretation mode on the graph
+being accepted, and only after the tests pass compiles/links machine code, registers a successful result, and returns diagnostics. That test phase may
 execute checkers and their candidate calls; it does not launch S's application entry or scan all nested DATA for
 tests. `sys\check`, `sys\checkL3`, and `sys\translate` execute neither application code nor `test`.
 Graph writes neither clear native nor trigger hidden change tracking.
 If A directly calls B, updating that call requires compilation of the unit containing the relevant caller/callee
 code, rather than assuming that recompiling B alone changes A's direct call.
+
+The graph, the frame and the machine implementation are three separate things. An edit is written straight into the clean graph and an explicit read takes the current graph; the local values and bindings of the current frame are not changed by a graph write through any automatic mechanism (no refresh, no cache coherence, no namespace synchronization, no mandatory copy of the tree, no forced snapshot for a test); a new machine implementation is installed at `endturn` after a successful explicit compilation. The tests are interpreted by the general rules; when a test needs isolation the programmer copies explicitly, and a failed test leaves machine compilation undone without undoing the effects of the code already executed. See the [acceptance boundary](kernel-implementation.en.md#acceptance-boundary).
 
 `sys\endturn()` exits through registered finally blocks to the normal turn boundary. Catch does not intercept it;
 control does not return to its call site, and it does not itself terminate a Thread/Message.
@@ -1232,6 +1256,19 @@ templates, argument modes, effects, priorities, strings, and signatures.
 <a id="general-receiver-guide"></a>
 ## General receivers: values, records and callable factories
 
+One operation has receiver and operand spellings under its canonical name.
+For example `unique(xs)` / `xs unique` use optional shared default equality,
+`some(x) bind half bind half` hides typed-record packing in the adaptive
+constructor, and `type(x)` / `x type` query the same actual physical type.
+`to(A; B)` / `A to B` describe an A-to-B signature; result is always last.
+
+The source-form role chooses a declared representation of one family, after
+which ordinary overload selection applies. Maybe, Result and Array do not become
+interchangeable merely because they share Structure storage. Whole-value capture
+does not expand a nested Array and does not erase a reference result.
+The [complete monadic example](MONADIC_OPERATIONS.md#7-полный-пользовательский-пример)
+retains all declared failures.
+
 The [receiver chapter](LMX_semantics.en.md#functional-receivers) and
 [public API](patterns/LMX_Fn_Receivers/API.md) describe the core implementations.
 The [common inventory](CORE_FUNCTIONS.md) lists every direct public function.
@@ -1276,7 +1313,7 @@ a different approach. Minor spelling changes are notes. Shared implementation
 dependencies are reported separately and are not assigned zero cost.
 
 The new name `satisfies` retains admission's previous direction and phases.
-`Name :: DATA` and `signatureTypes` construct signature descriptions with the same positional compatibility rule: input
+`Name :: DATA` and `to` construct signature descriptions with the same positional compatibility rule: input
 labels may differ, but count, order, complete requirements and the result must
 fit. The existing named-signature relationship with `call` is deliberately unchanged;
 all other uses accept either signature description. See [the equivalence rule](LMX_semantics.en.md#fn-forms-equivalent).
@@ -1288,6 +1325,22 @@ execution was performed during this documentation revision.
 <a id="unified-20261122"></a>
 ## Current worked forms
 
+Exact identifiers name the same operations without inspecting their contents:
+
+```lmx
+a + b
+`+`(a; b)
+
+items[next()]++
+`var++`(items[next()])
+```
+
+Each pair shows alternative spellings. The second pair determines the indexed
+place once and returns its previous value after incrementing it. `++var` returns
+the new value. `var` is the sole argument slot in the operation name; exact
+`` `++counter` `` remains an unrelated whole identifier. The existing `@`
+receiver remains unquoted in its ordinary use.
+
 ```lmx
 int[]: values [1 2 3]
 @: selected compress(source := values; mask := values > 1)
@@ -1298,7 +1351,7 @@ int[]: values [1 2 3]
 Here Positive\run is an ordinary predicate declared by the example's caller. Found is Maybe, not an index sentinel. Values has dense int storage; selection retains that storage profile. `[]: pending` is uninitialized, while `int[]: []` is a ready empty value. `int@[]` and `int[]@` differ. Use `@node\x`, not the compact declaration `@(node\x)`, for the address of a graph field. [Full examples and contracts](CORE_SEQUENCES_REGEX.en.md).
 
 ```lmx
-wholeMatch(utf8Text("AB-09"); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+wholeMatch(utf8Text("AB-09"); (then (within("A"; "Z") times 2) "-" (asciiDigit times 2)))
 ```
 
 The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and wholeMatch tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.

@@ -2,7 +2,7 @@
 
 ## Общий договор
 
-Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по явному равенству. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.
+Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по общему равенству по умолчанию или явному same. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.
 
 CL reference не вызывает sort/stable-sort/remove-duplicates. Обе реализации показывают алгоритмы; общая инфраструктура профиля последовательности перечислена отдельно.
 
@@ -77,18 +77,11 @@ FxSort:
 FxUnique:
     private:
         @: items
-        @: same
-    required: items same
+        @: same 0
+    required: items
     return: @
     unique:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -100,8 +93,7 @@ FxUnique:
             private: int: j 0
             while: j < used
                 private: @: previous FxSeqRead\read(result; j)
-                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
-                if: FxSeqPredicate\truth(answer) != 0
+                if: FxValueSame\test(previous; item; same) != 0
                     duplicate := 1
                     break
                 j += 1
@@ -165,10 +157,10 @@ FxUnique:
 
 ## Размер исходников
 
-| Язык | Полный без пробельных | Без сложного Throws | Непустые строки | Все Unicode-символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 1894 | 1751 | 97 | 3530 |
-| Common Lisp | 1218 | — | 43 | 1845 |
+| Язык | Без пробельных | Непустые строки | Все Unicode-символы |
+| --- | ---: | ---: | ---: |
+| LMX | 1799 | 89 | 3327 |
+| Common Lisp | 1218 | 43 | 1845 |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
 
@@ -179,7 +171,7 @@ FxUnique:
 ## Происхождение LMX
 
 - `FxSort` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a`.
-- `FxUnique` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `45e5c9ba86ebc9d39d746aaddb819ee0770027085f46bb27681f4a13679bb019`.
+- `FxUnique` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `8d4a6d2ed83e3d0ba9c278a36b58bfde1d88cf0083756099a9d7da24b7283cb8`.
 
 ## Первичные источники Common Lisp
 

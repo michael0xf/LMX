@@ -1,19 +1,20 @@
-# Ordinary text algorithms. Public names are wired in public.lmx.
-# The input is char[] and positions/counts are octets in the declared byte
-# profile, not grapheme/display-column positions. There is no implicit locale.
-# Existing UTF-8 TextView/Pattern operations remain the Unicode search route.
-# Exact equality already exists as matches(byteText(first); second).
+# Sequence algorithms with explicit comparison/encoding profiles.
+# Public value adapters retain exact Array/result types; internal @ values are
+# complete typed records. Text defaults apply only in the text representation.
 
-FxTextSearch:
+FxSequenceSearch:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start
         int: backwards
+        @: same 0
+    required: text part start backwards
     return: int
     search:
-        char[]: unitSource text
-        char[]: unitPart part
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(part)
         if: length(part) > length(text)
             return: -1
         private: int: last length(text) - length(part)
@@ -33,7 +34,7 @@ FxTextSearch:
                 return: -1
         ---
         while: 1
-            if: FxUnitRange\equal(at) != 0
+            if: FxSequenceDifference\find(text; part; same; at; length(part)) < 0
                 return: at
             if: at = stop
                 return: -1
@@ -41,202 +42,274 @@ FxTextSearch:
 
 FxIndexOf:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start 0
+        @: same 0
+    required: text part
     return: int
     indexOf:
-        return: FxTextSearch\search(text; part; start; 0)
+        throws: copy(FxThrows\predicate)
+        return: FxSequenceSearch\search(text; part; start; 0; same)
 
 FxLastIndexOf:
     private:
-        char[]: text
-        char[]: part
+        @: text
+        @: part
         int: start length(text)
+        @: same 0
+    required: text part
     return: int
     lastIndexOf:
-        return: FxTextSearch\search(text; part; start; 1)
+        throws: copy(FxThrows\predicate)
+        return: FxSequenceSearch\search(text; part; start; 1; same)
 
-FxCompareText:
+FxValueOrder:
     private:
-        char[]: first
-        char[]: second
+        @: first
+        @: second
+        @: order 0
+    required: first second
     return: int
-    compareText:
-        throws: copy(FxThrows\kernel)
+    compare:
+        throws: copy(FxThrows\call)
+        if: order != 0
+            private: @: record FxApply\apply(order; FxTwo\make(first; second))
+            private: int: result \record
+            return: (result > 0) - (result < 0)
+        return: (\first > \second) - (\first < \second)
+
+FxByteOrder:
+    private:
+        char: first
+        char: second
+    required: first second
+    return: int
+    compare:
+        private: int: a first
+        private: int: b second
+        if: a < 0
+            a += 256
+        if: b < 0
+            b += 256
+        return: (a > b) - (a < b)
+
+FxCompare:
+    private:
+        @: first
+        @: second
+        @: order 0
+    required: first second
+    return: int
+    compare:
+        throws: copy(FxThrows\traversal)
         private: @: a FxSeqInfo\get(first)
         private: @: b FxSeqInfo\get(second)
-        if: a\elementBits != 8 || b\elementBits != 8
-            throw: FxTypeToken()
+        private: @: selected order
+        if: selected = 0 && a\elementType = char && b\elementType = char
+            selected := FxByteOrder\compare
         private: int: i 0
         while: i < length(first) && i < length(second)
-            private: int: x RxOctet\read(first; i)
-            private: int: y RxOctet\read(second; i)
-            if: x != y
-                return: (x > y) - (x < y)
+            private: int: compared FxValueOrder\compare(FxSeqRead\read(first; i); FxSeqRead\read(second; i); selected)
+            if: compared != 0
+                return: compared
             i += 1
         return: (length(first) > length(second)) - (length(first) < length(second))
 
-FxCharIndex:
+FxTrimMember:
     private:
-        char[]: chars
-        char: value
+        @: item
+        @: members
+        @: predicate 0
+        @: same 0
+    required: item members
     return: int
-    index:
-        private: int: i 0
-        while: i < length(chars)
-            if: chars[i] = value
-                return: i
-            i += 1
-        return: -1
+    test:
+        throws: copy(FxThrows\predicate) FxShape
+        if: predicate != 0
+            return: FxSeqPredicate\truth(FxApply\apply(predicate; FxOne\make(item)))
+        return: FxKeyIndex\find(members; item; same) >= 0
 
-FxTextTrim:
+FxSequenceTrim:
     private:
-        char[]: text
-        char[]: chars
+        @: text
+        @: members
         int: side
-    return: char[]
+        @: predicate 0
+        @: same 0
+    required: text members side
+    return: @
     trim:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(members)
         private: int: begin 0
         private: int: end length(text)
         if: side != 2
             while: begin < end
-                if: FxCharIndex\index(chars; text[begin]) < 0
+                if: FxTrimMember\test(FxSeqRead\read(text; begin); members; predicate; same) = 0
                     break
                 begin += 1
         ---
         if: side != 1
             while: end > begin
-                if: FxCharIndex\index(chars; text[end - 1]) < 0
+                if: FxTrimMember\test(FxSeqRead\read(text; end - 1); members; predicate; same) = 0
                     break
                 end -= 1
         ---
-        return: \FxSeqSlice\slice(text; begin; end)
+        return: FxSeqSlice\slice(text; begin; end)
 
 FxTrimInputs:
     private:
-        char[]: text
-        char[]: chars " \t\r\n\v\f"
-    return: char[]
+        @: text
+        @: chars
+        @: predicate 0
+        @: same 0
+    required: text chars
+    return: @
 
 FxTrim:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 0)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 0; predicate; same)
 
 FxTrimStart:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 1)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 1; predicate; same)
 
 FxTrimEnd:
     copy: FxTrimInputs
     trim:
-        throws: copy(FxThrows\sequence)
-        return: FxTextTrim\trim(text; chars; 2)
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: FxSequenceTrim\trim(text; chars; 2; predicate; same)
 
-# Repetition delegates to the single storage-preserving generic cycle body.
-# This text contract rejects negative counts before using that shared body.
-FxRepeatText:
+FxSequencePad:
     private:
-        char[]: text
-        int: count
-    return: char[]
-    repeatText:
-        throws: copy(FxThrows\sequence)
-        if: count < 0
-            throw: SequenceSize()
-        return: \FxStdCycle\cycle(text; count)
-
-FxTextPad:
-    private:
-        char[]: text
+        @: text
         int: width
-        char[]: fill
+        @: fill
         int: right
-    return: char[]
+    required: text width fill right
+    return: @
     pad:
         throws: copy(FxThrows\sequence)
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(fill)
         if: width <= length(text)
-            return: \FxSeqSlice\slice(text; 0; length(text))
+            return: FxSeqSlice\slice(text; 0; length(text))
         private: int: missing width - length(text)
         if: length(fill) = 0
             throw: SequenceSize()
         private: int: count missing / length(fill)
         private: int: rest missing % length(fill)
-        private: char[]: padding FxRepeatText\repeatText(fill; count)
-        private: char[]: tail \FxSeqSlice\slice(fill; 0; rest)
-        private: char[]: extra \FxSeqConcat\concat((padding; tail))
+        private: @: padding FxStdCycle\cycle(fill; count)
+        private: @: tail FxSeqSlice\slice(fill; 0; rest)
+        private: @: extra FxSeqConcat\concat((padding; tail))
         if: right != 0
-            return: \FxSeqConcat\concat((text; extra))
-        return: \FxSeqConcat\concat((extra; text))
+            return: FxSeqConcat\concat((text; extra))
+        return: FxSeqConcat\concat((extra; text))
 
 FxPadInputs:
     private:
-        char[]: text
+        @: text
         int: width
-        char[]: fill " "
-    return: char[]
+        @: fill
+    required: text width fill
+    return: @
 
 FxPadLeft:
     copy: FxPadInputs
     pad:
         throws: copy(FxThrows\sequence)
-        return: FxTextPad\pad(text; width; fill; 0)
+        return: FxSequencePad\pad(text; width; fill; 0)
 
 FxPadRight:
     copy: FxPadInputs
     pad:
         throws: copy(FxThrows\sequence)
-        return: FxTextPad\pad(text; width; fill; 1)
+        return: FxSequencePad\pad(text; width; fill; 1)
 
-# Translation is literal and simultaneous. Duplicate source characters use
-# their first mapping; unmapped characters survive. No regex interpolation.
 FxTranslate:
     private:
-        char[]: text
-        char[]: from
-        char[]: to
-    return: char[]
+        @: text
+        @: from
+        @: to
+        @: same 0
+    required: text from to
+    return: @
     translate:
-        throws: copy(FxThrows\sequence)
+        throws: copy(FxThrows\predicate) FxShape SequenceElement SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(from)
+        FxSeqInfo\get(to)
         if: length(from) != length(to)
             throw: SequenceSize()
-        private: char[]: out \FxSeqSlice\slice(text; 0; length(text))
+        private: @: out FxSeqSlice\slice(text; 0; length(text))
         private: int: i 0
         while: i < length(text)
-            private: int: found FxCharIndex\index(from; text[i])
+            private: int: found FxKeyIndex\find(from; FxSeqRead\read(text; i); same)
             if: found >= 0
-                out[i] := to[found]
+                FxSeqStore\write(out; i; FxSeqRead\read(to; found))
             i += 1
         return: out
 
-# A caller supplies already rendered text parts. The generic intercalate
-# algorithm owns separator placement, allocation and overflow checks.
-FxJoin:
+FxRemoveAffix:
     private:
-        @: parts
-        char[]: separator ""
-    return: char[]
-    join:
-        throws: copy(FxThrows\mutation)
-        return: \FxStdIntercalate\intercalate(parts; separator)
+        @: text
+        @: affix
+        int: suffix
+        @: same 0
+    required: text affix suffix
+    return: @
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        FxSeqInfo\get(text)
+        FxSeqInfo\get(affix)
+        private: int: begin 0
+        private: int: end length(text)
+        private: int: at 0
+        if: length(affix) <= end
+            if: suffix != 0
+                at := end - length(affix)
+            if: FxSequenceDifference\find(text; affix; same; at; length(affix)) < 0
+                if: suffix != 0
+                    end -= length(affix)
+                else:
+                    begin := length(affix)
+        ---
+        return: FxSeqSlice\slice(text; begin; end)
 
-# Existing hasPrefix, hasSuffix, matches, replace and split already accept
-# literal text patterns. Clients choose byteText/utf8Text explicitly; there are
-# no parallel public string-equality, prefix, suffix or replacement algorithms.
+FxAffixInputs:
+    private:
+        @: text
+        @: affix
+        @: same 0
+    required: text affix
+    return: @
 
-# Exact signed integer formatting. This also owns the decimal digit algorithm
-# used by graph/callable builders; they do not keep another copy of that loop.
-FxFormatInt:
+FxRemovePrefix:
+    copy: FxAffixInputs
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        return: FxRemoveAffix\remove(text; affix; 0; same)
+
+FxRemoveSuffix:
+    copy: FxAffixInputs
+    remove:
+        throws: copy(FxThrows\predicate) SequenceSize
+        return: FxRemoveAffix\remove(text; affix; 1; same)
+
+# Exact integer encoding is one explicit format/parse profile.
+
+FxFormat:
     private:
         bigint: value
         int: base 10
     return: char[]
-    formatInt:
+    format:
         throws: copy(FxThrows\selection)
         if: base < 2 || base > 36
             throw: FxIndex()
@@ -260,13 +333,13 @@ FxFormatInt:
             out := \FxSeqConcat\concat((out; "-"))
         return: \FxSeqReverse\reverse(out)
 
-FxParseInt:
+FxParse:
     private:
         char[]: text
         int: base 10
     return: bigint
-    parseInt:
-        throws: NumericDomain
+    parse:
+        throws: NumericDomain copy(FxThrows\predicate) FxShape FxRecordArity
         if: base < 2 || base > 36 || length(text) = 0
             throw: NumericDomain()
         private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -282,7 +355,7 @@ FxParseInt:
             private: char: value text[at]
             if: value >= 'A' && value <= 'Z'
                 value := value - 'A' + 'a'
-            private: int: digit FxCharIndex\index(digits; value)
+            private: int: digit FxKeyIndex\find(digits; (value FxRecordOperands\record))
             if: digit < 0 || digit >= base
                 throw: NumericDomain()
             result := result * base + digit
@@ -291,43 +364,3 @@ FxParseInt:
             result := -result
         return: result
 
-FxRemoveAffix:
-    private:
-        char[]: text
-        char[]: affix
-        int: suffix
-    return: char[]
-    remove:
-        throws: copy(FxThrows\sequence)
-        char[]: unitSource text
-        char[]: unitPart affix
-        private: int: begin 0
-        private: int: end length(text)
-        private: int: at 0
-        if: suffix != 0
-            at := end - length(affix)
-        if: FxUnitRange\equal(at) != 0
-            if: suffix != 0
-                end -= length(affix)
-            else:
-                begin := length(affix)
-        ---
-        return: \FxSeqSlice\slice(text; begin; end)
-
-FxAffixInputs:
-    private:
-        char[]: text
-        char[]: affix
-    return: char[]
-
-FxRemovePrefix:
-    copy: FxAffixInputs
-    remove:
-        throws: copy(FxThrows\sequence)
-        return: FxRemoveAffix\remove(text; affix; 0)
-
-FxRemoveSuffix:
-    copy: FxAffixInputs
-    remove:
-        throws: copy(FxThrows\sequence)
-        return: FxRemoveAffix\remove(text; affix; 1)

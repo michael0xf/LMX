@@ -10,12 +10,10 @@
 
 ## Размер
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 3530 | 1894 | 1751 | 97 |
-| Perl | 1745 | 1174 | 1174 | 55 |
-
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 1799 | 3327 | 89 |
+| Perl | 1174 | 1745 | 55 |
 
 ## LMX
 
@@ -86,18 +84,11 @@ FxSort:
 FxUnique:
     private:
         @: items
-        @: same
-    required: items same
+        @: same 0
+    required: items
     return: @
     unique:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -109,8 +100,7 @@ FxUnique:
             private: int: j 0
             while: j < used
                 private: @: previous FxSeqRead\read(result; j)
-                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
-                if: FxSeqPredicate\truth(answer) != 0
+                if: FxValueSame\test(previous; item; same) != 0
                     duplicate := 1
                     break
                 j += 1

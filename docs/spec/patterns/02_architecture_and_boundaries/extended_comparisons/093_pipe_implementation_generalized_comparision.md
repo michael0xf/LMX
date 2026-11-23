@@ -1,6 +1,6 @@
-# 093. Pipe — generic implementation: отдельный расширенный договор
+# 093. Compose — generic implementation: общий договор
 
-Сохранена самостоятельная обобщённая реализация 23-Nov. Она решает более широкую задачу, чем восстановленная основная пара 22-Nov, и не участвует в её сумме или выборе кратчайшего листинга.
+Действующие общие определения извлечены из единого ядра. Эта отдельная пара сохраняет свой договор; её размер не подменяет размер клиентского вызова.
 
 ## Договор
 
@@ -8,7 +8,7 @@
 
 Пример с int возвращает7; string→length→Boolean тоже допустим; отказ первого этапа пропускает второй.
 
-Это последовательная композиция, не stream scheduler. Асинхронные адресованные вызовы уже обеспечивает post; потоки внутри pipe изменили бы его договор. Общие adapter bridges учитываются как зависимости.
+Композиция строится без выполнения стадий. inner получает исходные входы, outer принимает один результат; итоговый тип и контекст сохраняются. Сравнение не является stream scheduler.
 
 ## LMX
 
@@ -44,20 +44,11 @@ FxCompose:
         state\inner := inner
         private: @: failures FxFailures\union(a\throws; b\throws)
         return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
-
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
-    pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)
 ```
 
 [Исходник](source/lmx/093_pipe_implementation_generalized.lm3)
 
-Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.
+Точные общие определения FxCompositionState, FxCompositionEngine, FxCompose из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.
 
 ## Java
 
@@ -97,10 +88,12 @@ func Pipe[A,B,C any](first func(A) B, second func(B) C) func(A) C {
 
 | Язык | Непробельные символы |
 | --- | ---: |
-| LMX | 839 |
+| LMX | 715 |
 | Java | 308 |
 | Go | 178 |
 
-[Основная узкая пара](../093_pipe_implementation_comparision.md). [Норма LMX](../../../LMX_semantics.en.md).
+Полный текст каждого листинга включает все объявления, заголовки Throws, аргументы и ссылки; исключений из подсчёта нет.
 
-LMX здесь не выполнялся. Это сохранение исходников и их договора, а не новый отчёт о runtime-проверке.
+[Основная пара](../093_pipe_implementation_comparision.md). [Единые формы](../../UNIFIED_OPERATIONS.md).
+
+Результаты языкового выполнения изменённых исходников не заявлены.

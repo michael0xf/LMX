@@ -1,15 +1,19 @@
-Below:
-    int: value
-    return: int
-    test:
-        return: value < threshold
-
 Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxThrows\predicate)
-        int: threshold 0
-        int: negative any(items; Below\test)
-        threshold := 10
-        return: (negative; all(items; Below\test))
+        int: negative 0
+        int: below 1
+        int: i 0
+        while: i < length(items)
+            if: items[i] < 0
+                negative := 1
+                break
+            i += 1
+        i := 0
+        while: i < length(items)
+            if: items[i] >= 10
+                below := 0
+                break
+            i += 1
+        return: (negative; below)

@@ -6,6 +6,7 @@ from pathlib import Path
 import copy, hashlib, json, re, shutil
 from functools import reduce
 from rebuild import metrics, production, closure, COMPONENTS, R
+from lmx_style_variants import get_variants, validate_variants
 
 def check_lmx(path):
     errors=[];stack=[];quote=None;escaped=False;last=None
@@ -98,6 +99,7 @@ def main():
     assert len(data['examples'])==24 and len(data['implementations'])==4
     current=production()
     stats=json.loads((R/'statistics.json').read_text());by_stats={(x['id'],x['language']):x for x in stats['rows']}
+    by_style={(x['id'],x['style']):x for x in stats['comparison_rows']}
     for item in data['examples']+data['implementations']:
         for language,key in [('LMX','lmx'),('Julia','foreign')]:
             path=R/item['source_files'][key]
@@ -109,6 +111,17 @@ def main():
             for owner in item['production_definitions']:
                 if hashlib.sha256(current[owner['name']]['code'].encode()).hexdigest()!=owner['sha256']:errors.append('Production source drift '+owner['name'])
         else:
+            errors.extend(item['id']+': '+error for error in validate_variants(item,R))
+            markdown=(R/(item['id']+'_comparision.md')).read_text()
+            for style,variant in get_variants(item):
+                row=by_style.get((item['id'],style),{})
+                for metric,value in variant['metrics'].items():
+                    if row.get(metric)!=value:errors.append(item['id']+': '+style+' full-source statistic '+metric)
+                if '```lmx\n'+variant['code']+'```' not in markdown:
+                    errors.append(item['id']+': '+style+' Markdown source mismatch')
+                checks.append({'id':item['id'],'style':style,'source':variant['source_file'],
+                               'check':'paired_source_json_md_metrics','runtime_execution':'NOT_RUN',
+                               'status':'PASS'})
             for name in item['core_functions']:
                 if not (R/item['implementation_links'][name]).is_file():errors.append(item['id']+' uncovered core '+name)
             if re.search(r'Julia(?:Ordered|Array|Mutation|OrderGroup)Reference|include\(|library_comparisons',item['foreign']):errors.append(item['id']+' custom library imported by client')
@@ -127,7 +140,7 @@ def main():
         name=definition['name']
         if name not in current or hashlib.sha256(current[name]['code'].encode()).hexdigest()!=definition['sha256']:
             errors.append('Shared production source drift '+name)
-    lmx_paths=list((R/'source/lmx').glob('*.lm3'))+list((R/'library_comparisons').glob('*.lmx'))
+    lmx_paths=list((R/'source/lmx').rglob('*.lm3'))+list((R/'library_comparisons').glob('*.lmx'))
     for path in sorted(lmx_paths):
         found=check_lmx(path)
         errors.extend(str(path.relative_to(R))+': '+x for x in found)

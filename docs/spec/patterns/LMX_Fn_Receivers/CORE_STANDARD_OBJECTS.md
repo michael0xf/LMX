@@ -31,7 +31,7 @@ All `value`, `fallback`, `reason` and returned value records below follow the ex
 
 ## Reuse and failures
 
-`foldOption` is composed from `mapOption` and `orElseGet`; it contains no second branch-selection algorithm. `bind` and `bindResult` remain the existing flat-map operations. `tap` calls its effect once and returns the original record, with reference identity preserved. Mutable referenced objects are not secretly snapshotted.
+`foldOption` is composed from `mapOption` and `orElseGet`; it contains no second branch-selection algorithm. `bind` and `bind` remain the existing flat-map operations. `tap` calls its effect once and returns the original record, with reference identity preserved. Mutable referenced objects are not secretly snapshotted.
 
 `orElseOption`, `orElseResult` and `flattenOption` follow the existing FxBind/FxBindResult result-admission path. An actual Maybe/Result is admitted directly, with no unconditional dereference. Direct container results and a container carrying a reference payload are separate acceptance cases; the two are not collapsed by inventing another wrapper.
 
@@ -52,7 +52,7 @@ This is a family-by-family coverage review of the object/optional/result/resourc
 | Language | Facility | LMX decision | Status | Boundary |
 | --- | --- | --- | --- | --- |
 | Java | [Optional.map / filter](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | mapOption / filterOption | implemented | LMX retains Some(null); Java Optional.map treats a null mapper result as absence. |
-| Java | [Optional.flatMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | bind | existing | Existing Maybe chaining; no second flatMap algorithm. |
+| Java | [Optional.bind](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | bind | existing | Existing Maybe chaining; no second bind algorithm. |
 | Java | [Optional.orElse](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | orElse | implemented | Eager payload fallback; never returns the Maybe container. |
 | Java | [Optional.orElseGet](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | orElseGet | implemented | Nullary fallback invoked only on absence. |
 | Java | [Optional.or](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html) | orElseOption | implemented | Lazy replacement container; no nested Maybe. |
@@ -64,9 +64,9 @@ This is a family-by-family coverage review of the object/optional/result/resourc
 | Rust | [Result.map / map_err](https://doc.rust-lang.org/std/result/enum.Result.html) | mapResult / mapErr | implemented | Only the selected channel is transformed. |
 | Rust | [Result.or_else](https://doc.rust-lang.org/std/result/enum.Result.html) | orElseResult | implemented | Error continuation returns a Result, not an error payload. |
 | Rust | [Result.map_or_else](https://doc.rust-lang.org/std/result/enum.Result.html) | foldResult | implemented | Exactly one branch receives its typed payload. |
-| Rust | [Result.and_then](https://doc.rust-lang.org/std/result/enum.Result.html) | bindResult | existing | The existing success-chain operation is reused. |
+| Rust | [Result.and_then](https://doc.rust-lang.org/std/result/enum.Result.html) | bind | existing | The existing success-chain operation is reused. |
 | Rust | [Result.inspect / inspect_err](https://doc.rust-lang.org/std/result/enum.Result.html) | tag selection + tap | covered_composition | tap is a value effect; tag selection remains explicit, rather than pretending two tags are equal. |
-| Rust | [Result ? propagation](https://doc.rust-lang.org/std/result/enum.Result.html) | bindResult / catch | covered_composition | No new source-rewriting propagation operator is required for these finite chains. |
+| Rust | [Result ? propagation](https://doc.rust-lang.org/std/result/enum.Result.html) | bind / catch | covered_composition | No new source-rewriting propagation operator is required for these finite chains. |
 | Scala | [Option.map / filter / flatten](https://www.scala-lang.org/api/2.13.16/scala/Option.html) | mapOption / filterOption / flattenOption | implemented | No eager evaluation of the absent callback. |
 | Scala | [Option.getOrElse](https://www.scala-lang.org/api/2.13.16/scala/Option.html) | orElseGet | implemented | Scala default is by-name; the LMX equivalent takes an explicit thunk. |
 | Scala | [Option.orElse](https://www.scala-lang.org/api/2.13.16/scala/Option.html) | orElseOption | implemented | Returns a replacement Option container lazily. |
@@ -91,7 +91,7 @@ This is a family-by-family coverage review of the object/optional/result/resourc
 | Rust | [Option.ok_or / ok_or_else](https://doc.rust-lang.org/std/option/enum.Option.html) | foldOption + ok/err | covered_composition | Explicit constructors distinguish eager error values from lazy error callbacks. |
 | Rust | [Option.or / and / xor](https://doc.rust-lang.org/std/option/enum.Option.html) | present tags + ordinary branch | covered_composition | These eager finite choices do not justify duplicating the existing tag-selection algorithm in another representation. |
 | Rust | [Option.take / replace / insert / get_or_insert_with](https://doc.rust-lang.org/std/option/enum.Option.html) | ordinary owning-field update + orElseGet | covered_composition | Mutation must be requested explicitly and performed by the owner; pure fallback helpers do not mutate Maybe. |
-| Rust | [Option.zip / unzip / transpose](https://doc.rust-lang.org/std/option/enum.Option.html) | foldOption / bindResult + existing pair/list constructors | covered_composition | Finite container rearrangement uses existing tags; sequence transpose is a different existing contract. |
+| Rust | [Option.zip / unzip / transpose](https://doc.rust-lang.org/std/option/enum.Option.html) | foldOption / bind + existing pair/list constructors | covered_composition | Finite container rearrangement uses existing tags; sequence transpose is a different existing contract. |
 | Rust | [Option.as_ref / as_mut / cloned / copied](https://doc.rust-lang.org/std/option/enum.Option.html) | ordinary reference / copy policy | existing_with_difference | LMX does not import Rust borrow lifetimes or move semantics under a familiar name. |
 | Rust | [Result.is_ok / is_err / ok / err projections](https://doc.rust-lang.org/std/result/enum.Result.html) | ok tag / foldResult + some/none | covered_composition | One chosen channel; projection absence is distinct from a null payload. |
 | Java | [Objects.isNull / nonNull / requireNonNull](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Objects.html) | ordinary @ null check / named throw | covered_composition | The check is already one expression; typed nil absence is distinct from an initialized null pointer. |
@@ -110,9 +110,9 @@ This is a family-by-family coverage review of the object/optional/result/resourc
 
 `findField(source; label; occurrence)` searches only the existing physical fields of `source`. `occurrence` is required and zero based among equal ready names. Repeated names remain distinct; there is no implicit unique-key map conversion. It returns a Maybe containing the existing field record. `hasField` reads only that Maybe tag; `getField` returns the record or raises `FxIndex` for absence. A negative ordinal also raises `FxIndex`.
 
-The loop is written once in `FxFindField`. The three input contracts use one `copy(FxFieldArguments)`. `RxNames` already exposes canonical owning-field names, and the current [primitive/absence contract](../../LMX_semantics.en.md#receiver-args-only) permits a comparison with `nil` without reading nonexistent value bytes. The loop checks that state before calling the existing internal `FxSameText` body. No new public string-equality function is added; a public exact literal match already uses `matches(byteText(source); literalText)` with case-sensitive units and no normalization. A ready empty name is not an anonymous name. A named uninitialized payload is still an existing field; a computed declaration is returned as its graph record without running its initializer.
+The loop is written once in `FxFindField`. The three input contracts use one `copy(FxFieldArguments)`. `RxNames` already exposes canonical owning-field names, and the current [primitive/absence contract](../../LMX_semantics.en.md#receiver-args-only) permits a comparison with `nil` without reading nonexistent value bytes. The loop checks that state before calling the existing shared `FxEqualFields` body. No new public string-equality function is added; a public exact literal match already uses `matches(byteText(source); literalText)` with case-sensitive units and no normalization. A ready empty name is not an anonymous name. A named uninitialized payload is still an existing field; a computed declaration is returned as its graph record without running its initializer.
 
-This adds neither dynamic source parsing nor a private namespace bypass. The operations use existing field-name and physical-value access under their ordinary protection/ownership contracts. The [Fable acceptance task](CORE_STANDARD_OBJECTS_TZ.md) records the integration checks, including native/interpreter directions. It requests no new receiver, primitive or provider.
+This adds neither dynamic source parsing nor a private namespace bypass. The operations use existing field-name and physical-value access under their ordinary protection/ownership contracts. The [integration acceptance contract](CORE_STANDARD_OBJECTS_CONTRACT.md) records the checks, including native/interpreter directions. It requires no new receiver, primitive or provider.
 
 ## Acceptance
 

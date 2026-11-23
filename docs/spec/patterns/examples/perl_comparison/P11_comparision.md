@@ -1,12 +1,14 @@
 # P11. Автовивификация групп записей
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Сгруппировать целые записи по целому kind. Порядок групп — первое появление kind, порядок записей внутри группы — исходный. Никакие поля записи не удаляются.
 
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+
 После общей группировки map меняет только внешний формат наблюдения; группы и все поля событий сохраняются, без второго самописного цикла.
 
-## Вход и ожидаемый результат
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -59,22 +61,46 @@
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 447 | 730 | 22 |
+| LMX функциональный | 241 | 341 | 16 |
+| Perl | 218 | 305 | 12 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 434 | 296 | 281 | 22 |
-| Perl | 305 | 218 | 218 | 12 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
+## LMX — процедурный
 
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
+```lmx
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        FxSeqInfo\get(items)
+        @[]: out []
+        int: i 0
+        while: i < length(items)
+            @: held FxSeqRead\read(items; i)
+            @: event \held
+            int: key event\kind
+            int: j 0
+            while: j < length(out) && \out[j]\[0] != key
+                j += 1
+            if: j = length(out)
+                @: group (copy(()))
+                FxSeqPush\append(out; ((key; group) record))
+            @: group \out[j]\[1]
+            FxSeqPush\append(group; held)
+            i += 1
+        return: out
+```
 
-## LMX
+[Полный исходник](source/lmx/procedural/P11.lm3). 447 непробельных символов; 22 непустых строк. Все объявления и Throws включены.
 
-[Исходник](source/lmx/P11.lm3).
+## LMX — функциональный
 
 ```lmx
 Key:
@@ -82,13 +108,6 @@ Key:
     return: int
     get:
         return: event\kind
-
-Same:
-    int: first
-    int: second
-    return: int
-    test:
-        return: first = second
 
 GroupRow:
     FxGroup@: group
@@ -100,13 +119,15 @@ Example:
     @: items
     return: @
     run:
-        throws: copy(FxThrows\traversal) SequenceElement
-        return: map(groupBy(items; Key\get; Same\test); GroupRow\row)
+        throws: copy(FxMap\map\throws) copy(FxGroupBy\groupBy\throws)
+        return: map(groupBy(items; Key\get); GroupRow\row)
 ```
+
+[Полный исходник](source/lmx/P11.lm3). 241 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
-[Исходник](source/perl/P11.pl).
+[Полный исходник](source/perl/P11.pl).
 
 ```perl
 use strict;
@@ -123,16 +144,16 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - groupBy: [PI04](library_comparisons/PI04_comparision.md)
 - map: [PI01](library_comparisons/PI01_comparision.md)
 
-Штатные средства Perl: hash autovivification, CORE::push, CORE::map.
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

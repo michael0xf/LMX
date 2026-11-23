@@ -1,6 +1,6 @@
 # S21. Условие и HANDLER-CASE
 
-Полная пара в указанном ниже договоре.
+Полное сравнение на указанном домене.
 
 ## Общий договор
 
@@ -31,18 +31,17 @@
 ]
 ```
 
-## Размер основного варианта
+## Размер полных вариантов
 
-| Источник | Полный, без пробельных | Без сложного Throws | Все символы | Непустые строки |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 187 | 187 | 307 | 15 |
-| Common Lisp / SBCL | 178 | — | 214 | 7 |
+| Источник | Без пробельных | Все символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX — процедурный | 187 | 307 | 15 |
+| LMX — функциональный | 352 | 521 | 24 |
+| Common Lisp / SBCL | 178 | 214 | 7 |
 
-Учитывается полный основной листинг. Тестовый стенд и отдельные реализации ядра в него не входят; их файлы и размеры приведены отдельно.
+Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
-## LMX
-
-[Исходник](source/lmx/S21.lm3).
+## LMX — процедурный
 
 ```lmx
 Checked:
@@ -63,9 +62,45 @@ Example:
             return: 99
 ```
 
+[Полный исходник](source/lmx/procedural/S21.lm3). 187 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Checked:
+    int: value
+    return: int
+    checked:
+        throws: InputFailure
+        if: value < 0
+            throw: InputFailure()
+        return: value * 2
+
+ResultValue:
+    int: value
+    return: int
+    use:
+        return: value
+
+FailureValue:
+    @: reason
+    return: int
+    use:
+        return: 99
+
+Example:
+    int: value
+    return: int
+    run:
+        throws: copy(attempt\throws) copy(foldResult\throws)
+        return: \(foldResult (attempt Checked\checked (value)) FailureValue\use ResultValue\use)
+```
+
+[Полный исходник](source/lmx/S21.lm3). 352 непробельных символов; 24 непустых строк. Все объявления и Throws включены.
+
 ## Common Lisp / SBCL
 
-[Исходник](source/common-lisp/S21.lisp).
+[Полный исходник](source/common-lisp/S21.lisp).
 
 ```common-lisp
 (define-condition input-failure (error) ())
@@ -79,23 +114,23 @@ Example:
     (input-failure () 99)))
 ```
 
-## Почему эти варианты сопоставимы
+## Соответствие стилей договору
 
-Исходный полный вариант; нормы и конечные эффекты проверены.
+Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
 
 Перехватывается один явно объявленный типизированный выход. Нет catch-all и нет притязания на возобновляемые condition/restart Common Lisp.
 
-Средства Common Lisp/SBCL: `CL:DEFINE-CONDITION`, `CL:HANDLER-CASE`, `CL:ERROR`.
+## Общие операции и реализации
 
-## Реализации используемых функций
+- `attempt`: [тело ядра](../../LMX_Fn_Receivers/src/coreStandardObjects.lmx).
 
-Основной листинг использует базовые средства языка и полностью приведённые прикладные определения.
+- `foldResult`: [тело ядра](../../LMX_Fn_Receivers/src/coreStandardObjects.lmx).
 
-Common Lisp-клиент не загружает сравнительные reference-реализации.
+Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). LMX: **NOT_RUN**; структурная проверка текста не доказывает исполнение.
+SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
 
 ## Первичные источники
 

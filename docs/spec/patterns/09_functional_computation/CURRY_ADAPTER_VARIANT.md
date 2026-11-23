@@ -1,23 +1,19 @@
-# Curry: дополнительный общий механизм рядом с примером 085
+# Curry: общая реализация функционального клиента085
+Процедурный клиент полностью показывает сохранённые окружения; функциональный строит две независимые ветви общего curry. Оба клиента считаются полностью и сравниваются с теми же неизменёнными Haskell/Scala программами. Одно ядро обслуживает функциональную форму; второй реализации curry ради стиля нет.
+## Полные клиенты
+| Стиль | Символы | Строки |
+| --- | ---: | ---: |
+| [procedural](examples/lmx/procedural/085_currying.lm3) | 493 | 31 |
+| [functional](examples/lmx/085_currying.lm3) | 244 | 15 |
 
-Это исходники того же текущего ядра, а не ещё одна версия библиотеки. Клиент 085 выбирает две независимые ветви одного `curry(Addition\apply)` вместо двух `partial`; корректный partial-вариант сохранён рядом как другой способ построить callable.
+Все объявления и Throws входят в размер. Сохраняются add5/add100, saved=1000, повторное применение add5 и результат6101006.
 
-## Сценарий и граница сравнения
-
-Сохраняются add5, add100, переменная saved=1000, повторный вызов add5 и весь результат 6101006. Только способ построения двух closures заменён на общий поэтапный adapter. Haskell использует собственное каррированное применение, Scala — Function2.curried. Самописные generic-компоненты 099 показаны отдельно и не импортируются в этих клиентах; дополнительная универсальность LMX не объявляется тождественной по реализации.
-
-| Допустимый LMX-клиент | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| [core_curry](examples/lmx/085_currying.lm3) | 236 | 15 | 223 |
-| [core](examples/lmx/variants/085_currying_core.lm3) | 252 | 14 | 239 |
-
-## Полные дополнительные тела
-
-Общие policy, builder, capture и runtime уже приведены в [реестре](IMPLEMENTATION_DEPENDENCIES.md) и [пакете ресиверов](../LMX_Fn_Receivers/ADAPTER_IMPLEMENTATION.md). Ниже показаны все собственные тела curry. Они извлекаются непосредственно из действующего source, а не сокращаются до необъяснённого native вызова.
+## Полные общие тела
+Общие policy, builder, capture и runtime указаны в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Ниже извлечены точные тела того же ядра.
 
 ### FxCurryState
 
-[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx).
+[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx)
 
 ```lmx
 FxCurryState:
@@ -29,7 +25,7 @@ FxCurryState:
 
 ### FxLambdaMiddleEngine
 
-[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx).
+[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx)
 
 ```lmx
 FxLambdaMiddleEngine:
@@ -48,7 +44,7 @@ FxLambdaMiddleEngine:
 
 ### FxLambdaStages
 
-[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx).
+[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx)
 
 ```lmx
 FxLambdaStages:
@@ -87,7 +83,7 @@ FxLambdaStages:
 
 ### FxLambda
 
-[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx).
+[Источник](../LMX_Fn_Receivers/src/generic_functions.lmx)
 
 ```lmx
 FxLambda:
@@ -99,21 +95,18 @@ FxLambda:
         return: FxLambdaStages\build(operation; info; (copy(())))
 ```
 
-## Стоимость общих зависимостей
+## Полная стоимость зависимостей
 
-Полное транзитивное множество curry: **13482** непробельных символов / **690** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **1791** символов / **73** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.
+Уникальное транзитивное множество curry: **16906** символов. Дополнительно к partial из099: **1694** символов. Общие определения считаются один раз; стоимость native FxKernel и runtime не объявляется нулевой.
 
-| Дополнительное определение | Источник | Символы | Строки | Без сложного Throws |
-| --- | --- | ---: | ---: | ---: |
-| `FxCurryState` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 53 | 5 | 53 |
-| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 9 | 141 |
-| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 178 | 7 | 178 |
-| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 369 | 12 | 369 |
-| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 920 | 32 | 920 |
-| `FxOne` | [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx) | 97 | 8 | 97 |
-
-Дополнительный подсчёт без сложного Throws: полное множество 12383, дополнительно к partial 1758. Ссылки и первый аргумент банков учтены; реальные контракты не сокращаются.
+| Дополнительное определение | Источник | Символы | Строки |
+| --- | --- | ---: | ---: |
+| `FxCurryState` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 53 | 5 |
+| `FxFrameRead` | [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx) | 174 | 9 |
+| `FxLambda` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 178 | 7 |
+| `FxLambdaMiddleEngine` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 369 | 12 |
+| `FxLambdaStages` | [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) | 920 | 32 |
 
 ## Проверка
 
-Ни один LMX runtime здесь не запускался. Источник требует пяти обычных call-phase hooks, указанных в KERNEL_REQUIREMENTS, и полного A/B acceptance. Счётчики символов — воспроизводимая проверка публикации, не проверка семантики или скорости. Машинный реестр: [curry_dependencies.json](curry_dependencies.json). Для обновления после source changes: `python3 tools/curry_appendix.py`.
+Это проверка наличия исходников и их полного размера. Runtime LMX: NOT_RUN. [Машинный реестр](curry_dependencies.json).

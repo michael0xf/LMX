@@ -1,13 +1,13 @@
 # L2/L3 developer instruction
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
 > documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
 > order of 2026-11-21); only link targets were adapted to repository paths.
-> The mandatory build order of this repository is [to_fable2_fast_build.md](../../to_fable2_fast_build.md); the
-> implementation state is recorded in [READ.ME](../../READ.ME), the [plan](../../next_core_tasks_v3.md) and the
-> [current pipeline](../../steps/current.md).
+> The mandatory build order of this repository is to_fable2_fast_build.md (historical repository reference `../../to_fable2_fast_build.md`); the
+> implementation state is recorded in READ.ME (historical repository reference `../../READ.ME`), the [current implementation contract](kernel-implementation.en.md) and the
+> current pipeline (historical repository reference `../../steps/current.md`).
 
 This instruction accompanies the standalone English documentation packet. It
 applies the [semantics](LMX_semantics.en.md), [grammar](LMX_grammar.en.md),
@@ -21,6 +21,16 @@ rebuilding a Russian counterpart, or performing a bootstrap. Runtime acceptance
 requires its own measured evidence; this document does not report such a run.
 
 ## 1. Work from the accepted contract
+
+Integrate both source forms through existing consumers, not another parser.
+All receivers already reach Expression structurally. Preserve canonical names,
+complete actual roles, source activation and full throws. The permanent
+[generic-operation](GENERIC_OPERATIONS.md),
+[equality](GENERIC_EQUALITY.md),
+[monadic](MONADIC_OPERATIONS.md) and
+[form-lowering](OPERATION_FORMS.md) chapters supply the complete code designs
+and acceptance matrices. Validate reached execution separately from source
+parsing, reference-model checks and documentation consistency.
 
 Before an implementation change, identify the exact affected source, the current
 contract, the existing shared worker, and the observable result to establish.
@@ -115,7 +125,7 @@ normal single-level dedent or a permitted terminal return already expresses the
 intended close.
 
 `end: name` has its own purpose (the author's clarification of 2026-11-23,
-[journal](../../LMX_blog/2026-11-23.md#end-purpose)): it closes a long function that
+journal (historical repository reference `../../LMX_blog/2026-11-23.md#end-purpose`)): it closes a long function that
 does not end with `return` and, where it helps the reader, a long nested
 function even when its last statement is `return`. After a short function, or
 after a top-level function that ends with `return`, it is redundant.
@@ -182,10 +192,22 @@ calling. Merely placing a reference under a new container does not reparent it.
 The call site, native implementation address, or service dispatcher does not
 replace the selected occurrence's lexical context.
 
-R0 has no DATA and no user actual arguments. Do not synthesize self-DATA, an empty
-DATA Structure, or an artificial data field. Host/runtime launch parameters are
-not user signature arguments. Its native C method holds the R0 graph pointer
-locally, including when the invoked program operations use the interpreter.
+Startup always starts R0 as an ordinary L3 Thread beneath the stub parent and
+executes its CODE from the beginning. R0 has no DATA and no user actual arguments.
+Do not synthesize self-DATA, an empty DATA Structure, or an artificial data field.
+Internal Thread/runtime launch parameters are not user signature arguments. Its
+native C method holds the R0 graph pointer locally, including when the invoked
+program operations use the interpreter. The stub Thread parent is not a source
+DATA parent.
+
+Use the same activation preparation as for other CODE, with an optional real
+DATA parent. If DATA is absent, skip only input reception; preserve ordinary
+CODE-local namespace preparation, reached declarations, arbitrary calls,
+dispatch, cleanup, and exits. A named case or handler is called through those
+ordinary mechanisms after root startup, never selected in place of R0. Arguments
+owned by the stub parent can be sent to the running root by an ordinary message;
+they do not become `call(R0, args)` or hidden formals. See the
+[common activation sketch](kernel-implementation.en.md#root-activation).
 
 `return` in DATA describes a result and assigns nothing. In CODE it is the return
 receiver. Ordinary Structure calls and explicit `call` may return that described
@@ -222,7 +244,7 @@ tree. If the template contains a method subtree, that subtree is part of the
 requirement. Use a minimal template when only a minimal structural interface
 is intended.
 
-The fn branch of the same `implements` compares the count and ordered types
+The fn branch of the same `satisfies` compares the count and ordered types
 of explicit parameters and the presence/type of result. Parameter names,
 initializer values, and implementation trees are not fn identity keys.
 No separate signature-validator subsystem is introduced.
@@ -529,16 +551,16 @@ arena record headers.
 
 `sys\check` and `sys\checkL3` return diagnostics. `sys\translate` returns L1 and
 errors. These operations do not run the application or `test`. `sys\compile`
-performs clean-graph preparation, the required build/test phase, and the selected
-translation/compile/registration operation. Build tests run through the ordinary
-receiving contracts after the clean graph and before C generation; they may call
+performs clean-graph preparation, translation to L1/C, the required build/test phase, and then, only if the tests pass, machine
+compilation and registration. Build tests run in interpretation mode on the graph being accepted through the ordinary
+receiving contracts, after the clean graph and L1/C generation and before machine compilation; they may call
 checkers/candidates but do not launch the graph's application entry or recursively
 discover all nested DATA tests.
 
 Keep admission stages distinct. Construction establishes known interface facts
 without speculative user/default/test execution. Reached interpreter calls use
-standard `implements`, with admission facts scoped to their operation/reception; prepared native calls have
-no automatic runtime `implements`. Explicit `implements` is executed in either
+standard `satisfies`, with admission facts scoped to their operation/reception; prepared native calls have
+no automatic runtime `satisfies`. Explicit `satisfies` is executed in either
 path. Required checks at an actual reception and actual-value conversion checks
 remain in force, without a blanket rerun after every write.
 

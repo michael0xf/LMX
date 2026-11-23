@@ -5,6 +5,34 @@ Example:
     @: values
     return: @
     run:
-        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        @: removed splice(items; begin; end; values)
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws) copy(FxSeqBounds\count\throws) copy(FxSeqSize\sum\throws) copy(FxKernel\arrayWrite\throws) copy(sys\resize\throws)
+        int: removedCount FxSeqBounds\count(items; begin; end)
+        @: info FxSeqInfo\get(items)
+        FxSeqInfo\get(values)
+        int: oldSize length(items)
+        int: newSize FxSeqSize\sum(oldSize - removedCount; length(values); info\maxLength)
+        @: removed FxSeqAllocate\make(info\arrayType; removedCount)
+        @: staged FxSeqAllocate\make(info\arrayType; newSize)
+        int: i 0
+        while: i < removedCount
+            FxSeqStore\write(removed; i; FxSeqRead\read(items; begin + i))
+            i += 1
+        i := 0
+        while: i < newSize
+            @: value
+            if: i < begin
+                value := FxSeqRead\read(items; i)
+            else:
+                if: i - begin < length(values)
+                    value := FxSeqRead\read(values; i - begin)
+                else:
+                    value := FxSeqRead\read(items; end + (i - begin - length(values)))
+            ---
+            FxSeqStore\write(staged; i; value)
+            i += 1
+        sys\resize(items; newSize)
+        i := 0
+        while: i < newSize
+            FxKernel\arrayWrite(items; i; FxSeqRead\read(staged; i))
+            i += 1
         return: (items; removed)

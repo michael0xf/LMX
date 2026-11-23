@@ -37,9 +37,7 @@
             "characters": 216,
             "nonblank_lines": 18,
             "utf8_bytes": 397,
-            "sha256": "e4dde05cdfb0feecad8d956aea8098f3f17745a292b9937e96f9d3365a92ee90",
-            "without_complex_throws_characters": 216,
-            "complex_throws_removed_characters": 0
+            "sha256": "e4dde05cdfb0feecad8d956aea8098f3f17745a292b9937e96f9d3365a92ee90"
           }
         },
         {
@@ -88,26 +86,24 @@
       "scenario_en": "An idempotent read returns 503,503,200. Allow three attempts and delays of 1 and 2 units.",
       "expected_ru": "Итог 200; три обращения и две задержки. Статус 400 прекращает повторы сразу.",
       "expected_en": "Final status 200; three calls and two delays. Status 400 stops retries immediately.",
-      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.",
-      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit.",
-      "comparison_ru": "Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/039_retry_async_comparision.md).",
-      "comparison_en": "The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.",
+      "lmx_notes_ru": "Общий retry принимает callback, предикат повторения, предел и необязательную задержку. Http503 задаёт только доменное условие status = 503; Wait переводит номер завершённой попытки в прежние интервалы 1, 2. Проход, сохранение фактического результата и остановка находятся в ядре. request/read/delay не выполняются при передаче ссылок. Синхронный provider вызывается в отдельном Message и не ждёт собственного mailbox. Это тот же профиль идемпотентного HTTP-чтения, не новая гарантия таймера или scheduler.",
+      "lmx_notes_en": "Generic retry takes an operation, a retry predicate, a limit and an optional delay. Http503 supplies only status = 503; Wait maps the completed attempt number to the original delays 1 and 2. Traversal, exact result handling and termination belong to the core. Passing callbacks does not execute them. The synchronous provider operates in a separate Message without waiting on its own mailbox; the HTTP idempotent-read boundary is unchanged.",
+      "comparison_ru": "Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/039_retry_async_comparision.md). Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "Дедлайн, jitter, Retry-After и защита неидемпотентных операций не реализованы. Повтор после timeout может дублировать уже выполненный эффект.",
       "limits_en": "Deadline, jitter, Retry-After and non-idempotent-operation protection are outside this core. Retrying after timeout may duplicate an already completed effect.",
       "scope": "protocol",
       "listings": [
         {
           "language": "LMX",
-          "code": "RetryMessage:\n    @: request\n    @: delay\n    return: int\n    run:\n        throws: Attempts\n        import: RetryLibrary\n        return: request retry 3 delay\n",
-          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.",
-          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit.",
+          "code": "RetryMessage:\n    @: request\n    @: delay\n    return: int\n    Wait:\n        int: attempt\n        pause:\n            delay(1 << (attempt - 1))\n    run:\n        throws: copy(FxThrows\\call) FxArity FxPredicate FxRecordArity ReceiverIndex\n        return: retry(request; Http503\\retryOn; 3; delay := Wait\\pause)\n",
+          "notes_ru": "Общий retry принимает callback, предикат повторения, предел и необязательную задержку. Http503 задаёт только доменное условие status = 503; Wait переводит номер завершённой попытки в прежние интервалы 1, 2. Проход, сохранение фактического результата и остановка находятся в ядре. request/read/delay не выполняются при передаче ссылок. Синхронный provider вызывается в отдельном Message и не ждёт собственного mailbox. Это тот же профиль идемпотентного HTTP-чтения, не новая гарантия таймера или scheduler.",
+          "notes_en": "Generic retry takes an operation, a retry predicate, a limit and an optional delay. Http503 supplies only status = 503; Wait maps the completed attempt number to the original delays 1 and 2. Traversal, exact result handling and termination belong to the core. Passing callbacks does not execute them. The synchronous provider operates in a separate Message without waiting on its own mailbox; the HTTP idempotent-read boundary is unchanged.",
           "metrics": {
-            "characters": 102,
-            "nonblank_lines": 8,
-            "utf8_bytes": 159,
-            "sha256": "85e04c1014099d9df2c5f11ff090cd70a3581ee109a86010cdc1b33349f572bb",
-            "without_complex_throws_characters": 102,
-            "complex_throws_removed_characters": 0
+            "characters": 213,
+            "nonblank_lines": 11,
+            "utf8_bytes": 307,
+            "sha256": "237a93d37397fbdfba047ed73f91c8c38fe86c788f8f78209039950d62565726"
           }
         },
         {
@@ -152,7 +148,8 @@
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
       "comparison_level": "shared_implementation_client",
-      "extended_comparison": "extended_comparisons/039_retry_async_comparision.md"
+      "extended_comparison": "extended_comparisons/039_retry_async_comparision.md",
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 97,
@@ -164,32 +161,30 @@
         39,
         45
       ],
-      "summary_ru": "Собственная общая реализация ограниченного повтора HTTP 503 для клиентов Retry и Ambassador.",
-      "summary_en": "A shared application implementation of bounded HTTP-503 retry for the Retry and Ambassador clients.",
+      "summary_ru": "Общий retry сохраняет фактический результат и использует явные retryOn/delay/limit.",
+      "summary_en": "Generic retry preserves the actual result and uses explicit retryOn/delay/limit policies.",
       "scenario_ru": "Первый клиент задаёт 3 попытки и записывающий delay: request возвращает 503,503,200. Второй клиент задаёт 2 попытки без delay: request возвращает 503,200. Также проверить немедленное завершение при 400 и отсутствие повторов при лимите 1.",
       "scenario_en": "The first client chooses 3 attempts and a recording delay: request returns 503,503,200. The second chooses 2 attempts without delay: request returns 503,200. Also check immediate completion on 400 and no retry when the limit is 1.",
       "expected_ru": "Первый клиент получает 200 после 3 вызовов и задержек [1,2]. Второй получает 200 после 2 вызовов без задержек. 400 возвращается после первого вызова; при лимите 1 ответ 503 возвращается без delay. Недопустимое число попыток отвергается до request.",
       "expected_en": "The first client receives 200 after 3 calls and delays [1,2]. The second receives 200 after 2 calls without delays. A 400 returns after one call; limit 1 returns 503 without delay. An invalid attempt limit is rejected before request.",
-      "lmx_notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков. В LMX библиотека копирует предоставленный заголовок sys\\OPERANDS_TEMPLATE без повторного объявления его const-полей. Режим 0 передаёт готовые значения: left ссылается на callable-ссылку request; right содержит ссылку на int limit и необязательную callable-ссылку delay. Проверка длины right явная. \\left и \\right[i] читают готовые значения; последующие request()/wait(pause) выполняют вызовы. sys\\eval и режим 1 не нужны. Операнд использует приоритет + из шаблона, конкретный return:int объявлен один раз.",
-      "lmx_notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers. LMX copies the supplied sys\\OPERANDS_TEMPLATE header without redeclaring its const properties. Mode 0 supplies prepared values: left refers to the request callable reference; right contains a reference to int limit and optionally a delay callable reference. The right-length check is explicit. \\left and \\right[i] read prepared values; subsequent request()/wait(pause) perform calls. sys\\eval and mode 1 are unnecessary. The operand retains the template addition precedence and declares its concrete return:int once.",
+      "lmx_notes_ru": "Точное текущее определение FxRetryValue извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся. Http503 — только профиль retryOn(status; attempt), а не второй цикл повторения.",
+      "lmx_notes_en": "The exact current FxRetryValue definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed. Http503 is only the retryOn(status; attempt) profile, not a second retry loop.",
       "comparison_ru": "Сравниваются полные собственные реализации одного API, а не импортированный retry с одной стороны и ручной цикл с другой. LMX использует обычный операнд, Go — экспортированную функцию пакета, C# — статический метод. Для двух клиентов библиотека поставляется один раз. Размер клиентов и размер реализации показываются отдельно; их сумма не объявляется меньше исходных автономных листингов. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/097_retry_library_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
       "comparison_en": "These are complete application implementations of the same API, not an imported retry on one side versus a handwritten loop on another. LMX uses an ordinary operand, Go an exported package function, and C# a static method. The two clients share one library implementation. Client and implementation sizes are reported separately; their sum is not claimed to be smaller than the original standalone listings. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
-      "limits_ru": "Это последовательная retry-политика над завершёнными sync callbacks. Нет async post/answer автомата, jitter, общего дедлайна, Retry-After, автоматической идемпотентности, исключений как статусов или устойчивого журнала попыток. Повтор эффекта после неопределённого сетевого исхода остаётся ответственностью приложения.",
-      "limits_en": "This is a sequential retry policy over completed synchronous callbacks. It provides no asynchronous post/answer state machine, jitter, total deadline, Retry-After, automatic idempotency, exception-to-status conversion or durable attempt log. Retrying an effect after an uncertain network outcome remains application policy.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "RetryLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    retry:\n        throws: Attempts\n        if: length(right) < 1 || length(right) > 2\n            throw: Attempts()\n        int: limit \\right[0]\n        if: limit < 1 || limit > 31\n            throw: Attempts()\n        @: request \\left\n        int: attempt 0\n        int: pause 1\n        while: attempt < limit\n            int: status request()\n            if: status != 503\n                return: status\n            attempt += 1\n            if: attempt < limit && length(right) = 2\n                @: wait \\right[1]\n                wait(pause)\n                pause *= 2\n        ---\n        return: 503\n",
-          "notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков. В LMX библиотека копирует предоставленный заголовок sys\\OPERANDS_TEMPLATE без повторного объявления его const-полей. Режим 0 передаёт готовые значения: left ссылается на callable-ссылку request; right содержит ссылку на int limit и необязательную callable-ссылку delay. Проверка длины right явная. \\left и \\right[i] читают готовые значения; последующие request()/wait(pause) выполняют вызовы. sys\\eval и режим 1 не нужны. Операнд использует приоритет + из шаблона, конкретный return:int объявлен один раз.",
-          "notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers. LMX copies the supplied sys\\OPERANDS_TEMPLATE header without redeclaring its const properties. Mode 0 supplies prepared values: left refers to the request callable reference; right contains a reference to int limit and optionally a delay callable reference. The right-length check is explicit. \\left and \\right[i] read prepared values; subsequent request()/wait(pause) perform calls. sys\\eval and mode 1 are unnecessary. The operand retains the template addition precedence and declares its concrete return:int once.",
+          "code": "FxRetryValue:\n    private:\n        @: operation\n        @: retryOn\n        int: limit\n        @: delay 0\n        @: arguments ()\n    required: operation retryOn limit\n    return: @\n    retry:\n        throws: copy(FxThrows\\call) FxArity FxPredicate FxRecordArity ReceiverIndex\n        if: limit < 1\n            throw: FxArity()\n        private: int: attempt 1\n        while: 1\n            private: @: result FxApply\\apply(operation; arguments)\n            if: attempt = limit\n                return: result\n            private: @: retryArgs FxTwo\\make(result; (attempt FxRecordOperands\\record))\n            if: FxSeqPredicate\\truth(FxApply\\apply(retryOn; retryArgs)) = 0\n                return: result\n            if: delay != 0\n                FxApply\\apply(delay; FxOne\\make((attempt FxRecordOperands\\record)))\n            attempt += 1\n\nHttp503:\n    int: status\n    int: attempt\n    return: int\n    retryOn:\n        return: status = 503\n",
+          "notes_ru": "Точное текущее определение FxRetryValue извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся. Http503 — только профиль retryOn(status; attempt), а не второй цикл повторения.",
+          "notes_en": "The exact current FxRetryValue definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed. Http503 is only the retryOn(status; attempt) profile, not a second retry loop.",
           "metrics": {
-            "characters": 366,
-            "nonblank_lines": 24,
-            "utf8_bytes": 668,
-            "sha256": "b96013057669cd161137067b9a6fb326cd1ad31f7aa48f881d7be21ff1c0df1c",
-            "without_complex_throws_characters": 366,
-            "complex_throws_removed_characters": 0
+            "characters": 608,
+            "nonblank_lines": 30,
+            "utf8_bytes": 938,
+            "sha256": "47cfe244671051d86cbb72ffbb74423b8d26d18a56ab8db919ca9b37284d2359"
           }
         },
         {
@@ -230,7 +225,13 @@
         "source": "22-Nov-2026-3",
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
-      "extended_comparison": "extended_comparisons/097_retry_library_implementation_generalized_comparision.md"
+      "extended_comparison": "extended_comparisons/097_retry_library_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreGenericOperations.lmx",
+          "definition": "FxRetryValue"
+        }
+      ]
     },
     {
       "id": 40,
@@ -259,9 +260,7 @@
             "characters": 113,
             "nonblank_lines": 11,
             "utf8_bytes": 205,
-            "sha256": "e7dd949e54f71be367ead41264fbcb1916c86ce67dec3335d21a4f8c63a517af",
-            "without_complex_throws_characters": 113,
-            "complex_throws_removed_characters": 0
+            "sha256": "e7dd949e54f71be367ead41264fbcb1916c86ce67dec3335d21a4f8c63a517af"
           }
         },
         {
@@ -327,9 +326,7 @@
             "characters": 189,
             "nonblank_lines": 10,
             "utf8_bytes": 277,
-            "sha256": "61eef87b7c9c7b71d69639899d39ba2a6bb4e982ce8dea11c8fefd5937b34f97",
-            "without_complex_throws_characters": 189,
-            "complex_throws_removed_characters": 0
+            "sha256": "61eef87b7c9c7b71d69639899d39ba2a6bb4e982ce8dea11c8fefd5937b34f97"
           }
         },
         {
@@ -395,9 +392,7 @@
             "characters": 146,
             "nonblank_lines": 10,
             "utf8_bytes": 205,
-            "sha256": "8cf173450295adca912070b8c9419a0229a8c3e7cf584e2ea56dc8cdd2a27262",
-            "without_complex_throws_characters": 146,
-            "complex_throws_removed_characters": 0
+            "sha256": "8cf173450295adca912070b8c9419a0229a8c3e7cf584e2ea56dc8cdd2a27262"
           }
         },
         {
@@ -463,9 +458,7 @@
             "characters": 132,
             "nonblank_lines": 12,
             "utf8_bytes": 219,
-            "sha256": "1134019e9983cce06c9d3daf8cd726554553d067a8f4af751cba851072b0d7e1",
-            "without_complex_throws_characters": 132,
-            "complex_throws_removed_characters": 0
+            "sha256": "1134019e9983cce06c9d3daf8cd726554553d067a8f4af751cba851072b0d7e1"
           }
         },
         {
@@ -514,26 +507,24 @@
       "scenario_en": "The client requests a catalog. The ambassador calls its configured endpoint: first status 503, then 200.",
       "expected_ru": "Клиент получает 200; внешний провайдер вызван дважды, с одним и тем же endpoint/route.",
       "expected_en": "The client receives 200; the remote provider is called twice with the same endpoint and route.",
-      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход. Хост заранее устанавливает готовый provider в AmbassadorMessage\\http. read обращается к нему через node\\http, поэтому вызов callback из RetryLibrary не зависит от временного http в активации catalog.",
-      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit. The host installs the prepared provider in AmbassadorMessage\\http beforehand. read uses node\\http, so calling the callback from RetryLibrary does not depend on a temporary http in the catalog activation.",
-      "comparison_ru": "Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/045_ambassador_async_comparision.md).",
-      "comparison_en": "The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately.",
+      "lmx_notes_ru": "retry использует общий алгоритм с Http503 как явной политикой и двумя попытками. Endpoint и route остаются в read; отсутствие delay передано обычным пропуском аргумента. read получает установленный provider через node\\http, поэтому промежуточные вызовы не подменяют его. Результат сохраняет фактический int-профиль клиента. Асинхронный retryPost остаётся другой операцией с Message job и отдельным жизненным циклом.",
+      "lmx_notes_en": "retry uses the common algorithm with an explicit Http503 policy and two attempts. Endpoint and route remain in read; delay is omitted by ordinary argument rules. read accesses the installed provider through node\\http across intermediate calls. The client's actual int result profile is preserved. Asynchronous retryPost remains a different Message job operation.",
+      "comparison_ru": "Синхронный договор 22-Nov: конечные завершённые callbacks, retry только по статусу 503. Все три клиента используют полностью показанный helper 097. Его реализация считается один раз отдельно. Асинхронные retryPost/Polly/backoff примеры 23-Nov сохранены отдельно и не смешиваются с этим договором. [Асинхронная пара](extended_comparisons/045_ambassador_async_comparision.md). Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The synchronous 22-Nov contract retries completed callbacks only on status 503. All clients use the complete helper in 097, counted once separately. The wider asynchronous 23-Nov comparison is retained separately. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
       "limits_ru": "Пример повторяет только безопасное чтение. TLS не реализуется вручную; auth, backoff и метрики — обязательства выбранного провайдера/политики.",
       "limits_en": "Only a safe read is retried. TLS is not hand-implemented; authentication, backoff and metrics belong to the selected provider and policy.",
       "scope": "protocol",
       "listings": [
         {
           "language": "LMX",
-          "code": "AmbassadorMessage:\n    @: http\n    return: int\n    read:\n        return: node\\http\\post(\"https://catalog.example\"; \"/catalog/read\")\n    catalog:\n        throws: Attempts\n        import: RetryLibrary\n        return: read retry 2\n",
-          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход. Хост заранее устанавливает готовый provider в AmbassadorMessage\\http. read обращается к нему через node\\http, поэтому вызов callback из RetryLibrary не зависит от временного http в активации catalog.",
-          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit. The host installs the prepared provider in AmbassadorMessage\\http beforehand. read uses node\\http, so calling the callback from RetryLibrary does not depend on a temporary http in the catalog activation.",
+          "code": "AmbassadorMessage:\n    @: http\n    return: int\n    read:\n        return: node\\http\\post(\"https://catalog.example\"; \"/catalog/read\")\n    catalog:\n        throws: copy(FxThrows\\call) FxArity FxPredicate FxRecordArity ReceiverIndex\n        return: retry(read; Http503\\retryOn; 2)\n",
+          "notes_ru": "retry использует общий алгоритм с Http503 как явной политикой и двумя попытками. Endpoint и route остаются в read; отсутствие delay передано обычным пропуском аргумента. read получает установленный provider через node\\http, поэтому промежуточные вызовы не подменяют его. Результат сохраняет фактический int-профиль клиента. Асинхронный retryPost остаётся другой операцией с Message job и отдельным жизненным циклом.",
+          "notes_en": "retry uses the common algorithm with an explicit Http503 policy and two attempts. Endpoint and route remain in read; delay is omitted by ordinary argument rules. read accesses the installed provider through node\\http across intermediate calls. The client's actual int result profile is preserved. Asynchronous retryPost remains a different Message job operation.",
           "metrics": {
-            "characters": 162,
-            "nonblank_lines": 9,
-            "utf8_bytes": 228,
-            "sha256": "40227fd4f3e163e811fee3d3e2b07240c8272a0e9cacecfc50b905ea2892aaa0",
-            "without_complex_throws_characters": 162,
-            "complex_throws_removed_characters": 0
+            "characters": 217,
+            "nonblank_lines": 8,
+            "utf8_bytes": 277,
+            "sha256": "3e0aff5e98a993566d1d50b7e0fabe3bfbeea993f1e10d7cbbca3e9b72ddf276"
           }
         },
         {
@@ -578,7 +569,8 @@
         "reason": "Restore the original finite contract before choosing a shorter implementation."
       },
       "comparison_level": "shared_implementation_client",
-      "extended_comparison": "extended_comparisons/045_ambassador_async_comparision.md"
+      "extended_comparison": "extended_comparisons/045_ambassador_async_comparision.md",
+      "integration_status": "LMX source updated; runtime NOT_RUN"
     },
     {
       "id": 49,
@@ -607,9 +599,7 @@
             "characters": 182,
             "nonblank_lines": 15,
             "utf8_bytes": 307,
-            "sha256": "cb8885c8492d4abc5ce2273cf7a973dfd8eaebba7fb44f84f3ac654dfc98fbee",
-            "without_complex_throws_characters": 182,
-            "complex_throws_removed_characters": 0
+            "sha256": "cb8885c8492d4abc5ce2273cf7a973dfd8eaebba7fb44f84f3ac654dfc98fbee"
           }
         },
         {
@@ -675,9 +665,7 @@
             "characters": 179,
             "nonblank_lines": 14,
             "utf8_bytes": 313,
-            "sha256": "127480cec48e8e52851e8c0246b5b30564dcce0d610b0cf882ae98e59e84600c",
-            "without_complex_throws_characters": 179,
-            "complex_throws_removed_characters": 0
+            "sha256": "127480cec48e8e52851e8c0246b5b30564dcce0d610b0cf882ae98e59e84600c"
           }
         },
         {
@@ -743,9 +731,7 @@
             "characters": 113,
             "nonblank_lines": 10,
             "utf8_bytes": 191,
-            "sha256": "cdad32d196acc2dda240138c1fd1629c7b0da93a14ef8f944d63102016d36494",
-            "without_complex_throws_characters": 113,
-            "complex_throws_removed_characters": 0
+            "sha256": "cdad32d196acc2dda240138c1fd1629c7b0da93a14ef8f944d63102016d36494"
           }
         },
         {
@@ -811,9 +797,7 @@
             "characters": 242,
             "nonblank_lines": 24,
             "utf8_bytes": 449,
-            "sha256": "0602e617d4d80e2d0318acdb2b3de43339c836509f6c11242e52ff5c37325a26",
-            "without_complex_throws_characters": 242,
-            "complex_throws_removed_characters": 0
+            "sha256": "0602e617d4d80e2d0318acdb2b3de43339c836509f6c11242e52ff5c37325a26"
           }
         },
         {
@@ -881,9 +865,7 @@
             "characters": 96,
             "nonblank_lines": 9,
             "utf8_bytes": 165,
-            "sha256": "e513405649f09c0f54005ec9012ac84b6ed6497d3aaffbf2698527bac90bd9df",
-            "without_complex_throws_characters": 96,
-            "complex_throws_removed_characters": 0
+            "sha256": "e513405649f09c0f54005ec9012ac84b6ed6497d3aaffbf2698527bac90bd9df"
           }
         },
         {
@@ -949,9 +931,7 @@
             "characters": 187,
             "nonblank_lines": 17,
             "utf8_bytes": 341,
-            "sha256": "f9480b2a8072d766672c7027894b332ae56da6390ccdd16f5302837737bc182e",
-            "without_complex_throws_characters": 187,
-            "complex_throws_removed_characters": 0
+            "sha256": "f9480b2a8072d766672c7027894b332ae56da6390ccdd16f5302837737bc182e"
           }
         },
         {

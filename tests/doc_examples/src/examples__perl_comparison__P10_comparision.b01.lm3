@@ -1,19 +1,18 @@
-Same:
-    int: first
-    int: second
-    return: int
-    test:
-        return: first = second
-
-Frequency:
-    FxGroup@: group
-    return: @
-    row:
-        return: (\group\key; length(group\items))
-
 Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxThrows\traversal) SequenceElement
-        return: map(groupBy(items; identity; Same\test); Frequency\row)
+        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        @[]: out []
+        int: i 0
+        while: i < length(items)
+            int: j 0
+            while: j < length(out) && \out[j]\[0] != items[i]
+                j += 1
+            if: j = length(out)
+                FxSeqPush\append(out; ((items[i]; 0) record))
+            @: row out[j]
+            int: count \row[1]
+            row[1] := ((count + 1) record)
+            i += 1
+        return: out

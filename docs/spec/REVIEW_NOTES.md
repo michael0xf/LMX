@@ -1,6 +1,6 @@
 # Fable review notes — English documentation revision
 
-**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 Date: 2026-11-22.
 
@@ -121,7 +121,7 @@ that representation under an alternative name.
 | Structural versus fn matching | A structural template checks its required tree; positional signature matching checks ordered input types/count and result contract | Semantics, L2, kernel, CORE |
 | Selection | W/E are equal candidates; explicit actuals only; selected mapping is not expanded again | Semantics, L2, guide |
 | Binding | Own actual/default/autofill places; transparent caller place; former own-copy fallback; derived uninit for the specified inline local | Semantics, L2, kernel, CORE |
-| Admission stages | Nonexecuting construction checks; explicit pre-C build tests; interpreted reached-call satisfies; prepared native contract; explicit satisfies in either path | Semantics, guide, kernel, CORE |
+| Admission stages | Nonexecuting construction checks; explicit interpreted build tests (after L1/C generation, before machine compilation); interpreted reached-call satisfies; prepared native contract; explicit satisfies in either path | Semantics, guide, kernel, CORE |
 | Private | Both source and visible lexical receiving place filter implicit dynamic binding; explicit access remains ordinary | Semantics, guide, kernel |
 | Declaration actuals | DATA Structure; ordinary positional reception or explicit outer name := value; internal name is never matched to an input; transmission does not call the declaration | Semantics, guide, kernel |
 | Iterate behavior | Step repeatedly executes the retained declaration; body uses the same receiving item and its original live demo.total place without an extra initializer call | Guide, semantics, coding instruction |
@@ -166,7 +166,7 @@ no absent L1 document is presented as if it were bundled.
 The current rules decide D1 and D2 below without another author decision. P01 was
 resolved by the author's explicit answer recorded below. Ask only if applicable current requirements explicitly conflict;
 identify both clauses and a minimal case with different observable outcomes.
-Superseded prose or an unspecified test-launch profile does not establish such
+Superseded prose or an unspecified fixture receiving context does not establish such
 a conflict.
 
 ### D1. A no-RHS local in an inline nested scope
@@ -186,19 +186,23 @@ derivation recorded in the [control example](LMX_semantics.en.md#inline-declarat
 
 ### D2. Classification of unit-root source forms
 
-The [R0 entry rule](LMX_semantics.en.md#root-entry) preserves R0's own executable declarations and ordinary references
-while removing DATA and user actuals. A selected R0 entry therefore consumes its
-reached records under the common CODE head contracts. Forms supplied as DATA use
-the receiving DATA contract; import/copy/merge always retain CODE arguments.
-There is no need to restore call(C C), an artificial DATA object, or a new node
-meaning to classify these forms.
+The [R0 entry rule](LMX_semantics.en.md#root-entry) starts the root as an ordinary
+L3 Thread beneath the stub parent and executes its CODE from the beginning.
+R0 has no DATA or user actuals. The common activation skips only the absent input
+pass and retains CODE-local declarations, ordinary references, arbitrary calls,
+dispatch, and exits. Reached records follow their ordinary CODE head contracts;
+DATA-consuming arguments retain their ordinary receiving contracts, and
+import/copy/merge always consume CODE arguments. No artificial DATA, implicit
+self-call, or source-role registry is needed.
 
-A fixture must state the host/source entry profile it uses. A fragment supplying
-a DATA description can be prepared in that role and its explicitly named body
-called through the ordinary call path. This does not invent automatic main
-discovery, universal file-root execution, or a call to every declared Structure.
-The absence of a concrete host launcher in this documentation packet is an
-implementation-fixture boundary, not a contradiction in the language rules.
+A named comparison case or test body is an ordinary call after root startup;
+it never replaces R0 as the entry. A harness must describe the ordinary call and
+its receiving context, without converting a listing into an alternative
+DATA-loaded program or selecting a `Main`/service function at startup. If the
+stub parent has arguments, it can deliver them by an ordinary message to the
+running root. Internal graph/Thread launch parameters remain runtime concerns,
+not user actuals. The [common activation sketch](kernel-implementation.en.md#root-activation)
+states the implementation boundary without inventing a new kernel operation.
 
 ### P01. Resolved: code-only uninit and graph-fragment replacement
 

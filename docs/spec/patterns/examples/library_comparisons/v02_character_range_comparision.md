@@ -16,7 +16,7 @@ Complete entry definitions, with no omitted branch:
 
 ```lmx
 FxBetween:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
     const: int: PRIORITY sys\priority("<=")
     return: int
     between:
@@ -29,8 +29,9 @@ FxBetween:
 Complete canonical source files for the entry and its LMX dependencies:
 
 - [coreComparisonExamples.lmx](../../LMX_Fn_Receivers/src/coreComparisonExamples.lmx)
+- [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 
-The reachable roots are: `FxBetween`.
+The reachable roots are: `FxPreparedOperands`, `FxBetween`.
 These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
 The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
@@ -51,13 +52,13 @@ between value (lower, upper) = lower <= value && value <= upper
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: | ---: |
-| LMX entry definitions shown above | 185 | 185 | 9 | 263 |
-| All reachable LMX source roots, counted once | 185 | 185 | 9 | 263 |
-| Complete Haskell comparison module | 315 | — | 6 | 373 |
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: |
+| LMX entry definitions shown above | 182 | 9 | 260 |
+| All reachable LMX source roots, counted once | 250 | 14 | 363 |
+| Complete Haskell comparison module | 315 | 6 | 373 |
 
-The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.
 
 На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 

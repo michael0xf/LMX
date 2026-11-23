@@ -2,7 +2,7 @@
 
 **Status, 2026-11-22:** concrete LMX algorithms are supplied; the five call-phase hooks must be connected to the real kernel. No LMX kernel was included or executed. This is an implementation attempt, not a claim that the runtime acceptance matrix passes.
 
-The authoritative contract is the uploaded [semantics, adapter behavior](../../LMX_semantics.en.md#adapter-behavior), [wrapper behavior](../../LMX_semantics.en.md#adapter-wrappers), [uncurry](../../LMX_semantics.en.md#uncurry-contract), and the current Array/Sequence tasks included with this archive. The separately supplied priority task is reference material: its older names never override the current archive. The implementation uses the current uploaded sources. The exact previous bodies are preserved in reference/pre_adapter_fix_2026-11-22; they are not assembled or counted as current code.
+The authoritative contract is the integrated [semantics, adapter behavior](../../LMX_semantics.en.md#adapter-behavior), [wrapper behavior](../../LMX_semantics.en.md#adapter-wrappers), [uncurry](../../LMX_semantics.en.md#uncurry-contract), and the current [type](../../CORE_SEQUENCES_REGEX.en.md#types) and [sequence](../../CORE_SEQUENCES_REGEX.en.md#sequences) chapters. The implementation uses the current sources in this package. No removed archive attachment or historical implementation directory is needed to build or read it.
 
 ## What changed
 
@@ -16,7 +16,7 @@ The authoritative contract is the uploaded [semantics, adapter behavior](../../L
 | Compare memo keys made only from explicit input presence | Explicitly snapshot all accepted input values before key comparison and body execution |
 | Build every intermediate uncurry stage as `Ti → @` | Inspect and invoke the actual reached callable, retaining its full requirement; stop after the contract's N calls |
 
-All original public receiver names remain. No new parser, public function kind, user-facing frame API or optional library version is introduced. `record` and `signatureTypes` keep their existing `OPERANDS_TEMPLATE` contracts. Ordinary `map`, `apply`, `compose` and the adapters remain ordinary callable operations.
+The adapters use the current canonical public names in [the migration inventory](CANONICAL_MIGRATION.json); retired spellings are not callable aliases. No new parser, public function kind, user-facing frame API or optional library version is introduced. `record` and `to` keep their existing `OPERANDS_TEMPLATE` contracts. Ordinary `map`, `apply`, `compose` and the adapters remain ordinary callable operations.
 
 ## Source layout
 
@@ -117,7 +117,7 @@ Events expose no live frame/cell capability, so retaining a passive event cannot
 
 `recover` passes its handler `(name; payload; originalArgs)` with `originalArgs` in the same observation format. A failure does not force untouched inputs merely to construct the handler's metadata. This is a documented shape change from the earlier always-ready-vector assumption.
 
-`memoize` uses an explicit **value key policy**: before comparison or F's body, read every exposed accepted input in position order and capture a primitive-by-value/reference-by-target snapshot. Defaults and autofill are therefore resolved for the key; this is the operation's own observation. Omission with a default of 0 can compare equal to explicit 0 if `sameKey` says their accepted values are equal, but omission alone never gives a hit. Different autofill values produce different key values. A required failure occurs at selection; an uninitialized value demanded by key construction has its ordinary failure. Keys are fixed before body writes. A failed body is not inserted. Equality and reachable reference data must remain stable for the chosen key contract; hidden mutable dependencies of F are not automatically memoized.
+`memoize` uses an explicit **value key policy**: before comparison or F's body, read every exposed accepted input in position order and capture a primitive-by-value/reference-by-target snapshot. Defaults and autofill are therefore resolved for the key; this is the operation's own observation. Omission with a default of 0 can compare equal to explicit 0 if the shared ordinary/deep Array equality or optional `sameKey` says their accepted values are equal, but omission alone never gives a hit. Different autofill values produce different key values. A required failure occurs at selection; an uninitialized value demanded by key construction has its ordinary failure. Keys are fixed before body writes. A failed body is not inserted. Equality and reachable reference data must remain stable for the chosen key contract; hidden mutable dependencies of F are not automatically memoized.
 
 ## 8. Shared algorithms and other clients
 
@@ -125,7 +125,7 @@ The former independent `FxConcat`, `FxAppend` and `FxSlice` loops now delegate t
 
 ### Other clients and bounds
 
-`compose/pipe` preserve the inner function's input policy and then call the outer function normally. `predicate` preserves source inputs and only changes the result to boolean. `adapter` takes its external input policy from its actual `before` callable; the explicit contract supplies the intended outer type shape and result. Its mapped ready actuals and `after` call remain ordinary calls. `overload` has its expressly supplied own outer DATA policy; it does not steal defaults from its first candidate. Its tests and chosen branch consume selected outer places through the internal `place` transport, subject to the same pending PA01 provider requirement.
+`compose` preserves the inner function's input policy and then calls the outer function normally. Value `pipe` prepares an exact T→R callable through `FxPipeBuild`, applies its stages using one record engine, and returns the actual final R; it is not another composition-building alias. `predicate` preserves source inputs and only changes the result to boolean. `adapter` takes its external input policy from its actual `before` callable; the explicit contract supplies the intended outer type shape and result. Its mapped ready actuals and `after` call remain ordinary calls. `overload` has its expressly supplied own outer DATA policy; it does not steal defaults from its first candidate. Its tests and chosen branch consume selected outer places through the internal `place` transport, subject to the same pending PA01 provider requirement.
 
 `apply` accepts a ready finite Array of actual values, including a dense Array. A callback may have additional optional formals; its own rules govern missing positions. `repeat` and `retryCall` snapshot only the supplied ready actuals. Omitted tail inputs remain omitted on each fresh attempt and keep their source defaults. The snapshot does not become an eager execution of every possible target default.
 
@@ -136,3 +136,7 @@ Compilation remains explicit. Newly built owner/DATA/CODE does not borrow an old
 [ADAPTER_ACCEPTANCE.md](tests/ADAPTER_ACCEPTANCE.md) links the current specification's A01–A20/B01–B11 observations to the supplied fixture source and future kernel runs. [adapter_acceptance.json](tests/adapter_acceptance.json) records every case as **not run** in I→I, I→N, N→I and N→N. [adapter_semantics.lmx](tests/adapter_semantics.lmx) supplies concrete probes for defaults, demand, dependent prefix, private/autofill, once/trace/guard, exact stage models, final callable and effect order.
 
 The remaining work is to connect and test the five phase hooks, generated input-policy preparation, the PA01 distinction between internal places and actual declaration Structures, result lifetime and native lowering against the real kernel. Text checks and finite effect bookkeeping do not establish those properties. The current sources remove the earlier eager vector and coerced-stage algorithms; only real execution can establish that their integration satisfies all required observations.
+
+## Canonical form publication
+
+[PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md) specifies the existing actor/translator hook for adaptive whole-value constructors, semantic overload families, TYPE roles and exact pipeline/retry results. It runs before default admission where capture is required. Ordinary and operand forms preserve the same owner, dynamic binding, finite effects and true result, including void; generic VALUE adapters cannot replace RAW/FORM/PLACE routes.

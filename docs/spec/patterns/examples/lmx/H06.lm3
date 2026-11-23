@@ -10,28 +10,3 @@ CompositionProbe:
     return: int
     run:
         return: Functions\next(Functions\twice(4)) * 100 + Functions\twice(Functions\next(4))
-
-# BEGIN ALTERNATIVE LMX (excluded from character counts)
-# Вариант с общими ресиверами LMX — отдельный подход; вне основного размера.
-# Functions:
-#     int: x
-#     return: int
-#     twice:
-#         return: x * 2
-#     next:
-#         return: x + 1
-# 
-# CompositionProbe:
-#     return: int
-#     run:
-#         throws:
-#             FxArity
-#             FxIndex
-#             FxTypeToken
-#             FxKernelFailure
-#             SequenceSize
-#             ReceiverIndex
-#         @: forward pipe(Functions\twice; Functions\next)
-#         @: backward pipe(Functions\next; Functions\twice)
-#         return: forward(4) * 100 + backward(4)
-# END ALTERNATIVE LMX

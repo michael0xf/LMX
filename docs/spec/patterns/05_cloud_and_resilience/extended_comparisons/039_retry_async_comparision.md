@@ -26,7 +26,6 @@ RetryMessage:
         throws: FxIndex
         return: retryPost(worker\run; RetryPolicy\unavailable; 3; clock\elapsed; 1; 2; 1000; sink\complete)
 ```
-
 [Исходник](source/lmx/039_retry_async.lm3)
 
 worker и clock — явные Message из реализации097: отдельные арены, обычные post/reply. sink получает один итог;1 и2 — миллисекунды задержки.
@@ -57,7 +56,6 @@ func Retry(ctx context.Context, request func(context.Context) (int,error)) (int,
     return value,err
 }
 ```
-
 [Исходник](source/go/039_retry_async.go)
 
 Настоящий cenkalti/backoff v5.0.3; код097 не используется. Context задаёт внешний deadline/cancellation; только завершённый503 повторяется.
@@ -82,7 +80,6 @@ public static class Example {
     }
 }
 ```
-
 [Исходник](source/csharp/039_retry_async.cs)
 
 Настоящий Polly.Core8 Retry;2 означает повтора после первой попытки, всего3. Цепочка await не блокирует поток таймером.

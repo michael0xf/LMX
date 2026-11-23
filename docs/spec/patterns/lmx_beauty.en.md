@@ -2,7 +2,7 @@
 
 21 November 2026. [Русская версия](lmx_beauty.ru.md).
 
-The revised [Interpreter example](23_interpreter_comparison.md) uses **159 non-whitespace characters against Python’s 185**. Its common operand header now comes from a kernel template. The application retains what makes the example readable: the operation’s definition and an ordinary expression using it appear together.
+The revised [Interpreter example](23_interpreter_comparison.md) uses **159 non-whitespace characters against Python’s 185**. Its common operand header now comes from a supplied DATA fragment. The application retains what makes the example readable: the operation’s definition and an ordinary expression using it appear together.
 
 The task is to retain `(x + 3) + x`, evaluate it at `x = 2` and `x = 5`, and add the results. These are `7`, `13`, and finally `20`. The LMX input is called `n`; the computation is the same.
 
@@ -24,7 +24,6 @@ operands:
         demo:
             return: calculate(2) + calculate(5)
 ```
-
 The external call is `operands\example\demo()` and is excluded from the count.
 
 The upper part shows the shared header through `copy`, the concrete `int` result, and the addition body. Below it are `(n add 3) add n` and two calls with different inputs. The nested `example` sees `add` lexically, so no additional import is needed.
@@ -43,7 +42,6 @@ sys:
         const: int: PASS_ARGS_AS_IS 0
         const: int: PRIORITY priority("+")
 ```
-
 `PASS_ARGS_AS_IS 0` requests references to prepared values. `PRIORITY priority("+")` inside `sys` uses the precedence of built-in addition. The mandatory fields remain present in the operand’s effective DATA: ordinary `copy` supplies them through the namespace. The source graph retains the written `copy` record.
 
 The template has no `return`: the result belongs to the concrete operation, which declares `return: int` in `operands`. No result declaration is replaced by another. `example` separately describes its own methods’ result in its own DATA. [Operand contract](../LMX_semantics.en.md#operand-receiver) · [Field streams](../LMX_semantics.en.md#composition).
@@ -69,7 +67,6 @@ def demo():
     tree = add(add(v, number(3)), v)
     return tree(2) + tree(5)
 ```
-
 The reading difficulty comes from familiar names referring to things at a different level:
 
 | Notation | What it means in this example |
@@ -94,7 +91,6 @@ def add(left_calculator, right_calculator):
 
     return calculate
 ```
-
 A new function is created, retaining access to two other functions. After `add` returns, the new function continues to use them. This is how the closure works in this example.
 
 Now the line:
@@ -102,7 +98,6 @@ Now the line:
 ```python
 tree = add(add(v, number(3)), v)
 ```
-
 reads as follows: assemble a sum evaluator; on the left, place another sum evaluator that combines reading the variable with producing the constant three; on the right, place another reading of the variable.
 
 The entire algorithm is present in the listing. However, the reader needs to keep both **building the future computation** and **running it later** in mind at the same time. The names `number`, `variable`, and `add` do not, on their own, reveal this distinction. The compact notation encompasses creating functions, retaining connections to names in the enclosing scope, and deferred execution.
@@ -118,7 +113,7 @@ An experienced Python reader may recognize this construction immediately. Nevert
 
 By the primary metric, LMX is **26 characters, or 14.05%, shorter**. Including indentation and line endings makes its full size **7.69% larger**. These measures answer different questions; both listings use the same normalization.
 
-The complete `copy: sys\OPERANDS_TEMPLATE` line is counted in LMX. The separate template definition belongs to the supplied kernel and is excluded, just as internal standard-library implementations are excluded for the other languages. Showing it alongside the application explains the contract without making it code rewritten by every application.
+The complete `copy: sys\OPERANDS_TEMPLATE` line is counted in LMX. The separate definition of this supplied DATA fragment is shown for explanation and is excluded, just as internal standard-library implementations are excluded for the other languages. Showing it alongside the application explains the contract without making it code rewritten by every application.
 
 The size change comes from ordinary reuse of a description. `left`, `right`, `PASS_ARGS_AS_IS`, and `PRIORITY` remain part of the contract. They no longer need to be repeated in each example. The count measures this application and its use of the shared mechanism.
 

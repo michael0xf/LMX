@@ -2,19 +2,15 @@
 
 Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
 
-Четыре прикладных сценария используют ядро LMX и реальные средства Haskell/Scala. Четыре соседних сравнения показывают самостоятельные реализации соответствующих компонентов; usage-клиенты их не импортируют. Сохранены только альтернативы с другим подходом.
+Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют исходные контрольные программы. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.
 
-## Files
-
-[Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv) · [Implementations](IMPLEMENTATION_DEPENDENCIES.md)
-
-## Catalog
+## Каталог / Catalog
 
 ### [082. Monad](082_monad_comparision.md)
 
-Две операции bind над обобщённым Maybe; прикладной half по-прежнему проверяет чётность целого числа.
+Maybe: явная проверка промежуточного результата и компактная цепочка bind.
 
-Вызвать half дважды через bind. В some хранится запись значения с его собственным типом, а next получает само значение по обычному контракту вызова. Для отсутствия продолжение не вызывается. Проверки остаются 8, 6 и 3.
+Выполнить some(x) bind half bind half. Значение хранится со своим фактическим типом, half получает его обычным вызовом. При None следующие продолжения пропускаются. Проверки остаются 8, 6, 3 и дополнительно 0.
 
 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
 
@@ -28,7 +24,7 @@ some записи нуля остаётся присутствующим нул�
 
 ### [083. Trampoline](083_trampoline_comparision.md)
 
-Взаимные even/odd шаги используют общий Bounce с nullary continuation, созданной partial.
+Паритет: процедурный цикл и функциональный trampoline для конечного неотрицательного n.
 
 Для неотрицательного n определить чётность. Незавершённый шаг возвращает more(partial(другой_шаг; (n−1))) без вызова другого шага. trampoline вызывает по одному сохранённому thunk до done.
 
@@ -44,9 +40,9 @@ trampoline(done(record)) возвращает ту же запись резул�
 
 ### [084. Execute Around](084_execute_around_comparision.md)
 
-Переданные acquire/action/release исполняются вокруг защищённого использования ресурса. Основной кратчайший клиент использует общий bracket; полный короткий авторский Around из22-Nov сохранён отдельным подходом.
+Полный локальный Around и функциональный bracket сохраняют один ресурсный жизненный цикл.
 
-Ресурс содержит 42. acquire добавляет в журнал 1, action — 2, release — 3. Режим 0 успешен, режим 1 падает в action, режим 2 — в acquire. Основной клиент вызывает встроенный bracket / Control.Exception.bracket / Using.resource: освобождает только полученный ресурс и наблюдает ошибку вместе с журналом.
+Ресурс содержит42. acquire/action/release добавляют1/2/3 в журнал. Оба полных LMX-варианта сохраняют режимы успеха, отказа action и отказа acquire; освобождается только полученный ресурс.
 
 run(0) → 42123: результат 42, журнал 123. run(1) → −123: ошибка тела дошла до клиента и release выполнен. run(2) → −1: acquisition отказал, release не выполнен. Ресурс не используется после cleanup.
 
@@ -60,7 +56,7 @@ run(0) → 42123: результат 42, журнал 123. run(1) → −123: о
 
 ### [085. Currying](085_currying_comparision.md)
 
-Прямой partial строит add5 и add100 из обычной функции; процедура копирования окружения вынесена в общую реализацию.
+Независимые сохранённые префиксы: прямое окружение и общий curry.
 
 Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.
 
@@ -74,8 +70,10 @@ run(0) → 42123: результат 42, журнал 123. run(1) → −123: о
 
 Общий случай сохраняет порядок и типы входов, точный R и объявленные failures. Для клиента сложения результат — 6,101,6. Для N=0 фабрика возвращает nullary callable; для k>N отказ происходит до публикации результата.
 
-## Counting boundary
+## Методика / Method
 
-For each comparable usage layer choose the shortest eligible core/real-library client. Implementation comparisons use full scoped APIs separately. Keep only genuinely different approaches; one-line or type-only alternatives are notes. The source upload is the merge baseline.
+Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.
 
-Runtime status: LMX, Haskell and Scala NOT_RUN. Prepared edge cases are in [acceptance_cases.json](acceptance_cases.json).
+[Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv)
+
+Runtime LMX: NOT_RUN.

@@ -1,6 +1,6 @@
 language,foreign_facility,lmx,status,boundary,source
 Java,Optional.map / filter,mapOption / filterOption,implemented,LMX retains Some(null); Java Optional.map treats a null mapper result as absence.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
-Java,Optional.flatMap,bind,existing,Existing Maybe chaining; no second flatMap algorithm.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
+Java,Optional.bind,bind,existing,Existing Maybe chaining; no second bind algorithm.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
 Java,Optional.orElse,orElse,implemented,Eager payload fallback; never returns the Maybe container.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
 Java,Optional.orElseGet,orElseGet,implemented,Nullary fallback invoked only on absence.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
 Java,Optional.or,orElseOption,implemented,Lazy replacement container; no nested Maybe.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html
@@ -12,9 +12,9 @@ Rust,Option.map_or_else,foldOption,implemented,One lazy branch; no fabricated va
 Rust,Result.map / map_err,mapResult / mapErr,implemented,Only the selected channel is transformed.,https://doc.rust-lang.org/std/result/enum.Result.html
 Rust,Result.or_else,orElseResult,implemented,"Error continuation returns a Result, not an error payload.",https://doc.rust-lang.org/std/result/enum.Result.html
 Rust,Result.map_or_else,foldResult,implemented,Exactly one branch receives its typed payload.,https://doc.rust-lang.org/std/result/enum.Result.html
-Rust,Result.and_then,bindResult,existing,The existing success-chain operation is reused.,https://doc.rust-lang.org/std/result/enum.Result.html
+Rust,Result.and_then,bind,existing,The existing success-chain operation is reused.,https://doc.rust-lang.org/std/result/enum.Result.html
 Rust,Result.inspect / inspect_err,tag selection + tap,covered_composition,"tap is a value effect; tag selection remains explicit, rather than pretending two tags are equal.",https://doc.rust-lang.org/std/result/enum.Result.html
-Rust,Result ? propagation,bindResult / catch,covered_composition,No new source-rewriting propagation operator is required for these finite chains.,https://doc.rust-lang.org/std/result/enum.Result.html
+Rust,Result ? propagation,bind / catch,covered_composition,No new source-rewriting propagation operator is required for these finite chains.,https://doc.rust-lang.org/std/result/enum.Result.html
 Scala,Option.map / filter / flatten,mapOption / filterOption / flattenOption,implemented,No eager evaluation of the absent callback.,https://www.scala-lang.org/api/2.13.16/scala/Option.html
 Scala,Option.getOrElse,orElseGet,implemented,Scala default is by-name; the LMX equivalent takes an explicit thunk.,https://www.scala-lang.org/api/2.13.16/scala/Option.html
 Scala,Option.orElse,orElseOption,implemented,Returns a replacement Option container lazily.,https://www.scala-lang.org/api/2.13.16/scala/Option.html
@@ -39,7 +39,7 @@ Rust,Option.is_some / is_none / is_some_and / is_none_or,present tag / foldOptio
 Rust,Option.ok_or / ok_or_else,foldOption + ok/err,covered_composition,Explicit constructors distinguish eager error values from lazy error callbacks.,https://doc.rust-lang.org/std/option/enum.Option.html
 Rust,Option.or / and / xor,present tags + ordinary branch,covered_composition,These eager finite choices do not justify duplicating the existing tag-selection algorithm in another representation.,https://doc.rust-lang.org/std/option/enum.Option.html
 Rust,Option.take / replace / insert / get_or_insert_with,ordinary owning-field update + orElseGet,covered_composition,Mutation must be requested explicitly and performed by the owner; pure fallback helpers do not mutate Maybe.,https://doc.rust-lang.org/std/option/enum.Option.html
-Rust,Option.zip / unzip / transpose,foldOption / bindResult + existing pair/list constructors,covered_composition,Finite container rearrangement uses existing tags; sequence transpose is a different existing contract.,https://doc.rust-lang.org/std/option/enum.Option.html
+Rust,Option.zip / unzip / transpose,foldOption / bind + existing pair/list constructors,covered_composition,Finite container rearrangement uses existing tags; sequence transpose is a different existing contract.,https://doc.rust-lang.org/std/option/enum.Option.html
 Rust,Option.as_ref / as_mut / cloned / copied,ordinary reference / copy policy,existing_with_difference,LMX does not import Rust borrow lifetimes or move semantics under a familiar name.,https://doc.rust-lang.org/std/option/enum.Option.html
 Rust,Result.is_ok / is_err / ok / err projections,ok tag / foldResult + some/none,covered_composition,One chosen channel; projection absence is distinct from a null payload.,https://doc.rust-lang.org/std/result/enum.Result.html
 Java,Objects.isNull / nonNull / requireNonNull,ordinary @ null check / named throw,covered_composition,The check is already one expression; typed nil absence is distinct from an initialized null pointer.,https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Objects.html

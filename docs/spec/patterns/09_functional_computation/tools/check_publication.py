@@ -1,70 +1,66 @@
 #!/usr/bin/env python3
-"""Check source/publication integrity and real-library boundaries; not a compiler."""
+"""Check both full styles and canonical shared bodies; no language execution."""
 from pathlib import Path
-import json,re,csv
+import json,re,sys
 ROOT=Path(__file__).resolve().parents[1]
-import sys
 sys.path.insert(0,str(ROOT.parent/'tools'))
-from throws_metrics import measure_throws
+from lmx_style_variants import normalize,measure,validate_variants
+from canonical_operations import definitions
 LANG={'LMX':('lmx','lm3','lmx'),'Haskell':('haskell','hs','haskell'),'Scala':('scala','scala','scala')}
-def canon(s):return s.strip()+'\n'
-def metric(s):return sum(not x.isspace() for x in s),sum(bool(x.strip()) for x in s.splitlines())
+
 def main():
- data=json.loads((ROOT/'patterns.json').read_text());errors=[];checks=[];by={x['id']:x for x in data['patterns']}
- def check(ok,label):
-  checks.append(label)
-  if not ok:errors.append(label)
- for p in data['patterns']:
-  stem=f"{p['id']:03d}_{p['slug']}";md=(ROOT/(stem+'_comparision.md')).read_text()
-  fences=re.findall(r'^```([^\n]*)\n(.*?)^```\s*$',md,re.M|re.S)
-  nalt=sum(len(v)-1 for v in p['variants'].values())
-  check(len(fences)==3+nalt,f'{p["id"]}: only primary plus genuinely different alternatives')
-  for n,l in enumerate(p['listings']):
-   lang=l['language'];folder,ext,tag=LANG[lang];code=canon(l['code']);source=ROOT/'examples'/folder/(stem+'.'+ext)
-   check(source.read_text()==code,f'{p["id"]}/{lang}: complete primary source equals JSON')
-   check(fences[n]==(tag,code),f'{p["id"]}/{lang}: primary fence equals source')
-   eligible=p['eligible_variants'][lang]
-   check(p['primary_variant'][lang] in eligible,f'{p["id"]}/{lang}: selected eligible approach')
-   check(metric(code)[0]==min(metric(canon(p['variants'][lang][x]))[0] for x in eligible),f'{p["id"]}/{lang}: shortest within declared boundary')
-   a,b=metric(code);extra=measure_throws(code,ROOT.parent)['without_complex_throws_characters'] if lang=='LMX' else '—'
-   check(f'| {lang} | {a} | {b} | {extra} |' in md.splitlines(),f'{p["id"]}/{lang}: exact full and supplementary published counts')
-   if p.get('kind')!='implementation' and lang!='LMX':
-    check(not re.search(r'^import (MaybeValue|Bounce|Around|Partial)[ .(]',code,re.M),f'{p["id"]}/{lang}: no custom comparison import')
-   for v,other in p['variants'][lang].items():
-    altfile=ROOT/'examples'/folder/'variants'/(stem+'_'+v+'.'+ext)
-    if v==p['primary_variant'][lang]:check(not altfile.exists(),f'{p["id"]}/{lang}: no duplicate primary variant file')
-    else:
-     check(altfile.is_file() and altfile.read_text()==canon(other),f'{p["id"]}/{lang}/{v}: retained full alternate source')
-     check((tag,canon(other)) in fences,f'{p["id"]}/{lang}/{v}: alternate published once')
-  check(not p.get('alternative'),f'{p["id"]}: obsolete full historical copies removed')
- check('import Control.Exception (Exception, bracket, throwIO, try)' in by[84]['variants']['Haskell']['standard'],'084: actual Haskell bracket and named ResourceFailure')
- check('Either ResourceFailure Int' in by[84]['variants']['Haskell']['standard'],'084: only the declared ResourceFailure is handled')
- core84=by[84]['variants']['LMX']['core']
- check('catch: FxCallFailure (@: error)' in core84 and core84.count('throws: ResourceFailure')==3,'084: closed callback failure set, ordinary payload arity')
- check('sameText(' not in core84 and 'outcome\\failure' not in core84 and 'throw: FxCallFailure' not in core84,'084: no redundant name guard for the closed failure set')
- check('sys\\assert' not in by[84]['variants']['LMX']['core'] and 'actual[i]' not in by[84]['variants']['LMX']['core'],'084: no handwritten failure-name assertion loop')
- check(by[84]['variants']['LMX']['core'].count('Trace\\events := events * 10 + x')==1,'084: core trace update is shared once')
- check('Using.resource(acquire())' in by[84]['variants']['Scala']['standard'],'084: actual Scala Using.resource call')
- check('Around:' not in by[84]['variants']['LMX']['core'],'084: core client does not duplicate helper')
- local=by[84]['variants']['LMX']['local_callbacks']
- check(local.count('Around:\n')==1 and 'catch: ResourceFailure ()' in local,'084: procedural alternative has complete helper and handler')
- for token in ['int: value 42','int: mode','Trace\\events','return: -Trace\\events']:
-  check(token in by[84]['variants']['LMX']['core'],'084: retained scenario '+token)
- shared=by[83]['variants']['LMX']['shared_body']
- check(shared.count('return: more(')==1 and '@: next odd_step' in shared and '@: next even_step' in shared,'083: shared body retains both transitions')
- for lang in ['Haskell','Scala']:
-  check('saved' in by[85]['variants'][lang]['standard'],'085/'+lang+': retained saved binding')
- hs=by[98]['variants']['Haskell']['implementation'];sc=by[98]['variants']['Scala']['implementation']
- check('mask $ \\restore' in hs and 'restore (action resource)' in hs,'098: Haskell asynchronous setup protection and restored action')
- check('addSuppressed' in sc and 'severity(second) > severity(first)' in sc,'098: Scala dual-failure retention and priority')
- src=(ROOT.parent/'LMX_Fn_Receivers/src/generic_wrappers.lmx').read_text().split('FxAround:\n',1)[1].split('\n\n',1)[0]
- check(src.index('sys\\resize(resourceArgs; 1)')<src.index('resourceArgs[0] := FxApply\\apply(acquire; ())')<src.index('finally:'),'098: cleanup storage allocated before acquire; finally registered after success')
- check(src.index('finally:')<src.index('FxAppend\\append') and 'FxApply\\apply(release; resourceArgs)' in src,'098: cleanup protects action argument construction without repeated acquired/ok guard')
- check('Args (types :: [Type])' in by[99]['variants']['Haskell']['implementation'],'099: heterogeneous unbounded Haskell inputs')
- check('Tuple.Concat[Prefix, Rest]' in by[99]['variants']['Scala']['implementation'],'099: heterogeneous arbitrary Scala prefix')
- cases=json.loads((ROOT/'acceptance_cases.json').read_text())['cases']
- check(all(x['status']=='NOT_RUN' for x in cases),'acceptance cases do not claim execution')
- report={'date':'2026-11-23','ok':not errors,'scope':'source/publication and declared boundary checks; no language execution','checks':len(checks),'errors':errors,'pattern_ids':list(by),'retained_alternate_listings':sum(sum(len(v)-1 for v in p['variants'].values()) for p in by.values()),'acceptance_cases_prepared':len(cases),'lmx_runtime_executed':False,'haskell_runtime_executed':False,'scala_runtime_executed':False}
- (ROOT/'validation_2026-11-23.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
- print(json.dumps(report,ensure_ascii=False));return bool(errors)
+    data=json.loads((ROOT/'patterns.json').read_text());by={r['id']:r for r in data['patterns']};checks=[];errors=[]
+    def check(condition,label):
+        checks.append(label)
+        if not condition:errors.append(label)
+    for row in data['patterns']:
+        ident=row['id'];stem=f"{ident:03d}_{row['slug']}";md=(ROOT/(stem+'_comparision.md')).read_text()
+        fences=[(m[1],normalize(m[2])) for m in re.finditer(r'^```([^\n]*)\n(.*?)^```\s*$',md,re.M|re.S)]
+        variant_count=2 if row.get('lmx_variants') else 1
+        check(len(fences)==variant_count+2,f'{ident}: both client styles or one shared body, plus two unchanged controls')
+        if row.get('lmx_variants'):
+            for error in validate_variants(row,ROOT):check(False,f'{ident}: {error}')
+            for position,style in enumerate(['procedural','functional']):
+                variant=row['lmx_variants'][style]
+                check(fences[position]==('lmx',normalize(variant['code'])),f'{ident}/{style}: exact source/JSON/MD')
+                label='процедурный' if style=='procedural' else 'функциональный';m=variant['metrics']
+                line=f"| LMX — {label} | {m['characters']} | {m['nonblank_lines']} |"
+                check(line in md.replace('**',''),f'{ident}/{style}: complete source counts')
+            check(next(x['code'] for x in row['listings'] if x['language']=='LMX')==row['lmx_variants']['functional']['code'],f'{ident}: legacy listing is only the functional mirror')
+        else:
+            code=next(x['code'] for x in row['listings'] if x['language']=='LMX')
+            check(fences[0]==('lmx',normalize(code)),f'{ident}: one implementation source/MD')
+        for offset,listing in enumerate(x for x in row['listings'] if x['language']!='LMX'):
+            language=listing['language'];folder,extension,tag=LANG[language];code=normalize(listing['code'])
+            check((ROOT/'examples'/folder/(stem+'.'+extension)).read_text()==code,f'{ident}/{language}: exact unchanged source mirror')
+            check(fences[variant_count+offset]==(tag,code),f'{ident}/{language}: exact source/MD')
+            if row.get('kind')!='implementation':check(not re.search(r'^import (MaybeValue|Bounce|Around|Partial)[ .(]',code,re.M),f'{ident}/{language}: actual language/library client')
+        check('Без сложного Throws' not in md and 'without_complex_throws' not in md,f'{ident}: full-source counting only')
+    for ident in [91,92,98,99]:check(not by[ident].get('lmx_variants'),f'{ident}: common implementation is not duplicated by style')
+    defs=definitions(ROOT.parent/'LMX_Fn_Receivers')
+    ledger=json.loads((ROOT/'implementation_dependencies.json').read_text())
+    for component in ledger['components']:
+        ident=component['id']
+        if ident not in [91,92,98,99]:continue
+        canonical='\n'.join(defs[n]['code'] for n in component['primary_definitions'])
+        actual=next(x['code'] for x in by[ident]['listings'] if x['language']=='LMX')
+        check(normalize(canonical)==normalize(actual),f'{ident}: exact current canonical implementation')
+    functional=by[84]['lmx_variants']['functional']['code'];procedural=by[84]['lmx_variants']['procedural']['code']
+    check('\\bracket(' in functional and 'Around:' not in functional,'084 functional: use shared bracket')
+    check(procedural.count('Around:\n')==1 and 'catch: ResourceFailure ()' in procedural,'084 procedural: complete Around and original failure handler')
+    check('catch: FxCallFailure (@: error)' in functional and 'sys\\assert' not in functional,'084 functional: closed callback-failure set without handwritten text comparison')
+    for style in ['procedural','functional']:
+        code=by[84]['lmx_variants'][style]['code']
+        check(code.count('Trace\\events := events * 10 + x')==1,'084/'+style+': one shared trace update')
+    check('while: n > 0' in by[83]['lmx_variants']['procedural']['code'],'083 procedural: actual iterative parity state')
+    check(by[83]['lmx_variants']['functional']['code'].count('return: more(')==1,'083 functional: one shared step body')
+    check(' bind half bind half' in by[82]['lmx_variants']['functional']['code'],'082 functional: compact bind chain')
+    check('if: result\\present = 0' in by[82]['lmx_variants']['procedural']['code'],'082 procedural: explicit absence branch')
+    check('curry(Addition\\apply)' in by[85]['lmx_variants']['functional']['code'],'085 functional: common curry')
+    check('CapturePrototype:' in by[85]['lmx_variants']['procedural']['code'],'085 procedural: complete direct capture environment')
+    cases=json.loads((ROOT/'acceptance_cases.json').read_text())['cases']
+    check(all(c['status']=='NOT_RUN' for c in cases),'acceptance specifications do not claim LMX execution')
+    report={'ok':not errors,'checks':len(checks),'errors':errors,'scope':'Dual-style source/JSON/MD integrity and exact common body checks, not parsing or execution.','client_style_pairs':4,'common_implementations':4,'compared_listings':28,'acceptance_cases_prepared':len(cases),'runtime_execution':'NOT_RUN'}
+    (ROOT/'validation_2026-11-23.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps(report,ensure_ascii=False));return bool(errors)
 if __name__=='__main__':raise SystemExit(main())

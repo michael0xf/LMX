@@ -6,6 +6,8 @@
 
 ## Запускаемые подготовленные fixtures
 
+Выполнение программы всегда начинается с обычного L3 Thread R0 без DATA и пользовательских аргументов. После подготовки графа уже работающий R0 либо достигнутый обработчик сообщения обычным вызовом `FxAllExamples\run()` выполняет подготовленные проверки. Выбор имени проверяемого метода не заменяет этот старт.
+
 [run_all.lmx](../examples/run_all.lmx) явно вызывает:
 
 1. [fn_and_assignment.lmx](../examples/fn_and_assignment.lmx): готовые type-code
@@ -94,8 +96,8 @@ interpreter→native, native→interpreter, native→native. Native создаё
 
 ## Отрицательные примеры формы
 
-- `R signatureTypes (T0 T1)` при неструктурном левом type token: один контейнер, а не два
-  правых type-токена. Явный `fun\const\signatureTypes(...; right := types)` принимает вектор.
+- `T0 to (T1 T2) R` при неструктурном левом type token: один контейнер, а не два
+  правых type-токена. Явный `fun\const\to(...; right := types)` принимает вектор.
 - `(a b c) := f()` не раскрывает возвращённую Structure.
 - `(a b) := (copy(Pair))` использует написанный group и явный field stream.
 - `scalar := (copy(Pair))` сохраняет одну Structure, если этого требует scalar.
@@ -110,3 +112,11 @@ interpreter→native, native→interpreter, native→native. Native создаё
 Новые тела описаны в [ADAPTER_IMPLEMENTATION.md](../ADAPTER_IMPLEMENTATION.md). [adapter_semantics.lmx](adapter_semantics.lmx) содержит конкретные исходные пробы, запускаемые через `FxAdapterExamples\run()` после подключения настоящих call-phase bridges. [ADAPTER_ACCEPTANCE.md](ADAPTER_ACCEPTANCE.md) отделяет написанные пробы от ещё требующих инстанцирования сценариев; [adapter_acceptance.json](adapter_acceptance.json) содержит все A01–A20/B01–B11 из текущего §37. Все четыре execution режима каждого случая имеют статус NOT_RUN.
 
 Механическая проверка отсутствия старой eager capture/Ti→@ таблицы не доказывает runtime-сохранение default, parent, lifetime и native ABI. Эти проверки остаются обязательными; старые исходники под reference не участвуют в текущей сборке.
+
+## Canonical generic operations and both forms
+
+[generic_operations_acceptance.json](generic_operations_acceptance.json) records
+constructor capture, generic equality, Pattern source profiles and exact-role
+checks for every canonical export and variant. All execution modes are NOT_RUN.
+[generic_operations.lmx](generic_operations.lmx) contains prepared representative
+source fixtures. Family/role publication follows [PUBLICATION_CONTRACT.md](../PUBLICATION_CONTRACT.md).

@@ -1,25 +1,36 @@
 #!/usr/bin/env python3
-"""Account for the current core curry alternative; no language execution."""
+"""Account once for the canonical curry machinery used by the functional style."""
 from pathlib import Path
-import json,importlib.util,hashlib
+import json,importlib.util,hashlib,sys
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT.parent/'tools'))
+from lmx_style_variants import measure
 spec=importlib.util.spec_from_file_location('body_sync',Path(__file__).with_name('sync_receiver_bodies.py'))
 mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
 available=mod.blocks();names=['FxCurryState','FxLambdaMiddleEngine','FxLambdaStages','FxLambda'];closure=mod.dependencies(names,available)
 base=json.loads((ROOT/'implementation_dependencies.json').read_text())
-partial_component=next(r for r in base['components'] if r['id']==99)
-partial={definition['name'] for definition in partial_component['definitions']}
-extra=closure-partial
-p=next(x for x in json.loads((ROOT/'patterns.json').read_text())['patterns'] if x['id']==85)
-report={'scope':'source/dependency accounting only; no runtime proof','runtime_executed':False,'primary_definitions':names,'all_required_definitions':sorted(closure),'additional_to_partial_definition_closure':sorted(extra),'all_required':mod.metrics('\n'.join(available[n]['code'] for n in sorted(closure))),'additional_to_partial':mod.metrics('\n'.join(available[n]['code'] for n in sorted(extra))),'variants':{n:mod.metrics(code) for n,code in p['variants']['LMX'].items() if n in p['eligible_variants']['LMX']},'sources':[{'name':n,'path':'../LMX_Fn_Receivers/'+available[n]['source'],'sha256':hashlib.sha256(available[n]['code'].encode()).hexdigest(),**mod.metrics(available[n]['code'])} for n in sorted(closure)]}
+partial={d['name'] for row in base['components'] if row['id']==99 for d in row['definitions']};extra=closure-partial
+row=next(x for x in json.loads((ROOT/'patterns.json').read_text())['patterns'] if x['id']==85)
+report={'scope':'source/dependency accounting only; no runtime proof','runtime_executed':False,
+        'primary_definitions':names,'all_required_definitions':sorted(closure),'additional_to_partial_definition_closure':sorted(extra),
+        'all_required':measure('\n'.join(available[n]['code'] for n in sorted(closure))),
+        'additional_to_partial':measure('\n'.join(available[n]['code'] for n in sorted(extra))),
+        'variants':{s:v['metrics'] for s,v in row['lmx_variants'].items()},
+        'sources':[{'name':n,'path':'../LMX_Fn_Receivers/'+available[n]['source'],**measure(available[n]['code'])} for n in sorted(closure)]}
 (ROOT/'curry_dependencies.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
-lines=['# Curry: дополнительный общий механизм рядом с примером 085','Это исходники того же текущего ядра, а не ещё одна версия библиотеки. Клиент 085 выбирает две независимые ветви одного `curry(Addition\\apply)` вместо двух `partial`; корректный partial-вариант сохранён рядом как другой способ построить callable.','## Сценарий и граница сравнения','Сохраняются add5, add100, переменная saved=1000, повторный вызов add5 и весь результат 6101006. Только способ построения двух closures заменён на общий поэтапный adapter. Haskell использует собственное каррированное применение, Scala — Function2.curried. Самописные generic-компоненты 099 показаны отдельно и не импортируются в этих клиентах; дополнительная универсальность LMX не объявляется тождественной по реализации.','| Допустимый LMX-клиент | Непробельные символы | Непустые строки | Без сложного Throws |\n| --- | ---: | ---: | ---: |']
-for n,m in report['variants'].items():lines[-1]+=f"\n| [{n}]({('examples/lmx/085_currying.lm3' if n == p['primary_variant']['LMX'] else 'examples/lmx/variants/085_currying_' + n + '.lm3')}) | {m['characters']} | {m['lines']} | {m['without_complex_throws_characters']} |"
-lines+=['## Полные дополнительные тела','Общие policy, builder, capture и runtime уже приведены в [реестре](IMPLEMENTATION_DEPENDENCIES.md) и [пакете ресиверов](../LMX_Fn_Receivers/ADAPTER_IMPLEMENTATION.md). Ниже показаны все собственные тела curry. Они извлекаются непосредственно из действующего source, а не сокращаются до необъяснённого native вызова.']
-for n in names:lines+=['### '+n,'[Источник](../LMX_Fn_Receivers/'+available[n]['source']+').','```lmx\n'+available[n]['code']+'```']
-lines+=['## Стоимость общих зависимостей',f"Полное транзитивное множество curry: **{report['all_required']['characters']}** непробельных символов / **{report['all_required']['lines']}** непустых строк. Дополнительно к уже раскрытому closure partial из строки 099: **{report['additional_to_partial']['characters']}** символов / **{report['additional_to_partial']['lines']}** строк. Эти числа не следует прибавлять к клиенту при каждом вызове: это стоимость общей реализации один раз. Интерфейсы FxKernel и реальный runtime остаются отдельной известной границей, а не имеют выдуманную нулевую стоимость.",'| Дополнительное определение | Источник | Символы | Строки | Без сложного Throws |\n| --- | --- | ---: | ---: | ---: |']
-for n in sorted(extra):
- a=available[n];m=mod.metrics(a['code']);lines[-1]+=f"\n| `{n}` | [{a['source']}](../LMX_Fn_Receivers/{a['source']}) | {m['characters']} | {m['lines']} | {m['without_complex_throws_characters']} |"
-lines+=[f"Дополнительный подсчёт без сложного Throws: полное множество {report['all_required']['without_complex_throws_characters']}, дополнительно к partial {report['additional_to_partial']['without_complex_throws_characters']}. Ссылки и первый аргумент банков учтены; реальные контракты не сокращаются.",'## Проверка','Ни один LMX runtime здесь не запускался. Источник требует пяти обычных call-phase hooks, указанных в KERNEL_REQUIREMENTS, и полного A/B acceptance. Счётчики символов — воспроизводимая проверка публикации, не проверка семантики или скорости. Машинный реестр: [curry_dependencies.json](curry_dependencies.json). Для обновления после source changes: `python3 tools/curry_appendix.py`.']
-(ROOT/'CURRY_ADAPTER_VARIANT.md').write_text('\n\n'.join(lines)+'\n')
-print(json.dumps({'extra_definitions':len(extra),'client_metrics':report['variants'],'extra_chars':report['additional_to_partial']['characters']},ensure_ascii=False))
+lines=['# Curry: общая реализация функционального клиента085',
+       'Процедурный клиент полностью показывает сохранённые окружения; функциональный строит две независимые ветви общего curry. Оба клиента считаются полностью и сравниваются с теми же неизменёнными Haskell/Scala программами. Одно ядро обслуживает функциональную форму; второй реализации curry ради стиля нет.',
+       '## Полные клиенты','| Стиль | Символы | Строки |','| --- | ---: | ---: |']
+for style,variant in row['lmx_variants'].items():
+    m=variant['metrics'];lines += [f"| [{style}]({variant['source_file']}) | {m['characters']} | {m['nonblank_lines']} |"]
+lines += ['','Все объявления и Throws входят в размер. Сохраняются add5/add100, saved=1000, повторное применение add5 и результат6101006.','',
+          '## Полные общие тела','Общие policy, builder, capture и runtime указаны в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Ниже извлечены точные тела того же ядра.']
+for name in names:lines += ['', '### '+name,'',f"[Источник](../LMX_Fn_Receivers/{available[name]['source']})",'','```lmx',available[name]['code'].rstrip(),'```']
+lines += ['','## Полная стоимость зависимостей','',
+          f"Уникальное транзитивное множество curry: **{report['all_required']['characters']}** символов. Дополнительно к partial из099: **{report['additional_to_partial']['characters']}** символов. Общие определения считаются один раз; стоимость native FxKernel и runtime не объявляется нулевой.",'',
+          '| Дополнительное определение | Источник | Символы | Строки |','| --- | --- | ---: | ---: |']
+for name in sorted(extra):
+    item=available[name];m=measure(item['code']);lines += [f"| `{name}` | [{item['source']}](../LMX_Fn_Receivers/{item['source']}) | {m['characters']} | {m['nonblank_lines']} |"]
+lines += ['','## Проверка','','Это проверка наличия исходников и их полного размера. Runtime LMX: NOT_RUN. [Машинный реестр](curry_dependencies.json).']
+(ROOT/'CURRY_ADAPTER_VARIANT.md').write_text('\n'.join(lines)+'\n')
+print(json.dumps({'extra_definitions':len(extra),'client_metrics':report['variants'],'runtime':'NOT_RUN'}))

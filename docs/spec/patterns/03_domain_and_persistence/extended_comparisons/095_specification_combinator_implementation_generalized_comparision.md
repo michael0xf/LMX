@@ -1,6 +1,6 @@
-# 095. AllOf — predicate conjunction implementation: отдельный расширенный договор
+# 095. AllOf — predicate conjunction implementation: общий договор
 
-Сохранена самостоятельная обобщённая реализация 23-Nov. Она решает более широкую задачу, чем восстановленная основная пара 22-Nov, и не участвует в её сумме или выборе кратчайшего листинга.
+Действующие общие определения извлечены из единого ядра. Эта отдельная пара сохраняет свой договор; её размер не подменяет размер клиентского вызова.
 
 ## Договор
 
@@ -36,12 +36,6 @@ FxAllOfEngine:
             i += 1
         return: (1 FxRecordOperands\record)
 
-# Arbitrary finite count and arity. A written contract is mandatory only for
-# the empty predicate sequence, since there is then no callable to infer from.
-# Without it, the first predicate supplies the actual external input policy;
-# with it, the chosen contract supplies that policy. All predicates must accept
-# the same ordered type signature and return int truth. Forwarded places stay
-# lazy; a skipped predicate receives no call and demands no default.
 FxAllOf:
     private:
         @: predicates
@@ -91,7 +85,7 @@ FxAllOf:
 
 [Исходник](source/lmx/095_specification_combinator_implementation_generalized.lm3)
 
-Полный factory и engine ядра; оригинальные places передаются лениво, без снимка всех аргументов.
+Точные общие определения FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.
 
 ## Python
 
@@ -140,10 +134,12 @@ public static class PredicateSet {
 
 | Язык | Непробельные символы |
 | --- | ---: |
-| LMX | 2056 |
+| LMX | 1673 |
 | Python | 246 |
 | C# | 417 |
 
-[Основная узкая пара](../095_specification_combinator_implementation_comparision.md). [Норма LMX](../../../LMX_semantics.en.md).
+Полный текст каждого листинга включает все объявления, заголовки Throws, аргументы и ссылки; исключений из подсчёта нет.
 
-LMX здесь не выполнялся. Это сохранение исходников и их договора, а не новый отчёт о runtime-проверке.
+[Основная пара](../095_specification_combinator_implementation_comparision.md). [Единые формы](../../UNIFIED_OPERATIONS.md).
+
+Результаты языкового выполнения изменённых исходников не заявлены.

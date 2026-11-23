@@ -31,13 +31,13 @@
         {
           "name": "FxMap",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/collections.lmx",
-          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "file_sha256": "30c0720c1da73abe484d351ba78505905b80f93f39ff0f1a0f16aa68a3c67180",
           "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb"
         },
         {
           "name": "FxFilter",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/collections.lmx",
-          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "file_sha256": "30c0720c1da73abe484d351ba78505905b80f93f39ff0f1a0f16aa68a3c67180",
           "sha256": "542bdf6db0e61ac6b33c361a2b658db22cf4993b70667052f54fb95e104712d0"
         },
         {
@@ -49,13 +49,13 @@
         {
           "name": "FxFold",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/collections.lmx",
-          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "file_sha256": "30c0720c1da73abe484d351ba78505905b80f93f39ff0f1a0f16aa68a3c67180",
           "sha256": "28284bf3f75237774f902a6c8db5b662686965754bae34616b124d34881990b2"
         },
         {
           "name": "FxZipWith",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/collections.lmx",
-          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "file_sha256": "30c0720c1da73abe484d351ba78505905b80f93f39ff0f1a0f16aa68a3c67180",
           "sha256": "6db9499add9b08adc4931b289e9a589c9b6fc4d30f9641d9358d074ca6fa8fbf"
         }
       ],
@@ -85,16 +85,12 @@
         "LMX": {
           "characters_with_whitespace": 3805,
           "characters_without_whitespace": 2483,
-          "without_complex_throws_characters": 2386,
-          "complex_throws_removed_characters": 97,
           "nonblank_lines": 115,
           "utf8_bytes": 3805
         },
         "Common Lisp": {
           "characters_with_whitespace": 1912,
           "characters_without_whitespace": 1503,
-          "without_complex_throws_characters": 1503,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 47,
           "utf8_bytes": 1912
         }
@@ -118,7 +114,7 @@
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_values.htm"
       ],
       "dependency_role": "selected_clients",
-      "lmx": "FxSeqAny:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    any:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: 1\n            i += 1\n        return: 0\n\nFxSeqAll:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    all:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) = 0\n                return: 0\n            i += 1\n        return: 1\n\nFxSeqIndex:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    index:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: FxSome\\some(value := (i FxRecordOperands\\record))\n            i += 1\n        return: FxNone\\none()\n\nFxRecordOperands:\n    copy: sys\\OPERANDS_TEMPLATE\n    required: left right\n    return: @\n    record:\n        throws: FxRecordArity\n        if: length(right) != 0\n            throw: FxRecordArity()\n        return: left\n\nFxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    return: @\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: @\n    none:\n        return: (copy(FxMaybe))\n",
+      "lmx": "FxSeqAny:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    any:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: 1\n            i += 1\n        return: 0\n\nFxSeqAll:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    all:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) = 0\n                return: 0\n            i += 1\n        return: 1\n\nFxSeqIndex:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    index:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: FxSome\\some(value := (i FxRecordOperands\\record))\n            i += 1\n        return: FxNone\\none()\n\nFxRecordOperands:\n    copy: FxPreparedOperands\n    const: int: PRIORITY sys\\priority(\"+\")\n    required: left right\n    return: @\n    record:\n        throws: FxRecordArity\n        if: length(right) != 0\n            throw: FxRecordArity()\n        return: left\n\nFxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    required: value\n    return: FxMaybe@\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: FxMaybe@\n    none:\n        return: (copy(FxMaybe))\n",
       "foreign": "(in-package #:lmx-sbcl-reference)\n\n(defun record-value (value)\n  value)\n\n(defun any-value (items accepts)\n  (sequence-value items)\n  (function-value accepts)\n  (let ((source (coerce items 'vector)))\n    (dotimes (i (length source) 0)\n      (when (integer-truth (funcall accepts (aref source i)))\n        (return 1)))))\n\n(defun all-value (items accepts)\n  (sequence-value items)\n  (function-value accepts)\n  (let ((source (coerce items 'vector)))\n    (dotimes (i (length source) 1)\n      (unless (integer-truth (funcall accepts (aref source i)))\n        (return 0)))))\n\n(defun index-value (items accepts)\n  (sequence-value items)\n  (function-value accepts)\n  (let ((source (coerce items 'vector)))\n    (dotimes (i (length source) (values nil nil))\n      (when (integer-truth (funcall accepts (aref source i)))\n        (return (values i t))))))\n",
       "source_files": {
         "lmx": "source/implementations/lmx/SI02.lmx",
@@ -146,31 +142,32 @@
         {
           "name": "FxRecordOperands",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_functions.lmx",
-          "file_sha256": "bf82779aab91171aa3fee3225dba47fb489fe866b19b69bebba80a0bd04cc0c0",
-          "sha256": "d837d5b291ce5c4bace36acb94bf5b164ce969dc3062f7459142d142658c6d03"
+          "file_sha256": "b52637b3f548519b1a85e3522ac2289ef8ffb465faab2775696a9db93a46c20a",
+          "sha256": "bc9eea7b1ed13fbf19ba9dab65a8d66ba156fb32509a24c21eacc0144df7a51a"
         },
         {
           "name": "FxMaybe",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/containers.lmx",
-          "file_sha256": "ee9053e019d2d47522f3a5d5b48d49cd506095e6ca9bb2ae96a4df9ba69f304b",
+          "file_sha256": "8939b0360609c385263ffd3b704ed0e39618567a1d44cf5f768a77c8634093ee",
           "sha256": "664720047844572e08d51e3c2c789c38ae145175e1ebefa63cc034bdecf2f2b5"
         },
         {
           "name": "FxSome",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/containers.lmx",
-          "file_sha256": "ee9053e019d2d47522f3a5d5b48d49cd506095e6ca9bb2ae96a4df9ba69f304b",
-          "sha256": "773382b57e1f9271e4226f59ff65f75e60f2a14d022f53168d866496cddb2991"
+          "file_sha256": "8939b0360609c385263ffd3b704ed0e39618567a1d44cf5f768a77c8634093ee",
+          "sha256": "fb78deb916d609a09a4dbefa2e8207df6d8ffca340107df945c3a7feacc63b24"
         },
         {
           "name": "FxNone",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/containers.lmx",
-          "file_sha256": "ee9053e019d2d47522f3a5d5b48d49cd506095e6ca9bb2ae96a4df9ba69f304b",
-          "sha256": "740805d3653f10eee80cd7f96913329d6336ce9a3ce2d1b47816f667199e712c"
+          "file_sha256": "8939b0360609c385263ffd3b704ed0e39618567a1d44cf5f768a77c8634093ee",
+          "sha256": "c93c036c8fbbde7bfa342be789407c605f3e7978914b1fc099b949d094e31065"
         }
       ],
       "shared_lmx_definitions": [
         "FxApply",
         "FxOne",
+        "FxPreparedOperands",
         "FxSeqInfo",
         "FxSeqPredicate",
         "FxSeqRead",
@@ -190,18 +187,14 @@
       },
       "metrics": {
         "LMX": {
-          "characters_with_whitespace": 2163,
-          "characters_without_whitespace": 1402,
-          "without_complex_throws_characters": 1339,
-          "complex_throws_removed_characters": 63,
-          "nonblank_lines": 78,
-          "utf8_bytes": 2163
+          "characters_with_whitespace": 2237,
+          "characters_without_whitespace": 1462,
+          "nonblank_lines": 80,
+          "utf8_bytes": 2237
         },
         "Common Lisp": {
           "characters_with_whitespace": 843,
           "characters_without_whitespace": 674,
-          "without_complex_throws_characters": 674,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 24,
           "utf8_bytes": 843
         }
@@ -214,7 +207,7 @@
         "sort",
         "unique"
       ],
-      "contract": "Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по явному равенству. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.",
+      "contract": "Новая внешняя последовательность, неизменный источник, прежняя идентичность ссылочных элементов. Устойчивая bottom-up merge sort использует трёхсторонний целый comparator. unique оставляет первое вхождение по общему равенству по умолчанию или явному same. Пустой и одиночный вход не вызывают comparator. Вход и ключи не меняются из callbacks.",
       "boundary": "CL reference не вызывает sort/stable-sort/remove-duplicates. Обе реализации показывают алгоритмы; общая инфраструктура профиля последовательности перечислена отдельно.",
       "limitations": "Generic unique линейно ищет в уже принятой части и имеет O(n²), sort имеет O(n log n). Это не замер скорости SBCL и не описание внутреннего алгоритма его стандартной библиотеки. CL native remove-duplicates может разделять внешнюю последовательность с входом, а reference здесь всегда строит результат по договору LMX; клиент S08 не наблюдает идентичность внешнего контейнера.",
       "sources": [
@@ -222,7 +215,7 @@
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_dup.htm"
       ],
       "dependency_role": "selected_clients",
-      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    ---\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same\n    required: items same\n    return: @\n    unique:\n        throws:\n            FxCallFailure\n            FxKernelFailure\n            FxPredicate\n            FxTypeToken\n            ReceiverIndex\n            SequenceElement\n            SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                private: @: answer FxApply\\apply(same; FxTwo\\make(previous; item))\n                if: FxSeqPredicate\\truth(answer) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n",
+      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    ---\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same 0\n    required: items\n    return: @\n    unique:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                if: FxValueSame\\test(previous; item; same) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n",
       "foreign": "(in-package #:lmx-sbcl-reference)\n\n(defun sort-values (items compare)\n  (sequence-value items)\n  (function-value compare)\n  (let* ((source (snapshot items)) (size (length source))\n         (target (make-array size)) (width 1))\n    (loop while (< width size) do\n      (loop for begin from 0 below size by (* 2 width) do\n        (let* ((middle (min size (+ begin width)))\n               (end (min size (+ middle width)))\n               (left begin) (right middle) (out begin))\n          (loop while (and (< left middle) (< right end)) do\n            (let ((order (funcall compare (aref source left)\n                                          (aref source right))))\n              (check-type order integer)\n              (if (<= order 0)\n                  (progn (setf (aref target out) (aref source left))\n                         (incf left))\n                  (progn (setf (aref target out) (aref source right))\n                         (incf right)))\n              (incf out)))\n          (loop while (< left middle) do\n            (setf (aref target out) (aref source left))\n            (incf left) (incf out))\n          (loop while (< right end) do\n            (setf (aref target out) (aref source right))\n            (incf right) (incf out))))\n      (rotatef source target)\n      (setf width (* 2 width)))\n    (same-profile items source)))\n\n(defun unique-values (items same)\n  (sequence-value items)\n  (function-value same)\n  (let ((source (coerce items 'vector))\n        (out (make-array 0 :adjustable t :fill-pointer 0)))\n    (dotimes (i (length source))\n      (let ((value (aref source i)) (found nil))\n        (dotimes (j (length out))\n          (when (integer-truth (funcall same (aref out j) value))\n            (setf found t)\n            (return)))\n        (unless found (vector-push-extend value out))))\n    (same-profile items out)))\n",
       "source_files": {
         "lmx": "source/implementations/lmx/SI03.lmx",
@@ -232,18 +225,20 @@
         {
           "name": "FxSort",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
-          "file_sha256": "9d6a979426a47e2a07b251c9ff0d2cb2abf65a835f4776a2adbe75b39a495c74",
+          "file_sha256": "40d889d8879ecb2c607ea9d17dfdaa1373ea25649760c2a7580ff235ea0c7268",
           "sha256": "37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a"
         },
         {
           "name": "FxUnique",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
-          "file_sha256": "9d6a979426a47e2a07b251c9ff0d2cb2abf65a835f4776a2adbe75b39a495c74",
-          "sha256": "45e5c9ba86ebc9d39d746aaddb819ee0770027085f46bb27681f4a13679bb019"
+          "file_sha256": "40d889d8879ecb2c607ea9d17dfdaa1373ea25649760c2a7580ff235ea0c7268",
+          "sha256": "8d4a6d2ed83e3d0ba9c278a36b58bfde1d88cf0083756099a9d7da24b7283cb8"
         }
       ],
       "shared_lmx_definitions": [
         "FxApply",
+        "FxEqualFields",
+        "FxEqualityTypes",
         "FxSeqAdmit",
         "FxSeqAllocate",
         "FxSeqBounds",
@@ -253,9 +248,11 @@
         "FxSeqRead",
         "FxSeqSlice",
         "FxSeqStore",
+        "FxSequenceDifference",
         "FxThrows",
         "FxTry",
-        "FxTwo"
+        "FxTwo",
+        "FxValueSame"
       ],
       "external_boundaries": [
         "FxKernel"
@@ -270,18 +267,14 @@
       },
       "metrics": {
         "LMX": {
-          "characters_with_whitespace": 3530,
-          "characters_without_whitespace": 1894,
-          "without_complex_throws_characters": 1751,
-          "complex_throws_removed_characters": 143,
-          "nonblank_lines": 97,
-          "utf8_bytes": 3530
+          "characters_with_whitespace": 3327,
+          "characters_without_whitespace": 1799,
+          "nonblank_lines": 89,
+          "utf8_bytes": 3327
         },
         "Common Lisp": {
           "characters_with_whitespace": 1845,
           "characters_without_whitespace": 1218,
-          "without_complex_throws_characters": 1218,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 43,
           "utf8_bytes": 1845
         }
@@ -340,16 +333,12 @@
         "LMX": {
           "characters_with_whitespace": 2583,
           "characters_without_whitespace": 1729,
-          "without_complex_throws_characters": 1729,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 58,
           "utf8_bytes": 2583
         },
         "Common Lisp": {
           "characters_with_whitespace": 1732,
           "characters_without_whitespace": 1262,
-          "without_complex_throws_characters": 1262,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 38,
           "utf8_bytes": 1732
         }
@@ -379,48 +368,58 @@
         {
           "name": "FxPartial",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_functions.lmx",
-          "file_sha256": "bf82779aab91171aa3fee3225dba47fb489fe866b19b69bebba80a0bd04cc0c0",
+          "file_sha256": "b52637b3f548519b1a85e3522ac2289ef8ffb465faab2775696a9db93a46c20a",
           "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e"
         }
       ],
       "shared_lmx_definitions": [
         "FxAppend",
+        "FxApply",
         "FxBuild",
         "FxCaptureFailures",
         "FxCaptureOne",
         "FxCapturePrefix",
-        "FxCaptureState",
         "FxConcat",
         "FxDecimal",
         "FxEngineState",
+        "FxEqualFields",
+        "FxEqualityTypes",
         "FxFailureFilter",
         "FxFailures",
-        "FxFormatInt",
+        "FxFormat",
         "FxForwardEngine",
         "FxFrameApply",
         "FxFrameAttempt",
         "FxIndices",
         "FxInputPolicy",
         "FxLabels",
+        "FxOne",
         "FxOwnPolicy",
         "FxPrefixPolicy",
+        "FxPreparedOperands",
+        "FxRecordAdapter",
+        "FxRecordAdapterState",
+        "FxRecordConstructor",
         "FxRecordOperands",
-        "FxSameText",
         "FxSeqAllocate",
         "FxSeqBounds",
         "FxSeqConcat",
         "FxSeqInfo",
+        "FxSeqPredicate",
         "FxSeqRead",
         "FxSeqReverse",
         "FxSeqSize",
         "FxSeqSlice",
+        "FxSequenceDifference",
         "FxSignatures",
         "FxSlice",
         "FxSourcePolicy",
         "FxStageFailures",
         "FxThrows",
+        "FxTry",
+        "FxTwo",
         "FxTypeTokens",
-        "FxUnitRange",
+        "FxValueSame",
         "FxWrap"
       ],
       "external_boundaries": [
@@ -438,16 +437,12 @@
         "LMX": {
           "characters_with_whitespace": 713,
           "characters_without_whitespace": 533,
-          "without_complex_throws_characters": 533,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 17,
           "utf8_bytes": 713
         },
         "Common Lisp": {
           "characters_with_whitespace": 573,
           "characters_without_whitespace": 454,
-          "without_complex_throws_characters": 454,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 13,
           "utf8_bytes": 573
         }
@@ -461,14 +456,14 @@
       ],
       "contract": "Любое конечное число принятых позиционных аргументов, включая ноль; равенство получает весь ключ. Сохраняется внешний снимок аргументов, ссылочные цели не копируются. Кешируются только успешные результаты; nil, отсутствие значений и ссылочный результат сохраняются различимо. Результат ошибки и ошибка сравнения не превращаются в успешную запись.",
       "boundary": "Это две общие реализации linear-cache memoize с пользовательским равенством, а не подмена ими клиентского hash-table. CL reference сохраняет native multiple values. LMX использует один типизированный результат/void и стандартный frame snapshot; исходные тела его адаптера включены в зависимости.",
-      "limitations": "Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. В S23 основной вариант сравнивает явный кеш; эта пара относится к отдельно сохранённому варианту с memoize, потому что стандарт CL не содержит такого ресивера.",
+      "limitations": "Ключи должны оставаться стабильны для заданного равенства. Рекурсивный повтор ещё вычисляемого ключа не имеет special in-flight suppression. Кеш локален одному Message/последовательному владельцу; конкурентное разделение mutable cache не заявлено. S23 показывает явный процедурный кеш и функциональный вызов memoize. Общие реализации ниже учитываются один раз. Дополнительное LMX-равенство по умолчанию использует общий equality-контракт; эта пара проверяет профиль с явно переданным сравнением полного ключа.",
       "sources": [
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_gethas.htm",
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_apply.htm",
         "https://www.lispworks.com/documentation/HyperSpec/Body/s_fn.htm"
       ],
-      "dependency_role": "retained_core_variant_only",
-      "lmx": "FxMemoEntry:\n    @: key 0\n    @: value 0\n\nFxMemoState:\n    @: operation 0\n    @: sameKey 0\n    @: entries 0\n\nFxMemoEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: copy(FxThrows\\snapshot)\n        private: @: key FxFrameSnapshot\\snapshot(frame)\n        private: int: i 0\n        while: i < length(state\\entries)\n            private: FxMemoEntry@: entry state\\entries[i]\n            private: @: equalityArgs FxTwo\\make(FxRecords\\reference(entry\\key); FxRecords\\reference(key))\n            private: @: flagRecord FxApply\\apply(state\\sameKey; equalityArgs)\n            private: int: flag \\flagRecord\n            if: flag != 0\n                return: entry\\value\n            i += 1\n        private: @: value FxFrameApply\\apply(frame)\n        private: @: entry (copy(FxMemoEntry))\n        entry\\key := key\n        entry\\value := value\n        private: int: count length(state\\entries)\n        sys\\resize(state\\entries; count + 1)\n        state\\entries[count] := entry\n        return: value\n\nFxMemo:\n    private:\n        @: operation\n        @: sameKey\n    return: @\n    memo:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(subject := operation)\n        private: @: equality FxKernel\\signature(subject := sameKey)\n        private: @: state (copy(FxMemoState))\n        state\\operation := operation\n        state\\sameKey := sameKey\n        state\\entries := (copy(()))\n        private: @: contract FxSignatures\\make(info\\inputTypes; info\\resultType)\n        private: @: failures FxFailures\\union(info\\throws; equality\\throws)\n        return: FxWrap\\make(contract; FxMemoEngine\\run; state; failures; FxFullPolicy\\make(operation))\n",
+      "dependency_role": "functional_clients",
+      "lmx": "FxMemoEntry:\n    @: key 0\n    @: value 0\n\nFxMemoState:\n    @: operation 0\n    @: sameKey 0\n    @: entries 0\n\nFxMemoEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: copy(FxThrows\\snapshot) FxPredicate\n        private: @: key FxFrameSnapshot\\snapshot(frame)\n        private: int: i 0\n        while: i < length(state\\entries)\n            private: FxMemoEntry@: entry state\\entries[i]\n            if: FxValueSame\\test(entry\\key; key; state\\sameKey) != 0\n                return: entry\\value\n            i += 1\n        private: @: value FxFrameApply\\apply(frame)\n        private: @: entry (copy(FxMemoEntry))\n        entry\\key := key\n        entry\\value := value\n        private: int: count length(state\\entries)\n        sys\\resize(state\\entries; count + 1)\n        state\\entries[count] := entry\n        return: value\n\nFxMemo:\n    private:\n        @: operation\n        @: sameKey 0\n    required: operation\n    return: @\n    memo:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(subject := operation)\n        private: @: state (copy(FxMemoState))\n        state\\operation := operation\n        state\\sameKey := sameKey\n        state\\entries := (copy(()))\n        private: @: contract FxSignatures\\make(info\\inputTypes; info\\resultType)\n        private: @: failures info\\throws\n        if: sameKey != 0\n            private: @: equality FxKernel\\signature(subject := sameKey)\n            failures := FxFailures\\union(failures; equality\\throws)\n        return: FxWrap\\make(contract; FxMemoEngine\\run; state; failures; FxFullPolicy\\make(operation))\n",
       "foreign": "(in-package #:lmx-sbcl-reference)\n\n(defun memoize-values (operation same-key)\n  (function-value operation)\n  (function-value same-key)\n  (let ((entries (make-array 0 :adjustable t :fill-pointer 0)))\n    (lambda (&rest actuals)\n      (let ((key (snapshot actuals)))\n        (block lookup\n          (dotimes (i (length entries))\n            (let ((entry (aref entries i)))\n              (when (integer-truth (funcall same-key (car entry) key))\n                (return-from lookup (values-list (cdr entry))))))\n          (let ((values (multiple-value-list (apply operation actuals))))\n            (vector-push-extend (cons key values) entries)\n            (values-list values)))))))\n",
       "source_files": {
         "lmx": "source/implementations/lmx/SI06.lmx",
@@ -478,26 +473,26 @@
         {
           "name": "FxMemoEntry",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_combinators.lmx",
-          "file_sha256": "8e233c96e0d62a720baf6ea4ab6aae292a3fda04c10919a3eef03c0ca6eeb248",
+          "file_sha256": "82bd5e8ef50a6106a16e642c16775ff86344b2903dfa75babfddf347d4f37468",
           "sha256": "a02ea4be4da7690ed48b6aeebca2fa34f7d189fe1f09a6faf72168429884773f"
         },
         {
           "name": "FxMemoState",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_combinators.lmx",
-          "file_sha256": "8e233c96e0d62a720baf6ea4ab6aae292a3fda04c10919a3eef03c0ca6eeb248",
+          "file_sha256": "82bd5e8ef50a6106a16e642c16775ff86344b2903dfa75babfddf347d4f37468",
           "sha256": "b3c19624a4ad39492e9235a8a5ef0b0664d18ab16eac71b83a37417c0a48f10e"
         },
         {
           "name": "FxMemoEngine",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_combinators.lmx",
-          "file_sha256": "8e233c96e0d62a720baf6ea4ab6aae292a3fda04c10919a3eef03c0ca6eeb248",
-          "sha256": "61280b245abcadd82b6e78b853f82dc3722c5628bba4045e96543cec6b0faec8"
+          "file_sha256": "82bd5e8ef50a6106a16e642c16775ff86344b2903dfa75babfddf347d4f37468",
+          "sha256": "0a9237a564ac157eebd56b2d1ec93e1c323ba523668e14abfbc25800d06988db"
         },
         {
           "name": "FxMemo",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_combinators.lmx",
-          "file_sha256": "8e233c96e0d62a720baf6ea4ab6aae292a3fda04c10919a3eef03c0ca6eeb248",
-          "sha256": "6b326fa53fee173d06175b6d378c02c06a6e1ee024475981a26b95356e0fa3a8"
+          "file_sha256": "82bd5e8ef50a6106a16e642c16775ff86344b2903dfa75babfddf347d4f37468",
+          "sha256": "dc6b312c30db379b2bcf5e45a723e7b66cd5aaf36bbfbf194af57abe4b442083"
         }
       ],
       "shared_lmx_definitions": [
@@ -506,13 +501,14 @@
         "FxBuild",
         "FxCaptureFailures",
         "FxCaptureOne",
-        "FxCaptureState",
         "FxConcat",
         "FxDecimal",
         "FxEngineState",
+        "FxEqualFields",
+        "FxEqualityTypes",
         "FxFailureFilter",
         "FxFailures",
-        "FxFormatInt",
+        "FxFormat",
         "FxFrameApply",
         "FxFrameAttempt",
         "FxFrameRead",
@@ -521,18 +517,23 @@
         "FxIndices",
         "FxInputPolicy",
         "FxLabels",
+        "FxOne",
         "FxOwnPolicy",
+        "FxPreparedOperands",
+        "FxRecordAdapter",
+        "FxRecordAdapterState",
+        "FxRecordConstructor",
         "FxRecordOperands",
-        "FxRecords",
-        "FxSameText",
         "FxSeqAllocate",
         "FxSeqBounds",
         "FxSeqConcat",
         "FxSeqInfo",
+        "FxSeqPredicate",
         "FxSeqRead",
         "FxSeqReverse",
         "FxSeqSize",
         "FxSeqSlice",
+        "FxSequenceDifference",
         "FxSignatures",
         "FxSlice",
         "FxSourcePolicy",
@@ -541,7 +542,7 @@
         "FxTry",
         "FxTwo",
         "FxTypeTokens",
-        "FxUnitRange",
+        "FxValueSame",
         "FxWrap"
       ],
       "external_boundaries": [
@@ -557,18 +558,14 @@
       },
       "metrics": {
         "LMX": {
-          "characters_with_whitespace": 1700,
-          "characters_without_whitespace": 1211,
-          "without_complex_throws_characters": 1211,
-          "complex_throws_removed_characters": 0,
+          "characters_with_whitespace": 1616,
+          "characters_without_whitespace": 1136,
           "nonblank_lines": 48,
-          "utf8_bytes": 1700
+          "utf8_bytes": 1616
         },
         "Common Lisp": {
           "characters_with_whitespace": 680,
           "characters_without_whitespace": 508,
-          "without_complex_throws_characters": 508,
-          "complex_throws_removed_characters": 0,
           "nonblank_lines": 15,
           "utf8_bytes": 680
         }
@@ -593,18 +590,14 @@
   },
   "totals": {
     "LMX": {
-      "characters_with_whitespace": 14494,
-      "characters_without_whitespace": 9252,
-      "without_complex_throws_characters": 8949,
-      "complex_throws_removed_characters": 303,
-      "nonblank_lines": 413,
-      "utf8_bytes": 14494
+      "characters_with_whitespace": 14281,
+      "characters_without_whitespace": 9142,
+      "nonblank_lines": 407,
+      "utf8_bytes": 14281
     },
     "Common Lisp": {
       "characters_with_whitespace": 7585,
       "characters_without_whitespace": 5619,
-      "without_complex_throws_characters": 5619,
-      "complex_throws_removed_characters": 0,
       "nonblank_lines": 180,
       "utf8_bytes": 7585
     }

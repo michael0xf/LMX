@@ -1,6 +1,6 @@
-# Text Patterns: concrete LMX implementation
+# Generic Patterns and text profiles: concrete LMX implementation
 
-Revision: **2026-11-23**, based only on the current archive and the `LMX-TZ-2026-11-22-postfix-1` requirements, with the AR01 interface-observation correction below. The normative source is [the Regex requirements](../../CORE_SEQUENCES_REGEX.en.md#patterns), together with [the common Array/reference requirements](../../CORE_SEQUENCES_REGEX.en.md#types).
+Revision: **2026-11-23**, integrating generic source domains, shared range equality, both operation forms and the AR01 interface-observation contract. The normative source is [the Regex requirements](../../CORE_SEQUENCES_REGEX.en.md#patterns), together with [the common Array/reference requirements](../../CORE_SEQUENCES_REGEX.en.md#types).
 
 **Status:** the matcher algorithms are written in LMX. This is a source implementation for integration, **not a report of successful execution on an LMX kernel**. The archive supplied no runnable kernel against which these sources could be checked. Ordinary call admission, the AR01 read-only interface observation, the declared-failure metadata of dynamic callable dependencies, and the existing `|` implementation still require the common integration described below. None of those gates is a placeholder for an unimplemented regex engine.
 
@@ -9,14 +9,15 @@ Revision: **2026-11-23**, based only on the current archive and the `LMX-TZ-2026
 | Source | Implemented responsibility |
 | --- | --- |
 | [support.lmx](src/regex/support.lmx) | Ordinary structural requirements, Pattern factory, candidate cursors, persistent capture entries, Match and Span construction |
+| [source.lmx](src/regex/source.lmx) | Generic prepared sources, Array/text domain adapters, slicing, replacement roles and profile-preserving assembly |
 | [text.lmx](src/regex/text.lmx) | UTF-8 decoder, byte profile, scalar-to-byte offsets, text materialization and fragment copying |
-| [primitives.lmx](src/regex/primitives.lmx) | Literal text, sets and complements, ranges, predicates, boundaries, `sameAs`, elementary position/line probes |
+| [primitives.lmx](src/regex/primitives.lmx) | Literal sequences, whole elements, sets and complements, domain ranges, predicates, boundaries, `sameAs` and position/text-profile probes |
 | [values.lmx](src/regex/values.lmx) | Ready Pattern references, including ASCII classes, CRLF-aware anchors and `wordBoundary` |
 | [combinators.lmx](src/regex/combinators.lmx) | Sequence, ordered alternative, bounded/unbounded repetition, atomic selection, captures, forward assertions and backward assertions of unrestricted width |
 | [operations.lmx](src/regex/operations.lmx) | Matching, prefix/suffix predicates, searching, iteration, replacement, splitting and capture accessors |
 | [operands.lmx](src/regex/operands.lmx) | Five ordinary operands and the additional Pattern branch of existing `|` |
 
-[REGEX_EXPORTS.json](REGEX_EXPORTS.json) gives exact public names, qualified implementation paths, operand metadata, assembly order, dependencies, and integration gates. There are **40 receiver/operand entries**: 35 ordinary receivers and five operands. Ready Pattern values, configuration values, ordinary requirements and declared-failure names are listed separately. The extension of `|` adds no new public name.
+[REGEX_EXPORTS.json](REGEX_EXPORTS.json) gives exact public names, qualified implementation paths, operand metadata, assembly order, dependencies, and integration gates. Its canonical entries include the generic `arrayView` and `element` constructors; the current catalog records both forms and every semantic variant. Ready Pattern values, configuration values, ordinary requirements and declared-failure names are listed separately. The extension of `|` adds no new public name.
 
 The API spells the byte profile **`byteText`**, and first-match search **`find`**, following the current requirements. It does not introduce competing `bytesText`, `findFirst`, `or`, or a new `match`. Existing `repeat`, `lazy`, `some`, `none`, `record`, `guard` and their meanings are retained.
 
@@ -27,8 +28,8 @@ The API spells the byte profile **`byteText`**, and first-match search **`find`*
 | `|` | Ordered alternative between Pattern values | The same existing sign keeps numeric and Array behavior when no Pattern is present; it is not Boolean `||` |
 | `then` | Match the written parts one after another | Sequence construction does not reinterpret arithmetic `+` or merge/copy |
 | `times`, `atLeast`, `atMost`, `optional` | Exact, lower-bounded, upper-bounded and zero-or-one multiplicity | Ordinary count meanings remain visible; `optional` constructs a Pattern rather than a Maybe value |
-| `literal`, `oneOf`, `charRange` | Literal text, a set of units, an inclusive unit range | A text parameter never starts a second regex parser |
-| `sequence`, `choice`, `repeated` | Ordinary constructors with explicit ready values/settings | The short operand forms delegate to the same construction algorithms; they are not separate variants of the semantics |
+| `literal`, `element`, `oneOf`, `within` | A literal sequence, one whole element, a set of units, an inclusive domain range | Text decoding and range conversion are explicit profiles; no second regex parser |
+| `then`, `choice`, `repeated` | Ordinary constructors with explicit ready values/settings | The short operand forms delegate to the same construction algorithms; they are not separate variants of the semantics |
 | `some` / `none` | Existing presence/absence result containers | Empty successful text stays `some`, and no extra regex-only option type is created |
 | `extendFirst` / `stopFirst` | Order of matching attempts | Existing `lazy` remains deferred/cached callable evaluation, and existing `repeat` keeps its call-repetition contract |
 | `T[]`, `T@`, `[]: [parts]` | Existing common type and Array/Structure construction | Pattern arrays require no new container syntax, wrapper type or automatic spread |
@@ -37,7 +38,7 @@ The criterion is recognizability of the action and reuse of its existing mechani
 
 ## Actual representation and lifetime
 
-`Pattern` is a named signature of an ordinary callable. Its internal source input is an ordinary `RxPreparedText` requirement; the public matching/searching receivers accept `TextView` and prepare that context once. A constructed Pattern is the `open` method of a copied ordinary owner:
+`Pattern` is a named signature of an ordinary callable with one `RxPreparedSource` input. Public matching/searching accepts an explicitly prepared view role: `arrayView` preserves actual Array units; `utf8Text` and `byteText` preserve their text profiles. `RxPrepareSource` invokes the view's declared preparation method once and does not guess the domain from physical fields. A constructed Pattern is the `open` method of a copied ordinary owner:
 
 - The owner stores its engine method reference and configuration.
 - Its nested `Call` Structure is actual DATA for `open`, with `source`, `position` and `captures` inputs.
@@ -47,15 +48,16 @@ Returning the selected method retains its actual parent and lexical links under 
 
 A cursor's step returns the existing `Maybe`: `Some` carries an ordinary candidate with a new position and a capture-journal reference; `None` means exhaustion. A successful zero-length candidate is therefore distinct from exhaustion. The internal cursor protocol uses normal nullary calls and explicit state. Public `eachMatch` wraps that protocol with the existing `yield` suspension and declared `Stop` completion. It never catches a callback's `Stop` and misinterprets it as its own exhaustion.
 
-`Match`, `Span`, `TextView`, `RxPreparedText`, capture entries and search frames are ordinary Structures. They have no new physical type code, object kind, special pointer category or executable instruction format. A Structure remains the same `@[]` reference sequence accepted by the shared Array layer.
+`Match`, `Span`, `ArrayView`, `TextView`, `RxPreparedSource`, the text decoder's `RxPreparedText`, capture entries and search frames are ordinary Structures. They have no new physical type code, object kind, special pointer category or executable instruction format. A Structure remains the same `@[]` reference sequence accepted by the shared Array layer.
 
-Typed requirements use the new postfix heads. For example, the input is **`TextView@: source`**, not `@: source TextView`: the latter would initialize a universal reference with the model itself. The same distinction applies to `Pattern@: pattern`, `Match@: matched` and predicate/replacement references. `char[]` and `int[]` are ordinary dense arrays. Configuration defaults such as `@: maximum unbounded` intentionally remain initialized universal references.
+Typed requirements use the existing postfix heads. For example, the internal input is **`RxPreparedSource@: source`**, not `@: source RxPreparedSource`: the latter would initialize a universal reference with the model itself. Public source admission retains its explicit view family. The same distinction applies to `Pattern@: pattern`, `Match@: matched` and predicate/replacement references. `char[]` and `int[]` are ordinary dense arrays. Configuration defaults such as `@: maximum unbounded` intentionally remain initialized universal references.
 
 All state is owned by the current Message and ordinary reference graph. No Thread, global mutable regex registry, parser, bytecode VM, opcode table or hidden second program graph is introduced.
 
+<a id="ordered-candidate-enumeration"></a>
 ## Ordered candidate enumeration
 
-`choice` maintains the current branch and its cursor. It exhausts that branch's candidates before opening the next branch. `sequence` maintains an explicit linked stack of child cursors. A failure of a later child pops only that stack level and requests another candidate from the preceding child. The matching code does not implement alternative as Boolean `||`.
+`choice` maintains the current branch and its cursor. It exhausts that branch's candidates before opening the next branch. `then` maintains an explicit linked stack of child cursors. A failure of a later child pops only that stack level and requests another candidate from the preceding child. The matching code does not implement alternative as Boolean `||`.
 
 Consequently, `(then (literal("a") | "ab") "c")` on `abc` first tries the local `a` result and can then return to `ab`. `wholeMatch` filters complete candidates by the required end position **while enumerating** them. It does not select `a` and reject the whole operation before considering `ab`.
 
@@ -68,9 +70,9 @@ The minimum and maximum control those choices. `unbounded` is an ordinary config
 
 `atomic` has a cursor which requests at most one candidate from its child. A later sequence failure cannot reopen that child; a surrounding choice can still try its other branches.
 
-## Boolean text predicates
+## Boolean predicates over the selected source
 
-All four predicates accept `TextView@: source` and one `@: pattern`, with both actuals required. The pattern follows the same ordinary normalization as `matchAt`: either an existing Pattern or literal `char[]` text, without a regex-string parser. The result is an `int` equal to 1 or 0. A successful empty match counts as success; admission, encoding and callback failures remain failures.
+All four predicates require one source view and one pattern. They use the same `RxPrepareSource` and ordinary normalization as `matchAt`: an existing Pattern or explicitly selected literal input interpreted by that source's domain. Whole Array elements are not narrowed to char or int, and no regex-string parser is introduced. The result is an `int` equal to 1 or 0. A successful empty match counts as success; admission, encoding and callback failures remain failures.
 
 | Receiver | Accepted position | Result |
 | --- | --- | --- |
@@ -97,7 +99,13 @@ Lookahead obtains a candidate at the current start. Lookbehind enumerates possib
 
 Positive and negative lookaround preserve the outer position and outer capture head. Previously completed captures remain readable, but newly created local captures are discarded at the boundary. The code catches no encoding or callback failure to implement negation: absence of a candidate and a failed operation remain different outcomes.
 
-## Text units and results
+## Source units and domain profiles
+
+`RxPreparedSource` holds the original view, actual units and an explicit domain. The domain supplies literal preparation, range-bound conversion and slicing. `arrayView` retains dense/reference element admission; `element(x)` matches one complete value, while `literal(xs)` matches a sequence. `satisfy` and `boundaryOf` validate an actual unary predicate before matching, including empty input. `within` uses the selected element order and converted bounds. `FxSequenceDifference` is the single range-comparison loop for literals, `sameAs` and ordinary sequence equality.
+
+An AST node is one value. Recursive matching may prepare its children with `arrayView`; captures from different sources retain explicit source/coordinate ownership. Combinators, backtracking, zero-progress rules and capture journals are unchanged between domains. See [generic operations](../../GENERIC_OPERATIONS.md) and [publication](PUBLICATION_CONTRACT.md).
+
+### Text units and results
 
 `utf8Text` validates the supplied `char[]` and returns a public view containing its original descriptor and the explicit profile. Each reached public search then validates and decodes the **current** source into a separate ordinary `RxPreparedText`: an `int[]` of Unicode scalar values plus a scalar-to-byte-offset array, the source descriptor, the profile and a reference to that original view. The decoder rejects invalid leads, malformed or truncated continuation sequences, overlong encodings, surrogate values and values above U+10FFFF. It does not normalize, fold case, insert U+FFFD or interpret UTF-16 units or grapheme clusters.
 
@@ -111,13 +119,13 @@ The original source descriptor and profile are retained by `TextView`; no raw po
 
 The public `TextView` stores **no units/offset cache**. `RxPrepare` builds current units and offsets once at the start of each public `matchAt`, `wholeMatch`, `find`, `eachMatch`, `hasSuffix`, replacement or split operation; `contains`, `hasPrefix` and `matches` delegate to those same entry points. Every candidate, backtracking step and `eachMatch` resume in that operation shares the one prepared context. An `eachMatch` iterator owns it from construction through its final suspension/completion.
 
-`Match.source` and `Span.source` remain the **original public TextView object**. A separate ordinary `private\prepared` reference retains the index belonging to the selected operation. `matchedText` and capture accessors use those retained offsets and source descriptor; they do not consult an index later overwritten by another search. Starting a new search never edits an old Match, Span or prepared context.
+`Match.source` and `Span.source` remain the **original public TextView object**. A separate ordinary `private\prepared` reference retains the index belonging to the selected operation. `matchedValue` and capture accessors use those retained offsets and source descriptor; they do not consult an index later overwritten by another search. Starting a new search never edits an old Match, Span or prepared context.
 
-After a completed operation and after finishing access to its source-backed results, a caller may change the source and reuse the **same view** for another search. That search rebuilds its index from current bytes, so both changed scalar values and changed scalar widths are observed. Invalid new UTF-8 raises `PatternEncoding` at the new operation. This follows the stated TZ stability interval without extending it to the entire view lifetime. There is no watcher, version field, source snapshot, second executable graph or promise that mutation during an active operation will be diagnosed.
+After a completed operation and after finishing access to its source-backed results, a caller may change the source and reuse the **same view** for another search. That search rebuilds its index from current bytes, so both changed scalar values and changed scalar widths are observed. Invalid new UTF-8 raises `PatternEncoding` at the new operation. This follows the normative stability interval without extending it to the entire view lifetime. There is no watcher, version field, source snapshot, second executable graph or promise that mutation during an active operation will be diagnosed.
 
 The fixtures cover [same-view reuse and source identity](tests/regex/case_rebuild_view.lmx), [changed scalar width and retained offsets](tests/regex/case_reuse_view_width.lmx), and [invalid new bytes](tests/regex/case_reuse_view_invalid.lmx). Previous source-backed results are not accessed after the source mutation in those fixtures. Constructor validation currently uses the same explicit decoder as search preparation and discards its temporary index; avoiding that temporary constructor index is a permissible implementation optimization, not a condition for correct reuse.
 
-`matchedText`, `captureText`, `captureTexts` and `split` explicitly materialize new `char[]` values. `Match`, `Span` and `captureSpans` retain descriptors and positions. Already emitted Match boundaries and journal heads are never rewritten by later iteration.
+In a text profile, `matchedValue`, `captureValue`, `captureValues` and `split` explicitly materialize new `char[]` fragments. In an Array profile, those accessors use the same domain slicing contract and preserve the admitted Array representation; multi-fragment results retain their declared outer collection. `Match`, `Span` and `captureSpans` retain descriptors and positions. Already emitted Match boundaries and journal heads are never rewritten by later iteration.
 
 ## Empty matches, replacement and splitting
 
@@ -133,13 +141,13 @@ Replacement and splitting keep a separate `copiedUntil` cursor. The search's adv
 | Empty input, `emptyPattern` | `split` | Two empty fields |
 | Empty input, `neverPattern` | `split` | One empty field |
 
-The qualified text-replacement entry is `RxReplace\replace(source; pattern; replacement)`. It returns a newly materialized `char[]` and does not mutate the source. The separate sequence operation `replaceRange(target; begin; end; values)` mutates a range and returns that target. The sequence operation `splice(target; begin; end; values)` performs the range edit and returns the removed elements. These operations have distinct public names and result contracts.
+The qualified replacement entry is `RxReplace\replace(source; pattern; replacement)`. It returns a fresh result admitted by the source profile and does not mutate the source; the text profile publishes an exact `char[]` result. The separate sequence operation `replaceRange(target; begin; end; values)` mutates a range and returns that target. The sequence operation `splice(target; begin; end; values)` performs the range edit and returns the removed elements. These operations have distinct public names and result contracts.
 
-Replacement is admitted as text or an ordinary callable before search. The callable receives one whole `Match` through the signature's named actual map and runs once per **selected** match. It is never run for rejected candidates. Its text is validated in the same profile and appended without being searched again. On failure there is no partial returned output; already performed external callback effects are not rolled back.
+Before search, the public role selects `RxReplacementLiteral\accept` or `RxReplacementCallable\accept` and constructs ordinary `RxReplacementInput` DATA. A callable's physical Structure storage cannot silently select a literal role; real ambiguity requires an explicit representation. The callable receives one whole `Match` through the signature's actual map and runs once per **selected** match. It is never run for rejected candidates. Its result is admitted to the same source profile and appended without being searched again; text additionally validates encoding. On failure there is no partial returned output; already performed external callback effects are not rolled back.
 
 ## Operand integration
 
-All five new words use `PASS_ARGS_AS_IS = 0`, private `left/right`, an optional left and required right. The runtime supplies an explicitly empty right vector for a postfix form. `then` has the ready priority obtained from `sys\priority("+")`; the four repetition words use `sys\priority("*")`. Their order is left-to-right. The existing priority, binding, modifiers and defaults of `|` remain unchanged.
+The established five short Pattern words use `PASS_ARGS_AS_IS = 0`, private `left/right`, an optional left and required right. The runtime supplies an explicitly empty right vector for a postfix form. `then` has the ready priority obtained from `sys\priority("+")`; the four repetition words use `sys\priority("*")`. Their order is left-to-right. The existing priority, binding, modifiers and defaults of `|` remain unchanged.
 
 `RxLogicalArguments` appends the **whole** supplied left reference, if present, followed by the already prepared right elements. It does not reopen a group, unwrap an Array, fold a right tail automatically, re-evaluate any occurrence or inspect written arity to consume neighboring expressions.
 
@@ -147,7 +155,9 @@ The absence check `left != nil` uses the current [ordinary absence-state compari
 
 The sole conditional right opening is still performed once by common operand preparation: a written anonymous left, exactly one right argument, and that right argument a written anonymous Structure. Only one right level opens; the left stays whole. P0 never removes the container. This package performs **zero additional openings**.
 
-The existing `|` implementation calls `RxAlternativeDispatch\probe(left := left; right := right)` after its existing preparation. When `handled` is false, it executes its original numeric/Array algorithm with the original arguments. When at least one logical argument satisfies `Pattern`, the branch requires two or more arguments and admits every one as Pattern or literal text before constructing `choice`. Arithmetic and Array operations with no Pattern are untouched. `|=` keeps ordinary compound-assignment evaluation and admission.
+All Pattern receivers also have the general operand representation under the [common form contract](../../OPERATION_FORMS.md); the five short words below retain their established arity/priority policies. Both `then` forms delegate to `RxSequence\then`: an ordinary zero-part call returns `emptyPattern`, a single part is returned, and the established operand form requires at least two logical arguments.
+
+The existing `|` implementation calls `RxAlternativeDispatch\probe(left := left; right := right)` after its existing preparation. When `handled` is false, it executes its original numeric/Array algorithm with the original arguments. When at least one logical argument satisfies `Pattern`, the branch requires two or more arguments and admits every one in its explicitly selected Pattern or domain-literal role before constructing `choice`. Arithmetic and Array operations with no Pattern are untouched. `|=` keeps ordinary compound-assignment evaluation and admission.
 
 The archive contains the high-level branch, not the old kernel's implementation body. Connecting that branch at the existing `|` entry is a concrete remaining integration step; replacing `|` with a Pattern-only function would be wrong.
 
@@ -163,8 +173,8 @@ this source archive**.
 
 The former four uses of `satisfies` as an `int`/Boolean result were invalid:
 that public receiver has no newly invented Boolean ABI. `RxIsPattern`,
-`RxRepeated`, `RxReplacementAccept` and `RxReplacementText` now use the common
-observation bridge. It returns 1 only for established compatibility and 0 only
+`RxRepeated` and the explicit replacement admission routes use the common
+observation bridge where a full requirement must be observed. It returns 1 only for established compatibility and 0 only
 for established incompatibility; unknown remains a service failure and cannot
 select numeric `|`, literal normalization or a finite repetition bound.
 Ordinary later typed reception keeps its existing value checks and effects.
@@ -176,17 +186,15 @@ structural/positional admission relationships without executing a Pattern,
 replacement, initializer, default, test or converter. It adds no public API,
 global registry, speculative matching attempt or new Pattern representation.
 
-The two finite service outcomes `FxKernelFailure` and `FxTypeToken` are declared
-in all **31 reviewed methods on the static call paths** to this observation,
-including normalization, sequence/choice/repetition construction, word
+The two finite service outcomes `FxKernelFailure` and `FxTypeToken` remain in the finite contracts on the static paths to this observation, including normalization, sequence/choice/repetition construction, word
 operands, matching/search wrappers, lookaround construction and replacement.
 [AR01_STATIC_DECLARATIONS.json](tests/regex/AR01_STATIC_DECLARATIONS.json)
-records every affected method and its exact called dependency. This is not an
+records the reviewed paths and their called dependencies; the current complete source/effect audit also covers the added generic domain and admission routes. This is not an
 inferred union of arbitrary callback failures. Returned matcher cursors do not
 re-run construction-time normalization merely because they resume; their
 dynamic callable-failure contract remains the separate gate below.
 
-The implementation also uses the shared sequence layer's `FxSeqInfo`, `FxSeqRead`, `FxSeqPush` and checked-size helper `FxSeqSize`. Their underlying Array metadata and read/admit/write bridges preserve actual dense layout and the direct value-record references of `@[]`. `sequence` and `choice` do not require a dense source to be boxed into a new reference-array representation before reading its elements.
+The implementation also uses the shared sequence layer's `FxSeqInfo`, `FxSeqRead`, `FxSeqPush` and checked-size helper `FxSeqSize`. Their underlying Array metadata and read/admit/write bridges preserve actual dense layout and the direct value-record references of `@[]`. `then` and `choice` do not require a dense source to be boxed into a new reference-array representation before reading its elements.
 
 The ordinary factories additionally need these existing language mechanisms to work on the real kernel: copy with correct lexical/parent maps, returned nested methods, typed-reference admission, direct calls, checked allocation/resize, `yield`/`Stop`, and lifetime retention. New Pattern/text values do not need a native object tag or special allocator.
 
@@ -195,6 +203,8 @@ A concrete remaining **common declared-failure integration gate** concerns dynam
 Errors for invalid counts/ranges/arity, encoding and position remain the declared `PatternArgument`, `PatternEncoding` and `PatternPosition`. Ordinary admission failures remain admission failures. Array-size or resource exhaustion remains its own failure and is never “not found.” There is no claimed linear-time guarantee for unrestricted backtracking or `sameAs`.
 
 ## Verification and pending acceptance
+
+[PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md) fixes the source-role, literal/callable, exact result and finite failure boundaries. [GENERIC_OPERATIONS.md](../../GENERIC_OPERATIONS.md) records generic-domain and both-form observations; current status remains source-only and runtime **NOT_RUN**.
 
 [tests/regex/fixtures.json](tests/regex/fixtures.json) indexes **41** current numbered requirements and **57** source fixtures. The original 35 requirements retain their fixtures; four boundary fixtures cover prefix/suffix behavior, including end-reaching alternatives, overlap, empty success and encoding failures. The traceability for requirements 39–41 explicitly records the remaining empty-input combinations, boundary/profile/lookaround combinations and declared-callback-failure integration gate. These source fixtures do not establish complete runtime coverage. The source files deliberately include failure cases. They are acceptance material, not automatically imported program modules, and each has `pending_lmx_execution` status.
 

@@ -1,14 +1,11 @@
-Subtract:
-    int: left
-    int: right
-    return: int
-    subtract:
-        return: left - right
-
 Example:
     int[]: xs
     int: seed
     return: int
     run:
-        throws: FxCallFailure FxKernelFailure FxRecordArity FxTypeToken ReceiverIndex
-        return: \foldl(xs; (seed record); Subtract\subtract)
+        int: total seed
+        int: i 0
+        while: i < length(xs)
+            total -= xs[i]
+            i += 1
+        return: total

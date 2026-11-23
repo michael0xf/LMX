@@ -1,5 +1,7 @@
 # JVM / L3 Path B smoke
 
+**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — отменены полностью и сняты из очереди; сохраняются Path A (C99, MIR, WASM linear, RISC-V ISA). Всё, что ниже об этих четырёх целях, — история, а не требования и не очередь; ссылки на пункты 4–7 плана портирования считать снятыми. Основание: [план](../next_core_tasks_v3.md#backends-20261123).
+
 - ABI: 50B?52B; printer CHECK_*: 53B; **expression callable: `GROK-BOT-JVM-L3-EXPR-20260920-54B`**
 
 ## 54B

@@ -1,43 +1,60 @@
 # 082. Monad
 
-Две операции bind над обобщённым Maybe; прикладной half по-прежнему проверяет чётность целого числа.
-
-**Сравнения реализаций:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Это ссылки для чтения, не импорты самописных модулей в контрольные usage-клиенты.
+Maybe: явная проверка промежуточного результата и компактная цепочка bind.
 
 ## Общий сценарий
 
-Вызвать half дважды через bind. В some хранится запись значения с его собственным типом, а next получает само значение по обычному контракту вызова. Для отсутствия продолжение не вызывается. Проверки остаются 8, 6 и 3.
+Выполнить some(x) bind half bind half. Значение хранится со своим фактическим типом, half получает его обычным вызовом. При None следующие продолжения пропускаются. Проверки остаются 8, 6, 3 и дополнительно 0.
 
-**Ожидаемое наблюдение:** 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
+**Ожидается:** 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
 
-**Граница сравнения.** LMX вызывает непосредственные операции текущего ядра; контрольные языки используют настоящую библиотеку или собственные средства языка. Самописные аналоги из соседних сравнений сюда не импортируются.
+Общие реализации: [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Они учитываются отдельно; иностранные клиенты не импортируют эти сравнительные модули.
 
-| Язык | Используемое средство |
-| --- | --- |
-| Haskell | `base: Maybe, Just, Nothing, (>>=)` |
-| Scala | `scala-library: Option, Some, None, flatMap` |
+## Граница двух стилей
 
-## LMX — прямой API ядра
+Оба варианта вызывают half по порядку и прекращают цепочку после none. Процедурный код проверяет present явно; функциональный использует общий bind. some/value capture остаётся общим конструктором ядра.
+
+## LMX — процедурный
 
 ```lmx
 Example:
     int: x
-    return: @
+    return: FxMaybe@
     half:
         throws: FxRecordArity
         if: x % 2 = 0
-            return: some(value := (x / 2 record))
+            return: some(x / 2)
         return: none()
     run:
-        throws: copy(FxThrows\fixture) FxCallFailure
-        return: bind(bind(some(value := (x record)); half); half)
+        throws: copy(half\throws)
+        @: result half(x)
+        if: result\present = 0
+            return: result
+        return: half(\result\value)
 ```
 
-Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.
+[Полный исходник](examples/lmx/procedural/082_monad.lm3). 191 непробельных символов; 14 непустых строк. Все объявления и Throws включены.
 
-[Исходник](examples/lmx/082_monad.lm3)
+## LMX — функциональный
 
-## Haskell — готовое средство языка/библиотеки
+```lmx
+Example:
+    int: x
+    return: FxMaybe@
+    half:
+        throws: FxRecordArity
+        if: x % 2 = 0
+            return: some(x / 2)
+        return: none()
+    run:
+        throws: FxRecordArity copy(FxMaybeBindOperand\bind\throws)
+        return: some(x) bind half bind half
+```
+
+[Полный исходник](examples/lmx/082_monad.lm3). 180 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
+
+
+## Haskell
 
 ```haskell
 module MonadExample where
@@ -53,7 +70,7 @@ run x = Just x >>= half >>= half
 
 [Исходник](examples/haskell/082_monad.hs)
 
-## Scala — готовое средство языка/библиотеки
+## Scala
 
 ```scala
 object MonadExample {
@@ -67,47 +84,42 @@ object MonadExample {
 
 [Исходник](examples/scala/082_monad.scala)
 
-## Подсчёт
+## Подсчёт полного текста
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 195 | 11 | 182 |
-| Haskell | 125 | 5 | — |
-| Scala | 135 | 5 | — |
+| Запись | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX — процедурный | 191 | 14 |
+| LMX — функциональный | 180 | 11 |
+| Haskell | **125** | 5 |
+| Scala | 135 | 5 |
 
-Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
-
-## Удалённые малозначимые повторы
-
-Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
+Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
 ## Семантические границы
 
-Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.
+Чётность — конкретная задача над int; библиотечные конструкторы и bind этим типом не ограничены. Требуется подготовленный контекст публичных семейств и адаптивного входа. Законы монады относятся к допустимым чистым продолжениям и наблюдаемым значениям. Изменённый LMX-пример не исполнялся.
 
-[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
+[Ошибки и Message/post](FAILURE_BOUNDARIES.md). [Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md).
 
 ## English explanation
 
-Two bind operations over generic Maybe; the application half still checks an integer for evenness.
+Maybe: explicit intermediate branching and a compact bind chain.
 
-**Scenario.** Apply half twice through bind. some retains a value record with its own type; next receives the payload through ordinary call admission. Absence skips the continuation. The probes remain 8, 6 and 3.
+**Scenario.** Evaluate some(x) bind half bind half. The payload keeps its actual type and half receives it through ordinary admission. None skips subsequent continuations. The probes include 8, 6, 3 and 0.
 
 **Expected.** 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
 
-**Limits.** Generality covers payloads and A→Maybe<B>, not every possible Monad/IO/State. The application half takes int. Monad laws here concern pure total continuations and observable values, not addresses or external mutation.
+**Limits.** Evenness is an integer-specific application; the constructors and bind are generic. Public-family selection and adaptive value admission are part of the prepared context. Monad laws concern admissible pure continuations and observable values. The revised LMX example has not been executed.
 
-Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
+Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
-## Источники / Sources
+## Источники
 
 - [Haskell Maybe and Monad instance](https://hackage-content.haskell.org/package/base-4.21.0.0/docs/Data-Maybe.html)
 - [Scala Option.flatMap](https://www.scala-lang.org/api/2.13.16/scala/Option.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
-
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.
+[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

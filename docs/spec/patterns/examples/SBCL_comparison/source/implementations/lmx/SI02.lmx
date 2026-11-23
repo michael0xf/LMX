@@ -56,7 +56,8 @@ FxSeqIndex:
         return: FxNone\none()
 
 FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     record:
@@ -71,7 +72,8 @@ FxMaybe:
 
 FxSome:
     private: @: value
-    return: @
+    required: value
+    return: FxMaybe@
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -79,6 +81,6 @@ FxSome:
         return: result
 
 FxNone:
-    return: @
+    return: FxMaybe@
     none:
         return: (copy(FxMaybe))

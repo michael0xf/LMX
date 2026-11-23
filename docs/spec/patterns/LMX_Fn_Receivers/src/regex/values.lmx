@@ -7,7 +7,7 @@ RxReadyEmptyPatternConfig:
 RxReadyEmptyPattern:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -24,7 +24,7 @@ RxReadyNeverPatternConfig:
 RxReadyNeverPattern:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -34,22 +34,22 @@ RxReadyNeverPattern:
 
 const: @: neverPattern RxReadyNeverPattern\Call\open
 
-RxReadyAnyCharConfig:
+RxReadyAnyElementConfig:
     @: probe RxAnyProbe\probe
     @: payload 0
 
-RxReadyAnyChar:
+RxReadyAnyElement:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyAnyCharConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyAnyElementConfig; source := source; position := position; captures := captures)
 
-const: @: anyChar RxReadyAnyChar\Call\open
+const: @: anyElement RxReadyAnyElement\Call\open
 
 RxReadyLineCharConfig:
     @: probe RxLineCharProbe\probe
@@ -58,7 +58,7 @@ RxReadyLineCharConfig:
 RxReadyLineChar:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -75,7 +75,7 @@ RxReadyLineBreakConfig:
 RxReadyLineBreak:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -85,39 +85,39 @@ RxReadyLineBreak:
 
 const: @: lineBreak RxReadyLineBreak\Call\open
 
-RxReadyTextStartConfig:
-    @: probe RxTextStartProbe\probe
+RxReadyStartConfig:
+    @: probe RxStartProbe\probe
     @: payload 0
 
-RxReadyTextStart:
+RxReadyStart:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyTextStartConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyStartConfig; source := source; position := position; captures := captures)
 
-const: @: textStart RxReadyTextStart\Call\open
+const: @: start RxReadyStart\Call\open
 
-RxReadyTextEndConfig:
-    @: probe RxTextEndProbe\probe
+RxReadyEndConfig:
+    @: probe RxEndProbe\probe
     @: payload 0
 
-RxReadyTextEnd:
+RxReadyEnd:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
         return: @
         open:
-            return: RxPrimitiveOpen\open(config := RxReadyTextEndConfig; source := source; position := position; captures := captures)
+            return: RxPrimitiveOpen\open(config := RxReadyEndConfig; source := source; position := position; captures := captures)
 
-const: @: textEnd RxReadyTextEnd\Call\open
+const: @: end RxReadyEnd\Call\open
 
 RxReadyLineStartConfig:
     @: probe RxLineStartProbe\probe
@@ -126,7 +126,7 @@ RxReadyLineStartConfig:
 RxReadyLineStart:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -143,7 +143,7 @@ RxReadyLineEndConfig:
 RxReadyLineEnd:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -153,17 +153,14 @@ RxReadyLineEnd:
 
 const: @: lineEnd RxReadyLineEnd\Call\open
 
-RxReadyAsciiDigitPredicate:
-    @: predicate RxAsciiDigit\test
-
 RxReadyAsciiDigitConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiDigitPredicate
+    @: payload RxAsciiDigit\test
 
 RxReadyAsciiDigit:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -173,17 +170,14 @@ RxReadyAsciiDigit:
 
 const: @: asciiDigit RxReadyAsciiDigit\Call\open
 
-RxReadyAsciiLetterPredicate:
-    @: predicate RxAsciiLetter\test
-
 RxReadyAsciiLetterConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiLetterPredicate
+    @: payload RxAsciiLetter\test
 
 RxReadyAsciiLetter:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -193,17 +187,14 @@ RxReadyAsciiLetter:
 
 const: @: asciiLetter RxReadyAsciiLetter\Call\open
 
-RxReadyAsciiWordPredicate:
-    @: predicate RxAsciiWord\test
-
 RxReadyAsciiWordConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiWordPredicate
+    @: payload RxAsciiWord\test
 
 RxReadyAsciiWord:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -213,17 +204,14 @@ RxReadyAsciiWord:
 
 const: @: asciiWord RxReadyAsciiWord\Call\open
 
-RxReadyAsciiSpacePredicate:
-    @: predicate RxAsciiSpace\test
-
 RxReadyAsciiSpaceConfig:
     @: probe RxPredicateProbe\probe
-    @: payload RxReadyAsciiSpacePredicate
+    @: payload RxAsciiSpace\test
 
 RxReadyAsciiSpace:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures
@@ -233,17 +221,14 @@ RxReadyAsciiSpace:
 
 const: @: asciiSpace RxReadyAsciiSpace\Call\open
 
-RxReadyWordBoundaryPredicate:
-    @: predicate RxAsciiWord\test
-
 RxReadyWordBoundaryConfig:
     @: probe RxBoundaryProbe\probe
-    @: payload RxReadyWordBoundaryPredicate
+    @: payload RxAsciiWord\test
 
 RxReadyWordBoundary:
     Call:
         private:
-            RxPreparedText@: source
+            RxPreparedSource@: source
             int: position
             @: captures
         required: source position captures

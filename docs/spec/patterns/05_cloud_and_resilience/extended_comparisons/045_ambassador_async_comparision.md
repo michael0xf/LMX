@@ -32,7 +32,6 @@ AmbassadorMessage:
         throws: FxIndex
         return: retryPost(catalogWorker\run; AmbassadorPolicy\unavailable; 2; clock\elapsed; 0; 0; 1000; sink\complete)
 ```
-
 [Исходник](source/lmx/045_ambassador_async.lm3)
 
 catalogWorker вызывает существующий HTTP provider для https://catalog.example /catalog/read и оформляет FxOutcome. Две попытки, без задержки; шаблон worker полностью дан в097. Host помещает CatalogOperation и HTTP-reference в ту же арену receiving worker Message, что и FxRetryOperationMessage; чужой raw pointer прямо не вызывается.
@@ -58,7 +57,6 @@ func Ambassador(ctx context.Context, post func(context.Context,string,string) (i
     return value,err
 }
 ```
-
 [Исходник](source/go/045_ambassador_async.go)
 
 Реальный backoff; provider post остаётся явно переданным HTTP портом сценария.
@@ -81,7 +79,6 @@ public static class Example {
     }
 }
 ```
-
 [Исходник](source/csharp/045_ambassador_async.cs)
 
 Настоящий Polly; один повтор после первой попытки, без задержки.

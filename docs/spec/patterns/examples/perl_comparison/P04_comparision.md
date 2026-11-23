@@ -1,12 +1,14 @@
 # P04. Все промежуточные остатки счёта
 
-## Общий договор
+## Общий наблюдаемый договор
 
 Из начального остатка и списка изменений получить начальный остаток и все последующие суммы, в том числе начальный элемент для пустого списка.
 
+Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
 
 
-## Вход и ожидаемый результат
+
+## Вход и ожидаемое наблюдение
 
 ```json
 {
@@ -27,43 +29,55 @@
 }
 ```
 
-Дополнительные границы находятся в test_cases канонического [examples.json](examples.json); harness исключён из размера кода.
+## Размер полных клиентов
 
-## Размер выбранного варианта
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX процедурный | 268 | 414 | 15 |
+| LMX функциональный | 150 | 198 | 7 |
+| Perl | 129 | 162 | 7 |
 
-| Источник | Все символы | Без пробельных | Без сложного Throws | Непустые строки |
-|---|---:|---:|---:|---:|
-| LMX | 314 | 225 | 161 | 13 |
-| Perl | 162 | 129 | 129 | 7 |
+Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
-Дополнительная колонка исключает только аргументы Throws после первого. Заголовок, первый аргумент и ссылки copy(Throws) сохраняются; исходник не изменяется.
-
-Учитываются полные листинги, директивы, комментарии и обработка ошибок. Встроенное ядро не добавляется к каждому клиенту; его реализации считаются отдельно.
-
-## LMX
-
-[Исходник](source/lmx/P04.lm3).
+## LMX — процедурный
 
 ```lmx
-Add:
-    int: total
-    int: delta
-    return: int
-    run:
-        return: total + delta
-
 Example:
     int[]: deltas
     int: initial
     return: @
     run:
-        throws: FxRecordArity FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
-        return: scanl(deltas; (initial record); Add\run)
+        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        @[]: out []
+        int: total initial
+        FxSeqPush\append(out; (total record))
+        int: i 0
+        while: i < length(deltas)
+            total += deltas[i]
+            FxSeqPush\append(out; (total record))
+            i += 1
+        return: out
 ```
+
+[Полный исходник](source/lmx/procedural/P04.lm3). 268 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Example:
+    int[]: deltas
+    int: initial
+    return: @
+    run:
+        throws: copy(FxScan\scan\throws) copy(FxRecordOperands\record\throws)
+        return: scanl(deltas; (initial record); `+`)
+```
+
+[Полный исходник](source/lmx/P04.lm3). 150 непробельных символов; 7 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
-[Исходник](source/perl/P04.pl).
+[Полный исходник](source/perl/P04.pl).
 
 ```perl
 use strict;
@@ -75,15 +89,15 @@ sub example {
 }
 ```
 
-## Отдельные реализации
+## Общие библиотечные реализации
 
 - scanl: [PI01](library_comparisons/PI01_comparision.md)
 
-Штатные средства Perl: List::Util::reductions.
+Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
 ## Проверка
 
-Perl запущен: [отчёт](validation/client_tests.json). LMX: **NOT_RUN**.
+Perl-клиенты проверяет [действительный harness](validation/client_tests.json). LMX: **NOT_RUN**; обе формы проверяются как исходники, без заявления runtime-приёмки.
 
 ## Первичные источники
 

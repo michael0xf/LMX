@@ -23,7 +23,6 @@ RxDerive:
     derive:
         return: (merge(base; extension))
 ```
-
 This is the complete thin helper, 71 nonwhitespace characters. It
 collects the ordinary merge stream once. It does not deep-copy a second time,
 remove width, manufacture a fixed record type, execute copied methods, or add
@@ -38,7 +37,6 @@ data Size = Size { width :: Int, height :: Int, depth :: Int }
 recordExample :: Size
 recordExample = (Size 2 3 0) { height = 5, depth = 7 }
 ```
-
 Haskell uses its built-in record update. Its Size already contains depth;
 LMX's model composition can append a new field dynamically. This difference
 was already part of the scenario and is retained. No special library that

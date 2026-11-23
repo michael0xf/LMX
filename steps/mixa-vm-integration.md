@@ -1,5 +1,7 @@
 # Mixa × VM portability integration (working note)
 
+**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — отменены полностью и сняты из очереди; сохраняются Path A (C99, MIR, WASM linear, RISC-V ISA). Всё, что ниже об этих четырёх целях, — история, а не требования и не очередь; ссылки на пункты 4–7 плана портирования считать снятыми. Основание: [план](../next_core_tasks_v3.md#backends-20261123).
+
 Tickets: `GROK-BOT-MIXA-PORTABILITY-SYSTEMATIZE-20260921-54` (REVIEW1),
 `GROK-BOT-L3-VM-COMPLEXITY-20260921-72` (L3 VM complexity model).
 Editor: Grok Bot (Path A / VM smoke evidence owner).

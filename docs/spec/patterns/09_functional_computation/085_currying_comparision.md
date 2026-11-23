@@ -1,23 +1,61 @@
 # 085. Currying
 
-Прямой partial строит add5 и add100 из обычной функции; процедура копирования окружения вынесена в общую реализацию.
-
-**Сравнения реализаций:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это ссылки для чтения, не импорты самописных модулей в контрольные usage-клиенты.
+Независимые сохранённые префиксы: прямое окружение и общий curry.
 
 ## Общий сценарий
 
 Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.
 
-**Ожидаемое наблюдение:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
+**Ожидается:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
-**Граница сравнения.** LMX вызывает непосредственные операции текущего ядра; контрольные языки используют настоящую библиотеку или собственные средства языка. Самописные аналоги из соседних сравнений сюда не импортируются.
+Общие реализации: [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Они учитываются отдельно; иностранные клиенты не импортируют эти сравнительные модули.
 
-| Язык | Используемое средство |
-| --- | --- |
-| Haskell | `language: ordinary curried application` |
-| Scala | `scala-library: Function2.curried` |
+## Граница двух стилей
 
-## LMX — поэтапный curry
+Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.
+
+## LMX — процедурный
+
+```lmx
+CapturePrototype:
+    int: saved 0
+    @: binary 0
+    inputs:
+        int: second
+        return: int
+        apply:
+            return: node\binary(node\saved; second)
+
+Curry:
+    @: binary
+    int: first
+    return: @
+    capture:
+        @: instance (copy(CapturePrototype))
+        @: owner parent(instance\inputs)
+        owner\saved := first
+        owner\binary := binary
+        return: instance\inputs\apply
+
+Addition:
+    int: first
+    int: second
+    return: int
+    apply:
+        return: first + second
+
+Demo:
+    return: int
+    run:
+        @: add5 Curry\capture(Addition\apply; 5)
+        @: add100 Curry\capture(Addition\apply; 100)
+        int: saved 1000
+        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
+```
+
+[Полный исходник](examples/lmx/procedural/085_currying.lm3). 493 непробельных символов; 31 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
 
 ```lmx
 Addition:
@@ -30,7 +68,7 @@ Addition:
 Demo:
     return: int
     run:
-        throws: copy(FxThrows\capture) FxCallFailure
+        throws: copy(FxPartial\partial\throws) FxCallFailure
         @: add curry(Addition\apply)
         @: add5 add(5)
         @: add100 add(100)
@@ -38,11 +76,10 @@ Demo:
         return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
 ```
 
-Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.
+[Полный исходник](examples/lmx/085_currying.lm3). 244 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
 
-[Исходник](examples/lmx/085_currying.lm3)
 
-## Haskell — готовое средство языка/библиотеки
+## Haskell
 
 ```haskell
 module CurryingExample where
@@ -61,7 +98,7 @@ demo = let add5 = add 5
 
 [Исходник](examples/haskell/085_currying.hs)
 
-## Scala — готовое средство языка/библиотеки
+## Scala
 
 ```scala
 object CurryingExample {
@@ -80,55 +117,28 @@ object CurryingExample {
 
 [Исходник](examples/scala/085_currying.scala)
 
-## LMX — другой подход: прямой API ядра
+## Подсчёт полного текста
 
-```lmx
-Addition:
-    int: first
-    int: second
-    return: int
-    apply:
-        return: first + second
+| Запись | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX — процедурный | 493 | 31 |
+| LMX — функциональный | 244 | 15 |
+| Haskell | **154** | 8 |
+| Scala | 198 | 10 |
 
-Demo:
-    return: int
-    run:
-        throws: copy(FxThrows\capture) FxCallFailure
-        @: add5 partial(Addition\apply; (5))
-        @: add100 partial(Addition\apply; (100))
-        int: saved 1000
-        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
-```
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
 
-Прямое связывание двух независимых префиксов через partial; основной curry строит поэтапный интерфейс. Это разные способы построить callable.
-
-[Исходник альтернативы](examples/lmx/variants/085_currying_core.lm3)
-
-## Подсчёт
-
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 236 | 15 | 223 |
-| Haskell | 154 | 8 | — |
-| Scala | 198 | 10 | — |
-
-Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
-
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
-
-## Удалённые малозначимые повторы
-
-Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
+Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
 ## Семантические границы
 
 int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.
 
-[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
+[Ошибки и Message/post](FAILURE_BOUNDARIES.md). [Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md).
 
 ## English explanation
 
-Direct partial builds add5 and add100 from an ordinary function; environment copying belongs to the generic implementation.
+Independent captured prefixes: direct environments and the common curry operation.
 
 **Scenario.** Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.
 
@@ -136,15 +146,13 @@ Direct partial builds add5 and add100 from an ordinary function; environment cop
 
 **Limits.** int belongs only to application addition and the numeric observation 6101006. Generic partial is not limited to int×int→int. At k=N it returns a delayed nullary callable without calling the target during construction.
 
-Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
+Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
-## Источники / Sources
+## Источники
 
 - [Scala Function2.curried](https://www.scala-lang.org/api/2.13.16/scala/Function2.html)
 - [Haskell curried application](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
-
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.
+[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

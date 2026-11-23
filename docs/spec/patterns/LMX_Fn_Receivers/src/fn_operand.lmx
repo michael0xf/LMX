@@ -1,24 +1,12 @@
-# SIGNATURETYPES КАК ЯДЕРНЫЙ ОПЕРАНД: left — тип результата; right — типы входов.
-# Именованное объявление теперь пишется Name :: Signature. Прежний declaration
-# receiver полностью удалён, совместимый alias не сохраняется.
-# signatureTypes — обычное ядерное имя type-token конструктора, не отдельный reserved
-# declaration head. Его обнаружение идёт по общей структуре OPERANDS_TEMPLATE.
-# Созданное описание совместимо с Name :: Signature по общим правилам типов.
-#
-# copy стоит первым. Готовые PASS_ARGS_AS_IS=0 и PRIORITY унаследованы
-# из sys\OPERANDS_TEMPLATE; повторного объявления этих const-полей нет.
-# Публичный результат — @ на обычное описание сигнатуры, а не новая функция.
-# right подготовлен общим обработчиком по текущим правилам uploaded docs.
-# При левом type-токене справа остаётся цепочка написанных операндов.
-# Одиночная (T0 T1) не превращается автоматически в список типов: это один
-# контейнер-токен. Исключение: написанный anonymous left, right.length=1,
-# right[0] — написанная anonymous Structure. Снимается только внешний RHS-уровень;
-# left целиком, вложенный RHS повторно не открывается, function result не открывается.
-# Обычный make(left := token; right := typeRecords) явно передаёт вектор.
-# normalizeType читает ровно переданную запись: int payload как type code,
-# uninit:T как T без payload, void либо полное существующее требование.
+# Shared signature construction. Public to uses inputs first and result last.
+# FxSignatureOperand is the private result/inputs engine; FxToTypes and
+# FxToTokens map both public forms into that one body. TYPE tokens remain
+# complete requirements, including uninitialised records and exact void.
+# Name :: DATA is the distinct named declaration role. See PUBLICATION_CONTRACT.md.
+
 FxSignatureOperand:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
     make:
@@ -34,3 +22,40 @@ FxSignatureOperand:
             i += 1
         return: FxSignatures\make(inputs := inputTypes; result := resultType)
 
+
+
+FxToTypes:
+    private:
+        @[]: inputs
+        @: result
+    required: inputs result
+    return: @
+    to:
+        throws: copy(FxThrows\selection)
+        return: FxSignatureOperand\make(
+            left := result;
+            right := inputs
+        )
+
+FxToTokens:
+    private: @[]: tokens
+    required: tokens
+    return: @
+    to:
+        throws: FxArity copy(FxThrows\selection)
+        if: length(tokens) = 0
+            throw: FxArity()
+        private: int: last length(tokens) - 1
+        private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
+        return: FxToTypes\to(inputs := inputs; result := tokens[last])
+
+FxToOperand:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: @
+    to:
+        throws: FxArity copy(FxThrows\selection)
+        return: FxToTokens\to(
+            tokens := RxLogicalArguments\collect(left := left; right := right)
+        )

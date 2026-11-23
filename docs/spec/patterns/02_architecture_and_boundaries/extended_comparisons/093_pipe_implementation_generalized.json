@@ -1,29 +1,29 @@
 {
   "id": 93,
-  "name": "Pipe — generic implementation",
+  "name": "Compose — generic implementation",
   "slug": "pipe_implementation",
   "kind": "implementation",
   "paired_with": 13,
   "usage_ids": [
     13
   ],
-  "summary_ru": "Реализовать обобщённую последовательную композицию без привязки к int.",
-  "summary_en": "Implement generic ordered function composition without an int-only adapter.",
+  "summary_ru": "Общий compose строит callable outer(inner(...)); pipe применяет стадии к уже принятому значению.",
+  "summary_en": "Generic compose builds outer(inner(...)); pipe applies stages to an accepted value.",
   "scenario_ru": "Скомпоновать A→B и B→C в A→C; вызвать этапы по одному разу и не выполнять второй при отказе первого.",
   "scenario_en": "Compose A→B and B→C to A→C, evaluate first then second exactly once, and relay failures without executing the second stage after first-stage failure.",
   "expected_ru": "Пример с int возвращает7; string→length→Boolean тоже допустим; отказ первого этапа пропускает второй.",
   "expected_en": "The int fixture returns7; a heterogeneous string→length→Boolean fixture also works; a failure in the first stage skips the second.",
-  "lmx_notes_ru": "Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.",
-  "lmx_notes_en": "Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete.",
+  "lmx_notes_ru": "Точные общие определения FxCompositionState, FxCompositionEngine, FxCompose из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.",
+  "lmx_notes_en": "Exact common definitions FxCompositionState, FxCompositionEngine, FxCompose from the current core. This publication mirror preserves the stated type, context and failure contract; revised LMX runtime execution is NOT_RUN.",
   "comparison_ru": "Все три реализации хранят callable и явно компонуют обычные вызовы. LMX сохраняет исходные inputs и declared failures через общий адаптер; Java/Go используют generic-типы.",
   "comparison_en": "All three implementations retain callable references and explicitly compose ordinary calls. LMX preserves its exact source input policy and declared failure set through the shared adapter mechanism. Java and Go use static generic parameters.",
-  "limits_ru": "Это последовательная композиция, не stream scheduler. Асинхронные адресованные вызовы уже обеспечивает post; потоки внутри pipe изменили бы его договор. Общие adapter bridges учитываются как зависимости.",
+  "limits_ru": "Композиция строится без выполнения стадий. inner получает исходные входы, outer принимает один результат; итоговый тип и контекст сохраняются. Сравнение не является stream scheduler.",
   "limits_en": "This is sequential composition, not a stream scheduler. Existing post already provides asynchronous addressed calls; adding threads inside pipe would change its ordered value contract. Core adapter bridges are shared dependencies, not omitted pipe algorithms.",
   "scope": "core",
   "listings": [
     {
       "language": "LMX",
-      "code": "FxCompositionState:\n    @: outer 0\n    @: inner 0\n\nFxCompositionEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: copy(FxThrows\\call)\n        private: @: middle FxFrameApply\\apply(frame)\n        return: FxApply\\apply(state\\outer; FxOne\\make(middle))\n\nFxCompose:\n    private:\n        @: outer\n        @: inner\n    return: @\n    compose:\n        throws: copy(FxThrows\\adapter)\n        private: @: a FxKernel\\signature(subject := outer)\n        private: @: b FxKernel\\signature(subject := inner)\n        if: length(a\\inputTypes) != 1 || b\\hasResult = 0\n            throw: FxArity()\n        private: @: contract FxSignatures\\make(b\\inputTypes; a\\resultType)\n        private: @: state (copy(FxCompositionState))\n        state\\outer := outer\n        state\\inner := inner\n        private: @: failures FxFailures\\union(a\\throws; b\\throws)\n        return: FxWrap\\make(contract; FxCompositionEngine\\run; state; failures; FxFullPolicy\\make(inner))\n\nFxPipe:\n    private:\n        @: first\n        @: second\n    return: @\n    pipe:\n        throws: copy(FxThrows\\adapter)\n        return: FxCompose\\compose(outer := second; inner := first)\n",
+      "code": "FxCompositionState:\n    @: outer 0\n    @: inner 0\n\nFxCompositionEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: copy(FxThrows\\call)\n        private: @: middle FxFrameApply\\apply(frame)\n        return: FxApply\\apply(state\\outer; FxOne\\make(middle))\n\nFxCompose:\n    private:\n        @: outer\n        @: inner\n    return: @\n    compose:\n        throws: copy(FxThrows\\adapter)\n        private: @: a FxKernel\\signature(subject := outer)\n        private: @: b FxKernel\\signature(subject := inner)\n        if: length(a\\inputTypes) != 1 || b\\hasResult = 0\n            throw: FxArity()\n        private: @: contract FxSignatures\\make(b\\inputTypes; a\\resultType)\n        private: @: state (copy(FxCompositionState))\n        state\\outer := outer\n        state\\inner := inner\n        private: @: failures FxFailures\\union(a\\throws; b\\throws)\n        return: FxWrap\\make(contract; FxCompositionEngine\\run; state; failures; FxFullPolicy\\make(inner))\n",
       "notes_ru": "Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.",
       "notes_en": "Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete."
     },
@@ -53,5 +53,20 @@
     "foreign_usage_imports_own_implementation": false,
     "implementation_pair_retained": true,
     "runtime_lmx": "NOT_RUN"
-  }
+  },
+  "lmx_runtime_execution": "NOT_RUN",
+  "implementation_sources": [
+    {
+      "definition": "FxCompositionState",
+      "source": "../../LMX_Fn_Receivers/src/generic_combinators.lmx"
+    },
+    {
+      "definition": "FxCompositionEngine",
+      "source": "../../LMX_Fn_Receivers/src/generic_combinators.lmx"
+    },
+    {
+      "definition": "FxCompose",
+      "source": "../../LMX_Fn_Receivers/src/generic_combinators.lmx"
+    }
+  ]
 }

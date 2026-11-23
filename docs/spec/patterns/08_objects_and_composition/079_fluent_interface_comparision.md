@@ -35,7 +35,7 @@ Demo:
         return: options\count * options\price
 ```
 
-Вызов Demo\run(). sys\OPERANDS_TEMPLATE — предоставленный шаблон ядра из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.
+Вызов Demo\run(). sys\OPERANDS_TEMPLATE — предоставленный DATA-фрагмент из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.
 
 [Отдельный листинг](examples/lmx/079_fluent_interface.lm3)
 
@@ -88,15 +88,15 @@ LMX теперь показывает саму fluent-цепочку в expressi
 
 ## Объём показанного исходника
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 285 | 19 | 285 |
-| Java | 251 | 9 | — |
-| Python | 220 | 11 | — |
+| Язык | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX | 285 | 19 |
+| Java | 251 | 9 |
+| Python | 220 | 11 |
 
 Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Дополнительная колонка «без сложного Throws» оставляет заголовок и первый аргумент каждого списка в исходном порядке, полностью считает ссылки/copy и первый аргумент общего банка. Меняется только расчёт, не исходник или контракт.
+Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основные размеры и отношения сохраняют весь текст. Все объявления, аргументы и ссылки на общий банк ошибок учитываются целиком.
 
 ## English explanation
 
@@ -114,7 +114,7 @@ API operations return a context so the interaction can continue fluently.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Call Demo\run(). sys\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left.
+- **LMX:** Call Demo\run(). sys\OPERANDS_TEMPLATE is the supplied DATA fragment from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left.
 - **Java:** Call Example.demo(); main and printing are excluded.
 - **Python:** Call demo(); all shown classes and functions are counted.
 

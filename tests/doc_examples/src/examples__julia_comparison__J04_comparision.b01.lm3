@@ -3,5 +3,14 @@ Example:
     int[]: mask
     return: @
     run:
-        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceElement SequenceSize
-        return: compress(xs; mask)
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) FxShape
+        if: length(xs) != length(mask)
+            throw: FxShape()
+        @: info FxSeqInfo\get(xs)
+        @: out FxSeqAllocate\make(info\arrayType; 0)
+        int: i 0
+        while: i < length(xs)
+            if: mask[i] != 0
+                FxSeqPush\append(out; FxSeqRead\read(xs; i))
+            i += 1
+        return: out

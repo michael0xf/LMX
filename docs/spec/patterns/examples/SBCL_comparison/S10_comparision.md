@@ -1,6 +1,6 @@
 # S10. Замыкание add5
 
-Полная пара в указанном ниже договоре.
+Полное сравнение на указанном домене.
 
 ## Общий договор
 
@@ -37,68 +37,17 @@
 ]
 ```
 
-## Размер основного варианта
+## Размер полных вариантов
 
-| Источник | Полный, без пробельных | Без сложного Throws | Все символы | Непустые строки |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 170 | 170 | 257 | 13 |
-| Common Lisp / SBCL | 119 | — | 146 | 5 |
+| Источник | Без пробельных | Все символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX — процедурный | 260 | 431 | 21 |
+| LMX — функциональный | 165 | 254 | 13 |
+| Common Lisp / SBCL | 119 | 146 | 5 |
 
-Учитывается полный основной листинг. Тестовый стенд и отдельные реализации ядра в него не входят; их файлы и размеры приведены отдельно.
+Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
-## LMX
-
-[Исходник](source/lmx/S10.lm3).
-
-```lmx
-Addition:
-    int: first
-    int: second
-    return: int
-    add:
-        return: first + second
-
-Example:
-    int: value
-    return: int
-    run:
-        throws: copy(FxThrows\capture)
-        @: add5 partial(Addition\add; (5))
-        return: add5(value)
-```
-
-## Common Lisp / SBCL
-
-[Исходник](source/common-lisp/S10.lisp).
-
-```common-lisp
-(defun make-adder (first)
-  (lambda (second) (+ first second)))
-
-(defun example (value)
-  (let ((add5 (make-adder 5)))
-    (funcall add5 value)))
-```
-
-## Почему эти варианты сопоставимы
-
-Использован короткий шаблон H03 из 22-Nov: partial уже является общей фабрикой захвата, поэтому вторая MakeAdder-обёртка удалена. Фабрика для любого first — partial(Addition\add; (first)); исходник partial и полный граф его зависимостей приведены в SI05. Независимые захваты и срок жизни остаются частью приёмки.
-
-Использован короткий шаблон H03 из 22-Nov: partial уже является общей фабрикой захвата, поэтому вторая MakeAdder-обёртка удалена. Фабрика для любого first — partial(Addition\add; (first)); исходник partial и полный граф его зависимостей приведены в SI05. Независимые захваты и срок жизни остаются частью приёмки.
-
-Средства Common Lisp/SBCL: `CL:FUNCTION`, `CL:FUNCALL`.
-
-## Реализации используемых функций
-
-- `partial`: [SI05](library_comparisons/SI05_comparision.md)
-
-Common Lisp-клиент не загружает сравнительные reference-реализации.
-
-## Другой подход: Прямой / процедурный LMX
-
-Обычная копия DATA/кода и явная запись захвата в фактического владельца; чтение owner\first не перехватывается динамическим одноимённым caller. Фабрика принимает произвольный first. Полные текущие размеры приведены в статистике.
-
-[Исходник](alternatives/lmx/S10_copied_owner_closure.lm3). В основной коэффициент не входит.
+## LMX — процедурный
 
 ```lmx
 MakeAdder:
@@ -125,9 +74,57 @@ Example:
         return: add5(value)
 ```
 
+[Полный исходник](source/lmx/procedural/S10.lm3). 260 непробельных символов; 21 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
+
+```lmx
+Addition:
+    int: first
+    int: second
+    return: int
+    add:
+        return: first + second
+
+Example:
+    int: value
+    return: int
+    run:
+        throws: copy(partial	hrows)
+        @: add5 (partial Addition\add (5))
+        return: add5(value)
+```
+
+[Полный исходник](source/lmx/S10.lm3). 165 непробельных символов; 13 непустых строк. Все объявления и Throws включены.
+
+## Common Lisp / SBCL
+
+[Полный исходник](source/common-lisp/S10.lisp).
+
+```common-lisp
+(defun make-adder (first)
+  (lambda (second) (+ first second)))
+
+(defun example (value)
+  (let ((add5 (make-adder 5)))
+    (funcall add5 value)))
+```
+
+## Соответствие стилей договору
+
+Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+
+Использован короткий шаблон H03 из 22-Nov: partial уже является общей фабрикой захвата, поэтому вторая MakeAdder-обёртка удалена. Фабрика для любого first — partial(Addition\add; (first)); исходник partial и полный граф его зависимостей приведены в SI05. Независимые захваты и срок жизни остаются частью приёмки.
+
+## Общие операции и реализации
+
+- `partial`: [тело ядра](../../LMX_Fn_Receivers/src/generic_functions.lmx); отдельное сравнение [SI05](library_comparisons/SI05_comparision.md).
+
+Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
+
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). LMX: **NOT_RUN**; структурная проверка текста не доказывает исполнение.
+SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
 
 ## Первичные источники
 

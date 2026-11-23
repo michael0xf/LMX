@@ -20,7 +20,7 @@ Individual comparisons contain complete listings, expected results and scenario 
 
 The primary metric counts non-whitespace characters in the **main application listing**. Necessary imports, use of library facilities, declarations, wrappers and demo are included. Whitespace is excluded only from this metric. Full size and line count use LF, no blank lines at either edge and one final LF.
 
-The external launch, a launch-only main, printing, test harness and kernel/standard-library source are excluded. In example 23, `copy: sys\OPERANDS_TEMPLATE` is counted; the separately displayed kernel template definition is not. This is the explicit counting boundary used for all languages.
+The external launch, a launch-only main, printing, test harness and kernel/standard-library source are excluded. In example 23, `copy: sys\OPERANDS_TEMPLATE` is counted; the separately displayed definition of the supplied DATA fragment is not. This is the explicit counting boundary used for all languages.
 
 Names are not normalized; Python omits optional type annotations. Each language uses suitable functions, closures, structures, interfaces or enum variants. A general LMX @ is not presented as a full static signature of every callable. Written types, results and requirements are included in the measured code.
 
@@ -34,12 +34,12 @@ LMX was reviewed against the model and its results are expectations. All 161 lis
 
 ## Results for the current collection
 
-| Examples | LMX | Python | Overall LMX reduction | LMX shorter than Python | LMX without complex Throws |
-| --- | ---: | ---: | ---: | --- | ---: |
-| 1–9 | 2081 | 2592 | 19.71% | 8 of 9 | 2081 |
-| 10–18 | 2248 | 2651 | 15.20% | 7 of 9 | 2248 |
-| 19–23 | 1345 | 1627 | 17.33% | 4 of 5 | 1345 |
-| All 1–23 | 5674 | 6870 | 17.41% | 19 of 23 | 5674 |
+| Examples | LMX | Python | Overall LMX reduction | LMX shorter than Python |
+| --- | ---: | ---: | ---: | --- |
+| 1–9 | 2081 | 2592 | 19.71% | 8 of 9 |
+| 10–18 | 2248 | 2651 | 15.20% | 7 of 9 |
+| 19–23 | 1345 | 1627 | 17.33% | 4 of 5 |
+| All 1–23 | 5674 | 6870 | 17.41% | 19 of 23 |
 
 The first 18 examples total **4329 versus 5243**, a **17.43%** reduction. LMX is shorter than Python in 15 of 18 cases and shortest among eight languages in 13. Python has the smallest total among the other seven; C++ is shorter than Python for Factory, Builder, Prototype and Memento. In Factory, C++ is also shorter than LMX: **297 versus 306**.
 
@@ -62,7 +62,7 @@ Substantial reductions include Observer **48.24%**, State **39.20%**, Builder **
 
 [Interpreter](23_interpreter_comparison.md) retains `(x + 3) + x` and evaluates it at 2 and 5. Python assembles closures; LMX retains the expression in calculate’s graph. Both demonstrations return 20. The short LMX listing shows this repeated evaluation without a separate universal API for constructing arbitrary trees at runtime.
 
-Method add obtains its common header through `copy: sys\OPERANDS_TEMPLATE`; nested example sees add lexically. The kernel template supplies general left/right references, PASS_ARGS_AS_IS 0 and addition precedence. It has no return: the concrete operand declares return:int in its own DATA. Mandatory fields are supplied by copy, not omitted. The body reads prepared values through `\left` and `\right[0]` and returns a number. Mode 1 and explicit sys\eval are unnecessary here.
+Method add obtains its common header through `copy: sys\OPERANDS_TEMPLATE`; nested example sees add lexically. The supplied DATA fragment provides general left/right references, PASS_ARGS_AS_IS 0 and addition precedence. It has no return: the concrete operand declares return:int in its own DATA. Mandatory fields are supplied by copy, not omitted. The body reads prepared values through `\left` and `\right[0]` and returns a number. Mode 1 and explicit sys\eval are unnecessary here.
 
 The LMX application uses **159** non-whitespace characters against Python’s **185**, **14.05% fewer**. Full formatted size is **266 versus 247**, **7.69% larger**, with **12 versus 13** lines. The template definition is shown for understanding and excluded from the application count; its copy line is included. The external call `operands\example\demo()` is excluded too.
 
@@ -88,7 +88,6 @@ For example, with a shared `int: value` declaration and an `int` result:
 with_one:
     return: base() + 1
 ```
-
 Autofill of `value` can be expressed as an ordinary C parameter:
 
 ```c
@@ -96,7 +95,6 @@ int with_one(int value) {
     return base(value) + 1;
 }
 ```
-
 This illustrates value transport; service ABI parameters are omitted from the incomplete fragment. A mutable caller place is transported as its cell’s address while retaining the variable’s own type in LMX. The [executor-binding semantics](../LMX_semantics.en.md#binding-executors) distinguish that transport from the user-visible type.
 
 The external C compiler can then perform inlining, constant propagation, removal of redundant computations and loop optimization. Such passes are among [GCC’s ordinary optimization facilities](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html). The LMX translator must express operations and binding while retaining the information that the C compiler needs. “Without a complex optimizer of its own” thus has a concrete technical meaning.

@@ -1,33 +1,47 @@
 # 083. Trampoline
 
-Взаимные even/odd шаги используют общий Bounce с nullary continuation, созданной partial.
-
-**Сравнения реализаций:** [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md), [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это ссылки для чтения, не импорты самописных модулей в контрольные usage-клиенты.
+Паритет: процедурный цикл и функциональный trampoline для конечного неотрицательного n.
 
 ## Общий сценарий
 
 Для неотрицательного n определить чётность. Незавершённый шаг возвращает more(partial(другой_шаг; (n−1))) без вызова другого шага. trampoline вызывает по одному сохранённому thunk до done.
 
-**Ожидаемое наблюдение:** 0 → true, 1 → false, 100001 → false; LMX возвращает 1, 0, 0. Каждый шаг возвращает управление драйверу; вложенная цепочка вызовов even/odd не накапливается.
+**Ожидается:** 0 → true, 1 → false, 100001 → false; LMX возвращает 1, 0, 0. Каждый шаг возвращает управление драйверу; вложенная цепочка вызовов even/odd не накапливается.
 
-**Граница сравнения.** LMX вызывает непосредственные операции текущего ядра; контрольные языки используют настоящую библиотеку или собственные средства языка. Самописные аналоги из соседних сравнений сюда не импортируются.
+Общие реализации: [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md), [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Они учитываются отдельно; иностранные клиенты не импортируют эти сравнительные модули.
 
-| Язык | Используемое средство |
-| --- | --- |
-| Haskell | `free 5.2: Control.Monad.Free; base: Identity` |
-| Scala | `scala-library: scala.util.control.TailCalls` |
+## Граница двух стилей
 
-## LMX — общий алгоритм шага
+Договор клиента — parity конечного неотрицательного n: 0→1, 1→0, 100001→0. Процедурный цикл хранит состояние; функциональный вариант показывает настоящий trampoline и два шага с общим телом. Полная общая реализация trampoline остаётся отдельно в092.
+
+## LMX — процедурный
+
+```lmx
+Steps:
+    Example:
+        int: n
+        return: int
+        run:
+            int: value 1
+            while: n > 0
+                value := 1 - value
+                n -= 1
+            return: value
+```
+
+[Полный исходник](examples/lmx/procedural/083_trampoline.lm3). 82 непробельных символов; 10 непустых строк. Все объявления и Throws включены.
+
+## LMX — функциональный
 
 ```lmx
 Steps:
     int: n
     return: @
-    Throws: copy(FxThrows\capture) FxCallFailure
+    Throws: copy(FxPartial\partial\throws) FxCallFailure
     code:
         throws: copy(Throws)
         if: n = 0
-            return: done(value := (x record))
+            return: done(x)
         return: more(thunk := partial(next; (n - 1)))
     even_step:
         throws: copy(Throws)
@@ -47,11 +61,10 @@ Steps:
             return: \trampoline(even_step(n))
 ```
 
-Общий алгоритм шага находится в Steps\code; even_step и odd_step задают локальные x и next, доступные по динамическому связыванию. Throws содержит список выходов один раз, четыре copy(Throws) входят в подсчёт. Входы: Steps\Example\run(0), Steps\Example\run(1), Steps\Example\run(100001). Выходы передаются вызывающему; это не корневой обработчик Message. [Разыменование и catch](FAILURE_BOUNDARIES.md#trampoline).
+[Полный исходник](examples/lmx/083_trampoline.lm3). 354 непробельных символов; 25 непустых строк. Все объявления и Throws включены.
 
-[Исходник](examples/lmx/083_trampoline.lm3)
 
-## Haskell — готовое средство языка/библиотеки
+## Haskell
 
 ```haskell
 module TrampolineExample where
@@ -72,7 +85,7 @@ parity = iter runIdentity . evenStep
 
 [Исходник](examples/haskell/083_trampoline.hs)
 
-## Scala — готовое средство языка/библиотеки
+## Scala
 
 ```scala
 import scala.util.control.TailCalls.*
@@ -90,31 +103,28 @@ object TrampolineExample {
 
 [Исходник](examples/scala/083_trampoline.scala)
 
-## Подсчёт
+## Подсчёт полного текста
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 361 | 25 | 348 |
-| Haskell | 307 | 10 | — |
-| Scala | 265 | 8 | — |
+| Запись | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX — процедурный | **82** | 10 |
+| LMX — функциональный | 354 | 25 |
+| Haskell | 307 | 10 |
+| Scala | 265 | 8 |
 
-Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
-
-## Удалённые малозначимые повторы
-
-Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
+Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
 ## Семантические границы
 
 Ограничение n≥0 принадлежит задаче чётности. Общий trampoline не ограничивает результат int или bool. Это последовательный батут; Message, планирование и параллельное выполнение не добавлены. Создание thunk не вызывает исходный шаг.
 
-[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
+[Ошибки и Message/post](FAILURE_BOUNDARIES.md). [Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md).
 
 ## English explanation
 
-Mutual even/odd steps use generic Bounce with a nullary continuation created by partial.
+Parity: an explicit loop and a functional trampoline for finite nonnegative n.
 
 **Scenario.** For nonnegative n, compute parity. An unfinished step returns more(partial(otherStep; (n−1))) without invoking the other step. trampoline invokes one retained thunk at a time until done.
 
@@ -122,15 +132,13 @@ Mutual even/odd steps use generic Bounce with a nullary continuation created by 
 
 **Limits.** n≥0 is a parity-domain precondition. Generic trampoline does not restrict results to int or bool. It is sequential, with no Message scheduler or parallelism. Constructing a thunk does not invoke the original step.
 
-Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
+Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
-## Источники / Sources
+## Источники
 
 - [Haskell free: Free and iter](https://hackage-content.haskell.org/package/free-5.2/docs/Control-Monad-Free.html)
 - [Scala TailCalls](https://www.scala-lang.org/api/2.13.16/scala/util/control/TailCalls$.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
-
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.
+[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

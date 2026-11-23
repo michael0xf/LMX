@@ -121,4 +121,7 @@ def main():
         for record in rows:
             writer.writerow({'id':record['id'],'title':record['title'],**{lang+'_characters':record['metrics'][lang]['characters'] for lang in LANGS.values()},'LMX_without_complex_throws_characters':record['metrics']['LMX']['without_complex_throws_characters'],'source':record['file']})
     print(json.dumps(all_,ensure_ascii=False))
-if __name__=='__main__':main()
+if __name__=='__main__':
+    main()
+    from full_source_tables import clean_paths
+    clean_paths(list(ROOT.glob('*.md'))+list(ROOT.glob('*.csv')))

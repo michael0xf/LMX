@@ -1,0 +1,13 @@
+Mask:
+    Match@: matched
+    return: char[]
+    make:
+        throws: copy(FxTextCycle\cycle\throws)
+        return: cycle("*"; matched\end - matched\begin)
+
+Example:
+    char[]: text
+    return: char[]
+    run:
+        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxReplace\replace\throws) copy(Mask\make\throws)
+        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)

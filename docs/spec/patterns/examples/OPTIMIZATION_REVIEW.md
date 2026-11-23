@@ -1,23 +1,34 @@
-# Аудит examples: восстановление коротких реализаций
+# Две стилевые формы исходных24 сценариев
 
-Редакция: 23 ноября 2026 года. Все 24 сценария сохранены. H04 восстановлен на основе прямого merge из 22-Nov; H09 снова содержит целиком исходный короткий Cycles. Вариант с ядром не имеет приоритета перед более простым полным решением.
+Каждый сценарий имеет два полных исходника одного договора. Совпадение минимальной формы отмечено явно. Иностранные исходники и статусы сопоставимости сохранены.
 
-| Пример | Сохранённые подходы | Основной |
-| --- | --- | --- |
-| H01 | original, receivers | original |
-| H02 | original, receivers | original |
-| H03 | original, receivers | receivers |
-| H04 | original | original |
-| H06 | original, receivers | original |
-| H07 | original, receivers | original |
-| R01 | receivers | receivers |
-| V02 | original, regex | original |
-| V03 | reuse | reuse |
+| ID | Процедурный LMX | Функциональный LMX | Haskell | Статус | Соотношение форм |
+| --- | ---: | ---: | ---: | --- | --- |
+| [H01](haskell/comparisons/H01_comparision.md) | 191 | 191 | 303 | complete_pair | same_minimal_form |
+| [H02](haskell/comparisons/H02_comparision.md) | 245 | 215 | — | lmx_only | distinct |
+| [H03](haskell/comparisons/H03_comparision.md) | 495 | 249 | 143 | complete_pair | distinct |
+| [H04](haskell/comparisons/H04_comparision.md) | 265 | 205 | 128 | complete_pair | distinct |
+| [H05](haskell/comparisons/H05_comparision.md) | 218 | 206 | — | related_analogy | distinct |
+| [H06](haskell/comparisons/H06_comparision.md) | 223 | 167 | 89 | complete_pair | distinct |
+| [H07](haskell/comparisons/H07_comparision.md) | 354 | 354 | — | related_analogy | same_minimal_form |
+| [H08](haskell/comparisons/H08_comparision.md) | 94 | 94 | — | lmx_only | same_minimal_form |
+| [H09](haskell/comparisons/H09_comparision.md) | 285 | 285 | — | related_analogy | same_minimal_form |
+| [R01](haskell/comparisons/R01_comparision.md) | 184 | 183 | — | related_analogy | distinct |
+| [R02](haskell/comparisons/R02_comparision.md) | 95 | 95 | — | lmx_only | same_minimal_form |
+| [R03](haskell/comparisons/R03_comparision.md) | 226 | 226 | — | lmx_only | same_minimal_form |
+| [R04](haskell/comparisons/R04_comparision.md) | 383 | 383 | — | lmx_only | same_minimal_form |
+| [R06a](haskell/comparisons/R06a_comparision.md) | 189 | 189 | — | lmx_only | same_minimal_form |
+| [R06b](haskell/comparisons/R06b_comparision.md) | 139 | 139 | — | lmx_only | same_minimal_form |
+| [R07](haskell/comparisons/R07_comparision.md) | 159 | 159 | — | related_analogy | same_minimal_form |
+| [R09](haskell/comparisons/R09_comparision.md) | 189 | 189 | — | lmx_only | same_minimal_form |
+| [A01](haskell/comparisons/A01_comparision.md) | 126 | 126 | — | lmx_only | same_minimal_form |
+| [V02](haskell/comparisons/V02_comparision.md) | 223 | 170 | 132 | complete_pair | distinct |
+| [V03](haskell/comparisons/V03_comparision.md) | 308 | 298 | — | related_analogy | distinct |
+| [V04](haskell/comparisons/V04_comparision.md) | 160 | 160 | — | lmx_only | same_minimal_form |
+| [V05](haskell/comparisons/V05_comparision.md) | 547 | 547 | — | lmx_only | same_minimal_form |
+| [M01](haskell/comparisons/M01_comparision.md) | 93 | 93 | 411 | complete_pair | same_minimal_form |
+| [M05](haskell/comparisons/M05_comparision.md) | 49 | 49 | — | lmx_only | same_minimal_form |
 
-H07 переиспользует sys\OPERANDS_TEMPLATE через copy/merge. H08 использует один runner и одно тело изменения y, демонстрируя собственную ячейку Own и свободное динамическое место Free. M01.add вызывает уже существующий read. V05 записывает шаг журнала и пару set/observe по одному разу; два вызова пары безусловны. H01/H02/H03/H04/H06 не хранят ненужные промежуточные результаты.
+Все объявления и Throws входят в цену. Выбор одной основной LMX-записи по краткости больше не применяется. Прежний canonicalpath — только физический путь функционального исходника, а не дополнительная третья запись.
 
-H09 включает полное локальное определение Cycles в основной размер. Его catch обрабатывает только Stop источника; отказ тела распространяется под исходным именем. Отдельный core-адаптер с FxCallFailure показан как иной контракт и не используется для подмены основного примера. V02 сохраняет between; prepared/raw occurrences H07 и lazy сохраняются как разные подходы.
-
-Haskell использует аппликацию, композицию, foldM/replicateM, Data.Ix.inRange и Control.Monad.Loops.whileJust_. Каталог libraries содержит сравниваемые реализации; клиентский Cabal-компонент не добавляет его в hs-source-dirs.
-
-[Ожидания](expected_results.json), [реестр вариантов](variants.json), [размеры](validation/functional_receiver_counts.json). Проверены исходники и согласованность; исполнение LMX/GHC не заявляется.
+Runtime LMX: NOT_RUN.

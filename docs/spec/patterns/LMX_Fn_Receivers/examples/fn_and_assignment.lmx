@@ -1,7 +1,7 @@
 # Подготовленные проверки приёмки, а не отчёт о выполненном прогоне ядра.
 # Нужны generic_functions.lmx, fn_operand.lmx и поставщик FxKernel из KERNEL_REQUIREMENTS.md.
-# Реальный метод операнда — FxSignatureOperand\make. Каноническое написание
-# R signatureTypes T0 T1 — обычное ядерное имя в стандартном namespace ядра.
+# Реальный метод операнда — FxToOperand\to. Каноническое написание
+# T0 to T1 R — обычное ядерное имя в стандартном namespace ядра.
 # Именованное объявление полностью перенесено в Name :: Signature.
 # Пустые строки разделяют только корневые формы.
 # Каждый run возвращает 1 при выполнении всех проверок.
@@ -36,19 +36,19 @@ FxFnMixedTarget:
         throws: copy(FxThrows\fixture)
         return: number
 
-# Старое двухаргументное объявление остаётся доступным в том же документе.
+# Именованное объявление сохраняет свой собственный DATA-контракт.
 FxFnExpectedMixed :: (int: p0; double: p1; @: p2; return: int)
 
 # 1. Настоящее операндное применение квалифицированного метода.
-# left = запись готового int-кода результата int.
-# right = три записи int-кодов: int, double, @ — именно в этом порядке.
+# left = запись int-кода первого входа int.
+# right = типы остальных входов double, @ и последний тип результата int.
 # Проверка приёма target выявляет ошибку «все токены сами являются int,
-# значит все входы должны быть int»; последний правый токен остаётся входом.
+# значит все входы должны быть int»; последний правый токен задаёт результат.
 FxFnReadyCodesExample:
     return: int
     run:
         throws: copy(FxThrows\fixture)
-        @: made (sys\typeof(FxFnReadySamples[0]) FxSignatureOperand\make sys\typeof(FxFnReadySamples[0]) sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]))
+        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\to sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -59,9 +59,9 @@ FxFnReadyCodesExample:
         return: 1
 
 # 2. Обычный explicit named call того же метода.
-# left и элементы tokens уже содержат указатели на записи, поэтому здесь
+# result и элементы inputs уже содержат указатели на записи, поэтому здесь
 # не требуется prepared boxing и нет операции разыменования их payload.
-# Не следует заменять left := ...[0] адресным выражением @...[0]: это иной уровень.
+# Не следует заменять result := ...[0] адресным выражением @...[0]: это иной уровень.
 FxFnUninitExample:
     return: int
     run:
@@ -74,7 +74,7 @@ FxFnUninitExample:
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
         tokens[2] := FxFnUninitSamples\reference[0]
-        @: made FxSignatureOperand\make(left := FxFnUninitSamples\integral[0]; right := tokens)
+        @: made FxToTypes\to(inputs := tokens; result := FxFnUninitSamples\integral[0])
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -106,7 +106,7 @@ FxFnProcedureExample:
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
         @[]: tokens []
-        @: made FxSignatureOperand\make(left := original\resultType; right := tokens)
+        @: made FxToTypes\to(inputs := tokens; result := original\resultType)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
@@ -173,7 +173,7 @@ FxFnAndAssignmentExamples:
 # - инструментировать чтение uninit: ни make, ни normalizeType не читают payload;
 # - проверить qualified operand в interpreter/native и всех переходах между ними;
 # - обеспечить lifetime материализованных ready int-токенов;
-# - повторить операндный пример с прямым ядерным именем signatureTypes и проверить
+# - повторить операндный пример с прямым ядерным именем to и проверить
 #   совместимость с FxFnExpectedMixed :: (...);
 # - неизвестный код типа отказывает с FxTypeToken, не создавая успешный descriptor;
 # - mismatch длины в групповом присваивании обнаруживается до первой записи;

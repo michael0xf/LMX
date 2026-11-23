@@ -1,3 +1,10 @@
+СТАТУС 2026-11-23: JVM classfile, .NET CIL, WASM GC и Lua 5.4 отменены как цели LMX
+(порта нет, обязательств нет). Сохранены: MIR, WASM linear и RISC-V по маршруту
+Translator-L1. SLJIT -- runtime-бэкенд lowering/компиляции вместо модуля AOT-трансляции.
+Рейтинги
+ниже -- история (2026-09), не активная очередь; действующий приоритет --
+vm_porting_plan_ru.txt.
+
 L1 во виртуальные машины -- исследовательская заметка (русский)
 ==============================================================
 
@@ -185,7 +192,7 @@ include -> #include, throw -> static-канал + метки).
         компилятора C. Geomean на наборе MIR около 65% gcc -O2
         (JIT MIR ~91%). Windows ABI в QBE 1.3.
 
-8. sljit  (уже вендорится: third_party zherczeg-sljit*.tar.gz)
+8. sljit  (уже вендорится: third_party/sljit.zip)
         Лёгкий JIT-ассемблер, его использует PCRE2 в этом дереве.
         Нет переносимого файла bytecode. Разумное нативное JIT-
         понижение, если у L1 появится бэкенд машинного кода.
@@ -338,6 +345,6 @@ include -> #include, throw -> static-канал + метки).
     https://github.com/vnmakarov/mir    MIR / c2mir
     https://c9x.me/compile/             QBE
     https://github.com/WebAssembly/wasi-sdk
-    third_party/vcpkg.txt               tarball sljit уже в списке
+    third_party/vcpkg.txt (файла нет, проверено 2026-11-23)  sljit.zip уже вендорен
 
 Конец L1_to_vm_research_ru.txt.

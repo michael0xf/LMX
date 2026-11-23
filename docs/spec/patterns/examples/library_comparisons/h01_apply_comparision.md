@@ -51,13 +51,13 @@ apply operation value = operation value
 
 ## Size boundaries
 
-| Source boundary | Nonwhitespace characters | без сложного Throws | Nonblank lines | UTF-8 bytes |
-| --- | ---: | ---: | ---: | ---: |
-| LMX entry definitions shown above | 199 | 199 | 11 | 299 |
-| All reachable LMX source roots, counted once | 1906 | 1027 | 152 | 3185 |
-| Complete Haskell comparison module | 79 | — | 3 | 99 |
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: |
+| LMX entry definitions shown above | 199 | 11 | 299 |
+| All reachable LMX source roots, counted once | 2083 | 167 | 3493 |
+| Complete Haskell comparison module | 79 | 3 | 99 |
 
-The supplementary column retains each Throws header, its first written argument and every complete copy reference. Referenced definitions are counted once in the full dependency boundary. It never edits the source or replaces the main full-code count.
+Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.
 
 На мой взгляд, явные Throws — преимущество LMX: предельно ясно, какие ошибки может породить метод. Общий список и `throws: copy(Throws)` сохраняют этот контракт. Сокращать такие записи ради размера не хочется.
 

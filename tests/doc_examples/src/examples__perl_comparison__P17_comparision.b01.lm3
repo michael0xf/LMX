@@ -1,6 +1,30 @@
+Ascii:
+    char: value
+    return: int
+    letter:
+        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
+
+
 Example:
     char[]: text
     return: @
     run:
-        throws: copy(FxThrows\sequencefixture) PatternArgument PatternEncoding PatternPosition
-        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedText)
+        throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        @[]: out []
+        int: i 0
+        while: i < length(text)
+            while: i < length(text) && Ascii\letter(text[i]) = 0
+                i += 1
+            int: begin i
+            while: i < length(text) && Ascii\letter(text[i]) != 0
+                i += 1
+            if: i > begin
+                char[]: word []
+                sys\resize(word; i - begin)
+                int: j 0
+                while: j < length(word)
+                    word[j] := text[begin + j]
+                    j += 1
+                FxSeqPush\append(out; (word record))
+        ---
+        return: out

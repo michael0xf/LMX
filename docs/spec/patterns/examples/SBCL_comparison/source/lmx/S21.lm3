@@ -7,10 +7,21 @@ Checked:
             throw: InputFailure()
         return: value * 2
 
+ResultValue:
+    int: value
+    return: int
+    use:
+        return: value
+
+FailureValue:
+    @: reason
+    return: int
+    use:
+        return: 99
+
 Example:
     int: value
     return: int
     run:
-        return: Checked\checked(value)
-        catch: InputFailure ()
-            return: 99
+        throws: copy(attempt\throws) copy(foldResult\throws)
+        return: \(foldResult (attempt Checked\checked (value)) FailureValue\use ResultValue\use)

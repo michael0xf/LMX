@@ -1,0 +1,11 @@
+Example:
+    int: x
+    return: FxMaybe@
+    half:
+        throws: FxRecordArity
+        if: x % 2 = 0
+            return: some(x / 2)
+        return: none()
+    run:
+        throws: FxRecordArity copy(FxMaybeBindOperand\bind\throws)
+        return: some(x) bind half bind half

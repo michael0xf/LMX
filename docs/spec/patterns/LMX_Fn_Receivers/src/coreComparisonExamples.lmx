@@ -4,7 +4,7 @@
 # No mutable declaration, callback or namespace is shared across Message arenas.
 
 FxBetween:
-    copy: sys\OPERANDS_TEMPLATE
+    copy: FxPreparedOperands
     const: int: PRIORITY sys\priority("<=")
     return: int
     between:
@@ -27,7 +27,7 @@ FxIterateUntilStop:
         while: 1
             private: @: step FxKernel\attemptAccepted(iteration)
             if: step\ok = 0
-                if: FxSameText\same(step\failure; "Stop")
+                if: FxEqualFields\equalFields(step\failure; "Stop")
                     break
                 throw: FxCallFailure(step)
             private: @: result FxKernel\attemptAccepted(body)

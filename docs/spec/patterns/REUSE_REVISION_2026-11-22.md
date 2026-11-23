@@ -76,5 +76,7 @@
 
 - [Общая статистика](STATISTICS_2026-11-22.md), [Excel](STATISTICS_2026-11-22.xlsx), [PDF](STATISTICS_2026-11-22.pdf).
 - [Обзор 01–05](validation/reuse_review_01_05_20261122.json), [06–09](validation/reuse_review_06_09_20261122.json), [083/084](validation/reuse_review_083_084_20261122.json), [GoF и examples](validation/reuse_review_gof_examples_20261122.json).
-- [Сохранность](validation/reuse_preservation_sources_20261122.json), [нормативная сверка](validation/declaration_rule_review_20261122.json), [итоговая машинная сводка](validation/reuse_declaration_revision_20261122.json).
+- [Сохранность](validation/reuse_preservation_sources_20261122.json), [актуальные проверки](VALIDATION.md), [актуальные проверки](VALIDATION.md).
 - [Визуальная проверка PDF](validation/pdf_visual_review_20261122.json) и [Excel](validation/xlsx_visual_review_20261122.json).
+
+Актуальное применение общих операций, форм и переименований описано в [отчёте интеграции](../INTEGRATION_REPORT.md). Числа обзора 22-Nov остаются историческими и не являются результатами проверки изменённых исходников.

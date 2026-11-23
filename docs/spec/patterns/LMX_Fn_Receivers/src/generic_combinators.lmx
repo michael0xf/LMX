@@ -34,15 +34,6 @@ FxCompose:
         private: @: failures FxFailures\union(a\throws; b\throws)
         return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
 
-FxPipe:
-    private:
-        @: first
-        @: second
-    return: @
-    pipe:
-        throws: copy(FxThrows\adapter)
-        return: FxCompose\compose(outer := second; inner := first)
-
 FxIdentity:
     private: @: typeToken
     return: @
@@ -99,15 +90,12 @@ FxMemoEngine:
         @: frame
     return: @
     run:
-        throws: copy(FxThrows\snapshot)
+        throws: copy(FxThrows\snapshot) FxPredicate
         private: @: key FxFrameSnapshot\snapshot(frame)
         private: int: i 0
         while: i < length(state\entries)
             private: FxMemoEntry@: entry state\entries[i]
-            private: @: equalityArgs FxTwo\make(FxRecords\reference(entry\key); FxRecords\reference(key))
-            private: @: flagRecord FxApply\apply(state\sameKey; equalityArgs)
-            private: int: flag \flagRecord
-            if: flag != 0
+            if: FxValueSame\test(entry\key; key; state\sameKey) != 0
                 return: entry\value
             i += 1
         private: @: value FxFrameApply\apply(frame)
@@ -119,7 +107,8 @@ FxMemoEngine:
         state\entries[count] := entry
         return: value
 
-# sameKey receives two complete, accepted key snapshots and returns int.
+# sameKey optionally receives two complete, accepted key snapshots and returns int.
+# Without it, the shared ordinary/deep Array equality compares those snapshots.
 # Omitted/default/autofill positions are resolved by an explicit key read;
 # omission alone never yields a cache hit. Snapshot occurs before body writes.
 # Кеш линейный; ключи должны оставаться стабильны для выбранного равенства.
@@ -127,18 +116,21 @@ FxMemoEngine:
 FxMemo:
     private:
         @: operation
-        @: sameKey
+        @: sameKey 0
+    required: operation
     return: @
     memo:
         throws: copy(FxThrows\adapter)
         private: @: info FxKernel\signature(subject := operation)
-        private: @: equality FxKernel\signature(subject := sameKey)
         private: @: state (copy(FxMemoState))
         state\operation := operation
         state\sameKey := sameKey
         state\entries := (copy(()))
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
-        private: @: failures FxFailures\union(info\throws; equality\throws)
+        private: @: failures info\throws
+        if: sameKey != 0
+            private: @: equality FxKernel\signature(subject := sameKey)
+            failures := FxFailures\union(failures; equality\throws)
         return: FxWrap\make(contract; FxMemoEngine\run; state; failures; FxFullPolicy\make(operation))
 
 FxFixState:

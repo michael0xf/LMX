@@ -2,17 +2,15 @@
 
 Общая реализация partial(F;prefix): произвольная смешанная сигнатура, 0≤k≤N, точный остаточный контракт и исходный return.
 
-**Клиенты готовых средств:** [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md). Они не подключают показанные здесь foreign-реализации.
-
 ## Общий сценарий
 
 Реализовать произвольный типизированный префикс без привязки к int и двум входам: сохранить k из N значений в порядке и вернуть callable для N-k входов, не вызывая цель. Haskell Args/Callable и Scala Tuple/Callable задают вектор типов явно; LMX отражает существующий DATA и дополнительно сохраняет его defaults/binding.
 
-**Ожидаемое наблюдение:** Общий случай сохраняет порядок и типы входов, точный R и объявленные failures. Для клиента сложения результат — 6,101,6. Для N=0 фабрика возвращает nullary callable; для k>N отказ происходит до публикации результата.
+**Ожидается:** Общий случай сохраняет порядок и типы входов, точный R и объявленные failures. Для клиента сложения результат — 6,101,6. Для N=0 фабрика возвращает nullary callable; для k>N отказ происходит до публикации результата.
 
-**Граница сравнения.** Полные реализации заявленного компонента сопоставлены отдельно от его использования. Они не заявляются исходниками всего пакета стандартной библиотеки.
+Клиенты: [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md). Одно тело ядра обслуживает обе формы записи.
 
-## LMX — прямой API ядра
+## LMX — единая общая реализация
 
 ```lmx
 FxPartial:
@@ -34,11 +32,11 @@ FxPartial:
         return: FxWrap\make(contract; FxForwardEngine\run; (copy(())); info\throws; policy)
 ```
 
-Основной листинг — точные определения FxPartial из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
-
 [Исходник](examples/lmx/099_integer_partial_application_implementation.lm3)
 
-## Haskell — самостоятельная реализация
+Основной листинг — точные определения FxPartial из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
+
+## Haskell
 
 ```haskell
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, TypeFamilies, TypeOperators #-}
@@ -69,7 +67,7 @@ partial (Callable operation) prefix =
 
 [Исходник](examples/haskell/099_integer_partial_application_implementation.hs)
 
-## Scala — самостоятельная реализация
+## Scala
 
 ```scala
 object Partial {
@@ -86,27 +84,23 @@ object Partial {
 
 [Исходник](examples/scala/099_integer_partial_application_implementation.scala)
 
-## Подсчёт
+## Подсчёт полного текста
 
-| Язык | Непробельные символы | Непустые строки | Без сложного Throws |
-| --- | ---: | ---: | ---: |
-| LMX | 533 | 17 | 533 |
-| Haskell | 699 | 17 | — |
-| Scala | 263 | 7 | — |
+| Запись | Непробельные символы | Непустые строки |
+| --- | ---: | ---: |
+| LMX — общая реализация | 533 | 17 |
+| Haskell | 699 | 17 |
+| Scala | **263** | 7 |
 
-Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
 
-Автор считает явные конечные списки отказов и общий Throws/copy(Throws) преимуществом LMX: видно, какой метод какие исходы порождает. Основная цена включает их полностью. Дополнительная колонка оставляет заголовок и первый написанный аргумент списка; copy/ссылка сохраняется целиком, общий банк учитывается один раз с первым аргументом. Это только другой подсчёт, не сокращение исходника или контракта.
-
-## Удалённые малозначимые повторы
-
-Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
+Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
 ## Семантические границы
 
 Все три реализации допускают пустой/полный префикс, разнородные значения, независимые захваты, ссылочную идентичность и void/Unit. Haskell/Scala отвергают неверные формы статически, а нулевой вызов получает Nil/EmptyTuple. LMX проверяет во время выполнения и дополнительно сохраняет defaults/private/dynamic binding исходного callable. Foreign Callable — только сравнение реализации; usage его не импортирует.
 
-[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
+[Ошибки и Message/post](FAILURE_BOUNDARIES.md). [Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md).
 
 ## English explanation
 
@@ -118,15 +112,13 @@ General partial(F;prefix): an arbitrary heterogeneous signature, 0≤k≤N, exac
 
 **Limits.** All three implementations cover empty/full prefixes, heterogeneous records, independent captures, reference identity and void/Unit results. Haskell and Scala reject incompatible prefix shapes statically and use Nil/EmptyTuple for nullary calls. LMX checks at runtime and also preserves declaration-specific defaults/private/dynamic binding through its adapters. The typed foreign Callable is a comparison implementation, never an imported usage dependency.
 
-Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
+Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
-## Источники / Sources
+## Источники
 
 - [GHC GADTs](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/gadt.html)
 - [Scala Tuple concatenation](https://www.scala-lang.org/api/3.x/scala/Tuple.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
-
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.
+[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

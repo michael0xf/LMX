@@ -2,11 +2,11 @@
 
 ## Область реализации
 
-Общие типы элементов и ключей. Устойчивая bottom-up merge sort с целочисленным трёхсторонним comparator; unique оставляет первое появление по явному равенству; groupBy вызывает keyOf один раз на элемент и сохраняет порядок внутри групп. Пустые входы и неверные ответы comparator/predicate обработаны. Источник и ключи callbacks не меняют. Generic unique/groupBy используют поиск без hash; их асимптотика не приравнивается к оптимизированным Base.unique/SplitApplyCombine.group.
+Общие типы элементов и ключей. Устойчивая bottom-up merge sort с целочисленным трёхсторонним comparator; unique оставляет первое появление по общему равенству по умолчанию или явному same; groupBy вызывает keyOf один раз на элемент и сохраняет порядок внутри групп. Пустые входы и неверные ответы comparator/predicate обработаны. Источник и ключи callbacks не меняют. Generic unique/groupBy используют поиск без hash; их асимптотика не приравнивается к оптимизированным Base.unique/SplitApplyCombine.group.
 
-Это полная реализация объявленных операций в указанном профиле, а не весь Julia Base. Foreign comparison-модуль не импортируется клиентами. Зависимости Julia: JI01; тела находятся рядом. LMX-тела извлечены из текущего ядра; [общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) составляют их явное дополнение.
+Единое LMX-тело используется обеими клиентскими формами. Julia comparison-модуль клиенты не импортируют. Зависимости Julia: JI01.
 
-Публичные операции: `sort`, `unique`, `groupBy`.
+[Общие определения](shared_dependencies.lmx) и [машинный реестр](../validation/implementation_dependencies.json) дополняют эти тела.
 
 ## LMX: действующие тела
 
@@ -75,18 +75,11 @@ FxSort:
 FxUnique:
     private:
         @: items
-        @: same
-    required: items same
+        @: same 0
+    required: items
     return: @
     unique:
-        throws:
-            FxCallFailure
-            FxKernelFailure
-            FxPredicate
-            FxTypeToken
-            ReceiverIndex
-            SequenceElement
-            SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         private: @: info FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(info\arrayType; count)
@@ -98,8 +91,7 @@ FxUnique:
             private: int: j 0
             while: j < used
                 private: @: previous FxSeqRead\read(result; j)
-                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
-                if: FxSeqPredicate\truth(answer) != 0
+                if: FxValueSame\test(previous; item; same) != 0
                     duplicate := 1
                     break
                 j += 1
@@ -117,25 +109,24 @@ FxGroup:
 FxGroupBy:
     private:
         @: items
-        @: keyOf
-        @: sameKey
-    required: items keyOf sameKey
+        @: keyOf 0
+        @: sameKey 0
+    required: items
     return: @
     groupBy:
-        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
         private: @: result FxSeqAllocate\make(@[]; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
-            private: @: key FxApply\apply(keyOf; FxOne\make(item))
+            private: @: key FxProjectValue\get(item; keyOf)
             private: @: group 0
             private: int: j 0
             while: j < length(result)
                 private: FxGroup@: candidate result[j]
-                private: @: flagRecord FxApply\apply(sameKey; FxTwo\make(candidate\key; key))
-                private: int: flag \flagRecord
+                private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
                     break
@@ -150,7 +141,7 @@ FxGroupBy:
         return: result
 ```
 
-## Julia: самостоятельная семантическая реализация
+## Julia: самостоятельная реализация
 
 ```julia
 module JuliaOrderGroupReference
@@ -242,14 +233,14 @@ end
 end
 ```
 
-## Размеры компонентов
+## Полный размер компонентов
 
-| Язык | Без пробельных | Без сложного Throws | Непустые строки | Все символы |
-| --- | ---: | ---: | ---: | ---: |
-| LMX | 2676 | 2467 | 134 | 4815 |
-| Julia | 1614 | 1614 | 86 | 2610 |
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 2496 | 4504 | 125 |
+| Julia | 1614 | 2610 | 86 |
 
-Колонка «Без сложного Throws» исключает только аргументы после первого; copy(Throws) сохраняется целиком. Исходник не изменяется. Размер общих зависимостей приводится отдельно: складывать его для каждой строки повторно нельзя. Подготовлены empty/error/alias/callback cases в validation; runtime execution NOT_RUN.
+Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.
 
 ## Исходники LMX
 
@@ -258,8 +249,8 @@ end
 - `FxGroup` — [../../LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx)
 - `FxGroupBy` — [../../LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx)
 
-## Первичные источники семантики Julia
+## Первичные источники
 
-- [https://docs.julialang.org/en/v1/base/sort/](https://docs.julialang.org/en/v1/base/sort/)
-- [https://docs.julialang.org/en/v1/base/collections/](https://docs.julialang.org/en/v1/base/collections/)
-- [https://github.com/JuliaData/SplitApplyCombine.jl#grouping](https://github.com/JuliaData/SplitApplyCombine.jl#grouping)
+- <https://docs.julialang.org/en/v1/base/sort/>
+- <https://docs.julialang.org/en/v1/base/collections/>
+- <https://github.com/JuliaData/SplitApplyCombine.jl#grouping>

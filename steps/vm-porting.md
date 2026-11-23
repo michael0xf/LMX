@@ -1,12 +1,14 @@
 # VM: последовательная подготовка и проверка сборки
 
+**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — отменены полностью и сняты из очереди; сохраняются Path A (C99, MIR, WASM linear, RISC-V ISA). Всё, что ниже об этих четырёх целях, — история, а не требования и не очередь; ссылки на пункты 4–7 плана портирования считать снятыми. Основание: [план](../next_core_tasks_v3.md#backends-20261123).
+
 Поручение автора от 2026-09-20. Исполнитель: **существующий Grok Bot**, не Grok CLI. Координация и приёмка: Codex. Код задания: `LMX-VM-BOOTSTRAP-20260920-01`.
 
 Основание и порядок: [vm_porting_plan_en.txt](../include_languages/vm_porting_plan_en.txt), пункты 1–3. Общая координация: [implementation-plan.md](implementation-plan.md). Это рабочее задание, а не новая спецификация языка.
 
 Рабочая записка по переносимости **Mixa/myxa_manager** на VM-профили (существующие BACKEND/FILE/PROCESS seams, матрица сложности, отличие Path A smoke от продукта): [mixa-vm-integration.md](mixa-vm-integration.md).
 
-Четыре внешних L3 VM (отдельно от Path A): **JVM classfile → .NET CIL → WASM GC → Lua 5.4. CIL L3 baseline smoke: [vm-cil-l3-smoke.md](vm-cil-l3-smoke.md) (GROK-BOT-CIL-L3-BASELINE-20260921-101).**. Нативный binary-graph L3-интерпретатор — семантический oracle, не пятая цель. Java/JVM — первый кандидат. Модель сложности (shared L3/UI vs per-target emitter; когда четыре L3 дешевле независимых manager/UI на MIR/WASM-linear/RISC-V; Lua source smoke ≠ Lua bytecode backend) — §6 в [mixa-vm-integration.md](mixa-vm-integration.md) (GROK-BOT-L3-VM-COMPLEXITY-20260921-72).
+Четыре внешних L3 VM (отдельно от Path A; **отменены автором 2026-11-23**, ниже — история): **JVM classfile → .NET CIL → WASM GC → Lua 5.4. CIL L3 baseline smoke: [vm-cil-l3-smoke.md](vm-cil-l3-smoke.md) (GROK-BOT-CIL-L3-BASELINE-20260921-101).**. Нативный binary-graph L3-интерпретатор — семантический oracle, не пятая цель. Java/JVM — первый кандидат. Модель сложности (shared L3/UI vs per-target emitter; когда четыре L3 дешевле независимых manager/UI на MIR/WASM-linear/RISC-V; Lua source smoke ≠ Lua bytecode backend) — §6 в [mixa-vm-integration.md](mixa-vm-integration.md) (GROK-BOT-L3-VM-COMPLEXITY-20260921-72).
 
 ## Изменение приоритета
 
@@ -22,7 +24,7 @@
 - Загрузки, распаковки, сторонние checkout, сгенерированный C, бинарники и логи размещать в `dev/vm_porting/build/` (уже исключён из Git). Собственные скрипты, тесты, версии/хэши и краткий отчёт сохранять в Git. Ничего не скачивать поверх существующих каталогов и не коммитить сторонние SDK целиком.
 - Использовать официальные источники, фиксировать точную версию/commit, URL, SHA-256, host/target и лицензию. Проверять опубликованные upstream хэши/подписи, если они есть; собственный вычисленный хэш не выдавать за независимое подтверждение.
 - Разрешена локальная подготовка нужных переносимых инструментов. Не устанавливать новую ОС/WSL, не менять глобальный PATH, системные настройки, службы или права. Если нужны такие изменения либо платные ресурсы — сообщить, что именно отсутствует, и запросить решение.
-- Пункты 4–7 (четыре внешних L3 VM) остаются очередью после согласования L3-интерфейса и **отдельно** от Path A. Порядок проверки backend: **JVM classfile → .NET CIL → WASM GC → Lua 5.4. CIL L3 baseline smoke: [vm-cil-l3-smoke.md](vm-cil-l3-smoke.md) (GROK-BOT-CIL-L3-BASELINE-20260921-101).** (JVM первый; Lua bytecode+manager/UI последний; Lua source emission — только дешёвый smoke). Нативный L3-интерпретатор — oracle, не одна из четырёх целей. Старый план содержит исторические ссылки; они не отменяют актуальное вступление LMX и решения автора. LLVM runtime и BEAM не добавлять. Подробности сложности: [mixa-vm-integration.md](mixa-vm-integration.md) §6.
+- Пункты 4–7 (четыре внешних L3 VM) **сняты с очереди автором 2026-11-23**; прежде они были очередью после согласования L3-интерфейса и стояли **отдельно** от Path A. Порядок проверки backend: **JVM classfile → .NET CIL → WASM GC → Lua 5.4. CIL L3 baseline smoke: [vm-cil-l3-smoke.md](vm-cil-l3-smoke.md) (GROK-BOT-CIL-L3-BASELINE-20260921-101).** (JVM первый; Lua bytecode+manager/UI последний; Lua source emission — только дешёвый smoke). Нативный L3-интерпретатор — oracle, не одна из четырёх целей. Старый план содержит исторические ссылки; они не отменяют актуальное вступление LMX и решения автора. LLVM runtime и BEAM не добавлять. Подробности сложности: [mixa-vm-integration.md](mixa-vm-integration.md) §6.
 
 ## Последовательность и критерии
 

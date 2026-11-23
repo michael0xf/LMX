@@ -1,8 +1,13 @@
 # Direct functions for the current LMX core
 
-Edition: **23 November 2026**, based on `23-Nov-2026.tar.gz`, with short examples restored from `22-Nov-2026-3.tar.gz`.
+Edition: **23 November 2026**, integrated canonical forms and generic operation contracts.
 
-This is the common integration inventory of **212 public callable/operand names**. It is generated from the same [catalog](patterns/LMX_Fn_Receivers/catalog.json) as [the constant exports](patterns/LMX_Fn_Receivers/src/public.lmx). All belong to the current kernel. Clients call them directly; there is no optional LMX library import or parallel version of these facilities.
+This is the common integration inventory of the current public operations.
+The [catalog](patterns/LMX_Fn_Receivers/catalog.json) and
+[public exports](patterns/LMX_Fn_Receivers/src/public.lmx) retain their concrete
+implementations and exact signatures. Each applicable name has receiver and
+operand representations sharing one algorithm; multiple semantic families
+retain explicit receiving contracts. All belong to the current kernel.
 
 Public names use **lowerCamelCase**. Existing single-word identifiers remain lowercase. Implementation groups, types, named failures, ready Pattern values and symbolic language operators are separate categories; they are not extra functions in this count.
 
@@ -24,10 +29,27 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 
 ## Function inventory
 
+`name(args)` and the applicable operand spelling select the same operation
+under the [common form contract](OPERATION_FORMS.md). The table shows ordinary
+signatures; this does not exclude the operand representation. Whole-value,
+TYPE, NAME, DATA, RAW/BODY and PLACE inputs keep their stated roles.
+
+Canonical families and complete implementation designs are specified in
+[generic operations](GENERIC_OPERATIONS.md),
+[equality and uniqueness](GENERIC_EQUALITY.md), and
+[monadic operations](MONADIC_OPERATIONS.md). Superseded names exist only in the
+[migration history](NAMING_2026-11-22.md), never as exported aliases.
+
 ### Reflection and structure composition
+
+`type(x)` / `x type` captures one whole actual value and returns the existing
+`sys\typeof` physical code. It is distinct from the field-vector query
+`types(source)`, signature reflection and a type declaration. Reference values,
+including null, and whole Arrays are captured through their true records.
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
+| `type(value)` / `value type` | Capture one whole value through its true typed record and return its physical `sys\typeof` code; distinct from field-vector types and TYPE-token signature composition | [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) |
 | `types(source)` | physical field type codes; int[] by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names(source)` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature(operation)` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
@@ -47,14 +69,14 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `R signatureTypes T0 ... TN; explicit fun\const\signatureTypes(left := R; right := types)` | same signature kind: result type token left, all ordered input tokens right | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `to(T0; ...; TN; R)` / `T0 to ... TN R` | Full input TYPE tokens followed by the result token; `to(R)` is nullary | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
 | `curry(operation)` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `apply(operation; args)` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
 | `partial(operation; prefix)` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `uncurry(operation; contract; failures)` | explicit full target contract and stage failures, callable result preserved | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `flip(operation)` | swap first two positions of N>=2 with full input types | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `compose(outer; inner)` | inner arbitrary arity; outer consumes its one result; exact final R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
-| `pipe(first; second)` | compose(second; first), exact callable signature | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `pipe(value; stages)` | Apply stages to a whole typed value; preserve the last stage's exact result. `FxPipeBuild\make(inputType; stages)` publishes the prepared exact `T → R` signature. `compose` constructs a callable instead | [coreGenericOperations.lmx](patterns/LMX_Fn_Receivers/src/coreGenericOperations.lmx) |
 | `identity(typeToken)` | typed T -> T for any valid value type | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
 | `memoize(operation; sameKey)` | any arity/R; explicit key-vector equality, Message-local linear cache | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
 | `fix(operation)` | F(self;T0..Tn)->R becomes T0..Tn->R | [generic_combinators.lmx](patterns/LMX_Fn_Receivers/src/generic_combinators.lmx) |
@@ -63,6 +85,7 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | `once(operation)` | any arity/R; first success reused, failure permits retry | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
 | `repeat(operation; count; args=())` | count calls with arbitrary typed actual vector; result records | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
 | `runUntil(step; finished; initial)` | record state; step then predicate, no fixed payload type | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
+| `retry(operation; retryOn; limit; delay=0; arguments=())` | Return the operation's actual result; retryOn receives result and one-based attempt, optional delay receives attempt. Limit includes the initial call; exceptions propagate. Declared-exception retryCall and Message-owned retryPost keep their distinct effects | [coreGenericOperations.lmx](patterns/LMX_Fn_Receivers/src/coreGenericOperations.lmx) |
 | `retryCall(operation; attempts; args=())` | finite attempts, declared failures retained in FxCallFailure envelope | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
 | `bracket(acquire; release; action; arguments=())` | any resource/result; finally release; arbitrary extra action inputs | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
 | `recover(operation; handler)` | exact signature; handler(name,payload,actualVector) -> R | [generic_wrappers.lmx](patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx) |
@@ -87,8 +110,8 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | `scanl(items; seed; step)` | seeded scan, n+1 records; accumulator type not hardwired | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
 | `traverse(items; next)` | Maybe of direct Structure record vector; stop at first absence | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
 | `transpose(rows)` | rectangular Structure of row values; no fixed dimensions | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
-| `groupBy(items; keyOf; sameKey)` | typed keys and explicit equality, stable group/member order | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
-| `range(start; stop; step=1)` | dense int range, stop excluded, checked extent | [sequences.lmx](patterns/LMX_Fn_Receivers/src/sequences.lmx) |
+| `groupBy(items; keyOf=0; sameKey=0)` | Whole current element is the default key; explicit projection runs once; shared equality and stable group/member order | [collections.lmx](patterns/LMX_Fn_Receivers/src/collections.lmx) |
+| `range(start; stop; step=1)` / `range(start; stop; step; profile)` | Half-open range; the exact integer default retains dense int output and checked extent. An explicit profile supplies output array type, direction, validation, stepping and order; every reached step must advance | [sequences.lmx](patterns/LMX_Fn_Receivers/src/sequences.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
 | `slice(source; begin; end)` | validated half-open selection preserving actual storage profile | [sequences.lmx](patterns/LMX_Fn_Receivers/src/sequences.lmx) |
 | `reverse(source)` | new reverse container, reference targets retained | [sequences.lmx](patterns/LMX_Fn_Receivers/src/sequences.lmx) |
 | `concat(parts)` | one-level concatenation; same dense T or ordinary reference array | [sequences.lmx](patterns/LMX_Fn_Receivers/src/sequences.lmx) |
@@ -108,56 +131,62 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
 | `bind(input; next)` | Maybe of any typed record; next gets actual payload value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `some(value)` | Maybe present with any typed value record, including null | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `some(value)` | Maybe present with one whole value captured adaptively, including null; exact FxMaybe@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `none()` | Maybe absence, distinct from present empty/null value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `ok(value)` | Result success carrying any typed value record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `err(reason)` | Result failure carrying any typed reason record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `bindResult(input; next)` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `ok(value)` | Result success capturing one whole typed value; exact FxResult@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `err(reason)` | Result failure capturing one whole typed reason; exact FxResult@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bind(input; next)` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `list(values)` | universal sequence input, shallow copied reference vector | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `flatMap(items; next)` | universal sequence bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `done(value)` | terminal Bounce with result record | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `bind(items; next)` | universal sequence bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `done(value)` | terminal Bounce with one adaptively captured whole result value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `more(thunk)` | suspended nullary callable, arbitrary captures via partial | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `trampoline(current)` | iterate Bounce until done, never execute callable final result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 
-### Text patterns and matching
+### Patterns over typed sources
+
+`arrayView(items)` selects finite typed Array units. `element(value)` matches
+one whole value. `literal(value)` matches a block in the selected domain.
+The existing text views remain explicit profiles over the same Pattern engine.
+All comparisons reuse `FxValueSame` / `FxSequenceDifference`; fragments are
+materialized as `matchedValue` / `captureValue` / `captureValues`.
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `literal(text)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `oneOf(text)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `noneOf(text)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `charRange(first; last)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `satisfy(predicate)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `boundaryOf(predicate)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `sameAs(name)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
-| `sequence(patterns)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `choice(patterns)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `repeated(pattern; minimum=0; maximum=unbounded; order=extendFirst)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `atomic(pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `capture(name; pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `ahead(pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `notAhead(pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `behind(pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
-| `notBehind(pattern)` | ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `literal(value)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `oneOf(values)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `noneOf(values)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `within(first; last)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `satisfy(predicate)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `boundaryOf(predicate)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `sameAs(name)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) |
+| `then(patterns)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `choice(patterns)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `repeated(pattern; minimum=0; maximum=unbounded; order=extendFirst)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `atomic(pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `capture(name; pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `ahead(pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `notAhead(pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `behind(pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
+| `notBehind(pattern)` | ordinary typed-source Pattern builder; shared profile/cursor contract | [combinators.lmx](patterns/LMX_Fn_Receivers/src/regex/combinators.lmx) |
 | `utf8Text(source)` | ordinary text-pattern text_profile; see REGEX_IMPLEMENTATION.md | [text.lmx](patterns/LMX_Fn_Receivers/src/regex/text.lmx) |
 | `byteText(source)` | ordinary text-pattern text_profile; see REGEX_IMPLEMENTATION.md | [text.lmx](patterns/LMX_Fn_Receivers/src/regex/text.lmx) |
-| `matchAt(source; pattern; position)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `wholeMatch(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `find(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `eachMatch(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `contains(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `hasPrefix(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `hasSuffix(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `matches(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `matchedSpan(result)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `matchedText(result)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `captureSpans(result; name)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `lastCapture(result; name)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `captureText(result; name)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `captureTexts(result; name)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `replaceFirst(source; pattern; replacement)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `replace(source; pattern; replacement)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
-| `split(source; pattern)` | ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `matchAt(source; pattern; position)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `wholeMatch(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `find(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `eachMatch(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `contains(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `hasPrefix(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `hasSuffix(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `matches(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `matchedSpan(result)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `matchedValue(result)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `captureSpans(result; name)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `lastCapture(result; name)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `captureValue(result; name)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `captureValues(result; name)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `replaceFirst(source; pattern; replacement)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `replace(source; pattern; replacement)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
+| `split(source; pattern)` | ordinary typed-source Pattern receiver; source-profile result | [operations.lmx](patterns/LMX_Fn_Receivers/src/regex/operations.lmx) |
 | `then(left; right)` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `times(left; right)` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `atLeast(left; right)` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
@@ -170,7 +199,7 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | --- | --- | --- |
 | `findFirst(items; accepts)` | first accepted typed element as some(record), none for absence; ordered short-circuit over dense Arrays and Structures | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 | `allOf(predicates; contract=0)` | arbitrary finite predicate composition with a shared ordered signature, preserved input places and short-circuit; empty set requires an explicit contract | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
-| `equalFields(first; second; same)` | ordered sequence/field equality with explicit typed comparator; unequal lengths are false, empty equal lengths are true; no implicit deep graph equality | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `equalFields(first; second; same=0)` | Ordered length/element equality through one range comparator; default recursion covers finite acyclic sequences; explicit comparator receives whole elements | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 | `retryPost(request; retryOn; attempts; delay; firstDelay; maxDelay; timeoutMs; complete)` | Message-owned bounded retry with saturated backoff, transport timeout and policy cancellation; persistent terminal result and late-reply draining | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
 
 ### Declared-form iteration and ordered ranges
@@ -185,7 +214,8 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
 | `sort(items; compare)` | stable nonmutating generic merge sort; three-way int comparator; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
-| `unique(items; same)` | stable first-occurrence uniqueness with explicit typed equality predicate; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
+| `equals(first; second; projection=0; same=0)` | Optional projection of both whole values followed by the shared default or explicit equality; no text conversion, case folding or hidden recursive object comparison | [coreGenericOperations.lmx](patterns/LMX_Fn_Receivers/src/coreGenericOperations.lmx) |
+| `unique(items; same=0)` | Stable first representatives, optional shared equality, fresh source-profile outer array, exact element/reference identity; errors propagate | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
 
 ### Finite sequence and set conveniences
 
@@ -202,7 +232,7 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | `windows(items; width=2; step=1; partial=0)` | Positive width/step; full windows by default. partial permits one last nonempty short window. No suffix after a window reaches the end. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `chunks(items; size; strict=0)` | Nonoverlapping chunks, final short chunk permitted unless strict; invalid size fails before iteration. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `intersperse(items; separatorRecord)` | Insert an admitted separator between items; empty and singleton inputs do not admit an unused separator. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `intercalate(parts; separator)` | Separate sequence parts and concatenate; empty parts returns a fresh empty sequence of separator profile. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `join(parts; separator)`; text: `join(parts; separator="")` | Separate sequence parts and concatenate using one generic algorithm; empty parts returns a fresh empty sequence of separator profile. The text publication supplies only the empty-text default and exact `char[]` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
 | `unzip(pairs)` | Reverse the existing zip FxPair protocol; empty input returns two fresh empty record Arrays. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `foldr(items; seedRecord; step)` | Strict finite right fold; step(item,accumulator), right-to-left callback order. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `scanr(items; seedRecord; step)` | Right scan includes the seed at the final position; right-to-left callbacks. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
@@ -213,17 +243,17 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | `mapAccumR(items; seedRecord; step)` | Same stateful transform, callbacks right-to-left, outputs at original positions. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `groupAdjacent(items; keyOf; sameKey)` | Consecutive equal-key runs; keyOf once per item and sameKey once per adjacent pair. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `replicate(valueRecord; count)` | Finite copies of one ready value record; negative count gives empty; reference values retain one target. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `cycle(items; count)` | Required finite repetition count; nonpositive count gives empty; preflight result size. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `cycle(items; count; rejectNegative=0)` | One generic finite repetition algorithm; nonpositive count gives empty, or negative count raises SequenceSize when rejectNegative is selected. Preflight result size; text publication preserves the exact `char[]` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
 | `starmap(rows; operation)` | Each ready row becomes one actual vector; one typed callback result per row. No source graph field is executed while reading it. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `zipLongest(first; second; fillRecord)` | Two sequences padded to the longer length with the explicit complete fill value record. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `collect(next; limit=-1)` | Nullary producer through the existing call bridge until its Stop(), or finite limit; other declared failures retain their name and payload inside FxCallFailure. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `includes(items; valueRecord; same)` | Ordered short-circuit membership with explicit typed equality; no conflict with regex contains. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `adjoin(items; valueRecord; same)` | Return original source if already present; otherwise return a fresh same-profile Array with the new value prepended. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `union(first; second; same)` | Unique first occurrences from first then second; pure equivalence relation required. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `intersection(first; second; same)` | Unique first-source values present in second, preserving first-source order. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `difference(first; second; same)` | Unique first-source values absent from second; set difference, not Haskell list multiset subtraction. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `symmetricDifference(first; second; same)` | First-only values then second-only values, each once; use existing difference and concat. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `isSubset(first; second; same)` | Every equivalence class from first appears in second; multiplicity is ignored. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `includes(items; valueRecord; same=0)` | Ordered short-circuit membership with shared default or explicit typed equality; no conflict with regex contains. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `adjoin(items; valueRecord; same=0)` | Return original source if already present; otherwise return a fresh same-profile Array with the new value prepended. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `union(first; second; same=0)` | Unique first occurrences from first then second; pure equivalence relation required. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `intersection(first; second; same=0)` | Unique first-source values present in second, preserving first-source order. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `difference(first; second; same=0)` | Unique first-source values absent from second; set difference, not Haskell list multiset subtraction. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `symmetricDifference(first; second; same=0)` | First-only values then second-only values, each once; use existing difference and concat. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `isSubset(first; second; same=0)` | Every equivalence class from first appears in second; multiplicity is ignored. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 
 ### Optional values, results and physical field lookup
 
@@ -250,36 +280,34 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `assoc(rows; key; same; keyIndex=0)` | First matching row as Maybe; keyIndex=1 covers reverse association with the same search; empty rows skipped. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `assoc(rows; key; same=0; keyIndex=0)` | First matching row as Maybe; keyIndex=1 covers reverse association with the same search; empty rows skipped. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 | `pairlis(keys; values; tail=())` | Fresh forward-ordered key/value rows then shallow tail rows; equal lengths required. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `getProperty(properties; key; same)` | Maybe of the first matching flat property value; present zero/null differs from absent. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `setProperty(properties; key; value; same)` | Update first matching value, otherwise append a key/value pair; return same target Array. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `removeProperty(properties; key; same)` | Remove first matching key/value pair; return int 1 if found, otherwise 0. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `getProperties(properties; indicators; same)` | First property whose key matches any indicator; Maybe of key/value/index; Array index is explicit, not a Lisp cons tail. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `getProperty(properties; key; same=0)` | Maybe of the first matching flat property value; present zero/null differs from absent. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `setProperty(properties; key; value; same=0)` | Update first matching value, otherwise append a key/value pair; return same target Array. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `removeProperty(properties; key; same=0)` | Remove first matching key/value pair; return int 1 if found, otherwise 0. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `getProperties(properties; indicators; same=0)` | First property whose key matches any indicator; Maybe of key/value/index; Array index is explicit, not a Lisp cons tail. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 | `asOperand(operation; priority)` | Construct one ordinary OPERANDS_TEMPLATE-compatible prepared operand; present left then right actuals, exact source R/void and named failures. No new syntax mode. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `mismatch(first; second; same)` | Maybe of first differing index, or shared-prefix length when only lengths differ; no difference yields none. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `searchSequence(items; pattern; same; start=0)` | Maybe of first full subsequence start at or after start; empty pattern matches start; explicit equality. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `substitute(items; oldValue; newValue; same)` | Fresh same-profile Array, replacing every equivalent element; source unchanged and referenced targets shared. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `mismatch(first; second; same=0)` | Maybe of first differing index, or shared-prefix length when only lengths differ; no difference yields none. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `searchSequence(items; pattern; same=0; start=0)` | Maybe of first full subsequence start at or after start; empty pattern matches start; shared default or explicit equality. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `substitute(items; oldValue; newValue; same=0)` | Fresh same-profile Array, replacing every equivalent element; source unchanged and referenced targets shared. | [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 
-### Literal text processing and integer rendering
+### Sequence processing and explicit encoding profiles
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `indexOf(text; part; start=0)` | First literal byte-substring index at or after clamped start; -1 absent. Empty part matches the chosen valid boundary. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `lastIndexOf(text; part; start=length(text))` | Last literal byte-substring index at or before clamped start; overlapping candidates are tested, -1 absent. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `compareText(first; second)` | Unsigned-octet lexicographic order -1/0/1; exact case-sensitive content, length breaks an equal-prefix tie. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `trim(text; chars=" \t\r\n\v\f")` | Fresh byte slice after removing any chosen boundary characters on both sides; default is six ASCII whitespace characters. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `trimStart(text; chars=" \t\r\n\v\f")` | The same shared trim algorithm at the start only. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `trimEnd(text; chars=" \t\r\n\v\f")` | The same shared trim algorithm at the end only. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `repeatText(text; count)` | Fresh repeated char[] through the shared generic cycle algorithm; negative count is SequenceSize. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `padLeft(text; width; fill=" ")` | Fresh byte string of at least width units; repeat then truncate fill at the left, preserve text when already long enough. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `padRight(text; width; fill=" ")` | The same shared padding algorithm with padding on the right. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `translate(text; from; to)` | Simultaneous literal byte substitution, equal-size alphabets, first duplicate source entry wins, unknown bytes retained. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `join(parts; separator="")` | Join already rendered char[] parts through shared intercalate; no hidden printer or implicit coercion. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `formatInt(value; base=10)` | Exact signed bigint to lowercase digits in radix 2..36; shared with the internal nonnegative decimal name builder. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `parseInt(text; base=10)` | Strict whole-input signed bigint parse in radix 2..36; optional sign, ASCII digits case-insensitive, no whitespace/prefix/trailing text. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `removePrefix(text; affix)` | Remove one exact leading affix when present; fresh slice either way. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
-| `removeSuffix(text; affix)` | The same affix-removal algorithm at the end. | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `indexOf(text; part; start=0; same=0)` | First subsequence index at or after clamped start under shared default or explicit equality; -1 absent. Empty part matches the chosen valid boundary. The parameter name text does not restrict the source sequence profile | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `lastIndexOf(text; part; start=length(text); same=0)` | Last subsequence index at or before clamped start under the same equality; overlapping candidates are tested, -1 absent | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `compare(first; second; order=0)` | Lexicographic sequence comparison under an explicit element-order profile; text retains unsigned-octet order -1/0/1 | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `trim(text; chars; predicate=0; same=0)` | Fresh source-profile slice after removing accepted boundary elements on both sides; an explicit predicate or membership equality supplies acceptance. Text publication defaults chars to the six ASCII whitespace characters `" \t\r\n\v\f"` | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `trimStart(text; chars; predicate=0; same=0)` | The same shared trim algorithm at the start only; text publication supplies the same whitespace default | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `trimEnd(text; chars; predicate=0; same=0)` | The same shared trim algorithm at the end only; text publication supplies the same whitespace default | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `padLeft(text; width; fill)` | Fresh source-profile sequence of at least width units; repeat then truncate fill at the left, preserve original units when already long enough. Text publication defaults fill to `" "` | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `padRight(text; width; fill)` | The same shared padding algorithm with padding on the right; text publication supplies the same fill default | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `translate(text; from; to; same=0)` | Simultaneous element substitution under shared default or explicit equality; equal-size mappings, first duplicate source entry wins, unknown elements retained, fresh source-profile result | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `format(value; base=10)` / `format(value; profile; arguments=())` | Exact integer encoding keeps signed bigint, radix 2..36 and lowercase digits; an explicit generic callback profile consumes the actual value and additional arguments, preserving its selected result type | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `parse(text; base=10)` / `parse(source; profile; arguments=())` | Exact integer parsing keeps strict whole-input signed bigint, radix 2..36, sign/digit and error rules; an explicit generic callback profile consumes the actual source and additional arguments, preserving its selected result type | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `removePrefix(text; affix; same=0)` | Remove one matching leading subsequence under shared default or explicit equality; fresh source-profile slice either way | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
+| `removeSuffix(text; affix; same=0)` | The same affix-removal algorithm at the end | [coreStandardText.lmx](patterns/LMX_Fn_Receivers/src/coreStandardText.lmx) |
 
 ### Numeric reductions, selection and exact integers
 
@@ -302,6 +330,15 @@ A mutable asynchronous algorithm runs in its owning `Message` and uses the exist
 | `divMod(dividend; divisor)` | Exact bigint floor quotient and remainder with divisor sign; zero divisor raises NumericDomain. | [coreStandardNumeric.lmx](patterns/LMX_Fn_Receivers/src/coreStandardNumeric.lmx) |
 
 ## Integration and acceptance
+
+The shared publication distinguishes call/operand representations and
+semantic families without a global dispatch registry. Adaptive value entry
+captures once; a factory that exists but is not connected to public `some(x)`,
+`type(x)` or `element(x)` does not satisfy the contract. Pattern source adapters
+preserve whole units and profile-specific encoding/coordinate rules. Range and
+numeric profiles retain domain-specific order, exact division, advancement and
+overflow behavior. Host/reference tests and source checks remain separate from
+actual LMX execution.
 
 1. Preserve the existing complete graph, DATA ownership, declaration-argument behavior and ordinary interpreter/native dispatch. Do not introduce a second callable representation.
 2. Bind the narrow interfaces listed in the kernel requirements to existing kernel algorithms. An algorithm body is not replaced by a new opaque primitive with the same name.

@@ -1,0 +1,10 @@
+RangeQuery:
+    int: minimum
+    int: maximum
+    @: db
+    return: @
+    execute:
+        throws: Range
+        if: minimum > maximum
+            throw: Range()
+        return: db\query("SELECT id,cents FROM account WHERE cents BETWEEN ? AND ?"; minimum; maximum)

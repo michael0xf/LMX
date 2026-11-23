@@ -1,0 +1,10 @@
+GatewayMessage:
+    int: route
+    @: http
+    return: int
+    dispatch:
+        if: route = 1
+            return: http\post("https://orders.example"; "/orders/get")
+        if: route = 2
+            return: http\post("https://stock.example"; "/stock/get")
+        return: 404

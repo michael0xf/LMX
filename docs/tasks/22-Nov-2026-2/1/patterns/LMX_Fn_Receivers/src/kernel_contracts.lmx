@@ -1,0 +1,114 @@
+# INTERNAL INTERFACES TO THE EXISTING KERNEL, NOT IMPLEMENTED KERNEL BODIES.
+# The high-level algorithms are LMX sources. These declarations state the narrow
+# signature/graph/call preparation hooks to bind to the real kernel. No parser,
+# callable kind, lazy-array VM or second executable graph is introduced.
+
+FxKernelSignatureAPI :: (@: subject; return: @)
+
+FxKernelNormalizeTypeAPI :: (@: token; return: @)
+
+FxKernelSignatureDataAPI :: (@: inputs; @: result; @: labels; return: @)
+
+FxKernelCallableAPI :: (@: contract; @: labels; @: bodyGraph; @: state; @: failures; @: policy; return: @)
+
+FxKernelAttemptAPI :: (@: operation; @: args; @: failures; return: @)
+
+FxKernelRaiseAPI :: (char[]: name; @: payload)
+
+FxKernelFieldNamesAPI :: (@: source; return: @)
+
+FxKernelRenameFieldsAPI :: (@: target; @: indices; @: labels)
+
+# Five phase hooks for existing ordinary call preparation/execution.
+# A borrowed frame is service state of THIS invocation, never persistent graph.
+FxKernelCurrentCallAPI :: (@: owner; return: @)
+
+FxKernelFrameSlotAPI :: (@: frame; int: index; int: demand; return: @)
+
+FxKernelPrepareAPI :: (@: operation; @: entries; return: @)
+
+FxKernelEnterAPI :: (@: frame; @: failures; return: @)
+
+FxKernelReleaseCallAPI :: (@: frame)
+
+# signature -> {inputTypes,resultType,hasResult,names,throws,declarations}.
+# declarations are references to the selected candidate's real source forms;
+# no initializer/body is executed. Names/policy are not signature identity.
+# normalizeType reads an initialized int payload as type-id, uninit:T as its
+# type with no payload read, and returns an internal @ to a canonical int code
+# record. Existing type descriptions preserve full Structure/callable/Array
+# models; no new public boxed Type value is introduced.
+# T[] and T@ are postfix constructors producing ordinary int type codes.
+# []: variable is AnyArray, @[]: variable is the actual Structure/@[] requirement.
+# signatureData creates ordinary declarations, without universal required/private.
+# callable publishes ordinary owner -> DATA -> CODE with genuine parent links.
+# Its policy maps external positions to real source declarations, keeps bound
+# records and current-call provenance, and retains private ONLY where applicable.
+# The source policy is not copied from an unrelated named signature template.
+# Private state and inputPolicy are explicit ordinary graph fields; invocation
+# slots are transient service data, not hidden native fields.
+# Builder parses nothing per call and never borrows an incompatible native ABI.
+#
+# attempt consumes a finite ready actual vector; extra optional target formals
+# retain their defaults/absence. A Structure element is one whole actual.
+# Ready sequence input uses ordinary typed call access and actual dense stride.
+# Outcome is {ok,value,failure,payload}; value is the record of TRUE R/void.
+# A referenced Structure/Array/callable is not wrapped in another @ box.
+# Only declared admitted named failures are caught; implicit failures escape.
+# raise preserves the same name/payload within the generated declared exits.
+#
+# currentCall(owner) is legal in the generated CODE whose activation it names.
+# It returns the already selected frame view; getting it evaluates no input.
+# The view exposes inputTypes (public positions), failures and source operation.
+# The target source namespace keeps captured positions and initializer origins.
+# Ordinary binding is selected at the documented adapter call boundary; helper
+# locals are private, and no arbitrary caller/factory context can be injected.
+#
+# frameSlot(frame,index,0) only observes: supplied/ready/declaration/state/
+# requirement/ownPlace/transparentPlace and, iff ready, value. It reads no default.
+# frameSlot(...,1) makes ONE ordinary place read, including deferred reception.
+# Demand retains the original DATA/node and source-place preparation. Ready
+# received primitive records remain stable across writes to F's own formal;
+# this is input observation, not a writable alias to that working cell.
+# Named failures of that demand use FxCallFailure with the original outcome;
+# ordinary implicit failure remains an implicit failure. uninit is not @0.
+#
+# prepare(operation,entries) performs ordinary selection and call preparation.
+# ready entries hold a value record; place entries are preserved declaration
+# actuals whose initializer reads an existing selected place on demand. Supplied
+# source declaration forms keep their form/namespace substitution. An actual
+# entry retains the already selected explicit occurrence/form; an omitted input
+# cannot be made supplied by this entry. All maps are
+# checked before effects; W/E and source expressions are never applied a second time.
+# Its ordinary dynamic context is the reached call site, not a saved factory scope.
+#
+# enter resumes the selected call once using the original source DATA/CODE/node,
+# the normal native/interpreter dispatcher, and its already prepared actuals.
+# releaseCall ends a frame owned by prepare; ordinary cleanup precedes return and
+# outcomes use live arena records. The wrapper-owned currentCall frame is released
+# by its ordinary activation exit, including cache hit and exceptional paths.
+# A frame reference neither extends lifetime nor authorizes execution twice.
+#
+# fieldNames and renameFields use the existing owning-field name association.
+# An anonymous field is represented by uninit:char[], distinct from empty string.
+# Detailed narrow-hook and lifetime contracts: ../KERNEL_REQUIREMENTS.md.
+
+# Common physical Array access used by sequence algorithms and Regex.
+FxKernelArrayInfoAPI :: (@: source; return: @)
+
+FxKernelArrayReadAPI :: (@: source; int: index; return: @)
+
+FxKernelArrayAdmitAPI :: (@: target; @: value; return: @)
+
+FxKernelArrayWriteAPI :: (@: target; int: index; @: value)
+
+# arrayInfo -> {arrayType,elementType,elementBits,dense,maxLength}, all int.
+# Canonical codes preserve full models and pointer levels; maxLength bounds the
+# actual index AND byte-size arithmetic, not currently available free memory.
+# arrayRead returns a direct stored @[] value or a stable dense-T record using
+# the actual stride. It never executes a saved graph form or preboxes all input.
+# arrayAdmit performs the permitted full target-element admission before commit.
+# arrayWrite writes an already admitted value without repeating tests/converters.
+# Direct reference replacement for @[] is not matching the old slot's type.
+# Descriptor identity, parent, ordinary bounds/lifetime and failure channels stay.
+# Full contracts: ../SEQUENCES_IMPLEMENTATION.md, section 4.

@@ -1,0 +1,345 @@
+{
+  "group_title_ru": "Координация состояния: Message и общая память",
+  "group_title_en": "State coordination: Message and shared memory",
+  "languages": [
+    "Java",
+    "Rust"
+  ],
+  "rationale_ru": "Java показывает мониторы, volatile и TLS; Rust — Mutex/RwLock, OnceLock и безопасные области доступа. Они делают видимыми свойства, которые у LMX заменяются владением Message, а не исчезают бесплатно.",
+  "rationale_en": "Java exposes monitors, volatile and TLS; Rust exposes Mutex/RwLock, OnceLock and scoped access. They make explicit which properties LMX replaces through Message ownership rather than obtaining for free.",
+  "overview_ru": "Все шесть исходных паттернов сохранены отдельно. LMX-альтернатива через Message обеспечивает выбранные наблюдения, но не притворяется shared-memory RW lock, DCL fast path или OS-thread-local storage. Различия параллелизма, affinity и latency указаны по каждому примеру.",
+  "overview_en": "All six original patterns remain separate. Message-based LMX alternatives preserve the selected observations without pretending to be shared-memory RW locks, DCL fast paths or OS-thread-local storage. Parallelism, affinity and latency differences are stated for each example.",
+  "patterns": [
+    {
+      "id": 65,
+      "name": "Read-Write Lock",
+      "slug": "read_write_lock",
+      "summary_ru": "Чтение согласованного снимка при исключении пересечения с изменением.",
+      "summary_en": "Reading a consistent snapshot without overlapping a mutation.",
+      "scenario_ru": "Начальное значение 10. Прочитать, записать 20, прочитать снова; затем рассмотреть одновременно пришедшие чтения.",
+      "scenario_en": "Start at 10. Read, write 20, read again; then consider concurrent read requests.",
+      "expected_ru": "Последовательный сценарий даёт 10,20. Java/Rust допускают параллельных читателей; LMX owner обслуживает их последовательно.",
+      "expected_en": "The sequential trace returns 10,20. Java/Rust permit concurrent readers; the LMX owner serves them serially.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.",
+      "comparison_ru": "Это функциональная альтернатива для согласованных скалярных чтений, а не реализация самого RW-lock на L3. Параллельный доступ к большому неизменяемому снимку можно вынести в отдельный протокол.",
+      "comparison_en": "This is a functional alternative for consistent scalar reads, not an implementation of an L3 RW-lock. Parallel access to a large immutable snapshot requires a separate protocol.",
+      "limits_ru": "Нельзя объявлять одинаковую пропускную способность или гарантию параллельных readers. Fairness, starvation и poison policy отличаются; Rust unwrap выбран только для безаварийного сценария.",
+      "limits_en": "Equal throughput or parallel-reader guarantees cannot be claimed. Fairness, starvation and poisoning policies differ; Rust unwrap is selected only for the failure-free fixture.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+        },
+        {
+          "language": "Java",
+          "code": "final class Value {\n    private final java.util.concurrent.locks.ReentrantReadWriteLock lock =\n        new java.util.concurrent.locks.ReentrantReadWriteLock();\n    private int value = 10;\n    int read() {\n        lock.readLock().lock();\n        try { return value; } finally { lock.readLock().unlock(); }\n    }\n    int write(int next) {\n        lock.writeLock().lock();\n        try { value = next; return value; }\n        finally { lock.writeLock().unlock(); }\n    }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::sync::RwLock;\nstruct Value { value: RwLock<i32> }\nimpl Value {\n    fn new() -> Self { Self { value: RwLock::new(10) } }\n    fn read(&self) -> i32 { *self.value.read().unwrap() }\n    fn write(&self, next: i32) -> i32 {\n        let mut value = self.value.write().unwrap();\n        *value = next; *value\n    }\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java — ReentrantReadWriteLock",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantReadWriteLock.html",
+          "why_ru": "Чтение согласованного снимка при исключении пересечения с изменением.",
+          "why_en": "Reading a consistent snapshot without overlapping a mutation."
+        },
+        {
+          "title": "Rust — RwLock",
+          "url": "https://doc.rust-lang.org/std/sync/struct.RwLock.html",
+          "why_ru": "Чтение согласованного снимка при исключении пересечения с изменением.",
+          "why_en": "Reading a consistent snapshot without overlapping a mutation."
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "name": "Double-Checked Locking",
+      "slug": "double_checked_locking",
+      "summary_ru": "Безопасная однократная ленивая инициализация при конкурентных обращениях.",
+      "summary_en": "Safe once-only lazy initialization under concurrent access.",
+      "scenario_ru": "Два клиента одновременно запрашивают ресурс; factory строит значение 42 и считает вызовы.",
+      "scenario_en": "Two clients concurrently request a resource; the factory builds 42 and counts invocations.",
+      "expected_ru": "Оба получают 42; factory вызывается один раз. Java использует volatile+DCL, Rust — OnceLock, LMX — единственного владельца.",
+      "expected_en": "Both receive 42; one factory invocation. Java uses volatile+DCL, Rust OnceLock, and LMX one owner.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner.",
+      "comparison_ru": "У LMX отсутствует необходимость двойной проверки, потому что конкурентные клиенты сериализованы у owner. Это смена механизма при той же цели once-only. В Java volatile обязателен для выбранного DCL; Rust использует готовую корректную примитиву.",
+      "comparison_en": "LMX needs no double check because concurrent clients serialize at the owner. The mechanism changes while retaining the once-only goal. Java requires volatile for this DCL; Rust uses an established primitive.",
+      "limits_ru": "Не обещается одинаковая цена быстрого пути: LMX клиент отправляет запрос. Reentrant factory, failure/retry и асинхронная инициализация требуют явного состояния initializing и отдельной политики.",
+      "limits_en": "Fast-path costs differ: an LMX client sends a request. Reentrant factories, failure/retry and asynchronous initialization require an explicit initializing state and policy.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "LazyMessage:\n    @: build\n    int: ready 0\n    int: value 0\n    return: int\n    get:\n        if: node\\ready = 0\n            node\\value := build()\n            node\\ready := 1\n        return: node\\value\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+        },
+        {
+          "language": "Java",
+          "code": "final class Lazy {\n    private volatile Integer value;\n    private final java.util.function.IntSupplier build;\n    Lazy(java.util.function.IntSupplier build) { this.build = build; }\n    int get() {\n        Integer result = value;\n        if (result == null) {\n            synchronized (this) {\n                result = value;\n                if (result == null) value = result = build.getAsInt();\n            }\n        }\n        return result;\n    }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::sync::OnceLock;\nstruct Lazy { value: OnceLock<i32> }\nimpl Lazy {\n    fn new() -> Self { Self { value: OnceLock::new() } }\n    fn get(&self, build: impl FnOnce() -> i32) -> i32 {\n        *self.value.get_or_init(build)\n    }\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. build():int / IntSupplier / FnOnce — предоставленная синхронная factory, успешно возвращающая 42. Инициализация завершается в одном owner turn; factory не ждёт письма этому же занятому владельцу.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Language Specification — threads and memory model",
+          "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html",
+          "why_ru": "Безопасная однократная ленивая инициализация при конкурентных обращениях.",
+          "why_en": "Safe once-only lazy initialization under concurrent access."
+        },
+        {
+          "title": "Rust — OnceLock",
+          "url": "https://doc.rust-lang.org/std/sync/struct.OnceLock.html",
+          "why_ru": "Безопасная однократная ленивая инициализация при конкурентных обращениях.",
+          "why_en": "Safe once-only lazy initialization under concurrent access."
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "name": "Guarded Suspension",
+      "slug": "guarded_suspension",
+      "summary_ru": "Запрос получает результат только после выполнения предиката готовности.",
+      "summary_en": "A request receives its result only after a readiness predicate becomes true.",
+      "scenario_ru": "Два клиента ждут значение; publish(7) делает его готовым и завершает оба ожидания.",
+      "scenario_en": "Two clients wait for a value; publish(7) makes it ready and completes both waits.",
+      "expected_ru": "До publish ответов нет; после — оба клиента получают 7. LMX owner продолжает обслуживать publish, пока запросы ждут.",
+      "expected_en": "No replies before publish; afterwards both clients receive 7. The LMX owner remains able to process publish while requests wait.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue.",
+      "comparison_ru": "Java/Rust освобождают lock во время ожидания и повторно проверяют predicate. LMX сохраняет запрос и завершает turn, позволяя publish дойти до владельца; это событийная форма guarded wait.",
+      "comparison_en": "Java/Rust release the lock while waiting and recheck the predicate. LMX stores the request and ends its turn so publish can reach the owner: an event-driven guarded wait.",
+      "limits_ru": "Отмена ожидания, исчезновение клиента и повторные publish требуют политики. Без неё список ожидающих может расти; это не автоматическое продление жизни исходного stack frame.",
+      "limits_en": "Cancellation, client death and repeated publish need policy. Without it waiters can accumulate; retaining a request does not automatically extend a source stack frame lifetime.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+        },
+        {
+          "language": "Java",
+          "code": "final class Ready {\n    private boolean ready;\n    private int value;\n    synchronized int awaitValue() throws InterruptedException {\n        while (!ready) wait();\n        return value;\n    }\n    synchronized void publish(int next) {\n        value = next; ready = true; notifyAll();\n    }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::sync::{Condvar, Mutex};\nstruct Ready { value: Mutex<Option<i32>>, changed: Condvar }\nimpl Ready {\n    fn new() -> Self { Self { value: Mutex::new(None), changed: Condvar::new() } }\n    fn wait(&self) -> i32 {\n        let guard = self.value.lock().unwrap();\n        let guard = self.changed.wait_while(guard, |v| v.is_none()).unwrap();\n        guard.unwrap()\n    }\n    fn publish(&self, next: i32) {\n        *self.value.lock().unwrap() = Some(next);\n        self.changed.notify_all();\n    }\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. waiters.push(int)/pop():int/size():int — owner-local FIFO логических ID запросов. replies.send(id:int,value:int):void — supplied reliable delivery конкретному живому ожидающему Message. ID — прикладной идентификатор этого явно выбранного deferred protocol, не замена корреляции штатного post. Нельзя блокировать owner на собственной очереди.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. waiters.push(int)/pop():int/size():int is an owner-local FIFO of logical request IDs. replies.send(id:int,value:int):void is supplied reliable delivery to a specific live waiting Message. IDs belong to this explicitly selected deferred protocol, not a replacement for built-in post correlation. The owner must not block on its own queue."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Language Specification — Wait Sets and Notification",
+          "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html",
+          "why_ru": "Запрос получает результат только после выполнения предиката готовности.",
+          "why_en": "A request receives its result only after a readiness predicate becomes true."
+        },
+        {
+          "title": "Rust — Condvar",
+          "url": "https://doc.rust-lang.org/std/sync/struct.Condvar.html",
+          "why_ru": "Запрос получает результат только после выполнения предиката готовности.",
+          "why_en": "A request receives its result only after a readiness predicate becomes true."
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "name": "Balking",
+      "slug": "balking",
+      "summary_ru": "Если действие уже началось, повторный запрос сразу отказывается от выполнения.",
+      "summary_en": "If an action is already underway, another request immediately declines to execute it.",
+      "scenario_ru": "Начать сохранение, повторить start до finish, завершить, затем снова start.",
+      "scenario_en": "Start a save, repeat start before finish, finish it, then start again.",
+      "expected_ru": "Результаты start: 1,0,1. Второй запрос не создаёт дополнительной работы.",
+      "expected_en": "start results: 1,0,1. The second request creates no extra work.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests.",
+      "comparison_ru": "Balking возвращает отказ, тогда как Guarded Suspension сохраняет ожидание. LMX делает проверку и изменение флага в одном turn; Java/Rust используют atomic compare-and-set.",
+      "comparison_en": "Balking refuses rather than retaining a waiter as Guarded Suspension does. LMX checks and changes its flag in one turn; Java/Rust use atomic compare-and-set.",
+      "limits_ru": "Флаг не является durable lock и не публикует произвольную память между Message. Потерянный finish после crash требует recovery; дубли finish запрещены контрактом.",
+      "limits_en": "The flag is not a durable lock and does not publish arbitrary memory across Messages. A lost finish after a crash requires recovery; duplicate finishes are excluded by the contract.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "SaveMessage:\n    int: busy 0\n    return: int\n    start:\n        if: node\\busy = 1\n            return: 0\n        node\\busy := 1\n        return: 1\n    finish:\n        node\\busy := 0\n        return: 1\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+        },
+        {
+          "language": "Java",
+          "code": "final class Save {\n    private final java.util.concurrent.atomic.AtomicBoolean busy =\n        new java.util.concurrent.atomic.AtomicBoolean();\n    boolean start() { return busy.compareAndSet(false, true); }\n    int finish() { busy.set(false); return 1; }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::sync::atomic::{AtomicBool, Ordering};\nstruct Save { busy: AtomicBool }\nimpl Save {\n    fn new() -> Self { Self { busy: AtomicBool::new(false) } }\n    fn start(&self) -> bool {\n        self.busy.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_ok()\n    }\n    fn finish(&self) -> i32 { self.busy.store(false, Ordering::Release); 1 }\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Листинг реализует admission gate; actual save запускает caller только после start=1 и вызывает finish ровно один раз после окончания. LMX длинная работа выполняется отдельным Message, а SaveMessage остаётся доступен для повторных запросов.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. The listing implements an admission gate; the caller launches actual saving only after start succeeds and invokes finish exactly once on completion. LMX long work runs in another Message, leaving SaveMessage available for later requests."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Language Specification — synchronization and memory model",
+          "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html",
+          "why_ru": "Если действие уже началось, повторный запрос сразу отказывается от выполнения.",
+          "why_en": "If an action is already underway, another request immediately declines to execute it."
+        },
+        {
+          "title": "Rust — synchronization primitives",
+          "url": "https://doc.rust-lang.org/std/sync/",
+          "why_ru": "Если действие уже началось, повторный запрос сразу отказывается от выполнения.",
+          "why_en": "If an action is already underway, another request immediately declines to execute it."
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "name": "Thread-Local Storage",
+      "slug": "thread_local_storage",
+      "summary_ru": "Изоляция счётчика внутри конкретного исполнителя.",
+      "summary_en": "Isolating a counter within one execution participant.",
+      "scenario_ru": "Участник A вызывает next дважды, участник B один раз.",
+      "scenario_en": "Participant A calls next twice; participant B calls it once.",
+      "expected_ru": "A получает 1,2; B получает 1. В LMX участник — Message; в Java/Rust — OS/Java thread.",
+      "expected_en": "A receives 1,2; B receives 1. In LMX the participant is a Message; in Java/Rust it is a thread.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused.",
+      "comparison_ru": "Message-local state сохраняется при миграции turn на другой OS worker. Это полезная альтернатива task/actor-local state, но не тождество TLS: для thread-affine native ресурса нужна именно политика привязки к OS thread.",
+      "comparison_en": "Message-local state survives migration to another OS worker between turns. It is a useful task/actor-local alternative, not literal TLS: thread-affine native resources need an OS-thread-affinity policy.",
+      "limits_ru": "Нельзя переносить обещание OS-thread affinity на Message. В Java значение принадлежит потоку, а не автоматически HTTP запросу; в Rust ссылка LocalKey не должна покидать свой контракт жизни.",
+      "limits_en": "OS-thread affinity cannot be inferred for Message. Java values belong to a thread, not automatically an HTTP request; Rust LocalKey references must obey their lifetime contract.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "CounterMessage:\n    int: count 0\n    return: int\n    next:\n        node\\count += 1\n        return: node\\count\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+        },
+        {
+          "language": "Java",
+          "code": "final class LocalCounter {\n    private static final ThreadLocal<Integer> count = ThreadLocal.withInitial(() -> 0);\n    static int next() {\n        int value = count.get() + 1; count.set(value); return value;\n    }\n    static void clear() { count.remove(); }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::cell::Cell;\nthread_local! { static COUNT: Cell<i32> = const { Cell::new(0) }; }\nfn next() -> i32 {\n    COUNT.with(|count| { let value = count.get() + 1; count.set(value); value })\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Хост создаёт два независимых CounterMessage. Он не использует node-предка как глобальное хранилище. Контрольный harness запускает A и B на разных threads; Java clear вызывается при завершении ограниченного request scope, если поток переиспользуется.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Rust — LocalKey",
+          "url": "https://doc.rust-lang.org/std/thread/struct.LocalKey.html",
+          "why_ru": "Изоляция счётчика внутри конкретного исполнителя.",
+          "why_en": "Isolating a counter within one execution participant."
+        },
+        {
+          "title": "Java — ThreadLocal",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ThreadLocal.html",
+          "why_ru": "Изоляция счётчика внутри конкретного исполнителя.",
+          "why_en": "Isolating a counter within one execution participant."
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "name": "Monitor Object",
+      "slug": "monitor_object",
+      "summary_ru": "Объект защищает инвариант всей операции над своим состоянием.",
+      "summary_en": "An object protects an invariant across a complete operation on its state.",
+      "scenario_ru": "Баланс равен 10. Два клиента запрашивают withdraw(7); проверка и списание должны быть одной операцией.",
+      "scenario_en": "Balance is 10. Two clients request withdraw(7); checking and decrementing must be one operation.",
+      "expected_ru": "Ровно один запрос успешен; итоговый баланс 3. Отдельные read+write этим свойством не обладают.",
+      "expected_en": "Exactly one request succeeds; final balance is 3. Separate read+write requests do not have this property.",
+      "lmx_notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
+      "lmx_notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex.",
+      "comparison_ru": "Последовательный turn позволяет выражать владельца-инвариант без пользовательского lock на L3. Это не распределённая транзакция: другой владелец не включается в ту же атомарную операцию автоматически.",
+      "comparison_en": "A serial turn expresses an invariant-owning object without an application L3 lock. It is not a distributed transaction: another owner does not automatically join the atomic operation.",
+      "limits_ru": "Переполнение целого, durability и многосчётный перевод вне сценария. Ошибка после изменения графа не означает автоматический rollback.",
+      "limits_en": "Integer overflow, durability and multi-account transfer are outside this scenario. Failure after graph mutation does not imply automatic rollback.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
+          "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+        },
+        {
+          "language": "Java",
+          "code": "final class Account {\n    private int balance = 10;\n    synchronized boolean withdraw(int amount) {\n        if (amount < 0 || balance < amount) return false;\n        balance -= amount; return true;\n    }\n    synchronized int read() { return balance; }\n}\n",
+          "notes_ru": "Фрагмент для Java 21; запускающий harness не включён. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
+          "notes_en": "Java 21 fragment; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+        },
+        {
+          "language": "Rust",
+          "code": "use std::sync::Mutex;\nstruct Account { balance: Mutex<i32> }\nimpl Account {\n    fn new() -> Self { Self { balance: Mutex::new(10) } }\n    fn withdraw(&self, amount: i32) -> bool {\n        let mut balance = self.balance.lock().unwrap();\n        if amount < 0 || *balance < amount { return false; }\n        *balance -= amount; true\n    }\n    fn read(&self) -> i32 { *self.balance.lock().unwrap() }\n}\n",
+          "notes_ru": "Фрагмент Rust использует std; запускающий harness не включён. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
+          "notes_en": "Rust fragment using std; the launching harness is not included. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Language Specification — monitors",
+          "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html",
+          "why_ru": "Объект защищает инвариант всей операции над своим состоянием.",
+          "why_en": "An object protects an invariant across a complete operation on its state."
+        },
+        {
+          "title": "Rust — synchronization primitives",
+          "url": "https://doc.rust-lang.org/std/sync/",
+          "why_ru": "Объект защищает инвариант всей операции над своим состоянием.",
+          "why_en": "An object protects an invariant across a complete operation on its state."
+        }
+      ],
+      "procedural_lmx": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+      "variants": {
+        "LMX": {
+          "procedural": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "direct_expression": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Combine two pure rejection guards with ordinary short-circuit OR. A negative amount still skips the balance read; the accepted update remains one Message turn. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+Small:
+    int: cost 5
+
+Large:
+    int: cost 9
+
+Factory:
+    int: kind
+    return: @
+    create:
+        if: kind = 0
+            return: (copy(Small))
+        return: (copy(Large))
+
+Demo:
+    return: int
+    run:
+        @: a Factory\create(kind := 0)
+        @: b Factory\create(kind := 1)
+        return: a\cost + b\cost

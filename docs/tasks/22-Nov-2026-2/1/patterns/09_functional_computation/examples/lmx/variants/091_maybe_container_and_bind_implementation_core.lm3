@@ -1,0 +1,33 @@
+FxMaybe:
+    int: present 0
+    @: value 0
+
+FxSome:
+    private: @: value
+    return: @
+    some:
+        private: @: result (copy(FxMaybe))
+        result\present := 1
+        result\value := value
+        return: result
+
+FxNone:
+    return: @
+    none:
+        return: (copy(FxMaybe))
+
+FxBind:
+    private:
+        FxMaybe@: input
+        @: next
+    return: @
+    bind:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        if: input\present = 0
+            return: input
+        private: @: record FxApply\apply(next; FxOne\make(input\value))
+        private: FxMaybe@: result record
+        return: result

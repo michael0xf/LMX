@@ -1,0 +1,60 @@
+# СЕМАНТИЧЕСКАЯ СИГНАТУРА И ИМЕНА СУЩЕСТВУЮЩЕГО ЧИСТОГО ГРАФА.
+# Имена читаются по owning-field record, не через sys\name(ptr), которое
+# означает написанный идентификатор ptr. Не используется замена строк исходника.
+
+RxSignature:
+    private: @: operation
+    return: @
+    signature:
+        throws:
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: info FxKernel\signature(subject := operation)
+        return: FxSignatures\make(inputs := info\inputTypes; result := info\resultType)
+
+# Один элемент на физическое поле, порядок и повторы сохраняются.
+# Именованное поле: готовая LMX-строка; безымянное: uninit:Array<char>, без payload.
+# Пустое exact name не совпадает с отсутствием имени; никакого NUL-сентинела.
+RxNames:
+    private: @: source
+    return: @
+    names:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+        return: FxKernel\fieldNames(source := source)
+
+# Один общий copy сохраняет циклы, общие рёбра и parent-карту.
+# Переименовываются выбранные owning fields новой копии; исходник неизменён.
+# indices — обычная Structure int-записей; labels — строки/отсутствия имени.
+RxRename:
+    private:
+        @: source
+        @: indices
+        @: labels
+    return: @
+    rename:
+        throws:
+            FxArity
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+        if: length(indices) != length(labels)
+            throw: FxArity()
+        private: int: i 0
+        while: i < length(indices)
+            private: int: at \indices[i]
+            if: at < 0 || at >= length(source)
+                throw: FxIndex()
+            private: int: j 0
+            while: j < i
+                if: \indices[j] = at
+                    throw: FxIndex()
+                j += 1
+            i += 1
+        private: @: result (copy(source))
+        FxKernel\renameFields(target := result; indices := indices; labels := labels)
+        return: result

@@ -1,0 +1,11 @@
+ProactorMessage:
+    int: token
+    int: bytes
+    @: io
+    @: completionTarget
+    @: sink
+    begin:
+        io\submitRead(3; 7; completionTarget)
+    completed:
+        if: token = 7
+            sink\write(bytes)

@@ -37,6 +37,7 @@ predef: "l2src/lmx_checks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_language_words.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
 predef: "l2src/lmx_primitive_profile.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -108,8 +109,43 @@ end: lmx_graph_intern_in
 # state\receivers once, with the state: the one list the builder's input boundary (lm_graph_data_head) and the root's
 # reading consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
+# The words of the language and the predicate that P0 reads them by are ONE module (step 21.26 (b), revision 2: l2src/lmx_language_words.lm2); the kernel interns its words as receivers here, in the
+# order the module gives them: the DECLARING words first (fn sub fm), then the others, then the non-empty C names, then the names of the primitive profile.
+
+# The number of the words of a list written with one space between them.
+fn: lmx_graph_words_count (const: (char@: words)) size_t
+    size_t: at 0U
+    size_t: count 0U
+    while: words[at] != 0
+        if: words[at] != 32 && (at = 0U || words[at - 1U] = 32)
+            count := count + 1U
+        at := at + 1U
+    ---
+    return: count
+end: lmx_graph_words_count
+
+# The words of a list interned into list from the place count[0], count[0] moves after them. 0, or 1 without memory.
+fn: lmx_graph_words_intern (c.LmxGraphState@: state; const: (char@: words); char@@: list; size_t@: count) int
+    size_t: at 0U
+    size_t: start 0U
+    while: words[at] != 0
+        start := at
+        while: words[at] != 0 && words[at] != 32
+            at := at + 1U
+        ---
+        list[count[0]] := lmx_graph_intern_in(state, (cast: (const: char@) (words + start)), at - start)
+        if: list[count[0]] = 0
+            return: 1
+        count[0] := count[0] + 1U
+        if: words[at] != 0
+            at := at + 1U
+        ---
+    return: 0
+end: lmx_graph_words_intern
+
 fn: lmx_graph_receivers_in (c.LmxGraphState@: state) int
-    char@: words "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent satisfies test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end L2"
+    const: (char@: declaring c.lmx_language_declaring_words())
+    const: (char@: words c.lmx_language_receiver_words())
     const: (char@: primitive_names c.lmx_primitive_profile_names)
     const: (char@: c_names c.lmx_primitive_profile_c_names)
     size_t: primitive_count c.lmx_primitive_profile_count
@@ -118,32 +154,16 @@ fn: lmx_graph_receivers_in (c.LmxGraphState@: state) int
     size_t: start 0U
     size_t: count 0U
     size_t: row 0U
-    while: words[at] != 0
-        if: words[at] != 32 && (at = 0U || words[at - 1U] = 32)
-            count := count + 1U
-        at := at + 1U
-    ---
+    count := lmx_graph_words_count(declaring) + lmx_graph_words_count(words)
     if: primitive_count > ((cast: (size_t) -1) - count - 1U) / 2U
         return: 1
     list := (cast: (char@@) c.calloc(count + primitive_count * 2U + 1U, sizeof(char@)))
     if: list = 0
         return: 1
-    at := 0U
     count := 0U
-    while: words[at] != 0
-        start := at
-        while: words[at] != 0 && words[at] != 32
-            at := at + 1U
-        ---
-        list[count] := lmx_graph_intern_in(state, (cast: (const: char@) (words + start)), at - start)
-        if: list[count] = 0
-            c.free((cast: (@) list))
-            return: 1
-        count := count + 1U
-        if: words[at] != 0
-            at := at + 1U
-        ---
-    ---
+    if: lmx_graph_words_intern(state, declaring, list, @ count) != 0 || lmx_graph_words_intern(state, words, list, @ count) != 0
+        c.free((cast: (@) list))
+        return: 1
     at := 0U
     while: row < primitive_count
         start := at

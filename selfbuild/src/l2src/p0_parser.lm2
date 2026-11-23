@@ -5,7 +5,7 @@ predef: "l1src/p0.h.lm1"
 predef: "l2src/p0_own.h.lm1"
 predef: "l2src/p0_text.h.lm1"
 predef: "l2src/p0_scan.h.lm1"
-predef: "l2src/p0_receivers.lm1"
+predef: "l2src/lmx_language_words.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<ctype.h>" "<limits.h>"
 
 # Original: parser.lm1:216 lm_p0_document_init_owners
@@ -558,28 +558,16 @@ fn: lm_p0_head_is_simple_word (const: (char@: text); size_t: head_size) int
 
 # The head of the Frame names a CALL, by its spelling (Р134; P0 resolves no names): a control word, a path (a `\` in the head), a SYMBOLIC or COMPOSED head (`@`, `@@`, `[]`, `()`,
 # `@[]`, `int[]`, `Model@`: a `@`, `[`, `]`, `(` or `)` in it; Р152 п. 4: a head with a type suffix is a declaring receiver), or a word of the receivers of the kernel's list and the names
-# of the primitive profile -- ONE list, which tools/build.lm2 writes into l2src/p0_receivers.lm1 (bld_p0_receivers; Р135). Only a SIMPLE word that is none of these -- a bare name or a
-# whole exact (backquoted) name -- is a DECLARATION of a named Structure. 1 for a call, 0 for a declaration.
+# of the primitive profile -- ONE list and ONE predicate, the module l2src/lmx_language_words.lm2's (lmx_language_call_word, step 21.26 (b); the words that declare -- fn, sub, fm -- are not in it; nothing is excluded here by a name).
+# Only a SIMPLE word that is none of these -- a bare name or a whole exact (backquoted) name -- is a DECLARATION of a named Structure. 1 for a call, 0 for a declaration.
 fn: lm_p0_head_is_call (const: (c.LmP0Node@: target)) int
-    const: (char@: words c.lm_p0_receiver_words)
-    size_t: at 0U
-    size_t: start 0U
     size_t: head_size 0U
     if: ((target = 0) || (target\kind != c.LM_P0_NODE_FRAME))
         return: 0
     head_size := target\as\frame\head\length
     if: lm_p0_head_is_simple_word((cast: (const: char@) target\as\frame\head\data), head_size) = 0
         return: 1
-    while: words[at] != 0
-        start := at
-        while: words[at] != 0 && words[at] != 32
-            at := at + 1U
-        if: at - start = head_size && c.memcmp(words + start, target\as\frame\head\data, head_size) = 0
-            return: 1
-        if: words[at] != 0
-            at := at + 1U
-    ---
-    return: 0
+    return: c.lmx_language_call_word((cast: (const: char@) target\as\frame\head\data), head_size)
 end: lm_p0_head_is_call
 
 # The Frames a `return` closes besides an fn -- bare or with a value (grammar §17; Р116 and Р134): the DECLARATION of a named Structure -- a sub or an fm head, or

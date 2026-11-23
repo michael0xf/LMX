@@ -1,0 +1,67 @@
+# The words of the language (step 21.26 (b), revision 2): the words whose Frame P0 reads as a CALL and the kernel interns as receivers -- ONE list and ONE predicate, written once.
+# P0 (lm_p0_head_is_call) asks lmx_language_call_word; the kernel (lmx_graph_receivers_in) interns lmx_language_declaring_words, lmx_language_receiver_words and the primitive profile.  The module is self-contained:
+# it reads the primitive profile unit and the C library, nothing else, so an executable without the kernel -- the L1 backend, the classic frontend -- defines it by `import:` of its root, and an executable
+# with the kernel gets it from driver.o (its driver root predefs this unit; P0 predefs only the header lmx_language_words.h.lm1).
+predef: "l2src/lmx_primitive_profile.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<string.h>"
+
+# The words of the language that DECLARE: a Frame headed by one of them is a declaration, which its `return` closes, not a call.
+fn: lmx_language_declaring_words () const: char@
+    return: "fn sub fm"
+end: lmx_language_declaring_words
+
+# The other words of the language -- control words, receivers, declaration words of data and the type words of the C door.
+fn: lmx_language_receiver_words () const: char@
+    return: "if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent satisfies test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end L2"
+end: lmx_language_receiver_words
+
+# The word `text` of n bytes is a CALL for P0 (step 21.26 (b)): one of the words of the language that are not declaring (lmx_language_receiver_words), a non-empty C name of the profile, or a name of
+# the primitive profile whose cell is set -- the same list as lmx_graph_receivers_in interns, without the words that declare, as lmx_graph_language_receiver answers for the rest. No state, no
+# interning: P0 asks by the bytes of a head. 1 for a call, 0 for a declaration (or an empty text).
+fn: lmx_language_call_word (const: (char@: text); size_t: n) int
+    const: (char@: words lmx_language_receiver_words())
+    const: (char@: primitive_names c.lmx_primitive_profile_names)
+    const: (char@: c_names c.lmx_primitive_profile_c_names)
+    const: (char@: cells c.lmx_primitive_profile_cells)
+    size_t: primitive_count c.lmx_primitive_profile_count
+    size_t: at 0U
+    size_t: start 0U
+    size_t: row 0U
+    if: text = 0 || n = 0U
+        return: 0
+    while: words[at] != 0
+        start := at
+        while: words[at] != 0 && words[at] != 32
+            at := at + 1U
+        ---
+        if: at - start = n && c.memcmp(words + start, text, n) = 0
+            return: 1
+        if: words[at] != 0
+            at := at + 1U
+        ---
+    at := 0U
+    while: row < primitive_count
+        start := at
+        while: c_names[at] != 0
+            at := at + 1U
+        ---
+        if: at - start = n && c.memcmp(c_names + start, text, n) = 0
+            return: 1
+        row := row + 1U
+        at := at + 1U
+    ---
+    at := 0U
+    row := 0U
+    while: row < primitive_count
+        start := at
+        while: primitive_names[at] != 0
+            at := at + 1U
+        ---
+        if: cells[row] != 0 && at - start = n && c.memcmp(primitive_names + start, text, n) = 0
+            return: 1
+        row := row + 1U
+        at := at + 1U
+    ---
+    return: 0
+end: lmx_language_call_word

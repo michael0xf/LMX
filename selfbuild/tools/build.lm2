@@ -2365,6 +2365,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: root_names c.calloc(34U, sizeof(char@))
     char@@: walk_value_names c.calloc(193U, sizeof(char@))
     char@@: checks_names c.calloc(6U, sizeof(char@))
+    char@@: language_names c.calloc(3U, sizeof(char@))
     char@@: graph_names c.calloc(101U, sizeof(char@))
     char@@: graph_run_names c.calloc(82U, sizeof(char@))
     char@: src txt_path(stage, "src")
@@ -3411,6 +3412,14 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_checks", checks_names, 6, 1) != 0
         return: 1
+    # The words of the language (step 21.26 (b), revision 2): the module P0 and the kernel share, before lmx_graph, which predefs its header and interns its words.
+    if: language_names = 0
+        return: 1
+    language_names[0] := "lmx_language_declaring_words"
+    language_names[1] := "lmx_language_receiver_words"
+    language_names[2] := "lmx_language_call_word"
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_language_words", language_names, 3, 1) != 0
+        return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 101, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 82, 1) != 0
@@ -3475,7 +3484,7 @@ end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
 fn: decl_driver_carrier (c.FILE@: f) int
-    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_types.lm1\"\npredef: \"l2src/lmx_checks.lm1\"\npredef: \"l2src/lmx_graph.lm1\"\npredef: \"l2src/lmx_graph_run.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
+    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_types.lm1\"\npredef: \"l2src/lmx_checks.lm1\"\npredef: \"l2src/lmx_language_words.lm1\"\npredef: \"l2src/lmx_graph.lm1\"\npredef: \"l2src/lmx_graph_run.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
         return: 1
     return: 0
 end: decl_driver_carrier
@@ -4287,7 +4296,7 @@ fn: decl_l2_frontend_root (c.FILE@: f) int
         return: 1
     if: decl_l2_frontend_aggregate(f) != 0
         return: 1
-    if: c.fputs("\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: lm_compiler_cli_main(argc, argv)\nend: external\n", f) < 0
+    if: c.fputs("\nimport: \"l2src/lmx_language_words.lm1\"\n\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: lm_compiler_cli_main(argc, argv)\nend: external\n", f) < 0
         return: 1
     return: 0
 end: decl_l2_frontend_root
@@ -4348,141 +4357,6 @@ fn: decl_libc_abi (c.FILE@: f) int
     return: 0
 end: decl_libc_abi
 
-# The words of the kernel's list that declare (fn, sub, fm) are not calls: 1 for them, else 0.
-fn: bld_p0_declaring_word (char@: word; size_t: n) int
-    if: n = 2U && (c.memcmp(word, "fn", 2U) = 0 || c.memcmp(word, "fm", 2U) = 0)
-        return: 1
-    if: n = 3U && c.memcmp(word, "sub", 3U) = 0
-        return: 1
-    return: 0
-end: bld_p0_declaring_word
-
-# n bytes of word appended to out (cap bytes) at used[0], after a space when out is not empty; 0, or 1 when it does not fit.
-fn: bld_p0_append_word (char@: out; size_t: cap; size_t@: used; char@: word; size_t: n) int
-    if: used[0] + n + 2U > cap
-        return: 1
-    if: used[0] > 0U
-        out[used[0]] := (cast: (char) 32)
-        used[0] := used[0] + 1U
-    c.memcpy(out + used[0], word, n)
-    used[0] := used[0] + n
-    return: 0
-end: bld_p0_append_word
-
-# Whether the cell of row is set: the profile writes every cell as one escape \ddd (\000 not set). 1 set, 0 not.
-fn: bld_p0_cell_flag (char@: cells; size_t: row) int
-    if: cells[4U * row + 1U] != (cast: (char) 48) || cells[4U * row + 2U] != (cast: (char) 48) || cells[4U * row + 3U] != (cast: (char) 48)
-        return: 1
-    return: 0
-end: bld_p0_cell_flag
-
-# The strings of the profile constant named by key (the text up to its opening quote), separated by the four bytes \000, appended to out; the empty ones are skipped. With cells (the text
-# of the profile's cell constant after its opening quote) a string is appended only when the cell of its row is set -- the answer of lmx_graph_language_receiver --, and the cells must
-# be exactly one escape per string. 0, or 1 when the constant is not found, is not closed, does not fit or its cells do not match.
-fn: bld_p0_profile_words (char@: prim; char@: key; char@: cells; char@: out; size_t: cap; size_t@: used) int
-    char@: at c.strstr(prim, key)
-    size_t: i 0U
-    size_t: first 0U
-    size_t: row 0U
-    size_t: rows 0U
-    if: at = 0
-        return: 1
-    at := at + c.strlen(key)
-    while: at[i] != 0 && at[i] != (cast: (char) 34)
-        if: at[i] = (cast: (char) 92) && at[i + 1U] = (cast: (char) 48) && at[i + 2U] = (cast: (char) 48) && at[i + 3U] = (cast: (char) 48)
-            if: i > first && (cells = 0 || bld_p0_cell_flag(cells, row) != 0) && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
-                return: 1
-            row := row + 1U
-            i := i + 4U
-            first := i
-            continue
-        i := i + 1U
-    if: at[i] != (cast: (char) 34)
-        return: 1
-    rows := row
-    if: i > first
-        if: (cells = 0 || bld_p0_cell_flag(cells, row) != 0) && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
-            return: 1
-        rows := row + 1U
-    if: cells != 0 && cells[4U * rows] != (cast: (char) 34)
-        return: 1
-    return: 0
-end: bld_p0_profile_words
-
-# The unit l2src/p0_receivers.lm1 (Р134, Р135): the words whose Frame is a CALL for P0, ONE list with the kernel's. They are read, never typed in again: the first string literal after
-# the word `words` of lmx_graph_receivers_in (l2src/lmx_graph.lm2), whatever the notation of the type of `words` is, without the declaring fn sub fm, then the non-empty C names and the names of the primitive profile
-# (l2src/lmx_primitive_profile.lm1) whose cell is set, as lmx_graph_language_receiver answers. A literal or a string not found, or fewer than 40 words in the kernel's list, stops the
-# build: no default list. 0 written, 1 not.
-fn: bld_p0_receivers (char@: src) int
-    size_t@: kernel_len c.calloc(1U, c.sizeof(c.size_t))
-    size_t@: prim_len c.calloc(1U, c.sizeof(c.size_t))
-    size_t@: used c.calloc(1U, c.sizeof(c.size_t))
-    char@: kernel 0
-    char@: prim 0
-    char@: at 0
-    char@: cells 0
-    char@: out 0
-    char@: text 0
-    size_t: cap 0U
-    size_t: i 0U
-    size_t: first 0U
-    size_t: words 0U
-    int: status 1
-    if: kernel_len = 0 || prim_len = 0 || used = 0
-        return: 1
-    kernel := file_read(txt_path(src, "l2src/lmx_graph.lm2"), kernel_len)
-    prim := file_read(txt_path(src, "l2src/lmx_primitive_profile.lm1"), prim_len)
-    if: kernel = 0 || prim = 0
-        c.printf("P0-RECEIVERS cannot read the kernel's list or the primitive profile in %s\n", src)
-        return: 1
-    cap := kernel_len[0] + prim_len[0] + 256U
-    out := c.malloc(cap)
-    if: out = 0
-        return: 1
-    at := c.strstr(kernel, "fn: lmx_graph_receivers_in")
-    if: at != 0
-        at := c.strstr(at, " words ")
-    if: at != 0
-        at := c.strchr(at, 34)
-    if: at = 0
-        c.printf("P0-RECEIVERS the literal of lmx_graph_receivers_in is not found\n")
-        return: 1
-    at := at + 1
-    while: at[i] != 0 && at[i] != (cast: (char) 34)
-        first := i
-        while: at[i] != 0 && at[i] != (cast: (char) 34) && at[i] != (cast: (char) 32)
-            i := i + 1U
-        if: i > first
-            words := words + 1U
-            if: bld_p0_declaring_word(at + first, i - first) = 0 && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
-                return: 1
-            ---
-        if: at[i] = (cast: (char) 32)
-            i := i + 1U
-        ---
-    if: words < 40U
-        c.printf("P0-RECEIVERS fewer than 40 words in the kernel's list (%u)\n", (cast: (unsigned) words))
-        return: 1
-    cells := c.strstr(prim, "const: @: char lmx_primitive_profile_cells \"")
-    if: cells = 0
-        c.printf("P0-RECEIVERS the cells of the primitive profile are not found\n")
-        return: 1
-    cells := cells + c.strlen("const: @: char lmx_primitive_profile_cells \"")
-    if: bld_p0_profile_words(prim, "const: @: char lmx_primitive_profile_c_names \"", 0, out, cap, used) != 0 || bld_p0_profile_words(prim, "const: @: char lmx_primitive_profile_names \"", cells, out, cap, used) != 0
-        c.printf("P0-RECEIVERS the primitive profile strings or their cells do not match\n")
-        return: 1
-    out[used[0]] := (cast: (char) 0)
-    text := txt_cat3("# Generated by tools/build.lm2 (bld_p0_receivers): the words whose Frame is a CALL for P0 -- the receivers of the kernel's list (lmx_graph_receivers_in), then the C names and the set names of the primitive profile.\nconst: @: char lm_p0_receiver_words \"", out, "\"\n")
-    if: text = 0
-        return: 1
-    status := file_write(txt_path(src, "l2src/p0_receivers.lm1"), text, c.strlen(text))
-    c.free(kernel)
-    c.free(prim)
-    c.free(out)
-    c.free(text)
-    return: status
-end: bld_p0_receivers
-
 # P0 support is generated by an explicitly supplied previous frontend.
 # This is an ordinary component step of the existing bootstrap, not a fallback.
 fn: bld_p0_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: previous_fe; char@: out; int@: res) int
@@ -4498,6 +4372,7 @@ fn: bld_p0_l2_selected (c.FILE@: rec; char@: repo; char@: stage; char@: base; ch
     char@@: scan_names c.calloc(6U, sizeof(char@))
     char@@: copy_names c.calloc(3U, sizeof(char@))
     char@@: parser_names c.calloc(24U, sizeof(char@))
+    char@@: language_names c.calloc(3U, sizeof(char@))
     char@@: type_names c.calloc(2U, sizeof(char@))
     char@@: receiving_names c.calloc(1U, sizeof(char@))
     char@@: consumer_names c.calloc(6U, sizeof(char@))
@@ -4514,7 +4389,7 @@ fn: bld_p0_l2_selected (c.FILE@: rec; char@: repo; char@: stage; char@: base; ch
     char@@: frontend_lower_names c.calloc(427U, sizeof(char@))
     char@@: frontend_core_names c.calloc(445U, sizeof(char@))
     char@@: frontend_emit_names c.calloc(308U, sizeof(char@))
-    char@@: generated c.calloc(88U, sizeof(char@))
+    char@@: generated c.calloc(90U, sizeof(char@))
     int: k 0
     if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || frontend_coord_names = 0 || frontend_resolve_names = 0 || frontend_intern_names = 0 || frontend_useplan_names = 0 || frontend_lower_names = 0 || frontend_core_names = 0 || frontend_emit_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
@@ -6990,13 +6865,15 @@ fn: bld_p0_l2_selected (c.FILE@: rec; char@: repo; char@: stage; char@: base; ch
     generated[84] := "src/l2src/l2_frontend_emit.h.lm1"
     generated[85] := "headers/l2src/l2_frontend_emit.lm1.h"
     generated[86] := "src/l2src/l2_frontend_state.lm1"
-    generated[87] := "src/l2src/p0_receivers.lm1"
+    generated[87] := "src/l2src/lmx_language_words.lm1"
+    generated[88] := "src/l2src/lmx_language_words.h.lm1"
+    generated[89] := "headers/l2src/lmx_language_words.lm1.h"
     if: bld_p0_part_known(only) = 0
         return: 1
     if: dir_make(libc_dir) != 0
         return: 1
     if: only = 0
-        while: k < 88
+        while: k < 90
             os_file_remove(txt_path(stage, generated[k]))
             k := k + 1
         ---
@@ -7053,14 +6930,6 @@ fn: bld_p0_l2_selected (c.FILE@: rec; char@: repo; char@: stage; char@: base; ch
         os_file_remove(txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
-    # The words of P0's calls, ONE list with the kernel (Р134): the profile of the primitives first (it is written from primitive.lm2 by the frontend that translates these modules, in
-    # every path), then the unit that p0_parser predefs.
-    if: bld_p0_part_selected(only, "p0_parser") != 0
-        if: bld_primitive_profile(rec, previous_fe, src, out, res) != 0
-            return: 1
-        if: bld_p0_receivers(src) != 0
-            return: 1
-        bld_hash_note(rec, txt_path(src, "l2src/p0_receivers.lm1"))
     if: bld_p0_part_selected(only, "p0_own") != 0
         if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
             return: 1
@@ -7082,6 +6951,15 @@ fn: bld_p0_l2_selected (c.FILE@: rec; char@: repo; char@: stage; char@: base; ch
         ---
     ---
     if: bld_p0_part_selected(only, "p0_parser") != 0
+        # The words of P0's calls are the module l2src/lmx_language_words.lm2's (step 21.26 (b), revision 2), which the kernel uses too: it reads the primitive profile, written first by the frontend
+        # that translates these modules, and its header comes before p0_parser, which predefs it.
+        if: language_names = 0 || bld_primitive_profile(rec, previous_fe, src, out, res) != 0
+            return: 1
+        language_names[0] := "lmx_language_declaring_words"
+        language_names[1] := "lmx_language_receiver_words"
+        language_names[2] := "lmx_language_call_word"
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "lmx_language_words", language_names, 3, 1) != 0
+            return: 1
         if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_parser", parser_names, 24, 1) != 0
             return: 1
         ---
@@ -7506,7 +7384,7 @@ end: decl_l1_backend_state
 
 # Declarative backend root and the standard C entry bridge only.
 fn: decl_l1_backend_root (c.FILE@: f) int
-    if: c.fputs("# Generated by maintained L3; platform and CLI algorithms remain ordinary L2.\npredef: \"l1src/parser.lm1\"\npredef: \"l2src/l1_backend_text.h.lm1\"\npredef: \"l2src/l1_backend_state_helpers.h.lm1\"\npredef: \"l2src/l1_backend_emit.h.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<stdlib.h>\" \"<limits.h>\" \"<errno.h>\"\nos:\n    win:\n        predef: \"l2src/l1_backend_platform_win.h.lm1\"\n        import: \"l2src/l1_backend_platform_win.lm1\"\n    default:\n        predef: \"l2src/l1_backend_platform_posix.h.lm1\"\n        import: \"l2src/l1_backend_platform_posix.lm1\"\nend: os\n\nimport: \"l1src/l1_backend_state.lm1\"\nimport: \"l2src/l1_backend_text.lm1\"\nimport: \"l2src/l1_backend_state_helpers.lm1\"\nimport: \"l2src/l1_backend_emit.lm1\"\n\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: l1_cli_main(argc, argv)\nend: external\n", f) < 0
+    if: c.fputs("# Generated by maintained L3; platform and CLI algorithms remain ordinary L2.\npredef: \"l1src/parser.lm1\"\npredef: \"l2src/l1_backend_text.h.lm1\"\npredef: \"l2src/l1_backend_state_helpers.h.lm1\"\npredef: \"l2src/l1_backend_emit.h.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<stdlib.h>\" \"<limits.h>\" \"<errno.h>\"\nos:\n    win:\n        predef: \"l2src/l1_backend_platform_win.h.lm1\"\n        import: \"l2src/l1_backend_platform_win.lm1\"\n    default:\n        predef: \"l2src/l1_backend_platform_posix.h.lm1\"\n        import: \"l2src/l1_backend_platform_posix.lm1\"\nend: os\n\nimport: \"l2src/lmx_language_words.lm1\"\nimport: \"l1src/l1_backend_state.lm1\"\nimport: \"l2src/l1_backend_text.lm1\"\nimport: \"l2src/l1_backend_state_helpers.lm1\"\nimport: \"l2src/l1_backend_emit.lm1\"\n\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: l1_cli_main(argc, argv)\nend: external\n", f) < 0
         return: 1
     return: 0
 end: decl_l1_backend_root

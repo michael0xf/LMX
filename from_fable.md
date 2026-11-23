@@ -101,19 +101,24 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-pf-tool02/lmxtool-tool.exe` | da28afc3 |
-| hosted frontend | `S/fable-k1a-feh01/l2trans.exe` | a7a49450 |
-| runtime | `S/fable-k1a-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
-| Graph | `S/fable-k1a-graph02/graph_trans-prod.exe` | fedfeee4 |
-| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, 34ecf625 |
-| tool для проверки документов | тот же `S/fable-pf-tool02/lmxtool-tool.exe` | da28afc3 |
+| tool | `S/fable-p7-tool02/lmxtool-tool.exe` | 24730163 |
+| hosted frontend | `S/fable-p7-feh01/l2trans.exe` | 2742763e |
+| runtime | `S/fable-p7-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
+| Graph | `S/fable-p7-graph02/graph_trans-prod.exe` | c91ef01c |
+| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, f2697e5d |
+| tool для проверки документов | тот же `S/fable-p7-tool02/lmxtool-tool.exe` | 24730163 |
+
+Сейчас действует набор части разбора шага 21.7 (`fable-p7-*`): все четыре компонента собраны мной из итоговых
+исходников принятым набором, по одному шагу под сторожем фиксируемой памяти; runtime побайтно равен прежнему —
+срез ядро не меняет. Набор среза K1a (`fable-k1a-feh01`, `fable-k1a-rt02`, `fable-k1a-graph02`) и tool
+`fable-pf-tool02` остаются в стадии как база. Ниже — прежние наборы, от нового к старому.
 
 Tool пересобран 2026-11-23 двумя срезами инструмента: проверка ссылок (участок строчного кода ссылкой не
 считается, Р153; `S/fable-dl-tool02`, a3d401ae) и строка перед оглавлением грамматики (Р154). Оба — в частной
 стадии от HEAD, принятыми frontend и runtime, затем самим собой; прежний tool (`S/fable-b4-tool02`, 2be4b7dc)
 остаётся в стадии как база. Остальные три компонента — набор среза K1a.
 
-Сейчас действует набор среза K1a шага 21.7 (структурный вызов над родителем): runtime, hosted frontend и Graph
+Прежде действовал набор среза K1a шага 21.7 (структурный вызов над родителем): runtime, hosted frontend и Graph
 собраны мной из итоговых исходников набором шага 21.9 (а); tool прежний. Набор шага 21.9 (а) (`fable-9a-feh01`,
 `fable-9a-rt02`, `fable-9a-graph02`) остаётся в стадии как база: он был собран
 мной из итоговых исходников набором шага 22.4; tool прежний, его исходники не менялись. Набор шага 22.4

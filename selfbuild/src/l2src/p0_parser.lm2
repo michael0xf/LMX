@@ -5,6 +5,7 @@ predef: "l1src/p0.h.lm1"
 predef: "l2src/p0_own.h.lm1"
 predef: "l2src/p0_text.h.lm1"
 predef: "l2src/p0_scan.h.lm1"
+predef: "l2src/p0_receivers.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<ctype.h>" "<limits.h>"
 
 # Original: parser.lm1:216 lm_p0_document_init_owners
@@ -374,34 +375,82 @@ fn: lm_p0_node_head_is (const: (@: p0_node c.LmP0Node); const: (@: name char)) i
         return: 0
     name_length := c.strlen(name)
     return: p0_node\as\frame\head\length = name_length && c.memcmp(p0_node\as\frame\head\data, name, name_length) = 0
-# A `return` trailer line with no value: the word alone, or followed by a space or a comment --
-# not `return:` (lm_p0_legacy_trailer_role gives both spellings the RETURN role).
 end: lm_p0_node_head_is
 
-# Original: parser.lm1:551 lm_p0_trailer_text_is_bare
-fn: lm_p0_trailer_text_is_bare (const: (@: text char); size_t: byte_count) int
-    return: ((lm_p0_text_has_prefix_name(text, byte_count, "return", 1) != 0) && (lm_p0_text_has_prefix_name(text, byte_count, "return", 0) = 0))
-# The Frames a bare `return` closes besides an fn (author 2026-09-24, Q19.1/Q19.3): a callable
-# Structure without a result -- a sub or an fm head, or a named Structure, a colon Frame with no
-# inline tail and a vertical body -- and never a Frame whose head is a control word (A1: if,
-# else, while, for, until, catch, throws).
-end: lm_p0_trailer_text_is_bare
+# The Frames a `return` closes besides an fn -- bare or with a value (grammar §17; Р116, superseding the author's answer of
+# 2026-09-24, Q19.1/Q19.3, that `return: value` closes an fn only): a named Structure -- a colon Frame with no inline tail and
+# a vertical body --, a sub or an fm head, and never a Frame whose head is a control word (A1: if, else, while, for, until, catch,
+# throws). The terminal return is appended to its body and closes it.
 
-# Original: parser.lm1:558 lm_p0_return_closes_bare
-fn: lm_p0_return_closes_bare (const: (@: target c.LmP0Node)) int
+# A SIMPLE word head: a bare name -- letters, digits, `_`, `.` (the `c.` names) and any byte of a UTF-8 letter --, or an exact name written whole in backquotes (a doubled backquote inside
+# is one). Anything else -- a `\`, `@`, `[`, `]`, `(`, `)`, a space, a comma, an operator byte -- is not simple. 1 for a simple word, 0 otherwise. Step 23.3 (S1) gives this function the body
+# `suffix_count = 0 and the base is a word or an exact name` of the common head split; its callers stay.
+fn: lm_p0_head_is_simple_word (const: (@: text char); size_t: head_size) int
+    size_t: i 0U
+    unsigned: byte 0U
+    if: head_size = 0U
+        return: 0
+    if: text[0] = 96
+        i := 1U
+        while: i < head_size
+            if: text[i] = 96
+                if: i + 1U < head_size && text[i + 1U] = 96
+                    i := i + 2U
+                    continue
+                return: (cast: (int) (i + 1U = head_size))
+            i := i + 1U
+        return: 0
+    while: i < head_size
+        byte := (cast: (unsigned) text[i]) & 255U
+        if: byte >= 128U || byte = 46U || byte = 95U || (byte >= 48U && byte <= 57U) || (byte >= 65U && byte <= 90U) || (byte >= 97U && byte <= 122U)
+            i := i + 1U
+            continue
+        return: 0
+    return: 1
+
+# The head of the Frame names a CALL, by its spelling (Р134; P0 resolves no names): a control word, a path (a `\` in the head), a SYMBOLIC or COMPOSED head (`@`, `@@`, `[]`, `()`,
+# `@[]`, `int[]`, `Model@`: a `@`, `[`, `]`, `(` or `)` in it; Р152 п. 4: a head with a type suffix is a declaring receiver), or a word of the receivers of the kernel's list and the names
+# of the primitive profile -- ONE list, which tools/build.lm2 writes into l2src/p0_receivers.lm1 (bld_p0_receivers; Р135). Only a SIMPLE word that is none of these -- a bare name or a
+# whole exact (backquoted) name -- is a DECLARATION of a named Structure. 1 for a call, 0 for a declaration.
+fn: lm_p0_head_is_call (const: (@: target c.LmP0Node)) int
+    const: (@: words char c.lm_p0_receiver_words)
+    size_t: at 0U
+    size_t: start 0U
+    size_t: head_size 0U
+    if: ((target = 0) || (target\kind != c.LM_P0_NODE_FRAME))
+        return: 0
+    head_size := target\as\frame\head\length
+    if: lm_p0_head_is_simple_word((cast: (const: @: char) target\as\frame\head\data), head_size) = 0
+        return: 1
+    while: words[at] != 0
+        start := at
+        while: words[at] != 0 && words[at] != 32
+            at := at + 1U
+        if: at - start = head_size && c.memcmp(words + start, target\as\frame\head\data, head_size) = 0
+            return: 1
+        if: words[at] != 0
+            at := at + 1U
+    ---
+    return: 0
+end: lm_p0_head_is_call
+
+# The Frames a `return` closes besides an fn -- bare or with a value (grammar §17; Р116 and Р134): the DECLARATION of a named Structure -- a sub or an fm head, or
+# a colon Frame with a simple new name, no inline tail and a vertical body --; the terminal return is appended to its body and closes it. After a call (lm_p0_head_is_call)
+# the `return` is a field of the enclosing body: the second sentence of §17.
+fn: lm_p0_return_closes_declaration (const: (@: target c.LmP0Node)) int
     if: ((target = 0) || (target\kind != c.LM_P0_NODE_FRAME))
         return: 0
     if: (lm_p0_node_head_is(target, "sub") || lm_p0_node_head_is(target, "fm"))
         return: 1
-    if: (lm_p0_node_head_is(target, "if") || lm_p0_node_head_is(target, "else") || lm_p0_node_head_is(target, "while") || lm_p0_node_head_is(target, "for") || lm_p0_node_head_is(target, "until") || lm_p0_node_head_is(target, "catch") || lm_p0_node_head_is(target, "throws"))
+    if: lm_p0_head_is_call(target) != 0
         return: 0
     if: ((target\as\frame\flags & c.LM_P0_FRAME_INLINE_BODY) != 0U)
         return: 0
     return: ((target\as\frame\body != 0) && (target\as\frame\body\field_count > 0U))
-end: lm_p0_return_closes_bare
+end: lm_p0_return_closes_declaration
 
 # Original: parser.lm1:569 lm_p0_trailer_role_accepts_target
-fn: lm_p0_trailer_role_accepts_target (c.LmP0TrailerRole: role; const: (@: target c.LmP0Node); int: bare) int
+fn: lm_p0_trailer_role_accepts_target (c.LmP0TrailerRole: role; const: (@: target c.LmP0Node)) int
     # end: already filled this frame/structure trailer; it is not a trailer target.
     if: target = 0
         return: 0
@@ -409,16 +458,13 @@ fn: lm_p0_trailer_role_accepts_target (c.LmP0TrailerRole: role; const: (@: targe
         return: 0
     if: ((target\kind = c.LM_P0_NODE_STRUCTURE) && (target\as\structure\trailer != 0))
         return: 0
-    # `return` closes a callable Frame (author 2026-09-24, Q19.1/Q19.3): `return: value` an fn
-    # only, a bare `return` also a callable without a result (lm_p0_return_closes_bare).  Every
-    # other trailer word closes any Frame.  The rule is written here; the trailer.target lookup it
-    # replaced always answered nothing (the P0 registry was stubs returning 0; D-16 removed it).
+    # `return` closes an fn, or the declaration of a named Structure (lm_p0_return_closes_declaration), whether it is bare or has a value (grammar §17;
+    # Р116, Р134). Every other trailer word closes any Frame.  The rule is written here; the trailer.target lookup it replaced
+    # always answered nothing (the P0 registry was stubs returning 0; D-16 removed it).
     if: role = c.LM_P0_TRAILER_ROLE_RETURN
         if: lm_p0_node_head_is(target, "fn")
             return: 1
-        if: bare != 0
-            return: lm_p0_return_closes_bare(target)
-        return: 0
+        return: lm_p0_return_closes_declaration(target)
     return: lm_p0_trailer_role_is_tail_cutter(role)
 end: lm_p0_trailer_role_accepts_target
 
@@ -2474,10 +2520,10 @@ fn: lm_p0_field_start_looks_explicit_frame (@: document c.LmP0Document; const: (
     if: text[i] = '('
         if: lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0
             return: 0
-        return: close_index + 1U < byte_count && text[close_index + 1U] = ':'
+        return: close_index + 1U < byte_count && text[close_index + 1U] = ':' && (close_index + 2U >= byte_count || text[close_index + 2U] != ':')
     if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
         return: 0
-    return: i > index && i < byte_count && (text[i] = ':' || text[i] = '(')
+    return: i > index && i < byte_count && ((text[i] = ':' && (i + 1U >= byte_count || text[i + 1U] != ':')) || text[i] = '(')
 end: lm_p0_field_start_looks_explicit_frame
 
 # Original: parser.lm1:2154 lm_p0_field_parse_loop_frame_delete_any
@@ -2717,7 +2763,7 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
             if: (text[i] = '(')
                 if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                if: (((close_index = (i + 1U)) && ((close_index + 1U) < byte_count)) && (text[(close_index + 1U)] = ':'))
+                if: ((((close_index = (i + 1U)) && ((close_index + 1U) < byte_count)) && (text[(close_index + 1U)] = ':')) && (((close_index + 2U) >= byte_count) || (text[(close_index + 2U)] != ':')))
                     size_t: body_index
                     unsigned: body_flags
                     int: has_inline_body
@@ -2888,7 +2934,7 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                         restart_parse_context := 1
                         break
                     ---
-                    if: (((i < byte_count) && (text[i] = ':')) && (head_end > start))
+                    if: ((((i < byte_count) && (text[i] = ':')) && (head_end > start)) && (((i + 1U) >= byte_count) || (text[(i + 1U)] != ':')))
                         size_t: body_index
                         unsigned: body_flags
                         int: has_inline_body
@@ -3005,6 +3051,9 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                             restart_parse_context := 1
                             break
                         else:
+                            # The token `::` (Р143): a field that starts with two colons, not three, is the atom `::`.
+                            if: ((head_end = start) && ((start + 1U) < byte_count) && (text[start] = ':') && (text[(start + 1U)] = ':') && (((start + 2U) >= byte_count) || (text[(start + 2U)] != ':')))
+                                head_end := (start + 2U)
                             if: (head_end = start)
                                 size_t: diagnostic_line
                                 size_t: diagnostic_column
@@ -3778,7 +3827,6 @@ fn: lm_p0_stream_apply_item_event (@: document c.LmP0Document; @: stack c.LmP0St
     @: p0_node c.LmP0Node
     int: trailer_target_available
     int: trailer_target_accepted
-    int: trailer_bare 0
     if: (lm_p0_stack_ensure(document, stack, ((cast: (size_t) event\level) + 1U)) = 0)
         return: 0
     if: ((event\kind = c.LM_P0_STREAM_EVENT_ITEM) && (lm_p0_validate_dash_fence_line(document, (cast: (const: @: char) event\text), (cast: (size_t) event\text_length), (cast: (size_t) event\line), (cast: (size_t) event\column)) = 0))
@@ -3788,19 +3836,16 @@ fn: lm_p0_stream_apply_item_event (@: document c.LmP0Document; @: stack c.LmP0St
     else:
         trailer_role := c.LM_P0_TRAILER_ROLE_NONE
     ---
-    if: (trailer_role = c.LM_P0_TRAILER_ROLE_RETURN)
-        trailer_bare := lm_p0_trailer_text_is_bare((cast: (const: @: char) event\text), (cast: (size_t) event\text_length))
-    ---
     top_level := lm_p0_stack_top_level(stack)
     trailer_target_available := ((lm_p0_trailer_role_is_tail_cutter((cast: (c.LmP0TrailerRole) trailer_role)) && ((event\level + 1U) <= top_level)) && (stack\owners[(event\level + 1U)] != 0))
-    trailer_target_accepted := (trailer_target_available && lm_p0_trailer_role_accepts_target((cast: (c.LmP0TrailerRole) trailer_role), (cast: (const: @: c.LmP0Node) stack\owners[(event\level + 1U)]), trailer_bare))
+    trailer_target_accepted := (trailer_target_available && lm_p0_trailer_role_accepts_target((cast: (c.LmP0TrailerRole) trailer_role), (cast: (const: @: c.LmP0Node) stack\owners[(event\level + 1U)])))
     if: ((lm_p0_trailer_role_is_tail_cutter((cast: (c.LmP0TrailerRole) trailer_role)) = 0) || (trailer_target_accepted = 0))
         top_level := lm_p0_stack_collapse_soft_to_event(stack, (cast: (size_t) event\level))
         if: ((event\level = top_level) && (stack\hard[top_level] = 0U))
             stack\hard[top_level] := 1U
         ---
         trailer_target_available := ((lm_p0_trailer_role_is_tail_cutter((cast: (c.LmP0TrailerRole) trailer_role)) && ((event\level + 1U) <= top_level)) && (stack\owners[(event\level + 1U)] != 0))
-        trailer_target_accepted := (trailer_target_available && lm_p0_trailer_role_accepts_target((cast: (c.LmP0TrailerRole) trailer_role), (cast: (const: @: c.LmP0Node) stack\owners[(event\level + 1U)]), trailer_bare))
+        trailer_target_accepted := (trailer_target_available && lm_p0_trailer_role_accepts_target((cast: (c.LmP0TrailerRole) trailer_role), (cast: (const: @: c.LmP0Node) stack\owners[(event\level + 1U)])))
     ---
     if: ((lm_p0_trailer_role_is_tail_cutter((cast: (c.LmP0TrailerRole) trailer_role)) && ((event\level + 1U) < top_level)) && (trailer_target_accepted = 0))
         lm_p0_set_diagnostic(document, 13, (cast: (size_t) event\line), (cast: (size_t) event\column), "tail-cutter target is not valid for this receiver")

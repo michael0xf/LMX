@@ -4226,6 +4226,139 @@ fn: decl_libc_abi (@: f c.FILE) int
     return: 0
 end: decl_libc_abi
 
+# The words of the kernel's list that declare (fn, sub, fm) are not calls: 1 for them, else 0.
+fn: bld_p0_declaring_word (@: word char; size_t: n) int
+    if: n = 2U && (c.memcmp(word, "fn", 2U) = 0 || c.memcmp(word, "fm", 2U) = 0)
+        return: 1
+    if: n = 3U && c.memcmp(word, "sub", 3U) = 0
+        return: 1
+    return: 0
+end: bld_p0_declaring_word
+
+# n bytes of word appended to out (cap bytes) at used[0], after a space when out is not empty; 0, or 1 when it does not fit.
+fn: bld_p0_append_word (@: out char; size_t: cap; @: used size_t; @: word char; size_t: n) int
+    if: used[0] + n + 2U > cap
+        return: 1
+    if: used[0] > 0U
+        out[used[0]] := (cast: (char) 32)
+        used[0] := used[0] + 1U
+    c.memcpy(out + used[0], word, n)
+    used[0] := used[0] + n
+    return: 0
+end: bld_p0_append_word
+
+# Whether the cell of row is set: the profile writes every cell as one escape \ddd (\000 not set). 1 set, 0 not.
+fn: bld_p0_cell_flag (@: cells char; size_t: row) int
+    if: cells[4U * row + 1U] != (cast: (char) 48) || cells[4U * row + 2U] != (cast: (char) 48) || cells[4U * row + 3U] != (cast: (char) 48)
+        return: 1
+    return: 0
+end: bld_p0_cell_flag
+
+# The strings of the profile constant named by key (the text up to its opening quote), separated by the four bytes \000, appended to out; the empty ones are skipped. With cells (the text
+# of the profile's cell constant after its opening quote) a string is appended only when the cell of its row is set -- the answer of lmx_graph_language_receiver --, and the cells must
+# be exactly one escape per string. 0, or 1 when the constant is not found, is not closed, does not fit or its cells do not match.
+fn: bld_p0_profile_words (@: prim char; @: key char; @: cells char; @: out char; size_t: cap; @: used size_t) int
+    @: at char c.strstr(prim, key)
+    size_t: i 0U
+    size_t: first 0U
+    size_t: row 0U
+    size_t: rows 0U
+    if: at = 0
+        return: 1
+    at := at + c.strlen(key)
+    while: at[i] != 0 && at[i] != (cast: (char) 34)
+        if: at[i] = (cast: (char) 92) && at[i + 1U] = (cast: (char) 48) && at[i + 2U] = (cast: (char) 48) && at[i + 3U] = (cast: (char) 48)
+            if: i > first && (cells = 0 || bld_p0_cell_flag(cells, row) != 0) && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
+                return: 1
+            row := row + 1U
+            i := i + 4U
+            first := i
+            continue
+        i := i + 1U
+    if: at[i] != (cast: (char) 34)
+        return: 1
+    rows := row
+    if: i > first
+        if: (cells = 0 || bld_p0_cell_flag(cells, row) != 0) && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
+            return: 1
+        rows := row + 1U
+    if: cells != 0 && cells[4U * rows] != (cast: (char) 34)
+        return: 1
+    return: 0
+end: bld_p0_profile_words
+
+# The unit l2src/p0_receivers.lm1 (Р134, Р135): the words whose Frame is a CALL for P0, ONE list with the kernel's. They are read, never typed in again: the string literal after
+# `@: words char "` of lmx_graph_receivers_in (l2src/lmx_graph.lm2) without the declaring fn sub fm, then the non-empty C names and the names of the primitive profile
+# (l2src/lmx_primitive_profile.lm1) whose cell is set, as lmx_graph_language_receiver answers. A literal or a string not found, or fewer than 40 words in the kernel's list, stops the
+# build: no default list. 0 written, 1 not.
+fn: bld_p0_receivers (@: src char) int
+    @: kernel_len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: prim_len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: used size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: kernel char 0
+    @: prim char 0
+    @: at char 0
+    @: cells char 0
+    @: out char 0
+    @: text char 0
+    size_t: cap 0U
+    size_t: i 0U
+    size_t: first 0U
+    size_t: words 0U
+    int: status 1
+    if: kernel_len = 0 || prim_len = 0 || used = 0
+        return: 1
+    kernel := file_read(txt_path(src, "l2src/lmx_graph.lm2"), kernel_len)
+    prim := file_read(txt_path(src, "l2src/lmx_primitive_profile.lm1"), prim_len)
+    if: kernel = 0 || prim = 0
+        c.printf("P0-RECEIVERS cannot read the kernel's list or the primitive profile in %s\n", src)
+        return: 1
+    cap := kernel_len[0] + prim_len[0] + 256U
+    out := c.malloc(cap)
+    if: out = 0
+        return: 1
+    at := c.strstr(kernel, "fn: lmx_graph_receivers_in")
+    if: at != 0
+        at := c.strstr(at, "@: words char \"")
+    if: at = 0
+        c.printf("P0-RECEIVERS the literal of lmx_graph_receivers_in is not found\n")
+        return: 1
+    at := at + 15
+    while: at[i] != 0 && at[i] != (cast: (char) 34)
+        first := i
+        while: at[i] != 0 && at[i] != (cast: (char) 34) && at[i] != (cast: (char) 32)
+            i := i + 1U
+        if: i > first
+            words := words + 1U
+            if: bld_p0_declaring_word(at + first, i - first) = 0 && bld_p0_append_word(out, cap, used, at + first, i - first) != 0
+                return: 1
+            ---
+        if: at[i] = (cast: (char) 32)
+            i := i + 1U
+        ---
+    if: words < 40U
+        c.printf("P0-RECEIVERS fewer than 40 words in the kernel's list (%u)\n", (cast: (unsigned) words))
+        return: 1
+    cells := c.strstr(prim, "const: @: char lmx_primitive_profile_cells \"")
+    if: cells = 0
+        c.printf("P0-RECEIVERS the cells of the primitive profile are not found\n")
+        return: 1
+    cells := cells + c.strlen("const: @: char lmx_primitive_profile_cells \"")
+    if: bld_p0_profile_words(prim, "const: @: char lmx_primitive_profile_c_names \"", 0, out, cap, used) != 0 || bld_p0_profile_words(prim, "const: @: char lmx_primitive_profile_names \"", cells, out, cap, used) != 0
+        c.printf("P0-RECEIVERS the primitive profile strings or their cells do not match\n")
+        return: 1
+    out[used[0]] := (cast: (char) 0)
+    text := txt_cat3("# Generated by tools/build.lm2 (bld_p0_receivers): the words whose Frame is a CALL for P0 -- the receivers of the kernel's list (lmx_graph_receivers_in), then the C names and the set names of the primitive profile.\nconst: @: char lm_p0_receiver_words \"", out, "\"\n")
+    if: text = 0
+        return: 1
+    status := file_write(txt_path(src, "l2src/p0_receivers.lm1"), text, c.strlen(text))
+    c.free(kernel)
+    c.free(prim)
+    c.free(out)
+    c.free(text)
+    return: status
+end: bld_p0_receivers
+
 # P0 support is generated by an explicitly supplied previous frontend.
 # This is an ordinary component step of the existing bootstrap, not a fallback.
 fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: previous_fe char; @: out char; @: res int) int
@@ -4257,7 +4390,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: frontend_lower_names char c.calloc(427U, sizeof(@: char))
     @@: frontend_core_names char c.calloc(445U, sizeof(@: char))
     @@: frontend_emit_names char c.calloc(308U, sizeof(@: char))
-    @@: generated char c.calloc(87U, sizeof(@: char))
+    @@: generated char c.calloc(88U, sizeof(@: char))
     int: k 0
     if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || frontend_coord_names = 0 || frontend_resolve_names = 0 || frontend_intern_names = 0 || frontend_useplan_names = 0 || frontend_lower_names = 0 || frontend_core_names = 0 || frontend_emit_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
@@ -6729,12 +6862,13 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     generated[84] := "src/l2src/l2_frontend_emit.h.lm1"
     generated[85] := "headers/l2src/l2_frontend_emit.lm1.h"
     generated[86] := "src/l2src/l2_frontend_state.lm1"
+    generated[87] := "src/l2src/p0_receivers.lm1"
     if: bld_p0_part_known(only) = 0
         return: 1
     if: dir_make(libc_dir) != 0
         return: 1
     if: only = 0
-        while: k < 87
+        while: k < 88
             os_file_remove(txt_path(stage, generated[k]))
             k := k + 1
         ---
@@ -6791,6 +6925,14 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         os_file_remove(txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
+    # The words of P0's calls, ONE list with the kernel (Р134): the profile of the primitives first (it is written from primitive.lm2 by the frontend that translates these modules, in
+    # every path), then the unit that p0_parser predefs.
+    if: bld_p0_part_selected(only, "p0_parser") != 0
+        if: bld_primitive_profile(rec, previous_fe, src, out, res) != 0
+            return: 1
+        if: bld_p0_receivers(src) != 0
+            return: 1
+        bld_hash_note(rec, txt_path(src, "l2src/p0_receivers.lm1"))
     if: bld_p0_part_selected(only, "p0_own") != 0
         if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
             return: 1

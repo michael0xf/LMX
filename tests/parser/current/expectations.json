@@ -189,14 +189,14 @@
   {
     "path": "tests/parser/current/named_structure_then_value_return.lmx",
     "exit": 0,
-    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): return: value closes an fn only; after a named Structure it stays an item.",
-    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; S is a named Structure: return: 9 closes it like a bare return (before the rule: an item after S).",
+    "stdout_exact": "structure fields=1\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"9\"\n"
   },
   {
     "path": "tests/parser/current/sub_then_value_return.lmx",
     "exit": 0,
-    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): return: value closes an fn only; after a sub it stays an item.",
-    "stdout_exact": "structure fields=2\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=0\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"3\"\n  frame head=\"return\" body=structure fields=1\n    atom \"7\"\n"
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a sub is closed by return: 7 as by a bare return (before the rule: an item after the sub).",
+    "stdout_exact": "structure fields=1\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=0\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"3\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"7\"\n"
   },
   {
     "path": "tests/parser/current/else_then_bare_return.lmx",
@@ -219,8 +219,8 @@
   {
     "path": "tests/parser/current/vertical_call_then_value_return.lmx",
     "exit": 0,
-    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a vertical call before return: value needs no close: the value return closes an fn only.",
-    "stdout_exact": "structure fields=2\n  frame head=\"ping\" body=structure fields=1\n    atom \"7\"\n  frame head=\"return\" body=structure fields=1\n    atom \"0\"\n"
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; ping: with a vertical body is a named Structure for the parser (the rule is by the shape, not by a call): return: 0 closes it.",
+    "stdout_exact": "structure fields=1\n  frame head=\"ping\" body=structure fields=1\n    atom \"7\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"0\"\n"
   },
   {
     "path": "tests/parser/current/headless_codex_dotted.lmx",
@@ -1007,5 +1007,317 @@
     "authority": "TZ 2026-11-20 blank line closes the whole block (a pending `---` is resolved by the full border; it does not open an anonymous block for the following line)",
     "exit": 0,
     "stdout_exact": "structure fields=2\n  frame head=\"a\" body=structure fields=1\n    frame head=\"b\" body=structure fields=1\n      atom \"1\"\n  structure fields=1\n    frame head=\"c\" body=structure fields=1\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_two_right.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=4\n  atom \"Name\"\n  atom \"::\"\n  atom \"A\"\n  atom \"B\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_one_group.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=3\n  atom \"Name\"\n  atom \"::\"\n  structure fields=2\n    atom \"A\"\n    atom \"B\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_data.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=3\n  atom \"Name\"\n  atom \"::\"\n  structure fields=3\n    frame head=\"int\" body=structure fields=1\n      atom \"a\"\n    frame head=\"int\" body=structure fields=1\n      atom \"b\"\n    frame head=\"return\" body=structure fields=1\n      atom \"int\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_reference.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=3\n  atom \"Name\"\n  atom \"::\"\n  atom \"DataTemplate\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_compact.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=3\n  atom \"Name\"\n  atom \"::\"\n  atom \"A\"\n"
+  },
+  {
+    "path": "tests/parser/current/double_colon_three_refused.lmx",
+    "exit": 1,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "diagnostic": "6@1:6"
+  },
+  {
+    "path": "tests/parser/current/double_colon_assign_kept.lmx",
+    "exit": 0,
+    "authority": "Ledger R143, the book #prepared-operands: `::` is one atom token of an expression, never a Frame; `Name :: A B` has two right occurrences, `Name :: (A B)` one unnamed Structure (the count of fields).",
+    "stdout_exact": "structure fields=4\n  atom \"Name\"\n  atom \"::\"\n  atom \"A\"\n  frame head=\"a\" body=structure fields=1\n    atom \"5\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_second_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the first return closes S; S has its trailer, so the second return is an item (like end: followed by a return).",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"9\"\n  frame head=\"return\" body=structure fields=1\n    atom \"8\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_neighbour_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a neighbour record between the body of C and the return: nothing to close, the return is an item of D.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"C\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"4U\"\n    frame head=\"size_t\" body=structure fields=2\n      atom \"w\"\n      atom \"5U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_inside_body_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a return at body level is an internal return, a field of the body (grammar section 17), not a closure.",
+    "stdout_exact": "structure fields=1\n  frame head=\"S\" body=structure fields=2\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_blank_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a blank line closes the whole block (step 21.3): S is closed before the return, which is a root item.",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_indented_after_blank_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; after the blank line the indented return starts a fresh block as in blank_06a: nothing is open to close.",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  structure fields=1\n    frame head=\"return\" body=structure fields=1\n      atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_end_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; end: S filled the trailer of S: the return after it is an item.",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"end\" fields=1\n      atom \"S\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_not_after_control_head.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a control Frame (A1: if, else, while, for, until, catch, throws) is never closed by a return.",
+    "stdout_exact": "structure fields=2\n  frame head=\"if\" body=structure fields=2\n    atom \"c\"\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"1\"\n  frame head=\"return\" body=structure fields=1\n    atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_not_after_inline_body.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a Frame with an inline body (a group written after the colon) has no vertical body to close.",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"4U\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_in_group_closes_block.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the same as parenthesis_bare_return_closes_block with a value: the Structure the return stands in is an anonymous group, not a named Frame (N and R agree).",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"size_t\" body=structure fields=2\n          atom \"x\"\n          atom \"4U\"\n        Tail cutter trailer spelling=\"return\" fields=1\n          atom \"9\"\n      frame head=\"size_t\" body=structure fields=2\n        atom \"y\"\n        atom \"2U\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_end_inside_named.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the translation of the 11 args records: end: args closes the part, return: int stays a field of prepared (N and R agree: the part is already closed).",
+    "stdout_exact": "structure fields=1\n  frame head=\"prepared\" body=structure fields=2\n    frame head=\"args\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"a\"\n        atom \"2U\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"args\"\n    frame head=\"return\" body=structure fields=1\n      atom \"int\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_closes_nested_named.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the shape of the author's Flyweight example: demo/C is a NEW name, a declaration: the return closes it",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"size_t\" body=structure fields=2\n      atom \"a\"\n      atom \"1U\"\n    frame head=\"C\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"4U\"\n      Tail cutter trailer spelling=\"return\" fields=1\n        atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_args_in_prepared.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; args is a word of the language's receivers: a call, so return: int is a field of prepared",
+    "stdout_exact": "structure fields=1\n  frame head=\"prepared\" body=structure fields=2\n    frame head=\"args\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"a\"\n        atom \"2U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"int\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_l2_record_in_fn.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; L2 is a word of the language's receivers: a call, so the return is the internal return of the fn",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    structure fields=2\n      frame head=\"L2\" body=structure fields=1\n        frame head=\"size_t\" body=structure fields=2\n          atom \"v\"\n          atom \"4U\"\n      frame head=\"return\" body=structure fields=1\n        atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_one_level_after_block.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; finally is a word of the language's receivers (the author's example 098): the return is the own return of use",
+    "stdout_exact": "structure fields=1\n  frame head=\"use\" body=structure fields=3\n    frame head=\"size_t\" body=structure fields=2\n      atom \"a\"\n      atom \"1U\"\n    frame head=\"finally\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"2U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_two_level_drop.lmx",
+    "exit": 1,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; post is a receiver: a call, not capturable; a two-level drop needs a cutter (the author's example 087 as written): error 13, today and after",
+    "diagnostic": "13@6:5"
+  },
+  {
+    "path": "tests/parser/current/value_return_two_level_drop_with_cutter.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the same with the written cutter `---` (grammar section 17: more than one level needs an admitted cutter): the cutter leaves nothing to close, the return is the own return of offer (N = R = today).",
+    "stdout_exact": "structure fields=1\n  frame head=\"offer\" body=structure fields=3\n    frame head=\"size_t\" body=structure fields=2\n      atom \"credit\"\n      atom \"1U\"\n    frame head=\"post\" body=structure fields=1\n      frame head=\"ask\" body=structure fields=1\n        frame head=\"size_t\" body=structure fields=2\n          atom \"v\"\n          atom \"2U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_two_level_while.lmx",
+    "exit": 1,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the shape of the author's example 097_retry_library_implementation (while / if, then the return two levels up): a control Frame is never closed by a return, so N and R keep today's error 13.",
+    "diagnostic": "13@6:5"
+  },
+  {
+    "path": "tests/parser/current/value_return_flyweight_demo.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the author's Flyweight shape (21_flyweight_comparison, Design_Patterns19-23 section 156): demo is a new name nested in drawing, the return stands at the level of demo right after its body and closes it (the value 81 of the example needs this reading)",
+    "stdout_exact": "structure fields=1\n  frame head=\"drawing\" body=structure fields=2\n    frame head=\"render\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"w\"\n        atom \"2U\"\n    frame head=\"demo\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"first\"\n        atom \"4U\"\n      Tail cutter trailer spelling=\"return\" fields=1\n        atom \"81\"\n"
+  },
+  {
+    "path": "tests/parser/current/receiver_head_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a BARE return after a receiver block is a field of the enclosing body too (the rule is the same for both forms; TODAY args takes it as a trailer)",
+    "stdout_exact": "structure fields=1\n  frame head=\"prepared\" body=structure fields=2\n    frame head=\"args\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"a\"\n        atom \"2U\"\n    atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/path_head_value_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the shape of the author's iterator example: a path head is a call, the return is the return of demo (parses so today)",
+    "stdout_exact": "structure fields=1\n  frame head=\"demo\" body=structure fields=2\n    frame head=\"cycles\\iterate\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"step\"\n        atom \"2U\"\n    frame head=\"return\" body=structure fields=1\n      atom \"total\"\n"
+  },
+  {
+    "path": "tests/parser/current/path_head_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the same with a bare return (TODAY it closes the path Frame as a trailer)",
+    "stdout_exact": "structure fields=1\n  frame head=\"demo\" body=structure fields=2\n    frame head=\"cycles\\iterate\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"step\"\n        atom \"2U\"\n    atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_repeated_name_is_declaration.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; P0 resolves no names: a simple name that was declared above (an existing method with a block) is read as a declaration; whether it is a call is the kernel's matter, after P0",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"x\"\n      atom \"1U\"\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"5\"\n"
+  },
+  {
+    "path": "tests/parser/current/receiver_head_merge_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; merge is a receiver of the language: a call (TODAY a bare return would close it)",
+    "stdout_exact": "structure fields=1\n  frame head=\"demo\" body=structure fields=2\n    frame head=\"merge\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"a\"\n        atom \"2U\"\n    atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/value_return_after_receiver_prefix_name_closes.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a simple name that is only a PREFIX of a receiver word (arg, not args) is a declaration: the words of lm_p0_head_is_call are matched whole (killer of the prefix-match mutant d8)",
+    "stdout_exact": "structure fields=1\n  frame head=\"arg\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/primitive_head_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the name of a primitive (long) is a word of the kernel's receiver table (lmx_primitive_profile_names, appended to lmx_graph_receivers_in), so one list covers it: a Frame with a block is a call and a bare return after it is an item (fable R134 condition: one list of words). TODAY a bare return closes it; the value form is an item today",
+    "stdout_exact": "structure fields=2\n  frame head=\"long\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/primitive_head_value_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the name of a primitive (int) is a word of the kernel's receiver table (lmx_primitive_profile_names, appended to lmx_graph_receivers_in), so one list covers it: a Frame with a block is a call and a value return after it is an item (fable R134 condition: one list of words). TODAY a bare return closes it; the value form is an item today",
+    "stdout_exact": "structure fields=2\n  frame head=\"int\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/primitive_name_without_cell_bare_return_closes.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; void is a name of the primitive profile with no cell (lmx_graph_language_receiver does not answer for it): not a receiver, a simple name, so the Frame is the DECLARATION of a named Structure and the bare return closes it, as for S (named_structure_closed_by_bare_return); `return: 5` is an item. Same tree TODAY. Killer of the mutant that takes every name of the profile as a word",
+    "stdout_exact": "structure fields=2\n  frame head=\"void\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=0\n  frame head=\"return\" body=structure fields=1\n    atom \"5\"\n"
+  },
+  {
+    "path": "tests/parser/current/iterate_inline_value_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the author's real iterator shape (01_iterator_comparison, seven places): a path head WITH an inline tail and a vertical block, then return: total of demo. TREE OBSERVED on the accepted parser (the printing of the inline head with a block was not derived by hand): D reads like today",
+    "stdout_exact": "structure fields=1\n  frame head=\"numbers\" body=structure fields=1\n    frame head=\"demo\" body=structure fields=3\n      frame head=\"size_t\" body=structure fields=2\n        atom \"total\"\n        atom \"0U\"\n      frame head=\"cycles\\iterate\" body=structure fields=2\n        frame head=\"int\" body=structure fields=2\n          atom \"item\"\n          frame head=\"numbers\\next\" body=structure fields=0\n        structure fields=1\n          frame head=\"size_t\" body=structure fields=2\n            atom \"step\"\n            atom \"2U\"\n      frame head=\"return\" body=structure fields=1\n        atom \"total\"\n"
+  },
+  {
+    "path": "tests/parser/current/iterate_inline_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; the same with a bare return: the Frame has an inline tail (INLINE_BODY), so even today nothing closes it. TREE OBSERVED on the accepted parser: D reads like today",
+    "stdout_exact": "structure fields=1\n  frame head=\"numbers\" body=structure fields=1\n    frame head=\"demo\" body=structure fields=3\n      frame head=\"size_t\" body=structure fields=2\n        atom \"total\"\n        atom \"0U\"\n      frame head=\"cycles\\iterate\" body=structure fields=2\n        frame head=\"int\" body=structure fields=2\n          atom \"item\"\n          frame head=\"numbers\\next\" body=structure fields=0\n        structure fields=1\n          frame head=\"size_t\" body=structure fields=2\n            atom \"step\"\n            atom \"2U\"\n      atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/while_then_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a control head (while) is a call: a bare return after its block is an item. Tree DERIVED BY ANALOGY of if_then_bare_return (not yet run); the case exists so that the control word of lm_p0_head_is_call has a killer",
+    "stdout_exact": "structure fields=2\n  frame head=\"while\" body=structure fields=2\n    atom \"c\"\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"1\"\n  atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/for_then_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a control head (for) is a call: a bare return after its block is an item. Tree DERIVED BY ANALOGY of if_then_bare_return (not yet run); the case exists so that the control word of lm_p0_head_is_call has a killer",
+    "stdout_exact": "structure fields=2\n  frame head=\"for\" body=structure fields=2\n    atom \"c\"\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"1\"\n  atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/catch_then_bare_return_is_item.lmx",
+    "exit": 0,
+    "authority": "ledger R134 and R135 (variant D), grammar section 17: a terminal return at the opening level of the DECLARATION of a named Structure (a simple new name, sub, fm), right after its body, is appended to that body and closes it; after a CALL -- a control word, a path, a word of the language's receivers -- it belongs to the enclosing body; a control head (catch) is a call: a bare return after its block is an item. Tree DERIVED BY ANALOGY of if_then_bare_return (not yet run); the case exists so that the control word of lm_p0_head_is_call has a killer",
+    "stdout_exact": "structure fields=2\n  frame head=\"catch\" body=structure fields=2\n    atom \"c\"\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"1\"\n  atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/composed_head_array_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"int[]\" body=structure fields=2\n        atom \"1\"\n        atom \"2\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `int[]` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r02_array_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/composed_head_ref_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"Model@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `Model@` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r03_ref_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_square_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"[]\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `[]` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r06_square_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_at_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `@` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r07_at_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_refarray_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"@[]\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `@[]` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r10_square_ref_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_empty_group_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"()\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `()` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r11_empty_group_head); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/composed_head_array_toplevel_value_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=2\n  frame head=\"int[]\" body=structure fields=1\n    atom \"1\"\n  frame head=\"return\" body=structure fields=1\n    atom \"1\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `int[]` is a symbolic or composed head, that is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed. The tree equals the tree of the accepted Graph (probe r13_toplevel_array); the slice before the correction closed this Frame."
+  },
+  {
+    "path": "tests/parser/current/composed_head_array_bare_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"int[]\" body=structure fields=1\n        atom \"1\"\n      atom \"return\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `int[` is a call; a bare `return` after its vertical body is an item of the enclosing body (an atom), the Frame is not closed. Tree DERIVED from rule D by the tree of the call head `int:` (slice probe s01) before the run; the accepted Graph predates rule D and closes it."
+  },
+  {
+    "path": "tests/parser/current/composed_head_ref_bare_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"Model@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `Model` is a call; a bare `return` after its vertical body is an item of the enclosing body (an atom), the Frame is not closed. Tree DERIVED from rule D by the tree of the call head `int:` (slice probe s01) before the run; the accepted Graph predates rule D and closes it."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_square_bare_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"[]\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `[` is a call; a bare `return` after its vertical body is an item of the enclosing body (an atom), the Frame is not closed. Tree DERIVED from rule D by the tree of the call head `int:` (slice probe s01) before the run; the accepted Graph predates rule D and closes it."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_at_bare_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `` is a call; a bare `return` after its vertical body is an item of the enclosing body (an atom), the Frame is not closed. Tree DERIVED from rule D by the tree of the call head `int:` (slice probe s01) before the run; the accepted Graph predates rule D and closes it."
+  },
+  {
+    "path": "tests/parser/current/symbolic_head_empty_group_bare_return_is_item.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"()\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n",
+    "authority": "Р134/Р135 rule D, Р152 п. 4: the head `(` is a call; a bare `return` after its vertical body is an item of the enclosing body (an atom), the Frame is not closed. Tree DERIVED from rule D by the tree of the call head `int:` (slice probe s01) before the run; the accepted Graph predates rule D and closes it."
+  },
+  {
+    "path": "tests/parser/current/exact_name_value_return_closes_declaration.lmx",
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"size_t\" body=structure fields=2\n      atom \"a\"\n      atom \"1U\"\n    frame head=\"`C`\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"4U\"\n      Tail cutter trailer spelling=\"return\" fields=1\n        atom \"9\"\n",
+    "authority": "ledger R134 and R135 (variant D), grammar section 17, as value_return_closes_nested_named: the head is a WHOLE EXACT NAME written in backquotes -- a simple word, so a DECLARATION of a named Structure, not a call: the terminal return closes it. The tree is that of value_return_closes_nested_named with the head spelling `C` (derived from the norm, then confirmed by the Graph sonnet-21-7j; the accepted Graph reads this return as an item of D). Kills the mutant s2 (an exact name is never simple)."
   }
 ]

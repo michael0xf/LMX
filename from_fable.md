@@ -101,14 +101,18 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-s37c-tool02/lmxtool-tool.exe` | bdaecfa6 |
-| hosted frontend | `S/fable-s37c-feh00/l2trans.exe` | 3135b662 |
-| runtime | `S/fable-s37c-rt02` | driver.o 760bb272, driver-observe.o 16dc4144 |
-| Graph | `S/fable-s37c-graph02/graph_trans-prod.exe` | 42ca5d68 |
-| манифест исходников | `selfbuild/inputs.sha256` | 1651 файл, 7738a5e9 |
-| tool для проверки документов | тот же `S/fable-s37c-tool02/lmxtool-tool.exe` | bdaecfa6 |
+| tool | `S/fable-s2126a-tool02/lmxtool-tool.exe` | 818a4ff0 |
+| hosted frontend | `S/fable-s2126a-feh01/l2trans.exe` | 33950d88 |
+| runtime | `S/fable-s2126a-rt02` | driver.o 760bb272, driver-observe.o 16dc4144 |
+| Graph | `S/fable-s2126a-graph02/graph_trans-prod.exe` | 4faa0cf3 |
+| манифест исходников | `selfbuild/inputs.sha256` | 1654 файла, 5abd2f69 |
+| tool для проверки документов | тот же `S/fable-s2126a-tool02/lmxtool-tool.exe` | 818a4ff0 |
 
-Сейчас действует набор второго среза шага 23.7 (`fable-s37c-*`): все четыре компонента собраны из исходников,
+Сейчас действует набор пункта (а) шага 21.26 (`fable-s2126a-*`): в трансляторе L2 один вход разбора текста
+программы. Runtime равен прежнему побайтно, Graph — под маской штампа PE; изменились frontend и tool (в списке
+экспортов модуля типов новое имя).
+
+Прежде действовал набор второго среза шага 23.7 (`fable-s37c-*`): все четыре компонента собраны из исходников,
 переведённых в типизированную запись ссылки. Frontend и Graph равны прежним принятым под маской штампа PE,
 runtime — побайтно; tool отличается одной правкой поиска списка слов-ресиверов. Метка frontend — `feh00`: он
 собран принятым frontend с принятым runtime, эта же сборка вернула стадии порождаемые файлы.

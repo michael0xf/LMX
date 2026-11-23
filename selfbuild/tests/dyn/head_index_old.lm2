@@ -1,0 +1,36 @@
+# Step 23.6c, the twin of head_index_typed.lm2 in the OLD notation: the index of a head (`p[...] := 5`) is a text that the frontend reads again as a document of its own
+# (lm_compiler_head_expression); the three heads below hold a type inside the index -- a cast to `@: char`, sizeof(@: char), a cast to the void reference `@: void` -- and write 5 into
+# the slots 1, 2 and 3 of the array (the size of a reference is 8 bytes, 8 / 4 = slot 2). Each index is cast to size_t: a computed index of another type stops the native root with an uncaught throw on the accepted set. Native only: the walker reads the program through the builder of the graph, which has no pass of the typed notation (step 23.4, T4). Entry 7; 81.. name the failing check.
+include: "<stdlib.h>"
+fn: slot_one (@: s char) int
+    return: 1
+fn: slot_three (@: s void) int
+    return: 3
+fn: write_cast (@: p int; @: q void) int
+    p[(cast: (size_t) slot_one((cast: (@: char) q)))] := 5
+    return: 0
+fn: write_size (@: p int) int
+    p[(cast: (size_t) sizeof(@: char)) / 4U] := 5
+    return: 0
+fn: write_bare (@: p int; @: q void) int
+    p[(cast: (size_t) slot_three((cast: (@: void) q)))] := 5
+    return: 0
+fn: m () int
+    @: cells int c.calloc(4U, c.sizeof(c.int))
+    @: raw void c.calloc(4U, 1U)
+    int: done 0
+    done := write_cast(cells, raw)
+    done := write_size(cells)
+    done := write_bare(cells, raw)
+    if: cells[1] != 5
+        return: 81
+    if: cells[2] != 5
+        return: 82
+    if: cells[3] != 5
+        return: 83
+    if: cells[0] != 0
+        return: 84
+    return: 7
+end: m
+send: exit(exit_code: m(); stdout: ""; stderr: "")
+return

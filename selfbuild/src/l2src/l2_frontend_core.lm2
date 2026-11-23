@@ -2206,6 +2206,7 @@ fn: lm_compiler_table_formals () int
     const: (char@@: src_cell (cast: (const: char@@) (@ c.l2_src)))
     c.LmP0Text@@: tb_formal_cell (cast: (c.LmP0Text@@) (c.l2_tb_formal))
     c.LmP0Document@: sig 0
+    const: (char@: header)
     const: (c.LmP0Node@: root)
     c.LmP0Field@: f
     c.LmP0Field@: p
@@ -2220,7 +2221,8 @@ fn: lm_compiler_table_formals () int
     # The header's types (`@: Lmx`) are the receiver's, not the unit's: reading them leaves the unit's
     # foreign types as they were -- an index of l2_foreign_intern is emitted (LMX_TYPE_POINTER_BASE + i),
     # and the tables are read before the unit, at the start of its translation.
-    if: c.lm_p0_parse_string((cast: (const: char@) (c.lm_compiler_table_header())), (cast: (c.LmP0Document@@) (@ sig))) != 0 || sig = 0
+    header := c.lm_compiler_table_header()
+    if: c.lm_compiler_parse_text(header, c.strlen(header), @ sig) != 0 || sig = 0
         c.lm_compiler_foreign_truncate(fn0)
         lm_compiler_core_doc_destroy((cast: (c.LmP0Document@) (sig)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the header of the receiver table does not parse")))

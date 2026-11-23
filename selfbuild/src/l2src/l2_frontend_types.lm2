@@ -1658,6 +1658,18 @@ fn: lm_compiler_snap_bytes (const: (char@: path); size_t@: len) const: char@
     return: (cast: (const: char@) (data))
 end: lm_compiler_snap_bytes
 
+# The one entry of the reading of program text in the translator (step 21.26 (a): one parser everywhere). The bytes become the tree in the form the translator reads: today the parse of P0 and then the pass of the
+# typed notation (lm_p0_lower_types, step 23.6) over the whole tree. The file of a program and its parts (lm_compiler_snap_parse), the text of an indexed head (lm_compiler_head_expression), a predef document
+# (lm_compiler_snap_document) and the header text of the receiver table (lm_compiler_table_formals) read their text through this function and no other place of the translator calls the parse of P0 or the
+# pass. 0, or 1 when the parse or the pass fails: the document, when there is one, holds the diagnostic (lm_p0_document_diagnostic) and is the caller's to destroy.
+fn: lm_compiler_parse_text (const: (char@: data); size_t: n; c.LmP0Document@@: document) int
+    if: c.lm_p0_parse_bytes(data, n, document) != 0
+        return: (cast: (int) (1))
+    if: document[0] = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.lm_p0_lower_types(document[0])))
+end: lm_compiler_parse_text
+
 fn: lm_compiler_snap_document (const: (char@: path)) c.LmP0Document@
     int@: snap_n_cell (cast: (int@) (@ c.l2_snap_n))
     char@@@: snap_data_cell (cast: (char@@@) (@ c.l2_snap_data))
@@ -1674,7 +1686,7 @@ fn: lm_compiler_snap_document (const: (char@: path)) c.LmP0Document@
     if: i >= snap_n_cell[0]
         return: (cast: (c.LmP0Document@) (0))
     if: snap_doc_cell[0][i] = 0
-        if: c.lm_p0_parse_bytes(data, n, @ document) != 0 || document = 0
+        if: lm_compiler_parse_text(data, n, @ document) != 0 || document = 0
             if: document != 0
                 lm_compiler_types_doc_destroy(document)
             return: (cast: (c.LmP0Document@) (0))

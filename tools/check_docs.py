@@ -39,6 +39,9 @@ def check_links(root=ROOT):
             if anchor:
                 assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
 
+def check_preface(data):
+    assert 'preface' not in data or (isinstance(data['preface'],dict) and all(isinstance(data['preface'].get(l),str) and data['preface'][l].strip() for l in ('ru','en'))),'Preface needs both languages'
+
 def main():
     semantic_count=check_semantics(check=True)
     data=json.loads((ROOT/'provenance/grammar.json').read_text(encoding='utf-8'))
@@ -47,6 +50,7 @@ def main():
         assert path.read_text(encoding='utf-8')==render(data,lang),f'Out of sync: {path}'
     ids=[s['id'] for s in data['sections']]
     assert len(ids)==len(set(ids))
+    check_preface(data)
     source=Path(data['source']['path'])
     lines=None
     if source.is_file():

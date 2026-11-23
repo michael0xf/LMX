@@ -101,16 +101,17 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-dl-tool02/lmxtool-tool.exe` | a3d401ae |
+| tool | `S/fable-pf-tool02/lmxtool-tool.exe` | da28afc3 |
 | hosted frontend | `S/fable-k1a-feh01/l2trans.exe` | a7a49450 |
 | runtime | `S/fable-k1a-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
 | Graph | `S/fable-k1a-graph02/graph_trans-prod.exe` | fedfeee4 |
-| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, df180f2d |
-| tool для проверки документов | тот же `S/fable-dl-tool02/lmxtool-tool.exe` | a3d401ae |
+| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, 34ecf625 |
+| tool для проверки документов | тот же `S/fable-pf-tool02/lmxtool-tool.exe` | da28afc3 |
 
-Tool пересобран 2026-11-23 срезом проверки ссылок (участок строчного кода ссылкой не считается, Р153): в
-частной стадии от HEAD, принятыми frontend и runtime, затем самим собой; прежний tool
-(`S/fable-b4-tool02`, 2be4b7dc) остаётся в стадии как база. Остальные три компонента — набор среза K1a.
+Tool пересобран 2026-11-23 двумя срезами инструмента: проверка ссылок (участок строчного кода ссылкой не
+считается, Р153; `S/fable-dl-tool02`, a3d401ae) и строка перед оглавлением грамматики (Р154). Оба — в частной
+стадии от HEAD, принятыми frontend и runtime, затем самим собой; прежний tool (`S/fable-b4-tool02`, 2be4b7dc)
+остаётся в стадии как база. Остальные три компонента — набор среза K1a.
 
 Сейчас действует набор среза K1a шага 21.7 (структурный вызов над родителем): runtime, hosted frontend и Graph
 собраны мной из итоговых исходников набором шага 21.9 (а); tool прежний. Набор шага 21.9 (а) (`fable-9a-feh01`,

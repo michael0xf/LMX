@@ -1,5 +1,7 @@
 # LMX grammar
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 - [1. Scope and sources](#scope)
 - [2. Structures, fields, and Frames](#structure)
 - [3. Source bytes, lines, and coordinates](#positions)

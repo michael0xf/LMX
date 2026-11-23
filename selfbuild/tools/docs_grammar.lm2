@@ -76,15 +76,22 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
     size_t: example_after 0U
     size_t: origin_at 0U
     size_t: origin_after 0U
+    size_t: preface_at 0U
+    size_t: preface_after 0U
     size_t: items 0U
     int: examples_found 0
     int: origin_found 0
+    int: preface_found 0
     @: default_label char "Source excerpt"
     if: out = 0 || section_count = 0 || example_count = 0 || (c.strcmp(lang, "ru") != 0 && c.strcmp(lang, "en") != 0)
         return: 1
     if: dj_document(data, count, @ root_at, @ root_after) != 2 || dj_property(data, count, root_at, "sections", @ sections_at, @ sections_after) != 1 || data[sections_at] != (cast: (char) 91)
         return: 1
     ---
+    # Optional line between the title and the contents: the root key preface with the strings ru and en.
+    preface_found := dj_property(data, count, root_at, "preface", @ preface_at, @ preface_after)
+    if: preface_found < 0 || (preface_found != 0 && data[preface_at] != (cast: (char) 123))
+        return: 1
     section_count[0] := 0U
     example_count[0] := 0U
     if: dg_item(out, @ items) != 0
@@ -100,6 +107,8 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
         ---
     ---
     if: dg_item(out, @ items) != 0
+        return: 1
+    if: preface_found != 0 && (dj_property(data, count, preface_at, lang, @ language_at, @ language_after) != 1 || dg_item(out, @ items) != 0 || dg_field(out, data, count, preface_at, lang, 0, 1) != 0 || dg_item(out, @ items) != 0)
         return: 1
     section_at := dj_ws(data, count, sections_at + 1U)
     while: section_at < count && data[section_at] != (cast: (char) 93)

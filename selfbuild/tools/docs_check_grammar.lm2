@@ -306,6 +306,21 @@ fn: dc_sections (@: data char; size_t: count; size_t: sections_at; @: source cha
     return: failed
 end: dc_sections
 
+# The optional root key preface: an object with a not blank string for each language (the sections have the same two).
+fn: dc_preface (@: data char; size_t: count; size_t: root) int
+    size_t: preface_at 0U
+    size_t: after 0U
+    int: found dj_property(data, count, root, "preface", @ preface_at, @ after)
+    if: found < 0
+        return: 1
+    if: found = 0
+        return: 0
+    if: preface_at >= count || data[preface_at] != (cast: (char) 123)
+        return: 1
+    if: dc_nonempty(data, count, preface_at, "ru") != 0 || dc_nonempty(data, count, preface_at, "en") != 0
+        return: 1
+    return: 0
+
 fn: docs_grammar_check (@: repo char; @: out_sections size_t; @: out_examples size_t) int
     @: input char txt_path(repo, "provenance/grammar.json")
     @: ru_path char txt_path(repo, "docs/spec/LMX_grammar.ru.md")
@@ -372,6 +387,8 @@ fn: docs_grammar_check (@: repo char; @: out_sections size_t; @: out_examples si
             failed := dc_ids(data, count, sections_at)
         ---
     ---
+    if: failed = 0
+        failed := dc_preface(data, count, root)
     if: failed = 0
         if: dj_property(data, count, root, "source", @ source_at, @ after) != 1 || dc_string(data, count, source_at, "path", @ source_path, @ source_path_count) != 0
             failed := 1

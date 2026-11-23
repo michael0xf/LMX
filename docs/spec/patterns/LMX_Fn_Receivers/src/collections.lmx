@@ -1,26 +1,31 @@
-# КОЛЛЕКЦИИ ЗАПИСЕЙ ПРОИЗВОЛЬНЫХ ТИПОВ.
-# items — Structure / Array<@> из value records. (1; "x"; someStruct)
-# допускает разные типы; callback принимает собственный Ti обычным call.
-# Для плотного Array<T> требуется явное получение записей его элементов;
-# нельзя объявить его указатель массивом @. Вектор может хранить Array<T> целиком.
-# Результаты map/scan/zipWith также value records, а не IntBox.
-# Обход последовательный в одном Message; callback не меняет состав items.
+# UNIVERSAL SEQUENTIAL COLLECTIONS.
+# items/source/rows are direct @ references to any admitted Array: dense T[]
+# or the ordinary Structure/@[]. FxSeqRead uses the actual layout, never void**
+# reinterpretation. One selected element is one prepared actual, including a
+# whole Structure. Callbacks retain their own defaults, required/private and R.
+# Calls are ordered in one Message. A callback must not change source slots or
+# length. Result construction does not execute code fields or alter parent.
 
 FxMap:
     private:
         @: items
         @: transform
+    required: items transform
     return: @
     map:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
-        private: @: result (copy(()))
-        sys\resize(result; length(items))
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; count)
         private: int: i 0
-        while: i < length(items)
-            result[i] := FxApply\apply(transform; FxOne\make(items[i]))
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            result[i] := FxApply\apply(transform; FxOne\make(item))
             i += 1
         return: result
 
@@ -28,21 +33,27 @@ FxFilter:
     private:
         @: items
         @: accepts
+    required: items accepts
     return: @
     filter:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
-        private: @: result (copy(()))
-        sys\resize(result; length(items))
+            ReceiverIndex
+            SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(info\arrayType; count)
         private: int: used 0
         private: int: i 0
-        while: i < length(items)
-            private: @: flagRecord FxApply\apply(accepts; FxOne\make(items[i]))
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: flagRecord FxApply\apply(accepts; FxOne\make(item))
+            # Keep filter's established ordinary int-result admission channel.
             private: int: flag \flagRecord
             if: flag != 0
-                result[used] := items[i]
+                FxKernel\arrayWrite(target := result; index := used; value := item)
                 used += 1
             i += 1
         sys\resize(result; used)
@@ -53,16 +64,21 @@ FxFold:
         @: items
         @: seed
         @: step
+    required: items seed step
     return: @
     fold:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+        FxSeqInfo\get(items)
+        private: int: count length(items)
         private: @: accumulator seed
         private: int: i 0
-        while: i < length(items)
-            accumulator := FxApply\apply(step; FxTwo\make(accumulator; items[i]))
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            accumulator := FxApply\apply(step; FxTwo\make(accumulator; item))
             i += 1
         return: accumulator
 
@@ -74,21 +90,26 @@ FxZip:
     private:
         @: first
         @: second
+    required: first second
     return: @
     zip:
         throws:
-            FxRecordArity
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result (copy(()))
-        sys\resize(result; count)
+        private: @: result FxSeqAllocate\make(@[]; count)
         private: int: i 0
         while: i < count
             private: @: pair (copy(FxPair))
-            pair\first := first[i]
-            pair\second := second[i]
-            result[i] := FxRecords\reference(pair)
+            pair\first := FxSeqRead\read(first; i)
+            pair\second := FxSeqRead\read(second; i)
+            result[i] := pair
             i += 1
         return: result
 
@@ -97,20 +118,26 @@ FxZipWith:
         @: first
         @: second
         @: combine
+    required: first second combine
     return: @
     zipWith:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result (copy(()))
-        sys\resize(result; count)
+        private: @: result FxSeqAllocate\make(@[]; count)
         private: int: i 0
         while: i < count
-            result[i] := FxApply\apply(combine; FxTwo\make(first[i]; second[i]))
+            private: @: leftValue FxSeqRead\read(first; i)
+            private: @: rightValue FxSeqRead\read(second; i)
+            result[i] := FxApply\apply(combine; FxTwo\make(leftValue; rightValue))
             i += 1
         return: result
 
@@ -119,19 +146,27 @@ FxScan:
         @: items
         @: seed
         @: step
+    required: items seed step
     return: @
     scan:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
-        private: @: result (copy(()))
-        sys\resize(result; length(items) + 1)
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: info FxSeqInfo\get(result)
+        private: int: total FxSeqSize\sum(count; 1; info\maxLength)
+        sys\resize(result; total)
         private: @: accumulator seed
         result[0] := accumulator
         private: int: i 0
-        while: i < length(items)
-            accumulator := FxApply\apply(step; FxTwo\make(accumulator; items[i]))
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            accumulator := FxApply\apply(step; FxTwo\make(accumulator; item))
             result[i + 1] := accumulator
             i += 1
         return: result
@@ -140,56 +175,69 @@ FxTraverse:
     private:
         @: items
         @: next
+    required: items next
     return: @
     traverse:
         throws:
             FxCallFailure
             FxKernelFailure
-            FxRecordArity
             FxTypeToken
-        private: @: result (copy(()))
-        sys\resize(result; length(items))
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; count)
         private: int: i 0
-        while: i < length(items)
-            private: @: record FxApply\apply(next; FxOne\make(items[i]))
-            private: @: answer FxMaybe \record
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: record FxApply\apply(next; FxOne\make(item))
+            private: FxMaybe@: answer record
             if: answer\present = 0
                 return: answer
             result[i] := answer\value
             i += 1
-        return: FxSome\some(value := FxRecords\reference(result))
+        return: FxSome\some(value := result)
 
-# Строки здесь сами являются ссылочными значениями. Входные row records
-# извлекаются как @; никакого фиксированного числа строк/столбцов нет.
+# Rectangularity is checked before columns are constructed. Each selected row
+# is one sequence value; dense and reference rows can be freely mixed.
 FxTranspose:
     private: @: rows
+    required: rows
     return: @
     transpose:
         throws:
-            FxRecordArity
+            FxKernelFailure
             FxShape
-        private: @: result (copy(()))
-        if: length(rows) = 0
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(rows)
+        private: int: height length(rows)
+        private: @: result FxSeqAllocate\make(@[]; 0)
+        if: height = 0
             return: result
-        private: @: first \rows[0]
+        private: @: first FxSeqRead\read(rows; 0)
+        FxSeqInfo\get(first)
         private: int: width length(first)
         private: int: i 0
-        while: i < length(rows)
-            private: @: row \rows[i]
+        while: i < height
+            private: @: row FxSeqRead\read(rows; i)
+            FxSeqInfo\get(row)
             if: length(row) != width
                 throw: FxShape()
             i += 1
+        private: @: resultInfo FxSeqInfo\get(result)
+        FxSeqSize\sum(0; width; resultInfo\maxLength)
         sys\resize(result; width)
         private: int: j 0
         while: j < width
-            private: @: column (copy(()))
-            sys\resize(column; length(rows))
+            private: @: column FxSeqAllocate\make(@[]; height)
             i := 0
-            while: i < length(rows)
-                private: @: row \rows[i]
-                column[i] := row[j]
+            while: i < height
+                private: @: row FxSeqRead\read(rows; i)
+                column[i] := FxSeqRead\read(row; j)
                 i += 1
-            result[j] := FxRecords\reference(column)
+            result[j] := column
             j += 1
         return: result
 
@@ -202,21 +250,27 @@ FxGroupBy:
         @: items
         @: keyOf
         @: sameKey
+    required: items keyOf sameKey
     return: @
     groupBy:
         throws:
             FxCallFailure
             FxKernelFailure
-            FxRecordArity
             FxTypeToken
-        private: @: result (copy(()))
+            ReceiverIndex
+            SequenceElement
+            SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; 0)
         private: int: i 0
-        while: i < length(items)
-            private: @: key FxApply\apply(keyOf; FxOne\make(items[i]))
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: key FxApply\apply(keyOf; FxOne\make(item))
             private: @: group 0
             private: int: j 0
             while: j < length(result)
-                private: @: candidate FxGroup \result[j]
+                private: FxGroup@: candidate result[j]
                 private: @: flagRecord FxApply\apply(sameKey; FxTwo\make(candidate\key; key))
                 private: int: flag \flagRecord
                 if: flag != 0
@@ -226,12 +280,8 @@ FxGroupBy:
             if: group = 0
                 group := (copy(FxGroup))
                 group\key := key
-                group\items := (copy(()))
-                private: int: count length(result)
-                sys\resize(result; count + 1)
-                result[count] := FxRecords\reference(group)
-            private: int: used length(group\items)
-            sys\resize(group\items; used + 1)
-            group\items[used] := items[i]
+                group\items := FxSeqAllocate\make(@[]; 0)
+                FxSeqPush\append(result; group)
+            FxSeqPush\append(group\items; item)
             i += 1
         return: result

@@ -23,6 +23,8 @@ for (const group of groups) {
     console.log(JSON.stringify({group,phase:'before',preview:path.join(outputDir,group+'.before.png')}));
     continue;
   }
+  const before = await wb.render({sheetName:sh.name,range:'A1:K20',scale:1,format:'png'});
+  await fs.writeFile(path.join(outputDir,group+'.before.png'),new Uint8Array(await before.arrayBuffer()));
   const patterns = [...data.patterns].sort((a,b) => (a.paired_with||a.id)-(b.paired_with||b.id) || (a.kind==='implementation')-(b.kind==='implementation') || a.id-b.id);
   const langs=['LMX',...data.languages];
   sh.getRange('B3').values=[[`${langs.join(' / ')}; 2026-11-22`]];
@@ -146,9 +148,13 @@ if(mode!=='inspect') {
     const active=x.listings.find(l=>l.language==='LMX').code,other=x.alternative?.LMX;
     if(!other)continue;
     const count=s=>[...s].filter(c=>!(/\s/u.test(c))).length;
-    const note='Общий текущий контракт; историческая специализация или прежний API сохранены как пояснение, не как другая версия ядра.';
-    variants.getRange(`A${vr}:F${vr}`).values=[[String(x.id).padStart(3,'0'),'Текущее ядро',count(active),count(other.code),other.eligible?'Да':'Нет',note]];
-    variants.getRange(`A${vr}:F${vr}`).format={wrapText:true,rowHeight:52,verticalAlignment:'center'};
+    const selectedName=x.primary_variant?.LMX||'core',choices=x.variants?.LMX||{},eligible=x.eligible_variants?.LMX||[];
+    const alternatives=eligible.filter(n=>n!==selectedName).sort((a,b)=>count(choices[a])-count(choices[b]));
+    const second=alternatives.length?choices[alternatives[0]]:other.code;
+    const comparable=alternatives.length>0||other.eligible;
+    const note=alternatives.length?`Сопоставимая пара ${selectedName} / ${alternatives[0]}; выбран минимум. Дополнительная реализация curry показана и посчитана отдельно. Прежний процедурный код также сохранён.`:'Общий текущий контракт; историческая специализация или прежний API сохранены как пояснение, не как другая версия ядра.';
+    variants.getRange(`A${vr}:F${vr}`).values=[[String(x.id).padStart(3,'0'),selectedName,count(active),count(second),comparable?'Да':'Нет',note]];
+    variants.getRange(`A${vr}:F${vr}`).format={wrapText:true,rowHeight:Math.max(52,14*Math.ceil(note.length/75)+14),verticalAlignment:'center'};
     vr++;
   }
   variants.getRange(`C6:D${vr-1}`).setNumberFormat('#,##0');

@@ -11,7 +11,7 @@ FxLazyState:
 FxLazyEngine:
     private:
         @: state
-        @: args
+        @: frame
     return: @
     run:
         throws:
@@ -29,7 +29,7 @@ FxLazyEngine:
             if: completed = 0
                 state\status := 0
         ---
-        private: @: result FxApply\apply(state\operation; args)
+        private: @: result FxFrameApply\apply(frame)
         state\value := result
         state\status := 2
         completed := 1
@@ -43,15 +43,18 @@ FxOnce:
     return: @
     once:
         throws:
+            FxArity
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
         private: @: state (copy(FxLazyState))
         state\operation := operation
         private: @: failures FxFailures\union(info\throws; ("FxLazyCycle"))
-        return: FxWrap\make(contract; FxLazyEngine\run; state; failures)
+        return: FxWrap\make(contract; FxLazyEngine\run; state; failures; FxFullPolicy\make(operation))
 
 # lazy получает thunk; partial(F;allArgs) превращает любой F в thunk.
 FxLazy:
@@ -63,6 +66,8 @@ FxLazy:
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
         if: length(info\inputTypes) != 0
             throw: FxArity()
@@ -92,6 +97,8 @@ FxRepeat:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         if: count < 0
             throw: FxIndex()
         private: @: captured FxArguments\capture(operation; args)
@@ -139,6 +146,8 @@ FxRetry:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         if: attempts < 1
             throw: FxIndex()
         private: @: captured FxArguments\capture(operation; args)
@@ -167,6 +176,8 @@ FxAround:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: empty (copy(()))
         private: @: resource FxApply\apply(acquire; empty)
         private: @: resourceArgs FxOne\make(resource)
@@ -183,23 +194,28 @@ FxRecoverState:
 FxRecoverEngine:
     private:
         @: state
-        @: args
+        @: frame
     return: @
     run:
         throws:
             FxCallFailure
+            FxIndex
             FxKernelFailure
             FxRecordArity
             FxTypeToken
-        private: @: outcome FxTry\attempt(state\operation; args)
+            ReceiverIndex
+            SequenceSize
+        private: @: outcome FxFrameAttempt\attempt(frame)
         if: outcome\ok != 0
             return: outcome\value
         private: @: failureRecord (outcome\failure FxRecordOperands\record)
         private: @: actuals FxTwo\make(failureRecord; outcome\payload)
-        actuals := FxAppend\append(actuals; FxOne\make(FxRecords\reference(args)))
+        actuals := FxAppend\append(actuals; FxOne\make(FxRecords\reference(FxFrameObserve\observe(frame))))
         return: FxApply\apply(state\handler; actuals)
 
-# handler(name:string; payload; originalArgs:@) -> тот же R.
+# handler(name:string; payload; originalArgs:@) -> the same R.
+# originalArgs is a non-forcing state snapshot, in the same shape as trace.args;
+# ready records remain available, omitted/deferred inputs remain distinguished.
 # Payload принимается его действительным типом; можно ограничить набор ошибок
 # контрактом operation, а несоответствие handler отвергает обычное принятие.
 FxRecover:
@@ -209,23 +225,26 @@ FxRecover:
     return: @
     recover:
         throws:
+            FxArity
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
         private: @: handlerInfo FxKernel\signature(subject := handler)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
         private: @: state (copy(FxRecoverState))
         state\operation := operation
         state\handler := handler
-        return: FxWrap\make(contract; FxRecoverEngine\run; state; handlerInfo\throws)
+        return: FxWrap\make(contract; FxRecoverEngine\run; state; handlerInfo\throws; FxFullPolicy\make(operation))
 
 FxTraceState:
     @: operation 0
     @: sink 0
 
 FxTraceEvent:
-    []: char phase ""
+    char[]: phase ""
     @: args 0
     @: value 0
     int: hasValue 0
@@ -233,7 +252,7 @@ FxTraceEvent:
 FxTraceEmit:
     private:
         @: sink
-        []: char phase
+        char[]: phase
         @: args
         @: value
         int: hasValue
@@ -253,23 +272,24 @@ FxTraceEmit:
 FxTraceEngine:
     private:
         @: state
-        @: args
+        @: frame
     return: @
     run:
         throws:
             FxCallFailure
+            FxIndex
             FxKernelFailure
             FxRecordArity
             FxTypeToken
-        FxTraceEmit\emit(state\sink; "enter"; args; 0; 0)
+        FxTraceEmit\emit(state\sink; "enter"; FxFrameObserve\observe(frame); 0; 0)
         private: int: succeeded 0
         finally:
             if: succeeded = 0
-                FxTraceEmit\emit(state\sink; "leave-without-result"; args; 0; 0)
+                FxTraceEmit\emit(state\sink; "leave-without-result"; FxFrameObserve\observe(frame); 0; 0)
         ---
-        private: @: value FxApply\apply(state\operation; args)
+        private: @: value FxFrameApply\apply(frame)
         private: @: info FxKernel\signature(subject := state\operation)
-        FxTraceEmit\emit(state\sink; "return"; args; value; info\hasResult)
+        FxTraceEmit\emit(state\sink; "return"; FxFrameObserve\observe(frame); value; info\hasResult)
         succeeded := 1
         return: value
 
@@ -282,9 +302,12 @@ FxTrace:
     return: @
     trace:
         throws:
+            FxArity
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
         private: @: sinkInfo FxKernel\signature(subject := sink)
         private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
@@ -292,4 +315,4 @@ FxTrace:
         private: @: state (copy(FxTraceState))
         state\operation := operation
         state\sink := sink
-        return: FxWrap\make(contract; FxTraceEngine\run; state; failures)
+        return: FxWrap\make(contract; FxTraceEngine\run; state; failures; FxFullPolicy\make(operation))

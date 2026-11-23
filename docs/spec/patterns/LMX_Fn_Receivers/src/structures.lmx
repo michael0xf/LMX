@@ -1,122 +1,67 @@
-# ======================================================================
-# Преобразования структур. Физический индекс не означает позицию аргумента.
-# select/omit/reorder создают новый массив ссылок: поля и их parent сохраняются.
-# Для независимой копии выбранного графа предназначен project.
-# Ни один из этих ресиверов не исполняет выбранные поля.
-# ======================================================================
+# UNIVERSAL SELECTION COMPATIBILITY PATHS.
+# The previous internal names delegate to the shared dense/Structure algorithms.
+# Historical procedural bodies are preserved under reference/pre_sequence_fix/.
 
-# select(source; indices): выбранные физические поля в заданном порядке.
-# indices — Structure / Array<@> со ссылками на int-записи; повторение разрешено.
-# Все индексы проверяются до построения результата; пустой выбор разрешён.
-# Пример: select(S; (2;0;2)) возвращает ссылки S[2],S[0],S[2].
 RxSelect:
-    []: @ source
-    []: @ indices
+    private:
+        @: source
+        @: indices
+    required: source indices
     return: @
     select:
         throws:
+            FxKernelFailure
+            FxTypeToken
             ReceiverIndex
-        int: total length(source)
-        int: count length(indices)
-        int: i 0
-        while: i < count
-            int: at \indices[i]
-            if: at < 0 || at >= total
-                throw: ReceiverIndex()
-            i += 1
-        @: out (copy(()))
-        sys\resize(out; count)
-        i := 0
-        while: i < count
-            int: at \indices[i]
-            out[i] := source[at]
-            i += 1
-        return: out
+            SequenceSize
+        return: FxSeqSelect\select(source; indices)
 
-# omit(source; indices): исключить позиции, сохранив порядок остальных.
-# Повторные индексы исключения допустимы; источник не изменяется.
-# Пример: omit(S; (1;1)) исключает одно физическое поле S[1].
 RxOmit:
-    []: @ source
-    []: @ indices
+    private:
+        @: source
+        @: indices
+    required: source indices
     return: @
     omit:
         throws:
+            FxKernelFailure
+            FxTypeToken
             ReceiverIndex
-        int: total length(source)
-        int: excluded length(indices)
-        int: i 0
-        while: i < excluded
-            int: at \indices[i]
-            if: at < 0 || at >= total
-                throw: ReceiverIndex()
-            i += 1
-        @: out (copy(()))
-        sys\resize(out; total)
-        int: written 0
-        i := 0
-        while: i < total
-            int: omitThis 0
-            int: j 0
-            while: j < excluded
-                if: \indices[j] = i
-                    omitThis := 1
-                    break
-                j += 1
-            if: omitThis = 0
-                out[written] := source[i]
-                written += 1
-            i += 1
-        sys\resize(out; written)
-        return: out
+            SequenceSize
+        return: FxSeqOmit\omit(source; indices)
 
-# reorder(source; permutation): перестановка всех физических полей.
-# Проверяет длину, диапазон и отсутствие повторов; затем использует select.
-# Пример: reorder(S; (1;0)) переставляет два поля; (0;0) отвергается.
 RxReorder:
-    []: @ source
-    []: @ permutation
+    private:
+        @: source
+        @: permutation
+    required: source permutation
     return: @
     reorder:
         throws:
+            FxKernelFailure
+            FxTypeToken
             ReceiverIndex
             ReceiverPermutation
-        int: count length(source)
-        if: length(permutation) != count
-            throw: ReceiverPermutation()
-        int: i 0
-        while: i < count
-            int: at \permutation[i]
-            if: at < 0 || at >= count
-                throw: ReceiverIndex()
-            int: j 0
-            while: j < i
-                if: \permutation[j] = at
-                    throw: ReceiverPermutation()
-                j += 1
-            i += 1
-        return: RxSelect\select(source; permutation)
+            SequenceSize
+        return: FxSeqReorder\reorder(source; permutation)
 
-# project(source; indices): select и одна общая операция copy.
-# Общие ссылки/циклы выбранных полей сохраняются одной картой копирования.
-# Нужные lexical parent копируются обычным правилом; собранный out не становится
-# новым DATA для методов. Для DATA выбранного метода используется parent(method).
-# Пример: project(S; indices) отделяет изменяемый выбранный граф от исходного S.
 RxProject:
-    []: @ source
-    []: @ indices
+    private:
+        @: source
+        @: indices
+    required: source indices
     return: @
     project:
         throws:
+            FxKernelFailure
+            FxTypeToken
             ReceiverIndex
-        @: selected RxSelect\select(source; indices)
-        return: (copy(selected))
+            SequenceSize
+        return: FxSeqProject\project(source; indices)
 
-# defaults(source; fallback): композиция, в которой fallback задаёт модель.
-# Наличие совместимого поля в source имеет приоритет, включая 0 и uninit:T.
-# Здесь НЕ производится заполнение uninit и НЕ обещан исходный порядок source:
-# порядок задаёт fallback, несовпавшие поля source добавляются в конце.
-# Пример: defaults((int: x 0); (int: x 7; int: y 9)) даёт x=0,y=9.
+# defaults(source; fallback): composition whose fallback defines the model.
+# A compatible source field wins, including 0 and uninit:T. This does not fill
+# uninit, and output ordering is the model order followed by unmatched fields.
 RxDefaults:
     @: source
     @: fallback
@@ -152,8 +97,8 @@ independent: RxSlotPatch:
 # Изменённые значения остаются ссылками на after: глубокая неизменяемость не обещана.
 # Пример: after заменяет только поле 2 -> одна запись (2,after[2]).
 RxDiff:
-    []: @ before
-    []: @ after
+    @[]: before
+    @[]: after
     return: @
     diff:
         @: patch (copy(RxSlotPatch))
@@ -199,8 +144,8 @@ RxDiff:
 # предшествует построению результата. Подменённая база даёт ReceiverPatchBase.
 # Пример: patch(A; diff(A; B)) имеет длину B и те же ссылки по всем позициям.
 RxPatch:
-    []: @ source
-    @: change RxSlotPatch
+    @[]: source
+    RxSlotPatch@: change
     return: @
     patch:
         throws:

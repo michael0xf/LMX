@@ -1,0 +1,22 @@
+FxAround:
+    private:
+        @: acquire
+        @: release
+        @: action
+        @: arguments ()
+    return: @
+    around:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: empty (copy(()))
+        private: @: resource FxApply\apply(acquire; empty)
+        private: @: resourceArgs FxOne\make(resource)
+        finally:
+            FxApply\apply(release; resourceArgs)
+        ---
+        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
+        return: FxApply\apply(action; actionArgs)

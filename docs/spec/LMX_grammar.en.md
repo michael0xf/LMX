@@ -28,6 +28,7 @@
 - [26. Structural-result EBNF](#normal-form)
 - [27. Original literal-boundary examples](#fixtures)
 - [28. Receiver-library syntax, 22 November 2026](#receiver-library-syntax)
+- [29. Postfix types and Pattern operands](#postfix-pattern-grammar)
 
 <a id="scope"></a>
 
@@ -43,7 +44,7 @@ Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.
 
 A grammar rule is universal within its domain: a name, type, nesting level, or translator convenience creates no separate syntax branch. Apply the current requirements by their specific subject and revision, and correct superseded prose directly. Only an explicit contradiction that remains between current governing requirements is referred to the author with both provisions and a minimal differing example. Deriving a result from the common rules requires no separate permission and must not be replaced by special-case parsing.
 
-P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container. The clean graph fully reflects the written source. All receivers remain as written; terminal primitive leaves are included in their direct `{type value}` representation at the address held by the Lmx cell. An uninitialized leaf contains only its type code and zero value bytes. Computations, transformations, and DATA acceptance of emitted fields occur in the namespace; they do not evaluate or expand receivers away in the source graph. Explicit graph assignment can replace those written fragments under the [semantics](LMX_semantics.en.md#graph-fragment-assignment). The typed-leaf representation licenses no eager computation of a nonterminal RHS.
+P0 builds ordered Structures, Frames with their complete written heads, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container. The clean graph fully reflects the written source. All receivers remain as written; terminal primitive leaves are included in their direct `{type value}` representation at the address held by the Lmx cell. An uninitialized leaf contains only its type code and zero value bytes. Computations, transformations, and DATA acceptance of emitted fields occur in the namespace; they do not evaluate or expand receivers away in the source graph. Explicit graph assignment can replace those written fragments under the [semantics](LMX_semantics.en.md#graph-fragment-assignment). The typed-leaf representation licenses no eager computation of a nonterminal RHS.
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `if:`, `int:`, `[]:`, and user heads use the same form. Named signature declarations use the ordinary expression operand `::`, described below; it is not another colon-Frame form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
@@ -254,7 +255,7 @@ Sources: §§4.0–4.3.
 
 Horizontal whitespace and commas separate fields of the current tail. A single physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. A blank physical line is the separate full-block boundary defined in [§15](#levels). Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
-The two-field `int: i 5` and three-field `@: ptr Model Other` are ordinary Frames. P0 assigns no special field roles based on their head names. `@: ptr Model: Other` instead contains atom `ptr` and nested Frame `Model: Other`; it is not the flat three-argument requirement/candidate form. The receiver contract and the consuming DATA or CODE role determine subsequent meaning. The named signature form preserves its declaration contract: write `SumSignature :: (int: a; int: b; return: int)`, then use `@: sumPtr SumSignature SumContext\sum`. The second field names the requirement and the third names the candidate. A Structure call can provide a value where its actual DATA declares a compatible `return`. `i: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` remain ordinary nested Frames but do not declare places named `i`, `new_var`, or `ptr`: place receivers enumerate their own arguments. In DATA, `ms: int: time` declares Structure `ms` containing the terminal primitive declaration `time`. `call: args code` has two positional fields, with no separate DATA argument. See [roles](LMX_semantics.en.md#data-code-roles) and [place declarations](LMX_semantics.en.md#receiver-args-only).
+The two-field `int: i 5` and typed-head `Model@: ptr Other` use ordinary Frames. P0 retains the complete head and tail without choosing field roles from the spelling. `@: ptr Model: Other` instead contains a nested Frame in its tail; it does not acquire a typed requirement/candidate meaning. The current receiver contract consumes NAME/TYPE/VALUE roles after the common parse. Composed typed heads use this same mechanism, not a dedicated []/@ parser.
 
 The same frames describe field-stream receivers. `import` has one or more admitted sources, `copy` exactly one, and `merge` at least two. All three read their source arguments as CODE, regardless of where the receiver is written. The common translator/consumer algorithm performs ordinary W/E selection and then checks admitted source arity. P0 must therefore not reject `merge(S)` merely for one written Structure: E may supply multiple sources. In DATA, `Struct: merge(A B)` is an ordinary declaration of `Struct`, with a receiver in its body. Its namespace consumes the result; `Struct` is not an implicit source or model. Several such operations retain their written order and separate operation maps.
 
@@ -408,7 +409,7 @@ A closing bracket without an opener is a parse error in the main document and in
 
 Implementation status is separate from this normative grammar; consult the [implementation notes](implementation-notes.en.md) without treating earlier build records as acceptance of these requirements.
 
-`target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators.
+`target[index]` is a written nonempty index suffix. A written empty suffix `T[]` is a type constructor in the receiving Expression profile, even though both use the same P0 delimiter machinery. `a[()]` remains an index occurrence: emptiness is decided before evaluating the contents. Standalone `[data]` is admitted as the explicit element group of `[]: [data]`, `T[]: [data]`, or the named counterparts; it is not silently converted to a round group. `[]:` remains a symbolic declaration head. All square content uses the same P0 and can contain nested source forms. NAME/TYPE/VALUE roles are established by the ordinary consuming contract before name lookup, initializer evaluation, or suffix attachment in that role.
 
 A non-empty `(...)` whose closing parenthesis is followed by `:=` is the left side of a write ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
 
@@ -812,9 +813,9 @@ Compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=
 
 ## 22. Address, index, and path forms
 
-Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. Flat `@: ptr Model Other` has three neighboring fields; `@: ptr Model: Other` has atom `ptr` and a nested Frame. Their subsequent roles follow the resolved receiver contract and DATA/CODE context, not special P0 parsing. `ptr: @: Model: 0` is a nested Frame rather than a declaration of the place `ptr`. A named signature requirement uses the same flat form, `@: ptr Signature Candidate`. A CODE call can yield a value when its actual DATA declares a compatible `return`. `import`, `copy`, and `merge` always read their source arguments as CODE, including inside DATA declarations; anonymous Structures and bare references remain values. P0 neither reorders arguments nor resolves types, declarations, or assignments.
+Heads `@:`, `@@:`, `@@@:` and further depths use one parameterized ordinary receiver mechanism. Postfix type heads include `T[]:`, `T@:`, `(Model)[]:`, and `(Model)@@:`; their complete written left descriptions are preserved. A type constructor returns an int code even without a following colon; the colon begins an ordinary declaration Frame with that resolved head. `Model@: ptr Candidate` is the current typed reference declaration, and `@: ptr Model` is ordinary universal-reference initialization. The old three-argument requirement/candidate shorthand is withdrawn. `int@: p @value` has a TYPE head, a raw declaration NAME, and an address VALUE initializer. `F(T@; @x)` has two actuals separated by ordinary syntax. Neither future signatures nor trial execution determine those boundaries. `@(name)` equals `@: name`, and `[](name)` equals `[]: name`; neither compact form constructs a type code.
 
-Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. `@x` explicitly obtains a numeric address; ordinary references do not require it. `\x` dereferences and does not execute code. Reserved `node` is lexical and stays fixed across nested bodies; it is not a synonym for the current DATA/stream recipient or a dynamically selected namespace. Field and index chains bind tighter than prefix operators. L2 indexing of any rank computes an offset without checks, including negative indexes. L3 reduces adjacent indexes to one linear index with one length check; this is common index-path semantics, not a separate P0 parse. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure in the role of data, it is the zero-based Nth occurrence of the name `field` at its root level, not an Array field; bare `s\field` is allowed only with one occurrence. A repeated declaration in data, including repeated declarations accepted from separate receiver streams, neither replaces the former one nor writes into it — it is one more occurrence of the name: after it the name is addressed only with the index of an occurrence, and access without an index is an error ([semantics](LMX_semantics.en.md#fields)). Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
+Prefix `@x`, postfix `T@`, and `\x` differ from declaration heads `@:` and paths `x\field`. `@x` explicitly obtains a numeric address; ordinary references do not require it. `\x` dereferences and does not execute code. Reserved `node` is lexical and stays fixed across nested bodies; it is not a synonym for the current DATA/stream recipient or a dynamically selected namespace. Field and index chains bind tighter than prefix operators. L2 indexing of any rank computes an offset without checks, including negative indexes. L3 reduces adjacent indexes to one linear index with one length check; this is common index-path semantics, not a separate P0 parse. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure in the role of data, it is the zero-based Nth occurrence of the name `field` at its root level, not an Array field; bare `s\field` is allowed only with one occurrence. A repeated declaration in data, including repeated declarations accepted from separate receiver streams, neither replaces the former one nor writes into it — it is one more occurrence of the name: after it the name is addressed only with the index of an occurrence, and access without an index is an error ([semantics](LMX_semantics.en.md#fields)). Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -983,9 +984,19 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
     // segment. Comma is an ordinary field separator and never terminates the
     // current open short form.
 
-    head                ::= bare_identifier
-                          | exact_identifier
-                          | symbolic_head
+    head                ::= head_base { type_suffix }
+                          | common_composed_head
+
+    head_base           ::= bare_identifier | exact_identifier
+                          | symbolic_head | bounded_structure
+
+    type_suffix         ::= written_empty_square_suffix | "@"
+    written_empty_square_suffix ::= "[" trivia_only "]"
+
+    // common_composed_head is retained source under the same automaton.
+    // Its validity is resolved by the normal receiver-head consumer, not
+    // by an array parser, a spelling whitelist, or trial execution.
+    // A bounded description keeps its group; P0 does not normalize it.
 
     nullary_line_body   ::= name
                             an ordinary atom; semantic resolution does not
@@ -1063,7 +1074,7 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
                             local level-0 context and stored as a Mix-flagged
                             Structure node
 
-    index_access_suffix ::= "[" [ argument_list | vertical_argument_list ] "]"
+    index_access_suffix ::= "[" (argument_list | vertical_argument_list) "]"
                             attached to a preceding target by an expression,
                             update or receiver profile that admits index/access
                             syntax
@@ -1114,6 +1125,9 @@ Source: §15.1. This describes the parse result, not a second surface grammar or
          |  ExactIdentifier
          |  SymbolicHead
          |  ProfileHeadPath
+         |  RetainedComposedHeadForm
+             // Complete written groups/postfixes under the same P0 model;
+             // normalization and type-code allocation occur only in the consumer.
 
     BodyStructure
         ::= Structure({ Field })
@@ -1212,3 +1226,11 @@ blank-line root termination and explicit tail cutters. A reference sequence is
 already a Structure; it needs no additional grammar for a List container.
 See the complete [receiver contract](LMX_semantics.en.md#functional-receivers)
 and the [signature interchangeability rule](LMX_semantics.en.md#fn-forms-equivalent).
+
+<a id="postfix-pattern-grammar"></a>
+
+## 29. Postfix types and Pattern operands
+
+The [unified contract](CORE_SEQUENCES_REGEX.en.md#types) supplies NAME/TYPE/VALUE roles after the common structural parse. Empty written [] and nonempty indexing remain distinguishable in the graph, including spans and roundtrip. Prefix @ addresses a value; postfix @ constructs a type from a full requirement. The symbolic TYPE atom @ in @[] is accepted by the common normalizer. Type interning, array creation, and initializer execution do not occur in P0.
+
+`then`, `times`, `atLeast`, `atMost`, and `optional` are ordinary discovered Expression operands. Repetition has multiplication priority; then has addition priority; the existing | retains its priority and gains a Pattern branch. Arity is checked after grouping. Neither these words nor ordinary sequence receiver names create a new grammar or change the conditional opening of only the right container. All exact contracts and examples are in [the Expression and Pattern sections](CORE_SEQUENCES_REGEX.en.md#patterns).

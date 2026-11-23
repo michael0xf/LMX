@@ -10,11 +10,11 @@
 
 **Ожидаемое наблюдение:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
-Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
+Основные варианты: LMX — **ядро: поэтапное curry**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
 
 При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Клиенты используют один текущий компонент; исторические специализированные формы остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
 
-## LMX — основной: текущее ядро
+## LMX — основной: ядро: поэтапное curry
 
 ```lmx
 Addition:
@@ -34,13 +34,16 @@ Demo:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
-        @: add5 partial(Addition\apply; (5))
-        @: add100 partial(Addition\apply; (100))
+            ReceiverIndex
+            SequenceSize
+        @: add curry(Addition\apply)
+        @: add5 add(5)
+        @: add100 add(100)
         int: saved 1000
         return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
 ```
 
-Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.
+Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.
 
 Тела используемых компонентов показаны рядом: [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
 
@@ -88,11 +91,13 @@ Scala 3; клиент использует соседний авторский g
 
 [Основной листинг](examples/scala/085_currying.scala)
 
+Другие сохранённые LMX варианты: [core](examples/lmx/variants/085_currying_core.lm3) — 308 символов (допустимый).
+
 ## Выбор основного кода и подсчёт
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 283 | 20 |
+| LMX | 292 | 23 |
 | Haskell | 180 | 8 |
 | Scala | 189 | 9 |
 
@@ -165,9 +170,9 @@ object CurryingExample {
 
 ## Семантические границы
 
-**Честная граница сравнения.** Сравнивается частичное применение сложения с двумя независимыми захватами, повторным вызовом и сохранённым локальным saved. Контроли используют соседний partial-компонент, реализованный через обычное замыкание; LMX использует своё общее построение callable. Тела и стоимость построителя показаны в 099 и реестре зависимостей, а дополнительные возможности LMX по арности отдельно оговорены.
+**Честная граница сравнения.** Сравнивается частичное применение сложения с двумя независимыми захватами, повторным вызовом и сохранённым локальным saved. Контроли используют соседний partial-компонент, реализованный через обычное замыкание; LMX использует своё общее построение callable. Тела и стоимость построителя показаны в 099 и реестре зависимостей, а дополнительные возможности LMX по арности отдельно оговорены. Короткий curry-вариант сохраняет весь клиентский сценарий; его дополнительные LMX-тела приведены отдельно в CURRY_ADAPTER_VARIANT.md. Две независимые версии ядра не вводятся.
 
-**Основной LMX.** partial отражает входную сигнатуру, принимает заданный префикс обычными правилами и строит residual-callable с оставшимися типами и исходным return. Для двух int это add5(int)→int; helper не содержит такой специализации. Все операции доступны прямо из единого ядра; DATA Addition сохраняет исходные first/second и apply. Название каталожного паттерна Currying сохранено; конкретный тест здесь проверяет частичное применение. Отдельный curry, создающий последовательность unary-ступеней, реализован и разобран в [generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx) и [каталоге ресиверов](../LMX_Fn_Receivers/CATALOG.md). Эти два API не объявляются одной операцией.
+**Основной LMX.** Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.
 
 **Наблюдаемый общий сценарий.** int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.
 
@@ -187,7 +192,7 @@ Direct partial builds add5 and add100 from an ordinary function; environment cop
 
 Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Specialized historical implementations do not satisfy the full generalized current contract. There is one current component implementation; historical specialized code is not offered as another library dependency.
 
-**Primary LMX.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
+**Primary LMX.** One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099.
 
 **Current core implementation.** partial reflects the input signature, admits a prefix by ordinary rules and builds a residual callable with remaining input types and the original return. For two ints this is add5(int)→int; the helper is not specialized to it. Core operations are direct; Addition retains its original first/second fields and apply method. The catalog title Currying is retained; this particular test exercises partial application. The separate curry receiver builds unary stages and is documented in generic_functions.lmx and the receiver catalog. The two APIs are not presented as identical operations.
 
@@ -202,4 +207,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

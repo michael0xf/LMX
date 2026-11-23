@@ -48,7 +48,7 @@ def main():
         story += [Spacer(1,4),table(['ID','Сравнение','LMX\nсимв. / стр.',a+'\nсимв. / стр.',b+'\nсимв. / стр.','Слой'],rows,[32,258,91,106,106,87]),Spacer(1,10),p('Граница подсчёта','HeadingLMX'),p('Символы - непробельные Unicode-символы основного листинга, включая его комментарии; строки - непустые. Альтернативы исключены. Необходимые вызовы и объявления включены. Библиотечный уровень допустим при сопоставимой операции контрольного языка; общий код ядра показан отдельно и учитывается один раз при сравнении реализации.','SmallLMX')]
         if g['directory']=='09_functional_computation':
             dep=stats['functional_library_dependencies'];u=dep['unique_required_total'];aliases=sum(x['characters'] for x in dep['public_bundle'])
-            story.append(p(f"Общие определения четырёх LMX-компонентов без повторов: {u['characters']} символов / {u['lines']} строк. Внутренний набор экспортов ядра: ещё {aliases} символов один раз. Реестр: IMPLEMENTATION_DEPENDENCIES.md. В 099 LMX поддерживает произвольный префикс N входов, а контрольный общий случай связывает первый вход A×B→R; равная универсальность не заявляется.",'SmallLMX'))
+            story.append(p(f"Общие определения {len(dep['components'])} учитываемых LMX-компонентов без повторов: {u['characters']} символов / {u['lines']} строк. В их числе дополнительный curry-механизм клиента 085; он не создаёт нового сравнительного сценария. Внутренний набор экспортов ядра: ещё {aliases} символов один раз. Реестр: IMPLEMENTATION_DEPENDENCIES.md. В 099 LMX поддерживает произвольный префикс N входов, а контрольный общий случай связывает первый вход A×B→R; равная универсальность не заявляется.",'SmallLMX'))
         story += [p('Полные сценарии, исходники, зависимости и границы находятся в NNN_*_comparision.md, patterns.json и examples/. Эти числа не являются измерением скорости или отчётом о выполнении LMX.','SmallLMX')]
         target=ROOT/g['directory']/f"LMX_Comparison_{g['directory']}.pdf";doc(target,'LMX: '+g['title']).build(story,onFirstPage=footer,onLaterPages=footer);generated.append(target.relative_to(ROOT).as_posix())
     story=[p('LMX: сводная статистика','TitleLMX'),p('Редакция 22 ноября 2026 года','SmallLMX'),p('90 паттернов и 9 реализаций библиотек: 99 сравнений, 297 основных листингов. Отдельно сохранены 23 GoF-сравнения (184 листинга) и 24 корневых примера LMX. Альтернативные и исторические листинги доступны рядом. Основным выбран самый короткий корректный вариант с сопоставимой границей подсчёта.')]
@@ -62,10 +62,10 @@ def main():
     story += [table(['Группа','Слой','N','LMX','Контроль 1','Симв.','Контроль 2','Симв.'],rows,[208,78,29,65,94,67,94,45]),Spacer(1,10),p('Разные группы имеют разные контрольные языки и сценарии. Суммарный рейтинг языков по этим неодинаковым наборам не строится. Слои клиентов и реализаций не смешиваются.','SmallLMX'),PageBreak(),p('Функциональные реализации и зависимости','TitleLMX')]
     dep=stats['functional_library_dependencies'];rows=[]
     for x in dep['components']:
-        a=x['primary'];b=x['shared'];rows.append([f"{x['id']:03d}",f"{a['characters']} / {a['lines']}",f"{b['characters']} / {b['lines']}",a['characters']+b['characters']])
+        a=x['primary'];b=x['shared'];label=f"{x['id']:03d}"+(' / curry клиента' if x.get('role')=='usage_companion' else '');rows.append([label,f"{a['characters']} / {a['lines']}",f"{b['characters']} / {b['lines']}",a['characters']+b['characters']])
     story += [table(['Компонент','Основное тело\nсимв. / стр.','Общие зависимости\nсимв. / стр.','Вместе, символы'],rows,[100,220,250,210]),Spacer(1,10)]
     u=dep['unique_required_total'];alias=sum(x['characters'] for x in dep['public_bundle'])
-    story += [p(f"Все четыре компонента с устранением повторов: {u['characters']} символов / {u['lines']} строк. Внутренний набор экспортов добавляет {alias} символов один раз. Столбец зависимостей выше нельзя суммировать без удаления повторов.")]
+    story += [p(f"Все {len(dep['components'])} компонентов с устранением повторов: {u['characters']} символов / {u['lines']} строк. Внутренний набор экспортов добавляет {alias} символов один раз. Столбец зависимостей выше нельзя суммировать без удаления повторов.")]
     story += [p('Код адаптеров FxKernel должен быть реализован в настоящем ядре. Он не выдаётся за уже выполненную библиотеку или за компонент нулевого размера. LMX 099 имеет более широкий контракт частичного применения, чем короткие контрольные реализации первого связывания.','SmallLMX'),p('Корневые примеры: изменённые варианты','HeadingLMX')]
     rows=[]
     for x in stats['functional_receiver_counts']['rows']:
@@ -85,9 +85,16 @@ def main():
     story += [p('Полное основание выбора записано рядом с каждым примером и в examples/validation/functional_receiver_counts.json. Более короткий код, который убирает реальные raw-occurrences, поля или эффекты, не заменяет исходный сценарий.','SmallLMX'),p('Функциональная группа: текущий общий контракт','HeadingLMX')]
     choices=[]
     for x in json.loads((ROOT/'09_functional_computation/patterns.json').read_text())['patterns']:
-        code=next(y['code'] for y in x['listings'] if y['language']=='LMX');old=x.get('alternative',{}).get('LMX',{}).get('code','')
-        choices.append([f"{x['id']:03d}",sum(not c.isspace() for c in code),sum(not c.isspace() for c in old),'Сохранён исторический исходник; договор отличается'])
-    story += [table(['ID','Текущий LMX','Исторический LMX','Граница сравнения'],choices,[70,140,160,410]),Spacer(1,8),p('Текущие общие контейнеры и реализации сопоставляются с текущими общими компонентами контрольных языков. Историческая int-специализация или клиент прежнего API не выбирается как более короткая замена другого договора. Реализации ядра и его использование показаны раздельно.','SmallLMX')]
+        code=next(y['code'] for y in x['listings'] if y['language']=='LMX')
+        active=x.get('primary_variant',{}).get('LMX','core');variants=x.get('variants',{}).get('LMX',{});eligible=x.get('eligible_variants',{}).get('LMX',[])
+        alternatives=[n for n in eligible if n!=active]
+        if alternatives:
+            name=min(alternatives,key=lambda n:sum(not c.isspace() for c in variants[n]));old=variants[name]
+            note=f'Сопоставимая пара: {active} / {name}; выбран минимум'
+        else:
+            old=x.get('alternative',{}).get('LMX',{}).get('code','');note='Исторический исходник сохранён; договор отличается'
+        choices.append([f"{x['id']:03d}",sum(not c.isspace() for c in code),sum(not c.isspace() for c in old),note])
+    story += [table(['ID','Основной LMX','Второй LMX','Граница сравнения'],choices,[70,140,160,410]),Spacer(1,8),p('Клиенты и реализации ядра считаются раздельно. Исторические специализации сохранены как пояснение. Для 085 показаны сопоставимые curry/partial; прежний процедурный код также доступен рядом. Полные основания выбора находятся в patterns.json и Markdown.','SmallLMX')]
     target=ROOT/'STATISTICS_2026-11-22.pdf';doc(target,'LMX: статистика 22 ноября 2026').build(story,onFirstPage=footer,onLaterPages=footer);generated.append(target.name)
     gof=json.loads((ROOT/'validation/gof_statistics_20261122.json').read_text())
     languages=['LMX','Python','Java','C++','C#','TypeScript','Go','Rust']

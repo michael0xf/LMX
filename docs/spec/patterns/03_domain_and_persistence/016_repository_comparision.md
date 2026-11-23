@@ -18,7 +18,7 @@
 
 ```lmx
 Repository:
-    []: @ rows
+    @[]: rows
     int: id
     return: @
     find:

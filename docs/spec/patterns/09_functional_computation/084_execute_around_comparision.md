@@ -61,13 +61,15 @@ Example:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
+            ReceiverIndex
+            SequenceSize
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Acquire\open; Release\close; Action\use)
         return: value * 1000 + Trace\events
         catch: FxCallFailure (@: outcome)
-            []: char actual outcome\failure
-            []: char expected sys\name(ResourceFailure)
+            char[]: actual outcome\failure
+            char[]: expected sys\name(ResourceFailure)
             sys\assert(length(actual) = length(expected))
             int: i 0
             while: i < length(actual)
@@ -157,7 +159,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 817 | 52 |
+| LMX | 842 | 54 |
 | Haskell | 579 | 20 |
 | Scala | 440 | 26 |
 
@@ -325,4 +327,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

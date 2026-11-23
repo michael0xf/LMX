@@ -11,7 +11,7 @@
 | 067 | [Guarded Suspension](067_guarded_suspension_comparision.md) | 258 / 17 | 208 / 11 | 386 / 14 | Протокол и порты |
 | 068 | [Balking](068_balking_comparision.md) | 106 / 11 | 211 / 6 | 296 / 9 | Протокол и порты |
 | 069 | [Thread-Local Storage](069_thread_local_storage_comparision.md) | 70 / 6 | 202 / 7 | 157 / 5 | Протокол и порты |
-| 070 | [Monitor Object](070_monitor_object_comparision.md) | 158 / 13 | 184 / 8 | 299 / 11 | Протокол и порты |
+| 070 | [Monitor Object](070_monitor_object_comparision.md) | 149 / 11 | 184 / 8 | 299 / 11 | Протокол и порты |
 
 Java показывает мониторы, volatile и TLS; Rust — Mutex/RwLock, OnceLock и безопасные области доступа. Они делают видимыми свойства, которые у LMX заменяются владением Message, а не исчезают бесплатно.
 

@@ -580,7 +580,68 @@
           ],
           "source_values_unchanged": true
         }
-      ]
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current kernel; derive delegates to ordinary merge with one copy map."
+      ],
+      "selected_variant": "receivers",
+      "alternative_variant": "original",
+      "alternative_cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена."
     },
     {
       "id": "R02",
@@ -791,7 +852,195 @@
       "declared_exits": [
         "RangeArity"
       ],
-      "exit_contract": "The client propagates the helper exit; every written application supplies exactly two bounds."
+      "exit_contract": "The client propagates the helper exit; every written application supplies exactly two bounds.",
+      "selected_variant": "original",
+      "alternative_variant": "regex",
+      "alternative_cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ],
+        "regex": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [
+          "libraries/lmx/CharacterRange.lm3"
+        ],
+        "regex": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between."
     },
     {
       "id": "V03",
@@ -1214,7 +1463,9 @@
       "H03",
       "H04",
       "H06",
-      "H07"
+      "H07",
+      "R01",
+      "V02"
     ],
     "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
     "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
@@ -1224,7 +1475,9 @@
       "H03": "receivers",
       "H04": "original",
       "H06": "original",
-      "H07": "original"
+      "H07": "original",
+      "R01": "receivers",
+      "V02": "original"
     },
     "original_and_receivers_cases_preserved": true,
     "runtime_executed": false

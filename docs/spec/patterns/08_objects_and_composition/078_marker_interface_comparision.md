@@ -28,9 +28,7 @@ Check:
     @: item
     return: int
     accepts:
-        if: satisfies(item; Marker)
-            return: 1
-        return: 0
+        return: satisfies(item; Marker) != 0
     demo:
         return: accepts(item := Marked) * 10 + accepts(item := Unmarked)
 ```
@@ -90,11 +88,40 @@ Java и Python проверяют номинальную принадлежно�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 184 | 15 |
+| LMX | 175 | 13 |
 | Java | 238 | 7 |
 | Python | 177 | 10 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- postfix-expression-review-2026-11-22 -->
+
+## Процедурный аналог LMX — вне основного подсчёта
+
+Полный прежний вариант сохранён. Основным выбран более короткий эквивалентный вариант с обычным Expression; новые библиотеки не скрывают часть реализации.
+
+```lmx
+Marker:
+    auditable:
+
+Marked:
+    auditable:
+
+Unmarked:
+    int: value 7
+
+Check:
+    @: item
+    return: int
+    accepts:
+        if: satisfies(item; Marker)
+            return: 1
+        return: 0
+    demo:
+        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)
+```
+
+**Основание выбора / Selection:** Normalize the existing satisfies result through comparison rather than a branch. The auditable marker, unmarked value field and structural-versus-nominal limitation remain.
 
 ## English explanation
 

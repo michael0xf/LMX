@@ -1,9 +1,11 @@
-# Прямые публичные ресиверы
+# Прямые публичные ресиверы и Expression-операнды
 
-Редакция 2026-11-22. Все прежние 50 позиций сохранены; 11 контейнерных/служебных операций добавлены.
+Редакция 2026-11-22. Сохранены все 61 операции текущего загруженного комплекта; имена согласованы с новой редакцией; добавлены 14 последовательностных и 40 текстовых/Pattern-операций. Всего 115 уникальных вызовных имён.
 
 Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.
 `BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.
+
+`replaceRange` меняет диапазон и возвращает target; `splice` возвращает удалённые элементы в отдельном контейнере. Текстовый `replace` возвращает новый текст. `hasPrefix` и `hasSuffix` проверяют соответствующую границу и возвращают int 1/0.
 
 | № | Имя | Прежнее имя | Вызов | Исходник | Статус |
 |---|---|---|---|---|---|
@@ -40,7 +42,7 @@
 | 31 | `bindFields` | bindFields | `bindFields(operation; bindings)` | [src/structures.lmx](src/structures.lmx) | BODY |
 | 32 | `derive` | derive | `derive(base; extension)` | [src/structures.lmx](src/structures.lmx) | BODY |
 | 33 | `transpose` | transpose | `transpose(rows)` | [src/collections.lmx](src/collections.lmx) | BODY_WITH_BRIDGE |
-| 34 | `groupBy` | groupBy | `groupBy(items; keyOf; sameKey)` | [src/collections.lmx](src/collections.lmx) | BODY_WITH_BRIDGE |
+| 34 | `groupBy` | groupby | `groupBy(items; keyOf; sameKey)` | [src/collections.lmx](src/collections.lmx) | BODY_WITH_BRIDGE |
 | 35 | `lazy` | lazy | `lazy(operation)` | [src/generic_wrappers.lmx](src/generic_wrappers.lmx) | BODY_WITH_BRIDGE |
 | 36 | `force` | force | `force(thunk)` | [src/generic_wrappers.lmx](src/generic_wrappers.lmx) | BODY_WITH_BRIDGE |
 | 37 | `once` | once | `once(operation)` | [src/generic_wrappers.lmx](src/generic_wrappers.lmx) | BODY_WITH_BRIDGE |
@@ -57,21 +59,75 @@
 | 48 | `trace` | trace | `trace(operation; sink)` | [src/generic_wrappers.lmx](src/generic_wrappers.lmx) | BODY_WITH_BRIDGE |
 | 49 | `contract` | contract | `contract(operation; pre; post)` | [src/generic_combinators.lmx](src/generic_combinators.lmx) | BODY_WITH_BRIDGE |
 | 50 | `composeData` | composeData | `composeData(code; overlay)` | [src/structures.lmx](src/structures.lmx) | BODY |
-| 51 | `record` | новое | `record(left; right=())` | [src/generic_functions.lmx](src/generic_functions.lmx) | BODY |
-| 52 | `some` | новое | `some(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 53 | `none` | новое | `none()` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 54 | `ok` | новое | `ok(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 55 | `err` | новое | `err(reason)` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 56 | `bindResult` | новое | `bindResult(input; next)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
-| 57 | `list` | новое | `list(values)` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 58 | `flatMap` | новое | `flatMap(items; next)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
-| 59 | `done` | новое | `done(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
-| 60 | `more` | новое | `more(thunk)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
-| 61 | `trampoline` | новое | `trampoline(current)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
+| 51 | `record` | record | `record(left; right=())` | [src/generic_functions.lmx](src/generic_functions.lmx) | BODY |
+| 52 | `some` | some | `some(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 53 | `none` | none | `none()` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 54 | `ok` | ok | `ok(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 55 | `err` | err | `err(reason)` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 56 | `bindResult` | bindResult | `bindResult(input; next)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
+| 57 | `list` | list | `list(values)` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 58 | `flatMap` | flatmap | `flatMap(items; next)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
+| 59 | `done` | done | `done(value)` | [src/containers.lmx](src/containers.lmx) | BODY |
+| 60 | `more` | more | `more(thunk)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
+| 61 | `trampoline` | trampoline | `trampoline(current)` | [src/containers.lmx](src/containers.lmx) | BODY_WITH_BRIDGE |
+| 62 | `range` | новое | `range(start; stop; step=1)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 63 | `slice` | новое | `slice(source; begin; end)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 64 | `reverse` | reversed | `reverse(source)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 65 | `concat` | новое | `concat(parts)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 66 | `compress` | selectMask | `compress(source; mask)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 67 | `any` | anyMatch | `any(items; accepts)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 68 | `all` | allMatch | `all(items; accepts)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 69 | `index` | findIndex | `index(items; accepts)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 70 | `count` | countWhere | `count(items; accepts)` | [src/sequences.lmx](src/sequences.lmx) | BODY_WITH_BRIDGE |
+| 71 | `replaceRange` | splice | `replaceRange(target; begin; end; values)` | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | BODY_WITH_BRIDGE |
+| 72 | `splice` | новое | `splice(target; begin; end; values)` | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | BODY_WITH_BRIDGE |
+| 73 | `append` | appendTo | `append(target; values)` | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | BODY_WITH_BRIDGE |
+| 74 | `insert` | insertInto | `insert(target; position; values)` | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | BODY_WITH_BRIDGE |
+| 75 | `deleteAt` | deleteat | `deleteAt(target; begin; end)` | [src/sequences_mutation.lmx](src/sequences_mutation.lmx) | BODY_WITH_BRIDGE |
+| 76 | `literal` | новое | `literal(text)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 77 | `oneOf` | oneof | `oneOf(text)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 78 | `noneOf` | noneof | `noneOf(text)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 79 | `charRange` | новое | `charRange(first; last)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 80 | `satisfy` | charWhere | `satisfy(predicate)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 81 | `boundaryOf` | новое | `boundaryOf(predicate)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 82 | `sameAs` | backref | `sameAs(name)` | [src/regex/primitives.lmx](src/regex/primitives.lmx) | BODY_WITH_BRIDGE |
+| 83 | `sequence` | новое | `sequence(patterns)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 84 | `choice` | новое | `choice(patterns)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 85 | `repeated` | новое | `repeated(pattern; minimum=0; maximum=unbounded; order=extendFirst)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 86 | `atomic` | новое | `atomic(pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 87 | `capture` | новое | `capture(name; pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 88 | `ahead` | lookahead | `ahead(pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 89 | `notAhead` | negative_lookahead | `notAhead(pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 90 | `behind` | lookbehind | `behind(pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 91 | `notBehind` | negative_lookbehind | `notBehind(pattern)` | [src/regex/combinators.lmx](src/regex/combinators.lmx) | BODY_WITH_BRIDGE |
+| 92 | `utf8Text` | новое | `utf8Text(source)` | [src/regex/text.lmx](src/regex/text.lmx) | BODY_WITH_BRIDGE |
+| 93 | `byteText` | новое | `byteText(source)` | [src/regex/text.lmx](src/regex/text.lmx) | BODY_WITH_BRIDGE |
+| 94 | `matchAt` | новое | `matchAt(source; pattern; position)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 95 | `wholeMatch` | fullmatch | `wholeMatch(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 96 | `find` | новое | `find(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 97 | `eachMatch` | eachmatch | `eachMatch(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 98 | `contains` | новое | `contains(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 99 | `hasPrefix` | новое | `hasPrefix(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 100 | `hasSuffix` | новое | `hasSuffix(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 101 | `matches` | новое | `matches(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 102 | `matchedSpan` | новое | `matchedSpan(result)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 103 | `matchedText` | новое | `matchedText(result)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 104 | `captureSpans` | новое | `captureSpans(result; name)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 105 | `lastCapture` | новое | `lastCapture(result; name)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 106 | `captureText` | новое | `captureText(result; name)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 107 | `captureTexts` | новое | `captureTexts(result; name)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 108 | `replaceFirst` | новое | `replaceFirst(source; pattern; replacement)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 109 | `replace` | replaceAll | `replace(source; pattern; replacement)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 110 | `split` | splitBy | `split(source; pattern)` | [src/regex/operations.lmx](src/regex/operations.lmx) | BODY_WITH_BRIDGE |
+| 111 | `then` | новое | `then(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
+| 112 | `times` | новое | `times(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
+| 113 | `atLeast` | новое | `atLeast(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
+| 114 | `atMost` | новое | `atMost(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
+| 115 | `optional` | новое | `optional(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
 
 ## Области применения
 
-- **types** — physical field type codes; []:int by language contract.
+- **types** — physical field type codes; int[] by language contract.
 - **names** — physical canonical names; anonymous entries retain typed absence.
 - **signature** — ordinary positional signature description.
 - **signatureTypes** — same signature kind: result type token left, all ordered input tokens right.
@@ -83,8 +139,8 @@
 - **compose** — inner arbitrary arity; outer consumes its one result; exact final R.
 - **pipe** — compose(second; first), exact callable signature.
 - **identity** — typed T -> T for any valid value type.
-- **map** — each record admitted as actual callback type, result record vector.
-- **filter** — typed values; ordinary int truth predicate.
+- **map** — universal sequence, ordinary callback admission/defaults, result reference vector.
+- **filter** — universal sequence; stable storage-preserving selection and int predicate.
 - **foldl** — left fold over any accumulator/item/result records.
 - **zip** — pairs of typed records, min length.
 - **zipWith** — arbitrary binary callback types, result records.
@@ -93,8 +149,8 @@
 - **traverse** — Maybe of direct Structure record vector; stop at first absence.
 - **memoize** — any arity/R; explicit key-vector equality, Message-local linear cache.
 - **fix** — F(self;T0..Tn)->R becomes T0..Tn->R.
-- **select** — physical selection in direct Structure/Array<@>.
-- **omit** — physical omissions in direct Structure/Array<@>.
+- **select** — actual-type selection preserving dense/reference profile.
+- **omit** — actual-type omissions preserving dense/reference profile.
 - **rename** — one graph copy then canonical field names updated.
 - **reorder** — full checked permutation, any field value types.
 - **project** — one shared graph copy of selected fields.
@@ -127,8 +183,97 @@
 - **ok** — Result success carrying any typed value record.
 - **err** — Result failure carrying any typed reason record.
 - **bindResult** — typed Result success chain, failure kept.
-- **list** — bare Structure/Array<@>, shallow copied record vector.
-- **flatMap** — List bind, no artificial list.items box.
+- **list** — universal sequence input, shallow copied reference vector.
+- **flatMap** — universal sequence bind, no artificial list.items box.
 - **done** — terminal Bounce with result record.
 - **more** — suspended nullary callable, arbitrary captures via partial.
 - **trampoline** — iterate Bounce until done, never execute callable final result.
+- **range** — dense int range, stop excluded, checked extent.
+- **slice** — validated half-open selection preserving actual storage profile.
+- **reverse** — new reverse container, reference targets retained.
+- **concat** — one-level concatenation; same dense T or ordinary reference array.
+- **compress** — same-length int truth mask; stable profile-preserving selection.
+- **any** — ordered predicate calls, stop at first true.
+- **all** — ordered predicate calls, stop at first false.
+- **index** — Maybe of first int index, none when absent.
+- **count** — count accepted items in source order.
+- **replaceRange** — preflight then overlap-safe replacement, same target descriptor.
+- **splice** — same replacement; return a fresh shallow snapshot of removed elements, preserving dense/reference profile.
+- **append** — same target, source values fixed before writes.
+- **insert** — replaceRange at one position.
+- **deleteAt** — replaceRange with no inserted values.
+- **literal** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **oneOf** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **noneOf** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **charRange** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **satisfy** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **boundaryOf** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **sameAs** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **sequence** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **choice** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **repeated** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **atomic** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **capture** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **ahead** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **notAhead** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **behind** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **notBehind** — ordinary text-pattern builder; see REGEX_IMPLEMENTATION.md.
+- **utf8Text** — ordinary text-pattern text_profile; see REGEX_IMPLEMENTATION.md.
+- **byteText** — ordinary text-pattern text_profile; see REGEX_IMPLEMENTATION.md.
+- **matchAt** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **wholeMatch** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **find** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **eachMatch** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **contains** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **hasPrefix** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **hasSuffix** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **matches** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **matchedSpan** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **matchedText** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **captureSpans** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **lastCapture** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **captureText** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **captureTexts** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **replaceFirst** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **replace** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **split** — ordinary text-pattern receiver; see REGEX_IMPLEMENTATION.md.
+- **then** — ordinary Pattern operand with common left/right ABI.
+- **times** — ordinary Pattern operand with common left/right ABI.
+- **atLeast** — ordinary Pattern operand with common left/right ABI.
+- **atMost** — ordinary Pattern operand with common left/right ABI.
+- **optional** — ordinary Pattern operand with common left/right ABI.
+
+## Готовые значения, требования и исходы
+
+Эти имена читаются как значения/описания. Они не являются неявными nullary-вызовами и не входят в число вызовных имён выше.
+
+| Имя | Роль | Исходник |
+| --- | --- | --- |
+| `emptyPattern` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `neverPattern` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `anyChar` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `lineChar` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `lineBreak` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `textStart` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `textEnd` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `lineStart` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `lineEnd` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `asciiDigit` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `asciiLetter` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `asciiWord` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `asciiSpace` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `wordBoundary` | ready_pattern | [src/regex/values.lmx](src/regex/values.lmx) |
+| `extendFirst` | configuration_value | [src/regex/support.lmx](src/regex/support.lmx) |
+| `stopFirst` | configuration_value | [src/regex/support.lmx](src/regex/support.lmx) |
+| `unbounded` | configuration_value | [src/regex/support.lmx](src/regex/support.lmx) |
+| `Pattern` | ordinary_structural_requirement | [src/regex/support.lmx](src/regex/support.lmx) |
+| `TextView` | ordinary_structural_requirement | [src/regex/support.lmx](src/regex/support.lmx) |
+| `Match` | ordinary_structural_requirement | [src/regex/support.lmx](src/regex/support.lmx) |
+| `Span` | ordinary_structural_requirement | [src/regex/support.lmx](src/regex/support.lmx) |
+| `PatternArgument` | declared_failure | [src/regex/support.lmx](src/regex/support.lmx) |
+| `PatternEncoding` | declared_failure | [src/regex/support.lmx](src/regex/support.lmx) |
+| `PatternPosition` | declared_failure | [src/regex/support.lmx](src/regex/support.lmx) |
+
+Существующий `|` дополнен веткой [RxAlternativeDispatch\probe](src/regex/operands.lmx), без замены прежнего numeric/Array-пути. Постфиксы T[]/T@ подключаются в существующем общем resolver ядра, а не как новые дублирующие имена.
+
+[Последовательности](SEQUENCES_IMPLEMENTATION.md) · [Patterns и текст](REGEX_IMPLEMENTATION.md) · [Адаптеры](ADAPTER_IMPLEMENTATION.md).

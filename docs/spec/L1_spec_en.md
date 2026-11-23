@@ -1,5 +1,7 @@
 # L1 Specification
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 L1 is the generated intermediate representation used to lower the kernel to C99. Graph-language rules belong to [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md); only the C projection remains here. Current translator status and transitional hand-written L1 belong to the [implementation notes](implementation-notes.en.md).
 
 <a id="scope"></a>
@@ -300,8 +302,11 @@ External tables are not automatically attached to an arbitrary S.
 
 An established correspondence maps required model fields to the candidate's actual physical fields, including differing
 field order. It belongs to the reception or traversal that obtained it and is retained for those reads, address-taking
-operations and explicit graph writes. The arena has no persistent map store and no separate map for `call` or DATA;
-call-local places are not published. Different field order cannot be reduced to identity ordinals; reading,
+operations and explicit graph writes. The arena has no persistent store of these concrete field/namespace maps
+and no separate map for `call` or DATA; call-local places are not published. The common kernel's required
+table of completed directed TYPE-pair checks is separate metadata: stable complete requirements reuse a
+result under the applicable type/conversion context without retaining a concrete reception map.
+Different field order cannot be reduced to identity ordinals; reading,
 address-taking, and explicit writes to the original graph follow that same correspondence.
 In data every declaring form is an occurrence of the name: a repeated declaration neither
 replaces the former one nor writes into it, and a name with two or more occurrences is addressed only with the index of
@@ -380,3 +385,8 @@ Where explicitly compiled, generated callables lower to real methods with
 their established typed ABI. `satisfies` is the current name of the admission
 mechanism. See [L2 integration](L2_spec_en.md#functional-receiver-abi) and the
 [kernel integration](kernel-implementation.en.md#receiver-kernel-integration).
+
+<a id="unified-20261122"></a>
+## Lowering of current derived types
+
+Lowering consumes the complete head and resolved full type from the same common path as interpretation. It may specialize actual dense layouts or direct calls when proven, while preserving dynamic admission, missing actuals, computed defaults, declared exits, and the source graph. T[] and T@ are int-valued type constructors, not alternate prefixes. No payload is read from uninit:T, and an accepted array requirement does not change its actual stride. See [the current unified contract](CORE_SEQUENCES_REGEX.en.md).

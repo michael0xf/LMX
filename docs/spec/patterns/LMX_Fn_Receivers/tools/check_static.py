@@ -91,8 +91,19 @@ if re.search(r'doubleColon|RxTypeChain', code):
     errors.append('obsolete active receiver remains')
 
 catalog = json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8'))
-if len(catalog) != 61 or len({row['name'] for row in catalog}) != 61:
-    errors.append('catalog must contain all 50 original identities and 11 additions')
+if len(catalog) != 115 or len({row['name'] for row in catalog}) != 115:
+    errors.append('catalog must retain all 61 uploaded identities plus 14 sequence and 40 text operations')
+expected_entries = {
+    'replaceRange': ('FxSeqReplaceRange\\replaceRange', 'replaceRange(target; begin; end; values)'),
+    'splice': ('FxSeqSplice\\splice', 'splice(target; begin; end; values)'),
+    'replace': ('RxReplace\\replace', 'replace(source; pattern; replacement)'),
+    'hasPrefix': ('RxHasPrefix\\hasPrefix', 'hasPrefix(source; pattern)'),
+    'hasSuffix': ('RxHasSuffix\\hasSuffix', 'hasSuffix(source; pattern)'),
+}
+for name, (api, signature) in expected_entries.items():
+    matches = [x for x in catalog if x['name'] == name]
+    if len(matches) != 1 or matches[0]['api'] != api or matches[0]['signature'] != signature:
+        errors.append('wrong or non-unique agreed API entry ' + name)
 for row in catalog:
     name = row['api'].split('\\')[0]
     expected = disabled if row['status'] == 'GAP' else roots
@@ -104,9 +115,9 @@ for required in ['(a b c) := (b c a)', '(a b c) := (copy(s))']:
         errors.append(f'missing current assignment example: {required}')
 
 kernel_calls = sorted(set(re.findall(r'\bFxKernel\\+(\w+)\s*\(', source)))
-expected_kernel_calls = ['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData']
+expected_kernel_calls = sorted(['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData', 'currentCall', 'frameSlot', 'prepare', 'enter', 'releaseCall', 'arrayInfo', 'arrayRead', 'arrayAdmit', 'arrayWrite'])
 if kernel_calls != expected_kernel_calls:
-    errors.append(f'provider calls differ from eight documented interfaces: {kernel_calls}')
+    errors.append(f'provider calls differ from 17 documented common interfaces: {kernel_calls}')
 
 for row in catalog:
     if not (ROOT / row['source']).is_file():
@@ -144,7 +155,7 @@ report = {
     'prepared_assertions': len(re.findall(r'\bsys\\assert\(', code)),
     'checks': ['literal and bracket balance', 'four-space indentation',
                'explicit multi-level cutters', 'qualified root coverage',
-               'single-file assembly equality', '61-entry catalog coverage',
+               'single-file assembly equality', '115-entry unique callable/operand catalog coverage',
                'no active obsolete receiver', 'two current assignment examples',
                'exact documented provider dependencies'],
     'limitations': ['does not implement full LMX grammar or name lookup',

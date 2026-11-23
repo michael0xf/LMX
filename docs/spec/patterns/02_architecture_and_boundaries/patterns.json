@@ -122,7 +122,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
+          "code": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
           "notes_ru": "Вызов UseCase\\demo(). output(decision:int)→int — внешний порт отображения; бизнес-правило не читает HTTP-профиль или GUI.",
           "notes_en": "Call UseCase\\demo(). output(decision:int)→int is an outer presentation port; the business rule does not read an HTTP profile or GUI."
         },
@@ -146,7 +146,26 @@
           "why_ru": "Правило направления зависимостей и use cases.",
           "why_en": "Dependency direction and use cases."
         }
-      ]
+      ],
+      "procedural_lmx": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
+      "variants": {
+        "LMX": {
+          "procedural": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
+          "direct_expression": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
     },
     {
       "id": 8,

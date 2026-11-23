@@ -85,6 +85,19 @@ fn: dl_target (@: path char; @: target char; size_t: count) int
     return: failed
 end: dl_target
 
+# A `](` after an odd number of backticks in its paragraph stands in inline code and is not a link: an inline code span may
+# cross a line break but not a blank line (twin: doc_link_targets in tools/check_docs.py). The text is taken after fence removal.
+fn: dl_in_code (@: text char; size_t: first) int
+    size_t: at 0U
+    int: in_code 0
+    at := first
+    while: at > 0U && (at < 2U || text[at - 1U] != (cast: (char) 10) || text[at - 2U] != (cast: (char) 10))
+        at := at - 1U
+        if: text[at] = (cast: (char) 96)
+            in_code := 1 - in_code
+        ---
+    return: in_code
+
 fn: dl_document (@: path char) int
     @: original char 0
     @: stripped char 0
@@ -100,6 +113,9 @@ fn: dl_document (@: path char) int
         first := dt_find(stripped, count, scan, "](", 2U)
         if: first = (cast: (size_t) -1)
             break
+        if: dl_in_code(stripped, first) != 0
+            scan := first + 2U
+            continue
         first := first + 2U
         after := first
         while: after < count && stripped[after] != (cast: (char) 41)

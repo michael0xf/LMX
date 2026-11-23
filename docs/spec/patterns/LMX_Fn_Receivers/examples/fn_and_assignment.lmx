@@ -62,16 +62,16 @@ FxFnReadyCodesExample:
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
-        @: selected made FxFnMixedTarget\run
+        made@: selected FxFnMixedTarget\run
         sys\assert(selected(p0 := 7; p1 := 1.5; p2 := FxFnReadySamples) = 7)
-        @: oldStyle FxFnExpectedMixed FxFnMixedTarget\run
+        FxFnExpectedMixed@: oldStyle FxFnMixedTarget\run
         sys\assert(oldStyle(p0 := 9; p1 := 2.0; p2 := FxFnReadySamples) = 9)
         return: 1
 
 # 2. Обычный explicit named call того же метода.
 # left и элементы tokens уже содержат указатели на записи, поэтому здесь
 # не требуется prepared boxing и нет операции разыменования их payload.
-# Не следует заменять left := ...[0] выражением @(...[0]): это иной уровень.
+# Не следует заменять left := ...[0] адресным выражением @...[0]: это иной уровень.
 FxFnUninitExample:
     return: int
     run:
@@ -81,10 +81,12 @@ FxFnUninitExample:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         int: integralTag sys\typeof(FxFnUninitSamples\integral[0])
         int: realTag sys\typeof(FxFnUninitSamples\real[0])
         int: referenceTag sys\typeof(FxFnUninitSamples\reference[0])
-        []: @ tokens ()
+        @[]: tokens []
         sys\resize(tokens; 3)
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
@@ -93,7 +95,7 @@ FxFnUninitExample:
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
-        @: selected made FxFnMixedTarget\run
+        made@: selected FxFnMixedTarget\run
         sys\assert(selected(p0 := 11; p1 := 3.0; p2 := FxFnReadySamples) = 11)
         sys\assert(sys\typeof(FxFnUninitSamples\integral[0]) = integralTag)
         sys\assert(sys\typeof(FxFnUninitSamples\real[0]) = realTag)
@@ -127,16 +129,18 @@ FxFnProcedureExample:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         FxFnProcedureState\calls := 0
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
-        []: @ tokens ()
+        @[]: tokens []
         @: made FxSignatureOperand\make(left := original\resultType; right := tokens)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
         sys\assert(FxFnProcedureState\calls = 0)
-        @: selected made FxFnProcedureTarget\run
+        made@: selected FxFnProcedureTarget\run
         selected()
         sys\assert(FxFnProcedureState\calls = 1)
         return: 1
@@ -202,6 +206,8 @@ FxFnAndAssignmentExamples:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         sys\assert(FxFnReadyCodesExample\run() = 1)
         sys\assert(FxFnUninitExample\run() = 1)
         sys\assert(FxFnProcedureExample\run() = 1)

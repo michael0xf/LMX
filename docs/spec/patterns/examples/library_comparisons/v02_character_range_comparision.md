@@ -22,7 +22,7 @@ runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
 
 ```lmx
 TicketCode:
-    []: char candidate
+    char[]: candidate
     return: int
     accepts:
         throws: RangeArity
@@ -108,7 +108,7 @@ between value (lower, upper) = lower <= value && value <= upper
 
 The extracted application library implements only an inclusive character range. Ticket length, separator position and all ASCII bounds stay in the client. LMX uses the supplied header in prepared-value mode with its existing addition priority; each operator application is explicitly grouped before Boolean composition. No raw evaluation, hidden parser, I/O or Message protocol is introduced.
 
-The complete implementation is shown for both languages. LMX validates exactly two right operands and propagates the named `RangeArity` exit through `accepts`. Haskell uses a statically typed pair of bounds, so malformed arity is a type-level mismatch rather than that runtime exit. Reversed bounds give false in both implementations. The required successful/unsuccessful ticket outcomes and the embedded-NUL negative fixture are retained. Unicode letters or digits outside the written ASCII ranges do not become accepted through a general character-class predicate.
+The complete implementation is shown for both languages. LMX validates exactly two right operands and propagates the named `RangeArity` exit through `accepts`. Haskell uses a statically typed pair of bounds, so malformed arity is a type-level mismatch rather than that runtime exit. Reverse bounds give false in both implementations. The required successful/unsuccessful ticket outcomes and the embedded-NUL negative fixture are retained. Unicode letters or digits outside the written ASCII ranges do not become accepted through a general character-class predicate.
 
 Load the helper source before using the LMX client namespace. The Haskell module search path is given above. Counts separate clients from their full own libraries; the LMX client is shorter, but client plus library is larger than the former standalone validator. These are documentation-reviewed examples, not execution receipts or benchmarks.
 
@@ -120,3 +120,45 @@ Load the helper source before using the LMX client namespace. The Haskell module
 - [Haskell 2010 Report, глава 3](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html): применение именованной функции в инфиксной форме, tuple/list patterns и выражения.
 
 Внешние первичные источники открыты и прочитаны 2026-11-21; листинги написаны для этого сравнения.
+
+
+## New Pattern alternative — separate comparison boundary
+
+The current Pattern specification can express the same complete ASCII ticket
+check on an explicitly eight-bit byteText substrate. The new form is preserved
+as a separately executed alternative in [V02.lm3](../lmx/V02.lm3) and the
+[variant registry](../variants.json):
+
+```lmx
+TicketCode:
+    char[]: candidate
+    return: int
+    accepts:
+        throws:
+            PatternArgument
+            PatternEncoding
+            PatternPosition
+            SequenceSize
+            ReceiverIndex
+            FxKernelFailure
+            FxTypeToken
+        return: matches(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+```
+
+`charRange` receives one-unit text boundaries, `times` repeats exactly twice,
+and the prefix `then` form preserves its grouped Pattern arguments under the
+ordinary operand ABI. `matches` consumes the entire TextView. The same eleven
+positive/negative ticket cases, including NUL and non-ASCII input, are retained.
+The source has 245 nonwhitespace characters, including its declared exits.
+
+This alternative is not eligible to replace the competitive CharacterRange
+client. The existing Haskell control uses a small explicit range predicate and
+list/record pattern matching; it does not import a regex engine. The original
+LMX example also demonstrates the custom `between` operand and its RangeArity
+contract, which the new Pattern formulation does not purport to implement.
+Neither those helper tests nor their complete source has been removed.
+
+The Pattern implementation and its integration boundaries are visible in
+[REGEX_IMPLEMENTATION.md](../../LMX_Fn_Receivers/REGEX_IMPLEMENTATION.md) and the
+[current source directory](../../LMX_Fn_Receivers/REGEX_IMPLEMENTATION.md). This is an
+application of the new semantics, not a measured LMX or Haskell execution.

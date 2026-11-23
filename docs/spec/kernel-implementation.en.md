@@ -1,5 +1,7 @@
 # LMX kernel implementation specification: graph, namespace, storage, and execution
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 This is the implementation target for the standalone Fable acceptance package, reconciled through
 2026-11-21. It describes required observable behavior and preserves the established machine,
 arena, ABI, ownership, and explicit-compilation contracts. It is not a report that a particular
@@ -502,7 +504,7 @@ to positions, and supplies the candidate at the same indexes. The candidate's ow
 extra public aliases. Actual evaluation remains in written order; defaults, requiredness,
 throws, and hidden binding use the candidate's real declarations and names. Values in the fn
 template do not overlay parent(C). A two-argument `@: p Model` initially refers to Model itself;
-separating requirement and implementation uses `@: p Requirement Candidate`.
+separating requirement and implementation uses the typed head in `Requirement@: p Candidate`.
 
 An ordinary explicit structural model instead requires its entire specified tree, including
 written method subtrees; additional candidate fields are allowed under the common rules.
@@ -616,7 +618,7 @@ initialization source or global outer-local copying rule.
 
 ### 3.5. Names, receiving views, and source facts
 
-Written heads, paths, expression names, and actual labels remain words in the source graph. The
+Word occurrences in heads, paths, expressions, and actual labels remain words in the source graph; a composed head retains its complete written structure. The
 consumer resolves them through its current namespace and lexical/dynamic contracts. The builder
 does not bake a hidden future binding into a word or expand a mention of a known Structure.
 `Struct1: Struct2` contains its written mention/reference rather than copied fields; Struct2's
@@ -680,9 +682,13 @@ its logical names look like immediate physical children.
 ### 5.2. Service tables for concrete work
 
 Namespace mappings and local places belong to the actual traversal/call. Construction, expression,
-copy, and traversal-correspondence tables live for the operation that needs them and are destroyed
-on its exits. Reused facts owned by `satisfies` remain scoped to the established operation or
-reception; they are not a new permanent namespace, all-environments cache, or arena resolution registry.
+copy, and concrete traversal-correspondence tables live for the operation that needs them and are
+destroyed on its exits. Concrete field maps and value-dependent admission facts owned by
+`satisfies` remain scoped to the established operation or reception. Separately, the common kernel
+maintains the required table of completed directed TYPE-pair checks. Stable full requirements
+reuse their completed result under the applicable type/conversion context, including between
+calls. An in-progress recursive pair is not a completed positive result. This type metadata is
+not a permanent namespace, all-environments admission cache, or arena resolution registry.
 The selected W/E map remains until the chosen call is executed; it is not recomputed with another
 reading. An satisfies correspondence maps required model fields to physical candidate fields,
 including reordered layouts, for the reads, addresses, and explicit writes it serves. The next
@@ -996,7 +1002,7 @@ or metadata with another required purpose must be retained for that purpose.
 | `LmxOp`, `LMX_WALK_OP_*`, generated numeric operation/selectors as a second program | Walk the common source Lmx graph; temporary expression analysis is scoped (§3.3) |
 | Type-by-address ranges, typed pool classification, per-type chunks | Type from record code; intervals only for ownership; one arena record stream (§2) |
 | Embedded VoidArray, inline capacity, header native | Flat header, common dynamic storage, existing capacity and call tables (§3.1) |
-| Persistent arena-wide satisfies/resolution maps | Correspondence retained only by the reception/traversal needing it (§5.2) |
+| Persistent concrete field/namespace admission and resolution maps | Concrete correspondence remains reception/traversal-local; completed stable directed TYPE pairs use the required common table (§5.2) |
 | `LmxCodeLink`, reset-only `lmx_code_*`, `reset_gen`, `code_uses`, invalidation | Explicit compilation and endturn (§6.5); keep unrelated GC references |
 | Loaded/dirty frame rows, flush, automatic copy-back | Own places or immediate transparent caller aliases, with no graph publication (§6.3–6.6) |
 | Executable fn/sub object constructors, fncall, separate data parameter | Ordinary selected Structure, actual parent DATA, named positional signature requirement (§3.4) |
@@ -1062,7 +1068,7 @@ only checks actually run. Historical receipts do not prove this edition's behavi
 | Area | Evidence an implementation must eventually provide |
 |---|---|
 | Records and storage | Initialized value layout and alignment; code-only uninit with zero payload; explicit graph-fragment replacement; no stable raw payload promise across replacement; no type-by-range lookup; dense numeric Array and native-local distinctions |
-| Source graph | Full source including primitive leaves and every receiver/group; namespace processing preserves it; ordinary explicit graph assignment can replace receiver fragments; executable updates use the existing compile/endturn boundary |
+| Source graph | Full source including primitive leaves and every receiver/group; namespace processing preserves it; ordinary explicit graph assignment can replace receiver fragments; native (machine-code) updates use the existing compile/endturn boundary |
 | Parser closure | Empty/whitespace-only physical lines close to local root; comments/literals/Mix/pairs/EOF/source coordinates retain their contracts |
 | Calls and signatures | Actual parent, no-data R0, no executable fn/sub/fncall; `Name :: DATA` has one left declaration identifier and one intact right template; positional type comparison remains distinct from full structural models |
 | Selection | All applicable W/E pairs counted; no hidden rescue of required inputs; selected map reused; named-position counter and once-only actual effects |
@@ -1132,8 +1138,9 @@ The source provider contracts cover signature extraction, type normalization,
 DATA construction, ordinary callable construction, call outcome capture,
 rethrow of an allowed exit, canonical field-name reading and writing. Locate
 and reuse the existing algorithms before adding a public entry. Do not invent a
-second name table, persistent arena-wide admission cache or hidden target
-execution while extracting metadata.
+second name table, persistent arena-wide cache of concrete field/namespace admissions, or hidden
+target execution while extracting metadata. The required completed TYPE-pair table retains its
+separate metadata contract (§5.2).
 
 Construct real owner/DATA/CODE links, required/private generated inputs and
 private captured state. The initial target retains its original owner and
@@ -1179,3 +1186,8 @@ includes mixed payload types, arbitrary finite arity, void, nullary functions,
 full/empty partial prefixes, callable final results, field-name edge cases and
 both directions of fn equivalence. Static publication checks are separate from
 running those cases on the kernel.
+
+<a id="unified-20261122"></a>
+## Common implementation points
+
+Implement postfix type construction, declaration-head resolution, normalization, type-code allocation, checked type pairs, and array/ref admission in the existing common kernel paths. A head can be a retained composed source form; only a literal word head is identified directly by its canonical spelling pointer. Resolve NAME/TYPE/VALUE roles before premature lookup or index attachment. Metadata must survive attach and must not reference rolled-back or freed temporary descriptions. No local per-receiver type registry is acceptable. Dense read/admit/write, safe extent calculation, and access to existing selected call phases are the narrow integration boundaries of the supplied LMX algorithms. Pattern backtracking, sequence loops, adapter projection, and memoization are LMX bodies, not opaque kernel substitutes. See [current contracts](CORE_SEQUENCES_REGEX.en.md) and [the bridge inventory](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).

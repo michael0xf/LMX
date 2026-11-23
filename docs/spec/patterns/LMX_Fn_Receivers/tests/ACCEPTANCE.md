@@ -99,8 +99,14 @@ interpreter→native, native→interpreter, native→native. Native создаё
 - `(a b c) := f()` не раскрывает возвращённую Structure.
 - `(a b) := (copy(Pair))` использует написанный group и явный field stream.
 - `scalar := (copy(Pair))` сохраняет одну Structure, если этого требует scalar.
-- `curry`/`partial` не угадывают missing required positions по наличию defaults.
+- `curry`/`partial` сохраняют обычное selection: required без actual и собственного applicable default отклоняется; defaults не исполняются ради анализа.
 - `uncurry` не запускает ступени для анализа их следующей сигнатуры.
 - `names(S)` не реализуется через sys\name(pointerIdentifier).
 - `rename` не реализуется заменой строк результата toLmx.
 - `satisfies` не превращается в запуск candidate для проверки совместимости.
+
+## Текущая попытка исправления callable adapters
+
+Новые тела описаны в [ADAPTER_IMPLEMENTATION.md](../ADAPTER_IMPLEMENTATION.md). [adapter_semantics.lmx](adapter_semantics.lmx) содержит конкретные исходные пробы, запускаемые через `FxAdapterExamples\run()` после подключения настоящих call-phase bridges. [ADAPTER_ACCEPTANCE.md](ADAPTER_ACCEPTANCE.md) отделяет написанные пробы от ещё требующих инстанцирования сценариев; [adapter_acceptance.json](adapter_acceptance.json) содержит все A01–A20/B01–B11 из текущего §37. Все четыре execution режима каждого случая имеют статус NOT_RUN.
+
+Механическая проверка отсутствия старой eager capture/Ti→@ таблицы не доказывает runtime-сохранение default, parent, lifetime и native ABI. Эти проверки остаются обязательными; старые исходники под reference не участвуют в текущей сборке.

@@ -7,7 +7,16 @@ import re,json
 R=Path(__file__).resolve().parents[1]
 FILES=[p for p in (R/'src').glob('*.lmx') if p.name not in {'public.lmx','kernel_contracts.lmx'}]+list((R/'examples').glob('*.lmx'))
 records={}; contents={}
-DYNAMIC_SEEDS={'FxCaptureOne\\capture':{'FxRecordArity'}}
+DYNAMIC_SEEDS={'FxCaptureOne\\capture':{'FxRecordArity'},'FxFrameRead\\read':{'FxCallFailure'}}
+PROVIDER_SEEDS={
+ 'FxKernel\\arrayRead':{'ReceiverIndex'},
+ 'FxKernel\\arrayWrite':{'ReceiverIndex'},
+ 'FxKernel\\arrayAdmit':{'SequenceElement'},
+}
+# Existing finite declarations can include dynamic calls not reconstructible by
+# this lexical graph. Retain them as conservative seeds; never erase them just
+# because a dynamic target is not visible as a direct qualified call.
+
 def clean(s):
  return re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:``|[^`])*`|#[^\n]*',lambda m:' '*len(m.group()),s)
 for p in FILES:
@@ -24,18 +33,22 @@ for p in FILES:
    while stop<end and (not lines[stop].strip() or lines[stop].startswith('        ') or lines[stop].lstrip().startswith('#')):stop+=1
    block='\n'.join(lines[j+1:stop]);c=clean(block)
    if not re.search(r'\breturn\b|\bthrow:|\b[A-Za-z_]\w*\\\w+\s*\(|:=|\+=|-=|\*=|/=',c):continue
-   body=lines[j+1:stop];out=[];k=0
+   body=lines[j+1:stop];out=[];k=0;declared=set()
    while k<len(body):
     if body[k].startswith('        throws:'):
      k+=1
-     while k<len(body) and (body[k].startswith('            ') or not body[k].strip()):k+=1
+     while k<len(body) and (body[k].startswith('            ') or not body[k].strip()):
+      name=body[k].strip()
+      if re.fullmatch(r'[A-Za-z_]\w*',name):declared.add(name)
+      k+=1
     else:out.append(body[k]);k+=1
    text='\n'.join(out);code=clean(text)
-   own=set(re.findall(r'\bthrow:\s*(\w+)\s*\(',code))
+   own=declared|set(re.findall(r'\bthrow:\s*(\w+)\s*\(',code))
    edges=set(re.findall(r'\b((?:Fx|Rx)\w+\\\w+)\s*\(',code))
    edges |= set(re.findall(r'\b((?:Fx|Rx)\w+\\\w+)\s*\)',code))
    own |= DYNAMIC_SEEDS.get(root+'\\'+m.group(1),set())
    if any(x.startswith('FxKernel\\') for x in edges):own|={'FxTypeToken','FxKernelFailure'}
+   for edge in edges:own|=PROVIDER_SEEDS.get(edge,set())
    records[root+'\\'+m.group(1)]={'p':p,'start':j+1,'stop':stop,'body':out,'own':own,'edges':edges,'effects':set(own)}
 for _ in range(len(records)+1):
  changed=False

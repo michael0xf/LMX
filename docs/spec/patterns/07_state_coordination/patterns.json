@@ -290,7 +290,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "code": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
           "notes_ru": "LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Один AccountMessage получает оба withdraw через обычную почту. Инвариант полностью находится внутри handler, без ожидания внешнего ответа между проверкой и записью. Контрольные версии защищают весь метод одним монитором/Mutex.",
           "notes_en": "LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. One AccountMessage receives both withdraw requests through ordinary mail. The entire invariant lives inside one handler with no external wait between check and write. Controls protect the whole method using a monitor/Mutex."
         },
@@ -320,7 +320,26 @@
           "why_ru": "Объект защищает инвариант всей операции над своим состоянием.",
           "why_en": "An object protects an invariant across a complete operation on its state."
         }
-      ]
+      ],
+      "procedural_lmx": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+      "variants": {
+        "LMX": {
+          "procedural": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
+          "direct_expression": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Combine two pure rejection guards with ordinary short-circuit OR. A negative amount still skips the balance read; the accepted update remains one Message turn. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
     }
   ]
 }

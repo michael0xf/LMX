@@ -4,7 +4,7 @@
 
 ## Контракт общего ресивера
 
-pipe(first; second) создаёт callable без исполнения стадий. Его входы совпадают со всеми входами first; second имеет один вход, принимающий результат first. Промежуточный и конечный типы могут отличаться. Сохранённый callable выполняет стадии один раз и в записанном порядке. Два компонента — смысл бинарной композиции, не ограничение арности исходной функции.
+pipe(first; second) создаёт callable без исполнения стадий. Его входы и их политика совпадают со входами first; second получает один явный actual с результатом first и может иметь дополнительные допустимые optional/default входы. Промежуточный и конечный типы могут отличаться. Сохранённый callable выполняет стадии один раз и в записанном порядке. Два компонента — смысл бинарной композиции, не ограничение арности исходной функции.
 
 Публичный ресивер `pipe` уже входит в единое текущее ядро и используется прямо. Никаких import или выбираемых версий библиотек нет. Внутренние Fx/Rx-имена ниже обозначают структуры реализации ядра.
 
@@ -14,9 +14,12 @@ pipe(first; second) создаёт callable без исполнения стад
 
 Ниже приведено консервативное замыкание по корневым LMX-определениям от `FxPipe`: полные определения перечислены один раз, включая те, которые упомянуты в генерируемом тексте тела. Это видимый исходник текущего ядра; он не подменяется строкой импорта. Общие определения повторно используются другими receivers; одинаковые определения не считаются новой самостоятельной реализацией для каждого клиента.
 
+- [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
 - [generic_combinators.lmx](../../LMX_Fn_Receivers/src/generic_combinators.lmx)
 - [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
 - [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
+- [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
+- [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
 
 ```lmx
 FxTry:
@@ -46,6 +49,28 @@ FxApply:
             throw: FxCallFailure(outcome)
         return: outcome\value
 
+FxFrameAttempt:
+    private: @: frame
+    return: @
+    attempt:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+        return: FxKernel\enter(frame; frame\failures)
+
+FxFrameApply:
+    private: @: frame
+    return: @
+    apply:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: outcome FxFrameAttempt\attempt(frame)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
 FxOne:
     private: @: value
     return: @
@@ -58,19 +83,130 @@ FxOne:
 FxCompositionEngine:
     private:
         @: state
-        @: args
+        @: frame
     return: @
     run:
         throws:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
-        private: @: middle FxApply\apply(state\inner; args)
+        private: @: middle FxFrameApply\apply(frame)
         return: FxApply\apply(state\outer; FxOne\make(middle))
 
 FxCompositionState:
     @: outer 0
     @: inner 0
+
+FxSeqInfo:
+    private: @: source
+    required: source
+    return: @
+    get:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+        return: FxKernel\arrayInfo(source := source)
+
+FxSeqAllocate:
+    private:
+        int: arrayType
+        int: count
+    required: arrayType count
+    return: @
+    make:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            SequenceSize
+        if: count < 0
+            throw: SequenceSize()
+        private: @: out (arrayType: [])
+        private: @: info FxSeqInfo\get(out)
+        if: count > info\maxLength
+            throw: SequenceSize()
+        sys\resize(out; count)
+        return: out
+
+FxSeqRead:
+    private:
+        @: source
+        int: index
+    required: source index
+    return: @
+    read:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+        return: FxKernel\arrayRead(source := source; index := index)
+
+FxSeqSize:
+    private:
+        int: base
+        int: extra
+        int: limit
+    required: base extra limit
+    return: int
+    sum:
+        throws:
+            SequenceSize
+        if: base < 0 || extra < 0 || base > limit
+            throw: SequenceSize()
+        if: extra > limit - base
+            throw: SequenceSize()
+        return: base + extra
+
+FxSeqConcat:
+    private: @: parts
+    required: parts
+    return: @
+    concat:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        FxSeqInfo\get(parts)
+        private: int: count length(parts)
+        private: int: arrayType @[]
+        private: int: elementType 0
+        private: int: allDense 1
+        private: int: i 0
+        # Inspect all parts, including empty dense parts. Comparison uses
+        # canonical full element codes from the common type resolver.
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            private: @: info FxSeqInfo\get(part)
+            if: i = 0
+                arrayType := info\arrayType
+                elementType := info\elementType
+            if: info\dense = 0 || info\elementType != elementType
+                allDense := 0
+            i += 1
+        if: count = 0 || allDense = 0
+            arrayType := @[]
+        private: @: out FxSeqAllocate\make(arrayType; 0)
+        private: @: outInfo FxSeqInfo\get(out)
+        private: int: total 0
+        i := 0
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            total := FxSeqSize\sum(total; length(part); outInfo\maxLength)
+            i += 1
+        sys\resize(out; total)
+        private: int: at 0
+        i := 0
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            private: int: partSize length(part)
+            private: int: j 0
+            while: j < partSize
+                private: @: value FxSeqRead\read(part; j)
+                FxKernel\arrayWrite(target := out; index := at; value := value)
+                at += 1
+                j += 1
+            i += 1
+        return: out
 
 FxAppend:
     private:
@@ -78,18 +214,13 @@ FxAppend:
         @: second
     return: @
     append:
-        private: @: out (copy(()))
-        private: int: n length(first)
-        sys\resize(out; n + length(second))
-        private: int: i 0
-        while: i < n
-            out[i] := first[i]
-            i += 1
-        private: int: j 0
-        while: j < length(second)
-            out[n + j] := second[j]
-            j += 1
-        return: out
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: empty (copy(()))
+        return: FxSeqConcat\concat(parts := (empty; first; second))
 
 FxFailures:
     private:
@@ -97,39 +228,193 @@ FxFailures:
         @: second
     return: @
     union:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
         # Builder интернирует и устраняет повторные имена. Список не фиксирован.
         return: FxAppend\append(first; second)
 
-FxConcat:
+FxIndices:
     private:
-        []: char first
-        []: char second
-    return: []: char
-    concat:
-        private: []: char out ()
-        private: int: n length(first)
-        private: int: m length(second)
-        sys\resize(out; n + m)
+        int: start
+        int: count
+    return: @
+    make:
+        throws:
+            FxIndex
+        if: start < 0 || count < 0
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := start + i
+            i += 1
+        return: out
+
+FxInputPolicy:
+    @: source 0
+    @: positions 0
+    @: boundPositions 0
+    @: boundValues 0
+    @: pendingPositions 0
+    int: sourcePolicy 0
+
+FxSeqBounds:
+    private:
+        @: source
+        int: begin
+        int: end
+    required: source begin end
+    return: int
+    count:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+        FxSeqInfo\get(source)
+        if: begin < 0 || end < begin || end > length(source)
+            throw: ReceiverIndex()
+        return: end - begin
+
+FxSeqSlice:
+    private:
+        @: source
+        int: begin
+        int: end
+    required: source begin end
+    return: @
+    slice:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: int: count FxSeqBounds\count(source; begin; end)
+        private: @: info FxSeqInfo\get(source)
+        private: @: out FxSeqAllocate\make(info\arrayType; count)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(source; begin + i)
+            FxKernel\arrayWrite(target := out; index := i; value := value)
+            i += 1
+        return: out
+
+FxSlice:
+    private:
+        @[]: values
+        int: start
+        int: count
+    return: @
+    slice:
+        throws:
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        if: start < 0 || count < 0 || start > length(values)
+            throw: FxIndex()
+        if: count > length(values) - start
+            throw: FxIndex()
+        return: FxSeqSlice\slice(source := values; begin := start; end := start + count)
+
+FxSourcePolicy:
+    private:
+        @: operation
+        @: positions
+        @: boundPositions
+        @: boundValues
+        @: pendingPositions
+    return: @
+    make:
+        throws:
+            FxArity
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: info FxKernel\signature(operation)
+        private: int: n length(info\inputTypes)
+        if: length(boundPositions) != length(boundValues)
+            throw: FxArity()
+        private: @: covered (copy(()))
+        sys\resize(covered; n)
         private: int: i 0
         while: i < n
-            out[i] := first[i]
+            covered[i] := 0
             i += 1
-        private: int: j 0
-        while: j < m
-            out[n + j] := second[j]
-            j += 1
+        private: @: groups (positions; boundPositions; pendingPositions)
+        private: int: group 0
+        while: group < length(groups)
+            private: @: values groups[group]
+            private: int: j 0
+            while: j < length(values)
+                private: int: at \values[j]
+                if: at < 0 || at >= n
+                    throw: FxIndex()
+                if: \covered[at] != 0
+                    throw: FxArity()
+                covered[at] := 1
+                j += 1
+            ---
+            group += 1
+        i := 0
+        while: i < n
+            if: \covered[i] = 0
+                throw: FxArity()
+            i += 1
+        private: @: out (copy(FxInputPolicy))
+        out\source := operation
+        out\positions := FxSlice\slice(positions; 0; length(positions))
+        out\boundPositions := FxSlice\slice(boundPositions; 0; length(boundPositions))
+        out\boundValues := FxSlice\slice(boundValues; 0; length(boundValues))
+        out\pendingPositions := FxSlice\slice(pendingPositions; 0; length(pendingPositions))
+        out\sourcePolicy := 1
         return: out
+
+FxFullPolicy:
+    private: @: operation
+    return: @
+    make:
+        throws:
+            FxArity
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: info FxKernel\signature(operation)
+        private: @: empty (copy(()))
+        return: FxSourcePolicy\make(operation; FxIndices\make(0; length(info\inputTypes)); empty; empty; empty)
+
+FxConcat:
+    private:
+        char[]: first
+        char[]: second
+    return: char[]
+    concat:
+        throws:
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
+        private: @: out FxSeqConcat\concat(parts := (first; second))
+        return: \out
 
 FxDecimal:
     private: int: number
-    return: []: char
+    return: char[]
     decimal:
         throws:
             FxIndex
         if: number < 0
             throw: FxIndex()
-        private: []: char digits "0123456789"
-        private: []: char reversed ()
+        private: char[]: digits "0123456789"
+        private: char[]: reversed []
         private: int: used 0
         private: int: rest number
         while: 1
@@ -140,7 +425,7 @@ FxDecimal:
             if: rest = 0
                 break
         ---
-        private: []: char out ()
+        private: char[]: out []
         sys\resize(out; used)
         private: int: i 0
         while: i < used
@@ -154,6 +439,10 @@ FxLabels:
     labels:
         throws:
             FxIndex
+            FxKernelFailure
+            FxTypeToken
+            ReceiverIndex
+            SequenceSize
         if: count < 0
             throw: FxIndex()
         private: @: out (copy(()))
@@ -174,35 +463,58 @@ FxSignatures:
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: labels FxLabels\labels(length(inputs))
         private: @: data FxKernel\signatureData(inputs := inputs; result := result; labels := labels)
         Built :: data
         return: Built
 
-FxBuild:
-    private:
-        @: contract
-        []: char bodyText
-        @: state
-        @: failures
+FxOwnPolicy:
+    private: @: contract
     return: @
     make:
         throws:
+            FxIndex
+            FxKernelFailure
+            FxTypeToken
+        private: @: info FxKernel\signature(contract)
+        private: @: out (copy(FxInputPolicy))
+        out\source := contract
+        out\positions := FxIndices\make(0; length(info\inputTypes))
+        out\boundPositions := (copy(()))
+        out\boundValues := (copy(()))
+        out\pendingPositions := (copy(()))
+        return: out
+
+FxBuild:
+    private:
+        @: contract
+        char[]: bodyText
+        @: state
+        @: failures
+        @: policy 0
+    return: @
+    make:
+        throws:
+            FxIndex
             FxKernelFailure
             FxTypeToken
         private: @: shape FxKernel\signature(subject := contract)
         private: @: bodyGraph sys\fromLmx(bodyText)
-        return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures)
+        private: @: selectedPolicy policy
+        if: selectedPolicy = 0
+            selectedPolicy := FxOwnPolicy\make(contract)
+        return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures; selectedPolicy)
 
 FxEngineState:
     @: engine 0
     @: payload 0
-    @: record 0
 
 FxSameText:
     private:
-        []: char first
-        []: char second
+        char[]: first
+        char[]: second
     return: int
     same:
         if: length(first) != length(second)
@@ -217,7 +529,7 @@ FxSameText:
 FxFailureFilter:
     private:
         @: names
-        []: char excluded
+        char[]: excluded
     return: @
     without:
         private: @: out (copy(()))
@@ -225,24 +537,13 @@ FxFailureFilter:
         private: int: used 0
         private: int: i 0
         while: i < length(names)
-            private: []: char name \names[i]
+            private: char[]: name \names[i]
             if: FxSameText\same(name; excluded) = 0
                 out[used] := names[i]
                 used += 1
             i += 1
         sys\resize(out; used)
         return: out
-
-FxRecordOperands:
-    copy: sys\OPERANDS_TEMPLATE
-    required: left right
-    return: @
-    record:
-        throws:
-            FxRecordArity
-        if: length(right) != 0
-            throw: FxRecordArity()
-        return: left
 
 FxStageFailures:
     return: @
@@ -262,31 +563,20 @@ FxWrap:
         @: engine
         @: payload
         @: failures
+        @: policy 0
     return: @
     make:
         throws:
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := contract)
         private: @: state (copy(FxEngineState))
         state\engine := engine
         state\payload := payload
-        state\record := FxRecordOperands\record
-        private: []: char text "private: @: fx_args (copy(()))\nsys\\resize(fx_args; "
-        text := FxConcat\concat(text; FxDecimal\decimal(length(info\inputTypes)))
-        text := FxConcat\concat(text; ")\n")
-        private: int: i 0
-        while: i < length(info\inputTypes)
-            private: []: char number FxDecimal\decimal(i)
-            text := FxConcat\concat(text; "fx_args[")
-            text := FxConcat\concat(text; number)
-            text := FxConcat\concat(text; "] := (p")
-            text := FxConcat\concat(text; number)
-            text := FxConcat\concat(text; " node\\private\\state\\record)\n")
-            i += 1
-        text := FxConcat\concat(text; "private: @: fx_engine node\\private\\state\\engine\n")
-        text := FxConcat\concat(text; "private: @: fx_answer fx_engine(state := node\\private\\state\\payload; args := fx_args)\n")
+        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
         if: info\hasResult != 0
             text := FxConcat\concat(text; "return: \\fx_answer\n")
         else:
@@ -296,7 +586,7 @@ FxWrap:
         private: @: escapingEngine FxFailureFilter\without(engineInfo\throws; "FxCallFailure")
         private: @: allFailures FxFailures\union(failures; FxStageFailures\names())
         allFailures := FxFailures\union(allFailures; escapingEngine)
-        return: FxBuild\make(contract; text; state; allFailures)
+        return: FxBuild\make(contract; text; state; allFailures; policy)
 
 FxCompose:
     private:
@@ -309,6 +599,8 @@ FxCompose:
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: a FxKernel\signature(subject := outer)
         private: @: b FxKernel\signature(subject := inner)
         if: length(a\inputTypes) != 1 || b\hasResult = 0
@@ -318,7 +610,7 @@ FxCompose:
         state\outer := outer
         state\inner := inner
         private: @: failures FxFailures\union(a\throws; b\throws)
-        return: FxWrap\make(contract; FxCompositionEngine\run; state; failures)
+        return: FxWrap\make(contract; FxCompositionEngine\run; state; failures; FxFullPolicy\make(inner))
 
 FxPipe:
     private:
@@ -331,6 +623,8 @@ FxPipe:
             FxIndex
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         return: FxCompose\compose(outer := second; inner := first)
 ```
 
@@ -386,7 +680,7 @@ PipeLibrary:
 
 | Показанный код | Непробельные символы | Непустые строки | UTF-8 байты |
 | --- | ---: | ---: | ---: |
-| LMX: алгоритм и перечисленные LMX-зависимости | 5456 | 294 | 8588 |
+| LMX: алгоритм и перечисленные LMX-зависимости | 10183 | 571 | 16405 |
 | Haskell: весь показанный модуль | 389 | 15 | 517 |
 | LMX: процедурный механизм сценария, отдельный контракт | 145 | 11 | 252 |
 

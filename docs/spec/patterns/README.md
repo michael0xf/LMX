@@ -6,8 +6,8 @@
 ## Текущая редакция: единое ядро и сигнатуры
 
 - [Что изменено и как выбраны примеры](CORE_RECEIVERS_REVIEW.md).
-- [Интеграция общих ресиверов в ядро, со ссылками на исходники](../kernel-implementation.ru.md#receiver-kernel-integration).
-- [61 публичный ресивер ядра](RECEIVERS.md) и [полный пакет LMX_Fn_Receivers](LMX_Fn_Receivers/README.md).
+- [Интеграция общих ресиверов в ядро, со ссылками на исходники](../kernel-implementation.en.md#receiver-kernel-integration).
+- [115 публичных callable/операндов ядра](RECEIVERS.md), [24 прочих символа](LMX_Fn_Receivers/value_symbols.json) и [полный пакет LMX_Fn_Receivers](LMX_Fn_Receivers/README.md).
 - [Правила честного сравнения и выбора короткого варианта](COMPARISON_RULES.md).
 - Новая статистика: [Markdown](STATISTICS_2026-11-22.md), [CSV](STATISTICS_2026-11-22.csv), [Excel](STATISTICS_2026-11-22.xlsx), [PDF](STATISTICS_2026-11-22.pdf).
 

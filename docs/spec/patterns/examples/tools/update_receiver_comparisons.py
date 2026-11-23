@@ -13,16 +13,16 @@ EX=ROOT/'examples'
 LIB=ROOT/'LMX_Fn_Receivers'
 CONFIG=[
  ('h01_apply_comparision.md','Apply: общий вызов по контейнеру аргументов','H01','apply','FxApply','IntApply.hs','libraries/lmx/Application.lm3',
- 'У LMX вход `args` — обычная Structure/Array<@> записей аргументов. Результат — запись с реальным типом, которую клиент явно читает. Вызов проверяет точную сигнатуру и передаёт все позиции; количество и типы значений не фиксируются. FxKernel\\attempt открывает штатное исполнение call/catch; библиотечное тело apply оборачивает полученный отказ в FxCallFailure.',
+ 'У LMX вход `args` — любая допустимая последовательность по @, включая плотный Array и обычную Structure/@[]. Штатный транспорт читает фактический тип каждого actual, без reinterpretation и предварительного boxing всей последовательности. Результат — запись с реальным типом. Передаются только присутствующие actuals; собственные defaults, required/private и точный результат выбранного callable сохраняются. FxKernel\\attempt открывает штатное исполнение call/catch; библиотечное тело apply оборачивает полученный отказ в FxCallFailure.',
  'Haskell apply полиморфен по a и b. У Haskell последовательная аппликация и каррирование уже являются механизмами языка; эта запись не заявляет отдельный динамический вектор аргументов. Клиентский сценарий одинаков: вызов выбранного действия и замена выбранной ссылки.'),
  ('h03_capture_comparision.md','Partial: общий префикс аргументов','H03','partial','FxPartial','Partial.hs','libraries/lmx/ProceduralCapture.lm3',
- 'partial принимает callable с N входами и контейнер K записей. Построенный callable имеет N−K обязательных входов p0… и точный исходный результат R. K=0 и K=N допустимы; полный префикс создаёт отложенный nullary-callable. Новая функция не исполняет цель при создании. Примитивы захватываются по значению, ссылки сохраняют идентичность цели.',
+ 'partial принимает callable с N входами и K готовыми значениями любого подходящего Array через @. Построенный callable имеет N−K остаточных позиций и точный исходный результат R; реальные defaults и required/private исходных деклараций сохраняются, а не заменяются обязательностью всех p0…. K=0 и K=N допустимы; полный префикс создаёт отложенный nullary-callable. Новая функция не исполняет цель при создании. Примитивы захватываются по значению, ссылки сохраняют идентичность цели.',
  'В Haskell partial связывает первый вход уже каррированной функции. Полиморфные a/b/r не фиксируют Int; r само может быть функцией. Для нескольких исходных аргументов Haskell повторяет обычную аппликацию, тогда как LMX принимает явный вектор префикса. Числа 5 и 100 принадлежат клиенту.'),
  ('h06_pipe_comparision.md','Pipe: сохраняемая композиция точных сигнатур','H06','pipe','FxPipe','IntPipe.hs','../../02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3',
- 'pipe(first; second) создаёт callable без исполнения стадий. Его входы совпадают со всеми входами first; second имеет один вход, принимающий результат first. Промежуточный и конечный типы могут отличаться. Сохранённый callable выполняет стадии один раз и в записанном порядке. Два компонента — смысл бинарной композиции, не ограничение арности исходной функции.',
+ 'pipe(first; second) создаёт callable без исполнения стадий. Его входы и их политика совпадают со входами first; second получает один явный actual с результатом first и может иметь дополнительные допустимые optional/default входы. Промежуточный и конечный типы могут отличаться. Сохранённый callable выполняет стадии один раз и в записанном порядке. Два компонента — смысл бинарной композиции, не ограничение арности исходной функции.',
  'pipe2 и pipeIO2 показывают общую композицию a→b→c. Для прежних проверок полностью сохранены также pipe/pipeIO по списку однородных стадий; их типы стали полиморфными. IO-вариант задаёт порядок эффектов, чистый вариант не выдаётся за IO-действие.'),
  ('h07_evaluation_modes_comparision.md','Lazy: общий отложенный результат и повтор эффектов','H07','lazy','FxLazy','Lazy.hs','libraries/lmx/EvaluationModes.lm3',
- 'lazy получает nullary-callable и сохраняет точный тип его результата. До первого исполнения цель не вызывается; успешный результат кешируется, отказ оставляет возможность повторить попытку. Повторный вход в вычисляющийся thunk даёт FxLazyCycle. Здесь один владелец Message; потокобезопасный разделяемый между Message кеш не обещается.',
+ 'lazy готовит обычный вызов без явных actuals и сохраняет точный тип результата; отсутствие actuals не означает искусственного запрета дополнительных optional/default формалов. До первого исполнения цель не вызывается; успешный результат кешируется, отказ оставляет возможность повторить попытку. Повторный вход в вычисляющийся thunk даёт FxLazyCycle. Здесь один владелец Message; потокобезопасный разделяемый между Message кеш не обещается.',
  'lazyIO — явная общая реализация на IORef для одного потока: Cold/Busy/Ready, сброс после ошибки и вычисление результата до WHNF. Она не объявляется атомарным многопоточным кешем. Void LMX и () Haskell имеют разные представления. Прежний prepared/raw пример сохранён отдельно: lazy не выдаётся за доступ к исходным LMX-occurrences.')
 ]
 
@@ -33,8 +33,8 @@ def metric(text):
 def root_definitions():
  definitions={};locations={}
  for p in sorted((LIB/'src').glob('*.lmx')):
-  # Legacy/specialized examples are excluded from current generic dependency selection.
-  if p.name in ['functions_specialized.lmx','collections.lmx','wrappers.lmx','kernel_contracts.lmx','public.lmx']:continue
+  # Legacy/specialized examples are excluded; current universal collections are eligible dependencies.
+  if p.name in ['functions_specialized.lmx','wrappers.lmx','kernel_contracts.lmx','public.lmx']:continue
   text=p.read_text()
   for block in re.split(r'\n[ \t]*\n',text):
    lines=block.splitlines()
@@ -78,7 +78,7 @@ def main():
   measured=metric(body);hm=metric(haskell);om=metric(old)
   paths=sorted({locations[n] for n in roots})
   sources='\n'.join('- ['+Path(p).name+'](../../'+p+')' for p in paths)
-  primary=(EX/'lmx'/f'{ident}.lm3').read_text().split('# BEGIN PROCEDURAL LMX (excluded from character counts)')[0].rstrip()+'\n'
+  primary=(EX/'lmx'/f'{ident}.lm3').read_text().split('# BEGIN ALTERNATIVE LMX (excluded from character counts)')[0].split('# BEGIN PROCEDURAL LMX (excluded from character counts)')[0].rstrip()+'\n'
   text=f'''# {title}
 
 Редакция: 22 ноября 2026 года. Клиент: [{ident}](../lmx/{ident}.lm3), [разбор](../../LMX_examples_and_analogies.ru.md#{ident.lower()}).

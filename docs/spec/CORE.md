@@ -1,5 +1,7 @@
 # LMX core architecture
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
 > documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
 > order of 2026-11-21); only link targets were adapted to repository paths.
@@ -43,8 +45,8 @@ call Frame, a declaration receiver, and an operator position are distinguished b
 that common model. There is no parser branch for each receiver name and no
 independent expression parser.
 
-The walker recognizes a written head through its canonical name and the existing
-address-to-name information. After resolution, accesses use graph addresses and
+The walker recognizes a simple word head through its canonical name and the existing
+address-to-name information; composed heads use the common expression/head resolver. After resolution, accesses use graph addresses and
 admitted correspondences. The name table is not a permanent map of runtime
 variable bindings. Prepared native dispatch does not repeat source-name lookup
 merely to make a known direct call.
@@ -611,3 +613,8 @@ was performed.
 | Developer work and focused acceptance | [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md) |
 | Implementation provenance and historical distinctions | [implementation-notes.en.md](implementation-notes.en.md) |
 | Requirements and acceptance notes | [README.md](README.md), [REVIEW_NOTES.md](REVIEW_NOTES.md) |
+
+<a id="unified-20261122"></a>
+## Unified types, sequences, and patterns
+
+The current built-in facilities share one type normalizer, one actual-array access path, one call preparation mechanism, and the existing Expression ABI. Public postfix type constructors are T[] and T@; general [] and @ declarations retain their different receiving requirements. Pattern values and callbacks remain ordinary structures. The directed checked-type table is permitted metadata, without a second graph or persistent environments. [Current integrated contract](CORE_SEQUENCES_REGEX.en.md).

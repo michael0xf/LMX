@@ -16,7 +16,7 @@
 
 ```lmx
 OrderTable:
-    []: @ rows
+    @[]: rows
     return: int
     total:
         int: result 0

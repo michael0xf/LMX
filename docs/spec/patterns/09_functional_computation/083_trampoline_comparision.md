@@ -28,6 +28,8 @@ Steps:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
+            ReceiverIndex
+            SequenceSize
         if: n = 0
             return: done(value := (1 record))
         return: more(thunk := partial(odd_step; (n - 1)))
@@ -39,6 +41,8 @@ Steps:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
+            ReceiverIndex
+            SequenceSize
         if: n = 0
             return: done(value := (0 record))
         return: more(thunk := partial(even_step; (n - 1)))
@@ -54,6 +58,8 @@ Example:
             FxTypeToken
             FxKernelFailure
             FxCallFailure
+            ReceiverIndex
+            SequenceSize
         return: \trampoline(Steps\even_step(n))
 ```
 
@@ -109,7 +115,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 479 | 37 |
+| LMX | 554 | 43 |
 | Haskell | 236 | 9 |
 | Scala | 237 | 8 |
 
@@ -224,4 +230,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

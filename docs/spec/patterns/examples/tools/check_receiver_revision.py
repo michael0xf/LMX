@@ -42,7 +42,7 @@ def main():
    for x in r['variants']:
     check('        import: fun' not in x['code'],ident+': current core receiver still requires import')
     check(not re.search(r'(?m)^\s*fn:',x['code']),ident+': obsolete named declaration')
-    check(not x['load_before'],ident+': alternate library version dependency retained')
+    check(set(x['load_before']) <= set(r.get('allowed_user_helpers',[])),ident+': undeclared user-helper or alternate core dependency retained')
    check(cases[ident].get('selected_variant')==selected['id'],ident+': expected cases selected variant mismatch')
    check(cases[ident].get('core_versions')==1,ident+': current-core scope missing')
   checked.append({'id':ident,'primary':metric(primary),'selected':row.get('selected_variant','single_existing'),'has_alternative':ident in variants})

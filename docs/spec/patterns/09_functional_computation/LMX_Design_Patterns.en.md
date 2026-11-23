@@ -94,7 +94,7 @@ Direct partial builds add5 and add100 from an ordinary function; environment cop
 
 **Companion implementation:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Primary variants:** LMX: core, Haskell: generic, Scala: generic.
+**Primary variants:** LMX: core_curry, Haskell: generic, Scala: generic.
 
 **Scenario:** Declare addition and call partial(add;(5)) and partial(add;(100)). Obtain 6,101,6 after the factory completes. Local saved=1000 does not change retained values. The prefix is a Structure of records, not a hidden int-only list.
 

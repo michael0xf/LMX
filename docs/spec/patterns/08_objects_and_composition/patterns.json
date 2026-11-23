@@ -168,7 +168,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
+          "code": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n",
           "notes_ru": "Вызов Demo\\run(). Pool принадлежит одному Message и обслуживает последовательные запросы. Для конкурентных клиентов take/give вызываются почтовым протоколом владельца, а не чужими прямыми записями в free.",
           "notes_en": "Call Demo\\run(). Pool belongs to one Message and handles requests serially. Concurrent clients use the owner’s Message protocol for take/give rather than writing free directly."
         },
@@ -192,7 +192,26 @@
           "why_ru": "Жизненный цикл acquire/reuse/return ресурса.",
           "why_en": "The acquire/reuse/return resource lifecycle."
         }
-      ]
+      ],
+      "procedural_lmx": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
+      "variants": {
+        "LMX": {
+          "procedural": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
+          "direct_expression": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Return the same identity/null observation as canonical Boolean int. Pool operations, resource identity, second-acquisition refusal and all fields are preserved. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
     },
     {
       "id": 76,
@@ -306,7 +325,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+          "code": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
           "notes_ru": "Вызов Check\\demo(). Используется непустой структурный шаблон с именованной ветвью auditable. Совершенно пустая Structure не различала бы наличие метки.",
           "notes_en": "Call Check\\demo(). A nonempty structural requirement contains a named auditable branch. An entirely empty Structure would not distinguish the marker."
         },
@@ -330,7 +349,26 @@
           "why_ru": "Реальный Java marker без собственных методов и полей.",
           "why_en": "A real Java marker with no methods or fields."
         }
-      ]
+      ],
+      "procedural_lmx": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+      "variants": {
+        "LMX": {
+          "procedural": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+          "direct_expression": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Normalize the existing satisfies result through comparison rather than a branch. The auditable marker, unmarked value field and structural-versus-nominal limitation remain. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
     },
     {
       "id": 79,

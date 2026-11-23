@@ -6,29 +6,44 @@ ROOT = Path(__file__).resolve().parents[1]
 PARTS = [
     'src/kernel_contracts.lmx',
     'src/reflection.lmx',
+    'src/adapter_frames.lmx',
     'src/generic_functions.lmx',
     'src/fn_operand.lmx',
     'src/generic_runtime.lmx',
     'src/reflection_bridges.lmx',
     'src/containers.lmx',
+    'src/sequences_core.lmx',
+    'src/sequences_selection.lmx',
+    'src/sequences.lmx',
+    'src/sequences_mutation.lmx',
     'src/collections.lmx',
     'src/structures.lmx',
     'src/generic_combinators.lmx',
     'src/generic_wrappers.lmx',
+    'src/regex/support.lmx',
+    'src/regex/text.lmx',
+    'src/regex/primitives.lmx',
+    'src/regex/values.lmx',
+    'src/regex/combinators.lmx',
+    'src/regex/operations.lmx',
+    'src/regex/operands.lmx',
     'src/public.lmx',
     'examples/generic_callable_examples.lmx',
     'examples/structure_examples.lmx',
     'examples/fn_and_assignment.lmx',
     'examples/fn_equivalence.lmx',
     'examples/value_generic_examples.lmx',
+    'examples/sequence_examples.lmx',
+    'tests/adapter_semantics.lmx',
     'examples/run_all.lmx',
 ]
 
 HEADER = '''# LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕРЫ
 # Редакция 2026-11-22. Собрано из src/ и явно запускаемых examples/.
 # DATA-описания ядра; старые Int-специализации сюда не входят.
-# 61 встроенный receiver, доступный напрямую без client import. Каждая Structure — массив @.
-# FxKernel требует 8 явно описанных тонких мостов. Ядро здесь не исполнялось.
+# 115 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
+# FxKernel: 8 исходных границ + 5 фаз обычного вызова + 4 операции доступа к Array.
+# Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
 # Name :: DATA и signatureTypes взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
 # Загружать сборку ИЛИ отдельные файлы, не оба варианта вместе.

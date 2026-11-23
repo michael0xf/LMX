@@ -104,7 +104,7 @@ chain:
 
 **Invocation:** `chain\demo()`. **Expected result: 5.**
 
-With the default order, requests -2, 4, 3 yield 1, 2, 0. An explicit reversed order yields 2 for the same -2. Their sum is 5. Once the first handler accepts a request, the second is not invoked.
+With the default order, requests -2, 4, 3 yield 1, 2, 0. An explicit reverse order yields 2 for the same -2. Their sum is 5. Once the first handler accepts a request, the second is not invoked.
 
 A minimal chain of exactly two configurable handlers. The first accepting handler ends processing; if both decline, the result is 0. Arbitrary chain length, an empty chain and asynchronous handlers are outside this scenario.
 

@@ -8,7 +8,7 @@
 | ---: | --- | ---: | ---: | ---: | --- |
 | 005 | [Layered Architecture](005_layered_architecture_comparision.md) | 215 / 16 | 274 / 10 | 217 / 5 | Ядро сценария |
 | 006 | [Hexagonal Architecture (Ports and Adapters)](006_hexagonal_architecture_comparision.md) | 215 / 14 | 264 / 9 | 183 / 5 | Ядро сценария |
-| 007 | [Clean Architecture](007_clean_architecture_comparision.md) | 354 / 24 | 341 / 9 | 268 / 7 | Ядро сценария |
+| 007 | [Clean Architecture](007_clean_architecture_comparision.md) | 342 / 22 | 341 / 9 | 268 / 7 | Ядро сценария |
 | 008 | [Onion Architecture](008_onion_architecture_comparision.md) | 247 / 20 | 363 / 13 | 308 / 8 | Ядро сценария |
 | 009 | [Microservices](009_microservices_comparision.md) | 186 / 11 | 241 / 7 | 211 / 6 | Протокол и порты |
 | 010 | [Event-Driven Architecture](010_event_driven_architecture_comparision.md) | 215 / 13 | 263 / 11 | 241 / 8 | Протокол и порты |

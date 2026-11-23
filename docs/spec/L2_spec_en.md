@@ -1,5 +1,7 @@
 # L2 Specification
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 L2 defines the kernel mechanisms and machine operations. L3 semantics are in the
 [LMX specification](LMX_semantics.en.md), syntax in the [grammar](LMX_grammar.en.md),
 and the common implementation model in the [kernel specification](kernel-implementation.en.md).
@@ -379,7 +381,8 @@ SumContext:
 SumSignature@: sumPtr SumContext\sum
 ```
 
-The three arguments of `@` are the reference name, the named requirement, and the candidate.
+The head `SumSignature@` supplies the named requirement; its two arguments are the
+reference name and the candidate.
 `@: p Model` retains its ordinary two-argument meaning: it initially refers to Model itself; it
 does not choose a separate implementation. `sumPtr(a := 2; b := 3)` supplies 2 and 3 to the first
 and second input positions of `SumContext\sum`. A direct call uses the candidate's own names,
@@ -890,13 +893,14 @@ and dereferenced writes are not assignment through a bare Structure or function 
 and are not prohibited by that rule.
 
 A reference place is declared with the name first among the receiver's arguments:
-`@: p 0`, `@: p Model`, `@: p Model 0`, or `@: p Model Other`. The first argument is a
-place-name atom and is not invoked; the remaining arguments use the resolved receiver's ordinary
-contract. A two-argument `@: p Model` initially refers to Model itself. Three arguments explicitly
-separate the requirement and candidate, as in `@: p Model Other`, or requirement and null
-address, `@: p Model 0`.
+`@: p 0`, `@: p Model`, `Model@: p 0`, or `Model@: p Other`. The first argument is a
+place-name atom and is not invoked; a supplied initializer uses the resolved receiver's ordinary
+contract. A two-argument `@: p Model` initially refers to Model itself. A full requirement
+belongs in the typed head `Model@`; `Model@: p Other` supplies its candidate and
+`Model@: p 0` supplies an initialized null. The former three-argument requirement/candidate
+form is withdrawn.
 
-A nested `@: p Model: Other` is not that flat three-argument declaration. In a CODE-consuming
+A nested `@: p Model: Other` is not the typed declaration `Model@: p Other`. In a CODE-consuming
 position, `Model: Other` is an ordinary call if Model resolves to a callable; it is not an
 alternate notation for requirement plus candidate. Anonymous Structure values and bare references
 are not calls. A place-declaration receiver supplied as a CODE argument is preserved as DATA
@@ -1109,3 +1113,8 @@ other supported positions. The generic-call result/failure bridge must retain
 ordinary admission and declared exits, and name reflection uses the existing
 canonical table. Detailed provider interfaces are in the
 [kernel requirements](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).
+
+<a id="unified-20261122"></a>
+## Derived types and actual storage
+
+Public type tokens remain int. The common normalizer and type context retain complete array/pointer requirements, arbitrary finite pointer depth, and the distinction between initialized null/empty values and zero-payload uninit:T. Type interning and the table of completed directed satisfies-pair results are required service metadata. Stable pairs reuse their completed result under the applicable type/conversion context, including between calls; concrete field maps and value-dependent checks retain their ordinary reception scope. Attach preserves old code meaning and record addresses; restoration resolves compatible type descriptions. A successful A[] satisfies B[] does not alter actual A stride or authorize an invalid store. Universal sequence access reads actual dense storage or direct @[] references and prepares a value record only as required by ordinary consumption. This creates no mandatory element tags in dense storage and no second graph. See [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).

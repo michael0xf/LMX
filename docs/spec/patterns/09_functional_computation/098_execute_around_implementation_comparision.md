@@ -29,6 +29,8 @@ FxAround:
             FxCallFailure
             FxKernelFailure
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: empty (copy(()))
         private: @: resource FxApply\apply(acquire; empty)
         private: @: resourceArgs FxOne\make(resource)
@@ -85,7 +87,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 374 | 20 |
+| LMX | 399 | 22 |
 | Haskell | 287 | 10 |
 | Scala | 141 | 9 |
 
@@ -193,4 +195,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

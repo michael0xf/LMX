@@ -3,7 +3,7 @@
 
 Uses only the Python standard library. Reads documentation but never edits it.
 Fenced/indented code, inline-code spans and HTML comments are excluded from links.
-The baseline is read directly from tar; no archive member is extracted.
+The baseline is read directly from the current uploaded ZIP/tar; no member is extracted.
 """
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from pathlib import Path, PurePosixPath
 import posixpath
 import re
 import tarfile
+import zipfile
 import unicodedata
 from urllib.parse import unquote, urlsplit
 
@@ -322,6 +323,19 @@ def corpus_from_tar(path: Path) -> tuple[set[str], dict[str, str]]:
     return files, docs
 
 
+def corpus_from_zip(path: Path) -> tuple[set[str], dict[str, str]]:
+    files, docs = set(), {}
+    with zipfile.ZipFile(path) as archive:
+        for item in archive.infolist():
+            if item.is_dir():
+                continue
+            name = item.filename.removeprefix("./")
+            files.add(name)
+            if name.lower().endswith(".md"):
+                docs[name] = archive.read(item).decode("utf-8-sig")
+    return files, docs
+
+
 def resolve_all(files: set[str], docs: dict[str, str]) -> tuple[list[dict], int]:
     anchors = {name: parse_anchors(text) for name, text in docs.items()}
     rows, web = [], 0
@@ -383,16 +397,16 @@ def main() -> int:
             (parent / "upload/docs.tar.gz" for parent in root.parents
              if (parent / "upload/docs.tar.gz").is_file()), None)
     if baseline is None or not baseline.is_file():
-        parser.error("Use --baseline to identify the uploaded docs.tar.gz.")
-    output = args.output or root / "new_parts/validation/doc_links_20261122.json"
+        parser.error("Use --baseline to identify the current uploaded archive.")
+    output = args.output or root / "patterns/validation/doc_links_20261122.json"
     pending = {
-        "new_parts/STATISTICS_2026-11-22.xlsx",
-        "new_parts/STATISTICS_2026-11-22.pdf",
-        "new_parts/COMPARISON_RULES.md",
+        "patterns/STATISTICS_2026-11-22.xlsx",
+        "patterns/STATISTICS_2026-11-22.pdf",
+        "patterns/COMPARISON_RULES.md",
         *args.pending,
     }
     current_files, current_docs = corpus_from_directory(root)
-    baseline_files, baseline_docs = corpus_from_tar(baseline)
+    baseline_files, baseline_docs = (corpus_from_zip(baseline) if zipfile.is_zipfile(baseline) else corpus_from_tar(baseline))
     current_rows, current_web = resolve_all(current_files, current_docs)
     old_rows, old_web = resolve_all(baseline_files, baseline_docs)
     old_broken = {
@@ -432,7 +446,7 @@ def main() -> int:
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "scope": "All Markdown documents under docs; referenced local files of any type, manual HTML IDs/names and GFM-style heading anchors. Does not query external websites or validate PDF/XLSX embedded links.",
         "method": "Standard-library scanner excludes fenced/indented code, inline-code spans and HTML comments; resolves inline, defined reference/shortcut and HTML href/src links. Heading slugs remove markup/punctuation and apply duplicate suffixes.",
-        "reproduce": "python3 new_parts/tools/audit_doc_links.py --baseline /path/to/upload/docs.tar.gz --check-new",
+        "reproduce": "python3 patterns/tools/audit_doc_links.py --baseline /path/to/upload/docs.tar.gz --check-new",
         "baseline": {
             "archive": str(baseline.resolve()),
             "archive_sha256": hashlib.sha256(baseline.read_bytes()).hexdigest(),

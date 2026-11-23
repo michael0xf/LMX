@@ -15,7 +15,16 @@
 > [plan](../../next_core_tasks_v3.md#docs-20261121)). The L1 specification (`L1_spec_en.md`, `L1_spec_ru.md`) was not
 > part of the packet and is kept as it was.
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
+This is the documentation layout of the current uploaded archive. Historical notes
+inside individual files can refer to the author's wider repository; those paths do
+not change the layout or the source of this edition. The current work is summarized
+in the [revision report](REVISION_2026-11-22.md), including the [naming decisions](NAMING_2026-11-22.md).
+
 **Review edition: 2026-11-22.**
+
+The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `Struct@: ptr` and `type[]: array`. See the [task-to-documentation review](patterns/TZ_APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
 
 This edition integrates the requested
 receiver rename, general functional library, containers and signature interchangeability.
@@ -110,8 +119,7 @@ unchanged. Earlier wording quoted to explain a migration does not establish an
 alternative current syntax.
 
 `L2_L3_CODING_INSTRUCTION.md` was supplied in Russian and is English in this
-packet. The accidentally supplied `LMX_grammar.ru.md` is excluded at the author's
-request. A complete Russian edition is a separate later pass.
+packet. The current uploaded `LMX_grammar.en.md` is retained and updated together with the semantics. A complete new Russian translation of the primary documents is outside this pass.
 
 ## Scope and precedence
 
@@ -131,6 +139,7 @@ background sources rather than repository build dependencies.
 
 ## Archive contents
 
-There are nine primary English documents, this index, and the review notes. Unrelated source
-trees, generated binaries, test logs, and scratch editing scripts are not part
-of the packet.
+This directory contains the current specifications, reading guides, revision reports,
+implementation tasks, and the complete patterns/example package. Source code for
+the proposed core receivers, publication tools, and scoped verification reports are
+provided under `patterns/`; an executable LMX kernel is not included.

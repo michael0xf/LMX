@@ -30,7 +30,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Repository:\n    []: @ rows\n    int: id\n    return: @\n    find:\n        throws: OperandArity\n        import: FindLibrary\n        return: rows findById id\n",
+          "code": "Repository:\n    @[]: rows\n    int: id\n    return: @\n    find:\n        throws: OperandArity\n        import: FindLibrary\n        return: rows findById id\n",
           "notes_ru": "Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.",
           "notes_en": "Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row."
         },
@@ -545,7 +545,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "OrderTable:\n    []: @ rows\n    return: int\n    total:\n        int: result 0\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            result += row\\quantity * row\\price\n            i += 1\n        return: result\n",
+          "code": "OrderTable:\n    @[]: rows\n    return: int\n    total:\n        int: result 0\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            result += row\\quantity * row\\price\n            i += 1\n        return: result\n",
           "notes_ru": "rows — массив структур quantity/price. Один метод обслуживает весь набор, не создавая доменный объект на каждую строку.",
           "notes_en": "rows is an Array of quantity/price Structures. One module owns the operation over the table."
         },

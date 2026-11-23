@@ -20,9 +20,7 @@ AccountMessage:
     int: balance 10
     return: int
     withdraw:
-        if: amount < 0
-            return: 0
-        if: node\balance < amount
+        if: amount < 0 || node\balance < amount
             return: 0
         node\balance -= amount
         return: 1
@@ -83,11 +81,35 @@ LMX реализует координацию через отдельный Mess
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 158 | 13 |
+| LMX | 149 | 11 |
 | Java | 184 | 8 |
 | Rust | 299 | 11 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- postfix-expression-review-2026-11-22 -->
+
+## Процедурный аналог LMX — вне основного подсчёта
+
+Полный прежний вариант сохранён. Основным выбран более короткий эквивалентный вариант с обычным Expression; новые библиотеки не скрывают часть реализации.
+
+```lmx
+AccountMessage:
+    int: amount
+    int: balance 10
+    return: int
+    withdraw:
+        if: amount < 0
+            return: 0
+        if: node\balance < amount
+            return: 0
+        node\balance -= amount
+        return: 1
+    read:
+        return: node\balance
+```
+
+**Основание выбора / Selection:** Combine two pure rejection guards with ordinary short-circuit OR. A negative amount still skips the balance read; the accepted update remains one Message turn.
 
 ## English explanation
 

@@ -38,9 +38,7 @@ Demo:
         @: busy Pool\take()
         Pool\give(item := first)
         @: again Pool\take()
-        if: first = again && busy = 0
-            return: 1
-        return: 0
+        return: first = again && busy = 0
 ```
 
 Вызов Demo\run(). Pool принадлежит одному Message и обслуживает последовательные запросы. Для конкурентных клиентов take/give вызываются почтовым протоколом владельца, а не чужими прямыми записями в free.
@@ -109,11 +107,48 @@ def demo():
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 278 | 24 |
+| LMX | 266 | 22 |
 | Java | 350 | 14 |
 | Python | 280 | 16 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- postfix-expression-review-2026-11-22 -->
+
+## Процедурный аналог LMX — вне основного подсчёта
+
+Полный прежний вариант сохранён. Основным выбран более короткий эквивалентный вариант с обычным Expression; новые библиотеки не скрывают часть реализации.
+
+```lmx
+Resource:
+    int: id 7
+
+Pool:
+    @: free Resource
+    @: item
+    return: @
+    take:
+        @: result node\free
+        node\free := 0
+        return: result
+    give:
+        node\free := item
+        return: item
+
+Demo:
+    return: int
+    run:
+        Pool\free := Resource
+        @: first Pool\take()
+        @: busy Pool\take()
+        Pool\give(item := first)
+        @: again Pool\take()
+        if: first = again && busy = 0
+            return: 1
+        return: 0
+```
+
+**Основание выбора / Selection:** Return the same identity/null observation as canonical Boolean int. Pool operations, resource identity, second-acquisition refusal and all fields are preserved.
 
 ## English explanation
 

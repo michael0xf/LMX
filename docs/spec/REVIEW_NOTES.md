@@ -1,5 +1,7 @@
 # Fable review notes — English documentation revision
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 Date: 2026-11-22.
 
 ## 1. Review surface
@@ -267,3 +269,8 @@ Changed functional listings keep their procedural predecessors inline. Current
 statistics exclude those archives and count shared library dependencies
 separately. The receiver sources have static checks and prepared runtime
 acceptance cases; target-kernel execution is not claimed.
+
+<a id="unified-20261122"></a>
+## Review of the uploaded edition
+
+The root type/sequence/Pattern specifications have been applied to the uploaded documents, including their present adapter semantics. Earlier delivery trees were not used to restore examples. The source syntax migration, new algorithms, preserved variants, shared dependency costs, refreshed publication artifacts, and pending runtime checks are recorded in [the edition report](REVISION_2026-11-22.md).

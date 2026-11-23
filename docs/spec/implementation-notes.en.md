@@ -1,5 +1,7 @@
 # LMX implementation integration and historical notes
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 This file separates the desired implementation model from historical receipts. The operative
 contracts are the [semantics](LMX_semantics.en.md), [grammar](LMX_grammar.en.md),
 [L2 specification](L2_spec_en.md), and [kernel specification](kernel-implementation.en.md).
@@ -48,7 +50,7 @@ called a namespace image, descriptor cache, or execution metadata.
 | Complete program | One complete graph plus compiled methods; R0 is a C method with a local graph pointer even for interpreter execution | Static DATA replicas, persistent working/expanded/callable graphs, global hidden program instances |
 
 Fn matching and call selection are different operations. A method with types `[int, Array<char>]`
-and different formal names can satisfy that fn requirement; one with reversed types cannot,
+and different formal names can satisfy that fn requirement; one with reverse types cannot,
 even if a direct named call could supply its parameters in another order. A reference constrained
 by fn accepts the signature's public actual labels and maps positions to the candidate. Defaults,
 requiredness, throws, and hidden binding remain those of the candidate under its real names.
@@ -1128,7 +1130,7 @@ Root numeric/reference publication and direct calls through path heads still nee
 route; the whole of M11.5г, the following 5д–5е, M11.7/8 and M13/M14 remain open.
 Current checks and limits (original reference: `../steps/current.md`). The chronology below retains the results and limits of its own slices.
 
-Paired version -- RU (original reference: `kernel-implementation.ru.md`). The normative sources of the language are the L3 semantics (original reference: `LMX_semantics.en.md`),
+Paired version -- RU (original reference: `kernel-implementation.en.md`). The normative sources of the language are the L3 semantics (original reference: `LMX_semantics.en.md`),
 the grammar (original reference: `LMX_grammar.en.md`), L2 (original reference: `L2_spec_en.md`) and L1 (original reference: `L1_spec_en.md`); this document is the specification of the
 **implementation** of the kernel and of the code it emits, by the author's directive of 2026-11-08 (the author's words
 verbatim -- the journal (original reference: `../LMX_blog/2026-11-08.md`), the sections "Остановка инкрементальных кодов идентификаторов…",
@@ -1883,3 +1885,8 @@ in them is updated to `Name :: signature`, so byte-for-byte preservation is
 judged after this explicitly stated normalization. The former declaration form
 is not kept as a second notation anywhere in the active documents, sources, text
 generators, checks or preserved procedural variants.
+
+<a id="unified-20261122"></a>
+## Current integration obligations
+
+This edition applies only the uploaded documentation and its three root specifications. Current source implementations are an integration proposal, not evidence that the interpreter or native backend already supports them. P0 retains composed heads and every group; runtime type normalization/interning and the directed checked-type table use the same existing context across interpreter and native. Plain graph mutation and interpretation do not require compile/endturn. The source acceptance matrix records pending kernel executions separately from publication checks. See [the unified contract](CORE_SEQUENCES_REGEX.en.md#acceptance).

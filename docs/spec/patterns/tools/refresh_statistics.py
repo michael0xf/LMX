@@ -106,9 +106,9 @@ def main():
             title={'scenario':'Сценарии','usage':'Клиенты библиотек','implementation':'Реализации'}[layer];t=g['totals'][layer];a,b=g['languages'][1:]
             out[-1]+=f"\n| [{g['title']}]({g['directory']}/LMX_Comparison_{g['directory']}.md) | {title} | {count} | {t['LMX']['characters']} | {a} | {t[a]['characters']} | {b} | {t[b]['characters']} |"
             summarycsv.append({'group':g['directory'],'title':g['title'],'layer':layer,'comparisons':count,'LMX_characters':t['LMX']['characters'],'control1':a,'control1_characters':t[a]['characters'],'control2':b,'control2_characters':t[b]['characters']})
-    out+=['По разным группам не строится общий рейтинг языков: контрольные языки, сценарии и границы библиотек различаются. Основные и альтернативные реализации имеют явно указанные границы обобщения и зависимости; короткий клиент связывается со своей совместимой версией компонента.',
+    out+=['По разным группам не строится общий рейтинг языков: контрольные языки, сценарии и границы библиотек различаются. Основные и альтернативные реализации имеют явно указанные границы обобщения и зависимости; короткий клиент использует показанный рядом компонент единого текущего ядра.',
           '## Функциональная группа и общие зависимости',
-          '[Восемь сравнений](09_functional_computation/LMX_Comparison_09_functional_computation.md) сохраняют старые версии и показывают новую реализацию. [Реестр зависимостей](09_functional_computation/IMPLEMENTATION_DEPENDENCIES.md) считает реальные LMX-определения по одному разу; неопубликованное ядро не объявляется имеющим нулевой размер.',
+          '[Восемь сравнений](09_functional_computation/LMX_Comparison_09_functional_computation.md) сохраняют предыдущие исходники как пояснение и показывают текущую реализацию. [Реестр зависимостей](09_functional_computation/IMPLEMENTATION_DEPENDENCIES.md) считает реальные LMX-определения по одному разу, включая дополнительный curry-механизм клиента 085; неопубликованное ядро не объявляется имеющим нулевой размер.',
           '## Корневые примеры',
           '| Пример | Основной код, символы | Непустые строки | Второй вариант рядом |\n| --- | ---: | ---: | --- |']
     for x in example_counts:out[-1]+=f"\n| [{x['id']}]({x['source']}) | {x['characters']} | {x['nonblank_lines']} | {'Да' if x['procedural_archived'] else 'Исходный пример сохранён'} |"

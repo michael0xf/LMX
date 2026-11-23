@@ -1,0 +1,72 @@
+{
+  "scope": "Limited source checks and independent Python algorithm models; not LMX parsing, compilation, execution, or native/kernel validation",
+  "revision": "Final replaceRange name and new removed-value splice",
+  "source_status": "PASS",
+  "lmx_runtime_status": "NOT_RUN",
+  "lmx_runtime_executed": false,
+  "source_files": [
+    "src/collections.lmx",
+    "src/sequences.lmx",
+    "src/sequences_core.lmx",
+    "src/sequences_mutation.lmx",
+    "src/sequences_selection.lmx",
+    "src/structures.lmx",
+    "src/containers.lmx",
+    "examples/sequence_examples.lmx"
+  ],
+  "checks": [
+    "quoted literal and round/square/curly delimiter balance",
+    "four-space indentation and explicit multi-level cutters",
+    "qualified root coverage against the current package and FxKernel provider",
+    "four explicit actuals for sequence splice/replaceRange call sites",
+    "snapshot precedes mutation and splice returns the saved removed container",
+    "universal @ target/values and postfix T@/T[] fixture declarations",
+    "observable alias mutations instead of elementwise array equality for identity",
+    "owned source/doc operation spellings and prepared assertion count"
+  ],
+  "prepared_assertions": 82,
+  "prepared_runtime_probes": {
+    "status": "NOT_RUN",
+    "splice_probe_blocks": 6,
+    "splice_entrypoint_invocations": 8,
+    "profiles": [
+      "int[]",
+      "char[]",
+      "int@[]",
+      "Structure/@[]"
+    ],
+    "cases": [
+      "removed values differ from the changed target",
+      "retained target alias observes changes; new result slots are independent",
+      "referenced objects and typed pointer referents remain shared",
+      "self-overlap preserves pre-write removed and inserted values",
+      "empty interval, empty insertion, whole-target deletion, empty target",
+      "late incompatible inserted value leaves target unchanged",
+      "negative begin, reversed interval, and end beyond length leave target unchanged"
+    ]
+  },
+  "checked_call_sites": {
+    "FxSeqSplice\\splice": 11,
+    "FxSeqReplaceRange\\replaceRange": 7
+  },
+  "python_oracle_checks": {
+    "replace_range_and_overlap": 2640,
+    "splice_removed_and_overlap": 2640,
+    "profiles": [
+      "integer values",
+      "reference objects"
+    ],
+    "status": "PASS",
+    "note": "Fresh models of the retained move algorithm plus snapshot-before-mutation compared with independent Python slice concatenation; no LMX code executed.",
+    "previous_range_preflight_and_values": {
+      "cases": 8750,
+      "status": "Prior report retained; not rerun for this bounded mutation revision"
+    }
+  },
+  "limitations": [
+    "Type admission, array initialization, lifetime, callback/frame semantics and native ABI require the actual LMX kernel.",
+    "The source checks are deliberately not an LMX parser or proof of runtime correctness.",
+    "Bounds/type failures before mutation are prepared LMX runtime fixtures, not executed results."
+  ],
+  "errors": []
+}

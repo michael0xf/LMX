@@ -1,5 +1,7 @@
 # L2/L3 developer instruction
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
 > documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
 > order of 2026-11-21); only link targets were adapted to repository paths.
@@ -135,9 +137,10 @@ The same structural form is interpreted by role:
 | `i := value` | A retained written form unless consumed by its declared contract | Write an already known writable place |
 
 A place is declared by its receiver: `int: i 5`, `@: ptr`,
-`@: ptr Model`, or `@: ptr Model candidate`. The first argument identifies the
-place. Nested `Model: Other` remains a Frame; it is not an alternative spelling
-of two flat requirement/candidate arguments.
+`@: ptr Model`, or `Model@: ptr candidate`. The first argument identifies the
+place. A full reference requirement belongs in the typed head; `@: ptr Model`
+initializes a universal reference with Model. Nested `Model: Other` remains a
+Frame; it is not an alternative spelling of the typed declaration's candidate.
 
 `i: int: 5` does not declare the primitive i. A structural declaration's name
 does not become assignable merely because an expression appears after its colon.
@@ -482,10 +485,12 @@ the written import/copy/merge Frames.
 
 ## 12. Memory, explicit editing, and native code
 
-Read a value's physical kind from its code, not from its address interval. The
-interval structure is for ownership. A distinct physical kind uses a distinct
-type code under the L2 enumeration; do not introduce ad hoc flag bits or
-per-model type identities.
+Read a value's physical kind through its record code and the corresponding type
+description, not from its address interval. The interval structure is for ownership.
+Derived array and pointer requirements retain their full descriptions and ordinary
+int codes through the common interner. Do not introduce ad hoc flag bits or a
+separate physical C layout for every user model. A full type requirement and its
+checked TYPE-pair metadata do not create another executable graph.
 
 Structures and reference Arrays share the descriptor and variable-size storage
 contract. Use descriptor/index element references where required for movable
@@ -610,3 +615,8 @@ The English packet is the current review edition. The accidentally supplied
 Russian grammar is excluded at the author's request; a complete Russian edition
 can follow after the English review. The author's requirements and supplements
 are carried into the documentation in full; the documentation alone is the norm.
+
+<a id="unified-20261122"></a>
+## Current type and sequence rules
+
+Use T[] and T@ postfix type forms. Use an explicit square initializer for an anonymous typed array, preserve arbitrary pointer depth, and distinguish []: pending from @[]: pending. Universal sequence operations inspect actual array layout; they do not cast dense storage to void**. Keep callback defaults and omitted actuals intact. Only the documented one-level right-container opening is permitted; no P0 unwrap and no private array/regex parser. Use Message for concurrency. Runtime graph edits remain ordinary operations independent of optional native compilation. [Normative details and examples](CORE_SEQUENCES_REGEX.en.md).

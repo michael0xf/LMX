@@ -37,7 +37,7 @@ FxNone:
 
 FxBind:
     private:
-        @: input FxMaybe
+        FxMaybe@: input
         @: next
     return: @
     bind:
@@ -48,7 +48,7 @@ FxBind:
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: @: result FxMaybe \record
+        private: FxMaybe@: result record
         return: result
 ```
 
@@ -104,7 +104,7 @@ Scala 3; клиент использует соседний авторский g
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 411 | 30 |
+| LMX | 410 | 30 |
 | Haskell | 271 | 10 |
 | Scala | 265 | 12 |
 
@@ -132,7 +132,7 @@ MaybeOps:
     copy: sys\OPERANDS_TEMPLATE
     return: @
     bind:
-        @: input MaybeValue \left
+        MaybeValue@: input \left
         @: next \right[0]
         if: input\present = 0
             return: input
@@ -231,4 +231,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

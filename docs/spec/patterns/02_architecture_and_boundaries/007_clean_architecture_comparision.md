@@ -20,9 +20,7 @@ Policy:
     int: expense
     return: int
     eligible:
-        if: income - expense >= 30
-            return: 1
-        return: 0
+        return: income - expense >= 30
 
 Presenter:
     int: decision
@@ -93,11 +91,48 @@ func demo() int { return execute(100, 60, render) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 354 | 24 |
+| LMX | 342 | 22 |
 | Java | 341 | 9 |
 | Go | 268 | 7 |
 
 Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+
+<!-- postfix-expression-review-2026-11-22 -->
+
+## Процедурный аналог LMX — вне основного подсчёта
+
+Полный прежний вариант сохранён. Основным выбран более короткий эквивалентный вариант с обычным Expression; новые библиотеки не скрывают часть реализации.
+
+```lmx
+Policy:
+    int: income
+    int: expense
+    return: int
+    eligible:
+        if: income - expense >= 30
+            return: 1
+        return: 0
+
+Presenter:
+    int: decision
+    return: int
+    render:
+        if: decision != 0
+            return: 200
+        return: 422
+
+UseCase:
+    int: income
+    int: expense
+    @: output
+    return: int
+    execute:
+        return: output(decision := Policy\eligible(income := income; expense := expense))
+    demo:
+        return: execute(income := 100; expense := 60; output := Presenter\render)
+```
+
+**Основание выбора / Selection:** Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete.
 
 ## English explanation
 

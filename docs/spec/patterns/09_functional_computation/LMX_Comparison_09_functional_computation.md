@@ -7,13 +7,13 @@
 | ID | Паттерн | LMX | Haskell | Scala | Граница |
 | ---: | --- | ---: | ---: | ---: | --- |
 | 082 | [Monad](082_monad_comparision.md) | 226 / 17 | 183 / 6 | 147 / 6 | Использование библиотеки |
-| 091 | [Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md) | 411 / 30 | 271 / 10 | 265 / 12 | Реализация библиотеки |
-| 083 | [Trampoline](083_trampoline_comparision.md) | 479 / 37 | 236 / 9 | 237 / 8 | Использование библиотеки |
+| 091 | [Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md) | 410 / 30 | 271 / 10 | 265 / 12 | Реализация библиотеки |
+| 083 | [Trampoline](083_trampoline_comparision.md) | 554 / 43 | 236 / 9 | 237 / 8 | Использование библиотеки |
 | 092 | [Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md) | 611 / 39 | 198 / 9 | 303 / 13 | Реализация библиотеки |
-| 084 | [Execute Around](084_execute_around_comparision.md) | 817 / 52 | 579 / 20 | 440 / 26 | Использование библиотеки |
-| 098 | [Execute Around implementation](098_execute_around_implementation_comparision.md) | 374 / 20 | 287 / 10 | 141 / 9 | Реализация библиотеки |
-| 085 | [Currying](085_currying_comparision.md) | 283 / 20 | 180 / 8 | 189 / 9 | Использование библиотеки |
-| 099 | [General partial-application implementation](099_integer_partial_application_implementation_comparision.md) | 605 / 24 | 101 / 3 | 91 / 4 | Реализация библиотеки |
+| 084 | [Execute Around](084_execute_around_comparision.md) | 842 / 54 | 579 / 20 | 440 / 26 | Использование библиотеки |
+| 098 | [Execute Around implementation](098_execute_around_implementation_comparision.md) | 399 / 22 | 287 / 10 | 141 / 9 | Реализация библиотеки |
+| 085 | [Currying](085_currying_comparision.md) | 292 / 23 | 180 / 8 | 189 / 9 | Использование библиотеки |
+| 099 | [General partial-application implementation](099_integer_partial_application_implementation_comparision.md) | 589 / 24 | 101 / 3 | 91 / 4 | Реализация библиотеки |
 
 Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
 

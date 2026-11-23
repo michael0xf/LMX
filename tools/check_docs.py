@@ -8,6 +8,37 @@ from build_semantics import build as check_semantics
 
 ROOT=Path(__file__).resolve().parents[1]
 
+def doc_link_targets(text):
+    '''Targets of the `](...)` links of a document text (fences already removed). A `](` after an odd number of backticks in
+    its paragraph (counted from the last blank line) stands in inline code and is not a link; the search goes on after it.
+    Twin of dl_in_code in selfbuild/tools/docs_check_links.lm2.'''
+    targets=[];scan=0
+    while True:
+        first=text.find('](',scan)
+        if first<0:break
+        blank=text.rfind('\n\n',0,first);start=blank+2 if blank>=0 else 0
+        if text.count('`',start,first)%2:
+            scan=first+2;continue
+        first+=2;after=text.find(')',first)
+        if after<0:break
+        if after>first:targets.append(text[first:after])
+        scan=after+1
+    return targets
+
+def check_links(root=ROOT):
+    # Check only authored documentation; historical fixture links belong to their source trees.
+    docs=[*root.glob('README*.md'),*root.glob('docs/spec/*.md'),*root.glob('steps/*.md'),*root.glob('claude_chat/*.md'),root/'AGENTS.md',*root.glob('tests/parser/README*.md')]
+    for path in docs:
+        text=path.read_text(encoding='utf-8')
+        text=re.sub(r'(?ms)^(`{3,}).*?^\1\s*$','',text)
+        for target in doc_link_targets(text):
+            if '://' in target:continue
+            file,_,anchor=target.partition('#')
+            dest=(path.parent/file).resolve() if file else path
+            assert dest.exists(),f'Broken link in {path}: {target}'
+            if anchor:
+                assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
+
 def main():
     semantic_count=check_semantics(check=True)
     data=json.loads((ROOT/'provenance/grammar.json').read_text(encoding='utf-8'))
@@ -56,18 +87,7 @@ def main():
         represented={o['path'] for f in files for o in f['origins'] if o['stage']==source['stage']}
         for p in (base/'tests').rglob('*.lmx'):
             assert p.relative_to(base).as_posix() in represented,f'Missing parser input {p}'
-    # Check only authored documentation; historical fixture links belong to their source trees.
-    docs=[*ROOT.glob('README*.md'),*ROOT.glob('docs/spec/*.md'),*ROOT.glob('steps/*.md'),*ROOT.glob('claude_chat/*.md'),ROOT/'AGENTS.md',*ROOT.glob('tests/parser/README*.md')]
-    for path in docs:
-        text=path.read_text(encoding='utf-8')
-        text=re.sub(r'(?ms)^(`{3,}).*?^\1\s*$','',text)
-        for target in re.findall(r'\]\(([^)]+)\)',text):
-            if '://' in target:continue
-            file,_,anchor=target.partition('#')
-            dest=(path.parent/file).resolve() if file else path
-            assert dest.exists(),f'Broken link in {path}: {target}'
-            if anchor:
-                assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
+    check_links()
     tracked=check_eol()
     print(f'OK: {semantic_count} paired semantic chapters, 14 satisfies cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening; line endings LF in the index for all {tracked} tracked files (verbatim imports exempt)')
 

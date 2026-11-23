@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 R=Path(__file__).resolve().parents[1]
 rows=[
-('types','RxTypes\\types','reflection','source','physical field type codes; []:int by language contract'),
+('types','RxTypes\\types','reflection','source','physical field type codes; int[] by language contract'),
 ('names','RxNames\\names','reflection_bridges','source','physical canonical names; anonymous entries retain typed absence'),
 ('signature','RxSignature\\signature','reflection_bridges','operation','ordinary positional signature description'),
 ('signatureTypes','FxSignatureOperand\\make','fn_operand','left; right','same signature kind: result type token left, all ordered input tokens right'),
@@ -15,8 +15,8 @@ rows=[
 ('compose','FxCompose\\compose','generic_combinators','outer; inner','inner arbitrary arity; outer consumes its one result; exact final R'),
 ('pipe','FxPipe\\pipe','generic_combinators','first; second','compose(second; first), exact callable signature'),
 ('identity','FxIdentity\\identity','generic_combinators','typeToken','typed T -> T for any valid value type'),
-('map','FxMap\\map','collections','items; transform','each record admitted as actual callback type, result record vector'),
-('filter','FxFilter\\filter','collections','items; accepts','typed values; ordinary int truth predicate'),
+('map','FxMap\\map','collections','items; transform','universal sequence, ordinary callback admission/defaults, result reference vector'),
+('filter','FxFilter\\filter','collections','items; accepts','universal sequence; stable storage-preserving selection and int predicate'),
 ('foldl','FxFold\\fold','collections','items; seed; step','left fold over any accumulator/item/result records'),
 ('zip','FxZip\\zip','collections','first; second','pairs of typed records, min length'),
 ('zipWith','FxZipWith\\zipWith','collections','first; second; combine','arbitrary binary callback types, result records'),
@@ -25,8 +25,8 @@ rows=[
 ('traverse','FxTraverse\\traverse','collections','items; next','Maybe of direct Structure record vector; stop at first absence'),
 ('memoize','FxMemo\\memo','generic_combinators','operation; sameKey','any arity/R; explicit key-vector equality, Message-local linear cache'),
 ('fix','FxFix\\fix','generic_combinators','operation','F(self;T0..Tn)->R becomes T0..Tn->R'),
-('select','RxSelect\\select','structures','source; indices','physical selection in direct Structure/Array<@>'),
-('omit','RxOmit\\omit','structures','source; indices','physical omissions in direct Structure/Array<@>'),
+('select','RxSelect\\select','structures','source; indices','actual-type selection preserving dense/reference profile'),
+('omit','RxOmit\\omit','structures','source; indices','actual-type omissions preserving dense/reference profile'),
 ('rename','RxRename\\rename','reflection_bridges','source; indices; labels','one graph copy then canonical field names updated'),
 ('reorder','RxReorder\\reorder','structures','source; permutation','full checked permutation, any field value types'),
 ('project','RxProject\\project','structures','source; indices','one shared graph copy of selected fields'),
@@ -59,23 +59,70 @@ rows=[
 ('ok','FxOk\\ok','containers','value','Result success carrying any typed value record'),
 ('err','FxErr\\err','containers','reason','Result failure carrying any typed reason record'),
 ('bindResult','FxBindResult\\bindResult','containers','input; next','typed Result success chain, failure kept'),
-('list','FxList\\list','containers','values','bare Structure/Array<@>, shallow copied record vector'),
-('flatMap','FxListBind\\flatMap','containers','items; next','List bind, no artificial list.items box'),
+('list','FxList\\list','containers','values','universal sequence input, shallow copied reference vector'),
+('flatMap','FxListBind\\flatMap','containers','items; next','universal sequence bind, no artificial list.items box'),
 ('done','FxDone\\done','containers','value','terminal Bounce with result record'),
 ('more','FxMore\\more','containers','thunk','suspended nullary callable, arbitrary captures via partial'),
 ('trampoline','FxTrampoline\\trampoline','containers','current','iterate Bounce until done, never execute callable final result'),
 ]
+
+# Added entries are ordinary current-kernel operations, not a separate version.
+sequence_rows = [
+('range','FxSeqRange\\range','sequences','start; stop; step=1','dense int range, stop excluded, checked extent'),
+('slice','FxSeqSlice\\slice','sequences','source; begin; end','validated half-open selection preserving actual storage profile'),
+('reverse','FxSeqReverse\\reverse','sequences','source','new reverse container, reference targets retained'),
+('concat','FxSeqConcat\\concat','sequences','parts','one-level concatenation; same dense T or ordinary reference array'),
+('compress','FxSeqCompress\\compress','sequences','source; mask','same-length int truth mask; stable profile-preserving selection'),
+('any','FxSeqAny\\any','sequences','items; accepts','ordered predicate calls, stop at first true'),
+('all','FxSeqAll\\all','sequences','items; accepts','ordered predicate calls, stop at first false'),
+('index','FxSeqIndex\\index','sequences','items; accepts','Maybe of first int index, none when absent'),
+('count','FxSeqCount\\count','sequences','items; accepts','count accepted items in source order'),
+('replaceRange','FxSeqReplaceRange\\replaceRange','sequences_mutation','target; begin; end; values','preflight then overlap-safe replacement, same target descriptor'),
+('splice','FxSeqSplice\\splice','sequences_mutation','target; begin; end; values','same replacement; return a fresh shallow snapshot of removed elements, preserving dense/reference profile'),
+('append','FxSeqAppend\\append','sequences_mutation','target; values','same target, source values fixed before writes'),
+('insert','FxSeqInsert\\insert','sequences_mutation','target; position; values','replaceRange at one position'),
+('deleteAt','FxSeqDeleteAt\\deleteAt','sequences_mutation','target; begin; end','replaceRange with no inserted values'),
+]
+rows.extend(sequence_rows)
+regex = json.loads((R/'REGEX_EXPORTS.json').read_text())
+regex_signatures = {
+'literal':'text','oneOf':'text','noneOf':'text','charRange':'first; last','satisfy':'predicate','boundaryOf':'predicate','sameAs':'name',
+'sequence':'patterns','choice':'patterns','repeated':'pattern; minimum=0; maximum=unbounded; order=extendFirst','atomic':'pattern','capture':'name; pattern',
+'ahead':'pattern','notAhead':'pattern','behind':'pattern','notBehind':'pattern','utf8Text':'source','byteText':'source',
+'matchAt':'source; pattern; position','wholeMatch':'source; pattern','find':'source; pattern','eachMatch':'source; pattern','contains':'source; pattern','matches':'source; pattern','hasPrefix':'source; pattern','hasSuffix':'source; pattern',
+'matchedSpan':'result','matchedText':'result','captureSpans':'result; name','lastCapture':'result; name','captureText':'result; name','captureTexts':'result; name',
+'replaceFirst':'source; pattern; replacement','replace':'source; pattern; replacement','split':'source; pattern',
+}
+for e in regex['exports']:
+ if e['role'] in {'builder','receiver','text_profile','operand'}:
+  rows.append((e['name'],e['target'],e['source'][4:-4], 'left; right' if e['role']=='operand' else regex_signatures[e['name']],
+               'ordinary Pattern operand with common left/right ABI' if e['role']=='operand' else 'ordinary text-pattern '+e['role']+'; see REGEX_IMPLEMENTATION.md'))
+value_symbols=[x for x in regex['exports'] if x['role'] not in {'builder','receiver','text_profile','operand'}]
+(R/'value_symbols.json').write_text(json.dumps(value_symbols,ensure_ascii=False,indent=2)+'\n')
+
+renamed={new:old for old,new in json.loads((R.parent/'api_renaming_20261122.json').read_text())['map'].items()}
+revision=json.loads((R.parent/'api_revision_20261122.json').read_text())
+renamed.update({new:old for old,new in revision['map'].items()})
+for name in revision['new_receivers']:
+ renamed[name]=None
 former={ 'signatureTypes':'fn','curry':'lambda','foldl':'fold','scanl':'scan','memoize':'memo','runUntil':'until','retryCall':'retry','bracket':'around'}
 no_bridge={'types','select','omit','reorder','project','defaults','diff','patch','bindFields','derive','composeData','record','some','none','ok','err','list','done'}
 catalog=[]
 for i,(name,api,src,args,scope) in enumerate(rows,1):
- catalog.append({'id':i,'name':name,'former_name':former.get(name,name) if i<=50 else None,'public_name':name,'api':api,'signature':('R signatureTypes T0 ... TN; explicit fun\\const\\signatureTypes(left := R; right := types)' if name=='signatureTypes' else name+'('+args+')'),'source':'src/'+src+'.lmx','status':'BODY' if name in no_bridge else 'BODY_WITH_BRIDGE','scope':scope,'implementation_layer':'core','availability':'core_integration_task','namespace_root':'fun\\const','lmx_executed':False})
+ catalog.append({'id':i,'name':name,'former_name':former.get(name,renamed.get(name,name)) if i<=61 else renamed.get(name),'public_name':name,'api':api,'signature':('R signatureTypes T0 ... TN; explicit fun\\const\\signatureTypes(left := R; right := types)' if name=='signatureTypes' else name+'('+args+')'),'source':'src/'+src+'.lmx','status':'BODY' if name in no_bridge else 'BODY_WITH_BRIDGE','scope':scope,'implementation_layer':'core','availability':'core_integration_task','namespace_root':'fun\\const','lmx_executed':False})
 (R/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n')
-lines=['# Прямые публичные ресиверы','', 'Редакция 2026-11-22. Все прежние 50 позиций сохранены; 11 контейнерных/служебных операций добавлены.', '', 'Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.', '`BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.', '', '| № | Имя | Прежнее имя | Вызов | Исходник | Статус |', '|---|---|---|---|---|---|']
+lines=['# Прямые публичные ресиверы и Expression-операнды','', f'Редакция 2026-11-22. Сохранены все 61 операции текущего загруженного комплекта; имена согласованы с новой редакцией; добавлены {len(sequence_rows)} последовательностных и {len(rows)-61-len(sequence_rows)} текстовых/Pattern-операций. Всего {len(catalog)} уникальных вызовных имён.', '', 'Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.', '`BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.', '', '`replaceRange` меняет диапазон и возвращает target; `splice` возвращает удалённые элементы в отдельном контейнере. Текстовый `replace` возвращает новый текст. `hasPrefix` и `hasSuffix` проверяют соответствующую границу и возвращают int 1/0.', '', '| № | Имя | Прежнее имя | Вызов | Исходник | Статус |', '|---|---|---|---|---|---|']
 for x in catalog:
  lines.append(f"| {x['id']} | `{x['name']}` | {x['former_name'] or 'новое'} | `{x['signature']}` | [{x['source']}]({x['source']}) | {x['status']} |")
 lines+=['','## Области применения','']
 for x in catalog:lines.append(f"- **{x['name']}** — {x['scope']}.")
+lines += ['', '## Готовые значения, требования и исходы', '',
+          'Эти имена читаются как значения/описания. Они не являются неявными nullary-вызовами и не входят в число вызовных имён выше.', '',
+          '| Имя | Роль | Исходник |', '| --- | --- | --- |']
+for v in value_symbols:
+ lines.append(f"| `{v['name']}` | {v['role']} | [{v['source']}]({v['source']}) |")
+lines += ['', 'Существующий `|` дополнен веткой [RxAlternativeDispatch\\probe](src/regex/operands.lmx), без замены прежнего numeric/Array-пути. Постфиксы T[]/T@ подключаются в существующем общем resolver ядра, а не как новые дублирующие имена.', '',
+          '[Последовательности](SEQUENCES_IMPLEMENTATION.md) · [Patterns и текст](REGEX_IMPLEMENTATION.md) · [Адаптеры](ADAPTER_IMPLEMENTATION.md).']
 (R/'CATALOG.md').write_text('\n'.join(lines)+'\n')
 public=['# ВНУТРЕННИЙ НАБОР ЭКСПОРТОВ ЕДИНОГО ЯДРА: fun.', '# Ядро включает fun/const в штатные корневые объявления; клиенты пишут прямые имена.', '# Один const-блок даёт root-constant экспорты общего namespace; CODE не копируется.', '# signatureTypes — обычный ядерный type-token оператор; declaration head удалён.', '# Name :: DATA — единственная именованная форма того же вида сигнатуры.', 'fun:', '    const:']
 for x in catalog:public.append('        @: '+x['name']+' '+x['api'])

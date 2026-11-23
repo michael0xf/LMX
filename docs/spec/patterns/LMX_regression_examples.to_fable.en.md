@@ -388,7 +388,7 @@ Backend:
 Checks:
     return: int
     demo:
-        @: chosen PairSignature Backend\encode
+        PairSignature@: chosen Backend\encode
         return: chosen(left := 2; right := 7)
 ```
 
@@ -412,7 +412,7 @@ Backend:
 Checks:
     return: int
     demo:
-        @: chosen ValueSignature Backend\read
+        ValueSignature@: chosen Backend\read
         int: a chosen()
         int: b chosen(publicValue := 0)
         return: a * 10 + b
@@ -427,26 +427,26 @@ Variant with `required: int: actualValue` and no default: signature compatibilit
 ### B-12 — Type order matters; optional positions do not vanish
 
 ```lmx
-SelectionSignature :: (int: count; []: char text; return: int)
+SelectionSignature :: (int: count; char[]: text; return: int)
 
 Compatible:
     int: n
-    []: char s
+    char[]: s
     return: int
     choose:
         return: n
 
 Reordered:
-    []: char text
+    char[]: text
     int: count
     return: int
     choose:
         return: count
 ```
 
-- Accept `@: selected SelectionSignature Compatible\choose`.
+- Accept `SelectionSignature@: selected Compatible\choose`.
 - `selected(text := "abc"; count := 6)` returns 6.
-- Reject `@: selected SelectionSignature Reordered\choose`: the candidate type order is `Array<char>, int`.
+- Reject `SelectionSignature@: selected Reordered\choose`: the candidate type order is `Array<char>, int`.
 - Direct `Reordered\choose(count := 6; text := "abc")` remains valid and returns 6.
 - Reject candidates with one fewer declared input, including a missing optional input, or a different presence/type of result.
 
@@ -621,13 +621,13 @@ Library:
         apply:
             return: n * 3
     ---
-    @: selected TransformSignature Transform\apply
+    TransformSignature@: selected Transform\apply
 
 Use:
     import: Library
     return: int
     demo:
-        @: chosen TransformSignature Transform\apply
+        TransformSignature@: chosen Transform\apply
         return: chosen(4) + factor
 ```
 
@@ -681,7 +681,7 @@ Scrambled:
 CoordinateProbe:
     return: int
     run:
-        @: view CoordinateModel Scrambled
+        CoordinateModel@: view Scrambled
         int: before view\x * 10 + view\y
         view\x := 9
         return: before * 100 + view\x * 10 + view\y
@@ -731,8 +731,8 @@ Checker:
 BehaviorProbe:
     return: int
     run:
-        @: first UnaryNumber Increment\apply
-        @: second UnaryNumber Decrement\apply
+        UnaryNumber@: first Increment\apply
+        UnaryNumber@: second Decrement\apply
         int: good Checker\at_zero(candidate := first)
         int: bad Checker\at_zero(candidate := second)
         return: good * 10 + bad
@@ -929,8 +929,8 @@ These cases follow the current operand contract, including conditional RIGHT-onl
 
 ```lmx
 numeric_ops:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -963,8 +963,8 @@ Source: [operand discovery](../LMX_semantics.en.md#operand-receiver); [prepared 
 
 ```lmx
 several_ops:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1032,8 +1032,8 @@ meter:
         return: node\calls
 
 prepared_ops:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1042,7 +1042,7 @@ prepared_ops:
 
 raw_ops:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1084,7 +1084,7 @@ meter:
 
 selection_ops:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1121,7 +1121,7 @@ helpers:
 
 origin_ops:
     @: left
-    []: @ right
+    @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     int: n 700
@@ -1154,8 +1154,8 @@ Source: [`sys\eval` and the source context](../LMX_semantics.en.md#expression-ev
 
 ```lmx
 reference_ops:
-    @: left int
-    []: @(int) right
+    int@: left
+    int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: @
@@ -1469,7 +1469,7 @@ Start with a working copy of OP01. Apply one mutation per independent fixture:
 Separate positive fn test:
 
 ```lmx
-OperandPair :: (@: first; []: @ rest; return: int)
+OperandPair :: (@: first; @[]: rest; return: int)
 ```
 
 A candidate whose input types are `@`, then `Array<@>`, whose real names are
@@ -1534,7 +1534,7 @@ The requirement is exactly two uppercase ASCII letters, a hyphen and two decimal
 
 ```lmx
 TicketCode:
-    []: char candidate
+    char[]: candidate
     return: int
     accepts:
         if: length(candidate) != 5
@@ -1567,7 +1567,7 @@ TicketCode:
 
 Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `satisfies` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
 
-**Basis:** the example of [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) uses `[]: char`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
+**Basis:** the example of [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) uses `char[]:`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
 
 ### V02. A mock is an ordinary dependency of the actual candidate
 
@@ -1839,7 +1839,7 @@ Difference:
         return: adapted * 10 + direct
 ```
 
-**Entry:** `Difference\demo()` → **72**, from adapted **8** and direct **−8**. The adapter delegates with reversed actual positions; it must not be optimized into forwarding the original positional list unchanged. **Basis:** [P1] §4.
+**Entry:** `Difference\demo()` → **72**, from adapted **8** and direct **−8**. The adapter delegates with reverse actual positions; it must not be optimized into forwarding the original positional list unchanged. **Basis:** [P1] §4.
 
 ### P05 — Observer: duplicate subscriptions remain two calls
 
@@ -2606,7 +2606,7 @@ For a selected Thread, add a same-platform restart case for its serializable cal
 
 **Kind:** source fixture observation; use G01. **Sources:** [SEM] §12, `computed-field-address`; [L2] §11.
 
-In one active call to `ComputedInput\changeLocal`, obtain `@value`; separately obtain `@(ComputedInput\value)` from an external inspection call before executing the producer.
+In one active call to `ComputedInput\changeLocal`, obtain `@value`; separately obtain `(@ComputedInput\value)` from an external inspection call before executing the producer.
 
 **Expected:** under the [numeric-address rule](../LMX_semantics.en.md#method-reference-assignment) the explicit `@` operation produces a numeric address. In the first observation that address identifies the selected activation-local integer place, obtaining its value under the ordinary demand rules. In the second it identifies the written source declaration, not the result of `ReadSource\next()`, and does not run that producer. These address observations must not be relabelled as implicit ordinary reference construction. A native local is tested through its declared place/type contract; do not inspect four bytes before an arbitrary C local as if it were an arena record.
 

@@ -29,18 +29,18 @@ FxPartial:
             FxKernelFailure
             FxRecordArity
             FxTypeToken
+            ReceiverIndex
+            SequenceSize
         private: @: info FxKernel\signature(subject := operation)
-        private: @: inputs info\inputTypes
-        private: int: n length(inputs)
+        private: int: n length(info\inputTypes)
         private: int: k length(prefix)
         if: k > n
             throw: FxArity()
-        private: @: captured FxCapturePrefix\capture(inputs; prefix)
-        private: @: remaining FxSlice\slice(inputs; k; n - k)
+        private: @: captured FxCapturePrefix\capture(info\inputTypes; prefix)
+        private: @: remaining FxSlice\slice(info\inputTypes; k; n - k)
         private: @: contract FxSignatures\make(remaining; info\resultType)
-        private: @: state FxNewState\make(operation; info; captured)
-        private: []: char body FxTargetCallText\build(n; k; 0; info\hasResult)
-        return: FxBuild\make(contract; body; state; info\throws)
+        private: @: policy FxPrefixPolicy\make(operation; captured)
+        return: FxWrap\make(contract; FxForwardEngine\run; (copy(())); info\throws; policy)
 ```
 
 Основной листинг — точные определения FxPartial из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
@@ -73,11 +73,13 @@ Scala 3; клиент использует соседний авторский g
 
 [Основной листинг](examples/scala/099_integer_partial_application_implementation.scala)
 
+Другие сохранённые LMX варианты: [before_adapter_fix](examples/lmx/variants/099_integer_partial_application_implementation_before_adapter_fix.lm3) — 605 символов (исторический, вне выбора).
+
 ## Выбор основного кода и подсчёт
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 605 | 24 |
+| LMX | 589 | 24 |
 | Haskell | 101 | 3 |
 | Scala | 91 | 4 |
 
@@ -147,9 +149,9 @@ object CurryInt {
 
 **Основной LMX.** Показан реальный алгоритм partial из src/generic_functions.lmx. Он использует общие анализ сигнатуры, capturePrefix, построение DATA/graph и обычный generated call; ни число аргументов, ни тип результата не зашиты. Все вызываемые общие helpers перечислены и посчитаны в IMPLEMENTATION_DEPENDENCIES.md. Интерфейсы ядра являются требованиями интеграции, а не готовым проверенным бинарником.
 
-**Наблюдаемый общий сценарий.** Остаточные позиции принимаются явно и не запускаются досрочно из-за default-значений. capture не удерживает произвольное динамическое окружение фабрики. Глубокое клонирование ссылочных графов, авто-компиляция и новый persistent cache не добавлены. Для полностью связанных аргументов сохраняется отложенный nullary вызов.
+**Наблюдаемый общий сценарий.** Остаточные входы сохраняют собственные defaults, required/private и разрешённое связывание исходного F. Prefix остаётся в полном исходном DATA для зависимых defaults. Ни factory, ни общий wrapper не запускают ненужные initializers. Произвольное окружение фабрики не захватывается; полный prefix даёт отложенный nullary callable. Runtime-подтверждение требует подключения обычных call-phase hooks.
 
-**Возможности общего ядра.** Остаточные позиции принимаются явно и не запускаются досрочно из-за default-значений. capture не удерживает произвольное динамическое окружение фабрики. Глубокое клонирование ссылочных графов, авто-компиляция и новый persistent cache не добавлены. Для полностью связанных аргументов сохраняется отложенный nullary вызов.
+**Возможности общего ядра.** Остаточные входы сохраняют собственные defaults, required/private и разрешённое связывание исходного F. Prefix остаётся в полном исходном DATA для зависимых defaults. Ни factory, ни общий wrapper не запускают ненужные initializers. Произвольное окружение фабрики не захватывается; полный prefix даёт отложенный nullary callable. Runtime-подтверждение требует подключения обычных call-phase hooks.
 
 Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; основной пример bracket проверяет этот договор явно.
 
@@ -180,4 +182,4 @@ No execution of LMX or the control programs is claimed.
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.ru.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.

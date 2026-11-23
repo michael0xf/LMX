@@ -94,7 +94,7 @@ Haskell даёт естественный контроль для Maybe/Monad и
 
 **Соседнее сравнение реализации:** [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md)
 
-**Основные варианты:** LMX: core, Haskell: generic, Scala: generic.
+**Основные варианты:** LMX: core_curry, Haskell: generic, Scala: generic.
 
 **Сценарий:** Объявить сложение и вызвать partial(add;(5)) и partial(add;(100)). Получить 6,101,6 после завершения фабрики. Локальное saved=1000 не меняет сохранённые значения. Префикс — Structure записей, а не скрытый список только int.
 

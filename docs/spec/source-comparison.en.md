@@ -1,5 +1,7 @@
 # Source specification comparison and provenance
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 This note preserves the reported comparison of two historical source files on 2026-09-19:
 
 - C:/Nyasha_Planet/lingvamyxa/Lingvamyxa_spec.txt
@@ -68,3 +70,8 @@ Reported source SHA-256 values:
 See the [complete receiver chapter](LMX_semantics.en.md#functional-receivers)
 and the [kernel integration](kernel-implementation.en.md#receiver-kernel-integration) for contracts,
 implementation links and acceptance conditions.
+
+<a id="unified-20261122"></a>
+## Sources for the current unified edition
+
+The only baseline is the user's uploaded archive. Its root type specification has explicit priority over superseded forms in 1/. The sequence and Pattern specifications share that type contract. Callable adapter requirements come from the uploaded semantics §37. Current examples and their earlier alternatives are preserved from that same baseline. The [unified chapter](CORE_SEQUENCES_REGEX.en.md) records the resulting norm; [the edition report](REVISION_2026-11-22.md) records what was actually changed and verified.

@@ -1,134 +1,80 @@
-# Архитектура общих реализаций
+# Architecture of the general receiver implementations
 
-## Действительный смысл обобщения
+## Generality
 
-Основные исходники не выбирают отдельные `IntUnary`/`IntBinary` реализации.
-Вся информация о callable берётся из одного семантического `signature`:
-упорядоченные полные требования `inputTypes`, `resultType`, `hasResult`,
-публичные имена и объявленные исходы. Предел вида «два int и int-результат»
-отсутствует. Число этапов/параметров/элементов вычисляется из фактической структуры.
+The implementations derive finite input count and complete type requirements from the existing signature analyzer. They are not binary-int adapters. Inputs and results can be primitives, dense Arrays, Structure/@[], callable models or void where admitted by the ordinary contract. There is no fixed arity table.
 
-Служебные `int` остаются там, где они означают код типа, физический индекс,
-счётчик, состояние или логическую истину языка. Числа `0`, `1`, `2` у Maybe,
-Bounce и lazy — состояния протокола; десятичное основание `10` у преобразования
-индекса в имя — основание записи; `2` у flip/zip — определение этих операций.
-Это не скрытый предел пользовательской арности. Размеры должны помещаться в
-выбранный ядром индексный профиль; арифметика размера проверяется до resize.
+A Structure already is an array of references to value records. Algorithms use it directly, without an items wrapper. Dense Arrays use their real type and stride. A transport @ points to the actual typed record; it does not coerce every semantic type to @ or add a mandatory second box around a referenced Structure.
 
-Каждая Structure сама служит массивом `@`. Префиксы, списки, actuals, результаты
-отображения, индексы, метки и списки ошибок обходятся напрямую через `length`
-и индекс. Возвращаемому списку не требуется оболочка с дополнительным `items`.
-Значение элемента — запись с собственным типом; ссылка на эту запись не
-тождественна чтению её payload.
+Postfix type constructors return ordinary int codes. Normalization reads an initialized int's payload as a type-id and an uninitialized token's type without a payload read. References used internally to normalized requirements are references to code records and their existing full type descriptions, not new public Type objects.
 
-## Исходники по слоям
+## Source layers
 
-| Файл | Ответственность |
-|---|---|
-| [generic_functions.lmx](src/generic_functions.lmx) | N-арные curry/partial/uncurry/flip, type builder, capture, генерация обычного CODE |
-| [generic_runtime.lmx](src/generic_runtime.lmx) | Векторы записей, общая граница apply/attempt, создание точно типизированного wrapper |
-| [generic_combinators.lmx](src/generic_combinators.lmx) | compose/pipe/identity, memoize/fix, перестановки, адаптация, предикаты/контракты |
-| [generic_wrappers.lmx](src/generic_wrappers.lmx) | lazy/once/force, repeat/retry/runUntil, bracket/recover/trace |
-| [containers.lmx](src/containers.lmx) | Maybe/Result/List/Bounce и соответствующие операции |
-| [collections.lmx](src/collections.lmx) | map/filter/foldl/scanl/zip/zipWith/traverse/transpose/groupBy |
-| [structures.lmx](src/structures.lmx) | Обобщённые операции над физическим составом структуры |
-| [reflection.lmx](src/reflection.lmx), [reflection_bridges.lmx](src/reflection_bridges.lmx) | Коды типов, семантическая сигнатура, имена и переименование |
-| [fn_operand.lmx](src/fn_operand.lmx) | Новый конструктор обычной fn-сигнатуры через operand header |
-| [public.lmx](src/public.lmx) | Один публичный namespace fun, без повторной реализации алгоритмов |
+| Source | Role |
+| --- | --- |
+| [kernel_contracts.lmx](src/kernel_contracts.lmx) | Thin existing analyzer/builder/call hooks and five phase hooks for ordinary invocation |
+| [fn_operand.lmx](src/fn_operand.lmx) | Existing `signatureTypes` operand using `OPERANDS_TEMPLATE` |
+| [generic_functions.lmx](src/generic_functions.lmx) | Exact signature construction, prefix admission, partial/curry/flip/uncurry |
+| [adapter_frames.lmx](src/adapter_frames.lmx) | Real source input policies, projection entries, one-place reads, observation and snapshots |
+| [generic_runtime.lmx](src/generic_runtime.lmx) | Ready-actual apply and wrapper entry without eager argument capture |
+| [generic_combinators.lmx](src/generic_combinators.lmx) | Composition, permutation, memoization, fix, before/after adaptation and predicates |
+| [generic_wrappers.lmx](src/generic_wrappers.lmx) | First-success caching, retry, resource bracket, recovery and trace |
+| [reflection_bridges.lmx](src/reflection_bridges.lmx) | Semantic signature and existing owning-field names |
+| [collections.lmx](src/collections.lmx) | General collection algorithms through the shared typed sequence access |
+| [containers.lmx](src/containers.lmx) | Maybe/Result/List/Bounce algorithms |
+| [structures.lmx](src/structures.lmx) | Ordinary structural selection/composition operations |
+| [public.lmx](src/public.lmx) | Physical source owning-field exports into the one current kernel |
 
-`functions_specialized.lmx` и старые ссылочные wrappers не входят в проект.
-Они не входят в сборку и не являются доказательством общей реализации.
-Примеры с конкретными типами вынесены в `examples`, а не включены в алгоритмы.
+## Callable construction and call preservation
 
-## callable, DATA и захват
+`FxBuild` parses generated CODE once with the existing `sys\fromLmx` and calls the ordinary graph builder. Actual parent links are real. Explicit state is an ordinary private graph structure. No foreign native entry is reused and compilation remains explicit.
 
-`FxBuild` разбирает сгенерированное тело существующим `sys\fromLmx`; `FxKernel`
-соединяет его с обычным owner → DATA → CODE. Это один чистый граф, с настоящим
-parent и обычными required/private входами. Нет особого closure-объекта VM,
-второго работающего графа, скрытого глобального environment или автоматического
-кеша соответствия вне текущего обхода.
+A type signature is not a substitute for a source declaration's call policy. `FxInputPolicy` keeps the actual source, public-to-source positions, captured ready values and future curry positions. Exact type identity still ignores names/defaults/required/private/throws. Own interfaces without a source use expressly chosen ordinary declarations.
 
-`partial` снимает типизированный префикс обычным Ti-приёмом: примитив по значению,
-ссылка с сохранением цели. Глубокая `copy(prefix)` для этого не используется.
-`k=0` сохраняет весь упорядоченный список входных типов; `k=N` даёт отложенный nullary callable. Фабрика
-не исполняет F. `curry` разветвляет префикс на каждом шаге; последние R/void
-возвращаются только на последнем шаге. Callable-результат не запускается далее.
-`uncurry` требует явные contract и failures; число шагов определяется этим
-контрактом, не эвристикой «пока результат можно вызвать».
+`FxWrap` obtains the invocation's already prepared call frame and passes that borrowed handle to the selected engine. It never reads every pN into a vector. The engine can enter the selected source call, demand one input, create deferred declaration actuals for a predicate, or observe ready-state metadata. Source defaults keep their original DATA/node and access to captured prefix places. Private service locals are never used as accidental target autofill.
 
-Текущие тела фабрик делают остаточные входы required/private. Они сохраняют
-типовую форму, но **не обещают сохранить поведение отсутствующих actuals**:
-у исходного F может быть default/autofill, тогда как у `partial(F; пустой prefix)`
-сгенерированный p0 потребует явный actual. То же ограничение относится к
-построенным через `FxWrap` адаптерам. Это ограничение этих исходников, не
-статическая типизация LMX и не общее запрещение динамического связывания.
-`uncurry` строит промежуточные требования Ti → @; подходит ли конкретная
-ступень с более узким результатом, решает обычный admission. Исходник не
-предполагает автоматическое стирание такого требования или новую ковариантность.
+The source call's binding point is preparation of the generated callable from its current caller. An engine's later predicate/sink/handler/outer/stage calls remain ordinary additional calls, with the normal forwarding/private rules. This does not skip arbitrary A→B→C chains or collect descendants' free names.
 
-`FxWrap` адаптирует внутренний engine с вектором actual records к обычному
-внешнему интерфейсу T0…Tn → R. Сгенерированное тело захватывает каждый `pi` через
-`record`, вызывает engine и возвращает `\resultRecord` через обычное принятие
-точного R. Для void оно делает bare return. На границе разрешаются обычные
-admission/conversion; она не подменяется чтением памяти без типа.
+Full algorithms and the exact frame lifecycle are in [ADAPTER_IMPLEMENTATION.md](ADAPTER_IMPLEMENTATION.md); the narrow provider obligations are in [KERNEL_REQUIREMENTS.md](KERNEL_REQUIREMENTS.md).
 
-Возвращённая ссылка на record никогда не указывает на законченный C-stack
-local. Общий storage механизм обязан обеспечить подходящее время жизни.
-Примитивный snapshot и идентичность ссылочного target — разные гарантии.
+## Partial and curry
 
-## Два способа построения, одно требование
+A written prefix is admitted under its real Ti before publication. Dense and reference-array inputs use typed access. Primitives are captured by value; targets of reference values retain identity and normal lifetime. The residual source namespace still contains captured positions, so dependent defaults work in the original context.
 
-`Name :: DATA` и type-token operand signatureTypes строят обычное описание одним
-`FxSignatures\make` / `signatureData` / штатным `Built :: DATA` маршрутом. В admission не
-существует отдельного признака «сигнатура Haskell», «именованная сигнатура» или «сигнатура из токенов типов».
-Сравниваются упорядоченные полные типы входов и R/void, а не имена и defaults.
-Синтетические метки `pN` служат только привязке фактических аргументов.
+Partial with an empty prefix keeps the ordinary mapped input behavior. A full prefix returns a nullary callable and does not invoke F immediately. Flip/permute move source policies with positions.
 
-Исключение из области изменений: существующее отношение именованной сигнатуры с
-receiver `call` не переписывается. Никакой новый auto-call по указателю на
-описание сигнатуры не добавлен. Во всех остальных контекстах обе формы
-взаимозаменяемы. Код перекрёстной приёмки находится в
-[fn_equivalence.lmx](examples/fn_equivalence.lmx).
+Curry keeps its stagewise meaning: a non-final stage consumes and captures its one current accepted input, then constructs a persistent next-stage graph. It keeps no expired frame. Future positions are not forced merely to return the next stage. Its own reference-valued middle-stage protocol does not become a restriction on independently supplied uncurry chains.
 
-## Ошибки без фиктивного throws:*
+## Uncurry
 
-Обычная ядерная функция не может объявить неизвестное число произвольных
-имён ошибок одной строкой. Поэтому `FxTry` использует общий bridge `attempt`
-и получает Outcome. `FxApply` и вызывающие его generic-алгоритмы объявляют
-конечную оболочку `FxCallFailure(outcome)`; имя/тип payload исходного failure
-сохраняются. Это явная часть публичного API операций над record.
+The explicit flat contract supplies N and final R/void. At each reached step the loop obtains the actual current callable's complete description and uses the ordinary preparation/entry path. No forced Ti→@ table is constructed. A supplied outer occurrence is forwarded once with its original form; an omitted position stays omitted so the reached stage keeps its own default/required policy. Named signature-template defaults are not assigned to unrelated stages. A returned typed record retains its actual Structure/callable model.
 
-Внешний CODE, создаваемый `FxWrap`, получает вычисленный список target/handler
-исходов и конечных строительных ошибок. Он ловит внутренний FxCallFailure и
-поднимает исходное имя через тонкий bridge `raise`. Ни обычный wrapper, ни
-raise не получают право обходить `throws`, private или границу Message.
-Прямой `retryCall` после исчерпания попыток возвращает исходный Outcome внутри
-FxCallFailure, а не выдумывает `throws:*` или теряет причину.
+N>0 invokes exactly N unary stages; N=0 invokes one nullary stage. The final callable value is returned without another call. Result presence and ordinary final receiving R remain checked. An incompatible intermediate result fails only at its reached next call; later bodies do not run. No factory probes occur.
 
-Список конечных объявлений обычных helpers воспроизводится
-[tools/sync_effects.py](tools/sync_effects.py) и опубликован в
-[tests/effect_contracts.json](tests/effect_contracts.json). Скрипт — механическая
-проверка известных исходников; он не доказывает семантику generated body.
+Explicit outer actuals retain ordinary flat-call evaluation order. Prepared-value stage equivalence does not claim equivalence with an effectful nested source expression that evaluates later arguments at different times.
 
-## Чего здесь не обещано
+## Operation-specific observation
 
-Коллекция произвольных типов не означает, что одна функция, принимающая double,
-обязана принять строку. Плотный Array<T> не трактуется как Array<@>.
-`diff/patch` сравнивают идентичности записей и не обнаруживают изменение payload
-по прежнему адресу. `memoize` пользуется явным equality и требует стабильных
-ключей. `once` кеширует первый успех; после ошибки возможна новая попытка.
-`bracket` не выполняет release после неуспешного acquire и не вводит новый
-приоритет исключений finally. Общие кеши между Thread не создаются: для этого
-используются Message и существующие транспортные механизмы.
+Once checks its successful cache before input demand. A hit still follows normal explicit-actual preparation but forces no unused default.
 
-Ни статическая сборка, ни число подготовленных assert не означают исполнения
-в LMX. До подключения восьми мостов пакет является конкретным исходным
-результатом и контрактом интеграции, а не подтверждённым runnable binary.
+Guard/contract pass deferred declaration actuals referring to already selected source places. A predicate which reads one input can cause that default, while an untouched second input stays untouched. The same prepared source activation is later entered, and postconditions consume its input observation and genuine result. Already received primitive actuals retain their original values despite assignments to F's own formals; shared reference targets retain normal mutation behavior.
 
-## Статус в ядре
+Trace and recover create ordinary observation structures. Their argument metadata distinguishes supplied/ready/declaration/default/autofill/uninit; only ready values are included. No event keeps a live frame. Passive observation performs no initializer or converter.
 
-Все 61 API предоставляются стандартным namespace единого ядра напрямую.
-Внутренняя группа fun/const — исходные owning-field экспорты, а не пакет,
-который пользователь выбирает/импортирует. Прежние реализации не являются
-подключаемым вариантом. Восемь мостов — внутренние задачи интеграции ядра,
-и отсутствие запуска runtime в этом окружении явно сохранено в отчётах.
+Memoization explicitly snapshots all accepted inputs for its key before lookup and body execution. This is the documented value-key policy, not generic wrapper behavior. Omission is resolved under actual source policy before equality; no false hit follows solely from two absent actual lists. Stable key equality/reference targets remain the caller's contract, and failed calls are not cached.
+
+## Failures and effects
+
+Ready calls and frame entry return `FxOutcome` with the true result record or the original declared failure name/payload. Only known admitted declared names are caught. Implicit failures remain implicit.
+
+The generic LMX layer transports a declared failure through `FxCallFailure`. Generated CODE catches that envelope and re-raises the original name within its computed finite outcome set. No `throws:*` or arbitrary root context is invented. A throwing logger or cleanup routine follows normal language exit precedence.
+
+A sequence callback receives its stated number of actuals; additional optional formals follow its own real defaults/private/required rules. Apply does not force a full-width vector. Repeat/retry snapshot only supplied ready actuals, preserving omitted tail positions on each call.
+
+## Ownership, native execution and current status
+
+Factory state and caches are ordinary Message-local structures. The design does not share them secretly between Threads. A frame reference is borrowed service state, cannot be serialized or retained, and does not prolong a local lifetime. Native results use valid arena records or the normal direct ABI, never pointers into finished C stack slots.
+
+Known prepared native paths can use existing metadata and direct arguments. The general implementation does not demand boxing every native primitive, reparsing text per call or rebuilding the whole signature at each step. Graph edits and native validity use the existing explicit boundaries.
+
+The current archive supplies source-level algorithms and concrete fixtures. The real kernel provider and runtime executions are not present. No A/B case is marked runtime PASS. The prior loaded source is preserved under reference, clearly excluded from current assembly and comparisons. The separately supplied priority task is reference material; current uploaded documentation remains authoritative for names and syntax.

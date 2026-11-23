@@ -1,5 +1,7 @@
 # LMX semantics: worked explanations
 
+**Current extension:** [types, universal sequences, text patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+
 These worked explanations consolidate the accepted requirements through 2026-11-21. The
 [semantics](LMX_semantics.en.md) and [grammar](LMX_grammar.en.md) define the language contracts.
 Example results are required behavior, not claims of implementation tests.
@@ -67,7 +69,7 @@ already been performed. See [grammar §15](LMX_grammar.en.md#levels).
 |---|---|
 | Graph construction, known candidate | Applicable interface requirements are checked without executing the candidate body, initializers, or `test`. |
 | Build/test phase, after the clean graph and before C | Checks reached through the ordinary build/test receiver contracts execute; their checkers may call candidates. This is not recursive discovery of every nested DATA test. |
-| Reached interpreted call | The interpreter invokes standard `satisfies` for admission, including the checks required at that receiving site. Reused admission facts remain scoped to their operation/reception. |
+| Reached interpreted call | The interpreter invokes standard `satisfies` for admission, including the checks required at that receiving site. Concrete field maps and value-dependent admission facts remain scoped to their operation/reception. |
 | Prepared native call | The prepared contract is used without an automatic runtime `satisfies` call. Required actual-value conversion checks retain their contract. |
 | Explicit `satisfies` | The written operation executes in both native and interpreted code. |
 | First required check returns `0` | That admission stops immediately; its remaining checks do not execute. |
@@ -76,6 +78,11 @@ Known interface facts do not waive checks required at an actual receiving site. 
 every native store or graph edit reruns all tests. `sys\check`, `sys\checkL3`, and `sys\translate` do not execute
 application code or tests; `sys\compile` includes its explicit build/test phase without launching the graph's
 application entry. See [admission and test](LMX_semantics.en.md#admission).
+
+The common kernel maintains a separate table of completed directed TYPE-pair checks. Stable full
+requirements reuse their completed result under the applicable type/conversion context, including
+between calls. This does not preserve a concrete field/namespace map or replace value-dependent,
+range, lifetime, or access checks. An in-progress recursive pair is not a completed positive result.
 
 <a id="callable-description"></a>
 ## Input description and composition
@@ -276,7 +283,8 @@ SumContext:
 SumSignature@: sumPtr SumContext\sum
 ~~~
 
-The three fields of `@` are the reference name, requirement, and actual candidate. The shorthand `@: p Model` instead
+The typed head `SumSignature@` supplies the requirement; its two fields are the reference name
+and actual candidate. The ordinary universal-reference initializer `@: p Model` instead
 initially refers to Model itself; it does not select a separate implementation.
 
 The candidate's DATA is still SumContext. Fn-match compares two int input positions and an int result, so lhs/rhs
@@ -1228,3 +1236,21 @@ all other uses accept either signature description. See [the equivalence rule](L
 The supplied source bodies require the explicitly listed kernel integration
 interfaces. Their acceptance cases are prepared tests, not a claim that LMX
 execution was performed during this documentation revision.
+
+<a id="unified-20261122"></a>
+## Current worked forms
+
+```lmx
+int[]: values [1 2 3]
+@: selected compress(source := values; mask := values > 1)
+@: joined concat(parts := (values; values))
+@: found index(items := values; accepts := Positive\run)
+```
+
+Here Positive\run is an ordinary predicate declared by the example's caller. Found is Maybe, not an index sentinel. Values has dense int storage; selection retains that storage profile. `[]: pending` is uninitialized, while `int[]: []` is a ready empty value. `int@[]` and `int[]@` differ. Use `@node\x`, not the compact declaration `@(node\x)`, for the address of a graph field. [Full examples and contracts](CORE_SEQUENCES_REGEX.en.md).
+
+```lmx
+matches(utf8Text("AB-09"); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+```
+
+The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and matches tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.

@@ -382,31 +382,179 @@ end: lm_p0_node_head_is
 # a vertical body --, a sub or an fm head, and never a Frame whose head is a control word (A1: if, else, while, for, until, catch,
 # throws). The terminal return is appended to its body and closes it.
 
-# A SIMPLE word head: a bare name -- letters, digits, `_`, `.` (the `c.` names) and any byte of a UTF-8 letter --, or an exact name written whole in backquotes (a doubled backquote inside
-# is one). Anything else -- a `\`, `@`, `[`, `]`, `(`, `)`, a space, a comma, an operator byte -- is not simple. 1 for a simple word, 0 otherwise. Step 23.3 (S1) gives this function the body
-# `suffix_count = 0 and the base is a word or an exact name` of the common head split; its callers stay.
-fn: lm_p0_head_is_simple_word (const: (@: text char); size_t: head_size) int
-    size_t: i 0U
+# ---- the common split of a head (step 23.3, G5; grammar §29: `head ::= head_base { type_suffix }`) -------------------------------------------------------------------
+# The BASE of a head is a word with its path and indexes, an exact name, a series of `@`, or a bounded group `( ... )` / `[ ... ]` written whole; the SUFFIXES are `@` and the written empty
+# square `[ ]` (trivia only between the brackets: spaces, line breaks, a `#` comment to the end of its line). P0 keeps the head as written; this split only reads it.
+
+# An identifier byte of a word head: a letter, a digit, `_`, `.` (the `c.` names) or a byte of a UTF-8 letter.
+fn: lm_p0_is_word_byte (char: value) int
     unsigned: byte 0U
-    if: head_size = 0U
-        return: 0
-    if: text[0] = 96
-        i := 1U
-        while: i < head_size
-            if: text[i] = 96
-                if: i + 1U < head_size && text[i + 1U] = 96
-                    i := i + 2U
-                    continue
-                return: (cast: (int) (i + 1U = head_size))
+    byte := (cast: (unsigned) value) & 255U
+    return: (cast: (int) (byte >= 128U || byte = 46U || byte = 95U || (byte >= 48U && byte <= 57U) || (byte >= 65U && byte <= 90U) || (byte >= 97U && byte <= 122U)))
+
+# The byte before an `@` series that makes the series a POSTFIX (Р156): the end of a completed operand -- a name or a number, an exact name, `)` or `]`. A previous suffix needs no case
+# of its own: it ends with `@` (one series) or `]`. A string, a character constant or an operator before an `@` leaves it a prefix.
+fn: lm_p0_byte_ends_operand (char: value) int
+    return: (cast: (int) ((lm_p0_is_word_byte(value) != 0 && value != '.') || value = 96 || value = ')' || value = ']'))
+
+# An exact name written whole from the backquote at `start`; a doubled backquote inside is one. Returns 1 and the offset after the closing backquote.
+fn: lm_p0_skip_exact (const: (@: text char); size_t: end_index; size_t: start; @: after size_t) int
+    size_t: i 0U
+    i := start + 1U
+    while: i < end_index
+        if: text[i] = 96
+            if: i + 1U < end_index && text[i + 1U] = 96
+                i := i + 2U
+                continue
+            after[0] := i + 1U
+            return: 1
+        i := i + 1U
+    return: 0
+
+# A bounded group written whole from the opening bracket at `start` to its closer: brackets of both kinds count, strings and exact names are skipped. Returns 1 and the offset after the closer.
+fn: lm_p0_skip_bounded (const: (@: text char); size_t: end_index; size_t: start; @: after size_t) int
+    size_t: i 0U
+    size_t: depth 0U
+    i := start
+    while: i < end_index
+        if: text[i] = '"'
             i := i + 1U
-        return: 0
-    while: i < head_size
-        byte := (cast: (unsigned) text[i]) & 255U
-        if: byte >= 128U || byte = 46U || byte = 95U || (byte >= 48U && byte <= 57U) || (byte >= 65U && byte <= 90U) || (byte >= 97U && byte <= 122U)
+            while: i < end_index && text[i] != '"'
+                if: text[i] = 92
+                    i := i + 1U
+                i := i + 1U
             i := i + 1U
             continue
+        if: text[i] = 96
+            if: lm_p0_skip_exact(text, end_index, i, @ i) = 0
+                return: 0
+            continue
+        if: text[i] = '(' || text[i] = '['
+            depth := depth + 1U
+            i := i + 1U
+            continue
+        if: text[i] != ')' && text[i] != ']'
+            i := i + 1U
+            continue
+        if: depth = 0U
+            return: 0
+        depth := depth - 1U
+        i := i + 1U
+        if: depth = 0U
+            after[0] := i
+            return: 1
+        ---
+    return: 0
+
+# One written empty square at `start`: `[`, trivia, `]`. Returns 1 and the offset after the `]`.
+fn: lm_p0_empty_square_at (const: (@: text char); size_t: end_index; size_t: start; @: after size_t) int
+    size_t: probe 0U
+    if: start >= end_index || text[start] != '['
         return: 0
+    probe := start + 1U
+    while: probe < end_index
+        if: c.lm_p0_is_horizontal_space(text[probe]) || c.lm_p0_is_line_break(text[probe])
+            probe := probe + 1U
+            continue
+        if: text[probe] = '#'
+            while: probe < end_index && c.lm_p0_is_line_break(text[probe]) = 0
+                probe := probe + 1U
+            continue
+        break
+    if: probe >= end_index || text[probe] != ']'
+        return: 0
+    after[0] := probe + 1U
     return: 1
+
+# The run of suffixes from `start`: any number of `@` and of written empty squares. Returns the offset after the run; `count` is the number of suffixes (each `@` and each `[ ]` is one).
+fn: lm_p0_scan_suffix_run (const: (@: text char); size_t: end_index; size_t: start; @: count size_t) size_t
+    size_t: i 0U
+    size_t: after 0U
+    i := start
+    count[0] := 0U
+    while: i < end_index
+        if: text[i] = '@'
+            i := i + 1U
+            count[0] := count[0] + 1U
+            continue
+        if: lm_p0_empty_square_at(text, end_index, i, @ after) = 0
+            break
+        i := after
+        count[0] := count[0] + 1U
+    return: i
+
+# The base of a head: its end and its kind -- 1 a simple word, 2 a word with a path or an index, 3 an exact name, 4 a series of `@`, 5 a bounded group. Returns 1, or 0 for text that is no base.
+fn: lm_p0_split_base (const: (@: text char); size_t: head_size; @: base_end size_t; @: kind int) int
+    size_t: i 0U
+    size_t: after 0U
+    int: exact 0
+    base_end[0] := 0U
+    kind[0] := 0
+    if: head_size = 0U
+        return: 0
+    if: text[0] = '(' || text[0] = '['
+        if: lm_p0_skip_bounded(text, head_size, 0U, @ i) = 0
+            return: 0
+        kind[0] := 5
+        base_end[0] := i
+        return: 1
+    if: text[0] = '@'
+        while: i < head_size && text[i] = '@'
+            i := i + 1U
+        kind[0] := 4
+        base_end[0] := i
+        return: 1
+    kind[0] := 1
+    while: i < head_size
+        if: lm_p0_is_word_byte(text[i]) != 0
+            i := i + 1U
+            continue
+        if: text[i] = 92
+            kind[0] := 2
+            i := i + 1U
+            continue
+        if: text[i] = 96 && (i = 0U || text[i - 1U] = 92)
+            if: lm_p0_skip_exact(text, head_size, i, @ after) = 0
+                return: 0
+            exact := (cast: (int) (i = 0U))
+            i := after
+            if: i < head_size && lm_p0_is_word_byte(text[i]) != 0
+                return: 0
+            continue
+        if: text[i] = '['
+            if: i != 0U && text[i - 1U] != 92 && lm_p0_empty_square_at(text, head_size, i, @ after) != 0
+                break
+            if: lm_p0_skip_bounded(text, head_size, i, @ after) = 0
+                return: 0
+            kind[0] := 2
+            i := after
+            continue
+        break
+    if: i = 0U
+        return: 0
+    if: exact != 0 && kind[0] = 1
+        kind[0] := 3
+    base_end[0] := i
+    return: 1
+
+# The split of a head: the base and the run of suffixes. Returns 1 when the whole text is a base and a (possibly empty) run; `base_end`, `count` (the suffixes) and `kind` as above.
+fn: lm_p0_head_split (const: (@: text char); size_t: head_size; @: base_end size_t; @: count size_t; @: kind int) int
+    size_t: run_end 0U
+    count[0] := 0U
+    if: lm_p0_split_base(text, head_size, base_end, kind) = 0
+        return: 0
+    run_end := lm_p0_scan_suffix_run(text, head_size, base_end[0], count)
+    return: (cast: (int) (run_end = head_size))
+
+# A SIMPLE word head: a bare name or an exact name written whole, with no suffix, no path and no index. 1 for a simple word, 0 otherwise. The rule D correction wrote this test by bytes;
+# the body is now the common split -- the callers (lm_p0_head_is_call) are untouched.
+fn: lm_p0_head_is_simple_word (const: (@: text char); size_t: head_size) int
+    size_t: base_end 0U
+    size_t: count 0U
+    int: kind 0
+    if: lm_p0_head_split(text, head_size, @ base_end, @ count, @ kind) = 0
+        return: 0
+    return: (cast: (int) (count = 0U && (kind = 1 || kind = 3)))
 
 # The head of the Frame names a CALL, by its spelling (Р134; P0 resolves no names): a control word, a path (a `\` in the head), a SYMBOLIC or COMPOSED head (`@`, `@@`, `[]`, `()`,
 # `@[]`, `int[]`, `Model@`: a `@`, `[`, `]`, `(` or `)` in it; Р152 п. 4: a head with a type suffix is a declaring receiver), or a word of the receivers of the kernel's list and the names
@@ -2048,6 +2196,9 @@ fn: lm_p0_append_compact_atom_pieces (@: document c.LmP0Document; @: structure c
         ---
         if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, piece_end) = 0)
             return: 0
+        # A series of `@` glued on the left to the end of a completed operand is a postfix (Р156); anywhere else it is a prefix. What stands on the right does not matter.
+        if: (text[i] = '@') && (i > 0U) && (lm_p0_byte_ends_operand(text[i - 1U]) != 0) && (structure\last_field != 0) && (structure\last_field\value != 0)
+            structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_POSTFIX
         i := piece_end
         allow_signed_number := 0
     ---
@@ -2763,7 +2914,12 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
             if: (text[i] = '(')
                 if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                if: ((((close_index = (i + 1U)) && ((close_index + 1U) < byte_count)) && (text[(close_index + 1U)] = ':')) && (((close_index + 2U) >= byte_count) || (text[(close_index + 2U)] != ':')))
+                # A bounded group, then the run of type suffixes (possibly empty), then a colon that is no `::` and no `:=`, is the HEAD of a colon Frame: `()`, `(Model)`, `(Model)@@`, `(Model)[]`
+                # (Р156). The group and the suffixes are kept as written.
+                size_t: suffix_end
+                size_t: suffix_count
+                suffix_end := lm_p0_scan_suffix_run(text, byte_count, close_index + 1U, @ suffix_count)
+                if: ((suffix_end < byte_count) && (text[suffix_end] = ':') && (((suffix_end + 1U) >= byte_count) || ((text[(suffix_end + 1U)] != ':') && (text[(suffix_end + 1U)] != '='))))
                     size_t: body_index
                     unsigned: body_flags
                     int: has_inline_body
@@ -2771,9 +2927,9 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     p0_node\as\frame\head\data := (text + start)
-                    p0_node\as\frame\head\length := ((close_index - start) + 1U)
+                    p0_node\as\frame\head\length := (suffix_end - start)
                     p0_node\as\frame\flags := c.LM_P0_FRAME_COLON
-                    i := (close_index + 2U)
+                    i := (suffix_end + 1U)
                     while: ((i < byte_count) && c.lm_p0_is_horizontal_space(text[i]))
                         i := i + 1U
                     ---
@@ -2846,6 +3002,8 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    # The explicit group of elements: a Structure written in square brackets at a field start (Р156). The brackets of an index or of a suffix are atoms and carry no flag.
+                    p0_node\flags := p0_node\flags | c.LM_P0_NODE_SQUARE
                     # A group that spans lines is a document of its own (lm_p0_parse_group).
                     if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
                         @: group_structure c.LmP0Structure
@@ -5410,6 +5568,12 @@ sub: lm_p0_dump_run (@: dump c.LmP0Dump; @: stack c.LmOwnPtrStack)
             ---
             if: ((p0_node\flags & c.LM_P0_NODE_POSITIONAL_SKIP) != 0U)
                 lm_p0_dump_append_cstr(dump, "PositionalSkip ")
+            ---
+            if: ((p0_node\flags & c.LM_P0_NODE_SQUARE) != 0U)
+                lm_p0_dump_append_cstr(dump, "Square ")
+            ---
+            if: ((p0_node\flags & c.LM_P0_NODE_POSTFIX) != 0U)
+                lm_p0_dump_append_cstr(dump, "Postfix ")
             ---
             if: (p0_node\kind = c.LM_P0_NODE_STRUCTURE)
                 lm_p0_dump_append_cstr(dump, lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) p0_node\kind)))

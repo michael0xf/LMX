@@ -101,14 +101,18 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-p7-tool02/lmxtool-tool.exe` | 24730163 |
-| hosted frontend | `S/fable-p7-feh01/l2trans.exe` | 2742763e |
-| runtime | `S/fable-p7-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
-| Graph | `S/fable-p7-graph02/graph_trans-prod.exe` | c91ef01c |
-| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, f2697e5d |
-| tool для проверки документов | тот же `S/fable-p7-tool02/lmxtool-tool.exe` | 24730163 |
+| tool | `S/fable-s33-tool02/lmxtool-tool.exe` | 46581c62 |
+| hosted frontend | `S/fable-s33-feh01/l2trans.exe` | 00f091ee |
+| runtime | `S/fable-s33-rt02` | driver.o f55def3b, driver-observe.o 346d0668 |
+| Graph | `S/fable-s33-graph02/graph_trans-prod.exe` | 95eec970 |
+| манифест исходников | `selfbuild/inputs.sha256` | 1625 файлов, 2de148c9 |
+| tool для проверки документов | тот же `S/fable-s33-tool02/lmxtool-tool.exe` | 46581c62 |
 
-Сейчас действует набор части разбора шага 21.7 (`fable-p7-*`): все четыре компонента собраны мной из итоговых
+Сейчас действует набор шага 23.3 (`fable-s33-*`): все четыре компонента собраны мной из итоговых исходников
+набором части разбора шага 21.7, по одному шагу под сторожем фиксируемой памяти, шаг frontend — отдельным
+процессом; runtime побайтно равен прежнему. Набор `fable-p7-*` остаётся в стадии как база.
+
+Прежде действовал набор части разбора шага 21.7 (`fable-p7-*`): все четыре компонента собраны мной из итоговых
 исходников принятым набором, по одному шагу под сторожем фиксируемой памяти; runtime побайтно равен прежнему —
 срез ядро не меняет. Набор среза K1a (`fable-k1a-feh01`, `fable-k1a-rt02`, `fable-k1a-graph02`) и tool
 `fable-pf-tool02` остаются в стадии как база. Ниже — прежние наборы, от нового к старому.

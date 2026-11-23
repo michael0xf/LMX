@@ -381,7 +381,7 @@
   {
     "path": "tests/parser/current/group_bracket_end_closes_block.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    Square structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
     "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
@@ -1319,5 +1319,677 @@
     "exit": 0,
     "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"size_t\" body=structure fields=2\n      atom \"a\"\n      atom \"1U\"\n    frame head=\"`C`\" body=structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"v\"\n        atom \"4U\"\n      Tail cutter trailer spelling=\"return\" fields=1\n        atom \"9\"\n",
     "authority": "ledger R134 and R135 (variant D), grammar section 17, as value_return_closes_nested_named: the head is a WHOLE EXACT NAME written in backquotes -- a simple word, so a DECLARATION of a named Structure, not a call: the terminal return closes it. The tree is that of value_return_closes_nested_named with the head spelling `C` (derived from the norm, then confirmed by the Graph sonnet-21-7j; the accepted Graph reads this return as an item of D). Kills the mutant s2 (an exact name is never simple)."
+  },
+  {
+    "path": "tests/parser/current/t233_a01_array_init.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]\" body=structure fields=2\n    atom \"values\"\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a02_array_empty_init.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]\" body=structure fields=2\n    atom \"values\"\n    Square structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a03_array_uninit.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]\" body=structure fields=1\n    atom \"values\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a04_array_anonymous.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a05_generic_anonymous.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[]\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a06_ref_typed_value.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"Model@\" body=structure fields=2\n    atom \"p\"\n    atom \"Other\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a07_ref_typed_null.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"Model@\" body=structure fields=2\n    atom \"p\"\n    atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a08_ref_typed_uninit.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"Model@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a09_refarray.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"@[]\" body=structure fields=1\n    atom \"right\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a10_generic_uninit.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[]\" body=structure fields=1\n    atom \"pending\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a11_any_ref.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[]@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a12_any_any.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[][]\" body=structure fields=1\n    atom \"rows\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a13_depth3.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int@@@\" body=structure fields=2\n    atom \"p\"\n    atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a14_ptr_array.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int@[]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a15_array_ptr.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]@\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a16_array_array.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[][]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a17_universal_ref.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=2\n    atom \"p\"\n    atom \"Model\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a18_universal_depth2.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"@@\" body=structure fields=1\n    atom \"pp\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a19_array_destination.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"T[]\" body=structure fields=2\n    atom \"destination\"\n    atom \"Source\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a20_lmx_ptr.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"Lmx@\" body=structure fields=1\n    atom \"parent\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a21_char_array.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"char[]\" body=structure fields=1\n    atom \"name\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a22_empty_suffix_space.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[ ]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a23_empty_suffix_comment.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[# c\n]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a24_exact_name_suffix.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"`a b`[]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a25_path_suffix.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\\f[]\" body=structure fields=1\n    atom \"v\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a26_compact_ref.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=1\n    atom \"name\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a27_compact_array.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[]\" body=structure fields=1\n    atom \"name\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a28_compact_ref2.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"@@\" body=structure fields=1\n    atom \"name\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a29_square_base_ref.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[T]@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a30_square_base_plain.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"[1 2]\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a31_char_ptr_ptr.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"char@@\" body=structure fields=1\n    atom \"mainArgs\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_a32_size_array_init.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a head is kept as written, base and suffixes (`head_base { type_suffix }`); P0 does not normalize it. The tree is derived from that sentence; it is the tree the parked slice gives today.",
+    "stdout_exact": "structure fields=1\n  frame head=\"size_t[]\" body=structure fields=2\n    atom \"counts\"\n    Square structure fields=2\n      atom \"0\"\n      atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b01_group_depth2.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)@@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b02_group_array.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)[]\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b03_group_ref_value.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)@\" body=structure fields=2\n    atom \"p\"\n    atom \"Other\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b04_group_ref_uninit.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b05_group_array_ref.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)[]@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b06_group_empty_suffix_space.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)[ ]\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b07_group_path.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(a\\b)@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b08_group_two_atoms.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(A B)@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b09_empty_group_suffix.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"()@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b10_in_function_body.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=1\n      frame head=\"(Model)@@\" body=structure fields=1\n        atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b11_vertical_body.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)@@\" body=structure fields=2\n    atom \"x\"\n    atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b12_value_position_depth2.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. In a value position the group stays a group and the series after it is its postfix.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    structure fields=1\n      atom \"Model\"\n    Postfix atom \"@@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b13_value_position_array.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. In a value position the written empty suffix stays the atoms `[` and `]`.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    structure fields=1\n      atom \"Model\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b14_space_before_colon.lmx",
+    "exit": 1,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. A space before the colon: no head, as today.",
+    "diagnostic": "6@1:11"
+  },
+  {
+    "path": "tests/parser/current/t233_b15_group_no_suffix.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. Р156: a group with no suffix before a colon is a head too (the run of suffixes may be empty); whether it is admissible is the consumer's.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(Model)\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b16_group_two_atoms_plain.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(a b)\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b17_group_multiline_base.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. Р156: the head of a multi-line group base is kept as written, line breaks included.",
+    "stdout_exact": "structure fields=1\n  frame head=\"(\n    Model\n)@\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b18_empty_group_head.lmx",
+    "exit": 0,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. The head `()` is the same one Frame as before.",
+    "stdout_exact": "structure fields=1\n  frame head=\"()\" body=structure fields=1\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_b19_multiline_head_body_error_inline.lmx",
+    "exit": 1,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. The lines inside a multi-line head count: the lost `]` of the inline body is on line 3, column 7 of the record (the same count as `x: (` / `    1` / `) ]` gives 33@3:3 today).",
+    "diagnostic": "33@3:7"
+  },
+  {
+    "path": "tests/parser/current/t233_b20_multiline_head_body_error_vertical.lmx",
+    "exit": 1,
+    "authority": "Р156 G1, grammar §29 (`head_base` includes `bounded_structure`): a bounded group, then the run of suffixes (possibly empty), then a colon that is no `::` and no `:=`, is ONE colon Frame whose head is kept as written. The same for a vertical body: the lost `]` is on line 4, column 7.",
+    "diagnostic": "33@4:7"
+  },
+  {
+    "path": "tests/parser/current/t233_c01_group_depth2_value_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"(Model)@@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_c02_group_depth2_bare_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"(Model)@@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_c03_group_plain_value_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"(Model)\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_c04_group_plain_bare_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"(Model)\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_c05_group_two_atoms_value_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"(A B)@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_c06_empty_group_suffix_value_return.lmx",
+    "exit": 0,
+    "authority": "Р134/Р135 rule D and Р152 п. 4: a head with a group base or a suffix is a CALL; the `return` after its vertical body is an item of the enclosing body, the Frame is not closed.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=2\n    atom \"f\"\n    structure fields=2\n      frame head=\"()@\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"return\" body=structure fields=1\n        atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d01_standalone.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  Square structure fields=3\n    atom \"1\"\n    atom \"2\"\n    atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d02_standalone_empty.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  Square structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d03_value.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d04_nested_square.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=2\n      Square structure fields=2\n        atom \"1\"\n        atom \"2\"\n      Square structure fields=2\n        atom \"3\"\n        atom \"4\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d05_square_of_round.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=2\n      structure fields=2\n        atom \"1\"\n        atom \"2\"\n      structure fields=2\n        atom \"3\"\n        atom \"4\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d06_round_of_square.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    structure fields=2\n      Square structure fields=2\n        atom \"1\"\n        atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d07_argument.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d08_argument_empty.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    Square structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d09_multiline.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not. A group that spans lines is a document of its own: the flag is on it too.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=2\n      atom \"1\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d10_after_name_and_before_item.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int[]\" body=structure fields=3\n    atom \"v\"\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n    atom \"4\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d11_round_control.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not. Control: a round group carries no flag.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d12_index_control.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not. Control: the brackets of an index are atoms.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"a\"\n    atom \"[\"\n    atom \"1\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d13_two_groups.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    Square structure fields=2\n      atom \"1\"\n      atom \"2\"\n    Square structure fields=2\n      atom \"3\"\n      atom \"4\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d14_group_with_mix.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      MIX structure fields=1\n        atom \"m\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d15_group_with_comment.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=3\n      atom \"1\"\n      atom \"2\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d16_empty_square_then_postfix.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not. The `@` glued to the `]` of the group is a postfix (Р156 G4).",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=3\n    atom \"code\"\n    Square structure fields=0\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_d17_empty_square_space.lmx",
+    "exit": 0,
+    "authority": "Р156 G3: a Structure written in square brackets at a field start is the explicit group of elements and carries the flag (dump: `Square `); a round group, the brackets of an index and of a suffix do not.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    Square structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e01_suffix_empty.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"T\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e02_index_empty_group.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"a\"\n    atom \"[\"\n    structure fields=0\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e03_suffix_space.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"a\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e04_suffix_comment.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"a\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e05_index_copy.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"a\"\n    atom \"[\"\n    frame head=\"copy\" body=structure fields=1\n      atom \"empty\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e06_index_name.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"a\"\n    atom \"[\"\n    atom \"i\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e07_ptr_array_value.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them. The `@` glued to `int` is a postfix.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"int\"\n    Postfix atom \"@\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e08_array_array_value.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=5\n    atom \"T\"\n    atom \"[\"\n    atom \"]\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e09_separate_arrays_path.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=12\n    atom \"a\"\n    atom \"[\"\n    atom \"i\"\n    atom \"]\"\n    atom \"\\\"\n    atom \"[\"\n    atom \"j\"\n    atom \"]\"\n    atom \"\\\"\n    atom \"[\"\n    atom \"k\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e10_variable_suffix.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"typeCode\"\n    atom \"[\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e11_two_indexes.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=7\n    atom \"a\"\n    atom \"[\"\n    atom \"i\"\n    atom \"]\"\n    atom \"[\"\n    atom \"j\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_e12_index_two_fields.lmx",
+    "exit": 0,
+    "authority": "Grammar §29: a written empty suffix `T[]` and an index `a[...]` are told apart by the record: atoms `[` and `]` with no field between them against atoms with a field (even an empty Structure) between them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=5\n    atom \"a\"\n    atom \"[\"\n    atom \"1\"\n    atom \"2\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f01_postfix_name.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"T\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f02_postfix_series.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"T\"\n    Postfix atom \"@@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f03_prefix_name.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"@\"\n    atom \"y\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f04_two_actuals_semicolon.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"F\" body=structure fields=4\n    atom \"T\"\n    Postfix atom \"@\"\n    atom \"@\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f05_postfix_space_operand.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"F\" body=structure fields=3\n    atom \"T\"\n    Postfix atom \"@\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f06_prefix_space_before.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"F\" body=structure fields=3\n    atom \"T\"\n    atom \"@\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f07_glued_both_sides.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter. Р156: what stands on the right does not matter: `T@x` is the postfix `T@` and the next operand `x`.",
+    "stdout_exact": "structure fields=1\n  frame head=\"F\" body=structure fields=3\n    atom \"T\"\n    Postfix atom \"@\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f08_array_then_postfix.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"int\"\n    atom \"[\"\n    atom \"]\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f09_prefix_series.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"@@\"\n    atom \"y\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f10_typed_head_with_address.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"int@\" body=structure fields=3\n    atom \"p\"\n    atom \"@\"\n    atom \"value\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f11_after_group.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    structure fields=1\n      atom \"a\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f12_after_call.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    frame head=\"f\" body=structure fields=1\n      atom \"a\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f13_after_index.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=5\n    atom \"a\"\n    atom \"[\"\n    atom \"1\"\n    atom \"]\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f14_spaced_both_sides.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"a\"\n    atom \"@\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f15_after_number.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"1\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f16_after_operator.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"1\"\n    atom \"+\"\n    atom \"@\"\n    atom \"y\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_f17_after_bracket_suffix.lmx",
+    "exit": 0,
+    "authority": "Р156 G4: a series of `@` glued on the LEFT to the end of a completed operand (a name, a number, an exact name, `)`, `]`) is a POSTFIX (dump: `Postfix `); elsewhere it is a prefix; what stands on the right does not matter.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"T\"\n    atom \"[\"\n    atom \"]\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g01_old_three_argument.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=3\n    atom \"ptr\"\n    atom \"Model\"\n    atom \"Other\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g02_address_group.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    structure fields=4\n      atom \"@\"\n      atom \"D\"\n      atom \"\\\"\n      atom \"field\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g03_address_path.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=4\n    atom \"@\"\n    atom \"D\"\n    atom \"\\\"\n    atom \"field\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g04_address_compact.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    frame head=\"@\" body=structure fields=3\n      atom \"D\"\n      atom \"\\\"\n      atom \"field\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g05_empty_group_assign.lmx",
+    "exit": 1,
+    "authority": "Р156 G1: a colon followed by `=` is the token `:=`, never the colon of a head (the author, 2026-11-07); `():= 5` is no longer the head `()` with the body `= 5` (it was one by the old special case of the empty group): the group stays a group and `:=` after it is refused as `(a) := 5` is today.",
+    "diagnostic": "6@1:3"
+  },
+  {
+    "path": "tests/parser/current/t233_g06_square_then_postfix.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    Square structure fields=1\n      atom \"T\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g07_square_two_then_postfix.lmx",
+    "exit": 0,
+    "authority": "Unchanged by the slice: the tree is the one the parked slice gives today (with the prefixes of the new flags where the norm says so).",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    Square structure fields=2\n      atom \"1\"\n      atom \"2\"\n    Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t233_g08_group_postfix_double_colon.lmx",
+    "exit": 0,
+    "authority": "Р156 G1: `::` is the token of Р143, so `(Model)@` before it is no head; the group stays a group, the `@` glued to `)` is its postfix, `::` is an atom.",
+    "stdout_exact": "structure fields=4\n  structure fields=1\n    atom \"Model\"\n  Postfix atom \"@\"\n  atom \"::\"\n  atom \"p\"\n"
   }
 ]

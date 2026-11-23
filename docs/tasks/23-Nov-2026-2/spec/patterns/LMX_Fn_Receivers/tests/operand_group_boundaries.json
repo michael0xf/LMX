@@ -1,0 +1,84 @@
+{
+  "scope": "Pending semantic acceptance cases for the common operand consumer; not run by publication checks",
+  "runtime_executed": false,
+  "condition": [
+    "written left is anonymous Structure",
+    "right.length == 1",
+    "right[0] is written anonymous Structure"
+  ],
+  "action": "remove exactly the outer right[0] container once; preserve left as one whole Structure",
+  "p0": "preserve every source container",
+  "callable_we": "unchanged and separate",
+  "cases": [
+    {
+      "source": "(a b) op (c d)",
+      "right_before": 1,
+      "right_after": 2,
+      "right_elements": [
+        "c",
+        "d"
+      ],
+      "left_preserved": "(a b)",
+      "opened_right_levels": 1
+    },
+    {
+      "source": "a op (c d)",
+      "right_before": 1,
+      "right_after": 1,
+      "right_elements": [
+        "(c d)"
+      ],
+      "left_preserved": "a",
+      "opened_right_levels": 0
+    },
+    {
+      "source": "(a b) op (c d) e",
+      "right_before": 2,
+      "right_after": 2,
+      "right_elements": [
+        "(c d)",
+        "e"
+      ],
+      "left_preserved": "(a b)",
+      "opened_right_levels": 0
+    },
+    {
+      "source": "(a) op ((b c))",
+      "right_before": 1,
+      "right_after": 1,
+      "right_elements": [
+        "(b c)"
+      ],
+      "left_preserved": "(a)",
+      "opened_right_levels": 1
+    },
+    {
+      "source": "(a b) op factory()",
+      "right_before": 1,
+      "right_after": 1,
+      "right_elements": [
+        "factory() result as one value in prepared mode; original call in raw mode"
+      ],
+      "left_preserved": "(a b)",
+      "opened_right_levels": 0
+    },
+    {
+      "source": "(a b) op S",
+      "right_before": 1,
+      "right_after": 1,
+      "right_elements": [
+        "S as one Structure reference"
+      ],
+      "left_preserved": "(a b)",
+      "opened_right_levels": 0
+    },
+    {
+      "source": "() op ()",
+      "right_before": 1,
+      "right_after": 0,
+      "right_elements": [],
+      "left_preserved": "()",
+      "opened_right_levels": 1
+    }
+  ]
+}

@@ -1,0 +1,879 @@
+{
+  "date": "2026-11-23",
+  "baseline_public_count": 123,
+  "entries": [
+    {
+      "name": "take",
+      "api": "FxStdCut\\take",
+      "signature": "items; count -> same-profile Array",
+      "arguments": "items; count",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Fresh prefix; count is clamped to 0..length.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_take_normal",
+        "SF_take_negative",
+        "SF_take_large"
+      ]
+    },
+    {
+      "name": "drop",
+      "api": "FxStdCut\\drop",
+      "signature": "items; count -> same-profile Array",
+      "arguments": "items; count",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Fresh suffix after a clamped count.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_drop_negative",
+        "SF_drop_large"
+      ]
+    },
+    {
+      "name": "splitAt",
+      "api": "FxStdCut\\splitAt",
+      "signature": "items; count -> FxPair(first prefix, second suffix)",
+      "arguments": "items; count",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Both slices use one clamped cut; source remains unchanged.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_splitAt_middle"
+      ]
+    },
+    {
+      "name": "takeWhile",
+      "api": "FxStdPrefix\\takeWhile",
+      "signature": "items; accepts -> same-profile Array",
+      "arguments": "items; accepts",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Longest true prefix; predicate runs once per visited item, including first rejection.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://docs.python.org/3/library/itertools.html",
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_takeWhile_stop"
+      ]
+    },
+    {
+      "name": "dropWhile",
+      "api": "FxStdPrefix\\dropWhile",
+      "signature": "items; accepts -> same-profile Array",
+      "arguments": "items; accepts",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Suffix begins with first rejected item; no later predicates are evaluated.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://docs.python.org/3/library/itertools.html",
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_dropWhile_stop"
+      ]
+    },
+    {
+      "name": "span",
+      "api": "FxStdPrefix\\span",
+      "signature": "items; accepts -> FxPair(prefix, suffix)",
+      "arguments": "items; accepts",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "One prefix scan supplies both parts, without reevaluating an effectful predicate.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_span_stop"
+      ]
+    },
+    {
+      "name": "partition",
+      "api": "FxStdPartition\\partition",
+      "signature": "items; accepts -> FxPair(accepted, rejected)",
+      "arguments": "items; accepts",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Stable two-way partition with exactly one predicate call per item.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_partition_stable",
+        "SF_partition_typedEmpty"
+      ]
+    },
+    {
+      "name": "enumerate",
+      "api": "FxStdEnumerate\\enumerate",
+      "signature": "items; start=0 -> Array of FxPair(int index record, item record)",
+      "arguments": "items; start=0",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Indices are admitted to the current int type from exact arithmetic; no wrapping index is accepted.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/functions.html",
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_enumerate_offset",
+        "SF_enumerate_overflow"
+      ]
+    },
+    {
+      "name": "windows",
+      "api": "FxStdWindows\\windows",
+      "signature": "items; width=2; step=1; partial=0 -> Array of same-profile Array windows",
+      "arguments": "items; width=2; step=1; partial=0",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Positive width/step; full windows by default. partial permits one last nonempty short window. No suffix after a window reaches the end.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/primitive.slice.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_windows_pairwise",
+        "SF_windows_full",
+        "SF_windows_partial",
+        "SF_windows_noRedundantSuffix",
+        "SF_windows_zeroWidth"
+      ]
+    },
+    {
+      "name": "chunks",
+      "api": "FxStdChunks\\chunks",
+      "signature": "items; size; strict=0 -> Array of same-profile Array chunks",
+      "arguments": "items; size; strict=0",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Nonoverlapping chunks, final short chunk permitted unless strict; invalid size fails before iteration.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/library/itertools.html",
+        "https://doc.rust-lang.org/std/primitive.slice.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_chunks_tail",
+        "SF_chunks_strict",
+        "SF_chunks_zeroSize"
+      ]
+    },
+    {
+      "name": "intersperse",
+      "api": "FxStdIntersperse\\intersperse",
+      "signature": "items; separatorRecord -> same-profile Array",
+      "arguments": "items; separatorRecord",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Insert an admitted separator between items; empty and singleton inputs do not admit an unused separator.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html"
+      ],
+      "acceptance": [
+        "SF_intersperse_normal",
+        "SF_intersperse_empty",
+        "SF_intersperse_singleton"
+      ]
+    },
+    {
+      "name": "intercalate",
+      "api": "FxStdIntercalate\\intercalate",
+      "signature": "parts; separator -> Array under existing concat profile",
+      "arguments": "parts; separator",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Separate sequence parts and concatenate; empty parts returns a fresh empty sequence of separator profile.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html"
+      ],
+      "acceptance": [
+        "SF_intercalate_normal",
+        "SF_intercalate_empty"
+      ]
+    },
+    {
+      "name": "unzip",
+      "api": "FxStdUnzip\\unzip",
+      "signature": "pairs -> FxPair(first record Array, second record Array)",
+      "arguments": "pairs",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Reverse the existing zip FxPair protocol; empty input returns two fresh empty record Arrays.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_unzip_zipRoundTrip",
+        "SF_unzip_empty"
+      ]
+    },
+    {
+      "name": "foldr",
+      "api": "FxStdRightFold\\foldr",
+      "signature": "items; seedRecord; step -> typed result record",
+      "arguments": "items; seedRecord; step",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Strict finite right fold; step(item,accumulator), right-to-left callback order.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_foldr_nonCommutative",
+        "SF_foldr_empty"
+      ]
+    },
+    {
+      "name": "scanr",
+      "api": "FxStdRightFold\\scanr",
+      "signature": "items; seedRecord; step -> record Array",
+      "arguments": "items; seedRecord; step",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Right scan includes the seed at the final position; right-to-left callbacks.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://www.scala-lang.org/api/2.13.18/scala/collection/immutable/List.html"
+      ],
+      "acceptance": [
+        "SF_scanr_nonCommutative",
+        "SF_scanr_empty"
+      ]
+    },
+    {
+      "name": "filterMap",
+      "api": "FxStdMaybeMap\\filterMap",
+      "signature": "items; transform -> record Array",
+      "arguments": "items; transform",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Map to Maybe and keep present values, preserving zero/empty/reference values.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_filterMap_selection",
+        "SF_filterMap_zeroPresent",
+        "SF_filterMap_directNullReference",
+        "SF_filterMap_directReferenceIdentity"
+      ]
+    },
+    {
+      "name": "mapWhile",
+      "api": "FxStdMaybeMap\\mapWhile",
+      "signature": "items; transform -> record Array",
+      "arguments": "items; transform",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Map to Maybe; stop at first none, without calling later items.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_mapWhile_shortCircuit",
+        "SF_mapWhile_directNone"
+      ]
+    },
+    {
+      "name": "findMap",
+      "api": "FxStdMaybeMap\\findMap",
+      "signature": "items; transform -> FxMaybe",
+      "arguments": "items; transform",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Return the first present callback result; return none when all are absent.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html"
+      ],
+      "acceptance": [
+        "SF_findMap_first",
+        "SF_findMap_absent"
+      ]
+    },
+    {
+      "name": "mapAccumL",
+      "api": "FxStdMapAccum\\mapAccumL",
+      "signature": "items; seedRecord; step -> FxPair(final state record, output record Array)",
+      "arguments": "items; seedRecord; step",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "step(state,item) returns FxPair(next state,output); callbacks left-to-right.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html"
+      ],
+      "acceptance": [
+        "SF_mapAccumL_stateAndOutput",
+        "SF_mapAccumL_directPairMixedTypes"
+      ]
+    },
+    {
+      "name": "mapAccumR",
+      "api": "FxStdMapAccum\\mapAccumR",
+      "signature": "items; seedRecord; step -> FxPair(final state record, output record Array)",
+      "arguments": "items; seedRecord; step",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Same stateful transform, callbacks right-to-left, outputs at original positions.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html"
+      ],
+      "acceptance": [
+        "SF_mapAccumR_stateAndOutput"
+      ]
+    },
+    {
+      "name": "groupAdjacent",
+      "api": "FxStdGroupAdjacent\\groupAdjacent",
+      "signature": "items; keyOf; sameKey -> Array of FxGroup(key,items)",
+      "arguments": "items; keyOf; sameKey",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Consecutive equal-key runs; keyOf once per item and sameKey once per adjacent pair.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/library/itertools.html",
+        "https://doc.rust-lang.org/std/primitive.slice.html"
+      ],
+      "acceptance": [
+        "SF_groupAdjacent_separateRuns",
+        "SF_groupAdjacent_empty"
+      ]
+    },
+    {
+      "name": "replicate",
+      "api": "FxStdReplicate\\replicate",
+      "signature": "valueRecord; count -> record Array",
+      "arguments": "valueRecord; count",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Finite copies of one ready value record; negative count gives empty; reference values retain one target.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://docs.python.org/3/library/itertools.html"
+      ],
+      "acceptance": [
+        "SF_replicate_finite",
+        "SF_replicate_negative",
+        "SF_replicate_referenceIdentity"
+      ]
+    },
+    {
+      "name": "cycle",
+      "api": "FxStdCycle\\cycle",
+      "signature": "items; count -> same-profile Array",
+      "arguments": "items; count",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Required finite repetition count; nonpositive count gives empty; preflight result size.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html",
+        "https://docs.python.org/3/library/itertools.html"
+      ],
+      "acceptance": [
+        "SF_cycle_finite",
+        "SF_cycle_typedEmpty",
+        "SF_cycle_negative",
+        "SF_cycle_overflow"
+      ]
+    },
+    {
+      "name": "starmap",
+      "api": "FxStdStarMap\\starmap",
+      "signature": "rows; operation -> record Array",
+      "arguments": "rows; operation",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Each ready row becomes one actual vector; one typed callback result per row. No source graph field is executed while reading it.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/library/itertools.html"
+      ],
+      "acceptance": [
+        "SF_starmap_rows",
+        "SF_starmap_oneWholeArrayActual"
+      ]
+    },
+    {
+      "name": "zipLongest",
+      "api": "FxStdZipLongest\\zipLongest",
+      "signature": "first; second; fillRecord -> Array of FxPair",
+      "arguments": "first; second; fillRecord",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Two sequences padded to the longer length with the explicit complete fill value record.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/library/itertools.html"
+      ],
+      "acceptance": [
+        "SF_zipLongest_fill",
+        "SF_zipLongest_empty"
+      ]
+    },
+    {
+      "name": "collect",
+      "api": "FxStdCollect\\collect",
+      "signature": "next; limit=-1 -> record Array",
+      "arguments": "next; limit=-1",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Nullary producer through the existing call bridge until its Stop(), or finite limit; other declared failures retain their name and payload inside FxCallFailure.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/iter/trait.Iterator.html",
+        "https://docs.python.org/3/builtins/functions.html"
+      ],
+      "acceptance": [
+        "SF_collect_stop",
+        "SF_collect_bounded",
+        "SF_collect_zeroLimit",
+        "SF_collect_wrappedFailure",
+        "SF_collect_typedPayloads",
+        "SF_collect_kernelFailure",
+        "SF_collect_badLimit"
+      ]
+    },
+    {
+      "name": "includes",
+      "api": "FxStdMembership\\includes",
+      "signature": "items; valueRecord; same -> int truth",
+      "arguments": "items; valueRecord; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Ordered short-circuit membership with explicit typed equality; no conflict with regex contains.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://doc.rust-lang.org/std/primitive.slice.html",
+        "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-List.html"
+      ],
+      "acceptance": [
+        "SF_includes_shortCircuit",
+        "SF_includes_empty"
+      ]
+    },
+    {
+      "name": "adjoin",
+      "api": "FxStdAdjoin\\adjoin",
+      "signature": "items; valueRecord; same -> Array",
+      "arguments": "items; valueRecord; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Return original source if already present; otherwise return a fresh same-profile Array with the new value prepended.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_adjoin.htm"
+      ],
+      "acceptance": [
+        "SF_adjoin_prepend",
+        "SF_adjoin_identityWhenPresent"
+      ]
+    },
+    {
+      "name": "union",
+      "api": "FxStdSets\\union",
+      "signature": "first; second; same -> Array under concat profile",
+      "arguments": "first; second; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Unique first occurrences from first then second; pure equivalence relation required.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/stdtypes.html#set-types-set-frozenset",
+        "https://doc.rust-lang.org/std/collections/struct.HashSet.html"
+      ],
+      "acceptance": [
+        "SF_union_stable"
+      ]
+    },
+    {
+      "name": "intersection",
+      "api": "FxStdSets\\intersection",
+      "signature": "first; second; same -> first-profile Array",
+      "arguments": "first; second; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Unique first-source values present in second, preserving first-source order.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/stdtypes.html#set-types-set-frozenset",
+        "https://doc.rust-lang.org/std/collections/struct.HashSet.html"
+      ],
+      "acceptance": [
+        "SF_intersection_stable"
+      ]
+    },
+    {
+      "name": "difference",
+      "api": "FxStdSets\\difference",
+      "signature": "first; second; same -> first-profile Array",
+      "arguments": "first; second; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Unique first-source values absent from second; set difference, not Haskell list multiset subtraction.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/stdtypes.html#set-types-set-frozenset",
+        "https://doc.rust-lang.org/std/collections/struct.HashSet.html"
+      ],
+      "acceptance": [
+        "SF_difference_setNotMultiset"
+      ]
+    },
+    {
+      "name": "symmetricDifference",
+      "api": "FxStdSets\\symmetricDifference",
+      "signature": "first; second; same -> Array under concat profile",
+      "arguments": "first; second; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "First-only values then second-only values, each once; use existing difference and concat.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/stdtypes.html#set-types-set-frozenset",
+        "https://doc.rust-lang.org/std/collections/struct.HashSet.html"
+      ],
+      "acceptance": [
+        "SF_symmetricDifference_stable"
+      ]
+    },
+    {
+      "name": "isSubset",
+      "api": "FxStdSubset\\isSubset",
+      "signature": "first; second; same -> int truth",
+      "arguments": "first; second; same",
+      "source": "coreStandardFunctional",
+      "source_file": "src/coreStandardFunctional.lmx",
+      "scope": "Every equivalence class from first appears in second; multiplicity is ignored.",
+      "contracts": {
+        "input_sequences": "finite admitted dense T[] or Structure/@[] except unzip, which accepts FxPair records produced by zip",
+        "value_transport": "parameters named *Record and generic seed/value/fill/separator use existing complete typed value records; scalar callers may use (value record)",
+        "evaluation": "eager finite result; written callback order is part of the contract",
+        "failures": "existing FxCallFailure envelope for declared callback failures; collect consumes producer Stop; bridge/kernel failures retain their ordinary finite names",
+        "ownership": "one owning Message; no hidden closure/graph/environment or automatic lifetime extension",
+        "runtime_status": "NOT_RUN"
+      },
+      "source_urls": [
+        "https://docs.python.org/3/builtins/stdtypes.html#set-types-set-frozenset",
+        "https://doc.rust-lang.org/std/collections/struct.HashSet.html"
+      ],
+      "acceptance": [
+        "SF_isSubset_duplicates",
+        "SF_isSubset_missing",
+        "SF_isSubset_empty"
+      ]
+    }
+  ],
+  "new_public_count": 33,
+  "new_kernel_providers": [],
+  "new_parser_modes": [],
+  "source_semantics": "23-Nov specification, ordinary native/walker execution, typed value-record and dynamic-binding model",
+  "implemented_scope": "33 finite functional/collection operations plus reusable internal engines; not a claim that every foreign standard-library feature is now covered",
+  "existing_reused": [
+    "map",
+    "filter",
+    "foldl",
+    "scanl",
+    "flatMap",
+    "traverse",
+    "zip",
+    "zipWith",
+    "concat",
+    "reverse",
+    "slice",
+    "range",
+    "index",
+    "count",
+    "findFirst",
+    "unique",
+    "sort",
+    "apply",
+    "partial",
+    "flip",
+    "some",
+    "none",
+    "record",
+    "FxSeqInfo",
+    "FxSeqRead",
+    "FxSeqAllocate",
+    "FxSeqAdmit",
+    "FxSeqPush",
+    "FxSeqSize"
+  ],
+  "deliberate_differences": [
+    "Finite eager Arrays do not reproduce Haskell lazy/infinite lists or consuming Python/Rust iterators.",
+    "cycle requires a finite count; replicate returns a record Array.",
+    "unzip uses the existing named FxPair protocol, not an arbitrary two-field row without admission.",
+    "set results have stable first-occurrence order and eliminate duplicates; difference is set difference, not list multiset subtraction.",
+    "adjoin preserves source identity when present; its fresh-array absent case does not claim linked-list tail sharing.",
+    "The existing callback failure envelope is documented; collect consumes Stop and preserves other producer names/payloads in FxCallFailure."
+  ],
+  "operator_contract": "No prefix-only operator kind is introduced. Any operand wrapper must use ordinary OPERANDS_TEMPLATE left/right and the existing common prefix/infix rules. This file adds ordinary receivers, not parser special cases.",
+  "source_sha256": "da6e465f3ef57b12aa5e121533e2dd80d484817da13c927cf0b16bf7220a54c1"
+}

@@ -1,0 +1,25 @@
+Steps:
+    int: n
+    return: @
+    Throws: copy(FxThrows\capture) FxCallFailure
+    code:
+        throws: copy(Throws)
+        if: n = 0
+            return: done(value := (x record))
+        return: more(thunk := partial(next; (n - 1)))
+    even_step:
+        throws: copy(Throws)
+        int: x 1
+        @: next odd_step
+        return: code()
+    odd_step:
+        throws: copy(Throws)
+        int: x 0
+        @: next even_step
+        return: code()
+    Example:
+        int: n
+        return: int
+        run:
+            throws: copy(Throws)
+            return: \trampoline(even_step(n))

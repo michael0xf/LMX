@@ -1,0 +1,18 @@
+ProducerMessage:
+    @: consumer
+    run:
+        post:
+            ask:
+                consumer\accept(value := 1)
+                consumer\accept(value := 2)
+                consumer\accept(value := 3)
+                consumer\finish()
+
+ConsumerMessage:
+    int: value
+    int: total 0
+    @: sink
+    accept:
+        node\total += value
+    finish:
+        sink\write(node\total)

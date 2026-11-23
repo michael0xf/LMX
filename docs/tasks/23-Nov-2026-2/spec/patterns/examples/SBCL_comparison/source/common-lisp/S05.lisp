@@ -1,0 +1,5 @@
+(defun example (items)
+  (let ((some-calls 0) (every-calls 0))
+    (let ((any (some (lambda (x) (incf some-calls) (plusp x)) items))
+          (all (every (lambda (x) (incf every-calls) (plusp x)) items)))
+      (list (if any 1 0) some-calls (if all 1 0) every-calls))))

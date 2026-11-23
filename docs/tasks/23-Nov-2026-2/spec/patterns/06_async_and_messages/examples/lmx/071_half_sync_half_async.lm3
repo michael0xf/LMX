@@ -1,0 +1,16 @@
+IngressMessage:
+    int: frame
+    @: worker
+    received:
+        post:
+            ask:
+                worker\process(frame := frame)
+
+WorkerMessage:
+    int: frame
+    @: writer
+    process:
+        int: result frame * frame
+        post:
+            ask:
+                writer\write(value := result)

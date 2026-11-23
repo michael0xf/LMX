@@ -1,0 +1,249 @@
+# retryPost: asynchronous bounded retry over the existing Message post API.
+# Each job is persistent DATA in its sender Message arena, not a captured frame.
+# The caller retains the handle until its owner Message can release all waits.
+# post itself correlates each response; no numeric request-id registry is built.
+# Timeout/cancel stop this policy, NOT an operation already running elsewhere.
+# Late replies only drain pending; they cannot publish a second result.
+# Result.read() exposes the persisted outcome even if notification is undelivered.
+# Control.settled() describes attempt/delay completion, not permission to free
+# an arena still retained by any ordinary post route. timeoutMs > maxDelay
+# leaves an explicit configured window for a delayed acknowledgement.
+# complete is a nonthrowing procedure under the selected protocol; notification
+# is one send attempt, not a promise of exactly-once external delivery.
+
+# These internal bridge failures have the explicitly empty () payload.
+# User failures retain their original name and typed payload in FxOutcome.
+FxRetryEmptyFailure:
+    private: char[]: name
+    return: @
+    make:
+        private: @: outcome (copy(FxOutcome))
+        outcome\failure := name
+        outcome\payload := (copy(()))
+        return: outcome
+
+FxRetryPostResult:
+    char[]: kind ""
+    int: attempts 0
+    @: outcome 0
+
+FxRetryPostJob:
+    private:
+        @: request 0
+        @: retryOn 0
+        @: delay 0
+        @: complete 0
+        int: limit 0
+        int: pause 0
+        int: maxPause 0
+        int: timeoutMs 0
+        int: attempts 0
+        int: completed 0
+        int: pending 0
+        @: finalResult 0
+        int: notificationUndelivered 0
+    dispatch:
+        if: node\private\completed != 0
+            return
+        node\private\attempts += 1
+        node\private\pending += 1
+        private: @: request node\private\request
+        post:
+            ask:
+                request()
+            answer:
+                Replies\accept
+            timeout:
+                ms:
+                    int: time node\private\timeoutMs
+            ---
+            undelivered:
+                Events\undelivered()
+            unanswered:
+                Events\unanswered()
+            catch: FxKernelFailure ()
+                Events\failed("FxKernelFailure")
+            catch: FxTypeToken ()
+                Events\failed("FxTypeToken")
+    ---
+    Events:
+        char[]: failure
+        failed:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("requestFailure"; FxRetryEmptyFailure\make(failure))
+        undelivered:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("undelivered"; 0)
+        unanswered:
+            private: @: job parent(node)
+            job\Completion\finish("timeout"; 0)
+    ---
+    Control:
+        cancel:
+            private: @: job parent(node)
+            private: int: accepted job\private\completed = 0
+            job\Completion\finish("cancelled"; 0)
+            return: accepted
+        return: int
+        settled:
+            private: @: job parent(node)
+            return: job\private\pending = 0
+    ---
+    Result:
+        return: @
+        read:
+            private: @: job parent(node)
+            return: job\private\finalResult
+        undelivered:
+            private: @: job parent(node)
+            job\private\notificationUndelivered := 1
+            return: job\private\finalResult
+    ---
+    Completion:
+        char[]: kind
+        @: outcome
+        finish:
+            private: @: job parent(node)
+            if: job\private\completed != 0
+                return
+            private: @: result (copy(FxRetryPostResult))
+            result\kind := kind
+            result\attempts := job\private\attempts
+            result\outcome := outcome
+            job\private\finalResult := result
+            job\private\completed := 1
+            private: @: complete job\private\complete
+            post:
+                ask:
+                    complete(result)
+                undelivered:
+                    Result\undelivered()
+    ---
+    Replies:
+        @: outcome
+        accept:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            if: job\private\completed != 0
+                return
+            if: job\private\attempts >= job\private\limit
+                job\Completion\finish("completed"; outcome)
+                return
+            private: @: accepted FxApply\apply(job\private\retryOn; FxOne\make(FxRecords\reference(outcome)))
+            if: FxSeqPredicate\truth(accepted) = 0
+                job\Completion\finish("completed"; outcome)
+                return
+            private: int: duration job\private\pause
+            private: int: maximum job\private\maxPause
+            if: duration > maximum - duration
+                job\private\pause := maximum
+            else:
+                job\private\pause := duration + duration
+            if: duration = 0
+                job\dispatch()
+                return
+            job\private\pending += 1
+            private: @: delay job\private\delay
+            post:
+                ask:
+                    delay(duration)
+                answer:
+                    job\DelayReply\elapsed
+                timeout:
+                    ms:
+                        int: time job\private\timeoutMs
+                ---
+                unanswered:
+                    DelayReply\unanswered()
+                undelivered:
+                    DelayReply\undelivered()
+            ---
+            catch: FxCallFailure (@: failure)
+                job\Completion\finish("policyFailure"; failure)
+            catch: FxKernelFailure ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxKernelFailure"))
+            catch: FxTypeToken ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxTypeToken"))
+            catch: FxPredicate ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxPredicate"))
+            catch: ReceiverIndex ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("ReceiverIndex"))
+            catch: FxRecordArity ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxRecordArity"))
+    ---
+    DelayReply:
+        int: acknowledgement
+        unanswered:
+            private: @: job parent(node)
+            job\Completion\finish("delayTimeout"; 0)
+        undelivered:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("delayUndelivered"; 0)
+        elapsed:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            if: job\private\completed != 0
+                return
+            if: acknowledgement != 1
+                job\Completion\finish("delayFailure"; 0)
+                return
+            job\dispatch()
+
+# request is an addressed nullary Message method returning an FxOutcome.
+# retryOn(outcome)->int decides explicitly which completed results/failures to
+# repeat. A timeout or undelivered request is terminal, so the library never
+# silently repeats an operation with an unknown completion state.
+# delay(ms)->int is the addressed timer worker acknowledgement, not a void call.
+# complete(result)->void is an addressed completion consumer; no ACK is invented.
+# Clock waiting belongs to the existing host delay port (MESSAGE_HTTP_PROFILE).
+# The complete LMX worker below adapts that port into ordinary Message replies.
+FxRetryPost:
+    private:
+        @: request
+        @: retryOn
+        int: attempts
+        @: delay
+        int: firstDelay
+        int: maxDelay
+        int: timeoutMs
+        @: complete
+    required: request retryOn attempts delay firstDelay maxDelay timeoutMs complete
+    return: @
+    retryPost:
+        throws: FxIndex
+        if: attempts < 1 || firstDelay < 0 || maxDelay < firstDelay || timeoutMs <= maxDelay
+            throw: FxIndex()
+        private: @: job (copy(FxRetryPostJob))
+        job\private\request := request
+        job\private\retryOn := retryOn
+        job\private\limit := attempts
+        job\private\delay := delay
+        job\private\pause := firstDelay
+        job\private\maxPause := maxDelay
+        job\private\timeoutMs := timeoutMs
+        job\private\complete := complete
+        job\dispatch()
+        return: job
+
+# These are explicit Message templates. The existing host/lifecycle launches
+# them as Threads with their own arenas; copying a Structure alone does not.
+# The worker and its operation are owned by the SAME receiving Message. Passing
+# a remote raw operation pointer here never makes a legal cross-owner call.
+FxRetryOperationMessage:
+    @: operation
+    @: arguments ()
+    return: @
+    run:
+        throws: copy(FxThrows\kernel)
+        return: FxTry\attempt(operation; arguments)
+
+FxRetryDelayMessage:
+    @: wait
+    int: duration
+    return: int
+    elapsed:
+        wait(duration)
+        return: 1

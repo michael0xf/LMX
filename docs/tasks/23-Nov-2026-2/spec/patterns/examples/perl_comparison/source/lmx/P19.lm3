@@ -1,0 +1,13 @@
+Mask:
+    Match@: matched
+    return: char[]
+    make:
+        throws: copy(FxThrows\sequence)
+        return: repeatText("*"; matched\end - matched\begin)
+
+Example:
+    char[]: text
+    return: char[]
+    run:
+        throws: copy(FxThrows\sequence) PatternArgument PatternEncoding PatternPosition
+        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)

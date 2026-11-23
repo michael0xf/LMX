@@ -1,0 +1,634 @@
+{
+  "group_title_ru": "События, распределённое состояние и согласованность",
+  "group_title_en": "Events, distributed state and consistency",
+  "languages": [
+    "Java",
+    "Go"
+  ],
+  "rationale_ru": "Java представляет явные интерфейсы сервисов и зрелую экосистему транзакционных приложений; Go — компактные сервисные обработчики и явную обработку ошибок. Сравниваются одинаковые протоколы и одинаковые внешние гарантии, а не разные по полноте фреймворки.",
+  "rationale_en": "Java contributes explicit service interfaces and transactional application conventions; Go contributes compact service handlers and explicit errors. Each comparison fixes the same protocol and external guarantees instead of comparing frameworks with different scope.",
+  "overview_ru": "Сохранены исходные IDs 11,12,41,48,50,51,55,57; добавлен 86. LMX-обработчики размещаются в исполняемых Message с одной полосой записи и собственными аренами. Между владельцами используются post/send/receive и уже описанный HTTP-профиль §32: endpoint+route, application/lmx, intake/admission, синхронный reply либо replyTo/correlation. Обозначения transport/db/store/coordinator в листингах — явно перечисленные адаптерные контракты, не новые встроенные ресиверы. Их реализация одинаково исключена из всех трёх листингов и длины кода. Серийный turn не заменяет транзакцию БД, consensus, долговременный журнал или дедупликацию. Код собственный; источники задают смысл и ограничения паттернов. LMX-фикстура заранее помещает зависимости и начальное состояние в фактический DATA владельца; входы с потенциальной неоднозначностью позиции передаются явно по имени. Например, account\\debit(amount := 30). Листинги контролей рассчитаны на Python 3.10+, C# 12, Java 17 и Go 1.18+ там, где соответствующий язык присутствует.",
+  "overview_en": "Original IDs 11,12,41,48,50,51,55,57 remain; 86 is added. LMX handlers run in executing Messages with one writing lane and owned arenas. Owners communicate through post/send/receive and the existing §32 HTTP profile: endpoint+route, application/lmx, intake/admission and synchronous reply or replyTo/correlation. transport/db/store/coordinator are explicit adapter contracts, not invented builtins; their implementations are excluded equally from all listings and code counts. A serial turn does not provide database transactions, consensus, durability or deduplication. All code is newly authored; sources establish pattern meaning and limits. The LMX fixture installs dependencies and initial state in the actual owner DATA before calls; potentially ambiguous actual positions are named explicitly, for example account\\debit(amount := 30). Applicable control baselines are Python 3.10+, C# 12, Java 17 and Go 1.18+.",
+  "patterns": [
+    {
+      "id": 11,
+      "name": "CQRS",
+      "slug": "cqrs",
+      "scope": "protocol",
+      "summary_ru": "Разделить модель команды и модель чтения.",
+      "summary_en": "Separate the command model from the read model.",
+      "scenario_ru": "WriteMessage принимает add(5). Пока событие не доставлено, ReadMessage возвращает 0. После доставки проекции она возвращает 5.",
+      "scenario_en": "WriteMessage accepts add(5). ReadMessage returns 0 before projection delivery and 5 after delivery.",
+      "expected_ru": "Команда меняет write-state и отправляет snapshot=5; query до доставки даёт 0, после доставки — 5. Query не вызывает командный метод.",
+      "expected_en": "The command updates write-state and emits snapshot 5; queries observe 0 then 5 without calling command behavior.",
+      "lmx_notes_ru": "WriteMessage и ReadMessage — шаблоны двух отдельных исполняемых Message. transport.publish(snapshot) — явный адаптер к post/Message, с единственным получателем проекции. Он может использовать HTTP §32 с application/lmx и корреляцией; это не отсутствующая в LMX возможность.",
+      "lmx_notes_en": "The two templates are launched as separate executing Messages. transport.publish is an explicit post/Message adapter to the projection. It can use the existing HTTP application/lmx profile and correlation.",
+      "comparison_ru": "Все листинги показывают обработчики двух последовательных владельцев и порт доставки; runtime запуска/сеть не входят в длину. CQRS допускает синхронную проекцию, но здесь специально показано окно eventual consistency.",
+      "comparison_en": "Every listing contains two serial owners and a delivery port, excluding runtime startup and networking. The example deliberately exposes an eventual-consistency window.",
+      "limits_ru": "В примере один писатель и FIFO-доставка без потерь/дубликатов. Durable outbox, восстановление и версия проекции нужны отдельно для crash-safe развёртывания; отдельные методы GET/POST при общей модели сами по себе ещё не CQRS.",
+      "limits_en": "One writer and FIFO delivery without loss/duplicates are assumed. Durable outbox, recovery and projection versioning are separate requirements; separate GET/POST methods over one model do not alone establish CQRS.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "WriteMessage:\n    int: balance 0\n    int: amount\n    @: transport\n    add:\n        throws: Amount\n        if: amount < 0\n            throw: Amount()\n        node\\balance += amount\n        node\\transport\\publish(node\\balance)\n\nReadMessage:\n    int: visible 0\n    int: snapshot\n    return: int\n    apply:\n        node\\visible := snapshot\n        return: query()\n    query:\n        return: node\\visible\n",
+          "notes_ru": "WriteMessage и ReadMessage — шаблоны двух отдельных исполняемых Message. transport.publish(snapshot) — явный адаптер к post/Message, с единственным получателем проекции. Он может использовать HTTP §32 с application/lmx и корреляцией; это не отсутствующая в LMX возможность.",
+          "notes_en": "The two templates are launched as separate executing Messages. transport.publish is an explicit post/Message adapter to the projection. It can use the existing HTTP application/lmx profile and correlation.",
+          "metrics": {
+            "characters": 257,
+            "nonblank_lines": 19,
+            "utf8_bytes": 400,
+            "sha256": "c5df09e81a5b1c6896cd3d7ee50fd529e6958f60ce91168dbf0e7648a17b2fb2",
+            "without_complex_throws_characters": 257,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.IntConsumer;\nfinal class WriteModel {\n    private int balance;\n    private final IntConsumer publish;\n    WriteModel(IntConsumer publish) { this.publish=publish; }\n    void add(int amount) {\n        if (amount<0) throw new IllegalArgumentException(\"amount\");\n        balance+=amount;\n        publish.accept(balance);\n    }\n}\nfinal class ReadModel {\n    private int visible;\n    int apply(int snapshot) { visible=snapshot; return visible; }\n    int query() { return visible; }\n}\n",
+          "notes_ru": "В примере один писатель и FIFO-доставка без потерь/дубликатов. Durable outbox, восстановление и версия проекции нужны отдельно для crash-safe развёртывания; отдельные методы GET/POST при общей модели сами по себе ещё не CQRS.",
+          "notes_en": "One writer and FIFO delivery without loss/duplicates are assumed. Durable outbox, recovery and projection versioning are separate requirements; separate GET/POST methods over one model do not alone establish CQRS.",
+          "metrics": {
+            "characters": 395,
+            "nonblank_lines": 16,
+            "utf8_bytes": 504,
+            "sha256": "7cdb86781d1a49bf9941a40c11d05cab8459cdcebb8bf21cf8586b888317f5c8"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\nimport \"fmt\"\ntype WriteModel struct { Balance int; Publish func(int) }\nfunc (w *WriteModel) Add(amount int) error {\n    if amount < 0 { return fmt.Errorf(\"amount\") }\n    w.Balance += amount\n    w.Publish(w.Balance)\n    return nil\n}\ntype ReadModel struct { Visible int }\nfunc (r *ReadModel) Apply(snapshot int) int { r.Visible=snapshot; return r.Visible }\nfunc (r *ReadModel) Query() int { return r.Visible }\n",
+          "notes_ru": "В примере один писатель и FIFO-доставка без потерь/дубликатов. Durable outbox, восстановление и версия проекции нужны отдельно для crash-safe развёртывания; отдельные методы GET/POST при общей модели сами по себе ещё не CQRS.",
+          "notes_en": "One writer and FIFO delivery without loss/duplicates are assumed. Durable outbox, recovery and projection versioning are separate requirements; separate GET/POST methods over one model do not alone establish CQRS.",
+          "metrics": {
+            "characters": 347,
+            "nonblank_lines": 12,
+            "utf8_bytes": 425,
+            "sha256": "32c10aff63b7a1c41ce7e4d2fa90af1beca77aa4d8a80a820fadb805afd4be97"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — CQRS",
+          "url": "https://martinfowler.com/bliki/CQRS.html",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 12,
+      "name": "Event Sourcing",
+      "slug": "event_sourcing",
+      "scope": "protocol",
+      "summary_ru": "Восстановить состояние из долговременной последовательности событий.",
+      "summary_en": "Rebuild state from a durable ordered event sequence.",
+      "scenario_ru": "Журнал содержит дельты 100,20,-5. Восстановить баланс, затем добавить 10 с ожидаемой версией 3 и восстановить заново.",
+      "scenario_en": "The stream contains 100,20,-5. Replay, append 10 with expected version 3, and replay again.",
+      "expected_ru": "Баланс 115, затем 125. Append со старой версией отвергается; replay не отправляет повторные внешние платежи.",
+      "expected_en": "Balances are 115 then 125. A stale append fails; replay performs no external payments.",
+      "lmx_notes_ru": "EventMessage владеет обработкой команд. store.read() возвращает упорядоченный массив int; append(expected,delta) атомарно проверяет версию и надёжно добавляет событие. Это явный event-store порт, не свойство арены.",
+      "lmx_notes_en": "EventMessage owns command handling. store.read returns ordered int deltas; append atomically checks version and durably appends. This explicit event-store contract is not an arena property.",
+      "comparison_ru": "Во всех языках состояние является результатом одного fold над журналом. Message сериализует собственные обращения, а version check защищает журнал и от других клиентов.",
+      "comparison_en": "Every version folds the same journal. A serial Message orders its own commands; the version check also protects against other writers.",
+      "limits_ru": "Листинг использует один поток событий без snapshots и schema evolution. Crash durability, checksums и transaction log реализует store. HTTP admission не означает durable append.",
+      "limits_en": "One stream only, without snapshots or schema evolution. The store provides durability, checksums and transaction logging. HTTP admission is not durable append.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "EventMessage:\n    @: store\n    int: expected\n    int: delta\n    return: int\n    balance:\n        @: events node\\store\\read()\n        int: result 0\n        int: i 0\n        while: i < length(events)\n            result += events[i]\n            i += 1\n        return: result\n    append:\n        throws: Conflict\n        if: !node\\store\\append(expected; delta)\n            throw: Conflict()\n        return: balance()\n",
+          "notes_ru": "EventMessage владеет обработкой команд. store.read() возвращает упорядоченный массив int; append(expected,delta) атомарно проверяет версию и надёжно добавляет событие. Это явный event-store порт, не свойство арены.",
+          "notes_en": "EventMessage owns command handling. store.read returns ordered int deltas; append atomically checks version and durably appends. This explicit event-store contract is not an arena property.",
+          "metrics": {
+            "characters": 248,
+            "nonblank_lines": 18,
+            "utf8_bytes": 413,
+            "sha256": "ce4490105071fab8a7479fbe14dfd1e07d41fec56c620868123d1bf6d95bb432",
+            "without_complex_throws_characters": 248,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "interface EventStore {\n    int[] read();\n    boolean append(int expected,int delta);\n}\nfinal class EventAccount {\n    private final EventStore store;\n    EventAccount(EventStore store) { this.store=store; }\n    int balance() {\n        int result=0;\n        for (int delta:store.read()) result+=delta;\n        return result;\n    }\n    int append(int expected,int delta) {\n        if (!store.append(expected,delta)) throw new IllegalStateException(\"conflict\");\n        return balance();\n    }\n}\n",
+          "notes_ru": "Листинг использует один поток событий без snapshots и schema evolution. Crash durability, checksums и transaction log реализует store. HTTP admission не означает durable append.",
+          "notes_en": "One stream only, without snapshots or schema evolution. The store provides durability, checksums and transaction logging. HTTP admission is not durable append.",
+          "metrics": {
+            "characters": 372,
+            "nonblank_lines": 17,
+            "utf8_bytes": 493,
+            "sha256": "b97bb4c81ac409e8cc97c0de66dff044e3c1e66a1ab9d2b78bcb1dd224a7cf13"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\nimport \"fmt\"\ntype EventStore interface { Read() []int; Append(int,int) bool }\ntype EventAccount struct { Store EventStore }\nfunc (a *EventAccount) Balance() int {\n    result:=0\n    for _,delta:=range a.Store.Read() { result+=delta }\n    return result\n}\nfunc (a *EventAccount) Append(expected,delta int) (int,error) {\n    if !a.Store.Append(expected,delta) { return 0,fmt.Errorf(\"conflict\") }\n    return a.Balance(),nil\n}\n",
+          "notes_ru": "Листинг использует один поток событий без snapshots и schema evolution. Crash durability, checksums и transaction log реализует store. HTTP admission не означает durable append.",
+          "notes_en": "One stream only, without snapshots or schema evolution. The store provides durability, checksums and transaction logging. HTTP admission is not durable append.",
+          "metrics": {
+            "characters": 366,
+            "nonblank_lines": 13,
+            "utf8_bytes": 438,
+            "sha256": "dd39e33331efcd7f5e3991c9766763524a19e7c4e944d22eb96de7b6a7bd747b"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Event Sourcing",
+          "url": "https://martinfowler.com/eaaDev/EventSourcing.html",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "name": "Saga",
+      "slug": "saga",
+      "scope": "protocol",
+      "summary_ru": "Координировать локальные действия и явную компенсацию при отказе.",
+      "summary_en": "Coordinate local actions and an explicit compensating action.",
+      "scenario_ru": "Заказ посылает Reserve, получает Reserved(true), посылает Charge, получает Charged(false), посылает Release и получает Released(true). Повторить каждый ответ.",
+      "scenario_en": "Start, Reserved(true), Charged(false), Released(true), duplicating each reply. A separate successful charge path is also tested.",
+      "expected_ru": "Состояния 0→1→2→3→4; действия reserve,charge,release,failed выполняются по одному разу. Дубликаты уже обработанных фаз не порождают действия. Успешный Charge переводит в 5 и даёт done.",
+      "expected_en": "States are 0→1→2→3→4 and actions reserve,charge,release,failed each occur once. Duplicates produce no action. Successful charge reaches state 5 and emits done.",
+      "lmx_notes_ru": "SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 charged,3 released; ok=0/1. transport.publish(action) посылает обычный Message с saga-id и командой участнику. Номера действий описаны в общей фикстуре: 1 reserve,2 charge,3 release,4 failed,5 done.",
+      "lmx_notes_en": "SagaMessage is one owner. kind 0/1/2/3 means start/reserved/charged/released; ok is 0/1. The explicit transport port sends a Message containing saga-id and action: 1 reserve,2 charge,3 release,4 failed,5 done.",
+      "comparison_ru": "Во всех трёх листингах одинаковый конечный автомат, работающий в последовательной полосе владельца. Компенсация — отдельное бизнес-действие, а не автоматический rollback графа или distributed transaction.",
+      "comparison_en": "All listings implement the same serial finite-state machine. Compensation is a separate business action, not graph rollback or a distributed transaction.",
+      "limits_ru": "Показан детерминированный протокольный core без сбоев процесса. Для production состояние и outgoing action сохраняются атомарно, участники идемпотентны, таймауты/повторы/ошибка компенсации требуют политики. HTTP-профиль переносит те же Messages.",
+      "limits_en": "This deterministic protocol core excludes process crashes. Production requires atomic persistence of state/outgoing action, idempotent participants, retry/timeouts and compensation-failure policy. The existing HTTP profile carries the same Messages.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "SagaMessage:\n    int: phase 0\n    int: kind\n    int: ok\n    @: transport\n    handle:\n        int: action 0\n        if: kind = 0 && node\\phase = 0\n            action := 1\n        if: kind = 1 && node\\phase = 1\n            if: ok\n                action := 2\n            else:\n                action := 4\n        ---\n        if: kind = 2 && node\\phase = 2\n            if: ok\n                action := 5\n            else:\n                action := 3\n        ---\n        if: kind = 3 && node\\phase = 3 && ok\n            action := 4\n        if: action != 0\n            node\\phase := action\n            node\\transport\\publish(action)\n",
+          "notes_ru": "SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 charged,3 released; ok=0/1. transport.publish(action) посылает обычный Message с saga-id и командой участнику. Номера действий описаны в общей фикстуре: 1 reserve,2 charge,3 release,4 failed,5 done.",
+          "notes_en": "SagaMessage is one owner. kind 0/1/2/3 means start/reserved/charged/released; ok is 0/1. The explicit transport port sends a Message containing saga-id and action: 1 reserve,2 charge,3 release,4 failed,5 done.",
+          "metrics": {
+            "characters": 301,
+            "nonblank_lines": 26,
+            "utf8_bytes": 627,
+            "sha256": "b1b8d9ec500000980e0fff3bbddbab63c2a0cf99f4baefeecd1f1976aac8fea9",
+            "without_complex_throws_characters": 301,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.IntConsumer;\nfinal class Saga {\n    private int phase;\n    private final IntConsumer publish;\n    Saga(IntConsumer publish) { this.publish=publish; }\n    void handle(int kind,boolean ok) {\n        int action=0;\n        if (kind==0 && phase==0) { phase=1; action=1; }\n        if (kind==1 && phase==1) {\n            if (ok) { phase=2; action=2; } else { phase=4; action=4; }\n        }\n        if (kind==2 && phase==2) {\n            if (ok) { phase=5; action=5; } else { phase=3; action=3; }\n        }\n        if (kind==3 && phase==3 && ok) { phase=4; action=4; }\n        if (action!=0) publish.accept(action);\n    }\n}\n",
+          "notes_ru": "Показан детерминированный протокольный core без сбоев процесса. Для production состояние и outgoing action сохраняются атомарно, участники идемпотентны, таймауты/повторы/ошибка компенсации требуют политики. HTTP-профиль переносит те же Messages.",
+          "notes_en": "This deterministic protocol core excludes process crashes. Production requires atomic persistence of state/outgoing action, idempotent participants, retry/timeouts and compensation-failure policy. The existing HTTP profile carries the same Messages.",
+          "metrics": {
+            "characters": 452,
+            "nonblank_lines": 18,
+            "utf8_bytes": 642,
+            "sha256": "a7d6965edb2a339646e1a9f5eb4fb129c56b1810be0f921969a915708529023b"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\ntype Saga struct { Phase int; Publish func(int) }\nfunc (s *Saga) Handle(kind int,ok bool) {\n    action:=0\n    if kind==0 && s.Phase==0 { s.Phase=1; action=1 }\n    if kind==1 && s.Phase==1 {\n        if ok { s.Phase=2; action=2 } else { s.Phase=4; action=4 }\n    }\n    if kind==2 && s.Phase==2 {\n        if ok { s.Phase=5; action=5 } else { s.Phase=3; action=3 }\n    }\n    if kind==3 && s.Phase==3 && ok { s.Phase=4; action=4 }\n    if action!=0 { s.Publish(action) }\n}\n",
+          "notes_ru": "Показан детерминированный протокольный core без сбоев процесса. Для production состояние и outgoing action сохраняются атомарно, участники идемпотентны, таймауты/повторы/ошибка компенсации требуют политики. HTTP-профиль переносит те же Messages.",
+          "notes_en": "This deterministic protocol core excludes process crashes. Production requires atomic persistence of state/outgoing action, idempotent participants, retry/timeouts and compensation-failure policy. The existing HTTP profile carries the same Messages.",
+          "metrics": {
+            "characters": 359,
+            "nonblank_lines": 14,
+            "utf8_bytes": 484,
+            "sha256": "ff1fd382a895a8e8716d2fac9faaf1787cc76afa462b25b4d32e693e20764066"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Chris Richardson — Saga",
+          "url": "https://microservices.io/patterns/data/saga.html",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 48,
+      "name": "Transactional Outbox",
+      "slug": "transactional_outbox",
+      "scope": "protocol",
+      "summary_ru": "Сохранить бизнес-изменение и исходящее событие одной локальной транзакцией.",
+      "summary_en": "Commit the business change and outgoing event in one local database transaction.",
+      "scenario_ru": "Команда меняет счёт 7 на 120 и создаёт событие id=51. Relay отправляет событие; в контрольном сбое процесс падает после publish и до markSent.",
+      "scenario_en": "Update account 7 to 120 and create event 51. Relay publishes; inject a crash after publish but before markSent.",
+      "expected_ru": "При rollback нет ни изменения, ни outbox-строки. После commit оба существуют. После контрольного сбоя relay повторно отправляет id=51: потребитель должен уметь подавить дубль.",
+      "expected_en": "Rollback leaves neither change nor outbox row. Commit persists both. The crash causes event 51 to be published again, so consumption must be idempotent.",
+      "lmx_notes_ru": "OutboxMessage и RelayMessage — отдельные владельцы. db.atomic(write) синхронно вызывает write; бизнес-строка и outbox находятся в одной транзакционной БД. transport.publish — адаптер к Message/post либо HTTP-профилю; его успешный возврат означает оговорённое подтверждение брокера, а не исполнение потребителем. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+      "lmx_notes_en": "OutboxMessage and RelayMessage are separate owners. db.atomic invokes write synchronously; both rows share a transaction. The transport port uses Message/post or HTTP; successful publish means the chosen broker acknowledgement, not consumer execution. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+      "comparison_ru": "Все версии явно делают запись в outbox до commit и markSent после публикации. Сама по себе очередь исходящих Message в конце turn не равна durable outbox БД.",
+      "comparison_en": "Every version inserts before commit and marks sent only after publication. End-of-turn Message staging is not a durable database outbox.",
+      "limits_ru": "Один relay, упорядоченный pending batch и уникальный event-id. Параллельные relay требуют claim/lease. Broker ack, retries и idempotent consumer задаются инфраструктурой; exactly-once доставка не обещается.",
+      "limits_en": "One relay, ordered batches and unique event IDs are assumed. Parallel relays need claims/leases. No exactly-once delivery is promised.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "OutboxMessage:\n    @: db\n    int: accountId\n    int: cents\n    int: eventId\n    write:\n        db\\updateAccount(accountId; cents)\n        db\\insertOutbox(eventId; accountId; cents)\n    execute:\n        db\\atomic(body := write)\n\nRelayMessage:\n    @: db\n    @: transport\n    relay:\n        @: batch node\\db\\pending()\n        int: i 0\n        while: i < length(batch)\n            @: event batch[i]\n            node\\transport\\publish(event := event)\n            node\\db\\markSent(event\\id)\n            i += 1\n",
+          "notes_ru": "OutboxMessage и RelayMessage — отдельные владельцы. db.atomic(write) синхронно вызывает write; бизнес-строка и outbox находятся в одной транзакционной БД. transport.publish — адаптер к Message/post либо HTTP-профилю; его успешный возврат означает оговорённое подтверждение брокера, а не исполнение потребителем. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+          "notes_en": "OutboxMessage and RelayMessage are separate owners. db.atomic invokes write synchronously; both rows share a transaction. The transport port uses Message/post or HTTP; successful publish means the chosen broker acknowledgement, not consumer execution. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+          "metrics": {
+            "characters": 326,
+            "nonblank_lines": 21,
+            "utf8_bytes": 504,
+            "sha256": "fbde3961e382a86d54c9b12064ef64f3f8620416f0afd682c14b8564c19b8073",
+            "without_complex_throws_characters": 326,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.List;\nrecord Event(int id,int accountId,int cents) {}\ninterface OutboxDb {\n    void atomic(Runnable body);\n    void updateAccount(int id,int cents);\n    void insertOutbox(int eventId,int accountId,int cents);\n    List<Event> pending();\n    void markSent(int eventId);\n}\ninterface Publisher { void publish(Event event); }\nfinal class Outbox {\n    static void execute(OutboxDb db,int id,int cents,int eventId) {\n        db.atomic(() -> { db.updateAccount(id,cents); db.insertOutbox(eventId,id,cents); });\n    }\n    static void relay(OutboxDb db,Publisher publisher) {\n        for (Event event:db.pending()) {\n            publisher.publish(event);\n            db.markSent(event.id());\n        }\n    }\n}\n",
+          "notes_ru": "Один relay, упорядоченный pending batch и уникальный event-id. Параллельные relay требуют claim/lease. Broker ack, retries и idempotent consumer задаются инфраструктурой; exactly-once доставка не обещается.",
+          "notes_en": "One relay, ordered batches and unique event IDs are assumed. Parallel relays need claims/leases. No exactly-once delivery is promised.",
+          "metrics": {
+            "characters": 563,
+            "nonblank_lines": 21,
+            "utf8_bytes": 717,
+            "sha256": "7e62780326227ae96f1503d9b73a3ecde169593ae037a675f536dfa06bbd84ad"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\ntype Event struct { ID,AccountID,Cents int }\ntype OutboxDB interface {\n    Atomic(func() error) error\n    UpdateAccount(int,int) error\n    InsertOutbox(int,int,int) error\n    Pending() ([]Event,error)\n    MarkSent(int) error\n}\nfunc Execute(db OutboxDB,id,cents,eventID int) error {\n    return db.Atomic(func() error {\n        if err:=db.UpdateAccount(id,cents); err!=nil { return err }\n        return db.InsertOutbox(eventID,id,cents)\n    })\n}\nfunc Relay(db OutboxDB,publish func(Event) error) error {\n    batch,err:=db.Pending(); if err!=nil { return err }\n    for _,event:=range batch {\n        if err=publish(event); err!=nil { return err }\n        if err=db.MarkSent(event.ID); err!=nil { return err }\n    }\n    return nil\n}\n",
+          "notes_ru": "Один relay, упорядоченный pending batch и уникальный event-id. Параллельные relay требуют claim/lease. Broker ack, retries и idempotent consumer задаются инфраструктурой; exactly-once доставка не обещается.",
+          "notes_en": "One relay, ordered batches and unique event IDs are assumed. Parallel relays need claims/leases. No exactly-once delivery is promised.",
+          "metrics": {
+            "characters": 588,
+            "nonblank_lines": 23,
+            "utf8_bytes": 746,
+            "sha256": "5517f31d89c5b0bcbac69c2c638097e9a3213f173b2e3bec5e1a834c7b71287e"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Chris Richardson — Transactional Outbox",
+          "url": "https://microservices.io/patterns/data/transactional-outbox.html",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 50,
+      "name": "Materialized View",
+      "slug": "materialized_view",
+      "scope": "protocol",
+      "summary_ru": "Поддерживать заранее вычисленную проекцию для дешёвого чтения.",
+      "summary_en": "Maintain a precomputed projection for cheap reads.",
+      "scenario_ru": "ProjectionMessage получает события (seq=1,delta=10),(2,5),дубль (2,5), затем ошибочный пропуск (4,9). Прочитать total.",
+      "scenario_en": "Apply (1,10),(2,5), duplicate (2,5), then a gap (4,9); query total.",
+      "expected_ru": "total=15,last=2. Дубль игнорируется. Пропуск последовательности выдаёт Gap до изменения состояния.",
+      "expected_en": "Total is 15 and last is 2. The duplicate is ignored; the gap fails before changing state.",
+      "lmx_notes_ru": "Один Message владеет total/last. Параметры seq/delta приходят по Message или HTTP intake, apply изменяет только собственный граф. Возврат query не сканирует исходный журнал.",
+      "lmx_notes_en": "One Message owns total/last. Events arrive through Message or HTTP intake. apply changes its own graph; query does not rescan the event log.",
+      "comparison_ru": "Все три варианта хранят сумму и checkpoint отдельно от источника событий. Дедупликация здесь корректна для одного упорядоченного непрерывного потока.",
+      "comparison_en": "Each version stores a sum and checkpoint separately from the source stream. Deduplication assumes one contiguous ordered stream.",
+      "limits_ru": "Это memory-only проекция, которую можно восстановить replay. Для сохранения между авариями total и checkpoint записываются атомарно; для нескольких потоков нужен checkpoint на каждый, а не общий last.",
+      "limits_en": "This memory-only view can be rebuilt. Durable total/checkpoint must be committed atomically; multiple streams need separate checkpoints.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ProjectionMessage:\n    int: total 0\n    int: last 0\n    int: seq\n    int: delta\n    return: int\n    apply:\n        throws: Gap\n        if: seq <= node\\last\n            return: query()\n        if: seq != node\\last + 1\n            throw: Gap()\n        node\\total += delta\n        node\\last := seq\n        return: query()\n    query:\n        return: node\\total\n",
+          "notes_ru": "Один Message владеет total/last. Параметры seq/delta приходят по Message или HTTP intake, apply изменяет только собственный граф. Возврат query не сканирует исходный журнал.",
+          "notes_en": "One Message owns total/last. Events arrive through Message or HTTP intake. apply changes its own graph; query does not rescan the event log.",
+          "metrics": {
+            "characters": 208,
+            "nonblank_lines": 17,
+            "utf8_bytes": 357,
+            "sha256": "65cc28da7c9e87b4d1cbd7e3c8ba4664542432841120037ea2e1cd096e0975bb",
+            "without_complex_throws_characters": 208,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "final class Projection {\n    private int total,last;\n    int apply(int seq,int delta) {\n        if (seq<=last) return total;\n        if (seq!=last+1) throw new IllegalStateException(\"gap\");\n        total+=delta;\n        last=seq;\n        return total;\n    }\n    int query() { return total; }\n}\n",
+          "notes_ru": "Это memory-only проекция, которую можно восстановить replay. Для сохранения между авариями total и checkpoint записываются атомарно; для нескольких потоков нужен checkpoint на каждый, а не общий last.",
+          "notes_en": "This memory-only view can be rebuilt. Durable total/checkpoint must be committed atomically; multiple streams need separate checkpoints.",
+          "metrics": {
+            "characters": 205,
+            "nonblank_lines": 11,
+            "utf8_bytes": 294,
+            "sha256": "b24788a0569534d2fbff625eb4a4cbdf616f953e2008b6f14d9acb7d45c00fb3"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\nimport \"fmt\"\ntype Projection struct { Total,Last int }\nfunc (p *Projection) Apply(seq,delta int) (int,error) {\n    if seq<=p.Last { return p.Total,nil }\n    if seq!=p.Last+1 { return 0,fmt.Errorf(\"gap\") }\n    p.Total+=delta\n    p.Last=seq\n    return p.Total,nil\n}\nfunc (p *Projection) Query() int { return p.Total }\n",
+          "notes_ru": "Это memory-only проекция, которую можно восстановить replay. Для сохранения между авариями total и checkpoint записываются атомарно; для нескольких потоков нужен checkpoint на каждый, а не общий last.",
+          "notes_en": "This memory-only view can be rebuilt. Durable total/checkpoint must be committed atomically; multiple streams need separate checkpoints.",
+          "metrics": {
+            "characters": 269,
+            "nonblank_lines": 11,
+            "utf8_bytes": 333,
+            "sha256": "50bfece4338c8b57282aeb709f0087437e5e2e69a8b1ee8939ce752a93cec881"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure Architecture Center — Materialized View",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/materialized-view",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 51,
+      "name": "Sharding",
+      "slug": "sharding",
+      "scope": "protocol",
+      "summary_ru": "Направлять ключи в выбранные горизонтальные разделы хранилища.",
+      "summary_en": "Route keys to horizontal storage partitions.",
+      "scenario_ru": "Три шарда. Для неотрицательных customerId 7,8,9 вычислить shard=customerId%3 и передать get в соответствующий endpoint.",
+      "scenario_en": "For three shards, route nonnegative customer IDs 7,8,9 using id modulo 3.",
+      "expected_ru": "Ключи идут в шарды 1,2,0. Повторный ключ всегда выбирает тот же shard при неизменном наборе.",
+      "expected_en": "The selected shards are 1,2,0; repeated keys retain placement while the shard set is unchanged.",
+      "lmx_notes_ru": "RouterMessage владеет таблицей targets и получает запросы. transport.get(target,id) — синхронный профиль документированного HTTP транспорта: target содержит endpoint+route, результат получен после Message intake/исполнения на шарде. Это отдельный явно переданный адаптер, не builtin HTTP singleton.",
+      "lmx_notes_en": "RouterMessage owns targets. transport.get(target,id) is an explicitly supplied synchronous adapter to the documented HTTP profile; target contains endpoint and route, and the result follows remote Message execution.",
+      "comparison_ru": "Каждый язык вычисляет одну и ту же функцию маршрутизации и вызывает порт. В LMX шарды — отдельные Message/сервисы с независимым состоянием.",
+      "comparison_en": "Every language implements the same routing function and port call. LMX shards are separate Messages/services with isolated state.",
+      "limits_ru": "Число шардов фиксировано и больше нуля; id>=0. Изменение N перемещает ключи, поэтому миграция, metadata epochs и распределённые запросы не покрыты. Это routing core, не готовая система ребалансировки.",
+      "limits_en": "The shard count is fixed and positive and IDs are nonnegative. Changing the count relocates keys; migration, epochs and cross-shard queries are outside this routing core.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "RouterMessage:\n    @[]: targets\n    @: transport\n    int: id\n    return: @\n    get:\n        throws: Shard\n        if: id < 0 || length(targets) = 0\n            throw: Shard()\n        int: index id % length(targets)\n        return: transport\\get(targets[index]; id)\n",
+          "notes_ru": "RouterMessage владеет таблицей targets и получает запросы. transport.get(target,id) — синхронный профиль документированного HTTP транспорта: target содержит endpoint+route, результат получен после Message intake/исполнения на шарде. Это отдельный явно переданный адаптер, не builtin HTTP singleton.",
+          "notes_en": "RouterMessage owns targets. transport.get(target,id) is an explicitly supplied synchronous adapter to the documented HTTP profile; target contains endpoint and route, and the result follows remote Message execution.",
+          "metrics": {
+            "characters": 171,
+            "nonblank_lines": 11,
+            "utf8_bytes": 265,
+            "sha256": "55bb65f37a4dd3d57f72c309b4366744ca9f88053d284faa542f1c514a4a8ae1",
+            "without_complex_throws_characters": 171,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.List;\ninterface Transport { Object get(String target,int id); }\nfinal class Router {\n    static Object get(List<String> targets,Transport transport,int id) {\n        if (id<0 || targets.isEmpty()) throw new IllegalArgumentException(\"shard\");\n        int index=id%targets.size();\n        return transport.get(targets.get(index),id);\n    }\n}\n",
+          "notes_ru": "Число шардов фиксировано и больше нуля; id>=0. Изменение N перемещает ключи, поэтому миграция, metadata epochs и распределённые запросы не покрыты. Это routing core, не готовая система ребалансировки.",
+          "notes_en": "The shard count is fixed and positive and IDs are nonnegative. Changing the count relocates keys; migration, epochs and cross-shard queries are outside this routing core.",
+          "metrics": {
+            "characters": 291,
+            "nonblank_lines": 9,
+            "utf8_bytes": 357,
+            "sha256": "adcbf89440c034a6ea86a9daf9804a978b2d85cf7fb19c1ee0dc91df49f9c553"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\nimport \"fmt\"\ntype Transport interface { Get(string,int) (any,error) }\nfunc Get(targets []string,transport Transport,id int) (any,error) {\n    if id<0 || len(targets)==0 { return nil,fmt.Errorf(\"shard\") }\n    return transport.Get(targets[id%len(targets)],id)\n}\n",
+          "notes_ru": "Число шардов фиксировано и больше нуля; id>=0. Изменение N перемещает ключи, поэтому миграция, metadata epochs и распределённые запросы не покрыты. Это routing core, не готовая система ребалансировки.",
+          "notes_en": "The shard count is fixed and positive and IDs are nonnegative. Changing the count relocates keys; migration, epochs and cross-shard queries are outside this routing core.",
+          "metrics": {
+            "characters": 240,
+            "nonblank_lines": 7,
+            "utf8_bytes": 277,
+            "sha256": "3f168db87b77e06690c205db096619f42168b07a6661fc3286c532f4de69466d"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure Architecture Center — Sharding",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/sharding",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 55,
+      "name": "Leader Election",
+      "slug": "leader_election",
+      "scope": "protocol",
+      "summary_ru": "Получить подтверждённое право лидера и защитить ресурс от старого владельца.",
+      "summary_en": "Acquire confirmed leadership and reject stale-owner resource writes.",
+      "scenario_ru": "A получает lease/token=10, B временно не получает. После потери lease B получает 11. Задержавшаяся работа A с 10 пытается записать в ресурс.",
+      "scenario_en": "A holds token 10 while B is refused; after lease loss B obtains 11. A delayed write still carries 10.",
+      "expected_ru": "Текущий B может записать с 11; запись A с 10 отвергается ресурсом. acquire возвращает 0 при отсутствии лидерства, тогда работа не запускается.",
+      "expected_en": "B can write with 11; the resource rejects A with 10. acquire returns zero when no leadership was obtained and no work starts.",
+      "lmx_notes_ru": "CandidateMessage — участник. coordinator.acquire(id) и resource.writeIfCurrent(token,id) — явные порты распределённой координации. Сервис атомарно проверяет актуальное владение и fencing при записи; один локальный Message или HTTP timeout не доказывает остановку прежнего лидера.",
+      "lmx_notes_en": "CandidateMessage is one participant. Coordinator and protected-resource operations are explicit distributed ports. The resource atomically validates current ownership and fencing; a local Message or HTTP timeout cannot establish that an old leader stopped.",
+      "comparison_ru": "Листинги сравнивают клиентский протокол использования избранного лидера, а не реализации Raft/Paxos. Java и Go получают те же контракты. etcd Election/Lease — пример возможной инфраструктуры, не неявная зависимость LMX.",
+      "comparison_en": "The listings compare a leader client protocol, not Raft/Paxos implementations. Java and Go use the same contracts. etcd Election/Lease is a possible adapter infrastructure, not an implicit LMX dependency.",
+      "limits_ru": "Внутренняя election/lease библиотека не входит в метрику кода. acquire должен возвращать монотонный fencing token, release — освобождать только свой lease. Исключения write не отменяют требования TTL/renewal; менеджер lease обеспечивает их. Сниппет обслуживает одну рабочую попытку.",
+      "limits_en": "Coordinator implementation is excluded from code counts. acquire returns a monotonic fencing token; release affects only that lease. The lease manager provides TTL/renewal even when work fails. The snippet shows one work attempt.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "CandidateMessage:\n    @: coordinator\n    @: resource\n    int: id\n    return: int\n    attempt:\n        int: token coordinator\\acquire(id)\n        if: token = 0\n            return: 0\n        int: result resource\\writeIfCurrent(token; id)\n        coordinator\\release(id; token)\n        return: result\n",
+          "notes_ru": "CandidateMessage — участник. coordinator.acquire(id) и resource.writeIfCurrent(token,id) — явные порты распределённой координации. Сервис атомарно проверяет актуальное владение и fencing при записи; один локальный Message или HTTP timeout не доказывает остановку прежнего лидера.",
+          "notes_en": "CandidateMessage is one participant. Coordinator and protected-resource operations are explicit distributed ports. The resource atomically validates current ownership and fencing; a local Message or HTTP timeout cannot establish that an old leader stopped.",
+          "metrics": {
+            "characters": 199,
+            "nonblank_lines": 12,
+            "utf8_bytes": 298,
+            "sha256": "78385f69fd5dcbbbc7e6909bbdc8f3757314c5a77e5cf4fc96dabc5b4c2b32c5",
+            "without_complex_throws_characters": 199,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "interface Coordinator {\n    int acquire(int id);\n    void release(int id,int token);\n}\ninterface Resource { boolean writeIfCurrent(int token,int id); }\nfinal class Candidate {\n    static boolean attempt(Coordinator c,Resource r,int id) {\n        int token=c.acquire(id);\n        if (token==0) return false;\n        boolean result=r.writeIfCurrent(token,id);\n        c.release(id,token);\n        return result;\n    }\n}\n",
+          "notes_ru": "Внутренняя election/lease библиотека не входит в метрику кода. acquire должен возвращать монотонный fencing token, release — освобождать только свой lease. Исключения write не отменяют требования TTL/renewal; менеджер lease обеспечивает их. Сниппет обслуживает одну рабочую попытку.",
+          "notes_en": "Coordinator implementation is excluded from code counts. acquire returns a monotonic fencing token; release affects only that lease. The lease manager provides TTL/renewal even when work fails. The snippet shows one work attempt.",
+          "metrics": {
+            "characters": 319,
+            "nonblank_lines": 14,
+            "utf8_bytes": 418,
+            "sha256": "3e3f67bfe448dc466b594bff77bbfcc3280084e0fa94c212299aec052cd9e103"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\ntype Coordinator interface { Acquire(int) int; Release(int,int) }\ntype Resource interface { WriteIfCurrent(int,int) bool }\nfunc Attempt(c Coordinator,r Resource,id int) bool {\n    token:=c.Acquire(id)\n    if token==0 { return false }\n    result:=r.WriteIfCurrent(token,id)\n    c.Release(id,token)\n    return result\n}\n",
+          "notes_ru": "Внутренняя election/lease библиотека не входит в метрику кода. acquire должен возвращать монотонный fencing token, release — освобождать только свой lease. Исключения write не отменяют требования TTL/renewal; менеджер lease обеспечивает их. Сниппет обслуживает одну рабочую попытку.",
+          "notes_en": "Coordinator implementation is excluded from code counts. acquire returns a monotonic fencing token; release affects only that lease. The lease manager provides TTL/renewal even when work fails. The snippet shows one work attempt.",
+          "metrics": {
+            "characters": 278,
+            "nonblank_lines": 10,
+            "utf8_bytes": 334,
+            "sha256": "a4539858531cb5e32eb5000d8ecc75d987d6f3df5279a26c12c41aff6df4fa11"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure Architecture Center — Leader Election",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/leader-election",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        },
+        {
+          "title": "etcd Go concurrency package — Election and Session",
+          "url": "https://pkg.go.dev/go.etcd.io/etcd/client/v3/concurrency",
+          "why_ru": "Пример реального API координации; fencing ресурса остаётся явным требованием.",
+          "why_en": "An actual coordination API; resource fencing remains an explicit requirement."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 57,
+      "name": "Claim Check",
+      "slug": "claim_check",
+      "scope": "protocol",
+      "summary_ru": "Передать ссылку-квитанцию на большие данные, сохранив сами данные отдельно.",
+      "summary_en": "Send a compact claim ticket while retaining the large payload externally.",
+      "scenario_ru": "Сохранить ASCII payload длиной 10000 и послать только ticket(key,length). Получатель проверяет полномочия своего store-порта, читает blob и сравнивает длину.",
+      "scenario_en": "Store 10000 ASCII characters and publish only ticket(key,length). The receiver uses its authorized store port to fetch and validate length.",
+      "expected_ru": "Через очередь/HTTP идёт маленький DTO из двух чисел; обработчик получает исходный payload длиной 10000. Несовпадение длины выдаёт Payload.",
+      "expected_en": "The queue/HTTP carries two integers; the consumer obtains the original 10000-character payload. A length mismatch raises Payload.",
+      "lmx_notes_ru": "SenderMessage и ConsumerMessage — разные владельцы. blobs.put/get — явное внешнее blob-хранилище; transport.publish(ticket) использует Message/post либо описанный HTTP application/lmx. Key — переносимый идентификатор, не адрес арены. Полный payload не входит в Message. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E. TicketData имеет independent-корень; sender копирует готовые primitive leaves и явно записывает key/size до publish. Получатель получает значения, а не initializer, ссылающийся на завершившийся sender frame.",
+      "lmx_notes_en": "SenderMessage and ConsumerMessage are separate owners. blobs.put/get is explicit external storage; publish uses Message/post or the documented application/lmx HTTP profile. Key is portable, never an arena address; the body is not in the Message. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity. TicketData has an independent root; the sender copies ready primitive leaves and explicitly writes key/size before publish. The receiver obtains values, not an initializer referring to an expired sender frame.",
+      "comparison_ru": "Во всех вариантах сначала завершается сохранение blob, затем публикуется ticket. Это согласуется с LMX HTTP-профилем, допускающим cursor/range для большого тела.",
+      "comparison_en": "All versions persist the blob before publishing the ticket. LMX HTTP also supports cursor/range bodies for this role.",
+      "limits_ru": "ASCII фиксирует одинаковую длину в char/UTF-16/байтах. Длина не заменяет digest. Доступ, retention, cleanup сирот, повторное чтение и expiry токена задаются хранилищем; ticket сам не выдаёт полномочия.",
+      "limits_en": "ASCII makes length comparable across char, UTF-16 and byte representations. Length is not a digest. Authorization, retention, orphan cleanup and expiry remain store policy; a ticket grants no automatic authority.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "independent: TicketData:\n    int: key 0\n    int: size 0\n\nSenderMessage:\n    @: blobs\n    @: transport\n    char[]: payload\n    send:\n        int: key blobs\\put(payload)\n        @: ticket (copy(TicketData))\n        ticket\\key := key\n        ticket\\size := length(payload)\n        transport\\publish(ticket := ticket)\n\nConsumerMessage:\n    @: blobs\n    @: consume\n    @: ticket\n    receivePayload:\n        throws: Payload\n        @: payload blobs\\get(ticket\\key)\n        if: length(payload) != ticket\\size\n            throw: Payload()\n        consume(payload := payload)\n",
+          "notes_ru": "SenderMessage и ConsumerMessage — разные владельцы. blobs.put/get — явное внешнее blob-хранилище; transport.publish(ticket) использует Message/post либо описанный HTTP application/lmx. Key — переносимый идентификатор, не адрес арены. Полный payload не входит в Message. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E. TicketData имеет independent-корень; sender копирует готовые primitive leaves и явно записывает key/size до publish. Получатель получает значения, а не initializer, ссылающийся на завершившийся sender frame.",
+          "notes_en": "SenderMessage and ConsumerMessage are separate owners. blobs.put/get is explicit external storage; publish uses Message/post or the documented application/lmx HTTP profile. Key is portable, never an arena address; the body is not in the Message. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity. TicketData has an independent root; the sender copies ready primitive leaves and explicitly writes key/size before publish. The receiver obtains values, not an initializer referring to an expired sender frame.",
+          "metrics": {
+            "characters": 388,
+            "nonblank_lines": 23,
+            "utf8_bytes": 567,
+            "sha256": "0e7131b7b30c746329fef905f8223bd743217c7bfb6c86f0fe561fe37f8e55c1",
+            "without_complex_throws_characters": 388,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.Consumer;\nrecord Ticket(int key,int size) {}\ninterface Blobs { int put(String payload); String get(int key); }\nfinal class ClaimCheck {\n    static void send(Blobs blobs,Consumer<Ticket> publish,String payload) {\n        int key=blobs.put(payload);\n        publish.accept(new Ticket(key,payload.length()));\n    }\n    static void receive(Blobs blobs,Consumer<String> consume,Ticket ticket) {\n        String payload=blobs.get(ticket.key());\n        if (payload.length()!=ticket.size()) throw new IllegalStateException(\"payload\");\n        consume.accept(payload);\n    }\n}\n",
+          "notes_ru": "ASCII фиксирует одинаковую длину в char/UTF-16/байтах. Длина не заменяет digest. Доступ, retention, cleanup сирот, повторное чтение и expiry токена задаются хранилищем; ticket сам не выдаёт полномочия.",
+          "notes_en": "ASCII makes length comparable across char, UTF-16 and byte representations. Length is not a digest. Authorization, retention, orphan cleanup and expiry remain store policy; a ticket grants no automatic authority.",
+          "metrics": {
+            "characters": 488,
+            "nonblank_lines": 14,
+            "utf8_bytes": 594,
+            "sha256": "5ff767078ea2144a98d52d42aaed2de1443b60dab554679479fe1a245d76dc2b"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\nimport \"fmt\"\ntype Ticket struct { Key,Size int }\ntype Blobs interface { Put(string) (int,error); Get(int) (string,error) }\nfunc Send(blobs Blobs,publish func(Ticket) error,payload string) error {\n    key,err:=blobs.Put(payload); if err!=nil { return err }\n    return publish(Ticket{key,len(payload)})\n}\nfunc Receive(blobs Blobs,consume func(string) error,ticket Ticket) error {\n    payload,err:=blobs.Get(ticket.Key); if err!=nil { return err }\n    if len(payload)!=ticket.Size { return fmt.Errorf(\"payload\") }\n    return consume(payload)\n}\n",
+          "notes_ru": "ASCII фиксирует одинаковую длину в char/UTF-16/байтах. Длина не заменяет digest. Доступ, retention, cleanup сирот, повторное чтение и expiry токена задаются хранилищем; ticket сам не выдаёт полномочия.",
+          "notes_en": "ASCII makes length comparable across char, UTF-16 and byte representations. Length is not a digest. Authorization, retention, orphan cleanup and expiry remain store policy; a ticket grants no automatic authority.",
+          "metrics": {
+            "characters": 476,
+            "nonblank_lines": 13,
+            "utf8_bytes": 558,
+            "sha256": "d894f2d9c69ba4fd98401dba60924024ae95d96925f9d646a11d6053261148c6"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure Architecture Center — Claim Check",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/claim-check",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 86,
+      "name": "Idempotent Consumer / Transactional Inbox",
+      "slug": "idempotent_consumer_inbox",
+      "scope": "protocol",
+      "summary_ru": "Подавить повторное бизнес-действие по устойчивому идентификатору доставки.",
+      "summary_en": "Suppress repeated business effects using a durable delivery identity.",
+      "scenario_ru": "Дважды доставить subscriber=7,event=51,delta=5 при исходном balance=100. Первый commit проходит, но ACK теряется, поэтому broker повторяет доставку.",
+      "scenario_en": "Deliver subscriber 7,event 51,delta 5 twice from balance 100. The first commit succeeds but its ACK is lost.",
+      "expected_ru": "После обеих доставок balance=105 и ровно одна inbox-запись (7,51). Обе успешные обработки могут ACK. При сбое транзакции ни метка, ни изменение не остаются, ACK не посылается.",
+      "expected_en": "Balance ends at 105 with one inbox row (7,51). Both successful deliveries may ACK. A failed transaction leaves neither marker nor effect and sends no ACK.",
+      "lmx_notes_ru": "InboxMessage — единственный владелец обработчика, но дедупликация хранится в БД. tryInsert(subscriber,event) использует unique key и возвращает false при уже committed записи; изменение баланса и вставка входят в один db.atomic. ack — явный broker-порт после commit. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+      "lmx_notes_en": "InboxMessage owns the handler, while deduplication lives in the database. tryInsert uses a unique key and reports a committed duplicate; marker and balance update share db.atomic. Broker ACK happens after commit. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+      "comparison_ru": "Все варианты связывают durable marker с бизнес-изменением одной транзакцией. Обычный set в памяти годится для окна жизни одного процесса, но не эквивалентен transactional inbox после рестарта.",
+      "comparison_en": "Every implementation commits the durable marker and business effect together. An in-memory set protects only its lifetime and is not a transactional inbox across restarts.",
+      "limits_ru": "Добавленный пункт 86. Инвариант ограничен одной транзакционной БД; внешний платёж не становится exactly-once от записи inbox. Retention ключей, повтор с тем же id и другим payload, poison messages и retries требуют явного контракта.",
+      "limits_en": "Added pattern 86. The guarantee covers one database transaction; external payments are not automatically exactly-once. Key retention, conflicting duplicate payloads, poison messages and retries need explicit policy.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "InboxMessage:\n    @: db\n    @: broker\n    int: subscriber\n    int: eventId\n    int: delta\n    apply:\n        if: db\\tryInsert(subscriber; eventId)\n            db\\addBalance(delta)\n    ---\n    receiveEvent:\n        db\\atomic(body := apply)\n        broker\\ack(eventId)\n",
+          "notes_ru": "InboxMessage — единственный владелец обработчика, но дедупликация хранится в БД. tryInsert(subscriber,event) использует unique key и возвращает false при уже committed записи; изменение баланса и вставка входят в один db.atomic. ack — явный broker-порт после commit. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+          "notes_en": "InboxMessage owns the handler, while deduplication lives in the database. tryInsert uses a unique key and reports a committed duplicate; marker and balance update share db.atomic. Broker ACK happens after commit. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+          "metrics": {
+            "characters": 177,
+            "nonblank_lines": 13,
+            "utf8_bytes": 267,
+            "sha256": "86b32926be7c71ef035af2c380510ad8019944bc2980959a6d846277432384b9",
+            "without_complex_throws_characters": 177,
+            "complex_throws_removed_characters": 0
+          }
+        },
+        {
+          "language": "Java",
+          "code": "interface InboxDb {\n    void atomic(Runnable body);\n    boolean tryInsert(int subscriber,int eventId);\n    void addBalance(int delta);\n}\ninterface Broker { void ack(int eventId); }\nfinal class Inbox {\n    static void receive(InboxDb db,Broker broker,int subscriber,int eventId,int delta) {\n        db.atomic(() -> {\n            if (db.tryInsert(subscriber,eventId)) db.addBalance(delta);\n        });\n        broker.ack(eventId);\n    }\n}\n",
+          "notes_ru": "Добавленный пункт 86. Инвариант ограничен одной транзакционной БД; внешний платёж не становится exactly-once от записи inbox. Retention ключей, повтор с тем же id и другим payload, poison messages и retries требуют явного контракта.",
+          "notes_en": "Added pattern 86. The guarantee covers one database transaction; external payments are not automatically exactly-once. Key retention, conflicting duplicate payloads, poison messages and retries need explicit policy.",
+          "metrics": {
+            "characters": 337,
+            "nonblank_lines": 14,
+            "utf8_bytes": 437,
+            "sha256": "e8acd91ef6f48f7da1e01196815c211573002dc884f65b948c7a9cf608cc57e2"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "package patterns\ntype InboxDB interface {\n    Atomic(func() error) error\n    TryInsert(int,int) (bool,error)\n    AddBalance(int) error\n}\ntype Broker interface { Ack(int) error }\nfunc Receive(db InboxDB,broker Broker,subscriber,eventID,delta int) error {\n    err:=db.Atomic(func() error {\n        inserted,err:=db.TryInsert(subscriber,eventID)\n        if err!=nil { return err }\n        if !inserted { return nil }\n        return db.AddBalance(delta)\n    })\n    if err!=nil { return err }\n    return broker.Ack(eventID)\n}\n",
+          "notes_ru": "Добавленный пункт 86. Инвариант ограничен одной транзакционной БД; внешний платёж не становится exactly-once от записи inbox. Retention ключей, повтор с тем же id и другим payload, poison messages и retries требуют явного контракта.",
+          "notes_en": "Added pattern 86. The guarantee covers one database transaction; external payments are not automatically exactly-once. Key retention, conflicting duplicate payloads, poison messages and retries need explicit policy.",
+          "metrics": {
+            "characters": 405,
+            "nonblank_lines": 17,
+            "utf8_bytes": 521,
+            "sha256": "c59d260b80d72edd236549eb4f28e14c00a6c2fea5a2cc0a22eced045d2ffe22"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Chris Richardson — Idempotent Consumer",
+          "url": "https://microservices.io/patterns/communication-style/idempotent-consumer.html",
+          "why_ru": "Определение, механизм и границы гарантий.",
+          "why_en": "Definition, mechanism and guarantee boundaries."
+        }
+      ]
+    }
+  ]
+}

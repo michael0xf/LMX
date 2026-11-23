@@ -1,0 +1,25 @@
+Key:
+    @: event
+    return: int
+    get:
+        return: event\kind
+
+Same:
+    int: first
+    int: second
+    return: int
+    test:
+        return: first = second
+
+GroupRow:
+    FxGroup@: group
+    return: @
+    row:
+        return: (\group\key; group\items)
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: map(groupBy(items; Key\get; Same\test); GroupRow\row)

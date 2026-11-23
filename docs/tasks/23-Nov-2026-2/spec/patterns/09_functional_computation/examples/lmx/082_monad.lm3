@@ -1,0 +1,11 @@
+Example:
+    int: x
+    return: @
+    half:
+        throws: FxRecordArity
+        if: x % 2 = 0
+            return: some(value := (x / 2 record))
+        return: none()
+    run:
+        throws: copy(FxThrows\fixture) FxCallFailure
+        return: bind(bind(some(value := (x record)); half); half)

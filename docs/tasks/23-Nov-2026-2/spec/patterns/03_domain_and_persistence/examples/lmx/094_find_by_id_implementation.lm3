@@ -1,0 +1,17 @@
+FindLibrary:
+    copy: sys\OPERANDS_TEMPLATE
+    return: @
+    findById:
+        throws: OperandArity
+        if: length(right) != 1
+            throw: OperandArity()
+        @: rows \left
+        int: id \right[0]
+        int: i 0
+        while: i < length(rows)
+            @: row rows[i]
+            if: row\id = id
+                return: row
+            i += 1
+        @: missing 0
+        return: missing

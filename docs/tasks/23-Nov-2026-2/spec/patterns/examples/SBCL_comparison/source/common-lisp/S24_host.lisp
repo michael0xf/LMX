@@ -1,0 +1,5 @@
+(defun example (items)
+  (let* ((inbox (sb-concurrency:make-mailbox))
+         (thread (sb-thread:make-thread (lambda () (worker inbox)))))
+    (produce inbox items)
+    (sb-thread:join-thread thread)))

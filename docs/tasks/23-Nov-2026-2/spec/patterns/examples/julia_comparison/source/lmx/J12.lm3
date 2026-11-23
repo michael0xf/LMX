@@ -1,0 +1,19 @@
+Parity:
+    int: value
+    return: int
+    key:
+        return: value % 2 != 0
+
+Equal:
+    int: left
+    int: right
+    return: int
+    same:
+        return: left = right
+
+Example:
+    int[]: xs
+    return: @
+    run:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        return: groupBy(xs; Parity\key; Equal\same)

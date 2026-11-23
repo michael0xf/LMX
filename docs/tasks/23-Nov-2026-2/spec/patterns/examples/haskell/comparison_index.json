@@ -1,0 +1,693 @@
+{
+  "edition": "2026-11-23; existing Haskell source coverage audit",
+  "source_module": "haskell/Analogies.hs",
+  "source_module_sha256": "000fefaf6e094eb4901fbad0180e53f4dfd904dca339b86670f935bbfdcb958b",
+  "scope": "The original 24 LMX source files and the existing Analogies.hs only. No LMX or Haskell implementation was added or rewritten for this index.",
+  "coverage_unit": "An existing source example, including its current specified cases. complete_pair denotes the explicitly bounded full common fixture, not equivalence of entire language/runtime architectures.",
+  "status_definitions": {
+    "complete_pair": "An existing extracted Haskell implementation covers the full declared common fixture. Numeric packing/Bool normalization is explicit; imports and all called user definitions are included.",
+    "related_analogy": "Existing Haskell code illustrates the behavior but lacks a material current case/mechanism, or its inseparable instrumentation prevents a fair source-count boundary. No numerical comparison ratio is authorized.",
+    "lmx_only": "No existing Haskell implementation for this source example. A similar different guide example is not silently substituted."
+  },
+  "extraction_policy": "Function/type declarations and case expressions are exact lines from Analogies.hs; complete listings contain no new helper definitions. Import selectors may be narrowed to the required existing symbols; each normalized import records its original source line. main/assertEq and unrelated examples are not duplicated into each pair. M01 compares service code only on both sides. H04 includes its four-probe expression because the LMX listing also contains those calls. H09 has no ratio because its Haskell algorithm and extra counter instrumentation are inseparable without rewriting the uploaded function.",
+  "measurement_policy": "Counts include shown comments and all non-whitespace characters; physical/nonempty lines and UTF-8 bytes are also reported. Full module is measured once, separately from per-pair listings. Ratios are permitted only for complete_pair; related_analogy/lmx_only must remain blank or N/A.",
+  "summary": {
+    "complete_pair": 6,
+    "lmx_only": 12,
+    "related_analogy": 6
+  },
+  "runtime_execution": {
+    "haskell": false,
+    "lmx": false,
+    "reason": "No execution of these sources is claimed by this source/contract audit."
+  },
+  "full_module": {
+    "source": "haskell/Analogies.hs",
+    "sha256": "000fefaf6e094eb4901fbad0180e53f4dfd904dca339b86670f935bbfdcb958b",
+    "metrics": {
+      "bytes_utf8": 10521,
+      "characters": 10521,
+      "non_whitespace_characters": 8465,
+      "nonempty_lines": 247,
+      "physical_lines": 281
+    },
+    "dependencies": [
+      "base >=4.18 && <5",
+      "array",
+      "monad-loops ==0.4.3"
+    ],
+    "build_descriptor": "haskell/lmx-examples.cabal",
+    "scope": "Includes additional guide analogies not represented by the 24 standalone LMX files, all imports, main assertions and support definitions. It is not the sum of the eligible per-example listings."
+  },
+  "entries": [
+    {
+      "id": "H01",
+      "title": "Replace and invoke a first-class callable",
+      "status": "complete_pair",
+      "foreign_code": "import Data.IORef (newIORef, readIORef)\nimport qualified Data.IORef as Ref\n\napplicationExample :: IO Int\napplicationExample = do\n  chosen <- newIORef ((*2) :: Int -> Int)\n  firstOperation <- readIORef chosen\n  let first = firstOperation 7\n  Ref.writeIORef chosen (+1)\n  secondOperation <- readIORef chosen\n  let second = secondOperation 7\n  pure (first * 100 + second)\n",
+      "source_symbols": [
+        "applicationExample"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "applicationExample",
+          "first_line": 26,
+          "last_line": 34
+        }
+      ],
+      "contract_notes": "Complete for the current successful fixture: store twice, read and invoke it with 7, replace the same callable cell by plusOne, read and invoke it with 7; packed result 1408. IORef is a real base facility. The Haskell IO wrapper expresses the two writes/reads explicitly; no claim about the full LMX callable ABI is made.",
+      "lmx_source": "lmx/H01.lm3",
+      "lmx_source_sha256": "e965da1314258b6073e726fc4063b753c567dd9932ae5ab3ada7d4d588dad5cd",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "applicationExample",
+      "foreign_expected": 1408,
+      "output_normalization": null,
+      "imports": [
+        {
+          "module": "Data.IORef",
+          "first_line": 18,
+          "text": "import Data.IORef (newIORef, readIORef)",
+          "original_text": "import Data.IORef (newIORef, readIORef, modifyIORef')"
+        },
+        {
+          "module": "Data.IORef qualified",
+          "first_line": 19,
+          "text": "import qualified Data.IORef as Ref",
+          "original_text": "import qualified Data.IORef as Ref"
+        }
+      ],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 369,
+        "characters": 369,
+        "non_whitespace_characters": 303,
+        "nonempty_lines": 11,
+        "physical_lines": 12
+      },
+      "foreign_listing_sha256": "68156aa48602a38025f0b669b5fd26e83ee7c29396c87b4c547aebd113ac82e0"
+    },
+    {
+      "id": "H02",
+      "title": "Named signature positions versus candidate names",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell definition checks differently named positional signatures, explicit candidate names and the resulting 2772 observation.",
+      "lmx_source": "lmx/H02.lm3",
+      "lmx_source_sha256": "0fada75d76e77e680f44a2210628c5a6c6830901f1499ebc6609de5e719e2d1d",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "H03",
+      "title": "Independent bound prefixes and residual callable admission",
+      "status": "complete_pair",
+      "foreign_code": "makeAdder :: Int -> Int -> Int\nmakeAdder n = (+) n\n\nclosureExample :: (Int, Int, Int)\nclosureExample =\n  let add5 = makeAdder 5\n      add100 = makeAdder 100\n  in (add5 1, add100 1, add5 1)\n",
+      "source_symbols": [
+        "makeAdder",
+        "closureExample"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "makeAdder",
+          "first_line": 36,
+          "last_line": 37
+        },
+        {
+          "symbol": "closureExample",
+          "first_line": 39,
+          "last_line": 43
+        }
+      ],
+      "contract_notes": "Complete captured-prefix fixture: add5 and add100 are independent, their results are 6,101,6, and the original addition remains unchanged. Haskell values are immutable and native partial application exposes only the remaining argument. The LMX-specific explicit saved actual is rejected by its residual signature; Haskell has no such named formal and rejects that spelling statically. This admission-language difference is recorded separately and does not subtract the matching successful fixture.",
+      "lmx_source": "lmx/H03.lm3",
+      "lmx_source_sha256": "faf1dea1b7faabb45d7a8066ce4fbb582bff0956ec1cf254d043b21780b658ae",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "closureExample",
+      "foreign_expected": [
+        6,
+        101,
+        6
+      ],
+      "output_normalization": {
+        "from": "Haskell triple (first,second,again)",
+        "to": "LMX packed int",
+        "expression": "first * 1000000 + second * 1000 + again",
+        "normalized_expected": 6101006,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 189,
+        "characters": 189,
+        "non_whitespace_characters": 143,
+        "nonempty_lines": 7,
+        "physical_lines": 8
+      },
+      "foreign_listing_sha256": "35d0ccaa0ed2b7f32965d865462e246570ff8a181e862db866e1145d09f4d103"
+    },
+    {
+      "id": "H04",
+      "title": "Overrideable copied default",
+      "status": "complete_pair",
+      "foreign_code": "addWithDefault :: Int -> Maybe Int -> Int\naddWithDefault x supplied = x + maybe 5 id supplied\n\n    (map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing])\n",
+      "source_symbols": [
+        "addWithDefault"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "addWithDefault",
+          "first_line": 75,
+          "last_line": 76
+        }
+      ],
+      "contract_notes": "Complete four-probe fixture: absent default gives 6; explicit 25 gives 26; explicit zero gives 1; the repeated absent default is still 6. Haskell uses explicit Maybe Int; LMX uses copied DATA defaults and named override. These different representations preserve all four observed values and do not mutate the saved default. The listing includes the exact fixture expression from main after the helper; it is a declaration-plus-expression fragment of the unchanged complete module, not a new independently compiled module.",
+      "lmx_source": "lmx/H04.lm3",
+      "lmx_source_sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing]",
+      "foreign_expected": [
+        6,
+        26,
+        1,
+        6
+      ],
+      "output_normalization": {
+        "from": "Haskell list [a,b,c,d]",
+        "to": "LMX packed int",
+        "expression": "a * 1000000 + b * 10000 + c * 100 + d",
+        "normalized_expected": 6260106,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 160,
+        "characters": 160,
+        "non_whitespace_characters": 128,
+        "nonempty_lines": 3,
+        "physical_lines": 4
+      },
+      "foreign_listing_sha256": "ee3c0ce29a0d59abff867d7d5e939912d485b7b9304b487f1bcf79d3f1141250",
+      "fixture_expression_source": {
+        "first_line": 242,
+        "last_line": 242,
+        "text": "    (map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing])"
+      },
+      "listing_kind": "exact declaration plus expression fragment; run in the existing full module"
+    },
+    {
+      "id": "H05",
+      "title": "Dynamic and lexical binding after a graph copy",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "Env",
+        "dynamicAdd",
+        "lexicalAdd"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "Env",
+          "first_line": 78,
+          "last_line": 78
+        },
+        {
+          "symbol": "dynamicAdd",
+          "first_line": 80,
+          "last_line": 81
+        },
+        {
+          "symbol": "lexicalAdd",
+          "first_line": 83,
+          "last_line": 84
+        }
+      ],
+      "contract_notes": "The Haskell functions receive explicit environments and reproduce 26/6. They do not copy an executable graph, preserve parent relationships or implement LMX dynamic name lookup after copy.",
+      "lmx_source": "lmx/H05.lm3",
+      "lmx_source_sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "H06",
+      "title": "Order of two composed computations",
+      "status": "complete_pair",
+      "foreign_code": "compositionFactoryExample :: (Int, Int)\ncompositionFactoryExample = (((+1) . (*2)) 4, ((*2) . (+1)) 4)\n",
+      "source_symbols": [
+        "compositionFactoryExample"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "compositionFactoryExample",
+          "first_line": 48,
+          "last_line": 49
+        }
+      ],
+      "contract_notes": "Complete for the selected primary LMX listing: next(twice(4)) is 9 and twice(next(4)) is 10. The existing Haskell composition expression preserves both orders. The separate effectful stage-order fixture and the LMX pipe variant are additional material, not silently substituted into this ratio.",
+      "lmx_source": "lmx/H06.lm3",
+      "lmx_source_sha256": "058b479732dbe1a717eb97eb2542d2cd5a27f81eb4b745896749f516ffef9945",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "compositionFactoryExample",
+      "foreign_expected": [
+        9,
+        10
+      ],
+      "output_normalization": {
+        "from": "Haskell pair (a,b)",
+        "to": "LMX packed int",
+        "expression": "a * 100 + b",
+        "normalized_expected": 910,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 103,
+        "characters": 103,
+        "non_whitespace_characters": 89,
+        "nonempty_lines": 2,
+        "physical_lines": 2
+      },
+      "foreign_listing_sha256": "b543bd20b69382243dc18fe8d4cc5f3816a782b172ad6f693294124eff29f4e1"
+    },
+    {
+      "id": "H07",
+      "title": "Prepared value versus raw source occurrence",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "preparedAndRaw",
+        "preparedAndRawSeries",
+        "lazySeries"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "preparedAndRaw",
+          "first_line": 119,
+          "last_line": 129
+        },
+        {
+          "symbol": "preparedAndRawSeries",
+          "first_line": 131,
+          "last_line": 143
+        },
+        {
+          "symbol": "lazySeries",
+          "first_line": 51,
+          "last_line": 62
+        }
+      ],
+      "contract_notes": "The complete numeric/call-count series is present, but its raw side explicitly repeats an IO action. It does not accept an arbitrary raw source occurrence or evaluate the retained source graph via sys\\eval. The guide expressly keeps the lazy example separate from raw-occurrence semantics.",
+      "lmx_source": "lmx/H07.lm3",
+      "lmx_source_sha256": "60c089935482d6f9981830501f1c652edd28bcafda6c672a36c61904cc069f4c",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "H08",
+      "title": "Owned formal copy versus caller place",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell definition compares mutation of an owned formal copy with mutation of a transparent caller place.",
+      "lmx_source": "lmx/H08.lm3",
+      "lmx_source_sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "H09",
+      "title": "Finite iterator with a live declaration and body",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "iteratorCase"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "iteratorCase",
+          "first_line": 145,
+          "last_line": 166
+        }
+      ],
+      "contract_notes": "All observed iterator results agree: total 12, four next calls and three body calls. However, the only existing Haskell listing interleaves extra next/body counters with the algorithm, while the LMX source delegates those observations to its external fixture. A size ratio would charge harness instrumentation only to Haskell. No rewritten or shortened Haskell implementation has been invented; this is related_analogy because the current source counting boundaries cannot be matched exactly.",
+      "lmx_source": "lmx/H09.lm3",
+      "lmx_source_sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "observed_fixture_coverage": "complete for 12/4/3; source-count boundary is not comparable"
+    },
+    {
+      "id": "R01",
+      "title": "Merge an existing record and add a field",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "Size"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "Size",
+          "first_line": 92,
+          "last_line": 93
+        }
+      ],
+      "contract_notes": "The Haskell record update preserves width and changes height/depth, but Size declares depth before the update. LMX merge adds a previously absent field and preserves its source structures. The fixed-shape Haskell update cannot be labelled a complete dynamic record-extension pair.",
+      "lmx_source": "lmx/R01.lm3",
+      "lmx_source_sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R02",
+      "title": "Copy a field stream into group assignment",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "The module contains no implementation of the copied structural field stream and the current group-assignment observation 27. A new tuple-destructuring example has not been invented.",
+      "lmx_source": "lmx/R02.lm3",
+      "lmx_source_sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R03",
+      "title": "Imported parent identity versus copied parent identity",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell implementation tests import-retained owner identity and copy-recouped parent identity.",
+      "lmx_source": "lmx/R03.lm3",
+      "lmx_source_sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R04",
+      "title": "Computed initializer, local write and repeated activation",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "The module has no counterpart for these computed local initializer and explicit graph/local-write cases. H07 IO actions are not reassigned as coverage for this different contract.",
+      "lmx_source": "lmx/R04.lm3",
+      "lmx_source_sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R06a",
+      "title": "Graph copy preserving shared targets",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell graph-copy implementation preserves and tests shared targets while separating the copy from the original.",
+      "lmx_source": "lmx/R06a.lm3",
+      "lmx_source_sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R06b",
+      "title": "Graph copy preserving a cycle",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell graph-copy implementation preserves and tests the self-cycle while separating it from the original.",
+      "lmx_source": "lmx/R06b.lm3",
+      "lmx_source_sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R07",
+      "title": "User operand and preserved computation",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "Expr",
+        "evalExpr",
+        "tree"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "Expr",
+          "first_line": 95,
+          "last_line": 96
+        },
+        {
+          "symbol": "evalExpr",
+          "first_line": 98,
+          "last_line": 101
+        },
+        {
+          "symbol": "tree",
+          "first_line": 103,
+          "last_line": 104
+        }
+      ],
+      "contract_notes": "The explicit Haskell syntax tree yields the same arithmetic result 20. It is a manually defined AST and interpreter, not a user operand integrated into the ordinary parser and retained LMX graph.",
+      "lmx_source": "lmx/R07.lm3",
+      "lmx_source_sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "R09",
+      "title": "Uninitialized payload and local versus graph write",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "The module contains no counterpart for uninitialized zero-payload primitive/reference records or the distinct local and graph write paths.",
+      "lmx_source": "lmx/R09.lm3",
+      "lmx_source_sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "A01",
+      "title": "Shared structural slots and replacement field identity",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "The module has an A02 immutable numeric-array update, but no A01 shared structural descriptor/slot replacement that changes the visible field identity to z. The A02 listing is not relabelled as A01.",
+      "lmx_source": "lmx/A01.lm3",
+      "lmx_source_sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "V02",
+      "title": "Whole ASCII ticket-code predicate",
+      "status": "complete_pair",
+      "foreign_code": "import Data.Ix (inRange)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (inRange ('A','Z')) [a,b]\n    && all (inRange ('0','9')) [c,d]\naccepts _ = False\n",
+      "source_symbols": [
+        "accepts"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "accepts",
+          "first_line": 112,
+          "last_line": 116
+        }
+      ],
+      "contract_notes": "Complete whole-string predicate for exactly two ASCII uppercase letters, hyphen, two ASCII digits. The five-element list pattern enforces length; inRange checks ASCII endpoints. All eleven current fixtures agree, including NUL, non-ASCII letter and non-ASCII digit rejection. Haskell String and LMX char[] use their ordinary character-sequence representations; no locale-dependent character class is introduced.",
+      "lmx_source": "lmx/V02.lm3",
+      "lmx_source_sha256": "3c1179924ff6c1e51573e2574318f9cbabf5bc3b03a115e1e9d14892025bf0e9",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "accepts candidate",
+      "foreign_expected": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "output_normalization": {
+        "from": "Haskell Bool",
+        "to": "LMX int truth",
+        "expression": "False -> 0; True -> 1",
+        "changes_effects": false
+      },
+      "imports": [
+        {
+          "module": "Data.Ix",
+          "first_line": 16,
+          "text": "import Data.Ix (inRange)",
+          "original_text": "import Data.Ix (inRange)"
+        }
+      ],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 163,
+        "characters": 163,
+        "non_whitespace_characters": 132,
+        "nonempty_lines": 6,
+        "physical_lines": 7
+      },
+      "foreign_listing_sha256": "4cd34b1c32f0f7f4f5c645ed24c1b0856a9b8c984a774d216cc3a504b04540a9"
+    },
+    {
+      "id": "V03",
+      "title": "Inject a read dependency and check interaction counts",
+      "status": "related_analogy",
+      "foreign_code": "",
+      "source_symbols": [
+        "SampleVariant",
+        "sample",
+        "samplingCheck"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "SampleVariant",
+          "first_line": 168,
+          "last_line": 168
+        },
+        {
+          "symbol": "sample",
+          "first_line": 170,
+          "last_line": 176
+        },
+        {
+          "symbol": "samplingCheck",
+          "first_line": 178,
+          "last_line": 184
+        }
+      ],
+      "contract_notes": "The Good/Biased/ReadsTwice fixtures and read counts are represented. However, the Haskell checker takes a closed SampleVariant rather than the arbitrary candidate callable accepted by the LMX checker, and passes its read dependency explicitly. Treating it as a complete generic injection/checker implementation would overstate the existing source.",
+      "lmx_source": "lmx/V03.lm3",
+      "lmx_source_sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "V04",
+      "title": "Distinguish a named failure from a numeric result",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell definition checks the current named NoSample failure against an ordinary zero return.",
+      "lmx_source": "lmx/V04.lm3",
+      "lmx_source_sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "V05",
+      "title": "Command/read integration check and fault modes",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "No current Haskell definition implements all command/read observations, event counts and fault modes of the current integration fixture.",
+      "lmx_source": "lmx/V05.lm3",
+      "lmx_source_sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    },
+    {
+      "id": "M01",
+      "title": "Serial state updates at one Message owner",
+      "status": "complete_pair",
+      "foreign_code": "import Control.Concurrent (MVar, putMVar)\nimport Control.Concurrent.Chan (Chan, readChan)\n\ndata CounterRequest = AddBy Int (MVar Int) | ReadValue (MVar Int) | Stop (MVar ())\n\ncounterLoop :: Chan CounterRequest -> Int -> IO ()\ncounterLoop inbox value = do\n  request <- readChan inbox\n  case request of\n    AddBy delta reply -> do\n      let next = value + delta\n      next `seq` putMVar reply next\n      counterLoop inbox next\n    ReadValue reply -> do\n      putMVar reply value\n      counterLoop inbox value\n    Stop ack -> putMVar ack ()\n",
+      "source_symbols": [
+        "CounterRequest",
+        "counterLoop"
+      ],
+      "source_ranges": [
+        {
+          "symbol": "CounterRequest",
+          "first_line": 188,
+          "last_line": 188
+        },
+        {
+          "symbol": "counterLoop",
+          "first_line": 190,
+          "last_line": 201
+        }
+      ],
+      "contract_notes": "Complete local-owner fixture: one owner, two sender threads submit additions 4 and 9, each accepted request has one serialized update, final read occurs after both responses and returns 13 for either arrival order. The counted Haskell service uses actual Chan/MVar facilities and includes its owner loop and existing Stop acknowledgement branch. counterExample launches/sends/observes/stops it only as an external verification harness and is excluded from this service-to-service count, just as the LMX sender/owner launcher is outside Counter. The LMX fixture relies on the existing Message owner launcher. Neither side of this local comparison is credited with a complete HTTP or distributed-delivery stack; the separate HTTP profile remains outside this ratio.",
+      "lmx_source": "lmx/M01.lm3",
+      "lmx_source_sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN; source/contract audit only",
+      "foreign_entry": "counterExample",
+      "foreign_expected": 13,
+      "output_normalization": null,
+      "imports": [
+        {
+          "module": "Control.Concurrent",
+          "first_line": 11,
+          "text": "import Control.Concurrent (MVar, putMVar)",
+          "original_text": "import Control.Concurrent (MVar, forkIO, newEmptyMVar, putMVar, takeMVar)"
+        },
+        {
+          "module": "Control.Concurrent.Chan",
+          "first_line": 12,
+          "text": "import Control.Concurrent.Chan (Chan, readChan)",
+          "original_text": "import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)"
+        }
+      ],
+      "dependencies": [
+        "base"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 538,
+        "characters": 538,
+        "non_whitespace_characters": 411,
+        "nonempty_lines": 15,
+        "physical_lines": 17
+      },
+      "foreign_listing_sha256": "2d8c5e7af207bc7b29b6ab57429c27492156e685a06a78ce7070ffa8d65c5474",
+      "verification_symbols": [
+        "counterExample"
+      ],
+      "counting_boundary": "CounterRequest and counterLoop service only; counterExample sender/launch/assertion harness is excluded."
+    },
+    {
+      "id": "M05",
+      "title": "Void Message procedure without a fabricated reply",
+      "status": "lmx_only",
+      "foreign_code": "",
+      "source_symbols": [],
+      "source_ranges": [],
+      "contract_notes": "There is no current Haskell counterpart for the no-result Message procedure and its zero reply/ACK expectation. CounterRequest.Stop has an explicit ACK and is not a substitute.",
+      "lmx_source": "lmx/M05.lm3",
+      "lmx_source_sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN; source/contract audit only"
+    }
+  ]
+}

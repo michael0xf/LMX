@@ -1,0 +1,11 @@
+Checkout:
+    @: db
+    @: repository
+    int: accountId
+    int: amount
+    body:
+        @: account repository\load(accountId)
+        account\debit(amount := amount)
+        repository\save(account := account)
+    execute:
+        db\atomic(body := body)

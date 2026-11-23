@@ -1,0 +1,15 @@
+Below:
+    int: value
+    return: int
+    test:
+        return: value < threshold
+
+Example:
+    int[]: items
+    return: @
+    run:
+        throws: copy(FxThrows\predicate)
+        int: threshold 0
+        int: negative any(items; Below\test)
+        threshold := 10
+        return: (negative; all(items; Below\test))

@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Ошибка, cancellation, срок жизни, удаление потерянных клиентов и распределённая доставка — отдельные расширения. «Отклоняется» в сценарии означает отсутствие изменения, без отдельного error reply.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -38,9 +36,7 @@ FutureMessage:
             reply(waiters\pop())
 ```
 
-Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\pop()) получает очередной ID позиционно; оба читают текущее node\value.
-
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\pop()) получает очередной ID позиционно; оба читают текущее node\value.
 
 [Отдельный листинг](examples/lmx/064_future_promise.lm3)
 
@@ -82,11 +78,19 @@ future({ready,Value}, []) ->
 
 ## Разбор LMX
 
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\pop()) получает очередной ID позиционно; оба читают текущее node\value.
 
 ## Сопоставление
 
 LMX/Erlang сохраняют ожидающих у владельца. Go close(done) одновременно публикует значение и разблокирует читателей по контракту каналов; это не polling.
+
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
 
 ## Объём показанного исходника
 
@@ -96,39 +100,7 @@ LMX/Erlang сохраняют ожидающих у владельца. Go close
 | Go | 256 | 7 |
 | Erlang | 292 | 11 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- shared-method-reuse-review-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
-
-```lmx
-FutureMessage:
-    int: requestId
-    int: next
-    int: ready 0
-    int: value 0
-    @: waiters
-    @: replies
-    get:
-        if: node\ready = 1
-            replies\send(requestId; node\value)
-            return
-        waiters\push(requestId)
-    resolve:
-        if: node\ready = 1
-            return
-        node\value := next
-        node\ready := 1
-        while: waiters\size() > 0
-            replies\send(waiters\pop(); node\value)
-```
-
-**Основание выбора / Selection:** Share the complete reply method between the ready fast path and FIFO drain. The ready call uses normal DATA autofill of requestId; the draining call explicitly supplies each popped ID. The helper still sends the current node\value, and the first-resolution guard remains.
-
-**Completeness:** The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\pop()) receives the next ID positionally; both read the current node\value. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -138,15 +110,17 @@ A once-completed result is available to current waiters and later readers.
 
 **Expected observation.** All three clients receive 7; resolve accepts only the first value.
 
-**LMX.** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.
+**LMX.** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\pop()) receives the next ID positionally; both read the current node\value.
 
 **Comparison.** LMX/Erlang retain waiters at the owner. Go close(done) publishes the value and releases readers under channel synchronization; it is not polling.
 
 **Scope and limitations.** Error, cancellation, lifetime, dead-client removal and remote delivery are extensions. Rejected in the scenario means no state change, without a separate error reply.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
-- **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.
+- **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\pop()) receives the next ID positionally; both read the current node\value.
 - **Go:** Go fragment; imports are included where needed; package/harness is separate. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.
 - **Erlang:** Erlang functions for one module; -module/-export and the test harness are separate. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.
 
@@ -157,8 +131,6 @@ A once-completed result is available to current waiters and later readers.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

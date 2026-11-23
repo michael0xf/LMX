@@ -1,0 +1,3607 @@
+{
+  "edition": "2026-11-23",
+  "metric": "nonwhitespace Unicode codepoints, nonblank lines, LF normalized; comments included within the declared source boundary",
+  "ratio": "foreign / LMX; computed only for complete pairs; ratios from different suites are not a language ranking",
+  "counts": {
+    "lmx_examples": 72,
+    "complete_pairs": 54,
+    "implementation_comparisons": 18,
+    "source_files": 162
+  },
+  "summaries": [
+    {
+      "suite": "haskell",
+      "foreign_language": "Haskell",
+      "examples": 24,
+      "complete_pairs": 6,
+      "related_analogies": 6,
+      "lmx_only": 12,
+      "all_lmx_characters": 5429,
+      "paired_lmx_characters": 1331,
+      "paired_foreign_characters": 1206,
+      "paired_ratio": 0.9060856498873028,
+      "implementation_comparisons": 7
+    },
+    {
+      "suite": "julia",
+      "foreign_language": "Julia",
+      "examples": 24,
+      "complete_pairs": 24,
+      "related_analogies": 0,
+      "lmx_only": 0,
+      "all_lmx_characters": 3648,
+      "paired_lmx_characters": 3648,
+      "paired_foreign_characters": 1244,
+      "paired_ratio": 0.34100877192982454,
+      "implementation_comparisons": 4
+    },
+    {
+      "suite": "perl",
+      "foreign_language": "Perl",
+      "examples": 24,
+      "complete_pairs": 24,
+      "related_analogies": 0,
+      "lmx_only": 0,
+      "all_lmx_characters": 6490,
+      "paired_lmx_characters": 6490,
+      "paired_foreign_characters": 3073,
+      "paired_ratio": 0.47349768875192605,
+      "implementation_comparisons": 7
+    }
+  ],
+  "examples": [
+    {
+      "suite": "haskell",
+      "id": "H01",
+      "title": "Replace and invoke a first-class callable",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/H01.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 207,
+        "characters_with_whitespace": 325,
+        "nonblank_lines": 15,
+        "utf8_bytes": 325,
+        "sha256": "9bdbc4b25ca403a6c82f216b14e8e845ae19b7dbb25f793fd08f7baf1129b67d"
+      },
+      "foreign": {
+        "characters": 303,
+        "characters_with_whitespace": 369,
+        "nonblank_lines": 11,
+        "utf8_bytes": 369,
+        "sha256": "68156aa48602a38025f0b669b5fd26e83ee7c29396c87b4c547aebd113ac82e0"
+      },
+      "ratio": 1.463768115942029,
+      "contract": "Complete for the current successful fixture: store twice, read and invoke it with 7, replace the same callable cell by plusOne, read and invoke it with 7; packed result 1408. IORef is a real base facility. The Haskell IO wrapper expresses the two writes/reads explicitly; no claim about the full LMX callable ABI is made.",
+      "source_symbols": [
+        "applicationExample"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H02",
+      "title": "Named signature positions versus candidate names",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/H02.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 271,
+        "characters_with_whitespace": 388,
+        "nonblank_lines": 14,
+        "utf8_bytes": 388,
+        "sha256": "ebd0d6f5f4777530da04533b5b0d75f85e2959690c2ec917c11e2f077de5658e"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell definition checks differently named positional signatures, explicit candidate names and the resulting 2772 observation.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H03",
+      "title": "Independent bound prefixes and residual callable admission",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/H03.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 341,
+        "characters_with_whitespace": 576,
+        "nonblank_lines": 24,
+        "utf8_bytes": 576,
+        "sha256": "85b02642c61b488833252cc0d5b38cfed0cc111f0a4b619f2f1c27d1fad2862c"
+      },
+      "foreign": {
+        "characters": 143,
+        "characters_with_whitespace": 189,
+        "nonblank_lines": 7,
+        "utf8_bytes": 189,
+        "sha256": "35d0ccaa0ed2b7f32965d865462e246570ff8a181e862db866e1145d09f4d103"
+      },
+      "ratio": 0.41935483870967744,
+      "contract": "Complete captured-prefix fixture: add5 and add100 are independent, their results are 6,101,6, and the original addition remains unchanged. Haskell values are immutable and native partial application exposes only the remaining argument. The LMX-specific explicit saved actual is rejected by its residual signature; Haskell has no such named formal and rejects that spelling statically. This admission-language difference is recorded separately and does not subtract the matching successful fixture.",
+      "source_symbols": [
+        "makeAdder",
+        "closureExample"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H04",
+      "title": "Overrideable copied default",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/H04.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 265,
+        "characters_with_whitespace": 433,
+        "nonblank_lines": 18,
+        "utf8_bytes": 433,
+        "sha256": "1cb759a945cbb4873bc797e1284166fb189ca013b1a9c58d261c913ac8089418"
+      },
+      "foreign": {
+        "characters": 128,
+        "characters_with_whitespace": 160,
+        "nonblank_lines": 3,
+        "utf8_bytes": 160,
+        "sha256": "ee3c0ce29a0d59abff867d7d5e939912d485b7b9304b487f1bcf79d3f1141250"
+      },
+      "ratio": 0.4830188679245283,
+      "contract": "Complete four-probe fixture: absent default gives 6; explicit 25 gives 26; explicit zero gives 1; the repeated absent default is still 6. Haskell uses explicit Maybe Int; LMX uses copied DATA defaults and named override. These different representations preserve all four observed values and do not mutate the saved default. The listing includes the exact fixture expression from main after the helper; it is a declaration-plus-expression fragment of the unchanged complete module, not a new independently compiled module.",
+      "source_symbols": [
+        "addWithDefault"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H05",
+      "title": "Dynamic and lexical binding after a graph copy",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/H05.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 218,
+        "characters_with_whitespace": 383,
+        "nonblank_lines": 18,
+        "utf8_bytes": 383,
+        "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The Haskell functions receive explicit environments and reproduce 26/6. They do not copy an executable graph, preserve parent relationships or implement LMX dynamic name lookup after copy.",
+      "source_symbols": [
+        "Env",
+        "dynamicAdd",
+        "lexicalAdd"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H06",
+      "title": "Order of two composed computations",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/H06.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 179,
+        "characters_with_whitespace": 275,
+        "nonblank_lines": 13,
+        "utf8_bytes": 275,
+        "sha256": "215f69e58b65e7ef5d45d5fb67bc0ece16f7415691b6e72369dd0dc0bf244599"
+      },
+      "foreign": {
+        "characters": 89,
+        "characters_with_whitespace": 103,
+        "nonblank_lines": 2,
+        "utf8_bytes": 103,
+        "sha256": "b543bd20b69382243dc18fe8d4cc5f3816a782b172ad6f693294124eff29f4e1"
+      },
+      "ratio": 0.4972067039106145,
+      "contract": "Complete for the selected primary LMX listing: next(twice(4)) is 9 and twice(next(4)) is 10. The existing Haskell composition expression preserves both orders. The separate effectful stage-order fixture and the LMX pipe variant are additional material, not silently substituted into this ratio.",
+      "source_symbols": [
+        "compositionFactoryExample"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H07",
+      "title": "Prepared value versus raw source occurrence",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/H07.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 461,
+        "characters_with_whitespace": 671,
+        "nonblank_lines": 30,
+        "utf8_bytes": 671,
+        "sha256": "09c012a50d47c96a618dd82e54865e1dd8b2c69b468389c1bc79cf48ba9b49aa"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The complete numeric/call-count series is present, but its raw side explicitly repeats an IO action. It does not accept an arbitrary raw source occurrence or evaluate the retained source graph via sys\\eval. The guide expressly keeps the lazy example separate from raw-occurrence semantics.",
+      "source_symbols": [
+        "preparedAndRaw",
+        "preparedAndRawSeries",
+        "lazySeries"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H08",
+      "title": "Owned formal copy versus caller place",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/H08.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 122,
+        "characters_with_whitespace": 241,
+        "nonblank_lines": 17,
+        "utf8_bytes": 241,
+        "sha256": "23602fafc44e4e11d2b81122e9223af076341dd009418625b69b9f1694bbed0f"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell definition compares mutation of an owned formal copy with mutation of a transparent caller place.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "H09",
+      "title": "Finite iterator with a live declaration and body",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/H09.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 260,
+        "characters_with_whitespace": 427,
+        "nonblank_lines": 17,
+        "utf8_bytes": 427,
+        "sha256": "bd87f2d5bd381f3f70bb26e94cb0e08a8cb9a3b4314bdb0c5e73ef02f5800873"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "All observed iterator results agree: total 12, four next calls and three body calls. However, the only existing Haskell listing interleaves extra next/body counters with the algorithm, while the LMX source delegates those observations to its external fixture. A size ratio would charge harness instrumentation only to Haskell. No rewritten or shortened Haskell implementation has been invented; this is related_analogy because the current source counting boundaries cannot be matched exactly.",
+      "source_symbols": [
+        "iteratorCase"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R01",
+      "title": "Merge an existing record and add a field",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/R01.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 183,
+        "characters_with_whitespace": 257,
+        "nonblank_lines": 11,
+        "utf8_bytes": 257,
+        "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The Haskell record update preserves width and changes height/depth, but Size declares depth before the update. LMX merge adds a previously absent field and preserves its source structures. The fixed-shape Haskell update cannot be labelled a complete dynamic record-extension pair.",
+      "source_symbols": [
+        "Size"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R02",
+      "title": "Copy a field stream into group assignment",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R02.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 95,
+        "characters_with_whitespace": 171,
+        "nonblank_lines": 10,
+        "utf8_bytes": 171,
+        "sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The module contains no implementation of the copied structural field stream and the current group-assignment observation 27. A new tuple-destructuring example has not been invented.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R03",
+      "title": "Imported parent identity versus copied parent identity",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R03.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 244,
+        "characters_with_whitespace": 376,
+        "nonblank_lines": 16,
+        "utf8_bytes": 376,
+        "sha256": "cd7f248391d45e2b9fcddc6c01de237172a8e578ffda65218e258b14880eafd5"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell implementation tests import-retained owner identity and copy-recouped parent identity.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R04",
+      "title": "Computed initializer, local write and repeated activation",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R04.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 383,
+        "characters_with_whitespace": 595,
+        "nonblank_lines": 26,
+        "utf8_bytes": 595,
+        "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The module has no counterpart for these computed local initializer and explicit graph/local-write cases. H07 IO actions are not reassigned as coverage for this different contract.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R06a",
+      "title": "Graph copy preserving shared targets",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R06a.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 189,
+        "characters_with_whitespace": 262,
+        "nonblank_lines": 11,
+        "utf8_bytes": 262,
+        "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell graph-copy implementation preserves and tests shared targets while separating the copy from the original.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R06b",
+      "title": "Graph copy preserving a cycle",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R06b.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 139,
+        "characters_with_whitespace": 213,
+        "nonblank_lines": 10,
+        "utf8_bytes": 213,
+        "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell graph-copy implementation preserves and tests the self-cycle while separating it from the original.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R07",
+      "title": "User operand and preserved computation",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/R07.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 159,
+        "characters_with_whitespace": 266,
+        "nonblank_lines": 12,
+        "utf8_bytes": 266,
+        "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The explicit Haskell syntax tree yields the same arithmetic result 20. It is a manually defined AST and interpreter, not a user operand integrated into the ordinary parser and retained LMX graph.",
+      "source_symbols": [
+        "Expr",
+        "evalExpr",
+        "tree"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "R09",
+      "title": "Uninitialized payload and local versus graph write",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/R09.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 189,
+        "characters_with_whitespace": 276,
+        "nonblank_lines": 13,
+        "utf8_bytes": 276,
+        "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The module contains no counterpart for uninitialized zero-payload primitive/reference records or the distinct local and graph write paths.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "A01",
+      "title": "Shared structural slots and replacement field identity",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/A01.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 126,
+        "characters_with_whitespace": 199,
+        "nonblank_lines": 11,
+        "utf8_bytes": 199,
+        "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The module has an A02 immutable numeric-array update, but no A01 shared structural descriptor/slot replacement that changes the visible field identity to z. The A02 listing is not relabelled as A01.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "V02",
+      "title": "Whole ASCII ticket-code predicate",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/V02.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 242,
+        "characters_with_whitespace": 350,
+        "nonblank_lines": 10,
+        "utf8_bytes": 350,
+        "sha256": "d084f401a82d58e6702f0c296665c951236dd4f241db3c834c7831eb859c9bec"
+      },
+      "foreign": {
+        "characters": 132,
+        "characters_with_whitespace": 163,
+        "nonblank_lines": 6,
+        "utf8_bytes": 163,
+        "sha256": "4cd34b1c32f0f7f4f5c645ed24c1b0856a9b8c984a774d216cc3a504b04540a9"
+      },
+      "ratio": 0.5454545454545454,
+      "contract": "Complete whole-string predicate for exactly two ASCII uppercase letters, hyphen, two ASCII digits. The five-element list pattern enforces length; inRange checks ASCII endpoints. All eleven current fixtures agree, including NUL, non-ASCII letter and non-ASCII digit rejection. Haskell String and LMX char[] use their ordinary character-sequence representations; no locale-dependent character class is introduced.",
+      "source_symbols": [
+        "accepts"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "V03",
+      "title": "Inject a read dependency and check interaction counts",
+      "foreign_language": "Haskell",
+      "comparison_status": "related_analogy",
+      "lmx_source": "lmx/V03.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 298,
+        "characters_with_whitespace": 480,
+        "nonblank_lines": 23,
+        "utf8_bytes": 480,
+        "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "The Good/Biased/ReadsTwice fixtures and read counts are represented. However, the Haskell checker takes a closed SampleVariant rather than the arbitrary candidate callable accepted by the LMX checker, and passes its read dependency explicitly. Treating it as a complete generic injection/checker implementation would overstate the existing source.",
+      "source_symbols": [
+        "SampleVariant",
+        "sample",
+        "samplingCheck"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "V04",
+      "title": "Distinguish a named failure from a numeric result",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/V04.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 160,
+        "characters_with_whitespace": 270,
+        "nonblank_lines": 15,
+        "utf8_bytes": 270,
+        "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell definition checks the current named NoSample failure against an ordinary zero return.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "V05",
+      "title": "Command/read integration check and fault modes",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/V05.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 552,
+        "characters_with_whitespace": 872,
+        "nonblank_lines": 33,
+        "utf8_bytes": 872,
+        "sha256": "c060fc1b578051c165e0af1f6c73b34a5b29f7e7b049d63a53a83fa8930677ec"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "No current Haskell definition implements all command/read observations, event counts and fault modes of the current integration fixture.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "M01",
+      "title": "Serial state updates at one Message owner",
+      "foreign_language": "Haskell",
+      "comparison_status": "complete_pair",
+      "lmx_source": "lmx/M01.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 97,
+        "characters_with_whitespace": 158,
+        "nonblank_lines": 9,
+        "utf8_bytes": 158,
+        "sha256": "846083a9976f0a62407d87913c837ae51812947d427e81e9dfdea3c9bb81debe"
+      },
+      "foreign": {
+        "characters": 411,
+        "characters_with_whitespace": 538,
+        "nonblank_lines": 15,
+        "utf8_bytes": 538,
+        "sha256": "2d8c5e7af207bc7b29b6ab57429c27492156e685a06a78ce7070ffa8d65c5474"
+      },
+      "ratio": 4.237113402061856,
+      "contract": "Complete local-owner fixture: one owner, two sender threads submit additions 4 and 9, each accepted request has one serialized update, final read occurs after both responses and returns 13 for either arrival order. The counted Haskell service uses actual Chan/MVar facilities and includes its owner loop and existing Stop acknowledgement branch. counterExample launches/sends/observes/stops it only as an external verification harness and is excluded from this service-to-service count, just as the LMX sender/owner launcher is outside Counter. The LMX fixture relies on the existing Message owner launcher. Neither side of this local comparison is credited with a complete HTTP or distributed-delivery stack; the separate HTTP profile remains outside this ratio.",
+      "source_symbols": [
+        "CounterRequest",
+        "counterLoop"
+      ],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "haskell",
+      "id": "M05",
+      "title": "Void Message procedure without a fabricated reply",
+      "foreign_language": "Haskell",
+      "comparison_status": "lmx_only",
+      "lmx_source": "lmx/M05.lm3",
+      "foreign_source": "haskell/Analogies.hs",
+      "lmx": {
+        "characters": 49,
+        "characters_with_whitespace": 79,
+        "nonblank_lines": 5,
+        "utf8_bytes": 79,
+        "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+      },
+      "foreign": null,
+      "ratio": null,
+      "contract": "There is no current Haskell counterpart for the no-result Message procedure and its zero reply/ACK expectation. CounterRequest.Stop has an explicit ACK and is not a substitute.",
+      "source_symbols": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Haskell": "NOT_RUN"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J01",
+      "title": "Полуоткрытый диапазон с направлением",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J01.lm3",
+      "foreign_source": "julia_comparison/source/julia/J01.jl",
+      "lmx": {
+        "characters": 131,
+        "characters_with_whitespace": 186,
+        "nonblank_lines": 8,
+        "utf8_bytes": 186,
+        "sha256": "d97fa167c11ba5d40184bd78f432d75d0a4a3455af1fd5fb45f7db606f363cb5"
+      },
+      "foreign": {
+        "characters": 109,
+        "characters_with_whitespace": 162,
+        "nonblank_lines": 3,
+        "utf8_bytes": 162,
+        "sha256": "3a6d1ed40711ab64c31e046bf4fb4cbf4c9c1ca0781aa17aa58221835ece6b5d"
+      },
+      "ratio": 0.8320610687022901,
+      "category": "Диапазоны",
+      "contract": "Конечная последовательность машинных целых start + k*step до исключённой границы stop. step не равен нулю; направление может быть любым. Размер результата должен помещаться в массив.",
+      "core_functions": [
+        "range"
+      ],
+      "foreign_dependencies": [
+        "Base.:",
+        "Base.collect",
+        "Base.Iterators.takewhile"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/",
+        "https://docs.julialang.org/en/v1/base/iterators/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J02",
+      "title": "Копия среза",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J02.lm3",
+      "foreign_source": "julia_comparison/source/julia/J02.jl",
+      "lmx": {
+        "characters": 88,
+        "characters_with_whitespace": 140,
+        "nonblank_lines": 8,
+        "utf8_bytes": 140,
+        "sha256": "3d87cf899125366d013b08d03b1586bdaa3902b842f90831f5b8fc5716594872"
+      },
+      "foreign": {
+        "characters": 90,
+        "characters_with_whitespace": 116,
+        "nonblank_lines": 4,
+        "utf8_bytes": 116,
+        "sha256": "81d3dde24d88e6f6cec41ad2979bd493ea4a922546162d3c32802672be972e61"
+      },
+      "ratio": 1.0227272727272727,
+      "category": "Индексация",
+      "contract": "Создать новый внешний массив для нулевого полуинтервала [lo, hi). Требуется 0 <= lo <= hi <= length(xs). Ссылочные элементы сохраняют свои цели.",
+      "core_functions": [
+        "slice"
+      ],
+      "foreign_dependencies": [
+        "Base.getindex"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J03",
+      "title": "Разворот без изменения входа",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J03.lm3",
+      "foreign_source": "julia_comparison/source/julia/J03.jl",
+      "lmx": {
+        "characters": 72,
+        "characters_with_whitespace": 110,
+        "nonblank_lines": 6,
+        "utf8_bytes": 110,
+        "sha256": "15a431255f71eb4cbffc28b18a7dbd815dc1e11cec37f049261459af1a63a833"
+      },
+      "foreign": {
+        "characters": 23,
+        "characters_with_whitespace": 26,
+        "nonblank_lines": 1,
+        "utf8_bytes": 26,
+        "sha256": "24d893ad5469b2c2ddeac4b4e3b82eb67d9fe79cd9921c0e0eeb1626b9bbe7b1"
+      },
+      "ratio": 0.3194444444444444,
+      "category": "Массивы",
+      "contract": "Вернуть элементы в обратном порядке в новом внешнем массиве; исходный массив сохраняется.",
+      "core_functions": [
+        "reverse"
+      ],
+      "foreign_dependencies": [
+        "Base.reverse"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/",
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J04",
+      "title": "Отбор по числовой маске",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J04.lm3",
+      "foreign_source": "julia_comparison/source/julia/J04.jl",
+      "lmx": {
+        "characters": 138,
+        "characters_with_whitespace": 188,
+        "nonblank_lines": 7,
+        "utf8_bytes": 188,
+        "sha256": "f726ad82fd7f12c185ae25be3da7c2b513149b2b62f7717d8ec782141c0daf25"
+      },
+      "foreign": {
+        "characters": 97,
+        "characters_with_whitespace": 117,
+        "nonblank_lines": 4,
+        "utf8_bytes": 117,
+        "sha256": "e4cf242f648c951762f174d9492fd8975ec894aa6c15154602053740f223e18c"
+      },
+      "ratio": 0.7028985507246377,
+      "category": "Маски",
+      "contract": "Сохранить элементы, чья маска ненулевая; порядок прежний. Длины xs и mask должны совпадать, mask состоит из целых.",
+      "core_functions": [
+        "compress"
+      ],
+      "foreign_dependencies": [
+        "Base.getindex",
+        "Base.broadcast"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/",
+        "https://docs.julialang.org/en/v1/manual/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J05",
+      "title": "Квадраты через comprehension",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J05.lm3",
+      "foreign_source": "julia_comparison/source/julia/J05.jl",
+      "lmx": {
+        "characters": 138,
+        "characters_with_whitespace": 208,
+        "nonblank_lines": 11,
+        "utf8_bytes": 208,
+        "sha256": "3b1e24b472f7469f736f6a462c0b9b502d6748bc1eb78670331280d1f983703a"
+      },
+      "foreign": {
+        "characters": 25,
+        "characters_with_whitespace": 34,
+        "nonblank_lines": 1,
+        "utf8_bytes": 34,
+        "sha256": "2ac4ecfb512f864cb3ee071330f6649668f1a8cbf0a180f9b6d551710924edb2"
+      },
+      "ratio": 0.18115942028985507,
+      "category": "Преобразования",
+      "contract": "Вычислить квадрат каждого целого слева направо. Значения выбраны без переполнения, исходный массив сохраняется.",
+      "core_functions": [
+        "map"
+      ],
+      "foreign_dependencies": [
+        "Base.Generator",
+        "Base.collect"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/manual/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J06",
+      "title": "Стабильный отбор нечётных",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J06.lm3",
+      "foreign_source": "julia_comparison/source/julia/J06.jl",
+      "lmx": {
+        "characters": 136,
+        "characters_with_whitespace": 208,
+        "nonblank_lines": 11,
+        "utf8_bytes": 208,
+        "sha256": "76b8aa2a5b734a671b835715c03e342be2613a07e0f8d6eb2a26b381932bb03a"
+      },
+      "foreign": {
+        "characters": 28,
+        "characters_with_whitespace": 32,
+        "nonblank_lines": 1,
+        "utf8_bytes": 32,
+        "sha256": "0be6c8b84e9b43f3db1565a651ed4794f817582c528d1c74b447d38b8ab1e36a"
+      },
+      "ratio": 0.20588235294117646,
+      "category": "Предикаты",
+      "contract": "Сохранить все нечётные целые в исходном порядке, включая отрицательные.",
+      "core_functions": [
+        "filter"
+      ],
+      "foreign_dependencies": [
+        "Base.filter",
+        "Base.isodd"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J07",
+      "title": "Левая свёртка с неассоциативным шагом",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J07.lm3",
+      "foreign_source": "julia_comparison/source/julia/J07.jl",
+      "lmx": {
+        "characters": 220,
+        "characters_with_whitespace": 308,
+        "nonblank_lines": 13,
+        "utf8_bytes": 308,
+        "sha256": "8db4ab3f373ea8f5867af9cfc60534bb7bf0f2affe8faa5082dd4e62a0fca09e"
+      },
+      "foreign": {
+        "characters": 38,
+        "characters_with_whitespace": 44,
+        "nonblank_lines": 1,
+        "utf8_bytes": 44,
+        "sha256": "5946b713bb893b6f273dc32229bad527dca2c8665ba1357ea1ebd19918a0187f"
+      },
+      "ratio": 0.17272727272727273,
+      "category": "Свёртки",
+      "contract": "Последовательно вычитать элементы из seed: ((seed - x0) - x1) ... . Пустой вход возвращает seed. Арифметика без переполнения.",
+      "core_functions": [
+        "foldl",
+        "record"
+      ],
+      "foreign_dependencies": [
+        "Base.foldl"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J08",
+      "title": "Все промежуточные суммы с начальным значением",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J08.lm3",
+      "foreign_source": "julia_comparison/source/julia/J08.jl",
+      "lmx": {
+        "characters": 209,
+        "characters_with_whitespace": 298,
+        "nonblank_lines": 13,
+        "utf8_bytes": 298,
+        "sha256": "ef849d20e083fdad6e314a4ae1cbcb7bef76abef46e55c97212eeedc2824426a"
+      },
+      "foreign": {
+        "characters": 50,
+        "characters_with_whitespace": 57,
+        "nonblank_lines": 1,
+        "utf8_bytes": 57,
+        "sha256": "f70b9faa70667185edbc32b3da571417a15144f8b2c8d7d7e14afc6a5f6a0505"
+      },
+      "ratio": 0.23923444976076555,
+      "category": "Свёртки",
+      "contract": "Вернуть seed, затем результат каждого последовательного прибавления. Длина результата length(xs)+1; на пустом входе [seed].",
+      "core_functions": [
+        "scanl",
+        "record"
+      ],
+      "foreign_dependencies": [
+        "Base.accumulate",
+        "Base.vcat"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J09",
+      "title": "Парное прохождение до короткого входа",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J09.lm3",
+      "foreign_source": "julia_comparison/source/julia/J09.jl",
+      "lmx": {
+        "characters": 85,
+        "characters_with_whitespace": 130,
+        "nonblank_lines": 7,
+        "utf8_bytes": 130,
+        "sha256": "2dada556e2148837f01bb0af14e505ee092fde5c8424f1138470ed4171e793cc"
+      },
+      "foreign": {
+        "characters": 44,
+        "characters_with_whitespace": 49,
+        "nonblank_lines": 1,
+        "utf8_bytes": 49,
+        "sha256": "cca607a68b457ec39ae28e0c761f153a4198b164fdac01c8e5a1ba295a800723"
+      },
+      "ratio": 0.5176470588235295,
+      "category": "Итераторы",
+      "contract": "Материализовать пары соответствующих элементов. Результат заканчивается вместе с более коротким входом; входы не меняются.",
+      "core_functions": [
+        "zip"
+      ],
+      "foreign_dependencies": [
+        "Base.zip",
+        "Base.collect"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/iterators/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J10",
+      "title": "Слитное поэлементное выражение",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J10.lm3",
+      "foreign_source": "julia_comparison/source/julia/J10.jl",
+      "lmx": {
+        "characters": 164,
+        "characters_with_whitespace": 251,
+        "nonblank_lines": 13,
+        "utf8_bytes": 251,
+        "sha256": "35ec32f4bad52eb7e70d4828f2f0f2dd0db316af4791c64c4acd86b86e5ad6a7"
+      },
+      "foreign": {
+        "characters": 41,
+        "characters_with_whitespace": 51,
+        "nonblank_lines": 1,
+        "utf8_bytes": 51,
+        "sha256": "d54fff282bab8d555d022abbb39172e9d2b6151c8ebf92320badfe430eaf14b9"
+      },
+      "ratio": 0.25,
+      "category": "Broadcast",
+      "contract": "Для двух целочисленных векторов одинаковой длины вернуть 2*x + y*y по позициям. Арифметика без переполнения, callbacks не имеют эффектов.",
+      "core_functions": [
+        "zipWith"
+      ],
+      "foreign_dependencies": [
+        "Base.broadcast"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/manual/arrays/",
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J11",
+      "title": "Плоское разворачивание результатов",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J11.lm3",
+      "foreign_source": "julia_comparison/source/julia/J11.jl",
+      "lmx": {
+        "characters": 132,
+        "characters_with_whitespace": 203,
+        "nonblank_lines": 11,
+        "utf8_bytes": 203,
+        "sha256": "77d65f19ac30070f7ca6d51a8fe9d2bfa3e470c9d0823a30a04da401cc69a526"
+      },
+      "foreign": {
+        "characters": 53,
+        "characters_with_whitespace": 62,
+        "nonblank_lines": 1,
+        "utf8_bytes": 62,
+        "sha256": "6ec22deadb99ced8c0dd140f57b495634f6fdd2ac90e43fd0e0f506dc272deb8"
+      },
+      "ratio": 0.4015151515151515,
+      "category": "Итераторы",
+      "contract": "Для каждого целого x получить пару [x, x*x] и объединить пары по порядку. Происходит ровно одно разворачивание внешнего результата callback.",
+      "core_functions": [
+        "flatMap"
+      ],
+      "foreign_dependencies": [
+        "Base.Iterators.flatmap",
+        "Base.collect"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/iterators/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J12",
+      "title": "Группировка по чётности",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J12.lm3",
+      "foreign_source": "julia_comparison/source/julia/J12.jl",
+      "lmx": {
+        "characters": 256,
+        "characters_with_whitespace": 371,
+        "nonblank_lines": 17,
+        "utf8_bytes": 371,
+        "sha256": "0281cd89f31ca91f973cd6f2378d3c7cf6bc5edeae8a0561fcaf6d3e9f9dd74e"
+      },
+      "foreign": {
+        "characters": 55,
+        "characters_with_whitespace": 62,
+        "nonblank_lines": 2,
+        "utf8_bytes": 62,
+        "sha256": "9867bfe719d784a554eeb4d4f946b1b991d695fb68cf4f548e74edb351a8e84d"
+      },
+      "ratio": 0.21484375,
+      "category": "Группировка",
+      "contract": "Разбить целые на группы odd=true/false, сохранить порядок элементов внутри каждой группы. Отсутствующие группы не создаются. Порядок обхода самих групп не сравнивается.",
+      "core_functions": [
+        "groupBy"
+      ],
+      "foreign_dependencies": [
+        "SplitApplyCombine.group",
+        "Base.isodd"
+      ],
+      "sources": [
+        "https://github.com/JuliaData/SplitApplyCombine.jl#grouping"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J13",
+      "title": "Хотя бы одно превышение",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J13.lm3",
+      "foreign_source": "julia_comparison/source/julia/J13.jl",
+      "lmx": {
+        "characters": 149,
+        "characters_with_whitespace": 225,
+        "nonblank_lines": 12,
+        "utf8_bytes": 225,
+        "sha256": "0399ea2167de564532637ce76066dac2525ad97c8bb101bddb8dd9c481c92cf5"
+      },
+      "foreign": {
+        "characters": 36,
+        "characters_with_whitespace": 45,
+        "nonblank_lines": 1,
+        "utf8_bytes": 45,
+        "sha256": "f9cf51613f8b4a1f6bafc544a01ae8bb13721c534fd8f4e9e88564027afe2246"
+      },
+      "ratio": 0.24161073825503357,
+      "category": "Предикаты",
+      "contract": "Вернуть логическую истину, если существует x > limit. Пустой вход даёт ложь; просмотр заканчивается после первого успеха.",
+      "core_functions": [
+        "any"
+      ],
+      "foreign_dependencies": [
+        "Base.any"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J14",
+      "title": "Все значения положительны",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J14.lm3",
+      "foreign_source": "julia_comparison/source/julia/J14.jl",
+      "lmx": {
+        "characters": 142,
+        "characters_with_whitespace": 212,
+        "nonblank_lines": 11,
+        "utf8_bytes": 212,
+        "sha256": "f34adc640411c687ed5b4a0d6d0d03fda91bb7a65b948fa1089452a73ef60412"
+      },
+      "foreign": {
+        "characters": 26,
+        "characters_with_whitespace": 34,
+        "nonblank_lines": 1,
+        "utf8_bytes": 34,
+        "sha256": "8f6dba8b1ef90053bd2f140a51b6e7a1669eb7f542cc225f5d3f27647f324ce7"
+      },
+      "ratio": 0.18309859154929578,
+      "category": "Предикаты",
+      "contract": "Истина, если каждый элемент больше нуля. Пустой вход даёт истину; просмотр заканчивается после первого отказа.",
+      "core_functions": [
+        "all"
+      ],
+      "foreign_dependencies": [
+        "Base.all"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J15",
+      "title": "Первый найденный индекс без sentinel",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J15.lm3",
+      "foreign_source": "julia_comparison/source/julia/J15.jl",
+      "lmx": {
+        "characters": 201,
+        "characters_with_whitespace": 282,
+        "nonblank_lines": 12,
+        "utf8_bytes": 282,
+        "sha256": "5934ad4a4fa88d6abffe1fe005cd4c5dd73da7b6094bf65af4b42552f1f2974c"
+      },
+      "foreign": {
+        "characters": 90,
+        "characters_with_whitespace": 117,
+        "nonblank_lines": 4,
+        "utf8_bytes": 117,
+        "sha256": "4645636199ea225e957661a3b2682b25ba4fd5bb75a1a5dbdc125544fe3c9474"
+      },
+      "ratio": 0.44776119402985076,
+      "category": "Поиск",
+      "contract": "Вернуть первый нулевой индекс x > limit либо отсутствие результата. Настоящий индекс 0 не смешивается с отсутствием.",
+      "core_functions": [
+        "index"
+      ],
+      "foreign_dependencies": [
+        "Base.findfirst",
+        "Base.isnothing"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J16",
+      "title": "Количество выполнений предиката",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J16.lm3",
+      "foreign_source": "julia_comparison/source/julia/J16.jl",
+      "lmx": {
+        "characters": 138,
+        "characters_with_whitespace": 210,
+        "nonblank_lines": 11,
+        "utf8_bytes": 210,
+        "sha256": "8e6d22706569abdce50d5864f52b83afb9d7ff9e004ae0f4bd63906a12fedc51"
+      },
+      "foreign": {
+        "characters": 28,
+        "characters_with_whitespace": 32,
+        "nonblank_lines": 1,
+        "utf8_bytes": 32,
+        "sha256": "1a86e937efaac6061f71d68ddfd91e9aa3733b43e4e0e730043bd3dca2337a66"
+      },
+      "ratio": 0.2028985507246377,
+      "category": "Подсчёт",
+      "contract": "Посчитать чётные элементы; ноль и отрицательные чётные учитываются. Исходный массив сохраняется.",
+      "core_functions": [
+        "count"
+      ],
+      "foreign_dependencies": [
+        "Base.count",
+        "Base.iseven"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J17",
+      "title": "Дополнение существующего массива",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J17.lm3",
+      "foreign_source": "julia_comparison/source/julia/J17.jl",
+      "lmx": {
+        "characters": 94,
+        "characters_with_whitespace": 139,
+        "nonblank_lines": 7,
+        "utf8_bytes": 139,
+        "sha256": "038129e81a636eef967b2c02f74de5c52aff4f0655e18d9e0840b9fa3723a5f2"
+      },
+      "foreign": {
+        "characters": 45,
+        "characters_with_whitespace": 50,
+        "nonblank_lines": 1,
+        "utf8_bytes": 50,
+        "sha256": "9faa80be7245eef20dbd9752ebea448bc39a58fe5b86aabf35d874ff23523cfa"
+      },
+      "ratio": 0.4787234042553192,
+      "category": "Мутации",
+      "contract": "Добавить values в конец target и вернуть тот же target. Сравниваемый домен: отдельные совместимые векторы без перекрытия; наблюдаются содержимое и идентичность target.",
+      "core_functions": [
+        "append"
+      ],
+      "foreign_dependencies": [
+        "Base.append!"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J18",
+      "title": "Splice с возвратом удалённых элементов",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J18.lm3",
+      "foreign_source": "julia_comparison/source/julia/J18.jl",
+      "lmx": {
+        "characters": 112,
+        "characters_with_whitespace": 171,
+        "nonblank_lines": 9,
+        "utf8_bytes": 171,
+        "sha256": "fed14f9d44210270cd21e2db0811ab20cd1d2ca2798fd5ef9cb86826b154cebb"
+      },
+      "foreign": {
+        "characters": 128,
+        "characters_with_whitespace": 157,
+        "nonblank_lines": 4,
+        "utf8_bytes": 157,
+        "sha256": "7e2c902dd2edb8fa17b1074b100ea305dd0d7adeb9cf0fe07b998ba33f0d9e24"
+      },
+      "ratio": 1.1428571428571428,
+      "category": "Мутации",
+      "contract": "Заменить нулевой полуинтервал [lo,hi) target на values; вернуть удалённый внешний массив. values совместимы и не перекрываются с target; наблюдаются также итоговый target и сохранение его идентичности.",
+      "core_functions": [
+        "splice"
+      ],
+      "foreign_dependencies": [
+        "Base.splice!"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J19",
+      "title": "Транспонирование прямоугольной матрицы",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J19.lm3",
+      "foreign_source": "julia_comparison/source/julia/J19.jl",
+      "lmx": {
+        "characters": 113,
+        "characters_with_whitespace": 155,
+        "nonblank_lines": 6,
+        "utf8_bytes": 155,
+        "sha256": "587d30cba50a31a9c5a2076fd7c99912cabb0e751f8f7bc95bab5ac6524a2005"
+      },
+      "foreign": {
+        "characters": 35,
+        "characters_with_whitespace": 38,
+        "nonblank_lines": 1,
+        "utf8_bytes": 38,
+        "sha256": "372604cbade82bc09990b49e0cc7df0cee7aa254da1e912c2f9a76c1bd78748e"
+      },
+      "ratio": 0.30973451327433627,
+      "category": "Матрицы",
+      "contract": "Вернуть транспонированные значения без сопряжения и без изменения входа. Общий домен: непустые прямоугольные матрицы с положительной шириной и отдельно матрица 0x0.",
+      "core_functions": [
+        "transpose"
+      ],
+      "foreign_dependencies": [
+        "Base.permutedims"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J20",
+      "title": "Устойчивая сортировка записей",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J20.lm3",
+      "foreign_source": "julia_comparison/source/julia/J20.jl",
+      "lmx": {
+        "characters": 255,
+        "characters_with_whitespace": 386,
+        "nonblank_lines": 16,
+        "utf8_bytes": 386,
+        "sha256": "10f25e869a6cdc3efe28bf44226b15dd01214faf14685a2e618b75c9500d25cc"
+      },
+      "foreign": {
+        "characters": 44,
+        "characters_with_whitespace": 50,
+        "nonblank_lines": 1,
+        "utf8_bytes": 50,
+        "sha256": "76851e3ffaeb8f0aa867d318679eab160ef74e5b389081133b5bab2b57308801"
+      },
+      "ratio": 0.17254901960784313,
+      "category": "Сортировка",
+      "contract": "Отсортировать записи по key, сохраняя порядок равных ключей, все остальные поля и исходный массив. Результат — новый внешний массив.",
+      "core_functions": [
+        "sort"
+      ],
+      "foreign_dependencies": [
+        "Base.sort"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/sort/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J21",
+      "title": "Первые уникальные значения",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J21.lm3",
+      "foreign_source": "julia_comparison/source/julia/J21.jl",
+      "lmx": {
+        "characters": 208,
+        "characters_with_whitespace": 290,
+        "nonblank_lines": 12,
+        "utf8_bytes": 290,
+        "sha256": "e5f0509d21903ca1a548822f79bd5ba4bf8891faf12918a639287b9c810fe654"
+      },
+      "foreign": {
+        "characters": 22,
+        "characters_with_whitespace": 25,
+        "nonblank_lines": 1,
+        "utf8_bytes": 25,
+        "sha256": "2c1c5c30bd5d0813334b416fec28c013e33763ced3e6a55eefd3101592810d02"
+      },
+      "ratio": 0.10576923076923077,
+      "category": "Уникальность",
+      "contract": "Оставить первое появление каждого целого, сохранив порядок. Вход не меняется.",
+      "core_functions": [
+        "unique"
+      ],
+      "foreign_dependencies": [
+        "Base.unique"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J22",
+      "title": "Цифры в ASCII-строке",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J22.lm3",
+      "foreign_source": "julia_comparison/source/julia/J22.jl",
+      "lmx": {
+        "characters": 164,
+        "characters_with_whitespace": 238,
+        "nonblank_lines": 11,
+        "utf8_bytes": 238,
+        "sha256": "e2e25ae34b50ee411560eb6924e272380c8371f614fe9dfc79cf184b3f6884c2"
+      },
+      "foreign": {
+        "characters": 41,
+        "characters_with_whitespace": 51,
+        "nonblank_lines": 1,
+        "utf8_bytes": 51,
+        "sha256": "c2e73cf51da65347b44746f50cc3d975c5df34f698f6338c626da3ac94c2b1a7"
+      },
+      "ratio": 0.25,
+      "category": "Строки",
+      "contract": "Сохранить только символы от ASCII 0 до 9 в прежнем порядке. Контракт строкового клиента ограничен ASCII, а не всеми Unicode-категориями цифр.",
+      "core_functions": [
+        "filter"
+      ],
+      "foreign_dependencies": [
+        "Base.filter"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/",
+        "https://docs.julialang.org/en/v1/base/strings/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J23",
+      "title": "Объединение частей на один уровень",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J23.lm3",
+      "foreign_source": "julia_comparison/source/julia/J23.jl",
+      "lmx": {
+        "characters": 77,
+        "characters_with_whitespace": 115,
+        "nonblank_lines": 6,
+        "utf8_bytes": 115,
+        "sha256": "3d40534f02051d5bb2a36e767fdb92d71ec8a9c456043bf971e5dc183a371e1b"
+      },
+      "foreign": {
+        "characters": 48,
+        "characters_with_whitespace": 51,
+        "nonblank_lines": 1,
+        "utf8_bytes": 51,
+        "sha256": "4063b39a4f52d88e963b8c81fa01baf0578fd3f0cdabf5cb0f988703858fe9ac"
+      },
+      "ratio": 0.6233766233766234,
+      "category": "Вложенные массивы",
+      "contract": "Последовательно объединить конечные части. Пустые части допустимы. В клиентском сценарии части содержат целые; вложенные элементы не раскрываются рекурсивно.",
+      "core_functions": [
+        "concat"
+      ],
+      "foreign_dependencies": [
+        "Base.Iterators.flatten",
+        "Base.collect"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/iterators/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "julia",
+      "id": "J24",
+      "title": "Декартово произведение через вложенные comprehensions",
+      "foreign_language": "Julia",
+      "comparison_status": "complete_pair",
+      "lmx_source": "julia_comparison/source/lmx/J24.lm3",
+      "foreign_source": "julia_comparison/source/julia/J24.jl",
+      "lmx": {
+        "characters": 226,
+        "characters_with_whitespace": 417,
+        "nonblank_lines": 20,
+        "utf8_bytes": 417,
+        "sha256": "ad028837c9033c30182385bb78e76596cf69c4a337fead1723338eba2879390f"
+      },
+      "foreign": {
+        "characters": 48,
+        "characters_with_whitespace": 61,
+        "nonblank_lines": 1,
+        "utf8_bytes": 61,
+        "sha256": "86ecefcc7cf1849c9f2d3bb3dbba75f0d03f46c9d856cd4c0d89c5e14a0623c2"
+      },
+      "ratio": 0.21238938053097345,
+      "category": "Композиция",
+      "contract": "Для каждого x из left, затем каждого y из right вернуть пару (x,y). Порядок: правый вход меняется быстрее. Результат материализован, пустой любой вход даёт пустой результат.",
+      "core_functions": [
+        "map",
+        "flatMap"
+      ],
+      "foreign_dependencies": [
+        "Base.Generator",
+        "Base.Iterators.flatten",
+        "Base.collect"
+      ],
+      "sources": [
+        "https://docs.julialang.org/en/v1/manual/arrays/",
+        "https://docs.julialang.org/en/v1/base/iterators/"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Julia": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P01",
+      "title": "Преобразование списка через map",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P01.lm3",
+      "foreign_source": "perl_comparison/source/perl/P01.pl",
+      "lmx": {
+        "characters": 172,
+        "characters_with_whitespace": 246,
+        "nonblank_lines": 11,
+        "utf8_bytes": 246,
+        "sha256": "e5905fbccbe16d8f7d0b1246f75045d0755384abe4f50bb073d900300d1ca36e"
+      },
+      "foreign": {
+        "characters": 73,
+        "characters_with_whitespace": 101,
+        "nonblank_lines": 6,
+        "utf8_bytes": 101,
+        "sha256": "e08fdbe0fe53d49b7ba7a612ff587d83235f5a03ec6e04318b824f83b21b5ec3"
+      },
+      "ratio": 0.42441860465116277,
+      "category": "Списки",
+      "contract": "Вернуть новый список, умножив каждое целое число на 3; порядок и нули сохраняются. Вход не меняется.",
+      "core_functions": [
+        "map"
+      ],
+      "foreign_dependencies": [
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P02",
+      "title": "Отбор элементов через grep",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P02.lm3",
+      "foreign_source": "perl_comparison/source/perl/P02.pl",
+      "lmx": {
+        "characters": 175,
+        "characters_with_whitespace": 251,
+        "nonblank_lines": 11,
+        "utf8_bytes": 251,
+        "sha256": "ee354404bdaddea56eaca798f56f8ade765cf846590b2c2909ef988f5b61508a"
+      },
+      "foreign": {
+        "characters": 77,
+        "characters_with_whitespace": 107,
+        "nonblank_lines": 6,
+        "utf8_bytes": 107,
+        "sha256": "ee6475c8b08963c52900107e0399f4a5486eceed5e8616285f36fcb8a42479f6"
+      },
+      "ratio": 0.44,
+      "category": "Списки",
+      "contract": "Сохранить только чётные целые числа, включая ноль и отрицательные; сохранить исходный порядок и повторы.",
+      "core_functions": [
+        "filter"
+      ],
+      "foreign_dependencies": [
+        "CORE::grep"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/grep"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P03",
+      "title": "Сумма с нейтральным значением",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P03.lm3",
+      "foreign_source": "perl_comparison/source/perl/P03.pl",
+      "lmx": {
+        "characters": 197,
+        "characters_with_whitespace": 279,
+        "nonblank_lines": 12,
+        "utf8_bytes": 279,
+        "sha256": "4f0f22238688baa6c2d8d9b870b3c5344fab69320b1ac744125533ff8cc8874d"
+      },
+      "foreign": {
+        "characters": 90,
+        "characters_with_whitespace": 115,
+        "nonblank_lines": 7,
+        "utf8_bytes": 115,
+        "sha256": "1b2613f84feb8daa16c7310f5ecec632cf531f34fd94f36bd4dc9bd7d50862f2"
+      },
+      "ratio": 0.45685279187817257,
+      "category": "Списки",
+      "contract": "Сумма конечного списка целых чисел; пустой список даёт 0. Примеры не выходят за диапазон машинного int LMX.",
+      "core_functions": [
+        "foldl"
+      ],
+      "foreign_dependencies": [
+        "List::Util::sum0"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#sum0"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P04",
+      "title": "Все промежуточные остатки счёта",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P04.lm3",
+      "foreign_source": "perl_comparison/source/perl/P04.pl",
+      "lmx": {
+        "characters": 225,
+        "characters_with_whitespace": 314,
+        "nonblank_lines": 13,
+        "utf8_bytes": 314,
+        "sha256": "0c42aca92015442bbab1c5b671159b2d4309abb2062e18f19c071cbcfb4eb197"
+      },
+      "foreign": {
+        "characters": 129,
+        "characters_with_whitespace": 162,
+        "nonblank_lines": 7,
+        "utf8_bytes": 162,
+        "sha256": "2af3849473f09cff04a040820679d4aadd938c505e18190d2f3a5443c7ae5d57"
+      },
+      "ratio": 0.5733333333333334,
+      "category": "Списки",
+      "contract": "Из начального остатка и списка изменений получить начальный остаток и все последующие суммы, в том числе начальный элемент для пустого списка.",
+      "core_functions": [
+        "scanl"
+      ],
+      "foreign_dependencies": [
+        "List::Util::reductions"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#reductions"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P05",
+      "title": "Короткое замыкание any и all",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P05.lm3",
+      "foreign_source": "perl_comparison/source/perl/P05.pl",
+      "lmx": {
+        "characters": 250,
+        "characters_with_whitespace": 357,
+        "nonblank_lines": 16,
+        "utf8_bytes": 357,
+        "sha256": "143e5eb4241695a171992401843da1db323c3791af4cfad03ab34f73afacedf7"
+      },
+      "foreign": {
+        "characters": 123,
+        "characters_with_whitespace": 166,
+        "nonblank_lines": 7,
+        "utf8_bytes": 166,
+        "sha256": "39c2262bca44f59c226c9c533ee48416fc57cb915e41b07d56e58c4f29c0e48f"
+      },
+      "ratio": 0.492,
+      "category": "Списки",
+      "contract": "Вернуть два булевых int: существует ли отрицательный элемент; все ли элементы меньше 10. На пустом списке результат [0,1].",
+      "core_functions": [
+        "any",
+        "all"
+      ],
+      "foreign_dependencies": [
+        "List::Util::any",
+        "List::Util::all"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#any",
+        "https://perldoc.perl.org/5.40.1/List::Util#all"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P06",
+      "title": "Срез с перестановкой и повторением",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P06.lm3",
+      "foreign_source": "perl_comparison/source/perl/P06.pl",
+      "lmx": {
+        "characters": 130,
+        "characters_with_whitespace": 178,
+        "nonblank_lines": 7,
+        "utf8_bytes": 178,
+        "sha256": "5cfbaca837977c79cc7ad651c8fbad5a20ba0bd4bf592cd3e242e538a0b07159"
+      },
+      "foreign": {
+        "characters": 88,
+        "characters_with_whitespace": 111,
+        "nonblank_lines": 6,
+        "utf8_bytes": 111,
+        "sha256": "9151507694248feef531e372c8f81b53452a578ecb0fa136e1df01ef47084dd3"
+      },
+      "ratio": 0.676923076923077,
+      "category": "Массивы",
+      "contract": "Выбрать элементы по списку допустимых нулевых индексов; порядок индексов и повторы существенны. Результат — новый внешний массив, вложенные ссылки сохраняются.",
+      "core_functions": [
+        "select"
+      ],
+      "foreign_dependencies": [
+        "array slice"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldata#Slices"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P07",
+      "title": "Изменение массива с возвратом удалённых",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P07.lm3",
+      "foreign_source": "perl_comparison/source/perl/P07.pl",
+      "lmx": {
+        "characters": 185,
+        "characters_with_whitespace": 260,
+        "nonblank_lines": 10,
+        "utf8_bytes": 260,
+        "sha256": "801c6041f6f870236112b5247cbca037e76ece6ecd3d0f73cdd25dfb7bb9e413"
+      },
+      "foreign": {
+        "characters": 146,
+        "characters_with_whitespace": 186,
+        "nonblank_lines": 7,
+        "utf8_bytes": 186,
+        "sha256": "c6ffd0cdf4c36796b9207dcf353e8a6b5da541a54d1497dfd14ec953428b4a8f"
+      },
+      "ratio": 0.7891891891891892,
+      "category": "Массивы",
+      "contract": "Заменить диапазон [begin,end) и вернуть [тот же изменённый массив, новый список удалённых элементов]. Вставляемые значения читаются до изменения; пустые вставка и удаление допустимы.",
+      "core_functions": [
+        "splice"
+      ],
+      "foreign_dependencies": [
+        "CORE::splice"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/splice"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P08",
+      "title": "Стабильная сортировка записей",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P08.lm3",
+      "foreign_source": "perl_comparison/source/perl/P08.pl",
+      "lmx": {
+        "characters": 256,
+        "characters_with_whitespace": 341,
+        "nonblank_lines": 12,
+        "utf8_bytes": 341,
+        "sha256": "9721120c428355e69484d24e705dda7a0edae99540a24a6fed38d44eeb5392f6"
+      },
+      "foreign": {
+        "characters": 117,
+        "characters_with_whitespace": 148,
+        "nonblank_lines": 7,
+        "utf8_bytes": 148,
+        "sha256": "4ad0c9096e90b4cda57755d2f55b0b9b72840c2b1039250af1b77f25e5933358"
+      },
+      "ratio": 0.45703125,
+      "category": "Массивы",
+      "contract": "Новый список записей по возрастанию priority; для равного priority сохранить прежний порядок. Все остальные поля, включая width, и идентичность записей сохраняются.",
+      "core_functions": [
+        "sort"
+      ],
+      "foreign_dependencies": [
+        "CORE::sort",
+        "sort pragma"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/sort",
+        "https://perldoc.perl.org/5.40.1/sort"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P09",
+      "title": "Уникальные значения в порядке появления",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P09.lm3",
+      "foreign_source": "perl_comparison/source/perl/P09.pl",
+      "lmx": {
+        "characters": 216,
+        "characters_with_whitespace": 298,
+        "nonblank_lines": 12,
+        "utf8_bytes": 298,
+        "sha256": "c185ca67e505dbfab2e97817a2e87cb202357043308d3874a49b1ff3a0acf792"
+      },
+      "foreign": {
+        "characters": 90,
+        "characters_with_whitespace": 116,
+        "nonblank_lines": 7,
+        "utf8_bytes": 116,
+        "sha256": "4314af19ebd806a988d72d927d7f3ece0257d722d6ec8fdbedff378cc6548de6"
+      },
+      "ratio": 0.4166666666666667,
+      "category": "Массивы",
+      "contract": "Удалить последующие повторы канонических целых чисел; сохранить первое вхождение и порядок. Вход не меняется.",
+      "core_functions": [
+        "unique"
+      ],
+      "foreign_dependencies": [
+        "List::Util::uniq"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#uniq"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P10",
+      "title": "Частотная таблица с порядком первых вхождений",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P10.lm3",
+      "foreign_source": "perl_comparison/source/perl/P10.pl",
+      "lmx": {
+        "characters": 413,
+        "characters_with_whitespace": 625,
+        "nonblank_lines": 25,
+        "utf8_bytes": 625,
+        "sha256": "7151275bb409eea09f99d850e28844c44019c4a9a032cdf73e40bf7465bc42ac"
+      },
+      "foreign": {
+        "characters": 166,
+        "characters_with_whitespace": 237,
+        "nonblank_lines": 11,
+        "utf8_bytes": 237,
+        "sha256": "5e67a3caed63d743f6adf4a49bc736f5dfc782c6cd78487d07bd0ba02476502d"
+      },
+      "ratio": 0.4019370460048426,
+      "category": "Хеши",
+      "contract": "Для списка целых кодов вернуть пары [код,число вхождений], расположенные по первому появлению кода, а не по произвольному порядку хеша.",
+      "core_functions": [
+        "groupBy"
+      ],
+      "foreign_dependencies": [
+        "hash",
+        "CORE::exists",
+        "CORE::push",
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/functions/exists"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P11",
+      "title": "Автовивификация групп записей",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P11.lm3",
+      "foreign_source": "perl_comparison/source/perl/P11.pl",
+      "lmx": {
+        "characters": 394,
+        "characters_with_whitespace": 606,
+        "nonblank_lines": 25,
+        "utf8_bytes": 606,
+        "sha256": "d729accaaaf5d562e9a99ed951bf670f83a0f407b15a63db7ece9f393bc945c0"
+      },
+      "foreign": {
+        "characters": 218,
+        "characters_with_whitespace": 305,
+        "nonblank_lines": 12,
+        "utf8_bytes": 305,
+        "sha256": "2d91e3deffdc84e88f886667664693454d0415121be0f477f5be76f5a0913785"
+      },
+      "ratio": 0.5532994923857868,
+      "category": "Хеши",
+      "contract": "Сгруппировать целые записи по целому kind. Порядок групп — первое появление kind, порядок записей внутри группы — исходный. Никакие поля записи не удаляются.",
+      "core_functions": [
+        "groupBy"
+      ],
+      "foreign_dependencies": [
+        "hash autovivification",
+        "CORE::push",
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P12",
+      "title": "Наложение настроек с сохранением полей",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P12.lm3",
+      "foreign_source": "perl_comparison/source/perl/P12.pl",
+      "lmx": {
+        "characters": 58,
+        "characters_with_whitespace": 93,
+        "nonblank_lines": 6,
+        "utf8_bytes": 93,
+        "sha256": "dd7a15949aac633f6f0b1c51222e5e5b7bb0bdd26a15b16fa5f74fe62197e0a1"
+      },
+      "foreign": {
+        "characters": 77,
+        "characters_with_whitespace": 101,
+        "nonblank_lines": 6,
+        "utf8_bytes": 101,
+        "sha256": "a340248f5fa0534774b96b47b5dfca885484ddb1f3e6c58dfb9cbeab3aa29516"
+      },
+      "ratio": 1.3275862068965518,
+      "category": "Хеши",
+      "contract": "Объединить плоские настройки со скалярными и строковыми значениями: patch заменяет одноимённые совместимые поля base, новые добавляются. Ноль — значение, остальные поля, включая width/height/theme, сохраняются. Входы не меняются.",
+      "core_functions": [
+        "derive"
+      ],
+      "foreign_dependencies": [
+        "hash construction"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldata#List-value-constructors",
+        "https://perldoc.perl.org/5.40.1/perldsc"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P13",
+      "title": "Map с выдачей нескольких элементов",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P13.lm3",
+      "foreign_source": "perl_comparison/source/perl/P13.pl",
+      "lmx": {
+        "characters": 162,
+        "characters_with_whitespace": 234,
+        "nonblank_lines": 11,
+        "utf8_bytes": 234,
+        "sha256": "14c79f62bc92d769caadb36cece1d6a83dd0cd3e83e501f4cd39e79188db9ea0"
+      },
+      "foreign": {
+        "characters": 70,
+        "characters_with_whitespace": 96,
+        "nonblank_lines": 6,
+        "utf8_bytes": 96,
+        "sha256": "8d2c5b0ba6359ea006ad121cd0887405c3c174e4ae7be3876dcffd4791a94653"
+      },
+      "ratio": 0.43209876543209874,
+      "category": "Списки",
+      "contract": "Сплющить ровно один уровень списка списков, сохранив порядок. Пустые внутренние списки ничего не добавляют; более глубокие массивы остаются отдельными элементами.",
+      "core_functions": [
+        "flatMap"
+      ],
+      "foreign_dependencies": [
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map",
+        "https://perldoc.perl.org/5.40.1/perllol"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P14",
+      "title": "Разделение строки без потери пустых полей",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P14.lm3",
+      "foreign_source": "perl_comparison/source/perl/P14.pl",
+      "lmx": {
+        "characters": 166,
+        "characters_with_whitespace": 211,
+        "nonblank_lines": 6,
+        "utf8_bytes": 211,
+        "sha256": "70029939dcb378ea3d3c5017764d23bdfbcde977c8aa1654c965489d884e4adc"
+      },
+      "foreign": {
+        "characters": 92,
+        "characters_with_whitespace": 121,
+        "nonblank_lines": 6,
+        "utf8_bytes": 121,
+        "sha256": "96694fae546c26dd3d74171bd5b8b2e43d748999b830079fc6ea2875080a41c9"
+      },
+      "ratio": 0.5542168674698795,
+      "category": "Строки и regex",
+      "contract": "Разделить ASCII-строку по запятым; сохранить начальные, промежуточные и конечные пустые поля. Пустая строка означает одно пустое поле.",
+      "core_functions": [
+        "split"
+      ],
+      "foreign_dependencies": [
+        "CORE::split"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/split"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P15",
+      "title": "Проверка полного ASCII-идентификатора",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P15.lm3",
+      "foreign_source": "perl_comparison/source/perl/P15.pl",
+      "lmx": {
+        "characters": 203,
+        "characters_with_whitespace": 252,
+        "nonblank_lines": 6,
+        "utf8_bytes": 252,
+        "sha256": "bd7d8d200d680f093ac420b0ed81984d0cd9a4e28a231a3849479f5c1b5b6bdd"
+      },
+      "foreign": {
+        "characters": 92,
+        "characters_with_whitespace": 118,
+        "nonblank_lines": 6,
+        "utf8_bytes": 118,
+        "sha256": "6fd5f31096528f8f841be3ecf17a130750f7cdd30e7f01c7c1c7d2823be0efa1"
+      },
+      "ratio": 0.45320197044334976,
+      "category": "Строки и regex",
+      "contract": "Принять целиком строку вида [A-Za-z][A-Za-z0-9_]* и вернуть 0/1. Пустая строка и конечный перевод строки не допускаются.",
+      "core_functions": [
+        "matches"
+      ],
+      "foreign_dependencies": [
+        "regex anchors",
+        "regex character classes"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P16",
+      "title": "Именованные группы с явным отсутствием",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P16.lm3",
+      "foreign_source": "perl_comparison/source/perl/P16.pl",
+      "lmx": {
+        "characters": 396,
+        "characters_with_whitespace": 515,
+        "nonblank_lines": 11,
+        "utf8_bytes": 515,
+        "sha256": "f241701f9d4f97a587aa5ba69e003fd984a35310b2d85c14d66ab127246fc408"
+      },
+      "foreign": {
+        "characters": 144,
+        "characters_with_whitespace": 180,
+        "nonblank_lines": 7,
+        "utf8_bytes": 180,
+        "sha256": "508635f6b4d535adba757a1fc541c00d40d5a9900d2bda8fd8876a2725a1aca0"
+      },
+      "ratio": 0.36363636363636365,
+      "category": "Строки и regex",
+      "contract": "Разобрать всю строку key=value, где key — непустые ASCII-буквы, value — непустые ASCII-цифры. Вернуть [1,key,value] либо [0,\"\",\"\"]. Ведущие нули значения сохраняются.",
+      "core_functions": [
+        "wholeMatch",
+        "captureText"
+      ],
+      "foreign_dependencies": [
+        "named captures",
+        "%+"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P17",
+      "title": "Глобальное извлечение слов",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P17.lm3",
+      "foreign_source": "perl_comparison/source/perl/P17.pl",
+      "lmx": {
+        "characters": 343,
+        "characters_with_whitespace": 517,
+        "nonblank_lines": 15,
+        "utf8_bytes": 517,
+        "sha256": "814fe495e4b165caf66d3e4f089d8fd3697e901e170033c6b7f31dec5bf19cd7"
+      },
+      "foreign": {
+        "characters": 75,
+        "characters_with_whitespace": 99,
+        "nonblank_lines": 6,
+        "utf8_bytes": 99,
+        "sha256": "ff1cc9315ac2a5ab7e12da7825cb5b4a1a7a48495fd5a9405a87b4faffb29ddd"
+      },
+      "ratio": 0.21865889212827988,
+      "category": "Строки и regex",
+      "contract": "Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.",
+      "core_functions": [
+        "eachMatch",
+        "matchedText"
+      ],
+      "foreign_dependencies": [
+        "regex /g in list context"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P18",
+      "title": "Буквальная замена всех совпадений",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P18.lm3",
+      "foreign_source": "perl_comparison/source/perl/P18.pl",
+      "lmx": {
+        "characters": 228,
+        "characters_with_whitespace": 286,
+        "nonblank_lines": 8,
+        "utf8_bytes": 286,
+        "sha256": "f8d18965536032346422313054291b2c5eb4d9199e06fd2ca1f0b573f0673c55"
+      },
+      "foreign": {
+        "characters": 115,
+        "characters_with_whitespace": 141,
+        "nonblank_lines": 6,
+        "utf8_bytes": 141,
+        "sha256": "1c4f8e7cc7a6a28d753b7002c6f23a3b168e3061744dce91a518ad3b866b6c77"
+      },
+      "ratio": 0.5043859649122807,
+      "category": "Строки и regex",
+      "contract": "Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке; исходная строка не меняется. Метасимволы needle не становятся regex. Пустой needle вставляет между символами и на концах.",
+      "core_functions": [
+        "replace"
+      ],
+      "foreign_dependencies": [
+        "s///gr",
+        "\\Q...\\E"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P19",
+      "title": "Вычисляемая замена с сохранением ширины",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P19.lm3",
+      "foreign_source": "perl_comparison/source/perl/P19.pl",
+      "lmx": {
+        "characters": 474,
+        "characters_with_whitespace": 652,
+        "nonblank_lines": 19,
+        "utf8_bytes": 652,
+        "sha256": "9613f4c8ccc6f89d419951557aefcda52bb93e15dfd8bf78b7f933bec68118c5"
+      },
+      "foreign": {
+        "characters": 88,
+        "characters_with_whitespace": 114,
+        "nonblank_lines": 6,
+        "utf8_bytes": 114,
+        "sha256": "e6e9b2ee72f501ff7a1694c04e0af5860a198ecbebff4c3c8a30f7e0d6fb3769"
+      },
+      "ratio": 0.18565400843881857,
+      "category": "Строки и regex",
+      "contract": "Каждую максимальную последовательность ASCII-цифр заменить таким же количеством звёздочек. Длина строки и прочие символы сохраняются; callback вызывается один раз на выбранное совпадение.",
+      "core_functions": [
+        "replace",
+        "matchedText"
+      ],
+      "foreign_dependencies": [
+        "s///ger",
+        "string repetition x"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer",
+        "https://perldoc.perl.org/5.40.1/perlop#Multiplicative-Operators"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P20",
+      "title": "Обратная ссылка на одинаковое слово",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P20.lm3",
+      "foreign_source": "perl_comparison/source/perl/P20.pl",
+      "lmx": {
+        "characters": 226,
+        "characters_with_whitespace": 278,
+        "nonblank_lines": 6,
+        "utf8_bytes": 278,
+        "sha256": "be8286f9e1da142e853b408234f547c541c478c4c5d1857b1ab40a143710fea5"
+      },
+      "foreign": {
+        "characters": 97,
+        "characters_with_whitespace": 124,
+        "nonblank_lines": 6,
+        "utf8_bytes": 124,
+        "sha256": "584c356e2aa570488204753711610337813d1b67f4720c11528ee68096fe2009"
+      },
+      "ratio": 0.42920353982300885,
+      "category": "Строки и regex",
+      "contract": "Принять ровно два одинаковых непустых ASCII-слова, разделённых одним пробелом; сравнение чувствительно к регистру, вся строка должна совпасть.",
+      "core_functions": [
+        "matches"
+      ],
+      "foreign_dependencies": [
+        "named backreference"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P21",
+      "title": "Транслитерация алфавита ДНК",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P21.lm3",
+      "foreign_source": "perl_comparison/source/perl/P21.pl",
+      "lmx": {
+        "characters": 219,
+        "characters_with_whitespace": 432,
+        "nonblank_lines": 17,
+        "utf8_bytes": 432,
+        "sha256": "633ac2778d74a0f2b956584db3f2519133bd05b8b5560c1dbd97c36a4b783621"
+      },
+      "foreign": {
+        "characters": 75,
+        "characters_with_whitespace": 99,
+        "nonblank_lines": 6,
+        "utf8_bytes": 99,
+        "sha256": "f85594c5777a8d4ae855b06f8762281abd00abaf66b23dff9c97b6d2329bb7f6"
+      },
+      "ratio": 0.3424657534246575,
+      "category": "Строки",
+      "contract": "Вернуть новую строку с одновременной заменой A↔T и C↔G. Другие ASCII-символы и длина не меняются; уже заменённые символы повторно не обрабатываются.",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "tr///r"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#tr/SEARCHLIST/REPLACEMENTLIST/cdsr"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P22",
+      "title": "Независимые замыкания со своим счётчиком",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P22.lm3",
+      "foreign_source": "perl_comparison/source/perl/P22.pl",
+      "lmx": {
+        "characters": 365,
+        "characters_with_whitespace": 593,
+        "nonblank_lines": 24,
+        "utf8_bytes": 593,
+        "sha256": "5f76a1f9b846385d480f6578cc35002f2b879b678ba2dd00b3ae9a4939cbb595"
+      },
+      "foreign": {
+        "characters": 224,
+        "characters_with_whitespace": 288,
+        "nonblank_lines": 12,
+        "utf8_bytes": 288,
+        "sha256": "e0f3ddccb13f2aa222a10c31b33123f54868b667cd4dd5e6c1a94c8fcca24abd"
+      },
+      "ratio": 0.6136986301369863,
+      "category": "Состояние",
+      "contract": "Создать два независимых счётчика: первый стартует с initial, второй со 100. Последовательно прибавить первому 1 и 3, второму 2, первому −2; вернуть все четыре результата.",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "lexical closure",
+        "anonymous subroutine"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref#Anonymous-Subroutines",
+        "https://perldoc.perl.org/5.40.1/perlsub#Persistent-Private-Variables"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P23",
+      "title": "Ленивый итератор, в котором ноль не означает конец",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P23.lm3",
+      "foreign_source": "perl_comparison/source/perl/P23.pl",
+      "lmx": {
+        "characters": 364,
+        "characters_with_whitespace": 696,
+        "nonblank_lines": 29,
+        "utf8_bytes": 696,
+        "sha256": "2410b72c02135503e0b8043d730668fc0f3ae619b767f4183f0750580a6d385e"
+      },
+      "foreign": {
+        "characters": 242,
+        "characters_with_whitespace": 346,
+        "nonblank_lines": 16,
+        "utf8_bytes": 346,
+        "sha256": "9a17f9dfe37306f5f856b84cae03382bb37a8dcf6b5df3f00be4338c33c91c0b"
+      },
+      "ratio": 0.6648351648351648,
+      "category": "Состояние",
+      "contract": "Итератор выдаёт квадраты 0..limit−1 по одному и завершается отдельно от значения. Собрать его в список; limit неотрицателен. Нулевой первый элемент нельзя потерять как false.",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "closure iterator",
+        "CORE::defined"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref#Anonymous-Subroutines",
+        "https://perldoc.perl.org/5.40.1/functions/defined"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    },
+    {
+      "suite": "perl",
+      "id": "P24",
+      "title": "Освобождение ресурса при успехе и исключении",
+      "foreign_language": "Perl",
+      "comparison_status": "complete_pair",
+      "lmx_source": "perl_comparison/source/lmx/P24.lm3",
+      "foreign_source": "perl_comparison/source/perl/P24.pl",
+      "lmx": {
+        "characters": 673,
+        "characters_with_whitespace": 1083,
+        "nonblank_lines": 40,
+        "utf8_bytes": 1083,
+        "sha256": "cc16a18f8e0174d30546c2279dc3937bd1b029a0593ac871cdc72c81296a073d"
+      },
+      "foreign": {
+        "characters": 365,
+        "characters_with_whitespace": 521,
+        "nonblank_lines": 18,
+        "utf8_bytes": 521,
+        "sha256": "15c07abce9af1e0a0d3137b3c5109405e2b1f5ff2f5e43b6ea34c6fd9e271327"
+      },
+      "ratio": 0.5423476968796433,
+      "category": "Ресурсы",
+      "contract": "Ресурс содержит value=42 и width=8. Журнал: 1 acquire, 2 action, 3 release. mode=0 возвращает [50,123], mode=1 — отказ action и [0,123], mode=2 — отказ acquire и [0,1]. Release после успешного acquire выполняется ровно один раз.",
+      "core_functions": [
+        "bracket"
+      ],
+      "foreign_dependencies": [
+        "feature defer",
+        "CORE::eval",
+        "CORE::die"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlsyn#defer-blocks",
+        "https://perldoc.perl.org/5.40.1/functions/eval"
+      ],
+      "alternatives": [],
+      "runtime": {
+        "LMX": "NOT_RUN",
+        "Perl": "see suite validation"
+      }
+    }
+  ],
+  "implementations": [
+    {
+      "suite": "julia",
+      "id": "JI01",
+      "title": "Упорядоченные обходы, предикаты и свёртки",
+      "foreign_language": "Julia",
+      "core_functions": [
+        "map",
+        "filter",
+        "foldl",
+        "scanl",
+        "zip",
+        "zipWith",
+        "flatMap",
+        "any",
+        "all",
+        "index",
+        "count",
+        "record"
+      ],
+      "lmx": {
+        "characters": 5123,
+        "characters_with_whitespace": 7887,
+        "nonblank_lines": 263,
+        "utf8_bytes": 7887,
+        "sha256": "c58c730bfbf358f503033e122cf0d4eb54cc3026b6dbbb2282f9600f7200cadb"
+      },
+      "foreign": {
+        "characters": 2758,
+        "characters_with_whitespace": 3610,
+        "nonblank_lines": 125,
+        "utf8_bytes": 3610,
+        "sha256": "ff20a5f236f441932d3eede2cb4f7ace67bd4e87d5df2d0dd58b35afc20767d3"
+      },
+      "contract": "Конечные последовательности, произвольные типы полезных значений, упорядоченные callbacks в одной Message. map/flatMap/scan/zip возвращают записи значений; filter сохраняет исходный профиль. Предикаты возвращают int LMX, Bool/Int Julia. Ошибка callback распространяется; callback не изменяет входную последовательность. Частичный результат не выдаётся. index различает отсутствие и индекс 0. record сохраняет принятое значение, а не копирует граф.",
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/",
+        "https://docs.julialang.org/en/v1/base/iterators/",
+        "https://docs.julialang.org/en/v1/base/arrays/"
+      ],
+      "source_files": {
+        "lmx": "library_comparisons/JI01.lmx",
+        "foreign": "library_comparisons/JI01_ordered.jl"
+      },
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [
+        {
+          "name": "FxMap",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb"
+        },
+        {
+          "name": "FxFilter",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "542bdf6db0e61ac6b33c361a2b658db22cf4993b70667052f54fb95e104712d0"
+        },
+        {
+          "name": "FxFold",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "28284bf3f75237774f902a6c8db5b662686965754bae34616b124d34881990b2"
+        },
+        {
+          "name": "FxScan",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "b2d263367ff10e50a70e35d886028a1436b00911278ca3afe5500759d1fc98ef"
+        },
+        {
+          "name": "FxPair",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "b6398e4e7721b736da793bb4235791f377bb2e8ba46b80437b4d9c9223dd3898"
+        },
+        {
+          "name": "FxZip",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "70fe4a4a6bd403a8704a874e13fefa3bf081b75e8993b6657e98e8c285678cd0"
+        },
+        {
+          "name": "FxZipWith",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "6db9499add9b08adc4931b289e9a589c9b6fc4d30f9641d9358d074ca6fa8fbf"
+        },
+        {
+          "name": "FxListBind",
+          "source": "../../LMX_Fn_Receivers/src/containers.lmx",
+          "sha256": "c0c85d5b255d206d375f764e86b3ec12d615a2de99bae63d47785bdb184667a0"
+        },
+        {
+          "name": "FxSeqFlatMap",
+          "source": "../../LMX_Fn_Receivers/src/sequences_selection.lmx",
+          "sha256": "0b9c062187d8e74f9d42e6bd5754736f1ffe7675dbc6d60f20ddba7ab20f0804"
+        },
+        {
+          "name": "FxSeqAny",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "278519a8df43775d8d50fe278ac4ffeef91d96d6745e19734a9ada8ed0312a9b"
+        },
+        {
+          "name": "FxSeqAll",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "6ea407232d91cd061f26a24cf4b233c9d00c9c8735ce78449bf9527ced5cff6c"
+        },
+        {
+          "name": "FxSeqIndex",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "22227604f0bf6fc90aff292e178e982ca54056678eea94ef212ee58ca841b1dd"
+        },
+        {
+          "name": "FxSeqCount",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "97114d3c2102ad3a53ff9c012ba57d3706b3eaf0edb68f3c6b08d57255ac7efd"
+        },
+        {
+          "name": "FxRecordOperands",
+          "source": "../../LMX_Fn_Receivers/src/generic_functions.lmx",
+          "sha256": "d837d5b291ce5c4bace36acb94bf5b164ce969dc3062f7459142d142658c6d03"
+        },
+        {
+          "name": "FxMaybe",
+          "source": "../../LMX_Fn_Receivers/src/containers.lmx",
+          "sha256": "664720047844572e08d51e3c2c789c38ae145175e1ebefa63cc034bdecf2f2b5"
+        },
+        {
+          "name": "FxSome",
+          "source": "../../LMX_Fn_Receivers/src/containers.lmx",
+          "sha256": "773382b57e1f9271e4226f59ff65f75e60f2a14d022f53168d866496cddb2991"
+        },
+        {
+          "name": "FxNone",
+          "source": "../../LMX_Fn_Receivers/src/containers.lmx",
+          "sha256": "740805d3653f10eee80cd7f96913329d6336ce9a3ce2d1b47816f667199e712c"
+        }
+      ],
+      "shared_lmx_definitions": [
+        "FxApply",
+        "FxOne",
+        "FxSeqAllocate",
+        "FxSeqInfo",
+        "FxSeqPredicate",
+        "FxSeqRead",
+        "FxSeqSize",
+        "FxThrows",
+        "FxTry",
+        "FxTwo"
+      ],
+      "external_boundaries": [
+        "FxKernel"
+      ],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "julia",
+      "id": "JI02",
+      "title": "Границы, маски и устройство массивов",
+      "foreign_language": "Julia",
+      "core_functions": [
+        "range",
+        "slice",
+        "reverse",
+        "compress",
+        "concat",
+        "transpose"
+      ],
+      "lmx": {
+        "characters": 4233,
+        "characters_with_whitespace": 6661,
+        "nonblank_lines": 191,
+        "utf8_bytes": 6661,
+        "sha256": "22e5481070eaa2dd0c877cbe3a3ecad4a2f95f4ec65adac7bb7971f7e1a37b4d"
+      },
+      "foreign": {
+        "characters": 2529,
+        "characters_with_whitespace": 3417,
+        "nonblank_lines": 114,
+        "utf8_bytes": 3417,
+        "sha256": "67f1fb0db946e383ccba05cd74347277b9b9e30e128412bb663ada11bf60cfae"
+      },
+      "contract": "Полные конечные одномерные массивы и прямоугольные массивы строк. Диапазоны и срезы полуоткрыты и используют нулевые позиции. Предусмотрены пустые входы, отрицательный шаг, отказ на нулевом шаге, проверка размеров и несовместимой формы. Копируются внешние позиции, ссылочные цели сохраняются. concat не делает рекурсивного flatten. Julia reference принимает обычные one-based AbstractVector, а не все возможные AbstractArray/OffsetArray.",
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/arrays/",
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "source_files": {
+        "lmx": "library_comparisons/JI02.lmx",
+        "foreign": "library_comparisons/JI02_arrays.jl"
+      },
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [
+        {
+          "name": "FxSeqRange",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "7d8fcafacccb81dff705775307924bdb32621a0da358deb659c9b6b194c09299"
+        },
+        {
+          "name": "FxSeqSlice",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "aece514525d287393953df84759e37d3b8790babfe23bdf3b7911d554329a577"
+        },
+        {
+          "name": "FxSeqReverse",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "a759a1bd740c64c1ee44586d5d87380ac2809b3035439d5e169645882ef998fb"
+        },
+        {
+          "name": "FxSeqCompress",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "1e4d207e73ac79896ce881e466673552e8715b51bbb3e5284ad6917648fe63d4"
+        },
+        {
+          "name": "FxSeqConcat",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "e014196b8f4ec2bd44a264d07bc97e5324e16dc6bb5f28a74810f636b29339f4"
+        },
+        {
+          "name": "FxTranspose",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "e650c4a04fa6d8c627b418846f6a0737298b3007566780bc2672be50be66a6ea"
+        }
+      ],
+      "shared_lmx_definitions": [
+        "FxSeqAllocate",
+        "FxSeqBounds",
+        "FxSeqInfo",
+        "FxSeqInteger",
+        "FxSeqRead",
+        "FxSeqSize",
+        "FxThrows"
+      ],
+      "external_boundaries": [
+        "FxKernel"
+      ],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "julia",
+      "id": "JI03",
+      "title": "Изменение диапазона с сохранением target",
+      "foreign_language": "Julia",
+      "core_functions": [
+        "append",
+        "splice",
+        "replaceRange"
+      ],
+      "lmx": {
+        "characters": 2522,
+        "characters_with_whitespace": 3684,
+        "nonblank_lines": 88,
+        "utf8_bytes": 3684,
+        "sha256": "82e0f74dc9036f00cb20d1841af7bcb076050775882166b9e7701cc2ff6cd045"
+      },
+      "foreign": {
+        "characters": 1230,
+        "characters_with_whitespace": 1668,
+        "nonblank_lines": 50,
+        "utf8_bytes": 1668,
+        "sha256": "e88c2ab937fc84e16d223c05330678f01e067cfe96a8025e11219014126727f9"
+      },
+      "contract": "Один общий алгоритм replaceRange, splice возвращает удалённые элементы, append возвращает исходный target. Обе reference-реализации полностью подготавливают вставку до первой записи, в том числе при перекрытии. Обычное принятие типа и исчерпание ресурсов остаются правилами respective runtime; обещания общей транзакции нет. Сравнение клиентов J17/J18 ограничено совместимыми неперекрывающимися входами, поскольку Base.splice! предупреждает о разделяемой памяти.",
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/collections/"
+      ],
+      "source_files": {
+        "lmx": "library_comparisons/JI03.lmx",
+        "foreign": "library_comparisons/JI03_mutation.jl"
+      },
+      "comparison_scope": "implementation_only",
+      "dependencies": [
+        "JI02"
+      ],
+      "production_definitions": [
+        {
+          "name": "FxSeqReplaceRange",
+          "source": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx",
+          "sha256": "e7c1587a6366b20dc32c9ab1331da3f58d6fe164c1338c304c287133474d23e6"
+        },
+        {
+          "name": "FxSeqSplice",
+          "source": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx",
+          "sha256": "0f3327ccb8f5e3e8bdf981ae9943cc482bf61ef017a6560e4e5af494eb350962"
+        },
+        {
+          "name": "FxSeqAppend",
+          "source": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx",
+          "sha256": "7af2646fcedca13289a9ff79efa3e9915ab8ccfe1886c69cc617a2dc6b03083b"
+        }
+      ],
+      "shared_lmx_definitions": [
+        "FxSeqAdmit",
+        "FxSeqAllocate",
+        "FxSeqBounds",
+        "FxSeqInfo",
+        "FxSeqRead",
+        "FxSeqSize",
+        "FxSeqSlice",
+        "FxThrows"
+      ],
+      "external_boundaries": [
+        "FxKernel"
+      ],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "julia",
+      "id": "JI04",
+      "title": "Сортировка, уникальность и группировка",
+      "foreign_language": "Julia",
+      "core_functions": [
+        "sort",
+        "unique",
+        "groupBy"
+      ],
+      "lmx": {
+        "characters": 2676,
+        "characters_with_whitespace": 4815,
+        "nonblank_lines": 134,
+        "utf8_bytes": 4815,
+        "sha256": "a00d4b451249607bb14d1a10d0972f126033773eae21ac6db29812b6fd8524c7"
+      },
+      "foreign": {
+        "characters": 1614,
+        "characters_with_whitespace": 2610,
+        "nonblank_lines": 86,
+        "utf8_bytes": 2610,
+        "sha256": "b1c4d3cef636f77daa0238732c6c6568c087e960584bf20d3f72c056e4023408"
+      },
+      "contract": "Общие типы элементов и ключей. Устойчивая bottom-up merge sort с целочисленным трёхсторонним comparator; unique оставляет первое появление по явному равенству; groupBy вызывает keyOf один раз на элемент и сохраняет порядок внутри групп. Пустые входы и неверные ответы comparator/predicate обработаны. Источник и ключи callbacks не меняют. Generic unique/groupBy используют поиск без hash; их асимптотика не приравнивается к оптимизированным Base.unique/SplitApplyCombine.group.",
+      "sources": [
+        "https://docs.julialang.org/en/v1/base/sort/",
+        "https://docs.julialang.org/en/v1/base/collections/",
+        "https://github.com/JuliaData/SplitApplyCombine.jl#grouping"
+      ],
+      "source_files": {
+        "lmx": "library_comparisons/JI04.lmx",
+        "foreign": "library_comparisons/JI04_order_group.jl"
+      },
+      "comparison_scope": "implementation_only",
+      "dependencies": [
+        "JI01"
+      ],
+      "production_definitions": [
+        {
+          "name": "FxSort",
+          "source": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+          "sha256": "37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a"
+        },
+        {
+          "name": "FxUnique",
+          "source": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+          "sha256": "45e5c9ba86ebc9d39d746aaddb819ee0770027085f46bb27681f4a13679bb019"
+        },
+        {
+          "name": "FxGroup",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "d70eabaca64d10fa60f4ae4f6a211b3d8207503f6841cb38a931a53447b77d14"
+        },
+        {
+          "name": "FxGroupBy",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "c6a391aff1a3ebcaf3963e4123350fe6662d5c6bf8ca68cc77f15ccf50fa86cf"
+        }
+      ],
+      "shared_lmx_definitions": [
+        "FxApply",
+        "FxOne",
+        "FxSeqAdmit",
+        "FxSeqAllocate",
+        "FxSeqBounds",
+        "FxSeqInfo",
+        "FxSeqInteger",
+        "FxSeqPredicate",
+        "FxSeqPush",
+        "FxSeqRead",
+        "FxSeqSize",
+        "FxSeqSlice",
+        "FxSeqStore",
+        "FxThrows",
+        "FxTry",
+        "FxTwo"
+      ],
+      "external_boundaries": [
+        "FxKernel"
+      ],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI01",
+      "title": "Общие последовательные коллекции",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "map",
+        "filter",
+        "foldl",
+        "scanl",
+        "any",
+        "all",
+        "flatMap"
+      ],
+      "lmx": {
+        "characters": 2966,
+        "characters_with_whitespace": 4593,
+        "nonblank_lines": 146,
+        "utf8_bytes": 4593,
+        "sha256": "1e721c7c251502ce4b81702ee0dd1f7031d3400aa02bafc6af6740bfd7161504"
+      },
+      "foreign": {
+        "characters": 1387,
+        "characters_with_whitespace": 1937,
+        "nonblank_lines": 85,
+        "utf8_bytes": 1937,
+        "sha256": "2cdb73ee39d5da97327beecdf4be8d8540ef8caed8955e653a11bfa6acad17d9"
+      },
+      "contract": "Полные последовательные алгоритмы для произвольных значений: map, filter, fold с seed, scan с начальным seed, короткие any/all, раскрытие ровно одного уровня flatMap. Порядок вызовов сохранён. Пустые входы, произвольные ссылки и результаты, ошибки callbacks входят в договор.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map",
+        "https://perldoc.perl.org/5.40.1/functions/grep",
+        "https://perldoc.perl.org/5.40.1/List::Util",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/collections.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI02",
+      "title": "Срез и изменение диапазона",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "select",
+        "splice"
+      ],
+      "lmx": {
+        "characters": 3713,
+        "characters_with_whitespace": 5483,
+        "nonblank_lines": 144,
+        "utf8_bytes": 5483,
+        "sha256": "d86675a7180d8a5a997b0fedbce073cff121c954747edb31af82135129f314db"
+      },
+      "foreign": {
+        "characters": 1168,
+        "characters_with_whitespace": 1532,
+        "nonblank_lines": 50,
+        "utf8_bytes": 1532,
+        "sha256": "e235b4787c9f5f40323dc2db5295dfacbd468a3d90cf70abe493a052e5b48c53"
+      },
+      "contract": "Нулевые индексы, полуоткрытые диапазоны, повторы в select, пустое удаление/вставка. select создаёт новый внешний массив. splice сохраняет идентичность target и возвращает удалённые элементы. Если values совпадает с target, вставляемые значения снимаются до изменения.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/splice",
+        "https://perldoc.perl.org/5.40.1/perldata#Slices",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences_mutation.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI03",
+      "title": "Стабильная сортировка и unique",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "sort",
+        "unique"
+      ],
+      "lmx": {
+        "characters": 1894,
+        "characters_with_whitespace": 3530,
+        "nonblank_lines": 97,
+        "utf8_bytes": 3530,
+        "sha256": "cba14c645f207183356b813eb13c08934cf83e5b66ebdcc57f8c29d0c28152ad"
+      },
+      "foreign": {
+        "characters": 1174,
+        "characters_with_whitespace": 1745,
+        "nonblank_lines": 55,
+        "utf8_bytes": 1745,
+        "sha256": "739b7dbb19e3cb89f723fdbdc12e5eb4c60899f79aa000d7ccca01c669317937"
+      },
+      "contract": "Любые элементы и явные callbacks: compare возвращает отрицательный/нулевой/положительный int, same — ноль или ненулевой int. sort стабилен, unique сохраняет первое вхождение. Пустой и единичный массив не вызывают callback; оба результата имеют новый внешний контейнер и сохраняют идентичность ссылочных элементов.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/sort",
+        "https://perldoc.perl.org/5.40.1/sort",
+        "https://perldoc.perl.org/5.40.1/List::Util#uniq"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI04",
+      "title": "Группировка с произвольным ключом",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "groupBy"
+      ],
+      "lmx": {
+        "characters": 782,
+        "characters_with_whitespace": 1284,
+        "nonblank_lines": 37,
+        "utf8_bytes": 1284,
+        "sha256": "75701a521d3f3e2b55294958a39f2eeed33a8af5fb807f0174ded131b25522c1"
+      },
+      "foreign": {
+        "characters": 568,
+        "characters_with_whitespace": 827,
+        "nonblank_lines": 26,
+        "utf8_bytes": 827,
+        "sha256": "c795ce2952eee4bd7638209b2fda4c0b0754cf6ca4452c8f2e783c066ed6fb84"
+      },
+      "contract": "Ключи и элементы произвольны, включая структуры/ссылки. keyOf вызывается один раз на элемент. sameKey сравнивает с ключами уже созданных групп по порядку. Сохраняются порядок первых ключей, порядок элементов и полные значения/ссылки. Пустой вход возвращает пустой массив.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/collections.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI05",
+      "title": "Композиция записей и копирование data-графа",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "derive"
+      ],
+      "lmx": {
+        "characters": 71,
+        "characters_with_whitespace": 106,
+        "nonblank_lines": 6,
+        "utf8_bytes": 106,
+        "sha256": "4ed27df02fe433d37390af11adba8b6211a78882f8407bc15630ee82a3da4209"
+      },
+      "foreign": {
+        "characters": 1002,
+        "characters_with_whitespace": 1370,
+        "nonblank_lines": 44,
+        "utf8_bytes": 1370,
+        "sha256": "6054dc4848b78f150aea41928f188ed697294741d0a93929c7fc785d5b2509dc"
+      },
+      "contract": "Новый результат по модели base с заменой одноимённых совместимых полей extension. Дополнительная Perl-реализация показывает общий map копирования data-графа: вложенные HASH/ARRAY/SCALAR-ссылки, разделяемые цели и циклы поддержаны, вход не меняется. В клиенте P12 требуется только плоская запись настроек; там штатный хеш Perl достаточно точно реализует задачу.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref",
+        "https://perldoc.perl.org/5.40.1/perldata",
+        "https://perldoc.perl.org/5.40.1/Scalar::Util#refaddr"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/structures.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI06",
+      "title": "Полный синхронный bracket",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "bracket"
+      ],
+      "lmx": {
+        "characters": 526,
+        "characters_with_whitespace": 784,
+        "nonblank_lines": 24,
+        "utf8_bytes": 784,
+        "sha256": "1cb4e08d186267a879afbecc6f32b70d5a421bdb11882d43b813f64b5262afd8"
+      },
+      "foreign": {
+        "characters": 454,
+        "characters_with_whitespace": 637,
+        "nonblank_lines": 23,
+        "utf8_bytes": 637,
+        "sha256": "913d7320a0c14f895b748ad654921fb7b147efe214d74c3afd01fe2defa26f0e"
+      },
+      "contract": "Acquire без обязательных аргументов, release(resource), action(resource, дополнительные аргументы) с произвольным результатом, включая void/undef. После успешного acquire release выполняется ровно один раз при успехе и обычном отказе action; после отказа acquire не выполняется. Отказ release имеет приоритет над сохранённым отказом action.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlsyn#defer-blocks",
+        "https://perldoc.perl.org/5.40.1/functions/eval",
+        "https://perldoc.perl.org/5.40.1/functions/die"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "perl",
+      "id": "PI07",
+      "title": "Построение шаблонов и операции над regex-движком",
+      "foreign_language": "Perl",
+      "core_functions": [
+        "split",
+        "matches",
+        "wholeMatch",
+        "captureText",
+        "eachMatch",
+        "matchedText",
+        "replace"
+      ],
+      "lmx": {
+        "characters": 9969,
+        "characters_with_whitespace": 14332,
+        "nonblank_lines": 414,
+        "utf8_bytes": 14332,
+        "sha256": "97cc79b70c115d2ae796d715afabd22684279984e28eb8f4dd10d4f055769adb"
+      },
+      "foreign": {
+        "characters": 3999,
+        "characters_with_whitespace": 5209,
+        "nonblank_lines": 168,
+        "utf8_bytes": 5209,
+        "sha256": "e1ab33074a7c5b5b6327e6d01bc6fadd8fb255ada654584034cd3ad676e0286d"
+      },
+      "contract": "Общий byte/ASCII-профиль: построение буквальных и последовательных шаблонов, повторения с обеими стратегиями, уникальные именованные захваты и ссылка на ранее объявленную группу; wholeMatch/matches; ленивые неперекрывающиеся eachMatch; matchedText/captureText; полная замена строкой или callback; split с пустыми краевыми полями. Пустые совпадения продвигаются по правилам движка, отсутствующий и пустой capture различаются.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre",
+        "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators",
+        "https://perldoc.perl.org/5.40.1/perlop#The-empty-pattern",
+        "https://perldoc.perl.org/5.40.1/functions/pos",
+        "https://perldoc.perl.org/5.40.1/functions/split"
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/regex/text.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/primitives.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/combinators.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/operands.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/operations.lmx"
+      ],
+      "comparison_scope": "implementation_only",
+      "dependencies": [],
+      "production_definitions": [],
+      "shared_lmx_definitions": [],
+      "external_boundaries": [],
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "H01",
+      "title": "apply",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "apply"
+      ],
+      "lmx": {
+        "characters": 1906,
+        "nonblank_lines": 152,
+        "utf8_bytes": 3185,
+        "sha256": "31cee647c3b76fede1719b687300dbb4a542ccfface3e0b69f26ba95ec2f83ae"
+      },
+      "lmx_entry": {
+        "characters": 199,
+        "nonblank_lines": 11,
+        "utf8_bytes": 299,
+        "sha256": "5619321951bedad4c23cc6e509f840442ae83aafa16064d7a70f97d315c03a98"
+      },
+      "foreign": {
+        "characters": 79,
+        "nonblank_lines": 3,
+        "utf8_bytes": 99,
+        "sha256": "19095935c2b36c6fa27dde65fa7c3fed79ee53d5a0290e88a3992a33325617c6"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/failures.lmx",
+        "LMX_Fn_Receivers/src/generic_runtime.lmx"
+      ],
+      "comparison_file": "library_comparisons/h01_apply_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "H03",
+      "title": "partial",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "partial"
+      ],
+      "lmx": {
+        "characters": 11963,
+        "nonblank_lines": 627,
+        "utf8_bytes": 18427,
+        "sha256": "6d8af4f4749e445f408313cd78a5f44a6f98c132df83705ac2f4602fc9585e1e"
+      },
+      "lmx_entry": {
+        "characters": 533,
+        "nonblank_lines": 17,
+        "utf8_bytes": 713,
+        "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e"
+      },
+      "foreign": {
+        "characters": 699,
+        "nonblank_lines": 17,
+        "utf8_bytes": 847,
+        "sha256": "e57b7a60de9a65707c212e469864a0f11511afec984b39d02c4b355199327ef0"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/adapter_frames.lmx",
+        "LMX_Fn_Receivers/src/failures.lmx",
+        "LMX_Fn_Receivers/src/generic_functions.lmx",
+        "LMX_Fn_Receivers/src/generic_runtime.lmx",
+        "LMX_Fn_Receivers/src/sequences.lmx",
+        "LMX_Fn_Receivers/src/sequences_core.lmx"
+      ],
+      "comparison_file": "library_comparisons/h03_capture_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "H06",
+      "title": "pipe, compose",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "pipe",
+        "compose"
+      ],
+      "lmx": {
+        "characters": 11189,
+        "nonblank_lines": 606,
+        "utf8_bytes": 17292,
+        "sha256": "3f05fc0b293e1d329430234c5344de780118e0f4de0613e4233a352bfd3d7a36"
+      },
+      "lmx_entry": {
+        "characters": 631,
+        "nonblank_lines": 25,
+        "utf8_bytes": 873,
+        "sha256": "885d85a3639e33cc70cb6c77819a5b88803e61ad0eb7c76d23be6d500e50532b"
+      },
+      "foreign": {
+        "characters": 389,
+        "nonblank_lines": 15,
+        "utf8_bytes": 517,
+        "sha256": "41f7b94fce5b52b52096dd8ba82201b56f6eee7289bd638860a014e5631ef7cc"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/adapter_frames.lmx",
+        "LMX_Fn_Receivers/src/failures.lmx",
+        "LMX_Fn_Receivers/src/generic_combinators.lmx",
+        "LMX_Fn_Receivers/src/generic_functions.lmx",
+        "LMX_Fn_Receivers/src/generic_runtime.lmx",
+        "LMX_Fn_Receivers/src/sequences.lmx",
+        "LMX_Fn_Receivers/src/sequences_core.lmx"
+      ],
+      "comparison_file": "library_comparisons/h06_pipe_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "H07",
+      "title": "lazy, once",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "lazy",
+        "once"
+      ],
+      "lmx": {
+        "characters": 10875,
+        "nonblank_lines": 587,
+        "utf8_bytes": 16856,
+        "sha256": "61511307937696deb6f52eb61fd60c33538d03fe5e79876bcc808f3d8382f971"
+      },
+      "lmx_entry": {
+        "characters": 999,
+        "nonblank_lines": 46,
+        "utf8_bytes": 1444,
+        "sha256": "78840afbecfc917b66aa380bc1549be3daf5773e09f7abdbbe7d40038435d169"
+      },
+      "foreign": {
+        "characters": 1309,
+        "nonblank_lines": 35,
+        "utf8_bytes": 1639,
+        "sha256": "2786f2f6567bca6a19c7ca122a506ad9499ceb42898269f3ea57123cb324f654"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/adapter_frames.lmx",
+        "LMX_Fn_Receivers/src/failures.lmx",
+        "LMX_Fn_Receivers/src/generic_functions.lmx",
+        "LMX_Fn_Receivers/src/generic_runtime.lmx",
+        "LMX_Fn_Receivers/src/generic_wrappers.lmx",
+        "LMX_Fn_Receivers/src/sequences.lmx",
+        "LMX_Fn_Receivers/src/sequences_core.lmx"
+      ],
+      "comparison_file": "library_comparisons/h07_evaluation_modes_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "H09",
+      "title": "iterateUntilStop",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "iterateUntilStop"
+      ],
+      "lmx": {
+        "characters": 2008,
+        "nonblank_lines": 160,
+        "utf8_bytes": 3438,
+        "sha256": "424350f74e2d9751b1532061614f25b6f4802d559684a60db348e3a79b2c31c8"
+      },
+      "lmx_entry": {
+        "characters": 303,
+        "nonblank_lines": 14,
+        "utf8_bytes": 481,
+        "sha256": "688476f6ec89ffc4a03367eef687c343489efe57b63551166eeaeedfb80a524a"
+      },
+      "foreign": {
+        "characters": 644,
+        "nonblank_lines": 19,
+        "utf8_bytes": 830,
+        "sha256": "f4f264c4ac7775cdba91cebec1b709a80d50183d08eee22ac76af1426d4c6907"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/coreComparisonExamples.lmx",
+        "LMX_Fn_Receivers/src/failures.lmx",
+        "LMX_Fn_Receivers/src/generic_runtime.lmx"
+      ],
+      "comparison_file": "library_comparisons/h09_iterator_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "V02",
+      "title": "between",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "between"
+      ],
+      "lmx": {
+        "characters": 185,
+        "nonblank_lines": 9,
+        "utf8_bytes": 263,
+        "sha256": "2daa978153c2f1a92ac7d632805fcc6c5e463caa595615d6a504953d330b6bb9"
+      },
+      "lmx_entry": {
+        "characters": 185,
+        "nonblank_lines": 9,
+        "utf8_bytes": 263,
+        "sha256": "2daa978153c2f1a92ac7d632805fcc6c5e463caa595615d6a504953d330b6bb9"
+      },
+      "foreign": {
+        "characters": 315,
+        "nonblank_lines": 6,
+        "utf8_bytes": 373,
+        "sha256": "1b297c95d2e35bc7d7d82a12e0f54513ffe8a22248ad398e24699c382ac9847c"
+      },
+      "source_files": [
+        "LMX_Fn_Receivers/src/coreComparisonExamples.lmx"
+      ],
+      "comparison_file": "library_comparisons/v02_character_range_comparision.md",
+      "comparison_scope": "implementation_only",
+      "contract": "Complete entry and reachable LMX definitions; complete standalone Haskell module. Shared roots overlap across rows.",
+      "imported_by_clients": false
+    },
+    {
+      "suite": "haskell",
+      "id": "R01",
+      "title": "derive / record composition",
+      "foreign_language": "Haskell",
+      "core_functions": [
+        "derive"
+      ],
+      "lmx": {
+        "characters": 71,
+        "characters_with_whitespace": 106,
+        "nonblank_lines": 6,
+        "utf8_bytes": 106,
+        "sha256": "4ed27df02fe433d37390af11adba8b6211a78882f8407bc15630ee82a3da4209"
+      },
+      "foreign": {
+        "characters": 108,
+        "characters_with_whitespace": 141,
+        "nonblank_lines": 3,
+        "utf8_bytes": 141,
+        "sha256": "a9142828db4ba7c1176bbd89fb2d177581d72f2eb4e4c361724bf4f1549efc42"
+      },
+      "comparison_file": "library_comparisons/r01_derive_comparision.md",
+      "comparison_scope": "implementation_only",
+      "imported_by_clients": false,
+      "contract": "Exact explicitly delimited comparison bodies, including the stated host representation boundary."
+    }
+  ],
+  "haskell_module": {
+    "file": "haskell/Analogies.hs",
+    "metric": {
+      "characters": 8465,
+      "characters_with_whitespace": 10521,
+      "nonblank_lines": 247,
+      "utf8_bytes": 10521,
+      "sha256": "000fefaf6e094eb4901fbad0180e53f4dfd904dca339b86670f935bbfdcb958b"
+    },
+    "scope": "whole source with assertions and shared declarations; not added to per-case totals"
+  },
+  "runtime_note": "Source and publication metrics only. LMX runtime is absent. Foreign execution receipts, where available, are stored in suite validation."
+}

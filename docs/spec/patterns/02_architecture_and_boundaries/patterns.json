@@ -55,31 +55,8 @@
           "why_en": "Logical layers versus physical tiers."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity := quantity)\n    demo:\n        return: handle(quantity := 3)\n",
-          "reuse": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity)\n    demo:\n        return: handle(3)\n"
-        }
-      },
-      "procedural_lmx": "Data:\n    return: int\n    price:\n        return: 10\n\nApplication:\n    int: quantity\n    return: int\n    total:\n        return: quantity * Data\\price()\n\nPresentation:\n    int: quantity\n    return: int\n    handle:\n        return: Application\\total(quantity := quantity)\n    demo:\n        return: handle(quantity := 3)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use positional quantity in Application.total and Presentation.handle; each DATA visibly has that sole input. All three layers and their calls remain in the full listing. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 6,
@@ -126,31 +103,8 @@
           "why_en": "The original ports-and-adapters article."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(quantity := 2; price := Adapters\\memory) + quote(quantity := 2; price := Adapters\\alternate)\n",
-          "reuse": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(2; Adapters\\memory) + quote(2; Adapters\\alternate)\n"
-        }
-      },
-      "procedural_lmx": "Adapters:\n    return: int\n    memory:\n        return: 10\n    alternate:\n        return: 12\n\nCore:\n    int: quantity\n    @: price\n    return: int\n    quote:\n        return: quantity * price()\n    demo:\n        return: quote(quantity := 2; price := Adapters\\memory) + quote(quantity := 2; price := Adapters\\alternate)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the visible Core input order quantity, price for both calls. Both distinct adapters and the two quotations remain; a helper or common quantity local is longer than this positional form. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 7,
@@ -197,37 +151,8 @@
           "why_en": "Dependency direction and use cases."
         }
       ],
-      "procedural_lmx": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
-      "variants": {
-        "LMX": {
-          "procedural": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        if: income - expense >= 30\n            return: 1\n        return: 0\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
-          "direct_expression": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income := income; expense := expense))\n    demo:\n        return: execute(income := 100; expense := 60; output := Presenter\\render)\n",
-          "reuse": "Policy:\n    int: income\n    int: expense\n    return: int\n    eligible:\n        return: income - expense >= 30\n\nPresenter:\n    int: decision\n    return: int\n    render:\n        if: decision != 0\n            return: 200\n        return: 422\n\nUseCase:\n    int: income\n    int: expense\n    @: output\n    return: int\n    execute:\n        return: output(decision := Policy\\eligible(income; expense))\n    demo:\n        return: execute(100; 60; Presenter\\render)\n"
-        }
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "direct_expression",
-          "reuse"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Use visible input order income, expense for Policy and income, expense, output for UseCase. Keep the external output(decision := ...) contract and both complete Policy/Presenter implementations. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      },
-      "reuse_review": {
-        "previous_primary": "direct_expression",
-        "previous_fairness_note": "Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism.",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "inline_current_lmx_variants": [
-        "direct_expression",
-        "reuse"
-      ]
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 8,
@@ -274,31 +199,8 @@
           "why_en": "The author’s description of infrastructure outside the domain."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(order := Order; save := Repository\\save)\n",
-          "reuse": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(Order; Repository\\save)\n"
-        }
-      },
-      "procedural_lmx": "Order:\n    int: quantity 3\n    int: price 10\n    return: int\n    total:\n        return: quantity * price\n\nRepository:\n    @: last 0\n    @: order\n    save:\n        node\\last := order\n\nApplication:\n    @: order\n    @: save\n    return: int\n    submit:\n        save(order := order)\n        return: order\\total()\n    demo:\n        return: submit(order := Order; save := Repository\\save)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the visible submit input order order, save. Keep the named order actual on the saved callback because Repository has last before order; identity and save-before-total behavior remain. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 9,
@@ -344,7 +246,9 @@
           "why_ru": "Независимое развёртывание и лёгкие транспортные границы.",
           "why_en": "Independent deployment and lightweight communication boundaries."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 10,
@@ -390,7 +294,9 @@
           "why_ru": "Производители, каналы и независимые потребители.",
           "why_en": "Producers, channels, and independent consumers."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 13,
@@ -402,133 +308,110 @@
       "scenario_en": "For one item -3, normalize its sign, double it, then add 1.",
       "expected_ru": "7; промежуточные значения 3 и 6.",
       "expected_en": "7; intermediate values are 3 and 6.",
-      "lmx_notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
-      "lmx_notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery.",
-      "comparison_ru": "Все три клиента импортируют готовый Pipe, сохраняя определения нормализации, удвоения, смещения и их порядок. LMX показывает этот порядок слева направо в выражении; Java и Go передают тот же список callable. Соседнее сравнение отдельно учитывает явный цикл реализации во всех трёх языках; небольшой клиент не объявляется полной реализацией конвейера.",
-      "comparison_en": "All three clients import a ready Pipe while retaining normalization, doubling, offset, and their order. LMX writes that order left to right; Java and Go pass the same callable list. The companion separately counts the explicit implementation loop in all three languages; client size is not presented as the full pipeline implementation.",
-      "limits_ru": "Один int-поток в одном последовательном контексте; выбранный вход не переполняется. Стадии имеют один int-вход, int-результат и не объявляют recoverable failures. Очереди, backpressure и планировщик не включены. Тело Pipe не входит в клиентский размер, но полностью показано и измерено отдельно для всех трёх языков.",
-      "limits_en": "One int flow in one sequential context; the fixture does not overflow. Stages have one int input and result and declare no recoverable failures. Queues, backpressure, and scheduling are excluded. Pipe implementation is excluded from client size but shown and measured separately for every language.",
+      "lmx_notes_ru": "Прямой core receiver pipe создаёт обычный callable; дополнительного PipeLibrary/import нет. Каждый этап вызывается один раз.",
+      "lmx_notes_en": "The direct core receiver pipe constructs an ordinary callable. There is no PipeLibrary/import; each stage runs once.",
+      "comparison_ru": "LMX использует обобщённую композицию ядра, Java — настоящий andThen, Go — обычные вызовы. Сравнение093 не является зависимостью иностранных клиентов.",
+      "comparison_en": "LMX uses its direct generic core composition, Java its real andThen method, and Go ordinary calls. Implementation093 is a separate implementation comparison, not a dependency of the foreign usage examples.",
+      "limits_ru": "Сохраняется последовательный сценарий -3→3→6→7. Асинхронный stream/backpressure не подразумеваются: они рассматриваются в Message-примерах. Обобщённая композиция093 допускает разные промежуточные типы.",
+      "limits_en": "The fixture is the same sequential -3→3→6→7 transformation. No asynchronous stream scheduling or backpressure is implied; those belong to the Message examples. The generic composition in093 also permits different intermediate types.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(-3)\n",
-          "notes_ru": "Вызов Filters\\demo(). PipeLibrary — прикладной модуль с полной реализацией в соседнем сравнении; это не новый builtin. import делает доступным pipe. Унаследованы готовые PASS_ARGS_AS_IS=0 и PRIORITY=sys\\priority(\"+\") из sys\\OPERANDS_TEMPLATE; copy не переобъявляет эти const-поля. В value pipe normalize double offset один левый int и три правые ссылки на методы int→int. Подготовка ссылок не вызывает методы. Библиотека явно обходит right по порядку и вызывает каждую стадию один раз. Пустой правый список означает тождественное преобразование; автоматического fold нет. Всё выполняется в одном Message; параллельные стадии требуют отдельных Message и доставки.",
-          "notes_en": "Call Filters\\demo(). PipeLibrary is an application module fully implemented in the companion comparison, not a new builtin. import exposes pipe. copy inherits ready PASS_ARGS_AS_IS=0 and PRIORITY=sys\\priority(\"+\") from sys\\OPERANDS_TEMPLATE without redeclaring the const fields. The expression has one left int and three right int→int method references; preparing those references does not invoke them. The library explicitly visits right in order and calls each stage once. An empty right list returns the input; no automatic fold is assumed. Execution stays in one Message; parallel stages need separate Messages and delivery."
+          "code": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        throws: copy(FxThrows\\adapter)\n        @: stages pipe(pipe(normalize; double); offset)\n        return: stages(value)\n    demo:\n        throws: copy(FxThrows\\adapter)\n        return: pipeline(-3)\n",
+          "notes_ru": "Прямой core receiver pipe создаёт обычный callable; дополнительного PipeLibrary/import нет. Каждый этап вызывается один раз.",
+          "notes_en": "The direct core receiver pipe constructs an ordinary callable. There is no PipeLibrary/import; each stage runs once."
         },
         {
           "language": "Java",
-          "code": "import examplelib.Pipe;\nclass Example {\n    static int normalize(int value) { return Math.abs(value); }\n    static int twice(int value) { return value * 2; }\n    static int offset(int value) { return value + 1; }\n    static int pipeline(int value) {\n        return Pipe.apply(value, Example::normalize, Example::twice, Example::offset);\n    }\n    static int demo() { return pipeline(-3); }\n}\n",
-          "notes_ru": "Импорт examplelib.Pipe соответствует показанному companion. При сборке его public class находится в examplelib/Pipe.java; внешний вызов Example.demo().",
-          "notes_en": "The examplelib.Pipe import refers to the shown companion; place its public class in examplelib/Pipe.java. Call Example.demo()."
+          "code": "import java.util.function.IntUnaryOperator;\nclass Example {\n    static int normalize(int value) { return Math.abs(value); }\n    static int twice(int value) { return value * 2; }\n    static int offset(int value) { return value + 1; }\n    static int pipeline(int value) {\n        IntUnaryOperator first = Example::normalize;\n        return first.andThen(Example::twice).andThen(Example::offset).applyAsInt(value);\n    }\n    static int demo() { return pipeline(-3); }\n}\n",
+          "notes_ru": "Используется настоящий java.util.function.IntUnaryOperator.andThen. Реализация из093 здесь не подключается.",
+          "notes_en": "Uses the real java.util.function.IntUnaryOperator.andThen. The implementation in093 is not imported here."
         },
         {
           "language": "Go",
-          "code": "package main\nimport \"example/pipe\"\nfunc normalize(value int) int { if value < 0 { return -value }; return value }\nfunc twice(value int) int { return value * 2 }\nfunc offset(value int) int { return value + 1 }\nfunc pipeline(value int) int { return pipe.Apply(value, normalize, twice, offset) }\nfunc demo() int { return pipeline(-3) }\n",
-          "notes_ru": "Импорт example/pipe — локальный модуль example с показанным companion в pipe/pipe.go. Это не внешний пакет, который предлагается скачать. Внешний вызов demo().",
-          "notes_en": "example/pipe is the local example module with the shown companion in pipe/pipe.go, not an external download. Call demo()."
+          "code": "package main\nfunc normalize(value int) int { if value < 0 { return -value }; return value }\nfunc twice(value int) int { return value * 2 }\nfunc offset(value int) int { return value + 1 }\nfunc pipeline(value int) int { return offset(twice(normalize(value))) }\nfunc demo() int { return pipeline(-3) }\n",
+          "notes_ru": "Для фиксированного конвейера достаточно обычных вложенных вызовов; самописный package pipe не подключается.",
+          "notes_en": "Ordinary nested calls express this fixed pipeline; no custom pipe package is imported."
         }
       ],
       "sources": [
         {
-          "title": "Gregor Hohpe and Bobby Woolf — Pipes and Filters",
-          "url": "https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html",
-          "why_ru": "Независимые стадии и соединяющие каналы.",
-          "why_en": "Independent stages and connecting channels."
+          "title": "Java IntUnaryOperator",
+          "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/function/IntUnaryOperator.html",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
         }
       ],
       "kind": "pattern",
       "implementation_ids": [
         93
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
-          "reuse": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(-3)\n"
-        }
-      },
-      "procedural_lmx": "Filters:\n    int: value\n    return: int\n    normalize:\n        if: value < 0\n            return: -value\n        return: value\n    double:\n        return: value * 2\n    offset:\n        return: value + 1\n    pipeline:\n        import: PipeLibrary\n        return: value pipe normalize double offset\n    demo:\n        return: pipeline(value := -3)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the sole visible value position for pipeline(-3). The normalize/double/offset stages and measured PipeLibrary usage remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "revision_date": "2026-11-23",
+      "library_revision": {
+        "foreign_usage_imports_own_implementation": false,
+        "implementation_pair_retained": true,
+        "runtime_lmx": "NOT_RUN"
       }
     },
     {
       "id": 93,
-      "name": "Pipe — implementation",
+      "name": "Pipe — generic implementation",
       "slug": "pipe_implementation",
       "kind": "implementation",
       "paired_with": 13,
       "usage_ids": [
         13
       ],
-      "summary_ru": "Реализовать импортируемую последовательную передачу значения по списку стадий.",
-      "summary_en": "Implement the imported sequential handoff through a stage list.",
-      "scenario_ru": "Получить начальный int и упорядоченный список callable int→int. Применить каждый один раз; при пустом списке вернуть исходное значение.",
-      "scenario_en": "Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.",
-      "expected_ru": "Для -3 и стадий normalize,double,offset результаты 3,6,7; пустой список сохраняет -3.",
-      "expected_en": "For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.",
-      "lmx_notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
-      "lmx_notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes.",
-      "comparison_ru": "В LMX общий исполнитель формирует right, а библиотека явно выполняет обход. Java использует int-specialized functional interface, Go — обычные функции и variadic slice. Ни один вариант не импортирует готовый Pipe или готовый pipeline/fold для реализации самого Pipe.",
-      "comparison_en": "The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe.",
-      "limits_ru": "Показана прикладная библиотека для int, а не асинхронный stream framework. Политика ошибок, отмена и многопоточность не добавлены. Все три реализации используют только базовые вызовы и циклы; native/LMX исполнение здесь не заявлено.",
-      "limits_en": "This is an int application library, not an asynchronous stream framework. Error policy, cancellation, and concurrency are not added. All implementations use basic calls and loops; no native or LMX execution is claimed.",
+      "summary_ru": "Реализовать обобщённую последовательную композицию без привязки к int.",
+      "summary_en": "Implement generic ordered function composition without an int-only adapter.",
+      "scenario_ru": "Скомпоновать A→B и B→C в A→C; вызвать этапы по одному разу и не выполнять второй при отказе первого.",
+      "scenario_en": "Compose A→B and B→C to A→C, evaluate first then second exactly once, and relay failures without executing the second stage after first-stage failure.",
+      "expected_ru": "Пример с int возвращает7; string→length→Boolean тоже допустим; отказ первого этапа пропускает второй.",
+      "expected_en": "The int fixture returns7; a heterogeneous string→length→Boolean fixture also works; a failure in the first stage skips the second.",
+      "lmx_notes_ru": "Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.",
+      "lmx_notes_en": "Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete.",
+      "comparison_ru": "Все три реализации хранят callable и явно компонуют обычные вызовы. LMX сохраняет исходные inputs и declared failures через общий адаптер; Java/Go используют generic-типы.",
+      "comparison_en": "All three implementations retain callable references and explicitly compose ordinary calls. LMX preserves its exact source input policy and declared failure set through the shared adapter mechanism. Java and Go use static generic parameters.",
+      "limits_ru": "Это последовательная композиция, не stream scheduler. Асинхронные адресованные вызовы уже обеспечивает post; потоки внутри pipe изменили бы его договор. Общие adapter bridges учитываются как зависимости.",
+      "limits_en": "This is sequential composition, not a stream scheduler. Existing post already provides asynchronous addressed calls; adding threads inside pipe would change its ordered value contract. Core adapter bridges are shared dependencies, not omitted pipe algorithms.",
       "scope": "core",
       "listings": [
         {
           "language": "LMX",
-          "code": "PipeLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    pipe:\n        int: value \\left\n        int: i 0\n        while: i < length(right)\n            @: stage \\right[i]\n            value := stage(value)\n            i += 1\n        return: value\n",
-          "notes_ru": "copy: sys\\OPERANDS_TEMPLATE явно предоставляет left, right и готовые свойства режима 0 / приоритета +. pipe — намеренно вариадический операнд: один левый int, ноль или больше правых callable int→int. int: value \\left получает подготовленное значение; \\right[i] получает сохранённую ссылку на стадию, а stage(value) уже вызывает её. Цикл, порядок, промежуточное значение и поведение пустого списка показаны полностью. Метод не сохраняет указатели на временные операндные ячейки.",
-          "notes_en": "copy: sys\\OPERANDS_TEMPLATE provides left/right and ready mode 0 / additive priority. pipe is deliberately variadic: one left int and zero or more right int→int callables. int: value \\left reads the prepared value; \\right[i] yields the stored stage reference, and stage(value) invokes it. The loop, order, intermediate value, and empty-list behavior are explicit. No temporary operand-cell pointer escapes."
+          "code": "FxCompositionState:\n    @: outer 0\n    @: inner 0\n\nFxCompositionEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: copy(FxThrows\\call)\n        private: @: middle FxFrameApply\\apply(frame)\n        return: FxApply\\apply(state\\outer; FxOne\\make(middle))\n\nFxCompose:\n    private:\n        @: outer\n        @: inner\n    return: @\n    compose:\n        throws: copy(FxThrows\\adapter)\n        private: @: a FxKernel\\signature(subject := outer)\n        private: @: b FxKernel\\signature(subject := inner)\n        if: length(a\\inputTypes) != 1 || b\\hasResult = 0\n            throw: FxArity()\n        private: @: contract FxSignatures\\make(b\\inputTypes; a\\resultType)\n        private: @: state (copy(FxCompositionState))\n        state\\outer := outer\n        state\\inner := inner\n        private: @: failures FxFailures\\union(a\\throws; b\\throws)\n        return: FxWrap\\make(contract; FxCompositionEngine\\run; state; failures; FxFullPolicy\\make(inner))\n\nFxPipe:\n    private:\n        @: first\n        @: second\n    return: @\n    pipe:\n        throws: copy(FxThrows\\adapter)\n        return: FxCompose\\compose(outer := second; inner := first)\n",
+          "notes_ru": "Точные тела FxCompose/FxPipe из исходников ядра. Общий typed-call/admission bridge указан в каталоге зависимостей; алгоритм композиции показан полностью.",
+          "notes_en": "Exact FxCompose/FxPipe core bodies. Common typed-call/admission bridges are identified separately; the composition algorithm is complete."
         },
         {
           "language": "Java",
-          "code": "package examplelib;\nimport java.util.function.IntUnaryOperator;\npublic final class Pipe {\n    public static int apply(int value, IntUnaryOperator... stages) {\n        for (IntUnaryOperator stage : stages) value = stage.applyAsInt(value);\n        return value;\n    }\n}\n",
-          "notes_ru": "Полный examplelib/Pipe.java. IntUnaryOperator задаёт только контракт вызова; обход реализован здесь.",
-          "notes_en": "Complete examplelib/Pipe.java. IntUnaryOperator supplies the call contract only; iteration is implemented here."
+          "code": "import java.util.Objects;\nimport java.util.function.Function;\npublic final class Pipe {\n    private Pipe() {}\n    public static <A,B,C> Function<A,C> pipe(\n        Function<? super A,? extends B> first,\n        Function<? super B,? extends C> second) {\n        Objects.requireNonNull(first); Objects.requireNonNull(second);\n        return value -> second.apply(first.apply(value));\n    }\n}\n",
+          "notes_ru": "Самостоятельная реализация generic композиции; не вызывает andThen и не импортируется клиентом013. Исключения передаются вызывающему.",
+          "notes_en": "Standalone generic composition; it neither calls andThen nor is imported by013. Exceptions propagate to the caller."
         },
         {
           "language": "Go",
-          "code": "package pipe\nfunc Apply(value int, stages ...func(int) int) int {\n    for _, stage := range stages { value = stage(value) }\n    return value\n}\n",
-          "notes_ru": "Полный pipe/pipe.go в модуле example; Apply не использует готовую функцию конвейера.",
-          "notes_en": "Complete pipe/pipe.go in module example; Apply uses no ready pipeline function."
+          "code": "package pipecomparison\nfunc Pipe[A,B,C any](first func(A) B, second func(B) C) func(A) C {\n    if first == nil || second == nil { panic(\"nil pipeline stage\") }\n    return func(value A) C { return second(first(value)) }\n}\n",
+          "notes_ru": "Самостоятельная generic композиция двух стадий; любое конечное число строится повторной композицией. panic стадии не скрывается.",
+          "notes_en": "Standalone generic two-stage composition; repeated composition handles any finite chain. Stage panics are not hidden."
         }
       ],
       "sources": [
         {
-          "title": "Gregor Hohpe and Bobby Woolf — Pipes and Filters",
-          "url": "https://www.enterpriseintegrationpatterns.com/patterns/messaging/PipesAndFilters.html",
-          "why_ru": "Независимые стадии и соединяющие каналы.",
-          "why_en": "Independent stages and connecting channels."
-        },
-        {
-          "title": "Oracle — IntUnaryOperator",
-          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/IntUnaryOperator.html",
-          "why_ru": "Контракт int→int и прямой applyAsInt.",
-          "why_en": "The int→int contract and direct applyAsInt call."
-        },
-        {
-          "title": "Go specification — variadic parameters",
-          "url": "https://go.dev/ref/spec#Passing_arguments_to_..._parameters",
-          "why_ru": "Передача вариадического списка как slice и его порядок.",
-          "why_en": "Variadic arguments form an ordered slice."
+          "title": "Java Function composition",
+          "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/function/Function.html",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
         }
-      ]
+      ],
+      "revision_date": "2026-11-23",
+      "library_revision": {
+        "foreign_usage_imports_own_implementation": false,
+        "implementation_pair_retained": true,
+        "runtime_lmx": "NOT_RUN"
+      }
     },
     {
       "id": 14,
@@ -621,31 +504,8 @@
           "why_en": "A concrete kernel and extension-point design."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "reuse_existing_definition_or_place",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        install(implementation := Plugins\\twice)\n        int: first execute(value := 5)\n        install(implementation := Plugins\\thrice)\n        return: first + execute(value := 5)\n",
-          "reuse": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        int: value 5\n        install(implementation := Plugins\\twice)\n        int: first execute()\n        install(implementation := Plugins\\thrice)\n        return: first + execute()\n"
-        }
-      },
-      "procedural_lmx": "Plugins:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    thrice:\n        return: value * 3\n\nKernel:\n    @: extension Plugins\\twice\n    @: implementation\n    int: value\n    return: int\n    install:\n        node\\extension := implementation\n        return: 1\n    execute:\n        return: node\\extension(value := value)\n    demo:\n        install(implementation := Plugins\\twice)\n        int: first execute(value := 5)\n        install(implementation := Plugins\\thrice)\n        return: first + execute(value := 5)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Set the demo-local value to 5 once and reuse ordinary autofill for both execute() calls. Kernel.value has no default, Plugins receive the same explicit value, and both install operations and plugin bodies remain. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 46,
@@ -692,31 +552,8 @@
           "why_en": "Isolation of different semantic models."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(quantity := 2)\n",
-          "reuse": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(2)\n"
-        }
-      },
-      "procedural_lmx": "Legacy:\n    return: int\n    dollars:\n        return: 12\n\nACL:\n    return: int\n    cents:\n        return: Legacy\\dollars() * 100\n\nCheckout:\n    int: quantity\n    return: int\n    total:\n        return: quantity * ACL\\cents()\n    demo:\n        return: total(quantity := 2)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the sole visible quantity input for Checkout.total in demo. Legacy, conversion adapter and checkout remain separate and complete. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 47,
@@ -763,31 +600,8 @@
           "why_en": "Incremental replacement of a running system."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "reuse_and_positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route := route)\n        return: Backends\\legacy(route := route)\n    demo:\n        node\\migrated := 0\n        int: before handle(route := 1)\n        node\\migrated := 1\n        return: before + handle(route := 1) + handle(route := 2)\n",
-          "reuse": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route)\n        return: Backends\\legacy(route)\n    demo:\n        int: route 1\n        node\\migrated := 0\n        int: before handle()\n        node\\migrated := 1\n        return: before + handle() + handle(route := 2)\n"
-        }
-      },
-      "procedural_lmx": "Backends:\n    int: route\n    return: int\n    legacy:\n        return: 100 + route\n    modern:\n        return: 200 + route\n\nRouter:\n    int: migrated 0\n    int: route\n    return: int\n    handle:\n        if: route = 1 && node\\migrated != 0\n            return: Backends\\modern(route := route)\n        return: Backends\\legacy(route := route)\n    demo:\n        node\\migrated := 0\n        int: before handle(route := 1)\n        node\\migrated := 1\n        return: before + handle(route := 1) + handle(route := 2)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the visible Backends.route position, and set demo-local route to 1 once for two handle() calls via autofill. The final route 2 remains explicitly named; migrated state writes and response order remain 101,201,102. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     }
   ]
 }

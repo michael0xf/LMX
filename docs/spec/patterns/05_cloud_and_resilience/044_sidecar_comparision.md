@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Развёртывание и IPC-кодек заданы контрактом профиля и не реализованы листингом. Без отдельного процесса этот листинг описывает вспомогательный actor, а не полный Sidecar.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -69,6 +67,10 @@ LMX: структура с суффиксом Message — шаблон отде�
 
 Основной код мал во всех языках; определяющая часть Sidecar — deployment: два процесса/контейнера, общий lifecycle и endpoint. Локальный дочерний Message в одном процессе имеет более слабую изоляцию.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -77,7 +79,7 @@ LMX: структура с суффиксом Message — шаблон отде�
 | Go | 130 | 4 |
 | C# | 204 | 5 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -93,6 +95,8 @@ Auxiliary processing runs beside the application in a separate process with a sh
 
 **Scope and limitations.** Deployment and the IPC codec are specified by the profile contract and are not implemented by the listing. Without a separate process the listing describes an auxiliary actor, not a full Sidecar.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. sink.write(int): void is a supplied append-only sink. sendLocal/post creates a letter decoded by the sidecar. In LMX the sidecar is a Message in a separate process reached through a local HTTP endpoint. Go channel and C# enumerable represent decoded IPC input, not proof of process isolation.
@@ -105,8 +109,6 @@ Auxiliary processing runs beside the application in a separate process with a sh
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

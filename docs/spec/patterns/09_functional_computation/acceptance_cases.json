@@ -1,0 +1,237 @@
+{
+  "date": "2026-11-23",
+  "scope": "prepared semantic observations for the implementations; runtime not available",
+  "cases": [
+    {
+      "id": "M01",
+      "component": "some/none/bind",
+      "input": "none; callback that fails if called",
+      "expected": "same absence, callback not called",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "M02",
+      "component": "some/none/bind",
+      "input": "some(0)",
+      "expected": "present zero; not absence",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "M03",
+      "component": "some/none/bind",
+      "input": "some(empty text)",
+      "expected": "present empty text",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "M04",
+      "component": "some/none/bind",
+      "input": "some(reference); bind identity callback",
+      "expected": "reference target identity retained",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "M05",
+      "component": "some/none/bind",
+      "input": "some(value); bind throwing callback",
+      "expected": "failure propagates with original payload",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "B01",
+      "component": "done/more/trampoline",
+      "input": "done(callable value)",
+      "expected": "same final callable, no invocation",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "B02",
+      "component": "done/more/trampoline",
+      "input": "more(nullary returning done(7))",
+      "expected": "7; thunk called once",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "B03",
+      "component": "done/more/trampoline",
+      "input": "100001 mutually recursive steps",
+      "expected": "false/0 without recursive driver stack growth",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "B04",
+      "component": "done/more/trampoline",
+      "input": "more step throws",
+      "expected": "failure propagates; no invented done value",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "B05",
+      "component": "done/more/trampoline",
+      "input": "done(void record)",
+      "expected": "void outcome retained",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R01",
+      "component": "bracket",
+      "input": "acquire succeeds, action returns, release succeeds",
+      "expected": "acquire/action/release each once; result retained",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R02",
+      "component": "bracket",
+      "input": "acquire throws",
+      "expected": "action and release not called",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R03",
+      "component": "bracket",
+      "input": "action throws; release succeeds",
+      "expected": "release once; action failure propagated",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R04",
+      "component": "bracket",
+      "input": "action succeeds; release throws",
+      "expected": "release once; cleanup failure propagated",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R05",
+      "component": "bracket",
+      "input": "action and release throw",
+      "expected": "LMX ordinary finally; Haskell release failure; Scala severity + suppression",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R06",
+      "component": "bracket",
+      "input": "nested bracket; inner action throws",
+      "expected": "inner then outer release; original applicable failure policy",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R07",
+      "component": "bracket",
+      "input": "arbitrary record/reference result or void",
+      "expected": "original result contract and identity",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R08",
+      "component": "bracket",
+      "input": "Haskell asynchronous exception during action",
+      "expected": "masked setup; action restored; cleanup attempted once",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R09",
+      "component": "bracket",
+      "input": "Scala interruption thrown during action",
+      "expected": "cleanup runs; interruption retained per severity",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R10",
+      "component": "bracket",
+      "input": "LMX ordinary stop after a successful acquisition outcome is transferred",
+      "expected": "already registered guard observes ok1; release runs; outer obligations retained",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R11",
+      "component": "bracket",
+      "input": "LMX action-argument construction failure",
+      "expected": "preallocated resourceArgs used by cleanup",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R12",
+      "component": "bracket",
+      "input": "LMX post whole owner invocation",
+      "expected": "resource lifetime stays owner-local; reply after operation",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "R13",
+      "component": "bracket",
+      "input": "LMX timeout before owner finishes",
+      "expected": "timeout alone does not cancel or release",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P01",
+      "component": "partial/curry",
+      "input": "N=0,k=0",
+      "expected": "nullary callable; no early execution",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P02",
+      "component": "partial/curry",
+      "input": "N=3,k=0",
+      "expected": "same input order through new callable",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P03",
+      "component": "partial/curry",
+      "input": "N=3,k=3",
+      "expected": "nullary callable, target delayed until invocation",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P04",
+      "component": "partial/curry",
+      "input": "mixed prefix [int,text,reference]",
+      "expected": "types/order retained; no int-only coercion",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P05",
+      "component": "partial/curry",
+      "input": "two independent prefixes",
+      "expected": "later construction does not overwrite earlier capture",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P06",
+      "component": "partial/curry",
+      "input": "reference captured then referenced object changes",
+      "expected": "reference identity retained",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P07",
+      "component": "partial/curry",
+      "input": "target returns void/Unit",
+      "expected": "void result supported",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P08",
+      "component": "partial/curry",
+      "input": "prefix longer than N or wrong type",
+      "expected": "LMX rejection; Haskell/Scala type-check rejection",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P09",
+      "component": "partial/curry",
+      "input": "target throws",
+      "expected": "same applicable failure propagated",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "P10",
+      "component": "partial/curry",
+      "input": "LMX omitted default/private input",
+      "expected": "ordinary adapter acceptance; no eager initializer read",
+      "status": "NOT_RUN"
+    }
+  ]
+}

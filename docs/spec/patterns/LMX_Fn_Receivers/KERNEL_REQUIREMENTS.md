@@ -16,11 +16,96 @@ P0 retains every written group. The common operand handler opens one outer RHS g
 
 All public receivers are part of the one current kernel namespace. `fun\const` is a physical source export group, not an optional package version or second registry. Service inputs remain private; source user inputs retain their individual policy.
 
-The current package has **17 integration bridges**: the eight interfaces in §2, five ordinary call-phase hooks in §3, and four common Array boundaries in §6. These are internal boundaries, separate from the **115 public callable/operand names** and **24 other exported symbols** listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json).
+The current package has **19 integration bridges**: the eight original interfaces in §2 plus the read-only compatibility observation AR01, five ordinary call-phase hooks in §3, four common Array boundaries in §6, and the accepted-form gate AE01 below. These are internal boundaries, separate from the **123 public callable/operand names** and **24 other exported symbols** listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json).
+
+The bridge profile uses empty payload `()` for service exits `FxKernelFailure`
+and `FxTypeToken`. This defines the adapter service outcomes only. User-declared
+failures keep their original canonical name and arbitrary typed payload in
+`FxOutcome`/`FxCallFailure`. Implicit diagnostics and system exits are not converted
+into these service failures. Message reply handlers must cover the worker's
+declared exits instead of silently treating a failure as a missing reply.
+
+### Added gate AE01: accepted declaration/body execution
+
+`FxKernel\attemptAccepted(form)` executes an already accepted declaration or its
+associated body in the immediate receiving activation and returns the existing
+`FxOutcome`. Its exact source-occurrence, live-place and finite-failure contract
+is [specified here](CORE_EXAMPLE_HELPERS.md#required-integration-gate-ae01-fxkernelattemptacceptedform).
+The declaration is in [coreComparisonExamples.lmx](src/coreComparisonExamples.lmx).
+This is an explicit integration requirement, **not an implemented kernel body**.
+The LMX `iterateUntilStop` loop itself is complete and uses this one boundary.
+
+Reuse the kernel's existing accepted-form consumption and finite effect model.
+Do not infer the receiving context from pointer equality, the declaration's
+internal name or a saved factory scope. The same graph can be accepted at two
+different actual positions; the selected occurrence must remain distinguishable.
+The provider accepts no arbitrary frame handle and introduces no closure object,
+second executor, graph copy or caller-local publication. It runs neither form
+during inspection or transmission. A normal callable `attempt` cannot substitute
+for this gate unless it proves the same receiving-place behavior.
+
+AE01 must demonstrate the complete numbers/cycles observation, empty iteration,
+heterogeneous payloads, live `item`/`total`, step failure and body `Stop`, all four
+interpreter/native combinations, and failure before an initializer is run for an
+unaccepted or ambiguous form. Prepared observations remain **NOT_RUN**.
 
 ## 2. Existing narrow bridges
 
 Declarations are in [kernel_contracts.lmx](src/kernel_contracts.lmx). `FxKernel` is an internal integration name, not a new family of user pseudopackages.
+
+<a id="interface-probe-ar01"></a>
+### acceptsRequirement(candidate; requirement; consumer=0) — gate AR01
+
+**Required provider work; no native implementation or execution is supplied by
+this archive.** Expose a read-only observation of the existing directed
+`satisfies` interface check. This is an internal bridge, not a new public
+receiver, a Boolean return added to `satisfies`, or a second validator.
+
+`candidate` is an already available ordinary value/description. `requirement`
+is an existing primitive/Array type description, structural requirement or
+resolved positional signature, interpreted by that same checking mechanism.
+An explicitly supplied `consumer` selects its established used-interface rule;
+the default `0` means no explicit Consumer and therefore the full stated
+requirement. Transport and lifetime follow the ordinary current-Message rules.
+
+| Outcome | Required behavior |
+| --- | --- |
+| Compatibility is established by the common checker | Return `int` 1. |
+| Incompatibility is established by the common checker | Return `int` 0. |
+| The requirement is malformed or its type token is invalid | Raise service `FxTypeToken()`. |
+| The checker cannot complete the observation, including an unresolved required path | Raise service `FxKernelFailure()`; never substitute 0 or choose an alternate branch as if incompatibility were proved. |
+
+Unknown is not evidence of incompatibility. The last row reports an unavailable
+observation; it is not a type-refusal judgment. The provider must preserve any
+additional ordinary implicit/system diagnostic instead of catching it and
+returning 0. Service payloads use this document's empty `()` profile.
+
+Reuse the actual current type/conversion context, directional structural
+correspondence and positional-signature comparison. Different physical field
+positions, compatible full requirements, admitted type relations and extra
+candidate fields retain their normal meaning. Comparing raw physical tags or
+requiring exact type-code equality is not an implementation of this bridge.
+Signature parameter names do not become compatibility keys. An ordinary copy
+of an admissible configuration remains admissible according to its requirement;
+object identity is not an invented substitute for role checking.
+
+The observation executes **no candidate body, computed initializer, default,
+analytical test or converter**. It does not prepare or enter a trial call, copy
+a graph, manufacture a public object, publish a frame or create another
+persistent cache. Existing common TYPE-pair cache rules may be reused. A 1
+describes interface compatibility only: real reception still performs its
+ordinary value-dependent checks/conversion and can fail. It does not authorize
+unchecked calls or replace subsequent admission by a Boolean token.
+
+The first users are Pattern dispatch/normalization, the repetition
+configuration requirement and replacement text/callable discrimination. These
+algorithms remain LMX code. The provider contains no regex matching, alternative
+selection, callback execution or special Pattern type tags.
+
+The prepared [AR01 acceptance matrix](tests/regex/ADMISSION_PROBE_ACCEPTANCE.json)
+covers positive/negative/unknown observations, compatible nonidentical
+requirements, copied configuration, zero user effects, preserved numeric `|`
+fallback and interpreter/native paths. Every execution case is **NOT_RUN**.
 
 ### signature(subject)
 

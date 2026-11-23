@@ -2,7 +2,7 @@
 
 Две операции bind над обобщённым Maybe; прикладной half по-прежнему проверяет чётность целого числа.
 
-**Соседнее сравнение реализации:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
+**Сравнения реализаций:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Это ссылки для чтения, не импорты самописных модулей в контрольные usage-клиенты.
 
 ## Общий сценарий
 
@@ -10,11 +10,14 @@
 
 **Ожидаемое наблюдение:** 8 → присутствующее 2; 6 → отсутствие после второго half; 3 → отсутствие после первого half, второй half не вызывается. Готовая ссылка на half сама по себе вызовом не является.
 
-Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
+**Граница сравнения.** LMX вызывает непосредственные операции текущего ядра; контрольные языки используют настоящую библиотеку или собственные средства языка. Самописные аналоги из соседних сравнений сюда не импортируются.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
+| Язык | Используемое средство |
+| --- | --- |
+| Haskell | `base: Maybe, Just, Nothing, (>>=)` |
+| Scala | `scala-library: Option, Some, None, flatMap` |
 
-## LMX — основной: текущее ядро
+## LMX — прямой API ядра
 
 ```lmx
 Example:
@@ -38,152 +41,77 @@ Example:
 
 Операции являются частью текущего ядра и доступны напрямую. Библиотеку другой редакции загружать не нужно; общий код реализации показан в соседних сравннениях и реестре зависимостей.
 
-Тела используемых компонентов показаны рядом: [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+[Исходник](examples/lmx/082_monad.lm3)
 
-[Основной листинг](examples/lmx/082_monad.lm3)
-
-## Haskell — основной: обобщённая реализация
+## Haskell — готовое средство языка/библиотеки
 
 ```haskell
 module MonadExample where
-import MaybeValue (MaybeValue, some, none, bind)
 
-half :: Int -> MaybeValue Int
-half x = if even x then some (x `div` 2) else none
+half :: Int -> Maybe Int
+half x = if even x then Just (x `div` 2) else Nothing
 
-run :: Int -> MaybeValue Int
-run x = (some x `bind` half) `bind` half
+run :: Int -> Maybe Int
+run x = Just x >>= half >>= half
 ```
 
-Haskell2010; клиент компилируется вместе с соседним авторским модулем реализации. Прежний вариант также сохранён ниже; его размер не суммируется с новым.
+Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.
 
-Тела используемых компонентов показаны рядом: [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+[Исходник](examples/haskell/082_monad.hs)
 
-[Основной листинг](examples/haskell/082_monad.hs)
-
-## Scala — основной: обобщённая реализация
+## Scala — готовое средство языка/библиотеки
 
 ```scala
-import MaybeValue.*
-
 object MonadExample {
-  def half(x: Int): Value[Int] =
-    if (x % 2 == 0) some(x / 2) else none()
-  def run(x: Int): Value[Int] = some(x).bind(half).bind(half)
+  def half(x: Int): Option[Int] =
+    if (x % 2 == 0) Some(x / 2) else None
+  def run(x: Int): Option[Int] = Some(x).flatMap(half).flatMap(half)
 }
 ```
 
-Scala 3; клиент использует соседний авторский generic-компонент. Прежний вариант сохранён ниже и исключён из нового подсчёта.
+Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.
 
-Тела используемых компонентов показаны рядом: [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md). Это описание текущего компонента, а не выбор версии библиотеки. Общая инфраструктура ядра раскрыта в реестре зависимостей.
+[Исходник](examples/scala/082_monad.scala)
 
-[Основной листинг](examples/scala/082_monad.scala)
-
-## Выбор основного кода и подсчёт
+## Подсчёт
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX | 226 | 17 |
-| Haskell | 183 | 6 |
-| Scala | 147 | 6 |
+| Haskell | 125 | 5 |
+| Scala | 135 | 5 |
 
-Первичная таблица считает ровно `listings[].code`. Вторые варианты ниже не прибавляются к основным. [Допустимость и выбор алгоритма](variant_selection.json) воспроизводится скриптом. [Реестр зависимостей](IMPLEMENTATION_DEPENDENCIES.md) отдельно показывает, какие компоненты текущего ядра использует клиент и сколько стоит общее ядро новых ресиверов.
+Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
 
-## LMX — исторический процедурный пример; вне текущего подсчёта
+## Удалённые малозначимые повторы
 
-```lmx
-Example:
-    int: x
-    return: @
-    half:
-        import: Maybe
-        if: x % 2 = 0
-            return: unit(x / 2)
-        return: none()
-    run:
-        import: Maybe MaybeOps
-        return: (unit(x) bind half) bind half
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
-
-Историческая форма сохранена как объяснение исходного алгоритма. Она не объявляется действующей самостоятельной библиотекой или равной по общности заменой текущего ядра.
-
-Новые реализации доступны также в [LMX_Fn_Receivers](../LMX_Fn_Receivers/README.md). Исторический специализированный пример не ограничивает текущий общий API ядра.
-
-## Haskell — исторический специализированный пример; вне текущего подсчёта
-
-```haskell
-module MonadExample where
-import MaybeInt (MaybeInt, unit, none, bind)
-
-half :: Int -> MaybeInt
-half x = if even x then unit (x `div` 2) else none
-
-run :: Int -> MaybeInt
-run x = (unit x `bind` half) `bind` half
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
-
-## Scala — исторический специализированный пример; вне текущего подсчёта
-
-```scala
-import MaybeInt.*
-
-object MonadExample {
-  def half(x: Int): Value =
-    if (x % 2 == 0) unit(x / 2) else none()
-  def run(x: Int): Value = unit(x).bind(half).bind(half)
-}
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
+Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
 
 ## Семантические границы
 
-**Честная граница сравнения.** Сравнивается клиент одного готового Maybe-компонента: во всех трёх языках показаны две последовательные bind и short-circuit при отсутствии. Тело some/none/bind находится в соседнем сравнении 091; прямые операции LMX входят в ядро, их реализации и общие зависимости учтены отдельно.
+Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.
 
-**Основной LMX.** Все указанные операции доступны прямо из текущего ядра. `(x record)` сохраняет типизированную запись примитивного x, не превращая его в IntBox. Внешний @ у Maybe — служебная ссылка на запись; bind читает её через общий apply и передаёт half настоящее int-значение. Для передачи записи целиком some использует именованный actual value.
-
-**Наблюдаемый общий сценарий.** Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.
-
-**Возможности общего ядра.** Обобщение относится к хранимому значению и типам A→Maybe<B>, а не к любому возможному Monad/IO/State. Прикладной half принимает int. Законы монады здесь относятся к чистым полным продолжениям и наблюдаемым значениям, а не к адресам или внешней мутации.
-
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
+[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
 
 ## English explanation
 
 Two bind operations over generic Maybe; the application half still checks an integer for evenness.
 
-**Companion implementation:** [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md)
-
 **Scenario.** Apply half twice through bind. some retains a value record with its own type; next receives the payload through ordinary call admission. Absence skips the continuation. The probes remain 8, 6 and 3.
 
-**Expected observation.** 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
+**Expected.** 8 yields present 2; 6 yields absence after the second half; 3 yields absence after the first half and skips the second. A prepared reference to half is not itself a call.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
+**Limits.** Generality covers payloads and A→Maybe<B>, not every possible Monad/IO/State. The application half takes int. Monad laws here concern pure total continuations and observable values, not addresses or external mutation.
 
-**Primary LMX.** The operations are directly available from the current core. `(x record)` captures the primitive value record without an IntBox. A Maybe payload uses a record reference; bind invokes half through generic apply, passing an actual int value. The named value actual keeps the record whole.
-
-**LMX variant `core`.** The operations are directly available from the current core. `(x record)` captures the primitive value record without an IntBox. A Maybe payload uses a record reference; bind invokes half through generic apply, passing an actual int value. The named value actual keeps the record whole.
-
-No execution of LMX or the control programs is claimed.
+Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
 
 ## Источники / Sources
 
-- [Haskell 2010 Report, predefined types and Monad](https://www.haskell.org/onlinereport/haskell2010/haskellch6.html) — Контекст Maybe и три закона bind; готовый Prelude Maybe в листингах этой пары не используется.
-- [Haskell 2010 Report, declarations and bindings](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html) — Собственный алгебраический тип, сопоставление конструкторов и объявления fixity.
-- [Scala 3 Book, Algebraic Data Types](https://docs.scala-lang.org/scala3/book/types-adts-gadts.html) — Собственный enum для двух вариантов Maybe; готовый Option не используется.
+- [Haskell Maybe and Monad instance](https://hackage-content.haskell.org/package/base-4.21.0.0/docs/Data-Maybe.html)
+- [Scala Option.flatMap](https://www.scala-lang.org/api/2.13.16/scala/Option.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [guide](../../LMX_semantics_guide.en.md).
+**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.

@@ -10,12 +10,6 @@ Python показывает компактные функции, dataclass и я
 - [Excel](LMX_Comparison_03_domain_and_persistence.xlsx)
 - [PDF](LMX_Comparison_03_domain_and_persistence.pdf)
 - [CSV](LMX_Comparison_03_domain_and_persistence.csv)
-- [Методика](../COMPARISON_METHODOLOGY.ru.md)
-- [Общий каталог 90 паттернов](../PATTERN_CATALOG_90.ru.md)
-- [Статус проверки](../VALIDATION.md)
-- [Профиль Message и существующего HTTP-транспорта](../MESSAGE_HTTP_PROFILE.md)
-- [Операнды и библиотеки: правила этой редакции](../OPERAND_USAGE_PROFILE.md)
-- [Проверка всех 90 примеров](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Каталог
 
@@ -23,25 +17,25 @@ Python показывает компактные функции, dataclass и я
 
 Доменный интерфейс коллекции скрывает способ получения объектов.
 
-**Реализация используемого компонента:** [094. FindById — implementation](094_find_by_id_implementation_comparision.md)
+**Отдельное сравнение реализации:** [094. FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
 **Сценарий:** Репозиторий получает две уже материализованные записи: id=7, cents=100 и id=9, cents=250. Найти id=9 и затем отсутствующий id=10.
 
 **Наблюдение:** Первое обращение возвращает исходный объект id=9; второе — отсутствие. Сам поиск не создаёт новый экземпляр.
 
-Во всех трёх клиентах готовый FindById — небольшой прикладной helper для последовательности записей с id, а доменная Account и граница Repository остаются клиентскими. Соседняя реализация раскрывает цикл, ранний возврат и отсутствие во всех языках. Это не сравнение готового LINQ с ручным циклом только в LMX.
+Клиенты используют core findFirst, Python next и LINQ FirstOrDefault. Общие циклы поиска сравниваются отдельно в094; иностранные клиенты наши реализации не импортируют.
 
-### 094. [FindById — implementation](094_find_by_id_implementation_comparision.md)
+### 094. [FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
-Реализовать импортируемый поиск первой записи по целочисленному id.
+Реализовать общий поиск первого совпадения с явным признаком присутствия.
 
 **Примеры использования:** [016. Repository](016_repository_comparision.md)
 
-**Сценарий:** Просмотреть упорядоченную последовательность записей, вернуть первую с нужным id или отсутствие.
+**Сценарий:** Просмотреть значения до первого accepts(value); вернуть присутствующее значение или отсутствие, сохранив identity Account.
 
-**Наблюдение:** Для id 7 возвращается исходная запись 7; при повторном id возвращается первая; неизвестный id и пустой список дают отсутствие.
+**Наблюдение:** Пустой ввод/нет совпадений дают отсутствие; дубликаты — первый; найденный null/default остаётся присутствующим; отказ predicate передаётся дальше.
 
-Во всех трёх языках написаны собственный цикл, сравнение id, ранний return и ветвь отсутствия. Python next/filter и C# FirstOrDefault не используются для реализации helper. LMX и Python требуют поле id структурно, C# выражает тот же нужный доступ через IIdentified.
+Циклы полностью выписаны во всех языках; здесь не вызываются next/FirstOrDefault. Нет привязки к Account/id/int или фиксированной длине.
 
 ### 017. [Unit of Work](017_unit_of_work_comparision.md)
 
@@ -187,49 +181,49 @@ LMX и Python обходят строки, C# использует цикл с �
 
 Комбинировать предикаты, отделённые от проверяемого значения.
 
-**Реализация используемого компонента:** [095. Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+**Отдельное сравнение реализации:** [095. AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
 **Сценарий:** Соединить nonnegative и below100 через AND; проверить -1,50,100.
 
 **Наблюдение:** Результаты false,true,false. Правый предикат не вызывается, если левый дал false.
 
-Все три клиента определяют конкретные nonnegative/below100 и импортируют готовый combinator для построения reusable-предиката. В LMX запись A both B делает композицию выражением; Python и C# используют вызов фабрики. Соседняя реализация сохраняет проверку значения и короткое замыкание явно во всех трёх языках.
+Оба исходных predicate остаются в каждом клиенте; conjunction выполняют allOf, all(generator), Enumerable.All. Обобщённые реализации — отдельно в095.
 
-### 095. [Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+### 095. [AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
-Реализовать импортируемую бинарную композицию двух предикатов с коротким замыканием.
+Построить упорядоченную short-circuit conjunction произвольного конечного набора predicates.
 
 **Примеры использования:** [031. Specification](031_specification_comparision.md)
 
-**Сценарий:** Сохранить две callable-ссылки и вернуть новый int-предикат. При каждом вызове проверить левую часть; правую вызывать только после true.
+**Сценарий:** Сохранить снимок ссылок callable и построить predicate, который вызывает их по порядку до false; пустой набор истинен.
 
-**Наблюдение:** nonnegative both below100 даёт false,true,false для -1,50,100. При false слева счётчик правых вызовов не растёт. Повторный вызов использует сохранённые ссылки.
+**Наблюдение:** Для исходных проверок: -1→false,50→true,100→false. После false/отказа последующие predicate не вызываются. Пустой набор истинен при известной сигнатуре.
 
-LMX явно строит сохраняемый граф и выбирает владельца; Python closure и C# lambda сохраняют ссылки средствами языка. Все три тела показывают собственный AND через &&/and и не вызывают готовый both. Ни SQL-expression builder, ни скрытый AST evaluator не используется.
+LMX сохраняет точную многопозиционную сигнатуру; Python передаёт args/kwargs; C# выражает вход как generic T, при необходимости tuple. Все снимают коллекцию callable один раз и сохраняют short-circuit.
 
 ### 032. [Value Object](032_value_object_comparision.md)
 
 Равенство определяется значением, а не адресом экземпляра.
 
-**Реализация используемого компонента:** [096. Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+**Отдельное сравнение реализации:** [096. EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
 
 **Сценарий:** Сравнить отдельно созданные Money(100,840) и Money(100,840), затем Money(100,978). Currency — числовой код валюты.
 
 **Наблюдение:** Первые два значения равны, третье отличается. demo кодирует эти две проверки как 10; идентичность объектов для равенства не требуется.
 
-Все три клиента создают два значения с одинаковыми компонентами и третье с другой currency, затем вызывают готовое равенство. Реализация вынесена симметрично и показана рядом: LMX — явный equals-операнд, Python — tuple-based Money и явный same, C# — readonly struct и явный Same. Ни размер клиента, ни размер реализации не выдаётся за стоимость универсального dataclass/record generator.
+Клиенты используют настоящие средства immutable/value. LMX явно задаёт comparator полей; Python/C# генерируют его. Money не становится builtin. Общий цикл и ручные модели хранения сравниваются в096.
 
-### 096. [Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+### 096. [EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
 
-Полностью показать конкретный двухкомпонентный Money и его импортируемое равенство.
+Реализовать общее упорядоченное равенство полей с явно переданным отношением.
 
 **Примеры использования:** [032. Value Object](032_value_object_comparision.md)
 
-**Сценарий:** Хранить read-only cents/currency и сравнить обе компоненты в указанном порядке. Defaults 100/840, альтернативная currency 978.
+**Сценарий:** Сравнить произвольные конечные последовательности по длине и парам полей; Money сохраняет read-only cents/currency.
 
-**Наблюдение:** Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.
+**Наблюдение:** Пустые равны. При разных длинах comparator не вызывается; при равных обход останавливается на первом различии. Money даёт10. Ошибки comparator передаются дальше.
 
-Python использует базовый immutable tuple, запрещает instance dictionary через __slots__ и предоставляет read-only properties; same написан вручную. C# использует readonly struct/get-only properties и ручной Same. LMX использует готовые immutable primitive records и ручной оператор. Вспомогательная библиотека равенства не импортируется собственной реализацией; dataclass/record equality не подменяют показанный алгоритм.
+Общий цикл generic во всех языках. Иностранные ручные Money дополнительно показывают storage/value contracts. LMX использует свой immutable structural механизм, не имитируя класс.
 
 ### 033. [Optimistic Offline Lock](033_optimistic_offline_lock_comparision.md)
 
@@ -250,7 +244,3 @@ Python использует базовый immutable tuple, запрещает i
 **Наблюдение:** В каждый момент только действующий владелец может сохранить запись. Старый токен не оживает после истечения lease.
 
 Все варианты передают токен до места записи. Объект guard или процессный mutex без серверной проверки не защищает редактирование между HTTP-запросами.
-
-## Границы сравнения
-
-Размеры вычислены из трёх листингов каждого сравнения. В связанных парах использование готового компонента и реализация этого компонента посчитаны отдельно и одинаково для всех трёх языков. Runtime, HTTP-хост и БД не подменяются строкой импорта. Номера 1–85 сохранены из исходного списка, 86–90 — добавленные паттерны; номера выше 90 обозначают отдельные реализации библиотечных компонентов.

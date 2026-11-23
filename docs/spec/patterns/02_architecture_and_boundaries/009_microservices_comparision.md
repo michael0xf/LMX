@@ -10,8 +10,6 @@ Checkout запрашивает стоимость трёх единиц у Cata
 
 **Граница сравнения:** Протокол и порты. Нужны два отдельно запускаемых сервиса, HTTP provider, codec/admission и response mapping. Эта таблица считает только ядро; физическая независимость, отказоустойчивость и версии wire-контракта не реализованы листингом.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -72,6 +70,10 @@ Checkout\buy(quantity := 3; exchange := suppliedAdapter). Порт exchange(endp
 
 LMX уже имеет HTTP transport profile. Java/Go Exchange — тот же явно исключённый адаптер. Общий внешний fixture передаёт quantity=3, проверяет endpoint/route и вызывает catalog; это проверка бизнес-границы, не доказательство сетевого развёртывания.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -80,7 +82,7 @@ LMX уже имеет HTTP transport profile. Java/Go Exchange — тот же �
 | Java | 241 | 7 |
 | Go | 211 | 6 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -96,6 +98,8 @@ Services have independent deployment boundaries and communicate through a transp
 
 **Scope and limitations.** Two separately launched services, an HTTP provider, codec/admission, and response mapping are required. Only the core is counted; deployment independence, resilience, and wire-versioning are not implemented by the listing.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** Call Checkout\buy(quantity := 3; exchange := suppliedAdapter). exchange(endpoint:Array<char>, route:Array<char>, quantity:int)→int forms a complete application/lmx document, performs HTTP exchange, and returns a successful semantic reply; failures follow the agreed ordinary exit. Catalog\quote executes in Catalog’s owning Message.
@@ -108,8 +112,6 @@ Services have independent deployment boundaries and communicate through a transp
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

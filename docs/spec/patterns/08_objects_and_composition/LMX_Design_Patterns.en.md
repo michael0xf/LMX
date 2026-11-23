@@ -10,12 +10,6 @@ All ten original patterns are retained and reviewed for useful operands and sepa
 - [Excel](LMX_Comparison_08_objects_and_composition.xlsx)
 - [PDF](LMX_Comparison_08_objects_and_composition.pdf)
 - [CSV](LMX_Comparison_08_objects_and_composition.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -118,7 +112,3 @@ An object exposes a separate extension with additional behavior and access to it
 **Observation:** 14; Host identity is preserved.
 
 A separate object provides the additional interface. This differs from replacing Host or assigning a method a new lexical owner.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

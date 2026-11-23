@@ -5298,7 +5298,13 @@ No mandatory IDE, arbitrary editing of active machine instructions, global pause
 
 @@ functional-receivers | Общие функциональные ресиверы и контейнеры | General functional receivers and containers | author's edition of 2026-11-22: general functional receivers and containers
 [RU]
-**Редакция 22 ноября 2026 года.** Все поставляемые алгоритмы ресиверов и контейнеров принадлежат одному текущему ядру. Это не необязательные и не независимо версионируемые библиотеки. Сопровождающие тела LMX и контракты интеграции — входные данные для реализации ядра; эта редакция не утверждает, что эти исходники уже исполнялись на целевом ядре.
+**Редакция 23 ноября 2026 года.** Все поставляемые алгоритмы ресиверов и контейнеров принадлежат одному текущему ядру. Это не необязательные и не независимо версионируемые библиотеки. Сопровождающие тела LMX и контракты интеграции — входные данные для реализации ядра; эта редакция не утверждает, что эти исходники уже исполнялись на целевом ядре.
+
+[Полный перечень функций ядра](CORE_FUNCTIONS.md) — общий список для реализации, примеров и проверки. Публичные имена функций начинаются со строчной буквы, а каждое присоединённое слово пишется с прописной: `findFirst`, `allOf`, `equalFields`, `retryPost`, `iterateUntilStop`. Существующие имена из одного слова остаются строчными. Это соглашение касается имён вызываемых и операндов, а не описаний типов, имён исходных групп или символьных операндов. Имя используется повторно, только когда его контракт совпадает; `retryPost` не меняет существующего контракта `retryCall`.
+
+В сравнениях использования клиент на LMX вызывает эти прямые функции ядра. Клиент на контрольном языке пользуется действительным средством своего языка или названной общепринятой библиотекой. Отдельно написанные реализации остаются соседним материалом сравнения, а не вымышленными библиотеками, которые эти клиенты импортируют. Их объявленные контракты, ошибки и асинхронное владение должны быть реализованы на обеих сторонах.
+
+Существующий транспорт Message, включая профиль HTTP, остаётся асинхронным механизмом. Отправка целого владеющего метода может исполнить синхронный помощник асинхронно, не меняя этого помощника. Она не сохраняет ресурс живым после очистки его владельца, не превращает тайм-аут в отмену и не переносит живую локальную привязку между аренами. Дополнительное состояние политики, когда оно требуется, принадлежит Message и пользуется существующим транспортом.
 
 ### Прямые имена в едином текущем ядре
 
@@ -5466,8 +5472,16 @@ List — обычная последовательность ссылок, оп�
 | `atLeast` | обычный операнд Pattern с общим ABI left/right | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `atMost` | обычный операнд Pattern с общим ABI left/right | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `optional` | обычный операнд Pattern с общим ABI left/right | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
+| `findFirst` | первый принятый типизированный элемент как Maybe; упорядоченное короткое замыкание | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `allOf` | композиция конечной последовательности предикатов с сохранением мест входов и коротким замыканием | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `equalFields` | упорядоченное типизированное равенство полей через явный компаратор | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `retryPost` | ограниченный повтор во владении Message; тайм-аут, отмена по политике и вычерпывание поздних ответов | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `between` | подготовленный операнд включающих границ, обычные типы сравнения и приоритет | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `iterateUntilStop` | исполнение принятого объявления DATA и тела с живыми принимающими местами; Stop источника завершает цикл | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `sort` | устойчивая неизменяющая сортировка последовательности с явным трёхзначным компаратором; сохраняет действительный профиль массива | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
+| `unique` | устойчивый выбор первых вхождений с явным равенством; сохраняет действительный профиль массива | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
 
-Каталог содержит **115 уникальных имён вызываемых и операндов**: 61 общую операцию над обобщёнными значениями и контейнерами, 14 операций над последовательностями и 40 операций текстовых шаблонов. **24 готовых значения Pattern и настроек, обычные модели и именованные отказы** перечислены отдельно в [полном каталоге](patterns/LMX_Fn_Receivers/CATALOG.md); их имена не подразумевают вызовов. Постфиксные типы используют существующий разрешитель ядра, а ветвь Pattern у `|` расширяет его существующую реализацию.
+Каталог содержит **123 уникальных имени вызываемых и операндов**: 115 операций загруженного архива и восемь прямых функций ядра, выделенных из сравнений реализаций. Их полные сигнатуры и исходники перечислены в [CORE_FUNCTIONS.md](CORE_FUNCTIONS.md). **24 готовых значения Pattern и настроек, обычные модели и именованные отказы** перечислены отдельно в [полном каталоге](patterns/LMX_Fn_Receivers/CATALOG.md); их имена не подразумевают вызовов. Постфиксные типы используют существующий разрешитель ядра, а ветвь Pattern у `|` расширяет его существующую реализацию.
 
 <a id="range-replacement-results"></a>
 ### Замена диапазона и возвращаемые значения
@@ -5647,11 +5661,32 @@ P0 сохраняет все записанные контейнеры. Дейс
 Имена ресиверов выбраны по устоявшимся аналогам: [Haskell Prelude](https://downloads.haskell.org/ghc/7.8.1-rc2/docs/html/libraries/haskell2010-1.1.1.1/Prelude.html), [Control.Exception.bracket](https://downloads.haskell.org/~ghc/9.14.1.20260916/docs/libraries/base-4.22.1.0/Control-Exception.html), [Clojure memoize](https://clojure.github.io/clojure/clojure.core-api.html#clojure.core/memoize), [Python functools.partial](https://docs.python.org/3/library/functools.html#functools.partial). Совпадение имени не обещает ленивость Haskell, асинхронную маскировку исключений или другие свойства чужого runtime; отличия от полных контрактов контрольных языков приведены в [каталоге ресиверов](patterns/RECEIVERS.md).
 
 [EN]
-**Edition of 22 November 2026.** All supplied receiver and container algorithms
+**Edition of 23 November 2026.** All supplied receiver and container algorithms
 belong to one current kernel. They are not optional or independently versioned
 libraries. The accompanying LMX bodies and integration contracts are inputs to
 the kernel implementation; this edition does not claim that these sources have
 already run on the target kernel.
+
+The [complete core-function inventory](CORE_FUNCTIONS.md) is the common list for
+implementation, examples and review. Public function names start with a lowercase
+letter and capitalize each appended word: `findFirst`, `allOf`, `equalFields`,
+`retryPost`, `iterateUntilStop`. Existing single-word names remain lowercase.
+This convention concerns callable/operand names, not type descriptions, source
+group names or symbolic operands. A name is reused only when its contract agrees;
+`retryPost` does not change the existing `retryCall` contract.
+
+In usage comparisons, an LMX client calls these direct kernel functions. A
+control-language client uses its actual language facility or named established
+library. Separately written implementations remain adjacent comparison material,
+not fictitious libraries imported by those clients. Their declared contracts,
+errors and asynchronous ownership must be implemented on both sides.
+
+The existing Message transport, including the HTTP profile, remains the
+asynchronous mechanism. Posting a complete owning method can execute a synchronous
+helper asynchronously without changing that helper. It does not keep a resource
+alive after its owning cleanup, turn a timeout into cancellation, or transfer a
+live local binding across arenas. Additional policy state, when required, belongs
+to a Message and uses the existing transport.
 
 ### Direct names in the single current kernel
 
@@ -5908,8 +5943,16 @@ failure policy and the documented boundaries of each operation.
 | `atLeast` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `atMost` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `optional` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
+| `findFirst` | First accepted typed element as Maybe; ordered short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `allOf` | Compose a finite predicate sequence with preserved input places and short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `equalFields` | Ordered typed field equality through an explicit comparator | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `retryPost` | Message-owned bounded retry; timeout, policy cancellation and late-reply draining | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `between` | Prepared inclusive bounds operand, ordinary comparison types and priority | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `iterateUntilStop` | Execute accepted declaration DATA and body with live receiving places; source Stop ends the loop | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `sort` | Stable nonmutating sequence sort with explicit three-way comparator; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
+| `unique` | Stable first-occurrence selection with explicit equality; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
 
-The catalog contains **115 unique callable/operand names**: 61 generic/container operations, 14 sequence operations, and 40 text-pattern operations. The **24 ready Pattern/configuration values, ordinary models and named failures** are listed separately in [the full catalog](patterns/LMX_Fn_Receivers/CATALOG.md); their names do not imply calls. Postfix types use the existing core resolver, and the Pattern branch of `|` extends its existing implementation.
+The catalog contains **123 unique callable/operand names**: the 115 uploaded operations and eight direct core functions extracted from implementation comparisons. Their complete signatures and sources are listed in [CORE_FUNCTIONS.md](CORE_FUNCTIONS.md). The **24 ready Pattern/configuration values, ordinary models and named failures** are listed separately in [the full catalog](patterns/LMX_Fn_Receivers/CATALOG.md); their names do not imply calls. Postfix types use the existing core resolver, and the Pattern branch of `|` extends its existing implementation.
 
 <a id="range-replacement-results"></a>
 ### Range replacement and returned values

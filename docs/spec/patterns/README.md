@@ -11,7 +11,7 @@
 
 - [Что изменено и как выбраны примеры](CORE_RECEIVERS_REVIEW.md).
 - [Интеграция общих ресиверов в ядро, со ссылками на исходники](../kernel-implementation.en.md#receiver-kernel-integration).
-- [115 публичных callable/операндов ядра](RECEIVERS.md), [24 прочих символа](LMX_Fn_Receivers/value_symbols.json) и [полный пакет LMX_Fn_Receivers](LMX_Fn_Receivers/README.md).
+- [Полный актуальный список callable/операндов ядра](../CORE_FUNCTIONS.md), [24 прочих символа](LMX_Fn_Receivers/value_symbols.json) и [полный пакет LMX_Fn_Receivers](LMX_Fn_Receivers/README.md).
 - [Правила честного сравнения и выбора короткого варианта](COMPARISON_RULES.md).
 - Новая статистика: [Markdown](STATISTICS_2026-11-22.md), [CSV](STATISTICS_2026-11-22.csv), [Excel](STATISTICS_2026-11-22.xlsx), [PDF](STATISTICS_2026-11-22.pdf).
 
@@ -26,7 +26,7 @@
 - [Все решения аудита операндов и библиотек](OPERAND_LIBRARY_REVIEW.md).
 - [Библиотеки и их клиенты](LIBRARY_COMPONENTS.md).
 - [Правила применения OPERANDS_TEMPLATE](OPERAND_USAGE_PROFILE.md).
-- [Аудит корневых 24 примеров](examples/OPTIMIZATION_REVIEW.md) и [общие ресиверы для них](examples/README.ru.md#редакция-с-общими-ресиверами-и-выбором-короткого-варианта).
+- [Аудит корневых 24 примеров](examples/OPTIMIZATION_REVIEW.md) и [общие ресиверы для них](examples/README.ru.md#редакция-с-общими-ресиверами-и-без-малозначимых-дублей).
 - [Общий профиль Message/HTTP для новых примеров](MESSAGE_HTTP_PROFILE.md).
 - [Первичные источники](SOURCE_INDEX.md).
 - [Изменения редакции с библиотеками](CHANGELOG_OPERANDS.md).

@@ -1,422 +1,24 @@
-# Lazy: общий отложенный результат и повтор эффектов
+# Lazy and evaluation modes: usage and implementation are separate
 
-Редакция: 22 ноября 2026 года. Клиент: [H07](../lmx/H07.lm3), [разбор](../../LMX_examples_and_analogies.ru.md#h07).
+Edition: 2026-11-23. Client: [H07](../lmx/H07.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h07).
 
-## Контракт общего ресивера
+## Contract
 
-lazy готовит обычный вызов без явных actuals и сохраняет точный тип результата; отсутствие actuals не означает искусственного запрета дополнительных optional/default формалов. До первого исполнения цель не вызывается; успешный результат кешируется, отказ оставляет возможность повторить попытку. Повторный вход в вычисляющийся thunk даёт FxLazyCycle. Здесь один владелец Message; потокобезопасный разделяемый между Message кеш не обещается.
+lazy accepts a zero-input thunk; partial may bind all arguments first. once retains its general input contract. The first successful result is cached; failure permits retry, recursive forcing fails. LMX state belongs to one Message, Haskell Lazy.hs enforces one owning ThreadId. This does not replace the separate raw-occurrence test.
 
-Публичный ресивер `lazy` уже входит в единое текущее ядро и используется прямо. Никаких import или выбираемых версий библиотек нет. Внутренние Fx/Rx-имена ниже обозначают структуры реализации ядра.
+LMX public names: `lazy`, `once`. These names belong to the proposed core; no user library import is needed.
 
-Этот документ показывает исходники общего ядрового механизма и локального процедурного приёма. Это разные области контракта, а не две взаимозаменяемые версии ядра: специализированный приём не подменяет весь общий API только потому, что он короче. Основной клиент выбирается отдельно из корректных вариантов по полной длине и границе учёта, см. H07.
+**Foreign usage client:** Native let / do and Control.Monad.replicateM. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
 
-## Полный алгоритм ресивера ядра LMX
+## LMX implementation
 
-Ниже приведено консервативное замыкание по корневым LMX-определениям от `FxLazy`: полные определения перечислены один раз, включая те, которые упомянуты в генерируемом тексте тела. Это видимый исходник текущего ядра; он не подменяется строкой импорта. Общие определения повторно используются другими receivers; одинаковые определения не считаются новой самостоятельной реализацией для каждого клиента.
-
-- [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
-- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
-- [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
-- [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
-- [generic_wrappers.lmx](../../LMX_Fn_Receivers/src/generic_wrappers.lmx)
-- [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
-- [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
+Complete entry definitions, with no omitted branch:
 
 ```lmx
-FxSeqInfo:
-    private: @: source
-    required: source
-    return: @
-    get:
-        throws: FxKernelFailure FxTypeToken
-        return: FxKernel\arrayInfo(source := source)
-
-FxSeqAllocate:
-    private:
-        int: arrayType
-        int: count
-    required: arrayType count
-    return: @
-    make:
-        throws: FxKernelFailure FxTypeToken SequenceSize
-        if: count < 0
-            throw: SequenceSize()
-        private: @: out (arrayType: [])
-        private: @: info FxSeqInfo\get(out)
-        if: count > info\maxLength
-            throw: SequenceSize()
-        sys\resize(out; count)
-        return: out
-
-FxSeqRead:
-    private:
-        @: source
-        int: index
-    required: source index
-    return: @
-    read:
-        throws: FxKernelFailure FxTypeToken ReceiverIndex
-        return: FxKernel\arrayRead(source := source; index := index)
-
-FxSeqSize:
-    private:
-        int: base
-        int: extra
-        int: limit
-    required: base extra limit
-    return: int
-    sum:
-        throws: SequenceSize
-        if: base < 0 || extra < 0 || base > limit
-            throw: SequenceSize()
-        if: extra > limit - base
-            throw: SequenceSize()
-        return: base + extra
-
-FxThrows:
-    adapter:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    call:
-        FxCallFailure
-        FxKernelFailure
-        FxTypeToken
-    capture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    fixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-    lazyfixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxLazyCycle
-        FxRecordArity
-        FxTypeToken
-    mutation:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceElement
-        SequenceSize
-    mutationfixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceElement
-        SequenceSize
-    permutation:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceSize
-    predicate:
-        FxCallFailure
-        FxKernelFailure
-        FxPredicate
-        FxTypeToken
-        ReceiverIndex
-    rangefixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        SequenceSize
-        SequenceStep
-    recordcall:
-        FxCallFailure
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-    reorder:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceSize
-    retry:
-        FxArity
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    selection:
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    sequence:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    sequencefixture:
-        FxArity
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxPredicate
-        FxRecordArity
-        FxShape
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceElement
-        SequenceSize
-        SequenceStep
-    snapshot:
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    traversal:
-        FxCallFailure
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-
-FxSeqConcat:
-    private: @: parts
-    required: parts
-    return: @
-    concat:
-        throws: copy(FxThrows\sequence)
-        FxSeqInfo\get(parts)
-        private: int: count length(parts)
-        private: int: arrayType @[]
-        private: int: elementType 0
-        private: int: allDense 1
-        private: int: i 0
-        # Inspect all parts, including empty dense parts. Comparison uses
-        # canonical full element codes from the common type resolver.
-        while: i < count
-            private: @: part FxSeqRead\read(parts; i)
-            private: @: info FxSeqInfo\get(part)
-            if: i = 0
-                arrayType := info\arrayType
-                elementType := info\elementType
-            if: info\dense = 0 || info\elementType != elementType
-                allDense := 0
-            i += 1
-        if: count = 0 || allDense = 0
-            arrayType := @[]
-        private: @: out FxSeqAllocate\make(arrayType; 0)
-        private: @: outInfo FxSeqInfo\get(out)
-        private: int: total 0
-        i := 0
-        while: i < count
-            private: @: part FxSeqRead\read(parts; i)
-            total := FxSeqSize\sum(total; length(part); outInfo\maxLength)
-            i += 1
-        sys\resize(out; total)
-        private: int: at 0
-        i := 0
-        while: i < count
-            private: @: part FxSeqRead\read(parts; i)
-            private: int: partSize length(part)
-            private: int: j 0
-            while: j < partSize
-                private: @: value FxSeqRead\read(part; j)
-                FxKernel\arrayWrite(target := out; index := at; value := value)
-                at += 1
-                j += 1
-            i += 1
-        return: out
-
-FxAppend:
-    private:
-        @: first
-        @: second
-    return: @
-    append:
-        throws: copy(FxThrows\sequence)
-        private: @: empty (copy(()))
-        return: FxSeqConcat\concat(parts := (empty; first; second))
-
-FxFailures:
-    private:
-        @: first
-        @: second
-    return: @
-    union:
-        throws: copy(FxThrows\sequence)
-        # Builder интернирует и устраняет повторные имена. Список не фиксирован.
-        return: FxAppend\append(first; second)
-
-FxIndices:
-    private:
-        int: start
-        int: count
-    return: @
-    make:
-        throws: FxIndex
-        if: start < 0 || count < 0
-            throw: FxIndex()
-        private: @: out (copy(()))
-        sys\resize(out; count)
-        private: int: i 0
-        while: i < count
-            out[i] := start + i
-            i += 1
-        return: out
-
-FxInputPolicy:
-    @: source 0
-    @: positions 0
-    @: boundPositions 0
-    @: boundValues 0
-    @: pendingPositions 0
-    int: sourcePolicy 0
-
-FxSeqBounds:
-    private:
-        @: source
-        int: begin
-        int: end
-    required: source begin end
-    return: int
-    count:
-        throws: FxKernelFailure FxTypeToken ReceiverIndex
-        FxSeqInfo\get(source)
-        if: begin < 0 || end < begin || end > length(source)
-            throw: ReceiverIndex()
-        return: end - begin
-
-FxSeqSlice:
-    private:
-        @: source
-        int: begin
-        int: end
-    required: source begin end
-    return: @
-    slice:
-        throws: copy(FxThrows\sequence)
-        private: int: count FxSeqBounds\count(source; begin; end)
-        private: @: info FxSeqInfo\get(source)
-        private: @: out FxSeqAllocate\make(info\arrayType; count)
-        private: int: i 0
-        while: i < count
-            private: @: value FxSeqRead\read(source; begin + i)
-            FxKernel\arrayWrite(target := out; index := i; value := value)
-            i += 1
-        return: out
-
-FxSlice:
-    private:
-        @[]: values
-        int: start
-        int: count
-    return: @
-    slice:
-        throws: copy(FxThrows\selection)
-        if: start < 0 || count < 0 || start > length(values)
-            throw: FxIndex()
-        if: count > length(values) - start
-            throw: FxIndex()
-        return: FxSeqSlice\slice(source := values; begin := start; end := start + count)
-
-FxSourcePolicy:
-    private:
-        @: operation
-        @: positions
-        @: boundPositions
-        @: boundValues
-        @: pendingPositions
-    return: @
-    make:
-        throws: copy(FxThrows\adapter)
-        private: @: info FxKernel\signature(operation)
-        private: int: n length(info\inputTypes)
-        if: length(boundPositions) != length(boundValues)
-            throw: FxArity()
-        private: @: covered (copy(()))
-        sys\resize(covered; n)
-        private: int: i 0
-        while: i < n
-            covered[i] := 0
-            i += 1
-        private: @: groups (positions; boundPositions; pendingPositions)
-        private: int: group 0
-        while: group < length(groups)
-            private: @: values groups[group]
-            private: int: j 0
-            while: j < length(values)
-                private: int: at \values[j]
-                if: at < 0 || at >= n
-                    throw: FxIndex()
-                if: \covered[at] != 0
-                    throw: FxArity()
-                covered[at] := 1
-                j += 1
-            ---
-            group += 1
-        i := 0
-        while: i < n
-            if: \covered[i] = 0
-                throw: FxArity()
-            i += 1
-        private: @: out (copy(FxInputPolicy))
-        out\source := operation
-        out\positions := FxSlice\slice(positions; 0; length(positions))
-        out\boundPositions := FxSlice\slice(boundPositions; 0; length(boundPositions))
-        out\boundValues := FxSlice\slice(boundValues; 0; length(boundValues))
-        out\pendingPositions := FxSlice\slice(pendingPositions; 0; length(pendingPositions))
-        out\sourcePolicy := 1
-        return: out
-
-FxFullPolicy:
-    private: @: operation
-    return: @
-    make:
-        throws: copy(FxThrows\adapter)
-        private: @: info FxKernel\signature(operation)
-        private: @: empty (copy(()))
-        return: FxSourcePolicy\make(operation; FxIndices\make(0; length(info\inputTypes)); empty; empty; empty)
-
-FxFrameAttempt:
-    private: @: frame
-    return: @
-    attempt:
-        throws: FxKernelFailure FxTypeToken
-        return: FxKernel\enter(frame; frame\failures)
-
-FxFrameApply:
-    private: @: frame
-    return: @
-    apply:
-        throws: copy(FxThrows\call)
-        private: @: outcome FxFrameAttempt\attempt(frame)
-        if: outcome\ok = 0
-            throw: FxCallFailure(outcome)
-        return: outcome\value
+FxLazyState:
+    @: operation 0
+    int: status 0
+    @: value 0
 
 FxLazyEngine:
     private:
@@ -429,193 +31,17 @@ FxLazyEngine:
             return: state\value
         if: state\status = 1
             throw: FxLazyCycle()
-        state\status := 1
         private: int: completed 0
         finally:
             if: completed = 0
                 state\status := 0
         ---
+        state\status := 1
         private: @: result FxFrameApply\apply(frame)
         state\value := result
         state\status := 2
         completed := 1
         return: result
-
-FxLazyState:
-    @: operation 0
-    int: status 0
-    @: value 0
-
-FxConcat:
-    private:
-        char[]: first
-        char[]: second
-    return: char[]
-    concat:
-        throws: copy(FxThrows\sequence)
-        private: @: out FxSeqConcat\concat(parts := (first; second))
-        return: \out
-
-FxDecimal:
-    private: int: number
-    return: char[]
-    decimal:
-        throws: FxIndex
-        if: number < 0
-            throw: FxIndex()
-        private: char[]: digits "0123456789"
-        private: char[]: reversed []
-        private: int: used 0
-        private: int: rest number
-        while: 1
-            sys\resize(reversed; used + 1)
-            reversed[used] := digits[rest % 10]
-            used += 1
-            rest := rest / 10
-            if: rest = 0
-                break
-        ---
-        private: char[]: out []
-        sys\resize(out; used)
-        private: int: i 0
-        while: i < used
-            out[i] := reversed[used - i - 1]
-            i += 1
-        return: out
-
-FxLabels:
-    private: int: count
-    return: @
-    labels:
-        throws: copy(FxThrows\selection)
-        if: count < 0
-            throw: FxIndex()
-        private: @: out (copy(()))
-        sys\resize(out; count)
-        private: int: i 0
-        while: i < count
-            out[i] := FxConcat\concat("p"; FxDecimal\decimal(i))
-            i += 1
-        return: out
-
-FxSignatures:
-    private:
-        @: inputs
-        @: result
-    return: @
-    make:
-        throws: copy(FxThrows\selection)
-        private: @: labels FxLabels\labels(length(inputs))
-        private: @: data FxKernel\signatureData(inputs := inputs; result := result; labels := labels)
-        Built :: data
-        return: Built
-
-FxOwnPolicy:
-    private: @: contract
-    return: @
-    make:
-        throws: FxIndex FxKernelFailure FxTypeToken
-        private: @: info FxKernel\signature(contract)
-        private: @: out (copy(FxInputPolicy))
-        out\source := contract
-        out\positions := FxIndices\make(0; length(info\inputTypes))
-        out\boundPositions := (copy(()))
-        out\boundValues := (copy(()))
-        out\pendingPositions := (copy(()))
-        return: out
-
-FxBuild:
-    private:
-        @: contract
-        char[]: bodyText
-        @: state
-        @: failures
-        @: policy 0
-    return: @
-    make:
-        throws: FxIndex FxKernelFailure FxTypeToken
-        private: @: shape FxKernel\signature(subject := contract)
-        private: @: bodyGraph sys\fromLmx(bodyText)
-        private: @: selectedPolicy policy
-        if: selectedPolicy = 0
-            selectedPolicy := FxOwnPolicy\make(contract)
-        return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures; selectedPolicy)
-
-FxEngineState:
-    @: engine 0
-    @: payload 0
-
-FxSameText:
-    private:
-        char[]: first
-        char[]: second
-    return: int
-    same:
-        if: length(first) != length(second)
-            return: 0
-        private: int: i 0
-        while: i < length(first)
-            if: first[i] != second[i]
-                return: 0
-            i += 1
-        return: 1
-
-FxFailureFilter:
-    private:
-        @: names
-        char[]: excluded
-    return: @
-    without:
-        private: @: out (copy(()))
-        sys\resize(out; length(names))
-        private: int: used 0
-        private: int: i 0
-        while: i < length(names)
-            private: char[]: name \names[i]
-            if: FxSameText\same(name; excluded) = 0
-                out[used] := names[i]
-                used += 1
-            i += 1
-        sys\resize(out; used)
-        return: out
-
-FxStageFailures:
-    return: @
-    names:
-        private: @: out (copy(()))
-        sys\resize(out; 5)
-        out[0] := "FxIndex"
-        out[1] := "FxArity"
-        out[2] := "FxRecordArity"
-        out[3] := "FxTypeToken"
-        out[4] := "FxKernelFailure"
-        return: out
-
-FxWrap:
-    private:
-        @: contract
-        @: engine
-        @: payload
-        @: failures
-        @: policy 0
-    return: @
-    make:
-        throws: copy(FxThrows\selection)
-        private: @: info FxKernel\signature(subject := contract)
-        private: @: state (copy(FxEngineState))
-        state\engine := engine
-        state\payload := payload
-        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
-        if: info\hasResult != 0
-            text := FxConcat\concat(text; "return: \\fx_answer\n")
-        else:
-            text := FxConcat\concat(text; "return\n")
-        text := FxConcat\concat(text; "catch: FxCallFailure (@: outcome)\n    FxKernel\\raise(name := outcome\\failure; payload := outcome\\payload)\n")
-        private: @: engineInfo FxKernel\signature(subject := engine)
-        private: @: escapingEngine FxFailureFilter\without(engineInfo\throws; "FxCallFailure")
-        private: @: allFailures FxFailures\union(failures; FxStageFailures\names())
-        allFailures := FxFailures\union(allFailures; escapingEngine)
-        return: FxBuild\make(contract; text; state; allFailures; policy)
 
 FxOnce:
     private: @: operation
@@ -640,40 +66,71 @@ FxLazy:
         return: FxOnce\once(operation := operation)
 ```
 
-Явная граница ядра: `FxKernel`, системные примитивы и стандартные вызовы, описанные в [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). Это требуемые адаптеры к штатным операциям графа/вызова, а не показанный здесь C-код готового ядра. Их реализация не спрятана в цифре «размер библиотеки»: статус и условия приёмки приведены отдельно. Полный [собранный файл](../../LMX_Fn_Receivers/LMX_Receivers.lmx) и [экспорт имён](../../LMX_Fn_Receivers/src/public.lmx) находятся рядом.
+Complete canonical source files for the entry and its LMX dependencies:
 
-## Реализация Haskell
+- [adapter_frames.lmx](../../LMX_Fn_Receivers/src/adapter_frames.lmx)
+- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
+- [generic_functions.lmx](../../LMX_Fn_Receivers/src/generic_functions.lmx)
+- [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
+- [generic_wrappers.lmx](../../LMX_Fn_Receivers/src/generic_wrappers.lmx)
+- [sequences.lmx](../../LMX_Fn_Receivers/src/sequences.lmx)
+- [sequences_core.lmx](../../LMX_Fn_Receivers/src/sequences_core.lmx)
 
-lazyIO — явная общая реализация на IORef для одного потока: Cold/Busy/Ready, сброс после ошибки и вычисление результата до WHNF. Она не объявляется атомарным многопоточным кешем. Void LMX и () Haskell имеют разные представления. Прежний prepared/raw пример сохранён отдельно: lazy не выдаётся за доступ к исходным LMX-occurrences.
+The reachable roots are: `FxLazyState`, `FxThrows`, `FxFrameAttempt`, `FxFrameApply`, `FxLazyEngine`, `FxSeqInfo`, `FxSeqAllocate`, `FxSeqRead`, `FxSeqSize`, `FxSeqConcat`, `FxAppend`, `FxFailures`, `FxIndices`, `FxInputPolicy`, `FxSeqBounds`, `FxSeqSlice`, `FxSlice`, `FxSourcePolicy`, `FxFullPolicy`, `FxConcat`, `FxDecimal`, `FxLabels`, `FxSignatures`, `FxOwnPolicy`, `FxBuild`, `FxEngineState`, `FxSameText`, `FxFailureFilter`, `FxStageFailures`, `FxWrap`, `FxOnce`, `FxLazy`.
+These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
-[Точный исходник модуля](../libraries/haskell/Lazy.hs):
+The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
+
+## Haskell comparison implementation
+
+[Exact standalone module](../libraries/haskell/Lazy.hs):
 
 ```haskell
-module Lazy (lazyIO) where
+-- Comparison implementation only: one owning thread, like one LMX Message.
+module Lazy (lazyIO, onceIO, LazyFailure(..)) where
 
-import Control.Exception (evaluate, mask, onException)
+import Control.Concurrent (myThreadId)
+import Control.Exception (Exception, evaluate, mask, onException, throwIO)
 import Data.IORef (newIORef, readIORef, writeIORef)
+
+data LazyFailure = LazyCycle | LazyForeignOwner deriving (Eq, Show)
+instance Exception LazyFailure
 
 data LazyState a = Cold | Busy | Ready a
 
-lazyIO :: IO a -> IO (IO a)
-lazyIO action = do
+-- Cache the first successful result, independently of later input values.
+-- input can be any product/record/argument-vector type; output is unrestricted.
+-- A failed call leaves the cache Cold, so a later call may use different input.
+-- The action and result are evaluated only on a cache miss, to ordinary WHNF.
+onceIO :: (input -> IO a) -> IO (input -> IO a)
+onceIO action = do
+  owner <- myThreadId
   cell <- newIORef Cold
-  pure $ mask $ \restore -> do
+  pure $ \input -> mask $ \restore -> do
+    caller <- myThreadId
+    if caller /= owner then throwIO LazyForeignOwner else pure ()
     state <- readIORef cell
     case state of
       Ready value -> pure value
-      Busy -> ioError (userError "LazyCycle")
+      Busy -> throwIO LazyCycle
       Cold -> do
         writeIORef cell Busy
-        value <- restore (action >>= evaluate) `onException` writeIORef cell Cold
+        value <- restore (action input >>= evaluate) `onException` writeIORef cell Cold
         writeIORef cell (Ready value)
         pure value
+
+-- Allocation does not run the action. Ordinary async exceptions are masked
+-- during the state bookkeeping and restored during the action; a failure resets
+-- Cold and escapes unchanged. Foreign owners must send a request to this owner.
+lazyIO :: IO a -> IO (IO a)
+lazyIO action = do
+  cached <- onceIO (const action)
+  pure (cached ())
 ```
 
-## Процедурный механизм сценария на том же ядре
+## Separate prepared/raw test fixture
 
-Этот обычный пользовательский код показывает явный механизм конкретного сценария. Его int-специализация не является ограничением общего core-ресивера. Он не заменяет весь общий контракт ядра и не является старой библиотечной версией. У клиента он считается, если включён в его выбранный исходник; в таблице ниже его стоимость показана отдельно.
+These test operands deliberately use numeric addition; they test evaluation count, not a second lazy library.
 
 ```lmx
 PreparedOps:
@@ -697,14 +154,82 @@ RawOps:
         return: first + second
 ```
 
-## Размеры и границы сравнения
+```haskell
+-- Comparison fixtures for evaluation count; clients use native do / replicateM.
+module EvaluationModes (preparedTwice, rawTwice) where
 
-| Показанный код | Непробельные символы | Непустые строки | UTF-8 байты |
+preparedTwice :: Num a => a -> a
+preparedTwice value = value + value
+
+rawTwice :: (Monad m, Num a) => m a -> m a
+rawTwice action = do
+  first <- action
+  second <- action
+  pure (first + second)
+```
+
+## Completeness review: lazy and once
+
+The compared reusable API is first-success caching within one owner. LMX `lazy`
+restricts the target to zero inputs; `once` retains the target's complete input
+contract. Haskell `lazyIO` uses the zero-input IO action, and `onceIO` accepts any
+input product/record/vector type. Later successful-cache calls may pass different
+inputs but return the first successful result; this is not per-key memoization.
+
+| Event | LMX source behavior | Haskell source behavior |
+| --- | --- | --- |
+| Construct wrapper | Fresh state 0; target not executed | Fresh Cold cell; action not executed |
+| First force/call | Set state 1; enter the already prepared target frame once | Set Busy; run the supplied action once |
+| Successful result | Store the actual value record; publish state 2 | Store Ready value after evaluating its outer form |
+| Cache hit | Return the stored record; do not enter the target | Return the stored value; do not run the action |
+| Reentrant force | State 1 throws FxLazyCycle before installing an inner reset guard | Busy throws LazyCycle before installing an inner reset handler |
+| Target failure | finally resets to state 0 while completed is 0; the failure continues outward | onException resets Cold and rethrows the same exception |
+| Retry after failure | A later call can execute again, with its own ordinary actuals | A later call can execute again, with its own input |
+| Foreign owner | Message ownership prevents sharing the mutable state across arenas; use post to its owner | Explicit ThreadId check throws LazyForeignOwner; the cell is unchanged |
+
+The cleanup guard is registered before setting Busy. Cache-hit and reentrant-busy checks occur before this guard; therefore an inner recursive attempt cannot reset the outer running computation.
+
+LMX's finite engine exits are `FxCallFailure FxKernelFailure FxLazyCycle FxTypeToken`.
+`FxOnce` combines the target's finite exits with FxLazyCycle; `FxWrap` removes the
+internal call envelope and uses the declared original name/payload on the public
+callable path. The reset is a finally action, not a wildcard catch that consumes
+unknown errors. Implicit failures retain normal Message behavior.
+
+The ordinary call preparation policy still applies on cache hits; caching skips
+the target body, not all caller expression evaluation or receiving admission.
+Haskell similarly retains its ordinary argument/effect sequencing. Neither
+implementation promises exactly-once external effects when an earlier attempt
+performed effects and then failed.
+
+The interruption mechanisms are different. Haskell masks cache bookkeeping and
+restores the caller's masking state around the action. LMX uses one Message owner
+lane and registered cleanup on ordinary unwinding; it has no newly invented
+Haskell-style asynchronous exception injection or mask operator. Existing `post`
+provides asynchronous invocation, not a shared-memory cache or forced cancellation.
+Abrupt process termination is outside both successful-cleanup contracts.
+
+Haskell evaluate forces only the outer result form (WHNF), not all referenced data;
+LMX retains the returned typed record, including void and references, without
+recursively forcing graph contents. [GHC's specified evaluate/mask/onException
+contracts](https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Exception.html)
+explain the foreign exception boundary.
+
+[Prepared completeness cases](../validation/lazy_completeness_20261123.json)
+include retry, recursive forcing, void, mixed input, owner rejection and the
+separate interruption models. All runtime statuses remain NOT_RUN.
+
+## Size boundaries
+
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
-| LMX: алгоритм и перечисленные LMX-зависимости | 10852 | 584 | 16812 |
-| Haskell: весь показанный модуль | 438 | 17 | 589 |
-| LMX: процедурный механизм сценария, отдельный контракт | 293 | 18 | 420 |
+| LMX entry definitions shown above | 999 | 46 | 1444 |
+| All reachable LMX source roots, counted once | 10875 | 587 | 16856 |
+| Complete Haskell comparison module | 1309 | 35 | 1639 |
 
-Это механические размеры показанных исходников. LMX строит обычные графовые callable с точными сигнатурами; Haskell пользуется собственным типовым и функциональным runtime. Таблица не утверждает равенства стоимости их ядер, минимальности замыкания зависимостей или одинаковой реализации. Реализация ядра показана отдельно от клиента. Исключать её из конкурентного клиентского сравнения допустимо при сопоставимом встроенном/библиотечном/операторном механизме у контроля, либо как естественный механизм языка без скрытого предметного алгоритма. Архитектуры не обязаны совпадать; поля, состояние, копии, идентичности и эффекты обязаны сохраняться. Сравнение по клиентам и исходные сохранённые хеши — в [functional_receiver_counts.json](../validation/functional_receiver_counts.json).
+These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 
-**Проверка:** текст, ссылки и размеры воспроизводятся [скриптом](../tools/update_receiver_comparisons.py). LMX и GHC здесь не запускались; подготовленные assertions в [Analogies.hs](../haskell/Analogies.hs) не являются receipt исполнения.
+## Ownership and async scope
+
+The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
+
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).

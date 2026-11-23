@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Один relay, упорядоченный pending batch и уникальный event-id. Параллельные relay требуют claim/lease. Broker ack, retries и idempotent consumer задаются инфраструктурой; exactly-once доставка не обещается.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -113,6 +111,10 @@ OutboxMessage и RelayMessage — отдельные владельцы. db.atom
 
 Все версии явно делают запись в outbox до commit и markSent после публикации. Сама по себе очередь исходящих Message в конце turn не равна durable outbox БД.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -121,7 +123,7 @@ OutboxMessage и RelayMessage — отдельные владельцы. db.atom
 | Java | 563 | 21 |
 | Go | 588 | 23 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -137,6 +139,8 @@ Commit the business change and outgoing event in one local database transaction.
 
 **Scope and limitations.** One relay, ordered batches and unique event IDs are assumed. Parallel relays need claims/leases. No exactly-once delivery is promised.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** OutboxMessage and RelayMessage are separate owners. db.atomic invokes write synchronously; both rows share a transaction. The transport port uses Message/post or HTTP; successful publish means the chosen broker acknowledgement, not consumer execution. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.
@@ -149,8 +153,6 @@ Commit the business change and outgoing event in one local database transaction.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

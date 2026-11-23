@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Политики бюджета различаются: LMX/Go — один restart за жизнь примера, OTP — один за 60 секунд. Сценарий исполняется внутри этого окна. Recovery внешних эффектов и повтор jobs отдельно.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -77,6 +75,10 @@ LMX использует отдельные исполняемые Message с с
 
 LMX использует штатное отношение прямого родительства; restart strategy остаётся приложением. Erlang OTP поставляет зрелый supervisor; Go пример реализует короткий ограниченный контроллер.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -85,7 +87,7 @@ LMX использует штатное отношение прямого род
 | Go | 181 | 10 |
 | Erlang | 269 | 6 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -101,6 +103,8 @@ A parent monitors its direct child and restarts it after failure under a bounded
 
 **Scope and limitations.** Budgets differ: LMX/Go permit one restart over this example lifetime, OTP one per 60 seconds. The scenario runs within that window. External-effect recovery and job redelivery are separate.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. lifecycle.startChild(template):MessageAddress explicitly creates a new direct child with copied template and its own arena; reportExhausted():void reports exhaustion to the parent. The lifecycle provider delivers stopped exactly once for the current child and only after full termination; stale notifications from prior generations do not enter this handler. child is an application reference, not an alternative membership registry. The Erlang fragment supplies callbacks for a -behaviour(supervisor) module; WorkerModule provides start_link/0.
@@ -113,8 +117,6 @@ A parent monitors its direct child and restarts it after failure under a bounded
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

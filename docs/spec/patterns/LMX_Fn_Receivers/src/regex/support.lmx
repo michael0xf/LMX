@@ -163,12 +163,16 @@ RxIsPattern:
     private: @: value
     return: int
     test:
-        return: satisfies(value; Pattern)
+        throws: copy(FxThrows\kernel)
+        # Read the existing directed interface check without trial execution.
+        # Unresolved compatibility is a service failure, never a false result.
+        return: FxKernel\acceptsRequirement(candidate := value; requirement := Pattern)
 
 RxNormalize:
     private: @: value
     return: @
     make:
+        throws: copy(FxThrows\kernel)
         if: RxIsPattern\test(value := value) != 0
             return: value
         # Ordinary admission performs the rejection for numbers, arbitrary

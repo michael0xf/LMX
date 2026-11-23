@@ -1108,12 +1108,18 @@ minimal distinguishing case.
 
 <!-- receiver-integration-2026-11-22 -->
 <a id="receiver-kernel-integration"></a>
-## General receiver integration, 22 November 2026
+## General receiver integration, 23 November 2026
 
 This section integrates
 the rename to satisfies and the [general receiver sources](patterns/LMX_Fn_Receivers/LMX_Receivers.lmx).
 High-level algorithms remain LMX. The provider interfaces are a narrow entry to
 shared mechanisms, not one native primitive per higher-order operation.
+
+The [common function inventory](CORE_FUNCTIONS.md) is the complete integration
+list, including helpers extracted from usage comparisons. Preserve their public
+lowerCamelCase names. Include their ordinary LMX bodies in the current kernel;
+do not make a client load an optional companion library. Control-language
+implementation examples are comparison material only.
 
 The rename concerns the common mechanism of admitting a candidate by its
 requirements. The direction candidate → requirement, `Consumer`, the composition

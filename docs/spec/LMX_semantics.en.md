@@ -2893,11 +2893,32 @@ No mandatory IDE, arbitrary editing of active machine instructions, global pause
 <a id="functional-receivers"></a>
 ## 37. General functional receivers and containers
 
-**Edition of 22 November 2026.** All supplied receiver and container algorithms
+**Edition of 23 November 2026.** All supplied receiver and container algorithms
 belong to one current kernel. They are not optional or independently versioned
 libraries. The accompanying LMX bodies and integration contracts are inputs to
 the kernel implementation; this edition does not claim that these sources have
 already run on the target kernel.
+
+The [complete core-function inventory](CORE_FUNCTIONS.md) is the common list for
+implementation, examples and review. Public function names start with a lowercase
+letter and capitalize each appended word: `findFirst`, `allOf`, `equalFields`,
+`retryPost`, `iterateUntilStop`. Existing single-word names remain lowercase.
+This convention concerns callable/operand names, not type descriptions, source
+group names or symbolic operands. A name is reused only when its contract agrees;
+`retryPost` does not change the existing `retryCall` contract.
+
+In usage comparisons, an LMX client calls these direct kernel functions. A
+control-language client uses its actual language facility or named established
+library. Separately written implementations remain adjacent comparison material,
+not fictitious libraries imported by those clients. Their declared contracts,
+errors and asynchronous ownership must be implemented on both sides.
+
+The existing Message transport, including the HTTP profile, remains the
+asynchronous mechanism. Posting a complete owning method can execute a synchronous
+helper asynchronously without changing that helper. It does not keep a resource
+alive after its owning cleanup, turn a timeout into cancellation, or transfer a
+live local binding across arenas. Additional policy state, when required, belongs
+to a Message and uses the existing transport.
 
 ### Direct names in the single current kernel
 
@@ -3154,8 +3175,16 @@ failure policy and the documented boundaries of each operation.
 | `atLeast` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `atMost` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
 | `optional` | ordinary Pattern operand with common left/right ABI | [operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx) |
+| `findFirst` | First accepted typed element as Maybe; ordered short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `allOf` | Compose a finite predicate sequence with preserved input places and short-circuit | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `equalFields` | Ordered typed field equality through an explicit comparator | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `retryPost` | Message-owned bounded retry; timeout, policy cancellation and late-reply draining | [coreComparisonGroups.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx) |
+| `between` | Prepared inclusive bounds operand, ordinary comparison types and priority | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `iterateUntilStop` | Execute accepted declaration DATA and body with live receiving places; source Stop ends the loop | [coreComparisonExamples.lmx](patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx) |
+| `sort` | Stable nonmutating sequence sort with explicit three-way comparator; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
+| `unique` | Stable first-occurrence selection with explicit equality; preserves actual array profile | [corePerlExamples.lmx](patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx) |
 
-The catalog contains **115 unique callable/operand names**: 61 generic/container operations, 14 sequence operations, and 40 text-pattern operations. The **24 ready Pattern/configuration values, ordinary models and named failures** are listed separately in [the full catalog](patterns/LMX_Fn_Receivers/CATALOG.md); their names do not imply calls. Postfix types use the existing core resolver, and the Pattern branch of `|` extends its existing implementation.
+The catalog contains **123 unique callable/operand names**: the 115 uploaded operations and eight direct core functions extracted from implementation comparisons. Their complete signatures and sources are listed in [CORE_FUNCTIONS.md](CORE_FUNCTIONS.md). The **24 ready Pattern/configuration values, ordinary models and named failures** are listed separately in [the full catalog](patterns/LMX_Fn_Receivers/CATALOG.md); their names do not imply calls. Postfix types use the existing core resolver, and the Pattern branch of `|` extends its existing implementation.
 
 <a id="range-replacement-results"></a>
 ### Range replacement and returned values

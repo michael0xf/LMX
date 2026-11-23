@@ -1,6 +1,6 @@
 # Стоимость общих зависимостей функциональных примеров
 
-Редакция 2026-11-22. Текущие общие тела ядра 091/092/098/099 извлечены непосредственно из [пакета ресиверов](../LMX_Fn_Receivers/README.md). Пример использования не оплачивает библиотеку при каждом обращении; сама библиотека также не объявляется бесплатной.
+Редакция 2026-11-23. Текущие общие тела ядра 091/092/098/099 извлечены непосредственно из [пакета ресиверов](../LMX_Fn_Receivers/README.md). Пример использования не оплачивает библиотеку при каждом обращении; сама библиотека также не объявляется бесплатной.
 
 ## Что входит в числа
 
@@ -8,17 +8,17 @@
 
 | ID | Основное тело, символы / строки | Общие LMX-зависимости, символы / строки | Сумма внутри компонента |
 | ---: | ---: | ---: | ---: |
-| 091 | 390 / 27 | 1975 / 157 | 2365 / 184 |
-| 092 | 591 / 33 | 1878 / 149 | 2469 / 182 |
-| 098 | 359 / 17 | 3967 / 259 | 4326 / 276 |
-| 099 | 533 / 17 | 11407 / 607 | 11940 / 624 |
-| 085 | 1520 / 56 | 11033 / 595 | 12553 / 651 |
+| 091 | 390 / 27 | 2003 / 160 | 2393 / 187 |
+| 092 | 591 / 33 | 1906 / 152 | 2497 / 185 |
+| 098 | 526 / 24 | 3944 / 259 | 4470 / 283 |
+| 099 | 533 / 17 | 11430 / 610 | 11963 / 627 |
+| 085 | 1520 / 56 | 11056 / 598 | 12576 / 654 |
 
-Все перечисленные реализации, включая companion curry для 085, с устранением повторов: **15453 непробельных символов / 794 непустых строк**. Это исходники выбранного набора определений, не размер бинарника или всего runtime.
+Все перечисленные реализации, включая companion curry для 085, с устранением повторов: **15689 непробельных символов / 809 непустых строк**. Это исходники выбранного набора определений, не размер бинарника или всего runtime.
 
 ## Публичный набор имён
 
-- [src/public.lmx](../LMX_Fn_Receivers/src/public.lmx): 3292 символов / 122 строк. Общая таблица открывает все публичные имена; её следует считать один раз при загрузке полного набора.
+- [src/public.lmx](../LMX_Fn_Receivers/src/public.lmx): 3533 символов / 130 строк. Общая таблица открывает все публичные имена; её следует считать один раз при загрузке полного набора.
 
 ## Интерфейсы ядра и границы обобщения
 
@@ -26,7 +26,7 @@
 
 Структуры используются непосредственно как Array<@>: префикс partial, actuals, списки и последовательности результатов не требуют отдельного поля items. Плотный Array<T> принимается через фактический typed access; он не переинтерпретируется как вектор указателей. Метки состояния контейнеров, индексы и коды типов закономерно имеют тип int; полезные типы и арность этим не ограничены.
 
-В Haskell и Scala обычные вызовы, lambda, generic-типы и исключения являются инфраструктурой языка; их компиляторы и runtime также не входят в размеры листингов. У 099 общий проверяемый случай — A×B→R с привязкой первого аргумента. LMX реализует более широкий произвольный префикс N входов, включая k=0,k=N и void; один итоговый коэффициент «выигрыша» для этих неодинаковых возможностей не строится.
+В Haskell и Scala обычные вызовы, lambda, generic-типы и исключения являются инфраструктурой языка; их компиляторы и runtime также не входят в размеры листингов. В 099 все три реализации поддерживают произвольный типизированный префикс N входов, включая k=0,k=N и void/Unit. Haskell использует Args/Callable, Scala — Tuple/Callable. LMX дополнительно сохраняет обычный DATA/defaults/binding существующего callable; эти возможности не объявляются тождественными статическому векторному API.
 
 Сценарий 085 также имеет допустимый короткий вариант curry. Его полные тела и отдельный реестр дополнительных зависимостей приведены в [CURRY_ADAPTER_VARIANT.md](CURRY_ADAPTER_VARIANT.md); они не скрыты внутри цены одного partial.
 
@@ -38,8 +38,8 @@
 
 - `FxApply` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 199 символов / 11 строк.
 - `FxOne` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 97 символов / 8 строк.
-- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1496 символов / 129 строк.
-- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 183 символов / 9 строк.
+- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1529 символов / 132 строк.
+- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 178 символов / 9 строк.
 
 Внешние интерфейсы и имена failures: `FxArity`, `FxCallFailure`, `FxIndex`, `FxKernel`, `FxKernelFailure`, `FxLazyCycle`, `FxRecordArity`, `FxShape`, `FxTypeToken`.
 
@@ -48,8 +48,8 @@
 Основное тело: `FxBounce`, `FxDone`, `FxMore`, `FxTrampoline`.
 
 - `FxApply` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 199 символов / 11 строк.
-- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1496 символов / 129 строк.
-- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 183 символов / 9 строк.
+- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1529 символов / 132 строк.
+- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 178 символов / 9 строк.
 
 Внешние интерфейсы и имена failures: `FxArity`, `FxCallFailure`, `FxIndex`, `FxKernel`, `FxKernelFailure`, `FxLazyCycle`, `FxRecordArity`, `FxShape`, `FxTypeToken`.
 
@@ -59,14 +59,14 @@
 
 - `FxAppend` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 156 символов / 9 строк.
 - `FxApply` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 199 символов / 11 строк.
-- `FxOne` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 97 символов / 8 строк.
+- `FxOutcome` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 51 символов / 5 строк.
 - `FxSeqAllocate` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 288 символов / 16 строк.
 - `FxSeqConcat` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 1047 символов / 47 строк.
-- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 127 символов / 7 строк.
+- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 122 символов / 7 строк.
 - `FxSeqRead` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 168 символов / 9 строк.
 - `FxSeqSize` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 206 символов / 14 строк.
-- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1496 символов / 129 строк.
-- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 183 символов / 9 строк.
+- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1529 символов / 132 строк.
+- `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 178 символов / 9 строк.
 
 Внешние интерфейсы и имена failures: `FxArity`, `FxCallFailure`, `FxIndex`, `FxKernel`, `FxKernelFailure`, `FxLazyCycle`, `FxRecordArity`, `FxShape`, `FxTypeToken`.
 
@@ -87,7 +87,7 @@
 - `FxFailures` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 177 символов / 9 строк.
 - `FxForwardEngine` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 108 символов / 8 строк.
 - `FxFrameApply` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 177 символов / 9 строк.
-- `FxFrameAttempt` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 122 символов / 6 строк.
+- `FxFrameAttempt` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 117 символов / 6 строк.
 - `FxIndices` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 197 символов / 16 строк.
 - `FxInputPolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 102 символов / 7 строк.
 - `FxLabels` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 231 символов / 14 строк.
@@ -98,7 +98,7 @@
 - `FxSeqAllocate` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 288 символов / 16 строк.
 - `FxSeqBounds` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 228 символов / 13 строк.
 - `FxSeqConcat` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 1047 символов / 47 строк.
-- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 127 символов / 7 строк.
+- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 122 символов / 7 строк.
 - `FxSeqRead` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 168 символов / 9 строк.
 - `FxSeqSize` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 206 символов / 14 строк.
 - `FxSeqSlice` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 390 символов / 18 строк.
@@ -106,7 +106,7 @@
 - `FxSlice` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 258 символов / 13 строк.
 - `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1055 символов / 48 строк.
 - `FxStageFailures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 183 символов / 11 строк.
-- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1496 символов / 129 строк.
+- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1529 символов / 132 строк.
 - `FxTypeTokens` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 30 символов / 3 строк.
 - `FxWrap` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 1001 символов / 25 строк.
 
@@ -128,7 +128,7 @@
 - `FxFailures` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 177 символов / 9 строк.
 - `FxForwardEngine` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 108 символов / 8 строк.
 - `FxFrameApply` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 177 символов / 9 строк.
-- `FxFrameAttempt` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 122 символов / 6 строк.
+- `FxFrameAttempt` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 117 символов / 6 строк.
 - `FxFrameRead` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 174 символов / 9 строк.
 - `FxIndices` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 197 символов / 16 строк.
 - `FxInputPolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 102 символов / 7 строк.
@@ -140,7 +140,7 @@
 - `FxSeqAllocate` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 288 символов / 16 строк.
 - `FxSeqBounds` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 228 символов / 13 строк.
 - `FxSeqConcat` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 1047 символов / 47 строк.
-- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 127 символов / 7 строк.
+- `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 122 символов / 7 строк.
 - `FxSeqRead` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 168 символов / 9 строк.
 - `FxSeqSize` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 206 символов / 14 строк.
 - `FxSeqSlice` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 390 символов / 18 строк.
@@ -148,7 +148,7 @@
 - `FxSlice` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 258 символов / 13 строк.
 - `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1055 символов / 48 строк.
 - `FxStageFailures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 183 символов / 11 строк.
-- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1496 символов / 129 строк.
+- `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1529 символов / 132 строк.
 - `FxTypeTokens` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 30 символов / 3 строк.
 - `FxWrap` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 1001 символов / 25 строк.
 

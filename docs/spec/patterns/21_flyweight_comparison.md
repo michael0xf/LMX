@@ -71,33 +71,10 @@ first и second ссылаются на один thin; third ссылается 
 
 У завершающего `return` исправлен отступ: он находится внутри `drawing\demo`, рядом с тремя локальными ссылками. Прежний отступ выводил его в DATA `drawing`, где эти локальные места не принадлежат той же активации. Это исправление области действия; уменьшение числа непробельных символов не заявляется. Ожидаемый результат остаётся 81.
 
-### Прежний вариант LMX — не входит в подсчёт символов
+### Небольшое отличие без повторного листинга
 
-Ниже сохранён исходник до исправления отступа; его не следует запускать как актуальную версию.
+Исправленный отступ завершающего return уже показан в основном листинге. Нерабочая копия, отличавшаяся одним отступом, удалена; смысл исправления сохранён выше.
 
-<!-- uncounted-lmx: procedural -->
-```lmx
-glyphs:
-    int: kind
-    return: @
-    immutable: thin: int: width 2
-    immutable: thick: int: width 3
-    get:
-        if: kind = 0
-            return: thin
-        return: thick
-    drawing:
-        @: glyph
-        int: position
-        return: int
-        render:
-            return: glyph\width * 10 + position
-        demo:
-            @: first get(0)
-            @: second get(0)
-            @: third get(1)
-        return: render(first 3) + render(second 7) + render(third 1)
-```
 
 ## 2. Python
 

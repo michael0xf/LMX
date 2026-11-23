@@ -4,7 +4,7 @@ Current names, superseded spellings, and retained contract differences are recor
 
 ## Прямые имена единого ядра
 
-Текущий набор содержит **115 публичных вызовных имён** — callable и Expression-операнды —
+Текущий набор содержит **123 публичных вызовных имени** — callable и Expression-операнды —
 и **24 прочих символа**: 14 готовых Patterns, 3 значения настроек, 4 структурных требования
 и 3 именованных исхода. Все они входят в текущее единое ядро. Пользователь
 пишет `partial(...)`, `map(...)`, `signatureTypes(...)`, `bracket(...)` напрямую;
@@ -17,6 +17,14 @@ Current names, superseded spellings, and retained contract differences are recor
 граф и не обязательный вызов import при каждом старте программы.
 Квалифицированные физические пути `fun\const\map` и подобные остаются
 средством явно выбрать соответствующий встроенный receiver при коллизии имён.
+
+Единый [список для внесения в ядро](../../CORE_FUNCTIONS.md) содержит все сигнатуры
+и пути к реализациям. Новые функции этой редакции: `findFirst`, `allOf`,
+`equalFields`, `retryPost`, `between`, `iterateUntilStop`, `sort`, `unique`. Публичные имена имеют
+форму lowerCamelCase. `between` — prepared-операнд с приоритетом `<=`;
+`iterateUntilStop` принимает именно декларацию DATA и связанное тело, сохраняя
+принимающее исполнение через явно описанный [gate AE01](CORE_EXAMPLE_HELPERS.md).
+`retryPost` ведёт политику в Message и не заменяет синхронный `retryCall`.
 
 [Полный каталог с сигнатурами и ссылками](CATALOG.md) — нормативная таблица этого
 пакета. Частые имена приведены к аналогам других языков:

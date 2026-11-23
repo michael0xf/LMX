@@ -1233,9 +1233,11 @@ templates, argument modes, effects, priorities, strings, and signatures.
 ## General receivers: values, records and callable factories
 
 The [receiver chapter](LMX_semantics.en.md#functional-receivers) and
-[public API](patterns/LMX_Fn_Receivers/API.md) describe the complete library.
-One ordinary `fun` module exposes direct names through `import: fun`; the
-method still receives its actual parent's DATA.
+[public API](patterns/LMX_Fn_Receivers/API.md) describe the core implementations.
+The [common inventory](CORE_FUNCTIONS.md) lists every direct public function.
+The kernel exposes these names through its ordinary constant namespace;
+application code needs no `import: fun`. The method still receives its actual
+parent's DATA, and its name follows lowerCamelCase.
 
 For an ordinary Structure S, `length(S)` and `S[i]` already provide the
 reference-sequence interface. A captured argument prefix and a List can be S
@@ -1266,11 +1268,12 @@ separates declared failures from implicit failures and explains the generic
 `FxCallFailure` boundary.
 
 The examples in [functional computation](patterns/09_functional_computation/README.md)
-show Maybe/bind, a trampoline, bracket and partial application. Each changed
-example retains the old procedural LMX alongside the current primary listing;
-its archived code is excluded from the primary character count. General library
-dependencies are reported separately, so an import does not make their
-implementation cost disappear.
+show Maybe/bind, a trampoline, bracket and partial application. LMX clients use
+direct core functions; control-language clients use real standard or established
+libraries. The separately written implementations remain comparisons, not client
+dependencies. A procedural alternative retains full code only when it demonstrates
+a different approach. Minor spelling changes are notes. Shared implementation
+dependencies are reported separately and are not assigned zero cost.
 
 The new name `satisfies` retains admission's previous direction and phases.
 `Name :: DATA` and `signatureTypes` construct signature descriptions with the same positional compatibility rule: input

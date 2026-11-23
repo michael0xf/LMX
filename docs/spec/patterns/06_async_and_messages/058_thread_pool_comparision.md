@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Показан пул задач, а не доказательство двух OS threads. Размер почты/буфера и fairness задаются отдельно; round-robin LMX не является work stealing.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -93,6 +91,10 @@ LMX использует отдельные исполняемые Message с с
 
 LMX ограничивает количество логических исполнителей; отображение на OS threads определяется штатным Thread scheduler. Go goroutine и Erlang process также не равны одному выделенному OS thread.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -101,7 +103,7 @@ LMX ограничивает количество логических испо�
 | Go | 290 | 11 |
 | Erlang | 322 | 14 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -117,6 +119,8 @@ A bounded set of workers is reused for a sequence of jobs.
 
 **Scope and limitations.** This is a task pool, not proof of two OS threads. Mail/buffer capacity and fairness are separate; LMX round-robin is not work stealing.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host creates exactly two WorkerMessages and one PoolMessage, explicitly passing worker0/worker1/collector. collector.accept(int):void collects four results as a barrier. Pool stores application destinations; runtime membership remains Thread.children. The lifecycle harness closes workers after drain.
@@ -130,8 +134,6 @@ A bounded set of workers is reused for a sequence of jobs.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

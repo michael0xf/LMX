@@ -1,45 +1,61 @@
-# 096. Money value equality — implementation
+# 096. EqualFields — value equality implementation
 
-Полностью показать конкретный двухкомпонентный Money и его импортируемое равенство.
+Реализовать общее упорядоченное равенство полей с явно переданным отношением.
 
 **Примеры использования:** [032. Value Object](032_value_object_comparision.md)
 
 ## Общий сценарий
 
-Хранить read-only cents/currency и сравнить обе компоненты в указанном порядке. Defaults 100/840, альтернативная currency 978.
+Сравнить произвольные конечные последовательности по длине и парам полей; Money сохраняет read-only cents/currency.
 
-**Ожидаемое наблюдение:** Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.
+**Ожидаемое наблюдение:** Пустые равны. При разных длинах comparator не вызывается; при равных обход останавливается на первом различии. Money даёт10. Ошибки comparator передаются дальше.
 
-**Граница сравнения:** Реализация библиотеки. Это библиотека одного типа с двумя int-компонентами, не реализация Python dataclasses, C# records или универсального schema compiler. Принимаются корректные Money-значения; произвольные неверные типы и метапрограммное изменение классов/графа не сравниваются. В LMX защищены значения полей, как и в исходном примере; отдельная ретроактивная заморозка внешнего контейнера не добавлена.
+**Граница сравнения:** Реализация библиотеки. Позиционное равенство с явным comparator: не graph identity, deep equality, сериализация или поиск имён. Изменения во время сравнения не допускаются. Hash показан только для целостности иностранных value types.
 
-Показана реализация компонента на всех трёх языках. Её код полностью включён в эту строку сравнения; связанный прикладной пример считает только использование готового компонента.
+Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.
 
 ## LMX
 
 ```lmx
-MoneyLibrary:
-    immutable: Money:
-        int: cents 100
-        int: currency 840
-    Equality:
-        copy: sys\OPERANDS_TEMPLATE
-        return: int
-        equals:
-            throws: OperandArity
-            if: length(right) != 1
-                throw: OperandArity()
-            @: a \left
-            @: b \right[0]
-            return: a\cents = b\cents && a\currency = b\currency
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same
+    required: first second same
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        private: int: count length(first)
+        if: count != length(second)
+            return: 0
+        private: int: i 0
+        while: i < count
+            private: @: a FxSeqRead\read(first; i)
+            private: @: b FxSeqRead\read(second; i)
+            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
+            if: FxSeqPredicate\truth(accepted) = 0
+                return: 0
+            i += 1
+        return: 1
 ```
 
-Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\cents и a\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.
+Общий цикл работает с любыми длинами и типами, используя переданный comparator. Immutable Money является обычным механизмом языка и показан в032.
 
 [Отдельный листинг](examples/lmx/096_money_value_equality_implementation.lm3)
 
 ## Python
 
 ```python
+def equal_fields(first, second, same):
+    if not callable(same): raise TypeError("same must be callable")
+    if len(first) != len(second): return False
+    for index in range(len(first)):
+        if not same(first[index], second[index]): return False
+    return True
+
 class Money(tuple):
     __slots__ = ()
     def __new__(cls, cents=100, currency=840):
@@ -48,85 +64,98 @@ class Money(tuple):
     def cents(self): return self[0]
     @property
     def currency(self): return self[1]
-
-def same(left, right):
-    return left.cents == right.cents and left.currency == right.currency
+    def __eq__(self, other):
+        if type(other) is not Money: return NotImplemented
+        return equal_fields(self, other, lambda a,b: a == b)
+    def __ne__(self, other):
+        equal = self.__eq__(other)
+        return NotImplemented if equal is NotImplemented else not equal
+    __hash__ = tuple.__hash__
 ```
 
-Полный money.py; только базовый tuple и собственное сравнение двух полей.
+Полный общий comparator и ручной immutable Money с ==, != и согласованным hash; не замена всей dataclasses.
 
 [Отдельный листинг](examples/python/096_money_value_equality_implementation.py)
 
 ## C#
 
 ```csharp
-namespace ExampleLib {
-    public readonly struct Money {
-        public int Cents { get; }
-        public int Currency { get; }
-        public Money(int cents, int currency) { Cents = cents; Currency = currency; }
-        public static Money Create(int cents = 100, int currency = 840) => new Money(cents, currency);
-        public static bool Same(Money left, Money right) =>
-            left.Cents == right.Cents && left.Currency == right.Currency;
+#nullable enable
+using System;
+using System.Collections.Generic;
+public static class FieldEquality {
+    public static bool EqualFields<A,B>(IReadOnlyList<A> first, IReadOnlyList<B> second, Func<A,B,bool> same) {
+        ArgumentNullException.ThrowIfNull(first); ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(same);
+        if (first.Count != second.Count) return false;
+        for (int i=0; i<first.Count; i++) if (!same(first[i],second[i])) return false;
+        return true;
     }
+}
+public readonly struct Money : IEquatable<Money> {
+    public int Cents { get; }
+    public int Currency { get; }
+    public Money(int cents, int currency) { Cents=cents; Currency=currency; }
+    public static Money Create(int cents=100, int currency=840) => new(cents,currency);
+    public bool Equals(Money other) => FieldEquality.EqualFields(
+        new[]{Cents,Currency}, new[]{other.Cents,other.Currency}, (a,b)=>a==b);
+    public override bool Equals(object? other) => other is Money money && Equals(money);
+    public override int GetHashCode() => HashCode.Combine(Cents,Currency);
+    public static bool operator ==(Money a, Money b) => a.Equals(b);
+    public static bool operator !=(Money a, Money b) => !a.Equals(b);
 }
 ```
 
-Полный ExampleLib.Money; readonly-компоненты и собственный Same, без record-generated equality.
+Общий A/B comparator и полный ручной immutable value type. Примитивный HashCode.Combine относится к платформе; не сравнивается реализация hash table.
 
 [Отдельный листинг](examples/csharp/096_money_value_equality_implementation.cs)
 
 ## Разбор LMX
 
-Money — конкретный immutable-прототип с двумя готовыми прямыми int-полями. Внешняя запись immutable остаётся в исходном графе; она включена в явные пути клиента. Внутри квалифицированного Money нет дополнительных modifier-записей между ним и cents/currency, поэтому a\cents и a\currency обращаются к нужным полям скопированного результата. copy/merge создают контейнеры с immutable-компонентами; существующее mutable-значение не переквалифицируется. Equality ставит sys\OPERANDS_TEMPLATE первым, получает подготовленные значения ссылок и проверяет ровно один правый аргумент. Универсальная генерация равенства произвольных структур не заявляется; внешний контейнер результата не объявляется immutable только из-за immutable-компонентов.
+Общий цикл работает с любыми длинами и типами, используя переданный comparator. Immutable Money является обычным механизмом языка и показан в032.
 
 ## Сопоставление
 
-Python использует базовый immutable tuple, запрещает instance dictionary через __slots__ и предоставляет read-only properties; same написан вручную. C# использует readonly struct/get-only properties и ручной Same. LMX использует готовые immutable primitive records и ручной оператор. Вспомогательная библиотека равенства не импортируется собственной реализацией; dataclass/record equality не подменяют показанный алгоритм.
+Общий цикл generic во всех языках. Иностранные ручные Money дополнительно показывают storage/value contracts. LMX использует свой immutable structural механизм, не имитируя класс.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 231 | 14 |
-| Python | 268 | 10 |
-| C# | 335 | 10 |
+| LMX | 427 | 23 |
+| Python | 637 | 21 |
+| C# | 1037 | 24 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
-Fully show the concrete two-component Money representation and imported equality.
+Implement reusable ordered field equality with an explicitly supplied relation.
 
 **Usage examples:** [032. Value Object](032_value_object_comparision.md)
 
-**Scenario.** Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.
+**Scenario.** Compare arbitrary finite sequences by length and each pair of fields; the Money fixture keeps cents and currency as read-only values.
 
-**Expected observation.** Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.
+**Expected observation.** Empty equals empty. Different lengths call no comparator. Equal lengths stop at the first unequal pair; the original Money fixture gives10. Comparator failures propagate.
 
-**LMX.** Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\cents and a\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.
+**LMX.** Generic loop handles arbitrary lengths and types through the supplied comparator. Immutable Money uses ordinary language machinery shown in032.
 
-**Comparison.** Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm.
+**Comparison.** The common loop is generic in every language. Foreign manual Money types additionally expose their required field/storage/value protocols. LMX reuses the existing immutable structural mechanism instead of emulating a generated class.
 
-**Scope and limitations.** This implements one type with two int components, not Python dataclasses, C# records, or a universal schema compiler. Inputs are valid Money values; invalid foreign types and metaprogrammatic class/graph mutation are outside scope. LMX protects field values as in the original example; no retroactive freezing of the outer container is added.
+**Scope and limitations.** Positional field equality with an explicit comparator, not graph identity, recursive deep equality, serialization, or automatic field-name matching. No concurrent mutation during comparison. Hashing is outside the common loop and is shown only to complete foreign value-type conventions.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Money is a concrete immutable prototype with two ready direct int fields. The enclosing immutable receiver remains in the source graph and appears in explicit client paths. Within qualified Money no additional modifier record separates cents/currency from their parent, so a\cents and a\currency reach the copied result fields. copy/merge construct containing Structures with immutable components; no existing mutable value is requalified. Equality places sys\OPERANDS_TEMPLATE first, receives prepared reference values and requires exactly one right argument. This is not universal automatic equality for arbitrary Structures, nor a claim that the outer result container is immutable merely because its components are.
-- **Python:** Complete money.py, using only a basic tuple and its own two-field comparison.
-- **C#:** Complete ExampleLib.Money, with readonly components and explicit Same, without record-generated equality.
+- **LMX:** Generic loop handles arbitrary lengths and types through the supplied comparator. Immutable Money uses ordinary language machinery shown in032.
+- **Python:** Complete generic comparator and manual immutable Money with ==, != and consistent hashing; not a reimplementation of all dataclasses.
+- **C#:** Generic A/B comparator and complete manual immutable value type. Primitive HashCode.Combine is a platform dependency, not a hash-table implementation comparison.
 
 ## Источники / Sources
 
-- [Martin Fowler — Value Object](https://martinfowler.com/eaaCatalog/valueObject.html) — Определение и границы паттерна.
-- [Python — immutable tuples](https://docs.python.org/3/library/stdtypes.html#tuples) — Базовое immutable-представление двух компонент.
-- [Python — data model and slots](https://docs.python.org/3/reference/datamodel.html#slots) — Конструирование tuple subclass и отсутствие instance dictionary.
-- [Microsoft — readonly struct](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct#readonly-struct) — Read-only поля и свойства структуры.
+- [Python dataclasses contract](https://docs.python.org/3/library/dataclasses.html) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

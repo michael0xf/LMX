@@ -8,25 +8,17 @@ FxAround:
     around:
         throws: copy(FxThrows\traversal)
         private: @: empty (copy(()))
-        private: @: resource FxApply\apply(acquire; empty)
-        private: @: resourceArgs FxOne\make(resource)
+        private: @: resourceArgs (copy(()))
+        sys\resize(resourceArgs; 1)
+        private: @: acquired (copy(FxOutcome))
         finally:
-            FxApply\apply(release; resourceArgs)
+            if: acquired\ok != 0
+                resourceArgs[0] := acquired\value
+                FxApply\apply(release; resourceArgs)
         ---
+        acquired := FxTry\attempt(acquire; empty)
+        if: acquired\ok = 0
+            throw: FxCallFailure(acquired)
+        resourceArgs[0] := acquired\value
         private: @: actionArgs FxAppend\append(resourceArgs; arguments)
         return: FxApply\apply(action; actionArgs)
-
-# BEGIN ALTERNATIVE LMX (excluded from character counts)
-# Around:
-#     @: acquire
-#     @: release
-#     @: action
-#     return: int
-#     use:
-#         throws:
-#             ResourceFailure
-#         @: resource acquire()
-#         finally:
-#             release(resource := resource)
-#         return: action(resource := resource)
-# END ALTERNATIVE LMX

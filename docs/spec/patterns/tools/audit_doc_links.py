@@ -312,7 +312,7 @@ def corpus_from_tar(path: Path) -> tuple[set[str], dict[str, str]]:
             parts = PurePosixPath(member.name).parts
             if parts and parts[0] == ".":
                 parts = parts[1:]
-            if parts and parts[0] == "docs":
+            if parts and parts[0] in {"docs", "spec"}:
                 parts = parts[1:]
             name = str(PurePosixPath(*parts))
             files.add(name)
@@ -336,8 +336,8 @@ def corpus_from_zip(path: Path) -> tuple[set[str], dict[str, str]]:
     return files, docs
 
 
-def resolve_all(files: set[str], docs: dict[str, str]) -> tuple[list[dict], int]:
-    anchors = {name: parse_anchors(text) for name, text in docs.items()}
+def resolve_all(files: set[str], docs: dict[str, str], extra_docs=None) -> tuple[list[dict], int]:
+    anchors = {name: parse_anchors(text) for name, text in {**docs, **(extra_docs or {})}.items()}
     rows, web = [], 0
     for name in sorted(docs):
         for link in parse_links(docs[name]):
@@ -350,14 +350,15 @@ def resolve_all(files: set[str], docs: dict[str, str]) -> tuple[list[dict], int]
             fragment = unquote(parsed.fragment)
             resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), path)) if path else name
             row = dict(source=name, **link, resolved_path=resolved, anchor=fragment)
-            if path.startswith("/") or resolved == ".." or resolved.startswith("../"):
+            if resolved in files:
+                if fragment and resolved.lower().endswith(".md") and fragment not in anchors.get(resolved, set()):
+                    row["status"] = "missing_anchor"
+                else:
+                    row["status"] = "resolved"
+            elif path.startswith("/") or resolved == ".." or resolved.startswith("../"):
                 row["status"] = "repository_external"
-            elif resolved not in files:
-                row["status"] = "missing_file"
-            elif fragment and resolved.lower().endswith(".md") and fragment not in anchors.get(resolved, set()):
-                row["status"] = "missing_anchor"
             else:
-                row["status"] = "resolved"
+                row["status"] = "missing_file"
             rows.append(row)
     return rows, web
 
@@ -406,8 +407,17 @@ def main() -> int:
         *args.pending,
     }
     current_files, current_docs = corpus_from_directory(root)
+    # The delivered merge packet is an explicit sibling, not a missing part of
+    # the author's wider repository. Check those targets and their anchors,
+    # without crawling arbitrary directories outside spec.
+    sibling_docs = {}
+    sibling = root.parent / 'fable_merge'
+    if root.name == 'spec' and sibling.is_dir():
+        sibling_files, docs = corpus_from_directory(sibling)
+        current_files.update('../fable_merge/' + name for name in sibling_files)
+        sibling_docs = {'../fable_merge/' + name: text for name, text in docs.items()}
     baseline_files, baseline_docs = (corpus_from_zip(baseline) if zipfile.is_zipfile(baseline) else corpus_from_tar(baseline))
-    current_rows, current_web = resolve_all(current_files, current_docs)
+    current_rows, current_web = resolve_all(current_files, current_docs, sibling_docs)
     old_rows, old_web = resolve_all(baseline_files, baseline_docs)
     old_broken = {
         (r["source"], r["resolved_path"], r["anchor"], r["status"])

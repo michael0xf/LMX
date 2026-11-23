@@ -9,7 +9,9 @@ const mode = process.argv[2] || 'inspect';
 const selected = process.argv.slice(3);
 await fs.mkdir(outputDir, {recursive:true});
 const groups = (await fs.readdir(root,{withFileTypes:true})).filter(x => mode !== 'summary' && x.isDirectory() && /^\d\d_/.test(x.name) && (!selected.length || selected.includes(x.name))).map(x=>x.name).sort();
-const reports = mode === 'summary' ? JSON.parse(await fs.readFile(path.join(root,'validation','workbook_validation_20261122.json'),'utf8')).groups : [];
+const reports = mode === 'summary' || (mode !== 'inspect' && selected.length)
+  ? JSON.parse(await fs.readFile(path.join(root,'validation','workbook_validation_20261122.json'),'utf8')).groups.filter(x=>!groups.includes(x.group))
+  : [];
 for (const group of groups) {
   const target = path.join(root,group,`LMX_Comparison_${group}.xlsx`);
   const data = JSON.parse(await fs.readFile(path.join(root,group,'patterns.json'),'utf8'));
@@ -27,8 +29,8 @@ for (const group of groups) {
   await fs.writeFile(path.join(outputDir,group+'.before.png'),new Uint8Array(await before.arrayBuffer()));
   const patterns = [...data.patterns].sort((a,b) => (a.paired_with||a.id)-(b.paired_with||b.id) || (a.kind==='implementation')-(b.kind==='implementation') || a.id-b.id);
   const langs=['LMX',...data.languages];
-  sh.getRange('B3').values=[[`${langs.join(' / ')}; 2026-11-22`]];
-  sh.getRange('B4').values=[['Основной — самый короткий сопоставимый вариант; второй сохранён отдельно.']];
+  sh.getRange('B3').values=[[`${langs.join(' / ')}; 2026-11-23`]];
+  sh.getRange('B4').values=[['Основной — сопоставимый клиент или реализация; разные подходы показаны отдельно.']];
   const cells=[];
   for(let i=0;i<patterns.length;i++) {
     const p=patterns[i], row=7+i;
@@ -66,11 +68,12 @@ for (const group of groups) {
 }
 if(mode!=='inspect') {
   const stats=JSON.parse(await fs.readFile(path.join(root,'validation','statistics_20261122.json'),'utf8'));
-  const wb=Workbook.create();
-  const sh=wb.worksheets.add('Группы');
-  const ex=wb.worksheets.add('Примеры');
-  const gf=wb.worksheets.add('GoF');
-  const variants=wb.worksheets.add('Варианты');
+  const wb=await SpreadsheetFile.importXlsx(await FileBlob.load(path.join(root,'STATISTICS_2026-11-22.xlsx')));
+  const sh=wb.worksheets.getItem('Группы');
+  const ex=wb.worksheets.getItem('Примеры');
+  const gf=wb.worksheets.getItem('GoF');
+  const variants=wb.worksheets.getItem('Варианты');
+  for(const sheet of [sh,ex,gf,variants])sheet.getUsedRange().clear({applyTo:'contents'});
   function base(s,title,subtitle,end,widths) {
     s.showGridLines=false;
     s.getRange(`A1:${end}45`).format.font={name:'Arial',size:10,color:'#20364A'};
@@ -82,7 +85,7 @@ if(mode!=='inspect') {
     s.getRange(`A5:${end}5`).format={fill:'#233D55',font:{name:'Arial',size:10,bold:true,color:'#FFFFFF'},rowHeight:38,wrapText:true,horizontalAlignment:'center',verticalAlignment:'center'};
     s.freezePanes.freezeRows(5);
   }
-  base(sh,'Статистика LMX: группы сравнений','22 ноября 2026. Основные листинги; сохранённые альтернативы исключены.','J',[42,23,10,14,15,14,15,14,14,14]);
+  base(sh,'Статистика LMX: группы сравнений','23 ноября 2026. Основные листинги; сохранённые альтернативы исключены.','J',[42,23,10,14,15,14,15,14,14,14]);
   sh.getRange('A5:J5').values=[['Группа','Слой','Сравнения','LMX\nсимволы','Контроль 1','Символы','Контроль 2','Символы','LMX /\nконтроль 1','LMX /\nконтроль 2']];
   let row=6;
   for(const g of stats.groups)for(const layer of ['scenario','usage','implementation']) {
@@ -108,8 +111,8 @@ if(mode!=='inspect') {
   sh.getRange(`A${row+7}:D${row+7}`).values=[['LMX-зависимости, символы',shared.characters,'Непустые строки',shared.lines]];
   sh.getRange(`A${row+8}:D${row+8}`).values=[['Публичные имена',stats.receiver_library.public_receivers,'Запуск LMX','Не проводился']];
   sh.getRange(`B${row+7}:B${row+8}`).format.horizontalAlignment='center';
-  base(ex,'Корневые примеры: исторический пересчёт','До — исходная редакция; после — текущий основной. Выбор пары см. на листе «Варианты».','I',[11,16,16,15,15,15,15,18,38]);
-  ex.getRange('A5:I5').values=[['Пример','Символы\nдо','Символы\nпосле','Изменение','Строки\nдо','Строки\nпосле','Изменение','Архив рядом','Исходник']];
+  base(ex,'Исходные 24 примера: изменения','До — загруженный spec.tar.gz; после — текущий основной. Выбор пары см. на листе «Варианты».','I',[11,16,16,15,15,15,15,18,38]);
+  ex.getRange('A5:I5').values=[['Пример','Символы\nдо','Символы\nпосле','Изменение','Строки\nдо','Строки\nпосле','Изменение','Другой подход','Исходник']];
   const ers=stats.functional_receiver_counts.rows;
   for(let i=0;i<ers.length;i++) {
     const x=ers[i],r=6+i;
@@ -145,17 +148,15 @@ if(mode!=='inspect') {
   }
   const functional=JSON.parse(await fs.readFile(path.join(root,'09_functional_computation/patterns.json'),'utf8'));
   for(const x of functional.patterns) {
-    const active=x.listings.find(l=>l.language==='LMX').code,other=x.alternative?.LMX;
-    if(!other)continue;
+    const active=x.listings.find(l=>l.language==='LMX').code;
     const count=s=>[...s].filter(c=>!(/\s/u.test(c))).length;
     const selectedName=x.primary_variant?.LMX||'core',choices=x.variants?.LMX||{},eligible=x.eligible_variants?.LMX||[];
-    const alternatives=eligible.filter(n=>n!==selectedName).sort((a,b)=>count(choices[a])-count(choices[b]));
-    const second=alternatives.length?choices[alternatives[0]]:[other.context_prefix,other.code].filter(Boolean).join('\n');
-    const comparable=alternatives.length>0||other.eligible;
-    const note=alternatives.length?(x.id===84?`Оба сравниваемых варианта полностью включают Around и callbacks. Основной использует общие code/eval, второй — отдельные тела. Generic bracket также сохранён. Освобождение, журнал и обработка отказов остаются.`:x.id===83?`Основной объединяет алгоритм в Steps\\code; второй сохраняет отдельные even/odd. Общий список выходов и все обращения учтены; переходы и результат сохранены.`:`Сопоставимая пара ${selectedName} / ${alternatives[0]}; выбран минимум. Дополнительная реализация curry показана и посчитана отдельно. Прежний процедурный код также сохранён.`):'Общий текущий контракт; историческая специализация или прежний API сохранены как пояснение, не как другая версия ядра.';
-    variants.getRange(`A${vr}:F${vr}`).values=[[String(x.id).padStart(3,'0'),selectedName,count(active),count(second),comparable?'Да':'Нет',note]];
-    variants.getRange(`A${vr}:F${vr}`).format={wrapText:true,rowHeight:Math.max(52,14*Math.ceil(note.length/75)+14),verticalAlignment:'center'};
-    vr++;
+    for(const name of Object.keys(choices).filter(n=>n!==selectedName)) {
+      const note=x.id===84?'Ядерный bracket и локальная композиция Around. В usage выбран клиент ядра; локальная реализация имеет отдельную границу.':`Разные способы: ${selectedName} / ${name}. Поля, эффекты и результат сохранены.`;
+      variants.getRange(`A${vr}:F${vr}`).values=[[String(x.id).padStart(3,'0'),selectedName,count(active),count(choices[name]),eligible.includes(name)?'Да':'Нет',note]];
+      variants.getRange(`A${vr}:F${vr}`).format={wrapText:true,rowHeight:Math.max(52,14*Math.ceil(note.length/75)+14),verticalAlignment:'center'};
+      vr++;
+    }
   }
   variants.getRange(`C6:D${vr-1}`).setNumberFormat('#,##0');
   variants.getRange(`E6:E${vr-1}`).format.horizontalAlignment='center';
@@ -163,6 +164,14 @@ if(mode!=='inspect') {
   for(const [s,last,col] of [[sh,end,'J'],[ex,et-1,'I'],[gf,gr-1,'C']])for(let r=6;r<=last;r++)if(r%2===1)s.getRange(`A${r}:${col}${r}`).format.fill='#F0F3F6';
   wb.recalculate();
   if(sh.getRange(`C${row+1}`).values[0][0]!==99)throw Error('Summary catalog count is not 99');
+  const initialCount=sh.getRange('C6').values[0][0];
+  sh.getRange('C6').values=[[initialCount+1]];wb.recalculate();
+  if(sh.getRange(`C${row+1}`).values[0][0]!==100)throw Error('Summary count recalculation failed');
+  sh.getRange('C6').values=[[initialCount]];wb.recalculate();
+  const initialExample=ex.getRange('C6').values[0][0],initialTotal=ex.getRange(`C${et}`).values[0][0];
+  ex.getRange('C6').values=[[initialExample+7]];wb.recalculate();
+  if(ex.getRange(`C${et}`).values[0][0]!==initialTotal+7)throw Error('Summary example total recalculation failed');
+  ex.getRange('C6').values=[[initialExample]];wb.recalculate();
   const checks=await wb.inspect({kind:'match',searchTerm:'#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A|#NUM!|#NULL!',options:{useRegex:true,maxResults:30},maxChars:2500});
   await fs.writeFile(path.join(outputDir,'summary.errors.ndjson'),checks.ndjson);
   for(const [sheet,range,file] of [['Группы',`A1:J${row+8}`,'groups'],['Примеры',`A1:I${et+2}`,'examples'],['GoF','A1:C17','gof'],['Варианты',`A1:F${vr}`,'variants']]){
@@ -172,6 +181,7 @@ if(mode!=='inspect') {
   const saved=path.join(outputDir,'STATISTICS_2026-11-22.xlsx');
   await (await SpreadsheetFile.exportXlsx(wb)).save(saved);
   await fs.copyFile(saved,path.join(root,'STATISTICS_2026-11-22.xlsx'));
-  await fs.writeFile(path.join(root,'validation','workbook_validation_20261122.json'),JSON.stringify({date:'2026-11-22',engine:'@oai/artifact-tool',scope:'Metrics, ratio formulas, recalculation and saved XLSX; no native Excel execution asserted',groups:reports,summary:{sheets:4,comparison_count_verified:99,path:saved}},null,2)+'\n');
+  reports.sort((a,b)=>a.group.localeCompare(b.group));
+  await fs.writeFile(path.join(root,'validation','workbook_validation_20261122.json'),JSON.stringify({date:'2026-11-23',engine:'@oai/artifact-tool',scope:'Metrics, ratio formulas, recalculation and saved XLSX; no native Excel execution asserted',groups:reports,summary:{sheets:4,comparison_count_verified:99,recalculation_change_restore:true,path:saved}},null,2)+'\n');
   console.log(JSON.stringify({summary:saved,groups:reports.length}));
 }

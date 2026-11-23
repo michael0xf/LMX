@@ -1,5 +1,5 @@
-def find_by_id(rows, id):
-    for row in rows:
-        if row.id == id:
-            return row
-    return None
+def find_first(items, accepts):
+    if not callable(accepts): raise TypeError("accepts must be callable")
+    for item in items:
+        if accepts(item): return True, item
+    return False, None

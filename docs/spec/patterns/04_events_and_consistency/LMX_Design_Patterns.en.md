@@ -10,12 +10,6 @@ Original IDs 11,12,41,48,50,51,55,57 remain; 86 is added. LMX handlers run in ex
 - [Excel](LMX_Comparison_04_events_and_consistency.xlsx)
 - [PDF](LMX_Comparison_04_events_and_consistency.pdf)
 - [CSV](LMX_Comparison_04_events_and_consistency.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -108,7 +102,3 @@ Suppress repeated business effects using a durable delivery identity.
 **Observation:** Balance ends at 105 with one inbox row (7,51). Both successful deliveries may ACK. A failed transaction leaves neither marker nor effect and sends no ACK.
 
 Every implementation commits the durable marker and business effect together. An in-memory set protects only its lifetime and is not a transactional inbox across restarts.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

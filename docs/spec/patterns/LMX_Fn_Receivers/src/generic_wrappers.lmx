@@ -19,12 +19,12 @@ FxLazyEngine:
             return: state\value
         if: state\status = 1
             throw: FxLazyCycle()
-        state\status := 1
         private: int: completed 0
         finally:
             if: completed = 0
                 state\status := 0
         ---
+        state\status := 1
         private: @: result FxFrameApply\apply(frame)
         state\value := result
         state\status := 2
@@ -122,10 +122,19 @@ FxRetry:
             i += 1
         throw: FxCallFailure(last)
 
-# acquire() -> Resource; release(Resource) -> void;
-# action(Resource,T0,...,Tn) -> R; arguments содержит только T0,...,Tn.
-# Resource и R могут быть любыми типами. Вокруг не создаётся IntBox.
-# acquire с параметрами заранее превращают в thunk через partial.
+# acquire() -> Resource; release(Resource) -> any ignored result;
+# action(Resource,T0,...,Tn) -> R, including void; arguments contains T0,...,Tn.
+# Resource and R retain their real value records; no integer-only resource box.
+# Parameterised acquisition can be prepared with partial before entering bracket.
+# Message/post policy: post the whole owner method that performs bracket. Resource,
+# action and cleanup stay in that owner's arena and one ordinary activation; post
+# carries its eventual result. No second asynchronous bracket engine is needed.
+# Merely posting work from action and returning does NOT extend resource lifetime.
+# A timeout is not cancellation. Ordinary stop exits run registered finally blocks.
+# Cleanup is registered before acquisition and guarded by its successful outcome.
+# Transfer of a successful acquired value through FxKernel remains the ordinary
+# provider ownership/lifetime contract; this source adds no atomic/mask primitive.
+# Abrupt host-process death cannot be repaired by a language cleanup handler.
 FxAround:
     private:
         @: acquire
@@ -136,11 +145,18 @@ FxAround:
     around:
         throws: copy(FxThrows\traversal)
         private: @: empty (copy(()))
-        private: @: resource FxApply\apply(acquire; empty)
-        private: @: resourceArgs FxOne\make(resource)
+        private: @: resourceArgs (copy(()))
+        sys\resize(resourceArgs; 1)
+        private: @: acquired (copy(FxOutcome))
         finally:
-            FxApply\apply(release; resourceArgs)
+            if: acquired\ok != 0
+                resourceArgs[0] := acquired\value
+                FxApply\apply(release; resourceArgs)
         ---
+        acquired := FxTry\attempt(acquire; empty)
+        if: acquired\ok = 0
+            throw: FxCallFailure(acquired)
+        resourceArgs[0] := acquired\value
         private: @: actionArgs FxAppend\append(resourceArgs; arguments)
         return: FxApply\apply(action; actionArgs)
 

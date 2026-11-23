@@ -33,6 +33,7 @@ RxMatchAt:
     required: source pattern position
     return: @
     matchAt:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := position)
@@ -44,6 +45,7 @@ RxWholeMatch:
     required: source pattern
     return: @
     wholeMatch:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := 0; whole := 1)
@@ -102,6 +104,7 @@ RxFind:
     required: source pattern
     return: @
     find:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
@@ -128,6 +131,7 @@ RxEachMatch:
     required: source pattern
     return: @
     eachMatch:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: owner (copy(RxFindAllOwner))
@@ -141,6 +145,7 @@ RxContains:
     required: source pattern
     return: int
     contains:
+        throws: copy(FxThrows\kernel)
         private: @: found RxFind\find(source := source; pattern := pattern)
         return: found\present
 
@@ -151,6 +156,7 @@ RxHasPrefix:
     required: source pattern
     return: int
     hasPrefix:
+        throws: copy(FxThrows\kernel)
         private: @: found RxMatchAt\matchAt(source := source; pattern := pattern; position := 0)
         return: found\present
 
@@ -161,6 +167,7 @@ RxHasSuffix:
     required: source pattern
     return: int
     hasSuffix:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: int: position 0
@@ -183,6 +190,7 @@ RxMatches:
     required: source pattern
     return: int
     matches:
+        throws: copy(FxThrows\kernel)
         private: @: found RxWholeMatch\wholeMatch(source := source; pattern := pattern)
         return: found\present
 
@@ -273,7 +281,8 @@ RxReplacementAccept:
     required: replacement
     return: @
     accept:
-        if: satisfies(replacement; char[]) != 0
+        throws: copy(FxThrows\kernel)
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
             private: char[]: text \replacement
             return: replacement
         private: RxReplacement@: operation replacement
@@ -285,8 +294,9 @@ RxReplacementText:
         Match@: matched
     return: char[]
     make:
+        throws: copy(FxThrows\kernel)
         private: char[]: text
-        if: satisfies(replacement; char[]) != 0
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
             text := \replacement
         else:
             private: RxReplacement@: operation replacement
@@ -304,6 +314,7 @@ RxReplaceFirst:
     required: source pattern replacement
     return: char[]
     replaceFirst:
+        throws: copy(FxThrows\kernel)
         private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
@@ -327,6 +338,7 @@ RxReplace:
     required: source pattern replacement
     return: char[]
     replace:
+        throws: copy(FxThrows\kernel)
         private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
@@ -352,6 +364,7 @@ RxSplit:
     required: source pattern
     return: @
     split:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)

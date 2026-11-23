@@ -1,9 +1,10 @@
+-- Comparison fixtures for evaluation count; clients use native do / replicateM.
 module EvaluationModes (preparedTwice, rawTwice) where
 
-preparedTwice :: Int -> Int
+preparedTwice :: Num a => a -> a
 preparedTwice value = value + value
 
-rawTwice :: IO Int -> IO Int
+rawTwice :: (Monad m, Num a) => m a -> m a
 rawTwice action = do
   first <- action
   second <- action

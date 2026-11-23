@@ -10,8 +10,6 @@ SubmitRead(fd=3,token=7) затем completion(7,2). Handler не вызывае
 
 **Граница сравнения:** Протокол и порты. Провайдер должен действительно поддерживать завершение операции: имитация чтения в handler была бы Reactor. Cancellation/completion races и lifetime буфера остаются обязанностями I/O-адаптера.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -69,6 +67,10 @@ LMX использует отдельные исполняемые Message с с
 
 От Reactor отличается момент выполнения I/O и содержимое уведомления. Сообщение LMX само не превращает readiness provider в completion provider.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -77,7 +79,7 @@ LMX использует отдельные исполняемые Message с с
 | Go | 214 | 8 |
 | Erlang | 106 | 3 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -93,6 +95,8 @@ Reading is initiated in advance; the handler receives an already completed resul
 
 **Scope and limitations.** The provider must genuinely complete the operation: reading inside the handler would be Reactor. Cancellation/completion races and buffer lifetime remain I/O-adapter obligations.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.submitRead(fd:int,token:int,target:MessageAddress):void is a supplied completion I/O provider that performs the read before sending completed(token,bytes). It retains the buffer until completion; completionTarget is the live ProactorMessage address. sink.write(int):void receives byte count, with -1 denoting the fixture error. Erlang Ref is the correlation token.
@@ -105,8 +109,6 @@ Reading is initiated in advance; the handler receives an already completed resul
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

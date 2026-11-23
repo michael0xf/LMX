@@ -1,22 +1,18 @@
 # Сравнение: Функциональные вычисления
 
-Контрольные языки: **Haskell, Scala**. Редакция: 2026-11-22. Основной — короткий допустимый алгоритм текущего контракта.
+Редакция 2026-11-23. Контрольные языки: Haskell, Scala. Числа — непробельные символы / непустые строки.
 
-Числа — непробельные символы / непустые строки. Альтернативы сохранены и исключены из этой таблицы. Готовые общие компоненты показаны отдельно; в 084 собственный локальный Around целиком включён в клиентский размер. Исторические примеры не задают ещё одну библиотеку. Подробности и отдельные суммы: [реестр зависимостей](IMPLEMENTATION_DEPENDENCIES.md).
+Четыре клиента готовых средств и четыре отдельные реализации. Суммы разных уровней не образуют рейтинг языка. Соседние реализации не импортируются в контрольные клиенты.
 
 | ID | Паттерн | LMX | Haskell | Scala | Граница |
 | ---: | --- | ---: | ---: | ---: | --- |
-| 082 | [Monad](082_monad_comparision.md) | 226 / 17 | 183 / 6 | 147 / 6 | Использование библиотеки |
+| 082 | [Monad](082_monad_comparision.md) | 226 / 17 | 125 / 5 | 135 / 5 | Использование библиотеки |
 | 091 | [Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md) | 390 / 27 | 271 / 10 | 265 / 12 | Реализация библиотеки |
-| 083 | [Trampoline](083_trampoline_comparision.md) | 417 / 33 | 236 / 9 | 237 / 8 | Использование библиотеки |
+| 083 | [Trampoline](083_trampoline_comparision.md) | 417 / 33 | 307 / 10 | 265 / 8 | Использование библиотеки |
 | 092 | [Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md) | 591 / 33 | 198 / 9 | 303 / 13 | Реализация библиотеки |
-| 084 | [Execute Around](084_execute_around_comparision.md) | 709 / 55 | 579 / 20 | 440 / 26 | Клиент + локальный helper |
-| 098 | [Execute Around implementation](098_execute_around_implementation_comparision.md) | 359 / 17 | 287 / 10 | 141 / 9 | Реализация библиотеки |
-| 085 | [Currying](085_currying_comparision.md) | 292 / 23 | 180 / 8 | 189 / 9 | Использование библиотеки |
-| 099 | [General partial-application implementation](099_integer_partial_application_implementation_comparision.md) | 533 / 17 | 101 / 3 | 91 / 4 | Реализация библиотеки |
+| 084 | [Execute Around](084_execute_around_comparision.md) | 802 / 48 | 566 / 19 | 521 / 27 | Использование библиотеки |
+| 098 | [Execute Around implementation](098_execute_around_implementation_comparision.md) | 526 / 24 | 390 / 11 | 836 / 36 | Реализация библиотеки |
+| 085 | [Currying](085_currying_comparision.md) | 292 / 23 | 154 / 8 | 198 / 10 | Использование библиотеки |
+| 099 | [General partial-application implementation](099_integer_partial_application_implementation_comparision.md) | 533 / 17 | 699 / 17 | 263 / 7 | Реализация библиотеки |
 
-Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
-
-[Варианты и размеры](variant_selection.json) · [Методика](../COMPARISON_METHODOLOGY.ru.md) · [Проверка](VALIDATION_2026-11-22.md) · [Выходы и обработчики](FAILURE_BOUNDARIES.md)
-
-По разным контрактам и разной общности не строится общий рейтинг языка. Более короткий листинг не отменяет существование полной общей реализации рядом.
+[Зависимости](IMPLEMENTATION_DEPENDENCIES.md) · [Выбор](variant_selection.json) · [Ошибки и Message](FAILURE_BOUNDARIES.md) · [Проверка](VALIDATION_2026-11-23.md)

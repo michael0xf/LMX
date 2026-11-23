@@ -1,7 +1,7 @@
 {
-  "format": "lmx-comparable-variants-v1",
-  "date": "2026-11-22",
-  "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
+  "format": "lmx-comparable-variants-v2",
+  "date": "2026-11-23",
+  "rule": "One current core; genuine alternatives only. Small spelling or helper substitutions are notes, not repeated full listings. Select the shortest fair complete scenario; foreign clients import real packages only.",
   "records": [
     {
       "id": "H01",
@@ -66,7 +66,7 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм.",
+      "fairness_note": "Haskell использует обычную аппликацию; LMX выбранный метод вызывает напрямую либо передаёт в generic apply. Оба пути сохраняют динамический выбор метода; тела реализации apply сравниваются отдельно.",
       "core_versions": 1
     },
     {
@@ -228,7 +228,7 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса.",
+      "fairness_note": "Haskell использует родную каррированную аппликацию (+) n, без самописного partial в клиенте. LMX использует core partial; сравнение обобщённых реализаций вынесено отдельно.",
       "core_versions": 1
     },
     {
@@ -237,36 +237,6 @@
       "expected_ru": "DefaultProbe\\run() → 6260106 (6,26,1,6).",
       "implementation_comparison": null,
       "variants": [
-        {
-          "id": "original",
-          "label_ru": "Прямой / процедурный LMX",
-          "correct_for_scenario": true,
-          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: explicit add5(1; y := 25)\n        int: zero add5(1; y := 0)\n        int: again add5(1)\n        return: first * 1000000 + explicit * 10000 + zero * 100 + again\n",
-          "cases": [
-            {
-              "invoke": "DefaultProbe\\run()",
-              "expected": 6260106,
-              "components": [
-                6,
-                26,
-                1,
-                6
-              ],
-              "copied_default_after": 5
-            }
-          ],
-          "load_before": [],
-          "required_profile": [
-            "One current core; any procedural helper is explicitly present in this source."
-          ],
-          "notes_ru": "Прямой merge меняет готовый default y в копии DATA, сохраняя его входную позицию. Поэтому1 даёт6, явный y=25 даёт26, y=0 даёт1, следующий вызов снова6. Это переопределяемый default, а не необратимо связанный префикс.",
-          "metrics": {
-            "characters": 265,
-            "nonblank_lines": 17,
-            "utf8_bytes": 422,
-            "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
-          }
-        },
         {
           "id": "receivers",
           "label_ru": "Вариант с общими ресиверами LMX",
@@ -300,16 +270,16 @@
         }
       ],
       "original_source_sha256_at_import": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168",
-      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
-      "selected": "original",
-      "alternative": "receivers",
+      "preservation": "Scenario and cases preserved; minor duplicate represented by an inline note.",
+      "selected": "receivers",
+      "alternative": null,
       "selection_metric": "nonwhitespace_characters_of_complete_current_source",
       "eligible_variants": [
-        "original",
         "receivers"
       ],
       "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан.",
-      "core_versions": 1
+      "core_versions": 1,
+      "inline_variant_note_ru": "Прямое merge(Addition; (int: y 5)) с выбором поля add эквивалентно bindFields. Отличающиеся две строки описаны здесь; полный дублирующий листинг удалён."
     },
     {
       "id": "H06",
@@ -382,7 +352,7 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP.",
+      "fairness_note": "Haskell использует композицию (.) и Control.Monad.foldM для списка эффектных стадий. LMX использует динамические вызовы или core pipe. Сохраняются стадии, типы и порядок эффектов.",
       "core_versions": 1
     },
     {
@@ -498,41 +468,11 @@
       "implementation_comparison": "library_comparisons/r01_derive_comparision.md",
       "original_source_sha256_at_import": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc",
       "eligible_variants": [
-        "original",
         "receivers"
       ],
       "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена.",
       "retained_explanation_ru": "Результат **257**. `height` занимает соответствующий слот модели с новым значением `5`; `depth` добавляется. Поля обоих источников не изменены. Вариант с подходящими методами использует тот же контракт копирования и связывания, а не особую операцию над классами.\n\nHaskell может выразить обновление заранее известной записи:\n\n```haskell\ndata Size = Size { width :: Int, height :: Int, depth :: Int }\n\nrecordExample :: Size\nrecordExample = (Size 2 3 0) { height = 5, depth = 7 }\n```\n\nЗдесь поле `depth` заранее входит в `Size`. Чтобы добавлять произвольные именованные узлы вместе с исполняемым содержимым, потребуется выбранное представление данных: словарь, AST, граф или другая явная модель и её операции. Обычное значение типа `Int -> Int` само по себе не даёт API перечисления и замены внутренних узлов функции. Это граница рассматриваемого аналога, а не запрет решить задачу на Haskell. [Haskell: записи и объявления](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html); [LMX: композиция](../LMX_semantics.en.md#composition).\n\nЕсли затем приложение явно переназначит ссылку на `result`, оно будет использовать новую ветвь. Независимо сохранённая другая копия автоматически не обновится. «Изменение структуры» и «глобальная синхронизация всех когда-либо созданных копий» — разные обязательства.",
       "variants": [
-        {
-          "id": "original",
-          "label_ru": "Прямой / процедурный LMX",
-          "correct_for_scenario": true,
-          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
-          "cases": [
-            {
-              "invoke": "MergeProbe\\run()",
-              "expected": 257,
-              "components": [
-                2,
-                5,
-                7
-              ],
-              "source_values_unchanged": true
-            }
-          ],
-          "load_before": [],
-          "required_profile": [
-            "One current kernel; derive delegates to ordinary merge with one copy map."
-          ],
-          "notes_ru": "Обычный merge отдаёт поток; внешняя написанная группа собирает его в одно значение. Полный исходный клиент сохранён.",
-          "metrics": {
-            "characters": 184,
-            "nonblank_lines": 11,
-            "utf8_bytes": 258,
-            "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
-          }
-        },
         {
           "id": "receivers",
           "label_ru": "LMX с общим derive",
@@ -564,8 +504,10 @@
         }
       ],
       "selected": "receivers",
-      "alternative": "original",
-      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+      "alternative": null,
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "inline_variant_note_ru": "В этой задаче derive(RecordModel; RecordPatch) можно заменить на (merge(RecordModel; RecordPatch)). Это одна и та же композиция; второй полный листинг не нужен.",
+      "preservation": "Scenario and cases preserved; minor duplicate represented by an inline note."
     },
     {
       "id": "V02",
@@ -577,13 +519,13 @@
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро.",
+      "fairness_note": "LMX использует прямой core between, Haskell — готовый Data.Ix.inRange. Обе стороны сохраняют все поля и 11 проверок TicketCode. Regex-вариант остаётся другим подходом с отдельным контрактом matcher; он не заменяет сравнение включительных границ.",
       "variants": [
         {
           "id": "original",
           "label_ru": "Прямой LMX с пользовательским between",
           "correct_for_scenario": true,
-          "code": "CharacterRange:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    between:\n        throws: RangeArity\n        if: length(right) != 2\n            throw: RangeArity()\n        char: value \\left\n        char: lower \\right[0]\n        char: upper \\right[1]\n        return: lower <= value && value <= upper\n\nTicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
           "cases": [
             {
               "invoke": "TicketCode\\accepts(\"AB-09\")",
@@ -643,34 +585,13 @@
           "required_profile": [
             "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
           ],
-          "notes_ru": "Полный листинг включает собственный CharacterRange/between и весь прежний TicketCode. Клиент сохранён без изменений после определения helper; отдельная загрузка не требуется. В основной размер входят обе части и объявления RangeArity. Проверяются длина, разделитель, две буквы и две цифры ASCII.",
+          "notes_ru": "Операнд between входит в проект ядра и принимает подготовленные значения, без повторного исполнения left. Клиент сохраняет длину, дефис и точные диапазоны ASCII. Полная реализация ядра и соответствующая реализация Haskell показаны отдельно; Haskell-клиент использует Data.Ix.inRange.",
           "metrics": {
-            "characters": 462,
-            "nonblank_lines": 22,
-            "utf8_bytes": 684,
-            "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
-          },
-          "historical_client": {
-            "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
-            "metrics": {
-              "characters": 263,
-              "nonblank_lines": 11,
-              "utf8_bytes": 381,
-              "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
-            },
-            "preserved_as": "Exact suffix of the complete primary; the local helper is prefixed and counted."
-          },
-          "embedded_helpers": [
-            {
-              "source": "libraries/lmx/CharacterRange.lm3",
-              "metrics": {
-                "characters": 199,
-                "nonblank_lines": 11,
-                "utf8_bytes": 302,
-                "sha256": "8c08f5c6a8e461ddd72fe784c3157233c5fe610f3046a81126e3d54456e9e612"
-              }
-            }
-          ]
+            "characters": 242,
+            "nonblank_lines": 10,
+            "utf8_bytes": 350,
+            "sha256": "d084f401a82d58e6702f0c296665c951236dd4f241db3c834c7831eb859c9bec"
+          }
         },
         {
           "id": "regex",
@@ -746,7 +667,7 @@
           }
         }
       ],
-      "retained_explanation_ru": "Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII. Операнд `between` определён в полном листинге выше; [отдельный CharacterRange](examples/libraries/lmx/CharacterRange.lm3) сохраняется для чтения реализации. Клиент сохраняет длину, дефис и конкретные диапазоны. [Полная пара реализаций LMX/Haskell](examples/library_comparisons/v02_character_range_comparision.md) показывает helper, арность и разбивку стоимости; основной V02 уже включает его целиком. `throws: RangeArity` распространяет объявленный выход helper даже при заведомо корректных двух границах в каждом вызове. Режим 0 получает готовые символы; каждое применение явно сгруппировано перед `&&`.\n\n| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport CharacterRange (between)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (\\x -> x `between` ('A','Z')) [a,b] &&\n  all (\\x -> x `between` ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nБиблиотека проверяет только включительные границы. Перевёрнутый диапазон даёт false/0. Haskell фиксирует две границы типом пары; общий LMX-операнд проверяет длину `right` явно. Клиентская часть занимает 263 непробельных символа, а CharacterRange — 199. Основной полный листинг V02 поэтому занимает 462: обе части считаются вместе. Ранее показанные 263 относились только к клиенту.",
+      "retained_explanation_ru": "| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport Data.Ix (inRange)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (inRange ('A','Z')) [a,b] &&\n  all (inRange ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nВключительные границы и перевёрнутый диапазон обрабатываются одинаково. Haskell фиксирует пару типом, LMX проверяет ровно два правых аргумента и сообщает RangeArity. Реализации сравниваются отдельно от клиентов.",
       "selected": "original",
       "alternative": "regex",
       "selection_metric": "nonwhitespace_characters_of_complete_current_source"
@@ -757,46 +678,11 @@
       "expected_ru": "sample даёт вердикт 1 при одном чтении; biased — 0 при одном чтении; readsTwice — 0 при двух чтениях. Повторная проверка сбрасывает счётчик.",
       "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
       "eligible_variants": [
-        "original",
         "reuse"
       ],
       "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта.",
       "retained_explanation_ru": "| Вызов | Вердикт | Число чтений |\n| --- | ---: | ---: |\n| `SamplingCheck\\check(candidate := Measurement\\sample)` | 1 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\biased)` | 0 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\readsTwice)` | 0 | 2 |\n\nВыполняется настоящий кандидат. Подменена его зависимость `read`, а не весь проверяемый алгоритм. Собственное незаполненное `read` кандидата получает обычную локальную ссылку checker через autofill; `gain` передан явно. Счётчик mock расположен в явно доступном лексическом состоянии.\n\nПоследний кандидат специально возвращает правильное число `28`, но делает два чтения. Проверка только результата пропустила бы дефект. Haskell-аналог — параметр `readSample :: IO Int` у `sample`, с тестовым действием, которое возвращает `7` и увеличивает `IORef`. Подмена зависимости не требует отдельного языка тестов ни в одном варианте.\n\nКонтрольный повтор первого вызова опять даёт `1` и ровно одно чтение: checker явно сбрасывает свой счётчик. [Основание](../LMX_semantics.en.md#binding-autofill); V02 английского корпуса.",
       "variants": [
-        {
-          "id": "original",
-          "label_ru": "Прежний полный LMX с повторённым вычислением",
-          "correct_for_scenario": true,
-          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: read() * gain + 1\n    readsTwice:\n        int: discarded read()\n        return: read() * gain\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
-          "cases": [
-            {
-              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
-              "expected": 1,
-              "calls_after": 1
-            },
-            {
-              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
-              "expected": 0,
-              "calls_after": 1
-            },
-            {
-              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
-              "expected": 0,
-              "calls_after": 2
-            }
-          ],
-          "load_before": [],
-          "required_profile": [
-            "One current core; all application methods are present in the listing."
-          ],
-          "notes_ru": "Прежний основной листинг сохранён целиком. Каждый кандидат явно содержит вычисление read() * gain; отдельная зависимость не загружается.",
-          "metrics": {
-            "characters": 304,
-            "nonblank_lines": 23,
-            "utf8_bytes": 490,
-            "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
-          }
-        },
         {
           "id": "reuse",
           "label_ru": "LMX с повторным использованием sample",
@@ -833,8 +719,10 @@
         }
       ],
       "selected": "reuse",
-      "alternative": "original",
-      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+      "alternative": null,
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "inline_variant_note_ru": "В biased строка sample() + 1 соответствует read() * gain + 1; в readsTwice второй вызов sample() соответствует read() * gain. Сохранён вариант с повторным использованием существующего метода; отдельного алгоритма в дублирующем листинге нет.",
+      "preservation": "Scenario and cases preserved; minor duplicate represented by an inline note."
     }
   ]
 }

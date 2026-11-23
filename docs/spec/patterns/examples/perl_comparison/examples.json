@@ -1,0 +1,2788 @@
+{
+  "suite": "perl",
+  "foreign_language": "Perl",
+  "edition": "2026-11-23",
+  "runtime_profile": "Perl 5.40.1; List::Util 1.63; defer is experimental",
+  "examples": [
+    {
+      "id": "P01",
+      "title": "Преобразование списка через map",
+      "category": "Списки",
+      "contract": "Вернуть новый список, умножив каждое целое число на 3; порядок и нули сохраняются. Вход не меняется.",
+      "inputs": [
+        [
+          -2,
+          0,
+          3
+        ]
+      ],
+      "expected": [
+        -6,
+        0,
+        9
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              -2,
+              0,
+              3
+            ]
+          ],
+          "expected": [
+            -6,
+            0,
+            9
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              7
+            ]
+          ],
+          "expected": [
+            21
+          ]
+        }
+      ],
+      "lmx": "Scale:\n    int: value\n    return: int\n    run:\n        return: value * 3\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: map(items; Scale\\run)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    return [map { $_ * 3 } @$items];\n}\n",
+      "core_functions": [
+        "map"
+      ],
+      "foreign_dependencies": [
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P01.lm3",
+      "foreign_file": "source/perl/P01.pl",
+      "implementation_pairs": {
+        "map": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 246,
+          "nonwhitespace": 172,
+          "nonblank_lines": 11
+        },
+        "foreign": {
+          "characters": 101,
+          "nonwhitespace": 73,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P02",
+      "title": "Отбор элементов через grep",
+      "category": "Списки",
+      "contract": "Сохранить только чётные целые числа, включая ноль и отрицательные; сохранить исходный порядок и повторы.",
+      "inputs": [
+        [
+          -3,
+          -2,
+          0,
+          1,
+          2,
+          2
+        ]
+      ],
+      "expected": [
+        -2,
+        0,
+        2,
+        2
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              -3,
+              -2,
+              0,
+              1,
+              2,
+              2
+            ]
+          ],
+          "expected": [
+            -2,
+            0,
+            2,
+            2
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              1,
+              3
+            ]
+          ],
+          "expected": []
+        }
+      ],
+      "lmx": "Even:\n    int: value\n    return: int\n    run:\n        return: value % 2 = 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: filter(items; Even\\run)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    return [grep { $_ % 2 == 0 } @$items];\n}\n",
+      "core_functions": [
+        "filter"
+      ],
+      "foreign_dependencies": [
+        "CORE::grep"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/grep"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P02.lm3",
+      "foreign_file": "source/perl/P02.pl",
+      "implementation_pairs": {
+        "filter": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 251,
+          "nonwhitespace": 175,
+          "nonblank_lines": 11
+        },
+        "foreign": {
+          "characters": 107,
+          "nonwhitespace": 77,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P03",
+      "title": "Сумма с нейтральным значением",
+      "category": "Списки",
+      "contract": "Сумма конечного списка целых чисел; пустой список даёт 0. Примеры не выходят за диапазон машинного int LMX.",
+      "inputs": [
+        [
+          7,
+          -2,
+          0,
+          4
+        ]
+      ],
+      "expected": 9,
+      "test_cases": [
+        {
+          "args": [
+            [
+              7,
+              -2,
+              0,
+              4
+            ]
+          ],
+          "expected": 9
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            [
+              -5
+            ]
+          ],
+          "expected": -5
+        }
+      ],
+      "lmx": "Add:\n    int: total\n    int: value\n    return: int\n    run:\n        return: total + value\n\nExample:\n    int[]: items\n    return: int\n    run:\n        throws: FxRecordArity FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex\n        return: \\foldl(items; (0 record); Add\\run)\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(sum0);\nsub example {\n    my ($items) = @_;\n    return sum0(@$items);\n}\n",
+      "core_functions": [
+        "foldl"
+      ],
+      "foreign_dependencies": [
+        "List::Util::sum0"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#sum0"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P03.lm3",
+      "foreign_file": "source/perl/P03.pl",
+      "implementation_pairs": {
+        "foldl": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 279,
+          "nonwhitespace": 197,
+          "nonblank_lines": 12
+        },
+        "foreign": {
+          "characters": 115,
+          "nonwhitespace": 90,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P04",
+      "title": "Все промежуточные остатки счёта",
+      "category": "Списки",
+      "contract": "Из начального остатка и списка изменений получить начальный остаток и все последующие суммы, в том числе начальный элемент для пустого списка.",
+      "inputs": [
+        [
+          5,
+          -3,
+          8
+        ],
+        100
+      ],
+      "expected": [
+        100,
+        105,
+        102,
+        110
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              5,
+              -3,
+              8
+            ],
+            100
+          ],
+          "expected": [
+            100,
+            105,
+            102,
+            110
+          ]
+        },
+        {
+          "args": [
+            [],
+            7
+          ],
+          "expected": [
+            7
+          ]
+        },
+        {
+          "args": [
+            [
+              -7
+            ],
+            7
+          ],
+          "expected": [
+            7,
+            0
+          ]
+        }
+      ],
+      "lmx": "Add:\n    int: total\n    int: delta\n    return: int\n    run:\n        return: total + delta\n\nExample:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: FxRecordArity FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: scanl(deltas; (initial record); Add\\run)\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(reductions);\nsub example {\n    my ($deltas, $initial) = @_;\n    return [reductions { $a + $b } $initial, @$deltas];\n}\n",
+      "core_functions": [
+        "scanl"
+      ],
+      "foreign_dependencies": [
+        "List::Util::reductions"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#reductions"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P04.lm3",
+      "foreign_file": "source/perl/P04.pl",
+      "implementation_pairs": {
+        "scanl": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 314,
+          "nonwhitespace": 225,
+          "nonblank_lines": 13
+        },
+        "foreign": {
+          "characters": 162,
+          "nonwhitespace": 129,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P05",
+      "title": "Короткое замыкание any и all",
+      "category": "Списки",
+      "contract": "Вернуть два булевых int: существует ли отрицательный элемент; все ли элементы меньше 10. На пустом списке результат [0,1].",
+      "inputs": [
+        [
+          -1,
+          20
+        ]
+      ],
+      "expected": [
+        1,
+        0
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              -1,
+              20
+            ]
+          ],
+          "expected": [
+            1,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              0,
+              3
+            ]
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        }
+      ],
+      "lmx": "Negative:\n    int: value\n    return: int\n    run:\n        return: value < 0\n\nBelowTen:\n    int: value\n    return: int\n    run:\n        return: value < 10\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxTypeToken ReceiverIndex\n        return: (any(items; Negative\\run); all(items; BelowTen\\run))\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(any all);\nsub example {\n    my ($items) = @_;\n    return [0 + (any { $_ < 0 } @$items), 0 + (all { $_ < 10 } @$items)];\n}\n",
+      "core_functions": [
+        "any",
+        "all"
+      ],
+      "foreign_dependencies": [
+        "List::Util::any",
+        "List::Util::all"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#any",
+        "https://perldoc.perl.org/5.40.1/List::Util#all"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P05.lm3",
+      "foreign_file": "source/perl/P05.pl",
+      "implementation_pairs": {
+        "any": [
+          "PI01"
+        ],
+        "all": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 357,
+          "nonwhitespace": 250,
+          "nonblank_lines": 16
+        },
+        "foreign": {
+          "characters": 166,
+          "nonwhitespace": 123,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P06",
+      "title": "Срез с перестановкой и повторением",
+      "category": "Массивы",
+      "contract": "Выбрать элементы по списку допустимых нулевых индексов; порядок индексов и повторы существенны. Результат — новый внешний массив, вложенные ссылки сохраняются.",
+      "inputs": [
+        [
+          "a",
+          "b",
+          "c"
+        ],
+        [
+          2,
+          0,
+          2
+        ]
+      ],
+      "expected": [
+        "c",
+        "a",
+        "c"
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              "a",
+              "b",
+              "c"
+            ],
+            [
+              2,
+              0,
+              2
+            ]
+          ],
+          "expected": [
+            "c",
+            "a",
+            "c"
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [],
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "lmx": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: select(items; positions)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $positions) = @_;\n    return [@$items[@$positions]];\n}\n",
+      "core_functions": [
+        "select"
+      ],
+      "foreign_dependencies": [
+        "array slice"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldata#Slices"
+      ],
+      "notes": "Контракт клиента ограничивает индексы диапазоном 0..n-1. Отрицательные и выходящие за массив индексы Perl имеют другую семантику; отдельно проверяемая общая реализация отвергает их явно.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P06.lm3",
+      "foreign_file": "source/perl/P06.pl",
+      "implementation_pairs": {
+        "select": [
+          "PI02"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 178,
+          "nonwhitespace": 130,
+          "nonblank_lines": 7
+        },
+        "foreign": {
+          "characters": 111,
+          "nonwhitespace": 88,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P07",
+      "title": "Изменение массива с возвратом удалённых",
+      "category": "Массивы",
+      "contract": "Заменить диапазон [begin,end) и вернуть [тот же изменённый массив, новый список удалённых элементов]. Вставляемые значения читаются до изменения; пустые вставка и удаление допустимы.",
+      "inputs": [
+        [
+          1,
+          2,
+          3,
+          4
+        ],
+        1,
+        3,
+        [
+          8,
+          9,
+          10
+        ]
+      ],
+      "expected": [
+        [
+          1,
+          8,
+          9,
+          10,
+          4
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            1,
+            3,
+            [
+              8,
+              9,
+              10
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              8,
+              9,
+              10,
+              4
+            ],
+            [
+              2,
+              3
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1
+            ],
+            1,
+            1,
+            [
+              2
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            []
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            0,
+            2,
+            []
+          ],
+          "expected": [
+            [],
+            [
+              1,
+              2
+            ]
+          ]
+        }
+      ],
+      "lmx": "Example:\n    @: items\n    int: begin\n    int: end\n    @: values\n    return: @\n    run:\n        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        @: removed splice(items; begin; end; values)\n        return: (items; removed)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $begin, $end, $values) = @_;\n    my @removed = splice @$items, $begin, $end - $begin, @$values;\n    return [$items, \\@removed];\n}\n",
+      "core_functions": [
+        "splice"
+      ],
+      "foreign_dependencies": [
+        "CORE::splice"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/splice"
+      ],
+      "notes": "В Perl третий параметр — длина, в LMX — исключённый конец. Это преобразование видно в исходнике и входит в подсчёт.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": true,
+      "lmx_file": "source/lmx/P07.lm3",
+      "foreign_file": "source/perl/P07.pl",
+      "implementation_pairs": {
+        "splice": [
+          "PI02"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 260,
+          "nonwhitespace": 185,
+          "nonblank_lines": 10
+        },
+        "foreign": {
+          "characters": 186,
+          "nonwhitespace": 146,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P08",
+      "title": "Стабильная сортировка записей",
+      "category": "Массивы",
+      "contract": "Новый список записей по возрастанию priority; для равного priority сохранить прежний порядок. Все остальные поля, включая width, и идентичность записей сохраняются.",
+      "inputs": [
+        [
+          {
+            "priority": 2,
+            "id": "a",
+            "width": 8
+          },
+          {
+            "priority": 1,
+            "id": "b",
+            "width": 4
+          },
+          {
+            "priority": 2,
+            "id": "c",
+            "width": 12
+          }
+        ]
+      ],
+      "expected": [
+        {
+          "priority": 1,
+          "id": "b",
+          "width": 4
+        },
+        {
+          "priority": 2,
+          "id": "a",
+          "width": 8
+        },
+        {
+          "priority": 2,
+          "id": "c",
+          "width": 12
+        }
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 1,
+                "id": "b",
+                "width": 4
+              },
+              {
+                "priority": 2,
+                "id": "c",
+                "width": 12
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "priority": 1,
+              "id": "b",
+              "width": 4
+            },
+            {
+              "priority": 2,
+              "id": "a",
+              "width": 8
+            },
+            {
+              "priority": 2,
+              "id": "c",
+              "width": 12
+            }
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "priority": 2,
+              "id": "a",
+              "width": 8
+            }
+          ]
+        }
+      ],
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        return: sort(items; Order\\compare)\n",
+      "foreign": "use strict;\nuse warnings;\nuse sort 'stable';\nsub example {\n    my ($items) = @_;\n    return [sort { $a->{priority} <=> $b->{priority} } @$items];\n}\n",
+      "core_functions": [
+        "sort"
+      ],
+      "foreign_dependencies": [
+        "CORE::sort",
+        "sort pragma"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/sort",
+        "https://perldoc.perl.org/5.40.1/sort"
+      ],
+      "notes": "Компаратор LMX сравнивает, а не вычитает пользовательские ключи: сортировка не вводит переполнение разности.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P08.lm3",
+      "foreign_file": "source/perl/P08.pl",
+      "implementation_pairs": {
+        "sort": [
+          "PI03"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 341,
+          "nonwhitespace": 256,
+          "nonblank_lines": 12
+        },
+        "foreign": {
+          "characters": 148,
+          "nonwhitespace": 117,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P09",
+      "title": "Уникальные значения в порядке появления",
+      "category": "Массивы",
+      "contract": "Удалить последующие повторы канонических целых чисел; сохранить первое вхождение и порядок. Вход не меняется.",
+      "inputs": [
+        [
+          0,
+          1,
+          0,
+          -1,
+          1
+        ]
+      ],
+      "expected": [
+        0,
+        1,
+        -1
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              0,
+              1,
+              0,
+              -1,
+              1
+            ]
+          ],
+          "expected": [
+            0,
+            1,
+            -1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              5,
+              5,
+              5
+            ]
+          ],
+          "expected": [
+            5
+          ]
+        }
+      ],
+      "lmx": "Same:\n    int: first\n    int: second\n    return: int\n    test:\n        return: first = second\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        return: unique(items; Same\\test)\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(uniq);\nsub example {\n    my ($items) = @_;\n    return [uniq @$items];\n}\n",
+      "core_functions": [
+        "unique"
+      ],
+      "foreign_dependencies": [
+        "List::Util::uniq"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/List::Util#uniq"
+      ],
+      "notes": "Сравнение клиента ограничено каноническими целыми, поскольку uniq Perl не принимает same и сравнивает строковые представления с отдельным случаем undef. Реализационная пара рядом поддерживает произвольный явный same на обеих сторонах.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P09.lm3",
+      "foreign_file": "source/perl/P09.pl",
+      "implementation_pairs": {
+        "unique": [
+          "PI03"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 298,
+          "nonwhitespace": 216,
+          "nonblank_lines": 12
+        },
+        "foreign": {
+          "characters": 116,
+          "nonwhitespace": 90,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P10",
+      "title": "Частотная таблица с порядком первых вхождений",
+      "category": "Хеши",
+      "contract": "Для списка целых кодов вернуть пары [код,число вхождений], расположенные по первому появлению кода, а не по произвольному порядку хеша.",
+      "inputs": [
+        [
+          2,
+          1,
+          2,
+          3,
+          1,
+          2
+        ]
+      ],
+      "expected": [
+        [
+          2,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              2,
+              1,
+              2,
+              3,
+              1,
+              2
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              1
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              0,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              2
+            ]
+          ]
+        }
+      ],
+      "lmx": "Identity:\n    int: value\n    return: int\n    key:\n        return: value\n\nSame:\n    int: first\n    int: second\n    return: int\n    test:\n        return: first = second\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        @: groups groupBy(items; Identity\\key; Same\\test)\n        @[]: result []\n        sys\\resize(result; length(groups))\n        int: i 0\n        while: i < length(groups)\n            @: group groups[i]\n            result[i] := (\\group\\key; length(group\\items))\n            i += 1\n        return: result\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    my (%count, @order);\n    for (@$items) {\n        push @order, $_ unless exists $count{$_};\n        ++$count{$_};\n    }\n    return [map { [0 + $_, $count{$_}] } @order];\n}\n",
+      "core_functions": [
+        "groupBy"
+      ],
+      "foreign_dependencies": [
+        "hash",
+        "CORE::exists",
+        "CORE::push",
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/functions/exists"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P10.lm3",
+      "foreign_file": "source/perl/P10.pl",
+      "implementation_pairs": {
+        "groupBy": [
+          "PI04"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 625,
+          "nonwhitespace": 413,
+          "nonblank_lines": 25
+        },
+        "foreign": {
+          "characters": 237,
+          "nonwhitespace": 166,
+          "nonblank_lines": 11
+        }
+      }
+    },
+    {
+      "id": "P11",
+      "title": "Автовивификация групп записей",
+      "category": "Хеши",
+      "contract": "Сгруппировать целые записи по целому kind. Порядок групп — первое появление kind, порядок записей внутри группы — исходный. Никакие поля записи не удаляются.",
+      "inputs": [
+        [
+          {
+            "kind": 2,
+            "text": "a",
+            "width": 8
+          },
+          {
+            "kind": 1,
+            "text": "b",
+            "width": 4
+          },
+          {
+            "kind": 2,
+            "text": "c",
+            "width": 12
+          }
+        ]
+      ],
+      "expected": [
+        [
+          2,
+          [
+            {
+              "kind": 2,
+              "text": "a",
+              "width": 8
+            },
+            {
+              "kind": 2,
+              "text": "c",
+              "width": 12
+            }
+          ]
+        ],
+        [
+          1,
+          [
+            {
+              "kind": 1,
+              "text": "b",
+              "width": 4
+            }
+          ]
+        ]
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              {
+                "kind": 2,
+                "text": "a",
+                "width": 8
+              },
+              {
+                "kind": 1,
+                "text": "b",
+                "width": 4
+              },
+              {
+                "kind": 2,
+                "text": "c",
+                "width": 12
+              }
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              [
+                {
+                  "kind": 2,
+                  "text": "a",
+                  "width": 8
+                },
+                {
+                  "kind": 2,
+                  "text": "c",
+                  "width": 12
+                }
+              ]
+            ],
+            [
+              1,
+              [
+                {
+                  "kind": 1,
+                  "text": "b",
+                  "width": 4
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              {
+                "kind": 2,
+                "text": "a",
+                "width": 8
+              }
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              [
+                {
+                  "kind": 2,
+                  "text": "a",
+                  "width": 8
+                }
+              ]
+            ]
+          ]
+        }
+      ],
+      "lmx": "Key:\n    @: event\n    return: int\n    get:\n        return: event\\kind\n\nSame:\n    int: first\n    int: second\n    return: int\n    test:\n        return: first = second\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        @: groups groupBy(items; Key\\get; Same\\test)\n        @[]: result []\n        sys\\resize(result; length(groups))\n        int: i 0\n        while: i < length(groups)\n            @: group groups[i]\n            result[i] := (\\group\\key; group\\items)\n            i += 1\n        return: result\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    my (%groups, @order);\n    for my $event (@$items) {\n        my $key = $event->{kind};\n        push @order, $key unless exists $groups{$key};\n        push @{$groups{$key}}, $event;\n    }\n    return [map { [0 + $_, $groups{$_}] } @order];\n}\n",
+      "core_functions": [
+        "groupBy"
+      ],
+      "foreign_dependencies": [
+        "hash autovivification",
+        "CORE::push",
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P11.lm3",
+      "foreign_file": "source/perl/P11.pl",
+      "implementation_pairs": {
+        "groupBy": [
+          "PI04"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 606,
+          "nonwhitespace": 394,
+          "nonblank_lines": 25
+        },
+        "foreign": {
+          "characters": 305,
+          "nonwhitespace": 218,
+          "nonblank_lines": 12
+        }
+      }
+    },
+    {
+      "id": "P12",
+      "title": "Наложение настроек с сохранением полей",
+      "category": "Хеши",
+      "contract": "Объединить плоские настройки со скалярными и строковыми значениями: patch заменяет одноимённые совместимые поля base, новые добавляются. Ноль — значение, остальные поля, включая width/height/theme, сохраняются. Входы не меняются.",
+      "inputs": [
+        {
+          "width": 80,
+          "height": 24,
+          "theme": "dark"
+        },
+        {
+          "width": 120,
+          "border": 0
+        }
+      ],
+      "expected": {
+        "width": 120,
+        "height": 24,
+        "theme": "dark",
+        "border": 0
+      },
+      "test_cases": [
+        {
+          "args": [
+            {
+              "width": 80,
+              "height": 24,
+              "theme": "dark"
+            },
+            {
+              "width": 120,
+              "border": 0
+            }
+          ],
+          "expected": {
+            "width": 120,
+            "height": 24,
+            "theme": "dark",
+            "border": 0
+          }
+        },
+        {
+          "args": [
+            {
+              "width": 80,
+              "height": 24
+            },
+            {
+              "width": 0
+            }
+          ],
+          "expected": {
+            "width": 0,
+            "height": 24
+          }
+        },
+        {
+          "args": [
+            {
+              "width": 80
+            },
+            {}
+          ],
+          "expected": {
+            "width": 80
+          }
+        }
+      ],
+      "lmx": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        return: derive(base; patch)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($base, $patch) = @_;\n    return {%$base, %$patch};\n}\n",
+      "core_functions": [
+        "derive"
+      ],
+      "foreign_dependencies": [
+        "hash construction"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldata#List-value-constructors",
+        "https://perldoc.perl.org/5.40.1/perldsc"
+      ],
+      "notes": "Общий профиль — плоские совместимые data-поля. merge LMX копирует использованный граф общим отображением; Perl создаёт новый хеш. Для этого сценария сравниваются значения полей; идентичность вложенных изменяемых графов и композиция кода не объявлены одинаковыми.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P12.lm3",
+      "foreign_file": "source/perl/P12.pl",
+      "implementation_pairs": {
+        "derive": [
+          "PI05"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 93,
+          "nonwhitespace": 58,
+          "nonblank_lines": 6
+        },
+        "foreign": {
+          "characters": 101,
+          "nonwhitespace": 77,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P13",
+      "title": "Map с выдачей нескольких элементов",
+      "category": "Списки",
+      "contract": "Сплющить ровно один уровень списка списков, сохранив порядок. Пустые внутренние списки ничего не добавляют; более глубокие массивы остаются отдельными элементами.",
+      "inputs": [
+        [
+          [
+            1,
+            2
+          ],
+          [],
+          [
+            3
+          ]
+        ]
+      ],
+      "expected": [
+        1,
+        2,
+        3
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              [
+                1,
+                2
+              ],
+              [],
+              [
+                3
+              ]
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              [
+                1,
+                [
+                  2
+                ]
+              ],
+              [
+                [
+                  3
+                ]
+              ]
+            ]
+          ],
+          "expected": [
+            1,
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ]
+        }
+      ],
+      "lmx": "Row:\n    @: values\n    return: @\n    get:\n        return: values\n\nExample:\n    @: rows\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: flatMap(rows; Row\\get)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($rows) = @_;\n    return [map { @$_ } @$rows];\n}\n",
+      "core_functions": [
+        "flatMap"
+      ],
+      "foreign_dependencies": [
+        "CORE::map"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map",
+        "https://perldoc.perl.org/5.40.1/perllol"
+      ],
+      "notes": "",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P13.lm3",
+      "foreign_file": "source/perl/P13.pl",
+      "implementation_pairs": {
+        "flatMap": [
+          "PI01"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 234,
+          "nonwhitespace": 162,
+          "nonblank_lines": 11
+        },
+        "foreign": {
+          "characters": 96,
+          "nonwhitespace": 70,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P14",
+      "title": "Разделение строки без потери пустых полей",
+      "category": "Строки и regex",
+      "contract": "Разделить ASCII-строку по запятым; сохранить начальные, промежуточные и конечные пустые поля. Пустая строка означает одно пустое поле.",
+      "inputs": [
+        "a,,b,"
+      ],
+      "expected": [
+        "a",
+        "",
+        "b",
+        ""
+      ],
+      "test_cases": [
+        {
+          "args": [
+            "a,,b,"
+          ],
+          "expected": [
+            "a",
+            "",
+            "b",
+            ""
+          ]
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": [
+            ""
+          ]
+        },
+        {
+          "args": [
+            ","
+          ],
+          "expected": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: split(byteText(text); \",\")\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return length($text) ? [split /,/, $text, -1] : [''];\n}\n",
+      "core_functions": [
+        "split"
+      ],
+      "foreign_dependencies": [
+        "CORE::split"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/split"
+      ],
+      "notes": "Для пустого входа split Perl обычно возвращает пустой список; ветка в клиенте обеспечивает общий договор и входит в измеряемый код.",
+      "syntax_dependencies": [
+        "byteText",
+        "literal pattern"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P14.lm3",
+      "foreign_file": "source/perl/P14.pl",
+      "implementation_pairs": {
+        "split": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 211,
+          "nonwhitespace": 166,
+          "nonblank_lines": 6
+        },
+        "foreign": {
+          "characters": 121,
+          "nonwhitespace": 92,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P15",
+      "title": "Проверка полного ASCII-идентификатора",
+      "category": "Строки и regex",
+      "contract": "Принять целиком строку вида [A-Za-z][A-Za-z0-9_]* и вернуть 0/1. Пустая строка и конечный перевод строки не допускаются.",
+      "inputs": [
+        "user_21"
+      ],
+      "expected": 1,
+      "test_cases": [
+        {
+          "args": [
+            "user_21"
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            "7user"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "name\n"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A[A-Za-z][A-Za-z0-9_]*\\z/);\n}\n",
+      "core_functions": [
+        "matches"
+      ],
+      "foreign_dependencies": [
+        "regex anchors",
+        "regex character classes"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre"
+      ],
+      "notes": "Используются именно \\A и \\z; проверка не ослаблена до поиска подстроки или до конца перед последним переводом строки.",
+      "syntax_dependencies": [
+        "byteText",
+        "then",
+        "atLeast",
+        "asciiLetter",
+        "asciiWord"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P15.lm3",
+      "foreign_file": "source/perl/P15.pl",
+      "implementation_pairs": {
+        "matches": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 252,
+          "nonwhitespace": 203,
+          "nonblank_lines": 6
+        },
+        "foreign": {
+          "characters": 118,
+          "nonwhitespace": 92,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P16",
+      "title": "Именованные группы с явным отсутствием",
+      "category": "Строки и regex",
+      "contract": "Разобрать всю строку key=value, где key — непустые ASCII-буквы, value — непустые ASCII-цифры. Вернуть [1,key,value] либо [0,\"\",\"\"]. Ведущие нули значения сохраняются.",
+      "inputs": [
+        "Port=0080"
+      ],
+      "expected": [
+        1,
+        "Port",
+        "0080"
+      ],
+      "test_cases": [
+        {
+          "args": [
+            "Port=0080"
+          ],
+          "expected": [
+            1,
+            "Port",
+            "0080"
+          ]
+        },
+        {
+          "args": [
+            "x="
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        },
+        {
+          "args": [
+            "x=1!"
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureText(parsed\\value; \"key\")\n        @: value captureText(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return [0, '', ''] unless $text =~ /\\A(?<key>[A-Za-z]+)=(?<value>[0-9]+)\\z/;\n    return [1, $+{key}, $+{value}];\n}\n",
+      "core_functions": [
+        "wholeMatch",
+        "captureText"
+      ],
+      "foreign_dependencies": [
+        "named captures",
+        "%+"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
+      ],
+      "notes": "Схема использует уникальные имена групп. История всех повторных захватов LMX не сравнивается с одним значением %+.",
+      "syntax_dependencies": [
+        "byteText",
+        "then",
+        "atLeast",
+        "capture",
+        "asciiLetter",
+        "asciiDigit"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P16.lm3",
+      "foreign_file": "source/perl/P16.pl",
+      "implementation_pairs": {
+        "wholeMatch": [
+          "PI07"
+        ],
+        "captureText": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 515,
+          "nonwhitespace": 396,
+          "nonblank_lines": 11
+        },
+        "foreign": {
+          "characters": 180,
+          "nonwhitespace": 144,
+          "nonblank_lines": 7
+        }
+      }
+    },
+    {
+      "id": "P17",
+      "title": "Глобальное извлечение слов",
+      "category": "Строки и regex",
+      "contract": "Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.",
+      "inputs": [
+        "ab12CD, ef"
+      ],
+      "expected": [
+        "ab",
+        "CD",
+        "ef"
+      ],
+      "test_cases": [
+        {
+          "args": [
+            "ab12CD, ef"
+          ],
+          "expected": [
+            "ab",
+            "CD",
+            "ef"
+          ]
+        },
+        {
+          "args": [
+            "123"
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": []
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: FxRecordArity PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        @: next eachMatch(byteText(text); (asciiLetter atLeast 1))\n        @[]: result []\n        while: 1\n            @: found next()\n            catch: Stop ()\n                break\n            int: at length(result)\n            sys\\resize(result; at + 1)\n            result[at] := (matchedText(found) record)\n        return: result\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return [$text =~ /[A-Za-z]+/g];\n}\n",
+      "core_functions": [
+        "eachMatch",
+        "matchedText"
+      ],
+      "foreign_dependencies": [
+        "regex /g in list context"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators"
+      ],
+      "notes": "Perl собирает список встроенным /g; LMX использует итератор Stop. Обе стороны явно материализуют один и тот же конечный результат.",
+      "syntax_dependencies": [
+        "byteText",
+        "atLeast",
+        "asciiLetter"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P17.lm3",
+      "foreign_file": "source/perl/P17.pl",
+      "implementation_pairs": {
+        "eachMatch": [
+          "PI07"
+        ],
+        "matchedText": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 517,
+          "nonwhitespace": 343,
+          "nonblank_lines": 15
+        },
+        "foreign": {
+          "characters": 99,
+          "nonwhitespace": 75,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P18",
+      "title": "Буквальная замена всех совпадений",
+      "category": "Строки и regex",
+      "contract": "Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке; исходная строка не меняется. Метасимволы needle не становятся regex. Пустой needle вставляет между символами и на концах.",
+      "inputs": [
+        "a.b aXb a.b",
+        "a.b",
+        "$x"
+      ],
+      "expected": "$x aXb $x",
+      "test_cases": [
+        {
+          "args": [
+            "a.b aXb a.b",
+            "a.b",
+            "$x"
+          ],
+          "expected": "$x aXb $x"
+        },
+        {
+          "args": [
+            "ab",
+            "",
+            "-"
+          ],
+          "expected": "-a-b-"
+        },
+        {
+          "args": [
+            "abc",
+            "z",
+            "!"
+          ],
+          "expected": "abc"
+        },
+        {
+          "args": [
+            "ab",
+            "",
+            "-"
+          ],
+          "expected": "-a-b-",
+          "prime_empty_pattern": true
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: replace(byteText(text); literal(needle); replacement)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $needle, $replacement) = @_;\n    return $text =~ s/(?:\\Q$needle\\E)/$replacement/gr;\n}\n",
+      "core_functions": [
+        "replace"
+      ],
+      "foreign_dependencies": [
+        "s///gr",
+        "\\Q...\\E"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer"
+      ],
+      "notes": "Строка replacement вставляется как значение переменной: содержащиеся в ней $ и обратные ссылки повторно не интерпретируются. Не захватывающая группа делает runtime-pattern непустым даже для пустого needle и исключает зависимость от предыдущего успешного regex вызывающего кода.",
+      "syntax_dependencies": [
+        "byteText",
+        "literal"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P18.lm3",
+      "foreign_file": "source/perl/P18.pl",
+      "implementation_pairs": {
+        "replace": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 286,
+          "nonwhitespace": 228,
+          "nonblank_lines": 8
+        },
+        "foreign": {
+          "characters": 141,
+          "nonwhitespace": 115,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P19",
+      "title": "Вычисляемая замена с сохранением ширины",
+      "category": "Строки и regex",
+      "contract": "Каждую максимальную последовательность ASCII-цифр заменить таким же количеством звёздочек. Длина строки и прочие символы сохраняются; callback вызывается один раз на выбранное совпадение.",
+      "inputs": [
+        "card 1234 / 09"
+      ],
+      "expected": "card **** / **",
+      "test_cases": [
+        {
+          "args": [
+            "card 1234 / 09"
+          ],
+          "expected": "card **** / **"
+        },
+        {
+          "args": [
+            "a0b"
+          ],
+          "expected": "a*b"
+        },
+        {
+          "args": [
+            "abc"
+          ],
+          "expected": "abc"
+        }
+      ],
+      "lmx": "Mask:\n    Match@: matched\n    return: char[]\n    make:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        char[]: text matchedText(matched)\n        char[]: result []\n        sys\\resize(result; length(text))\n        int: i 0\n        while: i < length(text)\n            result[i] := '*'\n            i += 1\n        return: result\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\\make)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return $text =~ s/[0-9]+/'*' x length($&)/ger;\n}\n",
+      "core_functions": [
+        "replace",
+        "matchedText"
+      ],
+      "foreign_dependencies": [
+        "s///ger",
+        "string repetition x"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer",
+        "https://perldoc.perl.org/5.40.1/perlop#Multiplicative-Operators"
+      ],
+      "notes": "Здесь ширина совпадения — часть задачи, поэтому более короткая замена каждого числа единственным символом была бы другой программой.",
+      "syntax_dependencies": [
+        "byteText",
+        "atLeast",
+        "asciiDigit"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P19.lm3",
+      "foreign_file": "source/perl/P19.pl",
+      "implementation_pairs": {
+        "replace": [
+          "PI07"
+        ],
+        "matchedText": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 652,
+          "nonwhitespace": 474,
+          "nonblank_lines": 19
+        },
+        "foreign": {
+          "characters": 114,
+          "nonwhitespace": 88,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P20",
+      "title": "Обратная ссылка на одинаковое слово",
+      "category": "Строки и regex",
+      "contract": "Принять ровно два одинаковых непустых ASCII-слова, разделённых одним пробелом; сравнение чувствительно к регистру, вся строка должна совпасть.",
+      "inputs": [
+        "cat cat"
+      ],
+      "expected": 1,
+      "test_cases": [
+        {
+          "args": [
+            "cat cat"
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            "cat dog"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "Cat cat"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "x x "
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A(?<word>[A-Za-z]+) \\k<word>\\z/);\n}\n",
+      "core_functions": [
+        "matches"
+      ],
+      "foreign_dependencies": [
+        "named backreference"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
+      ],
+      "notes": "",
+      "syntax_dependencies": [
+        "byteText",
+        "then",
+        "atLeast",
+        "capture",
+        "sameAs",
+        "asciiLetter"
+      ],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P20.lm3",
+      "foreign_file": "source/perl/P20.pl",
+      "implementation_pairs": {
+        "matches": [
+          "PI07"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 278,
+          "nonwhitespace": 226,
+          "nonblank_lines": 6
+        },
+        "foreign": {
+          "characters": 124,
+          "nonwhitespace": 97,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P21",
+      "title": "Транслитерация алфавита ДНК",
+      "category": "Строки",
+      "contract": "Вернуть новую строку с одновременной заменой A↔T и C↔G. Другие ASCII-символы и длина не меняются; уже заменённые символы повторно не обрабатываются.",
+      "inputs": [
+        "ACGTN"
+      ],
+      "expected": "TGCAN",
+      "test_cases": [
+        {
+          "args": [
+            "ACGTN"
+          ],
+          "expected": "TGCAN"
+        },
+        {
+          "args": [
+            "AAAA"
+          ],
+          "expected": "TTTT"
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        }
+      ],
+      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        char[]: source \"ACGT\"\n        char[]: target \"TGCA\"\n        char[]: result [copy(text)]\n        int: i 0\n        while: i < length(text)\n            int: j 0\n            while: j < length(source)\n                if: text[i] = source[j]\n                    result[i] := target[j]\n                    break\n                j += 1\n            i += 1\n        return: result\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return $text =~ tr/ACGT/TGCA/r;\n}\n",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "tr///r"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlop#tr/SEARCHLIST/REPLACEMENTLIST/cdsr"
+      ],
+      "notes": "LMX здесь использует обычный граф, копирование и индексы. Отдельный библиотечный ресивер ради одного фиксированного алфавита не вводится.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P21.lm3",
+      "foreign_file": "source/perl/P21.pl",
+      "implementation_pairs": {},
+      "counts": {
+        "lmx": {
+          "characters": 432,
+          "nonwhitespace": 219,
+          "nonblank_lines": 17
+        },
+        "foreign": {
+          "characters": 99,
+          "nonwhitespace": 75,
+          "nonblank_lines": 6
+        }
+      }
+    },
+    {
+      "id": "P22",
+      "title": "Независимые замыкания со своим счётчиком",
+      "category": "Состояние",
+      "contract": "Создать два независимых счётчика: первый стартует с initial, второй со 100. Последовательно прибавить первому 1 и 3, второму 2, первому −2; вернуть все четыре результата.",
+      "inputs": [
+        10
+      ],
+      "expected": [
+        11,
+        14,
+        102,
+        12
+      ],
+      "test_cases": [
+        {
+          "args": [
+            10
+          ],
+          "expected": [
+            11,
+            14,
+            102,
+            12
+          ]
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": [
+            1,
+            4,
+            102,
+            2
+          ]
+        },
+        {
+          "args": [
+            -5
+          ],
+          "expected": [
+            -4,
+            -1,
+            102,
+            -3
+          ]
+        }
+      ],
+      "lmx": "Counter:\n    int: value 0\n    Add:\n        int: delta\n        return: int\n        add:\n            @: owner parent(node)\n            owner\\value += delta\n            return: owner\\value\n\nExample:\n    int: initial\n    return: @\n    run:\n        @: first (copy(Counter))\n        first := parent(first\\Add)\n        @: second (copy(Counter))\n        second := parent(second\\Add)\n        first\\value := initial\n        second\\value := 100\n        int: a first\\Add\\add(1)\n        int: b first\\Add\\add(3)\n        int: c second\\Add\\add(2)\n        int: d first\\Add\\add(-2)\n        return: (a; b; c; d)\n",
+      "foreign": "use strict;\nuse warnings;\nsub make_counter {\n    my ($value) = @_;\n    return sub { $value += shift };\n}\nsub example {\n    my ($initial) = @_;\n    my $first = make_counter($initial);\n    my $second = make_counter(100);\n    return [$first->(1), $first->(3), $second->(2), $first->(-2)];\n}\n",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "lexical closure",
+        "anonymous subroutine"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref#Anonymous-Subroutines",
+        "https://perldoc.perl.org/5.40.1/perlsub#Persistent-Private-Variables"
+      ],
+      "notes": "make_counter — определение предметного объекта этого примера, не импорт сравниваемой библиотеки. Два состояния изолированы; неподвижное число 100 — второй тестовый старт, не ограничение механизма.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P22.lm3",
+      "foreign_file": "source/perl/P22.pl",
+      "implementation_pairs": {},
+      "counts": {
+        "lmx": {
+          "characters": 593,
+          "nonwhitespace": 365,
+          "nonblank_lines": 24
+        },
+        "foreign": {
+          "characters": 288,
+          "nonwhitespace": 224,
+          "nonblank_lines": 12
+        }
+      }
+    },
+    {
+      "id": "P23",
+      "title": "Ленивый итератор, в котором ноль не означает конец",
+      "category": "Состояние",
+      "contract": "Итератор выдаёт квадраты 0..limit−1 по одному и завершается отдельно от значения. Собрать его в список; limit неотрицателен. Нулевой первый элемент нельзя потерять как false.",
+      "inputs": [
+        4
+      ],
+      "expected": [
+        0,
+        1,
+        4,
+        9
+      ],
+      "test_cases": [
+        {
+          "args": [
+            4
+          ],
+          "expected": [
+            0,
+            1,
+            4,
+            9
+          ]
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": [
+            0
+          ]
+        }
+      ],
+      "lmx": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\nExample:\n    int: limit\n    return: @\n    run:\n        @: source (copy(Squares))\n        source := parent(source\\Next)\n        source\\limit := limit\n        @: next source\\Next\\next\n        int[]: result []\n        while: 1\n            int: value next()\n            catch: Stop ()\n                break\n            int: at length(result)\n            sys\\resize(result; at + 1)\n            result[at] := value\n        return: result\n",
+      "foreign": "use strict;\nuse warnings;\nsub squares {\n    my ($limit) = @_;\n    my $i = 0;\n    return sub { return undef if $i >= $limit; my $n = $i++; return $n * $n };\n}\nsub example {\n    my ($limit) = @_;\n    my $next = squares($limit);\n    my @result;\n    while (defined(my $value = $next->())) {\n        push @result, $value;\n    }\n    return \\@result;\n}\n",
+      "core_functions": [],
+      "foreign_dependencies": [
+        "closure iterator",
+        "CORE::defined"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref#Anonymous-Subroutines",
+        "https://perldoc.perl.org/5.40.1/functions/defined"
+      ],
+      "notes": "Stop LMX и undef Perl служат отдельным окончанием. Это синхронная ленивость; фонового потока или обещания асинхронности здесь нет.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P23.lm3",
+      "foreign_file": "source/perl/P23.pl",
+      "implementation_pairs": {},
+      "counts": {
+        "lmx": {
+          "characters": 696,
+          "nonwhitespace": 364,
+          "nonblank_lines": 29
+        },
+        "foreign": {
+          "characters": 346,
+          "nonwhitespace": 242,
+          "nonblank_lines": 16
+        }
+      }
+    },
+    {
+      "id": "P24",
+      "title": "Освобождение ресурса при успехе и исключении",
+      "category": "Ресурсы",
+      "contract": "Ресурс содержит value=42 и width=8. Журнал: 1 acquire, 2 action, 3 release. mode=0 возвращает [50,123], mode=1 — отказ action и [0,123], mode=2 — отказ acquire и [0,1]. Release после успешного acquire выполняется ровно один раз.",
+      "inputs": [
+        0
+      ],
+      "expected": [
+        50,
+        123
+      ],
+      "test_cases": [
+        {
+          "args": [
+            0
+          ],
+          "expected": [
+            50,
+            123
+          ]
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": [
+            0,
+            123
+          ]
+        },
+        {
+          "args": [
+            2
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        }
+      ],
+      "lmx": "Resource:\n    int: value 42\n    int: width 8\nTrace:\n    int: mode 0\n    int: events 0\n    Acquire:\n        return: @\n        open:\n            throws: ResourceFailure\n            Trace\\events := Trace\\events * 10 + 1\n            if: Trace\\mode = 2\n                throw: ResourceFailure()\n            return: Resource\n    ---\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: ResourceFailure\n            Trace\\events := Trace\\events * 10 + 2\n            if: Trace\\mode = 1\n                throw: ResourceFailure()\n            return: resource\\value + resource\\width\n    ---\n    Release:\n        @: resource\n        close:\n            Trace\\events := Trace\\events * 10 + 3\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceSize\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value \\bracket(Trace\\Acquire\\open; Trace\\Release\\close; Trace\\Action\\use)\n        return: (value; Trace\\events)\n        catch: FxCallFailure (@: failure)\n            return: (0; Trace\\events)\n",
+      "foreign": "use strict;\nuse warnings;\nuse feature 'defer';\nno warnings 'experimental::defer';\nsub example {\n    my ($mode) = @_;\n    my ($events, $value) = (0, 0);\n    eval {\n        $events = $events * 10 + 1;\n        die \"ResourceFailure\\n\" if $mode == 2;\n        my $resource = {value => 42, width => 8};\n        defer { $events = $events * 10 + 3 }\n        $events = $events * 10 + 2;\n        die \"ResourceFailure\\n\" if $mode == 1;\n        $value = $resource->{value} + $resource->{width};\n    };\n    return [$value, $events];\n}\n",
+      "core_functions": [
+        "bracket"
+      ],
+      "foreign_dependencies": [
+        "feature defer",
+        "CORE::eval",
+        "CORE::die"
+      ],
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlsyn#defer-blocks",
+        "https://perldoc.perl.org/5.40.1/functions/eval"
+      ],
+      "notes": "Perl 5.40.1 поддерживает defer, но помечает его experimental; включение и предупреждение учтены в коде. Клиент использует штатный defer, не сравнительный bracket. Release клиента не бросает; отдельная реализация bracket дополнительно определяет случай отказа release. Все действия синхронны в текущем Message; post всего owner-метода достаточен для запуска всей операции асинхронно, но post отдельного action не продлевает жизнь ресурса.",
+      "syntax_dependencies": [],
+      "alternatives": [],
+      "input_mutation": false,
+      "lmx_file": "source/lmx/P24.lm3",
+      "foreign_file": "source/perl/P24.pl",
+      "implementation_pairs": {
+        "bracket": [
+          "PI06"
+        ]
+      },
+      "counts": {
+        "lmx": {
+          "characters": 1083,
+          "nonwhitespace": 673,
+          "nonblank_lines": 40
+        },
+        "foreign": {
+          "characters": 521,
+          "nonwhitespace": 365,
+          "nonblank_lines": 18
+        }
+      }
+    }
+  ],
+  "implementations": [
+    {
+      "id": "PI01",
+      "title": "Общие последовательные коллекции",
+      "core_functions": [
+        "map",
+        "filter",
+        "foldl",
+        "scanl",
+        "any",
+        "all",
+        "flatMap"
+      ],
+      "lmx": "FxMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    map:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; count)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            result[i] := FxApply\\apply(transform; FxOne\\make(item))\n            i += 1\n        return: result\n\nFxFilter:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    filter:\n        throws: copy(FxThrows\\traversal)\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: flagRecord FxApply\\apply(accepts; FxOne\\make(item))\n            # Keep filter's established ordinary int-result admission channel.\n            private: int: flag \\flagRecord\n            if: flag != 0\n                FxKernel\\arrayWrite(target := result; index := used; value := item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n\nFxFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    fold:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: accumulator seed\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            i += 1\n        return: accumulator\n\nFxScan:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    scan:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; 0)\n        private: @: info FxSeqInfo\\get(result)\n        private: int: total FxSeqSize\\sum(count; 1; info\\maxLength)\n        sys\\resize(result; total)\n        private: @: accumulator seed\n        result[0] := accumulator\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            result[i + 1] := accumulator\n            i += 1\n        return: result\n\nFxSeqAny:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    any:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: 1\n            i += 1\n        return: 0\n\nFxSeqAll:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    all:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) = 0\n                return: 0\n            i += 1\n        return: 1\n\nFxSeqFlatMap:\n    private:\n        @: items\n        @: next\n    required: items next\n    return: @\n    flatMap:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: out FxSeqAllocate\\make(@[]; 0)\n        private: @: info FxSeqInfo\\get(out)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: part FxApply\\apply(next; FxOne\\make(item))\n            FxSeqInfo\\get(part)\n            private: int: before length(out)\n            private: int: added length(part)\n            private: int: after FxSeqSize\\sum(before; added; info\\maxLength)\n            sys\\resize(out; after)\n            private: int: j 0\n            while: j < added\n                out[before + j] := FxSeqRead\\read(part; j)\n                j += 1\n            i += 1\n        return: out\n",
+      "lmx_extract": [
+        {
+          "file": "collections.lmx",
+          "roots": [
+            "FxMap",
+            "FxFilter",
+            "FxFold",
+            "FxScan"
+          ]
+        },
+        {
+          "file": "sequences.lmx",
+          "roots": [
+            "FxSeqAny",
+            "FxSeqAll"
+          ]
+        },
+        {
+          "file": "sequences_selection.lmx",
+          "roots": [
+            "FxSeqFlatMap"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Sequences;\nuse strict;\nuse warnings;\nsub array {\n    ref($_[0]) eq 'ARRAY' or die \"SequenceType\\n\";\n    return $_[0];\n}\nsub callable {\n    ref($_[0]) eq 'CODE' or die \"CallableType\\n\";\n    return $_[0];\n}\nsub truth {\n    my ($value) = @_;\n    defined($value) && !ref($value) && $value =~ /\\A-?[0-9]+\\z/\n        or die \"PredicateType\\n\";\n    return $value != 0;\n}\nsub map_values {\n    my ($items, $transform) = @_;\n    array($items); callable($transform);\n    my @out;\n    for my $item (@$items) {\n        my $value = $transform->($item);\n        push @out, $value;\n    }\n    return \\@out;\n}\nsub filter_values {\n    my ($items, $accepts) = @_;\n    array($items); callable($accepts);\n    my @out;\n    for my $item (@$items) {\n        push @out, $item if truth($accepts->($item));\n    }\n    return \\@out;\n}\nsub fold_values {\n    my ($items, $seed, $step) = @_;\n    array($items); callable($step);\n    my $value = $seed;\n    for my $item (@$items) {\n        $value = $step->($value, $item);\n    }\n    return $value;\n}\nsub scan_values {\n    my ($items, $seed, $step) = @_;\n    array($items); callable($step);\n    my $value = $seed;\n    my @out = ($seed);\n    for my $item (@$items) {\n        $value = $step->($value, $item);\n        push @out, $value;\n    }\n    return \\@out;\n}\nsub any_value {\n    my ($items, $accepts) = @_;\n    array($items); callable($accepts);\n    for my $item (@$items) {\n        return 1 if truth($accepts->($item));\n    }\n    return 0;\n}\nsub all_values {\n    my ($items, $accepts) = @_;\n    array($items); callable($accepts);\n    for my $item (@$items) {\n        return 0 unless truth($accepts->($item));\n    }\n    return 1;\n}\nsub flat_map {\n    my ($items, $next) = @_;\n    array($items); callable($next);\n    my @out;\n    for my $item (@$items) {\n        my $part = array($next->($item));\n        for my $value (@$part) {\n            push @out, $value;\n        }\n    }\n    return \\@out;\n}\n1;\n",
+      "contract": "Полные последовательные алгоритмы для произвольных значений: map, filter, fold с seed, scan с начальным seed, короткие any/all, раскрытие ровно одного уровня flatMap. Порядок вызовов сохранён. Пустые входы, произвольные ссылки и результаты, ошибки callbacks входят в договор.",
+      "boundary": "Общий нижний уровень — доступ к массиву и обычный вызов callback. На стороне LMX это уже имеющиеся FxSeq*/FxApply, на стороне Perl — массивы, push и вызов coderef. Сами map/grep/List::Util в сравнительной реализации не вызываются. FxListBind и публичные алиасы foldl/scanl только перенаправляют на показанные алгоритмы.",
+      "limitations": "Callbacks не меняют слоты или длину входа. Неудача прекращает обход и не публикует частичный результат; внешние эффекты callback не откатываются. Perl не имеет метки LMX int, поэтому predicate-admission принимает числовой скаляр с целой записью; сравнение не утверждает тождество низкоуровневых типов VM. Ошибки Perl распространяются обычным die, LMX — конечным FxCallFailure.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/map",
+        "https://perldoc.perl.org/5.40.1/functions/grep",
+        "https://perldoc.perl.org/5.40.1/List::Util",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/collections.lmx",
+          "roots": [
+            "FxMap",
+            "FxFilter",
+            "FxFold",
+            "FxScan"
+          ],
+          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "extract_sha256": "a40be0ba74328774bfabed3f87adfacfcb33c926374b7146560190c6c0a80d29"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+          "roots": [
+            "FxSeqAny",
+            "FxSeqAll"
+          ],
+          "file_sha256": "1b102659d0a7b09844e493b97811d55a7294c069ff1dac3cba27abe2d03f944c",
+          "extract_sha256": "ac40bb87cd5e793c3bcc117f323503ef7df4e8b3414de6332f67c84826176d9a"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx",
+          "roots": [
+            "FxSeqFlatMap"
+          ],
+          "file_sha256": "a277dcd8417fd9f8f3ab37a32315fdf05a525118f131a0256d866ffa380ad625",
+          "extract_sha256": "0b9c062187d8e74f9d42e6bd5754736f1ffe7675dbc6d60f20ddba7ab20f0804"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/collections.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI01.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI01.pm"
+    },
+    {
+      "id": "PI02",
+      "title": "Срез и изменение диапазона",
+      "core_functions": [
+        "select",
+        "splice"
+      ],
+      "lmx": "FxSeqIndices:\n    private:\n        @: source\n        @: indices\n    required: source indices\n    return: @\n    check:\n        throws: copy(FxThrows\\sequence)\n        FxSeqInfo\\get(source)\n        FxSeqInfo\\get(indices)\n        private: int: total length(source)\n        private: int: count length(indices)\n        private: @: checked FxSeqAllocate\\make(int[]; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(indices; i)\n            private: int: at \\value\n            if: at < 0 || at >= total\n                throw: ReceiverIndex()\n            checked[i] := at\n            i += 1\n        return: checked\n\nFxSeqSelection:\n    private:\n        @: source\n        int[]: positions\n    required: source positions\n    return: @\n    copySelected:\n        throws: copy(FxThrows\\sequence)\n        private: @: info FxSeqInfo\\get(source)\n        private: int: count length(positions)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; positions[i])\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqSelect:\n    private:\n        @: source\n        @: indices\n    required: source indices\n    return: @\n    select:\n        throws: copy(FxThrows\\sequence)\n        private: @: positions FxSeqIndices\\check(source; indices)\n        return: FxSeqSelection\\copySelected(source; positions)\n\nFxSeqSlice:\n    private:\n        @: source\n        int: begin\n        int: end\n    required: source begin end\n    return: @\n    slice:\n        throws: copy(FxThrows\\sequence)\n        private: int: count FxSeqBounds\\count(source; begin; end)\n        private: @: info FxSeqInfo\\get(source)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; begin + i)\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqReplaceRange:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    replaceRange:\n        throws: copy(FxThrows\\mutation)\n        private: @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        private: int: removed FxSeqBounds\\count(target; begin; end)\n        private: int: oldSize length(target)\n        private: int: added length(values)\n        private: int: retained oldSize - removed\n        private: int: newSize FxSeqSize\\sum(retained; added; info\\maxLength)\n        private: @: stage FxSeqAllocate\\make(info\\arrayType; added)\n        private: int: i 0\n        # This conservative overlap-safe path buffers only the inserted range.\n        # Dense preparation keeps dense T storage; @[] keeps direct references.\n        # No hidden user converter or initializer is called by arrayAdmit.\n        # Full ordinary admission belongs here, never in the commit loop.\n        while: i < added\n            private: @: sourceValue FxSeqRead\\read(values; i)\n            private: @: ready FxSeqAdmit\\admit(target; sourceValue)\n            FxKernel\\arrayWrite(target := stage; index := i; value := ready)\n            i += 1\n        # Capacity can change while descriptor identity is retained. Resource\n        # failure is ordinary; no general transactional promise is introduced.\n        sys\\reserve(target; newSize)\n        if: newSize > oldSize\n            private: int: shift newSize - oldSize\n            sys\\resize(target; newSize)\n            i := oldSize\n            # Move the tail backwards before inserting, like a typed memmove.\n            while: i > end\n                i -= 1\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := i + shift; value := value)\n        ---\n        else:\n            private: int: destination begin + added\n            i := end\n            # For shrink/equal length the forward order does not overwrite a\n            # source tail element that has not yet been read.\n            while: i < oldSize\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := destination; value := value)\n                destination += 1\n                i += 1\n            sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            private: @: value FxSeqRead\\read(stage; i)\n            FxKernel\\arrayWrite(target := target; index := begin + i; value := value)\n            i += 1\n        return: target\n\nFxSeqSplice:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    splice:\n        throws: copy(FxThrows\\mutation)\n        # Snapshot the removed range before reserve, resize, or any target\n        # write. Slice preserves the complete physical element profile and\n        # copies outer slots only: referenced targets remain shared.\n        private: @: removed FxSeqSlice\\slice(target; begin; end)\n        # The common replacement path prepares all inserted values before\n        # commit, including values = target and other overlapping sources.\n        # Failure during preparation leaves target's contents unchanged.\n        FxSeqReplaceRange\\replaceRange(target; begin; end; values)\n        return: removed\n",
+      "lmx_extract": [
+        {
+          "file": "sequences_selection.lmx",
+          "roots": [
+            "FxSeqIndices",
+            "FxSeqSelection",
+            "FxSeqSelect"
+          ]
+        },
+        {
+          "file": "sequences.lmx",
+          "roots": [
+            "FxSeqSlice"
+          ]
+        },
+        {
+          "file": "sequences_mutation.lmx",
+          "roots": [
+            "FxSeqReplaceRange",
+            "FxSeqSplice"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Ranges;\nuse strict;\nuse warnings;\nsub array {\n    ref($_[0]) eq 'ARRAY' or die \"SequenceType\\n\";\n    return $_[0];\n}\nsub checked_index {\n    my ($value) = @_;\n    defined($value) && !ref($value) && $value =~ /\\A[0-9]+\\z/\n        or die \"ReceiverIndex\\n\";\n    return 0 + $value;\n}\nsub select_values {\n    my ($source, $indices) = @_;\n    array($source); array($indices);\n    my @checked;\n    for my $value (@$indices) {\n        my $at = checked_index($value);\n        $at < @$source or die \"ReceiverIndex\\n\";\n        push @checked, $at;\n    }\n    my @out;\n    push @out, $source->[$_] for @checked;\n    return \\@out;\n}\nsub replace_range {\n    my ($target, $begin, $end, $values) = @_;\n    array($target); array($values);\n    $begin = checked_index($begin); $end = checked_index($end);\n    $begin <= $end && $end <= @$target or die \"ReceiverIndex\\n\";\n    my @staged = @$values;\n    my @ready;\n    for (my $i = 0; $i < $begin; ++$i) { push @ready, $target->[$i] }\n    push @ready, @staged;\n    for (my $i = $end; $i < @$target; ++$i) { push @ready, $target->[$i] }\n    @$target = @ready;\n    return $target;\n}\nsub splice_values {\n    my ($target, $begin, $end, $values) = @_;\n    array($target); array($values);\n    $begin = checked_index($begin); $end = checked_index($end);\n    $begin <= $end && $end <= @$target or die \"ReceiverIndex\\n\";\n    my @removed;\n    for (my $i = $begin; $i < $end; ++$i) { push @removed, $target->[$i] }\n    replace_range($target, $begin, $end, $values);\n    return \\@removed;\n}\n1;\n",
+      "contract": "Нулевые индексы, полуоткрытые диапазоны, повторы в select, пустое удаление/вставка. select создаёт новый внешний массив. splice сохраняет идентичность target и возвращает удалённые элементы. Если values совпадает с target, вставляемые значения снимаются до изменения.",
+      "boundary": "Показаны проверка всех индексов, снимок вставки и commit; сравнительная Perl-реализация не вызывает штатный splice. Runtime обеспечивает расширение памяти и обычный тип элементов; LMX сохраняет полный профиль dense/@[] и проверяет допуск до commit.",
+      "limitations": "Проверки диапазона и staging заканчиваются до первой записи в target. Сбой подготовки не меняет target; необратимые отказы процесса/аллокатора во время commit не объявлены транзакционно откатываемыми. Perl не имеет профиля dense T[], поэтому сохраняется свой родной ARRAY и тождество его ссылочных элементов.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/splice",
+        "https://perldoc.perl.org/5.40.1/perldata#Slices",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx",
+          "roots": [
+            "FxSeqIndices",
+            "FxSeqSelection",
+            "FxSeqSelect"
+          ],
+          "file_sha256": "a277dcd8417fd9f8f3ab37a32315fdf05a525118f131a0256d866ffa380ad625",
+          "extract_sha256": "b0f84cedab64267c6401f524ce000764340dd4b6c7323308e711e4aeed7b71c5"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+          "roots": [
+            "FxSeqSlice"
+          ],
+          "file_sha256": "1b102659d0a7b09844e493b97811d55a7294c069ff1dac3cba27abe2d03f944c",
+          "extract_sha256": "aece514525d287393953df84759e37d3b8790babfe23bdf3b7911d554329a577"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/sequences_mutation.lmx",
+          "roots": [
+            "FxSeqReplaceRange",
+            "FxSeqSplice"
+          ],
+          "file_sha256": "2980213c6bc022b3faaabcb3ca62621c34dc6f56f752b51eda8a067f1a851cf5",
+          "extract_sha256": "05a3a95df379f39cd01403e4136b81dc72f42e31a59fc7c9b71a18b706b23851"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/sequences_selection.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences.lmx",
+        "patterns/LMX_Fn_Receivers/src/sequences_mutation.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI02.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI02.pm"
+    },
+    {
+      "id": "PI03",
+      "title": "Стабильная сортировка и unique",
+      "core_functions": [
+        "sort",
+        "unique"
+      ],
+      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    ---\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same\n    required: items same\n    return: @\n    unique:\n        throws:\n            FxCallFailure\n            FxKernelFailure\n            FxPredicate\n            FxTypeToken\n            ReceiverIndex\n            SequenceElement\n            SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                private: @: answer FxApply\\apply(same; FxTwo\\make(previous; item))\n                if: FxSeqPredicate\\truth(answer) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n",
+      "lmx_extract": [
+        {
+          "file": "corePerlExamples.lmx",
+          "roots": [
+            "FxSort",
+            "FxUnique"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Ordering;\nuse strict;\nuse warnings;\nsub arguments {\n    my ($items, $operation) = @_;\n    ref($items) eq 'ARRAY' or die \"SequenceType\\n\";\n    ref($operation) eq 'CODE' or die \"CallableType\\n\";\n}\nsub integer {\n    my ($value) = @_;\n    defined($value) && !ref($value) && $value =~ /\\A-?[0-9]+\\z/\n        or die \"ComparisonType\\n\";\n    return 0 + $value;\n}\nsub stable_sort {\n    my ($items, $compare) = @_;\n    arguments($items, $compare);\n    my $current = [@$items];\n    my $count = @$current;\n    my $scratch = [];\n    my $width = 1;\n    while ($width < $count) {\n        my $start = 0;\n        while ($start < $count) {\n            my $middle = $width < $count - $start ? $start + $width : $count;\n            my $end = $width < $count - $middle ? $middle + $width : $count;\n            my ($left, $right, $at) = ($start, $middle, $start);\n            while ($at < $end) {\n                my $take_left = $right == $end;\n                if (!$take_left && $left < $middle) {\n                    my $order = integer($compare->($current->[$left], $current->[$right]));\n                    $take_left = $order <= 0;\n                }\n                $scratch->[$at++] = $take_left ? $current->[$left++] : $current->[$right++];\n            }\n            $start = $end;\n        }\n        ($current, $scratch) = ($scratch, $current);\n        $width = $width > $count - $width ? $count : $width + $width;\n    }\n    return $current;\n}\nsub stable_unique {\n    my ($items, $same) = @_;\n    arguments($items, $same);\n    my @out;\n    ITEM: for my $item (@$items) {\n        for my $previous (@out) {\n            next ITEM if integer($same->($previous, $item)) != 0;\n        }\n        push @out, $item;\n    }\n    return \\@out;\n}\n1;\n",
+      "contract": "Любые элементы и явные callbacks: compare возвращает отрицательный/нулевой/положительный int, same — ноль или ненулевой int. sort стабилен, unique сохраняет первое вхождение. Пустой и единичный массив не вызывают callback; оба результата имеют новый внешний контейнер и сохраняют идентичность ссылочных элементов.",
+      "boundary": "Сравниваются собственные общие алгоритмы: итеративное слияние и последовательная проверка представителей. Штатные sort и List::Util::uniq используются только клиентами. Нет специализации элементов на int или ограничения числа аргументов функции данных.",
+      "limitations": "sort: O(n log n) сравнений, O(n) памяти. unique с произвольным same: O(n²) сравнений, O(n) памяти; это не универсальная хеш-таблица. Ошибка callback не меняет вход при соблюдении запрета менять source/ключи самим callback. List::Util::uniq имеет иной общий договор строкового равенства; P09 использует совпадающий целочисленный поддомен.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/functions/sort",
+        "https://perldoc.perl.org/5.40.1/sort",
+        "https://perldoc.perl.org/5.40.1/List::Util#uniq"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
+          "roots": [
+            "FxSort",
+            "FxUnique"
+          ],
+          "file_sha256": "9d6a979426a47e2a07b251c9ff0d2cb2abf65a835f4776a2adbe75b39a495c74",
+          "extract_sha256": "cba14c645f207183356b813eb13c08934cf83e5b66ebdcc57f8c29d0c28152ad"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI03.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI03.pm"
+    },
+    {
+      "id": "PI04",
+      "title": "Группировка с произвольным ключом",
+      "core_functions": [
+        "groupBy"
+      ],
+      "lmx": "FxGroup:\n    @: key 0\n    @: items 0\n\nFxGroupBy:\n    private:\n        @: items\n        @: keyOf\n        @: sameKey\n    required: items keyOf sameKey\n    return: @\n    groupBy:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; 0)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: key FxApply\\apply(keyOf; FxOne\\make(item))\n            private: @: group 0\n            private: int: j 0\n            while: j < length(result)\n                private: FxGroup@: candidate result[j]\n                private: @: flagRecord FxApply\\apply(sameKey; FxTwo\\make(candidate\\key; key))\n                private: int: flag \\flagRecord\n                if: flag != 0\n                    group := candidate\n                    break\n                j += 1\n            if: group = 0\n                group := (copy(FxGroup))\n                group\\key := key\n                group\\items := FxSeqAllocate\\make(@[]; 0)\n                FxSeqPush\\append(result; group)\n            FxSeqPush\\append(group\\items; item)\n            i += 1\n        return: result\n",
+      "lmx_extract": [
+        {
+          "file": "collections.lmx",
+          "roots": [
+            "FxGroup",
+            "FxGroupBy"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Groups;\nuse strict;\nuse warnings;\nsub group_by {\n    my ($items, $key_of, $same_key) = @_;\n    ref($items) eq 'ARRAY' or die \"SequenceType\\n\";\n    ref($key_of) eq 'CODE' && ref($same_key) eq 'CODE' or die \"CallableType\\n\";\n    my @groups;\n    for my $item (@$items) {\n        my $key = $key_of->($item);\n        my $selected;\n        for my $group (@groups) {\n            my $same = $same_key->($group->{key}, $key);\n            defined($same) && !ref($same) && $same =~ /\\A-?[0-9]+\\z/\n                or die \"PredicateType\\n\";\n            if ($same != 0) { $selected = $group; last }\n        }\n        if (!defined $selected) {\n            $selected = {key => $key, items => []};\n            push @groups, $selected;\n        }\n        push @{$selected->{items}}, $item;\n    }\n    return \\@groups;\n}\n1;\n",
+      "contract": "Ключи и элементы произвольны, включая структуры/ссылки. keyOf вызывается один раз на элемент. sameKey сравнивает с ключами уже созданных групп по порядку. Сохраняются порядок первых ключей, порядок элементов и полные значения/ссылки. Пустой вход возвращает пустой массив.",
+      "boundary": "Обе реализации используют список групп и явное равенство; они не принуждают пользовательский ключ к строке. Для клиентских целых ключей Perl вправе использовать свою настоящую хеш-таблицу и автоматическое создание массива.",
+      "limitations": "Здесь нет обещания O(n) для произвольного пользовательского sameKey: худший случай квадратичен. Callback не меняет вход; его отказ прекращает операцию и не публикует частичные группы. Нули, пустые ключи и составные ключи не служат sentinel.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+        "https://perldoc.perl.org/5.40.1/perlref"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/collections.lmx",
+          "roots": [
+            "FxGroup",
+            "FxGroupBy"
+          ],
+          "file_sha256": "00bf9ebe91722dc9b2d6e6bee08ee82e8449ee09598b1278088343c975f2b718",
+          "extract_sha256": "75701a521d3f3e2b55294958a39f2eeed33a8af5fb807f0174ded131b25522c1"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/collections.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI04.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI04.pm"
+    },
+    {
+      "id": "PI05",
+      "title": "Композиция записей и копирование data-графа",
+      "core_functions": [
+        "derive"
+      ],
+      "lmx": "RxDerive:\n    @: base\n    @: extension\n    return: @\n    derive:\n        return: (merge(base; extension))\n",
+      "lmx_extract": [
+        {
+          "file": "structures.lmx",
+          "roots": [
+            "RxDerive"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Records;\nuse strict;\nuse warnings;\nuse Scalar::Util qw(refaddr reftype blessed);\nsub clone_data {\n    my ($value, $seen) = @_;\n    return $value unless ref $value;\n    blessed($value) and die \"MergeType\\n\";\n    my $address = refaddr($value);\n    return $seen->{$address} if exists $seen->{$address};\n    my $kind = reftype($value);\n    if ($kind eq 'HASH') {\n        my $out = {};\n        $seen->{$address} = $out;\n        for my $key (keys %$value) { $out->{$key} = clone_data($value->{$key}, $seen) }\n        return $out;\n    }\n    if ($kind eq 'ARRAY') {\n        my $out = [];\n        $seen->{$address} = $out;\n        for my $item (@$value) { push @$out, clone_data($item, $seen) }\n        return $out;\n    }\n    if ($kind eq 'SCALAR' || $kind eq 'REF') {\n        my $target;\n        my $out = \\$target;\n        $seen->{$address} = $out;\n        $target = clone_data($$value, $seen);\n        return $out;\n    }\n    die \"MergeType\\n\";\n}\nsub derive_record {\n    my ($base, $extension) = @_;\n    ref($base) eq 'HASH' && ref($extension) eq 'HASH' or die \"MergeType\\n\";\n    my %seen;\n    my $model = clone_data($base, \\%seen);\n    my $extra = clone_data($extension, \\%seen);\n    for my $key (keys %$extra) { $model->{$key} = $extra->{$key} }\n    my %group;\n    for my $key (keys %$model) { $group{$key} = $model->{$key} }\n    return \\%group;\n}\n1;\n",
+      "contract": "Новый результат по модели base с заменой одноимённых совместимых полей extension. Дополнительная Perl-реализация показывает общий map копирования data-графа: вложенные HASH/ARRAY/SCALAR-ссылки, разделяемые цели и циклы поддержаны, вход не меняется. В клиенте P12 требуется только плоская запись настроек; там штатный хеш Perl достаточно точно реализует задачу.",
+      "boundary": "LMX derive вызывает базовую операцию языка merge: весь графовый копировщик уже входит в язык. Perl-реализация самостоятельно копирует data-граф одним refaddr-map и накладывает поля. Контейнер результата отделён от копии модели; внутренние ссылки остаются связаны с общей картой копирования.",
+      "limitations": "Сравнение data-профиля не переносит на Perl lexical parent, нативные реализации, protected/independent/immutable, типовую совместимость имён и порядок модельных индексов LMX. Неподдерживаемые host-объекты/код отвергаются MergeType, а не молча теряются. Полную семантику merge определяет LMX_semantics.en.md, раздел The common graph-copying map. Для P12 идентичность изменяемых вложенных графов не является обещанным результатом.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlref",
+        "https://perldoc.perl.org/5.40.1/perldata",
+        "https://perldoc.perl.org/5.40.1/Scalar::Util#refaddr"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/structures.lmx",
+          "roots": [
+            "RxDerive"
+          ],
+          "file_sha256": "df324f406bc3043cb6202b4f23c9acb59c5bbd27467d42155e94af967c6b6606",
+          "extract_sha256": "4ed27df02fe433d37390af11adba8b6211a78882f8407bc15630ee82a3da4209"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/structures.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI05.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI05.pm"
+    },
+    {
+      "id": "PI06",
+      "title": "Полный синхронный bracket",
+      "core_functions": [
+        "bracket"
+      ],
+      "lmx": "FxAround:\n    private:\n        @: acquire\n        @: release\n        @: action\n        @: arguments ()\n    return: @\n    around:\n        throws: copy(FxThrows\\traversal)\n        private: @: empty (copy(()))\n        private: @: resourceArgs (copy(()))\n        sys\\resize(resourceArgs; 1)\n        private: @: acquired (copy(FxOutcome))\n        finally:\n            if: acquired\\ok != 0\n                resourceArgs[0] := acquired\\value\n                FxApply\\apply(release; resourceArgs)\n        ---\n        acquired := FxTry\\attempt(acquire; empty)\n        if: acquired\\ok = 0\n            throw: FxCallFailure(acquired)\n        resourceArgs[0] := acquired\\value\n        private: @: actionArgs FxAppend\\append(resourceArgs; arguments)\n        return: FxApply\\apply(action; actionArgs)\n",
+      "lmx_extract": [
+        {
+          "file": "generic_wrappers.lmx",
+          "roots": [
+            "FxAround"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Resources;\nuse strict;\nuse warnings;\nsub bracket {\n    my ($acquire, $release, $action, @arguments) = @_;\n    ref($acquire) eq 'CODE' && ref($release) eq 'CODE' && ref($action) eq 'CODE'\n        or die \"CallableType\\n\";\n    my ($ready, $resource, $value) = (0);\n    my $ok = eval {\n        $resource = $acquire->();\n        $ready = 1;\n        $value = $action->($resource, @arguments);\n        1;\n    };\n    my $failure = $@;\n    if ($ready) {\n        my $released = eval { $release->($resource); 1 };\n        if (!$released) { $failure = $@; $ok = 0 }\n    }\n    die $failure unless $ok;\n    return $value;\n}\n1;\n",
+      "contract": "Acquire без обязательных аргументов, release(resource), action(resource, дополнительные аргументы) с произвольным результатом, включая void/undef. После успешного acquire release выполняется ровно один раз при успехе и обычном отказе action; после отказа acquire не выполняется. Отказ release имеет приоритет над сохранённым отказом action.",
+      "boundary": "LMX регистрирует finally до acquire и охраняет cleanup успешным outcome. Perl помещает acquire/action в один защищённый eval, сохраняет точный outcome и затем отдельно выполняет release; дополнительный eval задаёт явный приоритет отказа cleanup. Так реализация поддерживает двойной отказ, не полагаясь на неопределённый порядок двух исключений native defer. В прикладном P24 используется настоящий defer с не бросающим release.",
+      "limitations": "Синхронный договор обычного возврата и исключений callbacks, один Message/один вызов; нет гарантии после смерти процесса, exit или внешнего асинхронного прерывания между host-инструкциями. Для асинхронного запуска post всего owner-метода переносит результат, а ресурс/cleanup остаются в его арене. Post внутри action и немедленный выход не продлевают жизнь ресурса. Общая Perl-реализация обходится стандартным eval; экспериментальный defer остаётся только в отдельном клиентском примере. Haskell mask и общие межпоточные ссылки не обещаны.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlsyn#defer-blocks",
+        "https://perldoc.perl.org/5.40.1/functions/eval",
+        "https://perldoc.perl.org/5.40.1/functions/die"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx",
+          "roots": [
+            "FxAround"
+          ],
+          "file_sha256": "194bd05083538b2cfa7d974cb85fba970ef9074fab1e3ecc80cac076e15851c7",
+          "extract_sha256": "1cb4e08d186267a879afbecc6f32b70d5a421bdb11882d43b813f64b5262afd8"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI06.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI06.pm"
+    },
+    {
+      "id": "PI07",
+      "title": "Построение шаблонов и операции над regex-движком",
+      "core_functions": [
+        "split",
+        "matches",
+        "wholeMatch",
+        "captureText",
+        "eachMatch",
+        "matchedText",
+        "replace"
+      ],
+      "lmx": "RxTextViewMake:\n    private:\n        char[]: source\n        int: profile\n    return: @\n    make:\n        private: @: validated RxTextBuild\\make(source := source; profile := profile)\n        private: @: out (copy(TextView))\n        out\\source := source\n        out\\profile := profile\n        return: out\n\nRxPrepare:\n    private: TextView@: source\n    required: source\n    return: @\n    make:\n        private: @: prepared RxTextBuild\\make(source := source\\source; profile := source\\profile)\n        prepared\\view := source\n        return: prepared\n\nRxByteText:\n    private: char[]: source\n    required: source\n    return: @\n    byteText:\n        return: RxTextViewMake\\make(source := source; profile := 1)\n\nRxTextConfig:\n    char[]: text \"\"\n\nRxLiteral:\n    private: char[]: text\n    required: text\n    return: @\n    literal:\n        private: @: payload (copy(RxTextConfig))\n        payload\\text := text\n        return: RxPrimitiveMake\\make(RxLiteralProbe\\probe; payload)\n\nRxSameAs:\n    private: char[]: name\n    required: name\n    return: @\n    sameAs:\n        private: @: payload (copy(RxNameConfig))\n        payload\\name := name\n        return: RxPrimitiveMake\\make(RxSameAsProbe\\probe; payload)\n\nRxPartsConfig:\n    @: originalParts 0\n    @[]: parts []\n\nRxPartsPrepare:\n    private: @: patterns\n    return: @\n    prepare:\n        throws: copy(FxThrows\\kernel)\n        private: @: info FxSeqInfo\\get(source := patterns)\n        private: @[]: parts []\n        sys\\resize(parts; length(patterns))\n        private: int: i 0\n        while: i < length(patterns)\n            private: @: item FxSeqRead\\read(patterns; i)\n            parts[i] := RxNormalize\\make(value := item)\n            i += 1\n        private: @: config (copy(RxPartsConfig))\n        config\\originalParts := patterns\n        config\\parts := parts\n        return: config\n\nRxSequence:\n    private: @: patterns\n    required: patterns\n    return: @\n    sequence:\n        throws: copy(FxThrows\\kernel)\n        private: @: config RxPartsPrepare\\prepare(patterns := patterns)\n        if: length(config\\parts) = 0\n            return: emptyPattern\n        if: length(config\\parts) = 1\n            return: config\\parts[0]\n        return: RxPatternFactory\\make(RxSequenceOpen\\open; config)\n\nRxRepeatConfig:\n    @: pattern 0\n    int: minimum 0\n    int: bounded 0\n    int: maximum 0\n    int: order 0\n\nRxRepeated:\n    private:\n        @: pattern\n        int: minimum 0\n        @: maximum unbounded\n        int: order extendFirst\n    required: pattern\n    return: @\n    repeated:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        if: minimum < 0\n            throw: PatternArgument()\n        if: order != extendFirst && order != stopFirst\n            throw: PatternArgument()\n        private: @: config (copy(RxRepeatConfig))\n        config\\pattern := RxNormalize\\make(value := pattern)\n        config\\minimum := minimum\n        config\\order := order\n        # A copied configuration keeps its role; identity is not its contract.\n        if: FxKernel\\acceptsRequirement(candidate := maximum; requirement := RxUnbounded) = 0\n            private: int: bound \\maximum\n            if: bound < minimum || bound < 0\n                throw: PatternArgument()\n            config\\bounded := 1\n            config\\maximum := bound\n        return: RxPatternFactory\\make(RxRepeatOpen\\open; config)\n\nRxCaptureConfig:\n    char[]: name \"\"\n    @: pattern 0\n\nRxCapture:\n    private:\n        char[]: name\n        @: pattern\n    required: name pattern\n    return: @\n    capture:\n        throws: copy(FxThrows\\kernel)\n        private: @: config (copy(RxCaptureConfig))\n        config\\name := name\n        config\\pattern := RxNormalize\\make(value := pattern)\n        return: RxPatternFactory\\make(RxCaptureOpen\\open; config)\n\nRxLogicalArguments:\n    private:\n        @: left\n        @[]: right\n    required: right\n    return: @\n    collect:\n        private: int: extra 0\n        if: left != nil\n            extra := 1\n        private: @[]: out []\n        sys\\resize(out; length(right) + extra)\n        if: extra != 0\n            out[0] := left\n        private: int: i 0\n        while: i < length(right)\n            out[i + extra] := right[i]\n            i += 1\n        return: out\n\nRxThenOperand:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"+\")\n    return: @\n    then:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) < 2\n            throw: PatternArgument()\n        return: RxSequence\\sequence(patterns := args)\n\nRxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @\n    times:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count; maximum := args[1])\n    atLeast:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count)\n    atMost:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        if: count < 0\n            throw: PatternArgument()\n        return: RxRepeated\\repeated(pattern := args[0]; maximum := args[1])\n    optional:\n        throws: FxKernelFailure FxTypeToken PatternArgument\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 1\n            throw: PatternArgument()\n        return: RxRepeated\\repeated(pattern := args[0]; maximum := 1)\n\nRxSelectAt:\n    private:\n        RxPreparedText@: source\n        Pattern@: pattern\n        int: position\n        int: whole 0\n        int: nonEmpty 0\n    return: @\n    select:\n        # whole filters the END position only; the supplied start may be nonzero.\n        private: @: cursor RxOpen\\open(pattern; source; position; 0)\n        private: @: next cursor()\n        while: next\\present != 0\n            private: @: candidate next\\value\n            private: int: accepted 1\n            if: whole != 0 && candidate\\position != length(source\\units)\n                accepted := 0\n            if: nonEmpty != 0 && candidate\\position = position\n                accepted := 0\n            if: accepted != 0\n                return: FxSome\\some(value := RxMatchMake\\make(source; position; candidate))\n            next := cursor()\n        return: FxNone\\none()\n\nRxWholeMatch:\n    private:\n        TextView@: source\n        @: pattern\n    required: source pattern\n    return: @\n    wholeMatch:\n        throws: copy(FxThrows\\kernel)\n        private: @: prepared RxPrepare\\make(source := source)\n        private: @: ready RxNormalize\\make(value := pattern)\n        return: RxSelectAt\\select(source := prepared; pattern := ready; position := 0; whole := 1)\n\nRxFindState:\n    @: source 0\n    @: pattern 0\n    int: position 0\n    int: nonEmpty 0\n    int: finished 0\n\nRxFindStateMake:\n    private:\n        RxPreparedText@: source\n        Pattern@: pattern\n    return: @\n    make:\n        private: @: out (copy(RxFindState))\n        out\\source := source\n        out\\pattern := pattern\n        return: out\n\nRxFindNext:\n    private: @: state\n    return: @\n    step:\n        if: state\\finished != 0\n            return: FxNone\\none()\n        private: int: end length(state\\source\\units)\n        while: state\\position <= end\n            private: @: selected RxSelectAt\\select(source := state\\source; pattern := state\\pattern; position := state\\position; nonEmpty := state\\nonEmpty)\n            if: selected\\present != 0\n                private: @: matched selected\\value\n                if: matched\\end > matched\\begin\n                    state\\position := matched\\end\n                    state\\nonEmpty := 0\n                else:\n                    if: matched\\end = end\n                        state\\finished := 1\n                    else:\n                        state\\nonEmpty := 1\n                ---\n                return: selected\n            state\\nonEmpty := 0\n            if: state\\position = end\n                state\\finished := 1\n                return: FxNone\\none()\n            state\\position += 1\n        state\\finished := 1\n        return: FxNone\\none()\n\nRxFindAllOwner:\n    private: @: state 0\n    Next:\n        return: @\n        next:\n            throws: Stop\n            private: @: owner parent()\n            private: @: state owner\\private\\state\n            while: 1\n                private: @: selected RxFindNext\\step(state := state)\n                if: selected\\present = 0\n                    throw: Stop()\n                yield: selected\\value\n\nRxEachMatch:\n    private:\n        TextView@: source\n        @: pattern\n    required: source pattern\n    return: @\n    eachMatch:\n        throws: copy(FxThrows\\kernel)\n        private: @: prepared RxPrepare\\make(source := source)\n        private: @: ready RxNormalize\\make(value := pattern)\n        private: @: owner (copy(RxFindAllOwner))\n        owner\\private\\state := RxFindStateMake\\make(prepared; ready)\n        return: owner\\Next\\next\n\nRxMatches:\n    private:\n        TextView@: source\n        @: pattern\n    required: source pattern\n    return: int\n    matches:\n        throws: copy(FxThrows\\kernel)\n        private: @: found RxWholeMatch\\wholeMatch(source := source; pattern := pattern)\n        return: found\\present\n\nRxMatchedText:\n    private: Match@: result\n    required: result\n    return: char[]\n    matchedText:\n        return: RxTextSlice\\copyText(result\\private\\prepared; result\\begin; result\\end)\n\nRxLastCapture:\n    private:\n        Match@: result\n        char[]: name\n    required: result name\n    return: @\n    lastCapture:\n        private: @: latest RxCaptureLatest\\find(result\\captures; name)\n        if: latest\\present = 0\n            return: latest\n        private: @: entry latest\\value\n        return: FxSome\\some(value := RxSpanMake\\make(result\\private\\prepared; entry\\begin; entry\\end))\n\nRxCaptureText:\n    private:\n        Match@: result\n        char[]: name\n    required: result name\n    return: @\n    captureText:\n        private: @: latest RxLastCapture\\lastCapture(result; name)\n        if: latest\\present = 0\n            return: latest\n        private: @: span latest\\value\n        private: char[]: text RxTextSlice\\copyText(span\\private\\prepared; span\\begin; span\\end)\n        return: FxSome\\some(value := FxRecords\\reference(value := text))\n\nRxReplacementAccept:\n    private: @: replacement\n    required: replacement\n    return: @\n    accept:\n        throws: copy(FxThrows\\kernel)\n        if: FxKernel\\acceptsRequirement(candidate := replacement; requirement := char[]) != 0\n            private: char[]: text \\replacement\n            return: replacement\n        private: RxReplacement@: operation replacement\n        return: operation\n\nRxReplacementText:\n    private:\n        @: replacement\n        Match@: matched\n    return: char[]\n    make:\n        throws: copy(FxThrows\\kernel)\n        private: char[]: text\n        if: FxKernel\\acceptsRequirement(candidate := replacement; requirement := char[]) != 0\n            text := \\replacement\n        else:\n            private: RxReplacement@: operation replacement\n            # The callback is reached once, after selection, with one whole\n            # Match by named actual. Its ordinary failure is never a mismatch.\n            text := operation(matched := matched)\n        private: @: checked RxTextBuild\\make(text; matched\\private\\prepared\\profile)\n        return: text\n\nRxReplace:\n    private:\n        TextView@: source\n        @: pattern\n        @: replacement\n    required: source pattern replacement\n    return: char[]\n    replace:\n        throws: copy(FxThrows\\kernel)\n        private: @: admittedReplacement RxReplacementAccept\\accept(replacement := replacement)\n        private: @: prepared RxPrepare\\make(source := source)\n        private: @: ready RxNormalize\\make(value := pattern)\n        private: @: state RxFindStateMake\\make(prepared; ready)\n        private: char[]: out []\n        private: int: copiedUntil 0\n        private: @: selected RxFindNext\\step(state := state)\n        while: selected\\present != 0\n            private: @: matched selected\\value\n            private: char[]: replacementText RxReplacementText\\make(admittedReplacement; matched)\n            RxTextAppendSpan\\append(out; prepared; copiedUntil; matched\\begin)\n            RxTextAppend\\append(out; replacementText)\n            copiedUntil := matched\\end\n            selected := RxFindNext\\step(state := state)\n        # Search position and source-copy position remain separate.\n        RxTextAppendSpan\\append(out; prepared; copiedUntil; length(prepared\\units))\n        return: out\n\nRxSplit:\n    private:\n        TextView@: source\n        @: pattern\n    required: source pattern\n    return: @\n    split:\n        throws: copy(FxThrows\\kernel)\n        private: @: prepared RxPrepare\\make(source := source)\n        private: @: ready RxNormalize\\make(value := pattern)\n        private: @: state RxFindStateMake\\make(prepared; ready)\n        private: @[]: parts []\n        private: int: copiedUntil 0\n        private: @: selected RxFindNext\\step(state := state)\n        while: selected\\present != 0\n            private: @: matched selected\\value\n            private: char[]: text RxTextSlice\\copyText(prepared; copiedUntil; matched\\begin)\n            FxSeqPush\\append(parts; FxRecords\\reference(value := text))\n            copiedUntil := matched\\end\n            selected := RxFindNext\\step(state := state)\n        private: char[]: tail RxTextSlice\\copyText(prepared; copiedUntil; length(prepared\\units))\n        FxSeqPush\\append(parts; FxRecords\\reference(value := tail))\n        return: parts\n",
+      "lmx_extract": [
+        {
+          "file": "regex/text.lmx",
+          "roots": [
+            "RxTextViewMake",
+            "RxPrepare",
+            "RxByteText"
+          ]
+        },
+        {
+          "file": "regex/primitives.lmx",
+          "roots": [
+            "RxTextConfig",
+            "RxLiteral",
+            "RxSameAs"
+          ]
+        },
+        {
+          "file": "regex/combinators.lmx",
+          "roots": [
+            "RxPartsConfig",
+            "RxPartsPrepare",
+            "RxSequence",
+            "RxRepeatConfig",
+            "RxRepeated",
+            "RxCaptureConfig",
+            "RxCapture"
+          ]
+        },
+        {
+          "file": "regex/operands.lmx",
+          "roots": [
+            "RxLogicalArguments",
+            "RxThenOperand",
+            "RxRepeatOperands"
+          ]
+        },
+        {
+          "file": "regex/operations.lmx",
+          "roots": [
+            "RxSelectAt",
+            "RxWholeMatch",
+            "RxFindState",
+            "RxFindStateMake",
+            "RxFindNext",
+            "RxFindAllOwner",
+            "RxEachMatch",
+            "RxMatches",
+            "RxMatchedText",
+            "RxLastCapture",
+            "RxCaptureText",
+            "RxReplacementAccept",
+            "RxReplacementText",
+            "RxReplace",
+            "RxSplit"
+          ]
+        }
+      ],
+      "foreign": "package PerlComparison::Patterns;\nuse strict;\nuse warnings;\nsub text {\n    my ($source) = @_;\n    defined($source) && !ref($source) or die \"PatternEncoding\\n\";\n    for my $character (CORE::split //, $source) {\n        ord($character) <= 255 or die \"PatternEncoding\\n\";\n    }\n    return \"$source\";\n}\nsub literal {\n    return quotemeta(text($_[0]));\n}\nsub sequence {\n    my ($parts) = @_;\n    ref($parts) eq 'ARRAY' or die \"PatternArgument\\n\";\n    my $source = '';\n    for my $part (@$parts) {\n        defined($part) && !ref($part) or die \"PatternArgument\\n\";\n        $source .= \"(?:$part)\";\n    }\n    return $source;\n}\nsub name {\n    my ($name) = @_;\n    defined($name) && !ref($name) && $name =~ /\\A[A-Za-z_][A-Za-z0-9_]*\\z/\n        or die \"PatternArgument\\n\";\n    return $name;\n}\nsub capture {\n    my ($name, $pattern) = @_;\n    $name = name($name);\n    defined($pattern) && !ref($pattern) or die \"PatternArgument\\n\";\n    return \"(?<$name>$pattern)\";\n}\nsub same_as {\n    my $name = name($_[0]);\n    return \"\\\\k<$name>\";\n}\nsub repeated {\n    my ($pattern, $minimum, $maximum, $extend_first) = @_;\n    $minimum = 0 unless defined $minimum;\n    $extend_first = 1 unless defined $extend_first;\n    defined($pattern) && !ref($pattern) or die \"PatternArgument\\n\";\n    !ref($minimum) && $minimum =~ /\\A[0-9]+\\z/ or die \"PatternArgument\\n\";\n    if (defined $maximum) {\n        !ref($maximum) && $maximum =~ /\\A[0-9]+\\z/ && $maximum >= $minimum\n            or die \"PatternArgument\\n\";\n    }\n    !ref($extend_first) && $extend_first =~ /\\A[01]\\z/\n        or die \"PatternArgument\\n\";\n    return '' if $pattern eq '';\n    my $bound = defined($maximum) ? \"$minimum,$maximum\" : \"$minimum,\";\n    return \"(?:$pattern){$bound}\" . ($extend_first ? '' : '?');\n}\nsub then_pattern {\n    @_ >= 2 or die \"PatternArgument\\n\";\n    return sequence([@_]);\n}\nsub times {\n    my ($pattern, $count) = @_;\n    defined($count) or die \"PatternArgument\\n\";\n    return repeated($pattern, $count, $count, 1);\n}\nsub at_least {\n    my ($pattern, $minimum) = @_;\n    defined($minimum) or die \"PatternArgument\\n\";\n    return repeated($pattern, $minimum, undef, 1);\n}\nsub at_most {\n    my ($pattern, $maximum) = @_;\n    defined($maximum) or die \"PatternArgument\\n\";\n    return repeated($pattern, 0, $maximum, 1);\n}\nsub optional {\n    return repeated($_[0], 0, 1, 1);\n}\nsub compiled {\n    my ($pattern, $whole) = @_;\n    defined($pattern) && !ref($pattern) or die \"PatternArgument\\n\";\n    my $ready = $whole ? \"\\\\A(?:$pattern)\\\\z\" : \"(?:$pattern)\";\n    my $regex = eval { qr/$ready/ };\n    die \"PatternArgument: $@\" if $@;\n    return $regex;\n}\nsub snapshot {\n    my ($source) = @_;\n    return {source => $source, begin => $-[0], end => $+[0], captures => {%+}};\n}\nsub checked_match {\n    my ($match) = @_;\n    ref($match) eq 'HASH' && ref($match->{captures}) eq 'HASH'\n        or die \"MatchType\\n\";\n    defined($match->{source}) && !ref($match->{source}) or die \"MatchType\\n\";\n    for my $key ('begin', 'end') {\n        defined($match->{$key}) && !ref($match->{$key}) && $match->{$key} =~ /\\A[0-9]+\\z/\n            or die \"PatternPosition\\n\";\n    }\n    $match->{begin} <= $match->{end} && $match->{end} <= length($match->{source})\n        or die \"PatternPosition\\n\";\n    return $match;\n}\nsub whole_match {\n    my ($source, $pattern) = @_;\n    $source = text($source);\n    my $regex = compiled($pattern, 1);\n    return [0, undef] unless $source =~ /$regex/;\n    return [1, snapshot($source)];\n}\nsub matches {\n    return whole_match(@_)->[0];\n}\nsub each_match {\n    my ($source, $pattern) = @_;\n    $source = text($source);\n    my $regex = compiled($pattern, 0);\n    my $finished = 0;\n    pos($source) = 0;\n    return sub {\n        return undef if $finished;\n        if ($source =~ /$regex/gc) {\n            return snapshot($source);\n        }\n        $finished = 1;\n        return undef;\n    };\n}\nsub matched_text {\n    my $match = checked_match($_[0]);\n    return substr($match->{source}, $match->{begin}, $match->{end} - $match->{begin});\n}\nsub capture_text {\n    my ($match, $name) = @_;\n    checked_match($match);\n    $name = name($name);\n    return [0, undef] unless exists $match->{captures}{$name};\n    return [1, $match->{captures}{$name}];\n}\nsub replace_all {\n    my ($source, $pattern, $replacement) = @_;\n    $source = text($source);\n    my $callback = ref($replacement) eq 'CODE';\n    $replacement = text($replacement) unless $callback;\n    my $next = each_match($source, $pattern);\n    my ($out, $copied_until) = ('', 0);\n    while (my $match = $next->()) {\n        $out .= substr($source, $copied_until, $match->{begin} - $copied_until);\n        my $insert = $callback ? text($replacement->($match)) : $replacement;\n        $out .= $insert;\n        $copied_until = $match->{end};\n    }\n    return $out . substr($source, $copied_until);\n}\nsub split_parts {\n    my ($source, $pattern) = @_;\n    $source = text($source);\n    my $next = each_match($source, $pattern);\n    my @out;\n    my $copied_until = 0;\n    while (my $match = $next->()) {\n        push @out, substr($source, $copied_until, $match->{begin} - $copied_until);\n        $copied_until = $match->{end};\n    }\n    push @out, substr($source, $copied_until);\n    return \\@out;\n}\n1;\n",
+      "contract": "Общий byte/ASCII-профиль: построение буквальных и последовательных шаблонов, повторения с обеими стратегиями, уникальные именованные захваты и ссылка на ранее объявленную группу; wholeMatch/matches; ленивые неперекрывающиеся eachMatch; matchedText/captureText; полная замена строкой или callback; split с пустыми краевыми полями. Пустые совпадения продвигаются по правилам движка, отсутствующий и пустой capture различаются.",
+      "boundary": "Perl использует собственный regex engine для распознавания/поиска. В отдельном модуле самостоятельно реализованы строитель шаблона, validation, снимок Match, состояние итератора, выбор/сборка результата замены, однократный callback и сборка split. Модуль не вызывает одноимённые s///, native split(pattern), List::Util либо Perl-клиент. LMX ниже использует свой существующий Pattern engine; его полные примитивы, комбинаторы, TextView, курсоры и FxSeq/runtime доступны в канонической src/regex, а не скрыты в клиенте.",
+      "limitations": "Это сравнение операций над общим согласованным regex-профилем, не порт всего Perl engine и не равенство всех возможностей LMX Pattern. В Perl имена capture ограничены ASCII-идентификаторами и уникальны, sameAs ссылается на объявленную предыдущую группу; повторная история captureTexts и lookbehind здесь не заявлены. Исходный текст не меняется во время курсора. Все byte-значения 0..255 допустимы; Unicode-сопоставление не подменяется этим профилем. Ошибка callback распространяется, не превращается в отсутствие совпадения. Сами Pattern-строители раскрыты здесь отдельно; реальные клиенты Perl записаны обычным regex-синтаксисом. Для проверки допуска Pattern/replacement/max-count LMX теперь использует внутренний readonly acceptsRequirement и конечные FxKernelFailure/FxTypeToken. Это текущий native integration gate AR01, а не исполненный в архиве провайдер.",
+      "sources": [
+        "https://perldoc.perl.org/5.40.1/perlre",
+        "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators",
+        "https://perldoc.perl.org/5.40.1/perlop#The-empty-pattern",
+        "https://perldoc.perl.org/5.40.1/functions/pos",
+        "https://perldoc.perl.org/5.40.1/functions/split"
+      ],
+      "canonical_sources": [
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/regex/text.lmx",
+          "roots": [
+            "RxTextViewMake",
+            "RxPrepare",
+            "RxByteText"
+          ],
+          "file_sha256": "9776cd76c2bad03986dbc8e8d18f047d6c5b7a50b477062b72efa04d8973e9f5",
+          "extract_sha256": "911dde02868d85b11301e46a59ee2c4e807839f619bbefc9a99bd65d7bbdf4c6"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/regex/primitives.lmx",
+          "roots": [
+            "RxTextConfig",
+            "RxLiteral",
+            "RxSameAs"
+          ],
+          "file_sha256": "1ba1b870eb943b5bee054ba840ce923943d24f69ad627165b49687cd9e0e3827",
+          "extract_sha256": "516973e898acb1ad42da02c7796215246f0f582c61d24d6da177323c7f4931e0"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/regex/combinators.lmx",
+          "roots": [
+            "RxPartsConfig",
+            "RxPartsPrepare",
+            "RxSequence",
+            "RxRepeatConfig",
+            "RxRepeated",
+            "RxCaptureConfig",
+            "RxCapture"
+          ],
+          "file_sha256": "bdc3d0db80076d6c03a5c7dd3bbdf9b0f03adff8a107a3d2808b70f278b5aa9e",
+          "extract_sha256": "372aacc67b970dd0ab97d371e5e9dccce3832058e12decc05e4d72219c9a272c"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/regex/operands.lmx",
+          "roots": [
+            "RxLogicalArguments",
+            "RxThenOperand",
+            "RxRepeatOperands"
+          ],
+          "file_sha256": "a96d9230ba48eeff5dfb6f9f0ca0ee9096364e8c45ad5a14e5bf35358f5241ea",
+          "extract_sha256": "7766632df4ab9601e80bf259164c9d21b3f852280333cef8320070fac144ee7a"
+        },
+        {
+          "file": "patterns/LMX_Fn_Receivers/src/regex/operations.lmx",
+          "roots": [
+            "RxSelectAt",
+            "RxWholeMatch",
+            "RxFindState",
+            "RxFindStateMake",
+            "RxFindNext",
+            "RxFindAllOwner",
+            "RxEachMatch",
+            "RxMatches",
+            "RxMatchedText",
+            "RxLastCapture",
+            "RxCaptureText",
+            "RxReplacementAccept",
+            "RxReplacementText",
+            "RxReplace",
+            "RxSplit"
+          ],
+          "file_sha256": "c72d1da739de961a6968986b0c0788b11b7da6302bfa916e1a71f3808c675e27",
+          "extract_sha256": "ef2f3dc47e2297c2a728c189517178c4605b87f0920580d0c44f716727ee050d"
+        }
+      ],
+      "source_files": [
+        "patterns/LMX_Fn_Receivers/src/regex/text.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/primitives.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/combinators.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/operands.lmx",
+        "patterns/LMX_Fn_Receivers/src/regex/operations.lmx"
+      ],
+      "lmx_file": "library_comparisons/source/lmx/PI07.lmx",
+      "foreign_file": "library_comparisons/source/perl/PI07.pm",
+      "pattern_constructor_coverage": [
+        "byteText",
+        "literal",
+        "sequence",
+        "repeated",
+        "capture",
+        "sameAs",
+        "then",
+        "times",
+        "atLeast",
+        "atMost",
+        "optional"
+      ]
+    }
+  ],
+  "methodology": {
+    "measurement": "Complete selected source; Unicode code points, including comments; total and without all whitespace; nonblank lines.",
+    "clients": "Only Perl CORE/stdlib syntax and actual List::Util are used; comparison implementation modules are not imported.",
+    "lmx_execution": "NOT_RUN: no executable LMX runtime in the supplied archive.",
+    "numeric_scope": "All client inputs, intermediate arithmetic and final numeric values fit the actual LMX int; generic implementation algorithms impose no int-only element or fixed arity restriction.",
+    "text_scope": "ASCII client inputs; byteText makes the LMX representation explicit. No Unicode equivalence claim is inferred.",
+    "shared_infrastructure": "Ordinary runtime array allocation/admission and callable dispatch; regex matching engine; not charged again as each high-level operation."
+  }
+}

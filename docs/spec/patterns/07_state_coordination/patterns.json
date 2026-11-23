@@ -61,25 +61,10 @@
           "why_en": "Reading a consistent snapshot without overlapping a mutation."
         }
       ],
-      "variants": {
-        "LMX": {
-          "procedural": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
-          "shared_methods": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: read()\n"
-        }
-      },
-      "procedural_lmx": "ValueMessage:\n    int: newValue\n    int: value 10\n    return: int\n    read:\n        return: node\\value\n    write:\n        node\\value := newValue\n        return: node\\value\n",
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Reuse the included read method after write updates node\\value. Both execute within the same owner turn; the returned value comes from the updated graph rather than a copied DATA value. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 66,
@@ -131,7 +116,9 @@
           "why_ru": "Безопасная однократная ленивая инициализация при конкурентных обращениях.",
           "why_en": "Safe once-only lazy initialization under concurrent access."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 67,
@@ -184,25 +171,10 @@
           "why_en": "A request receives its result only after a readiness predicate becomes true."
         }
       ],
-      "variants": {
-        "LMX": {
-          "procedural": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-          "shared_methods": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    awaitValue:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n"
-        }
-      },
-      "procedural_lmx": "ReadyMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    awaitValue:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    publish:\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Share the complete reply method between an already-ready request and the publish drain. Normal DATA autofill carries requestId for the first case; each popped ID is positional for the second. publish can still run while earlier clients wait, and later publication is not changed into Future single assignment. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 68,
@@ -254,7 +226,9 @@
           "why_ru": "Если действие уже началось, повторный запрос сразу отказывается от выполнения.",
           "why_en": "If an action is already underway, another request immediately declines to execute it."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 69,
@@ -306,7 +280,9 @@
           "why_ru": "Изоляция счётчика внутри конкретного исполнителя.",
           "why_en": "Isolating a counter within one execution participant."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 70,
@@ -359,38 +335,10 @@
           "why_en": "An object protects an invariant across a complete operation on its state."
         }
       ],
-      "procedural_lmx": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
-      "variants": {
-        "LMX": {
-          "procedural": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0\n            return: 0\n        if: node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
-          "direct_expression": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || node\\balance < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n",
-          "shared_methods": "AccountMessage:\n    int: amount\n    int: balance 10\n    return: int\n    withdraw:\n        if: amount < 0 || read() < amount\n            return: 0\n        node\\balance -= amount\n        return: 1\n    read:\n        return: node\\balance\n"
-        }
-      },
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "direct_expression",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Use the included read method in the rejection predicate. This remains a direct local call inside withdraw, with no await/post between checking and decrementing. Short-circuit OR still skips the balance read for a negative amount. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      },
-      "inline_current_lmx_variants": [
-        "direct_expression"
-      ],
-      "companion_sources": [
-        {
-          "file": "examples/lmx/070_monitor_object_direct_expression.lm3",
-          "counts_as_primary": false,
-          "sha256": "cfb54b7f202df658b769714d3043b29390364020f18ab0cc402f333dcd2b89e3",
-          "reason": "Complete prior primary retained as commented source; selected shared_methods variant is in the ordinary source file."
-        }
-      ]
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     }
   ]
 }

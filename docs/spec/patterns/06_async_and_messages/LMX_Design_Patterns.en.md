@@ -10,12 +10,6 @@ The original eight patterns are extended with structured concurrency, supervisio
 - [Excel](LMX_Comparison_06_async_and_messages.xlsx)
 - [PDF](LMX_Comparison_06_async_and_messages.pdf)
 - [CSV](LMX_Comparison_06_async_and_messages.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -128,7 +122,3 @@ Map emits keys, shuffle routes them to owners, and reduce combines values per ke
 **Observation:** Result {0:2,1:2}. Final reads occur after four acknowledged reduce operations.
 
 LMX expresses shuffle as explicit selection of the key owner Message; Go channels and Erlang mail carry keys. This exposes map/group/reduce without claiming to implement the distributed Google MapReduce engine.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

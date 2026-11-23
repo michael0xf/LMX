@@ -93,6 +93,9 @@ FxListBind:
         return: FxSeqFlatMap\flatMap(items; next)
 
 # Bounce stores either a final value record or an ordinary nullary callable.
+# This is synchronous stack control, not a future or task. To run it asynchronously,
+# post the complete trampoline invocation to its owning Message; post already
+# transports completion/failure. Thunks never cross into a foreign mutable arena.
 # partial(F; allArgs) may construct that thunk for any number of F inputs.
 # trampoline stops on done, not merely on whether the value is callable.
 FxBounce:

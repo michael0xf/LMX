@@ -1,13 +1,9 @@
 {
-  "format": "functional-receiver-counts-v2",
-  "date": "2026-11-22",
-  "scope": "shortest correct primary source only; complete current-syntax variants compared with the same method",
+  "format": "functional-receiver-counts-v3",
+  "date": "2026-11-23",
+  "baseline_archive_sha256": "4b142bab169cf7cc3fd89766da35b90561f913b68dca3ab1f0725793e4ecb932",
+  "scope": "Primary client, excluding distinct commented alternatives and separately compared implementations",
   "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
-  "metric_definition": {
-    "characters": "Unicode code points excluding whitespace; active comments and strings included",
-    "nonblank_lines": "nonempty stripped lines",
-    "utf8_bytes": "code.strip()+LF encoded UTF-8"
-  },
   "source_count": 24,
   "changed_ids": [
     "H01",
@@ -22,6 +18,7 @@
   ],
   "selected_receiver_primary_ids": [
     "H03",
+    "H04",
     "R01"
   ],
   "variant_comparisons": [
@@ -47,7 +44,7 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм."
+      "fairness_note": "Haskell использует обычную аппликацию; LMX выбранный метод вызывает напрямую либо передаёт в generic apply. Оба пути сохраняют динамический выбор метода; тела реализации apply сравниваются отдельно."
     },
     {
       "id": "H02",
@@ -95,19 +92,13 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса."
+      "fairness_note": "Haskell использует родную каррированную аппликацию (+) n, без самописного partial в клиенте. LMX использует core partial; сравнение обобщённых реализаций вынесено отдельно."
     },
     {
       "id": "H04",
-      "selected": "original",
-      "alternative": "receivers",
+      "selected": "receivers",
+      "alternative": null,
       "variants": {
-        "original": {
-          "characters": 265,
-          "nonblank_lines": 17,
-          "utf8_bytes": 422,
-          "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
-        },
         "receivers": {
           "characters": 265,
           "nonblank_lines": 18,
@@ -116,7 +107,6 @@
         }
       },
       "eligible_variants": [
-        "original",
         "receivers"
       ],
       "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан."
@@ -143,7 +133,7 @@
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP."
+      "fairness_note": "Haskell использует композицию (.) и Control.Monad.foldM для списка эффектных стадий. LMX использует динамические вызовы или core pipe. Сохраняются стадии, типы и порядок эффектов."
     },
     {
       "id": "H07",
@@ -171,14 +161,8 @@
     {
       "id": "R01",
       "selected": "receivers",
-      "alternative": "original",
+      "alternative": null,
       "variants": {
-        "original": {
-          "characters": 184,
-          "nonblank_lines": 11,
-          "utf8_bytes": 258,
-          "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
-        },
         "receivers": {
           "characters": 183,
           "nonblank_lines": 11,
@@ -187,7 +171,6 @@
         }
       },
       "eligible_variants": [
-        "original",
         "receivers"
       ],
       "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена."
@@ -198,10 +181,10 @@
       "alternative": "regex",
       "variants": {
         "original": {
-          "characters": 462,
-          "nonblank_lines": 22,
-          "utf8_bytes": 684,
-          "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+          "characters": 242,
+          "nonblank_lines": 10,
+          "utf8_bytes": 350,
+          "sha256": "d084f401a82d58e6702f0c296665c951236dd4f241db3c834c7831eb859c9bec"
         },
         "regex": {
           "characters": 248,
@@ -213,19 +196,13 @@
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро."
+      "fairness_note": "LMX использует прямой core between, Haskell — готовый Data.Ix.inRange. Обе стороны сохраняют все поля и 11 проверок TicketCode. Regex-вариант остаётся другим подходом с отдельным контрактом matcher; он не заменяет сравнение включительных границ."
     },
     {
       "id": "V03",
       "selected": "reuse",
-      "alternative": "original",
+      "alternative": null,
       "variants": {
-        "original": {
-          "characters": 304,
-          "nonblank_lines": 23,
-          "utf8_bytes": 490,
-          "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
-        },
         "reuse": {
           "characters": 298,
           "nonblank_lines": 23,
@@ -234,7 +211,6 @@
         }
       },
       "eligible_variants": [
-        "original",
         "reuse"
       ],
       "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта."
@@ -268,18 +244,18 @@
     {
       "id": "H01",
       "file": "lmx/H01.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 237,
-        "nonblank_lines": 16,
-        "utf8_bytes": 367,
-        "sha256": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10"
+        "characters": 207,
+        "nonblank_lines": 15,
+        "utf8_bytes": 325,
+        "sha256": "9bdbc4b25ca403a6c82f216b14e8e845ae19b7dbb25f793fd08f7baf1129b67d"
       },
       "historical_before": {
-        "characters": 237,
-        "nonblank_lines": 16,
-        "utf8_bytes": 367,
-        "sha256": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10"
+        "characters": 207,
+        "nonblank_lines": 15,
+        "utf8_bytes": 325,
+        "sha256": "9bdbc4b25ca403a6c82f216b14e8e845ae19b7dbb25f793fd08f7baf1129b67d"
       },
       "after": {
         "characters": 207,
@@ -305,29 +281,28 @@
         }
       },
       "original_source_sha256_at_import": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Haskell использует обычную аппликацию; LMX выбранный метод вызывает напрямую либо передаёт в generic apply. Оба пути сохраняют динамический выбор метода; тела реализации apply сравниваются отдельно."
     },
     {
       "id": "H02",
       "file": "lmx/H02.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 272,
+        "characters": 271,
         "nonblank_lines": 14,
-        "utf8_bytes": 390,
-        "sha256": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a"
+        "utf8_bytes": 388,
+        "sha256": "ebd0d6f5f4777530da04533b5b0d75f85e2959690c2ec917c11e2f077de5658e"
       },
       "historical_before": {
-        "characters": 272,
+        "characters": 271,
         "nonblank_lines": 14,
-        "utf8_bytes": 390,
-        "sha256": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a"
+        "utf8_bytes": 388,
+        "sha256": "ebd0d6f5f4777530da04533b5b0d75f85e2959690c2ec917c11e2f077de5658e"
       },
       "after": {
         "characters": 271,
@@ -353,29 +328,28 @@
         }
       },
       "original_source_sha256_at_import": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original",
         "receivers"
       ],
-      "fairness_note": "Контроль использует встроенную функциональную сигнатуру и позиционное применение. Name::DATA и signatureTypes описывают такое же семантическое требование; создание типового описания не скрывает вычисление значения или предметный алгоритм.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Контроль использует встроенную функциональную сигнатуру и позиционное применение. Name::DATA и signatureTypes описывают такое же семантическое требование; создание типового описания не скрывает вычисление значения или предметный алгоритм."
     },
     {
       "id": "H03",
       "file": "lmx/H03.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 264,
-        "nonblank_lines": 17,
-        "utf8_bytes": 409,
-        "sha256": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1"
+        "characters": 341,
+        "nonblank_lines": 24,
+        "utf8_bytes": 576,
+        "sha256": "85b02642c61b488833252cc0d5b38cfed0cc111f0a4b619f2f1c27d1fad2862c"
       },
       "historical_before": {
-        "characters": 264,
-        "nonblank_lines": 17,
-        "utf8_bytes": 409,
-        "sha256": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1"
+        "characters": 341,
+        "nonblank_lines": 24,
+        "utf8_bytes": 576,
+        "sha256": "85b02642c61b488833252cc0d5b38cfed0cc111f0a4b619f2f1c27d1fad2862c"
       },
       "after": {
         "characters": 341,
@@ -401,18 +375,17 @@
         }
       },
       "original_source_sha256_at_import": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original",
         "receivers"
       ],
-      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Haskell использует родную каррированную аппликацию (+) n, без самописного partial в клиенте. LMX использует core partial; сравнение обобщённых реализаций вынесено отдельно."
     },
     {
       "id": "H04",
       "file": "lmx/H04.lm3",
-      "changed": false,
+      "changed": true,
       "before": {
         "characters": 265,
         "nonblank_lines": 17,
@@ -427,20 +400,14 @@
       },
       "after": {
         "characters": 265,
-        "nonblank_lines": 17,
-        "utf8_bytes": 422,
-        "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
+        "nonblank_lines": 18,
+        "utf8_bytes": 433,
+        "sha256": "1cb759a945cbb4873bc797e1284166fb189ca013b1a9c58d261c913ac8089418"
       },
-      "has_alternative": true,
-      "selected_variant": "original",
-      "alternative_variant": "receivers",
+      "has_alternative": false,
+      "selected_variant": "receivers",
+      "alternative_variant": null,
       "variants": {
-        "original": {
-          "characters": 265,
-          "nonblank_lines": 17,
-          "utf8_bytes": 422,
-          "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
-        },
         "receivers": {
           "characters": 265,
           "nonblank_lines": 18,
@@ -449,13 +416,11 @@
         }
       },
       "original_source_sha256_at_import": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
-        "original",
         "receivers"
       ],
-      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан."
     },
     {
       "id": "H05",
@@ -484,18 +449,18 @@
     {
       "id": "H06",
       "file": "lmx/H06.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 201,
-        "nonblank_lines": 14,
-        "utf8_bytes": 313,
-        "sha256": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354"
+        "characters": 179,
+        "nonblank_lines": 13,
+        "utf8_bytes": 275,
+        "sha256": "215f69e58b65e7ef5d45d5fb67bc0ece16f7415691b6e72369dd0dc0bf244599"
       },
       "historical_before": {
-        "characters": 201,
-        "nonblank_lines": 14,
-        "utf8_bytes": 313,
-        "sha256": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354"
+        "characters": 179,
+        "nonblank_lines": 13,
+        "utf8_bytes": 275,
+        "sha256": "215f69e58b65e7ef5d45d5fb67bc0ece16f7415691b6e72369dd0dc0bf244599"
       },
       "after": {
         "characters": 179,
@@ -521,29 +486,28 @@
         }
       },
       "original_source_sha256_at_import": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original",
         "receivers"
       ],
-      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Haskell использует композицию (.) и Control.Monad.foldM для списка эффектных стадий. LMX использует динамические вызовы или core pipe. Сохраняются стадии, типы и порядок эффектов."
     },
     {
       "id": "H07",
       "file": "lmx/H07.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 180,
-        "nonblank_lines": 14,
-        "utf8_bytes": 282,
-        "sha256": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb"
+        "characters": 461,
+        "nonblank_lines": 30,
+        "utf8_bytes": 671,
+        "sha256": "09c012a50d47c96a618dd82e54865e1dd8b2c69b468389c1bc79cf48ba9b49aa"
       },
       "historical_before": {
-        "characters": 180,
-        "nonblank_lines": 14,
-        "utf8_bytes": 282,
-        "sha256": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb"
+        "characters": 461,
+        "nonblank_lines": 30,
+        "utf8_bytes": 671,
+        "sha256": "09c012a50d47c96a618dd82e54865e1dd8b2c69b468389c1bc79cf48ba9b49aa"
       },
       "after": {
         "characters": 461,
@@ -569,12 +533,11 @@
         }
       },
       "original_source_sha256_at_import": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Полный смысл H07 включает реальные raw-occurrences и их исполнение через sys\\eval, а не только итоговые числа. Lazy и два обычных вызова — полезный дополнительный приём того же ядра, но он не сохраняет raw-контракт; поэтому не участвует в выборе основного для этого сценария. Haskell IO-аналог сравнивает эффекты и не выдаётся за доступ к LMX AST.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Полный смысл H07 включает реальные raw-occurrences и их исполнение через sys\\eval, а не только итоговые числа. Lazy и два обычных вызова — полезный дополнительный приём того же ядра, но он не сохраняет raw-контракт; поэтому не участвует в выборе основного для этого сценария. Haskell IO-аналог сравнивает эффекты и не выдаётся за доступ к LMX AST."
     },
     {
       "id": "H08",
@@ -605,22 +568,22 @@
       "file": "lmx/H09.lm3",
       "changed": true,
       "before": {
-        "characters": 212,
-        "nonblank_lines": 16,
-        "utf8_bytes": 367,
-        "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
-      },
-      "historical_before": {
-        "characters": 212,
-        "nonblank_lines": 16,
-        "utf8_bytes": 367,
-        "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
-      },
-      "after": {
         "characters": 285,
         "nonblank_lines": 25,
         "utf8_bytes": 527,
         "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+      },
+      "historical_before": {
+        "characters": 285,
+        "nonblank_lines": 25,
+        "utf8_bytes": 527,
+        "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+      },
+      "after": {
+        "characters": 260,
+        "nonblank_lines": 17,
+        "utf8_bytes": 427,
+        "sha256": "bd87f2d5bd381f3f70bb26e94cb0e08a8cb9a3b4314bdb0c5e73ef02f5800873"
       },
       "has_alternative": false
     },
@@ -675,18 +638,18 @@
     {
       "id": "R01",
       "file": "lmx/R01.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 184,
+        "characters": 183,
         "nonblank_lines": 11,
-        "utf8_bytes": 258,
-        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+        "utf8_bytes": 257,
+        "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
       },
       "historical_before": {
-        "characters": 184,
+        "characters": 183,
         "nonblank_lines": 11,
-        "utf8_bytes": 258,
-        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+        "utf8_bytes": 257,
+        "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
       },
       "after": {
         "characters": 183,
@@ -694,16 +657,10 @@
         "utf8_bytes": 257,
         "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
       },
-      "has_alternative": true,
+      "has_alternative": false,
       "selected_variant": "receivers",
-      "alternative_variant": "original",
+      "alternative_variant": null,
       "variants": {
-        "original": {
-          "characters": 184,
-          "nonblank_lines": 11,
-          "utf8_bytes": 258,
-          "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
-        },
         "receivers": {
           "characters": 183,
           "nonblank_lines": 11,
@@ -712,13 +669,11 @@
         }
       },
       "original_source_sha256_at_import": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
-        "original",
         "receivers"
       ],
-      "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена."
     },
     {
       "id": "R02",
@@ -893,32 +848,32 @@
       "file": "lmx/V02.lm3",
       "changed": true,
       "before": {
-        "characters": 263,
-        "nonblank_lines": 11,
-        "utf8_bytes": 382,
-        "sha256": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7"
-      },
-      "historical_before": {
-        "characters": 263,
-        "nonblank_lines": 11,
-        "utf8_bytes": 382,
-        "sha256": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7"
-      },
-      "after": {
         "characters": 462,
         "nonblank_lines": 22,
         "utf8_bytes": 684,
         "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+      },
+      "historical_before": {
+        "characters": 462,
+        "nonblank_lines": 22,
+        "utf8_bytes": 684,
+        "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+      },
+      "after": {
+        "characters": 242,
+        "nonblank_lines": 10,
+        "utf8_bytes": 350,
+        "sha256": "d084f401a82d58e6702f0c296665c951236dd4f241db3c834c7831eb859c9bec"
       },
       "has_alternative": true,
       "selected_variant": "original",
       "alternative_variant": "regex",
       "variants": {
         "original": {
-          "characters": 462,
-          "nonblank_lines": 22,
-          "utf8_bytes": 684,
-          "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+          "characters": 242,
+          "nonblank_lines": 10,
+          "utf8_bytes": 350,
+          "sha256": "d084f401a82d58e6702f0c296665c951236dd4f241db3c834c7831eb859c9bec"
         },
         "regex": {
           "characters": 248,
@@ -928,28 +883,27 @@
         }
       },
       "original_source_sha256_at_import": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
         "original"
       ],
-      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "LMX использует прямой core between, Haskell — готовый Data.Ix.inRange. Обе стороны сохраняют все поля и 11 проверок TicketCode. Regex-вариант остаётся другим подходом с отдельным контрактом matcher; он не заменяет сравнение включительных границ."
     },
     {
       "id": "V03",
       "file": "lmx/V03.lm3",
-      "changed": true,
+      "changed": false,
       "before": {
-        "characters": 304,
+        "characters": 298,
         "nonblank_lines": 23,
-        "utf8_bytes": 490,
-        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+        "utf8_bytes": 480,
+        "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
       },
       "historical_before": {
-        "characters": 304,
+        "characters": 298,
         "nonblank_lines": 23,
-        "utf8_bytes": 490,
-        "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+        "utf8_bytes": 480,
+        "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
       },
       "after": {
         "characters": 298,
@@ -957,16 +911,10 @@
         "utf8_bytes": 480,
         "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
       },
-      "has_alternative": true,
+      "has_alternative": false,
       "selected_variant": "reuse",
-      "alternative_variant": "original",
+      "alternative_variant": null,
       "variants": {
-        "original": {
-          "characters": 304,
-          "nonblank_lines": 23,
-          "utf8_bytes": 490,
-          "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
-        },
         "reuse": {
           "characters": 298,
           "nonblank_lines": 23,
@@ -975,13 +923,11 @@
         }
       },
       "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
-      "original_algorithm_preserved": true,
+      "scenario_preserved": true,
       "eligible_variants": [
-        "original",
         "reuse"
       ],
-      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта.",
-      "syntax_normalized": "Name :: DATA; signatureTypes token constructor"
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта."
     },
     {
       "id": "V04",
@@ -1034,26 +980,26 @@
   ],
   "totals_changed": {
     "before": {
-      "characters": 2170,
-      "nonblank_lines": 137,
-      "utf8_bytes": 3313
-    },
-    "after": {
       "characters": 2667,
       "nonblank_lines": 169,
       "utf8_bytes": 4078
+    },
+    "after": {
+      "characters": 2447,
+      "nonblank_lines": 158,
+      "utf8_bytes": 3755
     }
   },
   "totals_all": {
     "before": {
-      "characters": 5104,
-      "nonblank_lines": 359,
-      "utf8_bytes": 8041
-    },
-    "after": {
       "characters": 5674,
       "nonblank_lines": 400,
       "utf8_bytes": 8966
+    },
+    "after": {
+      "characters": 5429,
+      "nonblank_lines": 381,
+      "utf8_bytes": 8543
     }
   },
   "runtime_executed": false

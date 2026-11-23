@@ -1,7 +1,10 @@
-from money import Money, same
+from dataclasses import dataclass
+
+@dataclass(frozen=True, slots=True)
+class Money:
+    cents: int = 100
+    currency: int = 840
 
 def demo():
-    first = Money()
-    second = Money()
-    third = Money(currency=978)
-    return int(same(first, second)) * 10 + int(same(first, third))
+    first, second, third = Money(), Money(), Money(currency=978)
+    return int(first == second) * 10 + int(first == third)

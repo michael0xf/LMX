@@ -1,8 +1,8 @@
 # Text Patterns: concrete LMX implementation
 
-Revision: **2026-11-22**, based only on the current archive and the `LMX-TZ-2026-11-22-postfix-1` requirements. The normative source is [the Regex requirements](../../CORE_SEQUENCES_REGEX.en.md#patterns), together with [the common Array/reference requirements](../../CORE_SEQUENCES_REGEX.en.md#types).
+Revision: **2026-11-23**, based only on the current archive and the `LMX-TZ-2026-11-22-postfix-1` requirements, with the AR01 interface-observation correction below. The normative source is [the Regex requirements](../../CORE_SEQUENCES_REGEX.en.md#patterns), together with [the common Array/reference requirements](../../CORE_SEQUENCES_REGEX.en.md#types).
 
-**Status:** the matcher algorithms are written in LMX. This is a source implementation for integration, **not a report of successful execution on an LMX kernel**. The archive supplied no runnable kernel against which these sources could be checked. Ordinary call admission, the declared-failure metadata of dynamic callable dependencies, and the existing `|` implementation still require the common integration described below. None of those gates is a placeholder for an unimplemented regex engine.
+**Status:** the matcher algorithms are written in LMX. This is a source implementation for integration, **not a report of successful execution on an LMX kernel**. The archive supplied no runnable kernel against which these sources could be checked. Ordinary call admission, the AR01 read-only interface observation, the declared-failure metadata of dynamic callable dependencies, and the existing `|` implementation still require the common integration described below. None of those gates is a placeholder for an unimplemented regex engine.
 
 ## Source map
 
@@ -153,7 +153,40 @@ The archive contains the high-level branch, not the old kernel's implementation 
 
 ## Common kernel gates and failure contract
 
-There are **no new regex-specific kernel bridges**. The implementation uses the shared sequence layer's `FxSeqInfo`, `FxSeqRead`, `FxSeqPush` and checked-size helper `FxSeqSize`. Their underlying Array metadata and read/admit/write bridges preserve actual dense layout and the direct value-record references of `@[]`. `sequence` and `choice` do not require a dense source to be boxed into a new reference-array representation before reading its elements.
+There are **no regex-specific checking or matching bridges**. The common
+`FxKernel.acceptsRequirement(candidate; requirement; consumer=0)` boundary is a
+required read-only exposure of the existing directed interface checker; its
+strict [AR01 contract](KERNEL_REQUIREMENTS.md#interface-probe-ar01)
+and [acceptance matrix](tests/regex/ADMISSION_PROBE_ACCEPTANCE.json) are explicit
+remaining kernel work. The native provider is **not implemented or verified in
+this source archive**.
+
+The former four uses of `satisfies` as an `int`/Boolean result were invalid:
+that public receiver has no newly invented Boolean ABI. `RxIsPattern`,
+`RxRepeated`, `RxReplacementAccept` and `RxReplacementText` now use the common
+observation bridge. It returns 1 only for established compatibility and 0 only
+for established incompatibility; unknown remains a service failure and cannot
+select numeric `|`, literal normalization or a finite repetition bound.
+Ordinary later typed reception keeps its existing value checks and effects.
+
+Raw type-tag equality would incorrectly narrow compatible Pattern signatures
+and replacement requirements. Likewise, comparing the `unbounded` object's
+identity would reject an ordinary copied configuration. The bridge reuses full
+structural/positional admission relationships without executing a Pattern,
+replacement, initializer, default, test or converter. It adds no public API,
+global registry, speculative matching attempt or new Pattern representation.
+
+The two finite service outcomes `FxKernelFailure` and `FxTypeToken` are declared
+in all **31 reviewed methods on the static call paths** to this observation,
+including normalization, sequence/choice/repetition construction, word
+operands, matching/search wrappers, lookaround construction and replacement.
+[AR01_STATIC_DECLARATIONS.json](tests/regex/AR01_STATIC_DECLARATIONS.json)
+records every affected method and its exact called dependency. This is not an
+inferred union of arbitrary callback failures. Returned matcher cursors do not
+re-run construction-time normalization merely because they resume; their
+dynamic callable-failure contract remains the separate gate below.
+
+The implementation also uses the shared sequence layer's `FxSeqInfo`, `FxSeqRead`, `FxSeqPush` and checked-size helper `FxSeqSize`. Their underlying Array metadata and read/admit/write bridges preserve actual dense layout and the direct value-record references of `@[]`. `sequence` and `choice` do not require a dense source to be boxed into a new reference-array representation before reading its elements.
 
 The ordinary factories additionally need these existing language mechanisms to work on the real kernel: copy with correct lexical/parent maps, returned nested methods, typed-reference admission, direct calls, checked allocation/resize, `yield`/`Stop`, and lifetime retention. New Pattern/text values do not need a native object tag or special allocator.
 

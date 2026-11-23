@@ -10,12 +10,6 @@ All eleven original entries remain. Layered, Hexagonal, Clean, and Onion overlap
 - [Excel](LMX_Comparison_02_architecture_and_boundaries.xlsx)
 - [PDF](LMX_Comparison_02_architecture_and_boundaries.pdf)
 - [CSV](LMX_Comparison_02_architecture_and_boundaries.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -83,25 +77,25 @@ Explicit recipients make the example deterministic; a subscription catalog can l
 
 Independent transformations are connected in an ordered data flow.
 
-**Implementation of the supplied component:** [093. Pipe — implementation](093_pipe_implementation_comparision.md)
+**Separate implementation comparison:** [093. Pipe — generic implementation](093_pipe_implementation_comparision.md)
 
 **Scenario:** For one item -3, normalize its sign, double it, then add 1.
 
 **Observation:** 7; intermediate values are 3 and 6.
 
-All three clients import a ready Pipe while retaining normalization, doubling, offset, and their order. LMX writes that order left to right; Java and Go pass the same callable list. The companion separately counts the explicit implementation loop in all three languages; client size is not presented as the full pipeline implementation.
+LMX uses its direct generic core composition, Java its real andThen method, and Go ordinary calls. Implementation093 is a separate implementation comparison, not a dependency of the foreign usage examples.
 
-### 093. [Pipe — implementation](093_pipe_implementation_comparision.md)
+### 093. [Pipe — generic implementation](093_pipe_implementation_comparision.md)
 
-Implement the imported sequential handoff through a stage list.
+Implement generic ordered function composition without an int-only adapter.
 
 **Usage examples:** [013. Pipe and Filter](013_pipe_and_filter_comparision.md)
 
-**Scenario:** Receive an int and an ordered list of int→int callables. Apply each once; return the input for an empty list.
+**Scenario:** Compose A→B and B→C to A→C, evaluate first then second exactly once, and relay failures without executing the second stage after first-stage failure.
 
-**Observation:** For -3 with normalize,double,offset the intermediate values are 3,6,7; an empty list preserves -3.
+**Observation:** The int fixture returns7; a heterogeneous string→length→Boolean fixture also works; a failure in the first stage skips the second.
 
-The expression executor forms LMX right; the library explicitly iterates it. Java uses an int-specialized functional interface, Go ordinary functions and a variadic slice. None imports the ready Pipe or a ready pipeline/fold to implement Pipe.
+All three implementations retain callable references and explicitly compose ordinary calls. LMX preserves its exact source input policy and declared failure set through the shared adapter mechanism. Java and Go use static generic parameters.
 
 ### 014. [Blackboard](014_blackboard_comparision.md)
 
@@ -142,7 +136,3 @@ A router progressively moves selected capabilities to a new implementation.
 **Observation:** Responses 101, 201, 102; demo returns their sum, 404.
 
 One capability switches independently of the rest. Enabling it does not imply fallback after the new service has already produced effects.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

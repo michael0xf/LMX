@@ -55,31 +55,10 @@
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "reuse_existing_definition_or_place",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "WriteMessage:\n    int: balance 0\n    int: amount\n    @: transport\n    add:\n        throws: Amount\n        if: amount < 0\n            throw: Amount()\n        node\\balance += amount\n        node\\transport\\publish(node\\balance)\n\nReadMessage:\n    int: visible 0\n    int: snapshot\n    return: int\n    apply:\n        node\\visible := snapshot\n        return: node\\visible\n    query:\n        return: node\\visible\n",
-          "reuse": "WriteMessage:\n    int: balance 0\n    int: amount\n    @: transport\n    add:\n        throws: Amount\n        if: amount < 0\n            throw: Amount()\n        node\\balance += amount\n        node\\transport\\publish(node\\balance)\n\nReadMessage:\n    int: visible 0\n    int: snapshot\n    return: int\n    apply:\n        node\\visible := snapshot\n        return: query()\n    query:\n        return: node\\visible\n"
-        }
-      },
-      "procedural_lmx": "WriteMessage:\n    int: balance 0\n    int: amount\n    @: transport\n    add:\n        throws: Amount\n        if: amount < 0\n            throw: Amount()\n        node\\balance += amount\n        node\\transport\\publish(node\\balance)\n\nReadMessage:\n    int: visible 0\n    int: snapshot\n    return: int\n    apply:\n        node\\visible := snapshot\n        return: node\\visible\n    query:\n        return: node\\visible\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Reuse the existing ReadMessage.query method for the apply result. The state write still occurs before the read; query itself remains read-only and cannot dispatch a command. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 12,
@@ -172,31 +151,10 @@
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "reuse_existing_definition_or_place",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "SagaMessage:\n    int: phase 0\n    int: kind\n    int: ok\n    @: transport\n    handle:\n        int: action 0\n        if: kind = 0 && node\\phase = 0\n            node\\phase := 1\n            action := 1\n        if: kind = 1 && node\\phase = 1\n            if: ok\n                node\\phase := 2\n                action := 2\n            else:\n                node\\phase := 4\n                action := 4\n        ---\n        if: kind = 2 && node\\phase = 2\n            if: ok\n                node\\phase := 5\n                action := 5\n            else:\n                node\\phase := 3\n                action := 3\n        ---\n        if: kind = 3 && node\\phase = 3 && ok\n            node\\phase := 4\n            action := 4\n        if: action != 0\n            node\\transport\\publish(action)\n",
-          "reuse": "SagaMessage:\n    int: phase 0\n    int: kind\n    int: ok\n    @: transport\n    handle:\n        int: action 0\n        if: kind = 0 && node\\phase = 0\n            action := 1\n        if: kind = 1 && node\\phase = 1\n            if: ok\n                action := 2\n            else:\n                action := 4\n        ---\n        if: kind = 2 && node\\phase = 2\n            if: ok\n                action := 5\n            else:\n                action := 3\n        ---\n        if: kind = 3 && node\\phase = 3 && ok\n            action := 4\n        if: action != 0\n            node\\phase := action\n            node\\transport\\publish(action)\n"
-        }
-      },
-      "procedural_lmx": "SagaMessage:\n    int: phase 0\n    int: kind\n    int: ok\n    @: transport\n    handle:\n        int: action 0\n        if: kind = 0 && node\\phase = 0\n            node\\phase := 1\n            action := 1\n        if: kind = 1 && node\\phase = 1\n            if: ok\n                node\\phase := 2\n                action := 2\n            else:\n                node\\phase := 4\n                action := 4\n        ---\n        if: kind = 2 && node\\phase = 2\n            if: ok\n                node\\phase := 5\n                action := 5\n            else:\n                node\\phase := 3\n                action := 3\n        ---\n        if: kind = 3 && node\\phase = 3 && ok\n            node\\phase := 4\n            action := 4\n        if: action != 0\n            node\\transport\\publish(action)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Factor the common phase write into the final action != 0 block. Each kind matches at most one transition branch, branch tests have no effects, and every original next phase equals action; phase is still committed before publishing exactly once. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 48,
@@ -242,7 +200,9 @@
           "why_ru": "Определение, механизм и границы гарантий.",
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 50,
@@ -289,31 +249,10 @@
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "reuse_existing_definition_or_place",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "ProjectionMessage:\n    int: total 0\n    int: last 0\n    int: seq\n    int: delta\n    return: int\n    apply:\n        throws: Gap\n        if: seq <= node\\last\n            return: node\\total\n        if: seq != node\\last + 1\n            throw: Gap()\n        node\\total += delta\n        node\\last := seq\n        return: node\\total\n    query:\n        return: node\\total\n",
-          "reuse": "ProjectionMessage:\n    int: total 0\n    int: last 0\n    int: seq\n    int: delta\n    return: int\n    apply:\n        throws: Gap\n        if: seq <= node\\last\n            return: query()\n        if: seq != node\\last + 1\n            throw: Gap()\n        node\\total += delta\n        node\\last := seq\n        return: query()\n    query:\n        return: node\\total\n"
-        }
-      },
-      "procedural_lmx": "ProjectionMessage:\n    int: total 0\n    int: last 0\n    int: seq\n    int: delta\n    return: int\n    apply:\n        throws: Gap\n        if: seq <= node\\last\n            return: node\\total\n        if: seq != node\\last + 1\n            throw: Gap()\n        node\\total += delta\n        node\\last := seq\n        return: node\\total\n    query:\n        return: node\\total\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Reuse the existing query() for both apply return paths. Duplicate detection and Gap rejection remain before mutation, and successful total/last updates complete before query reads the total. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 51,
@@ -359,7 +298,9 @@
           "why_ru": "Определение, механизм и границы гарантий.",
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 55,
@@ -411,7 +352,9 @@
           "why_ru": "Пример реального API координации; fencing ресурса остаётся явным требованием.",
           "why_en": "An actual coordination API; resource fencing remains an explicit requirement."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 57,
@@ -457,7 +400,9 @@
           "why_ru": "Определение, механизм и границы гарантий.",
           "why_en": "Definition, mechanism and guarantee boundaries."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 86,

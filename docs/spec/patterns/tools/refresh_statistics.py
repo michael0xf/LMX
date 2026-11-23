@@ -9,7 +9,7 @@ from collections import defaultdict
 import json,re,csv,hashlib
 
 ROOT=Path(__file__).resolve().parents[1]
-DATE='2026-11-22'
+DATE='2026-11-23'
 MARKER='# BEGIN PROCEDURAL LMX (excluded from character counts)'
 ALTERNATIVE_MARKER='# BEGIN ALTERNATIVE LMX (excluded from character counts)'
 
@@ -21,7 +21,7 @@ def primary(path):return canon(path.read_text().split(MARKER)[0].split(ALTERNATI
 def order(p):return (p.get('paired_with',p['id']),p.get('kind','pattern')=='implementation',p['id'])
 def put(p,s):p.write_text(s)
 def main():
-    report={'date':DATE,'method':'Unicode nonwhitespace codepoints, nonblank lines, UTF8 bytes; shortest valid available variant is primary. Other variants retained and excluded. Shared dependencies separate. No runtime or performance claim.','groups':[],'variant_selection':[]}
+    report={'date':DATE,'method':'Unicode nonwhitespace codepoints, nonblank lines, UTF8 bytes; shortest valid available variant is primary. Only materially different approaches retained and excluded; one-line changes are notes. Shared dependencies separate. No runtime or performance claim.','groups':[],'variant_selection':[]}
     flat=[]
     for jp in sorted(ROOT.glob('[0-9][0-9]_*/patterns.json')):
         d=json.loads(jp.read_text());directory=jp.parent;langs=['LMX']+d['languages'];rows=[];summary=[]
@@ -95,9 +95,9 @@ def main():
     report['gof']={'comparisons':len(gof),'listings':8*len(gof),'records':gof,'total_characters':{l:sum(x['metrics'][l]['characters'] for x in gof) for l in fences.values()}}
     lib=ROOT/'LMX_Fn_Receivers';cat=json.loads((lib/'catalog.json').read_text());report['receiver_library']={'public_receivers':len(cat),'assembled':metrics((lib/'LMX_Receivers.lmx').read_text()),'runtime_executed':False}
     target=ROOT/'validation/statistics_20261122.json';target.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
-    out=['# Статистика редакции 22 ноября 2026 года',
+    out=['# Статистика редакции 23 ноября 2026 года',
          '**90 паттернов + 9 реализаций библиотек: 99 сравнений и 297 основных листингов.** Сохранены также 23 исходных GoF-сравнения (184 листинга) и отдельная подборка 24 LMX-примеров.',
-         'Считаются непробельные Unicode-символы и непустые строки основного листинга. Из двух корректных вариантов основным выбирается более короткий; альтернативы сохранены рядом и исключены. Реализации общих зависимостей учитываются отдельно; размеры кода не означают скорость исполнения.',
+         'Считаются непробельные Unicode-символы и непустые строки основного листинга. Среди сопоставимых способов выбирается более короткий. Полные альтернативы остаются только для другого подхода; малые различия изложены примечанием. Реализации общих зависимостей учитываются отдельно; размеры кода не означают скорость исполнения.',
          '## Группы и границы сравнения',
          '| Группа | Слой | Количество | LMX, символы | Контроль 1 | Символы | Контроль 2 | Символы |\n| --- | --- | ---: | ---: | --- | ---: | --- | ---: |']
     summarycsv=[]
@@ -110,10 +110,10 @@ def main():
             summarycsv.append({'group':g['directory'],'title':g['title'],'layer':layer,'comparisons':count,'LMX_characters':t['LMX']['characters'],'control1':a,'control1_characters':t[a]['characters'],'control2':b,'control2_characters':t[b]['characters']})
     out+=['По разным группам не строится общий рейтинг языков: контрольные языки, сценарии и границы библиотек различаются. Основные и альтернативные реализации имеют явно указанные границы обобщения и зависимости; короткий клиент использует показанный рядом компонент единого текущего ядра.',
           '## Функциональная группа и общие зависимости',
-          '[Восемь сравнений](09_functional_computation/LMX_Comparison_09_functional_computation.md) сохраняют предыдущие исходники как пояснение и показывают текущую реализацию. [Реестр зависимостей](09_functional_computation/IMPLEMENTATION_DEPENDENCIES.md) считает реальные LMX-определения по одному разу, включая дополнительный curry-механизм клиента 085; неопубликованное ядро не объявляется имеющим нулевой размер.',
+          '[Восемь сравнений](09_functional_computation/LMX_Comparison_09_functional_computation.md) разделяют реальное библиотечное использование и самостоятельные реализации. Контрольные клиенты не импортируют наши сравнительные реализации. [Реестр зависимостей](09_functional_computation/IMPLEMENTATION_DEPENDENCIES.md) считает реальные LMX-определения по одному разу, включая дополнительный curry-механизм клиента 085; неопубликованное ядро не объявляется имеющим нулевой размер.',
           '## Корневые примеры',
           '| Пример | Основной код, символы | Непустые строки | Второй вариант рядом |\n| --- | ---: | ---: | --- |']
-    for x in example_counts:out[-1]+=f"\n| [{x['id']}]({x['source']}) | {x['characters']} | {x['nonblank_lines']} | {'Да' if x['procedural_archived'] else 'Исходный пример сохранён'} |"
+    for x in example_counts:out[-1]+=f"\n| [{x['id']}]({x['source']}) | {x['characters']} | {x['nonblank_lines']} | {'Да' if x['procedural_archived'] else 'Нет'} |"
     out+=['[Выбор основного варианта и размеры обоих](examples/validation/functional_receiver_counts.json) и [полная стоимость библиотечных реализаций](examples/validation/receiver_library_counts.json). Общая реализация остаётся доступной, даже если более короткий процедурный вариант выбран основным.',
           '## Исходные 23 GoF-сравнения',
           'Все 184 основных листинга повторно пересчитаны. Для Composite, Prototype и Abstract Factory сохранены альтернативные LMX-алгоритмы, основной выбран по краткости при сопоставимой границе подсчёта. В Flyweight исправлен уровень отступа финального return; прежний некорректный вариант помечен историческим и не участвует в выборе по краткости.',

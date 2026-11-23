@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. ASCII фиксирует одинаковую длину в char/UTF-16/байтах. Длина не заменяет digest. Доступ, retention, cleanup сирот, повторное чтение и expiry токена задаются хранилищем; ticket сам не выдаёт полномочия.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -99,6 +97,10 @@ SenderMessage и ConsumerMessage — разные владельцы. blobs.put/
 
 Во всех вариантах сначала завершается сохранение blob, затем публикуется ticket. Это согласуется с LMX HTTP-профилем, допускающим cursor/range для большого тела.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -107,7 +109,7 @@ SenderMessage и ConsumerMessage — разные владельцы. blobs.put/
 | Java | 488 | 14 |
 | Go | 476 | 13 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -123,6 +125,8 @@ Send a compact claim ticket while retaining the large payload externally.
 
 **Scope and limitations.** ASCII makes length comparable across char, UTF-16 and byte representations. Length is not a digest. Authorization, retention, orphan cleanup and expiry remain store policy; a ticket grants no automatic authority.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** SenderMessage and ConsumerMessage are separate owners. blobs.put/get is explicit external storage; publish uses Message/post or the documented application/lmx HTTP profile. Key is portable, never an arena address; the body is not in the Message. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity. TicketData has an independent root; the sender copies ready primitive leaves and explicitly writes key/size before publish. The receiver obtains values, not an initializer referring to an expired sender frame.
@@ -135,8 +139,6 @@ Send a compact claim ticket while retaining the large payload externally.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

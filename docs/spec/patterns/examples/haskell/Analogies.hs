@@ -1,3 +1,5 @@
+-- Usage clients import only real packages; implementation comparisons are separate.
+-- monad-loops supplies whileJust_; no modules from examples/libraries are imported.
 -- Companion examples for LMX_examples_and_analogies.ru.md.
 -- Expected results are asserted here; this file is not an execution receipt.
 -- Sources for the library interfaces:
@@ -8,17 +10,13 @@ module Main where
 
 import Control.Concurrent (MVar, forkIO, newEmptyMVar, putMVar, takeMVar)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
-import Control.Monad (unless, void)
+import Control.Monad (unless, void, foldM, replicateM)
+import Control.Monad.Loops (whileJust_)
+import Data.List (foldl')
+import Data.Ix (inRange)
 import Data.Array (Array, listArray, (!), (//), elems)
 import Data.IORef (newIORef, readIORef, modifyIORef')
 import qualified Data.IORef as Ref
-import IntApply (apply)
-import Partial (partial)
-import IntPipe (pipe, pipeIO, pipe2, pipeIO2)
-import Lazy (lazyIO)
-import EvaluationModes (preparedTwice, rawTwice)
-import qualified StepIterator as Iterator
-import CharacterRange (between)
 
 assertEq :: (Eq a, Show a) => String -> a -> a -> IO ()
 assertEq name expected actual =
@@ -29,14 +27,14 @@ applicationExample :: IO Int
 applicationExample = do
   chosen <- newIORef ((*2) :: Int -> Int)
   firstOperation <- readIORef chosen
-  let first = apply firstOperation 7
+  let first = firstOperation 7
   Ref.writeIORef chosen (+1)
   secondOperation <- readIORef chosen
-  let second = apply secondOperation 7
+  let second = secondOperation 7
   pure (first * 100 + second)
 
 makeAdder :: Int -> Int -> Int
-makeAdder n = partial (+) n
+makeAdder n = (+) n
 
 closureExample :: (Int, Int, Int)
 closureExample =
@@ -45,20 +43,19 @@ closureExample =
   in (add5 1, add100 1, add5 1)
 
 compositionExample :: (Int, Int)
-compositionExample = (pipe 4 [(*2), (+1)], pipe 4 [(+1), (*2)])
+compositionExample = (foldl' (flip ($)) 4 [(*2), (+1)], foldl' (flip ($)) 4 [(+1), (*2)])
 
 compositionFactoryExample :: (Int, Int)
-compositionFactoryExample = (pipe2 (*2) (+1) 4, pipe2 (+1) (*2) 4)
+compositionFactoryExample = (((+1) . (*2)) 4, ((*2) . (+1)) 4)
 
 lazySeries :: IO (Int, Int, Int)
 lazySeries = do
   counter <- newIORef (0 :: Int)
   let next = modifyIORef' counter (+1) >> readIORef counter
       prepared = do
-        delayed <- lazyIO next
-        first <- delayed
-        second <- delayed
-        pure (first + second)
+        value <- next
+        let delayed = value
+        pure (delayed + delayed)
   first <- prepared
   second <- prepared
   calls <- readIORef counter
@@ -70,8 +67,8 @@ compositionEffects = do
   trace <- newIORef []
   let twice x = modifyIORef' trace (++ ["twice"]) >> pure (x * 2)
       next x = modifyIORef' trace (++ ["next"]) >> pure (x + 1)
-  first <- pipeIO 4 [twice, next]
-  second <- pipeIO 4 [next, twice]
+  first <- foldM (flip ($)) 4 [twice, next]
+  second <- foldM (flip ($)) 4 [next, twice]
   seen <- readIORef trace
   pure (first, second, seen)
 
@@ -114,8 +111,8 @@ eventValue Finished = 0
 
 accepts :: String -> Bool
 accepts [a,b,'-',c,d] =
-  all (\x -> x `between` ('A','Z')) [a,b]
-    && all (\x -> x `between` ('0','9')) [c,d]
+  all (inRange ('A','Z')) [a,b]
+    && all (inRange ('0','9')) [c,d]
 accepts _ = False
 
 -- Effects are executed explicitly. Reusing the IO action is not reusing its result.
@@ -127,21 +124,21 @@ preparedAndRaw = do
   count1 <- readIORef preparedCount
   rawCount <- newIORef (0 :: Int)
   let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount
-  rawValue <- rawTwice rawNext
+  rawValue <- sum <$> replicateM 2 rawNext
   count2 <- readIORef rawCount
-  pure ((preparedTwice value, count1), (rawValue, count2))
+  pure ((value + value, count1), (rawValue, count2))
 
 preparedAndRawSeries :: IO ((Int, Int, Int), (Int, Int, Int))
 preparedAndRawSeries = do
   preparedCount <- newIORef (0 :: Int)
   let preparedNext = modifyIORef' preparedCount (+1) >> readIORef preparedCount
-  first <- preparedTwice <$> preparedNext
-  second <- preparedTwice <$> preparedNext
+  first <- (\value -> value + value) <$> preparedNext
+  second <- (\value -> value + value) <$> preparedNext
   count1 <- readIORef preparedCount
   rawCount <- newIORef (0 :: Int)
   let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount
-  third <- rawTwice rawNext
-  fourth <- rawTwice rawNext
+  third <- sum <$> replicateM 2 rawNext
+  fourth <- sum <$> replicateM 2 rawNext
   count2 <- readIORef rawCount
   pure ((first, second, count1), (third, fourth, count2))
 
@@ -155,14 +152,14 @@ iteratorCase source observe = do
         modifyIORef' calls (+1)
         values <- readIORef remaining
         case values of
-          [] -> pure Iterator.Stop
+          [] -> pure Nothing
           value : rest -> do
             Ref.writeIORef remaining rest
-            pure (Iterator.Yield value)
+            pure (Just value)
       body item = do
         modifyIORef' bodies (+1)
         modifyIORef' total (+ observe item)
-  Iterator.iterateUntilStop next body
+  whileJust_ next body
   result <- readIORef total
   steps <- readIORef calls
   bodyCalls <- readIORef bodies
@@ -238,7 +235,7 @@ fanOutExample = do
 
 main :: IO ()
 main = do
-  assertEq "H01 apply" 14 (apply (*2) 7)
+  assertEq "H01 apply" 14 (((*2) :: Int -> Int) 7)
   applicationExample >>= assertEq "H01 replaced operation" 1408
   assertEq "H03 closure" (6,101,6) closureExample
   assertEq "H04 explicit default model" [6,26,1,6]
@@ -248,7 +245,7 @@ main = do
   assertEq "H06 composition" (9,10) (((+1) . (*2)) (4 :: Int), ((*2) . (+1)) (4 :: Int))
   assertEq "H06 ready pipe" (9,10) compositionExample
   assertEq "H06 composition factory" (9,10) compositionFactoryExample
-  lazySeries >>= assertEq "H07 memoized nullary action" (2,4,2)
+  lazySeries >>= assertEq "H07 one action and shared prepared value" (2,4,2)
   compositionEffects >>= assertEq "H06 stage order/count"
     (9,10,["twice","next","next","twice"])
   preparedAndRaw >>= assertEq "H07 values/actions" ((2,1),(3,2))

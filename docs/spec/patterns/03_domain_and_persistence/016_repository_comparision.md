@@ -2,7 +2,7 @@
 
 Доменный интерфейс коллекции скрывает способ получения объектов.
 
-**Реализация используемого компонента:** [094. FindById — implementation](094_find_by_id_implementation_comparision.md)
+**Отдельное сравнение реализации:** [094. FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
 ## Общий сценарий
 
@@ -10,24 +10,33 @@
 
 **Ожидаемое наблюдение:** Первое обращение возвращает исходный объект id=9; второе — отсутствие. Сам поиск не создаёт новый экземпляр.
 
-**Граница сравнения:** Использование библиотеки. In-memory последовательность, совпадение по одному целочисленному id и первая запись при дубликатах. Возвращается исходный объект, не snapshot. Это не общий LINQ engine, не ORM и не индекс БД. Dataclass/record в клиенте описывает поля Account; алгоритм поиска реализован отдельно и полностью.
+**Граница сравнения:** Использование библиотеки. Упорядоченный поиск сохраняет исходный объект и первый дубликат; это не ORM/индекс. LMX выражает отсутствие через none; в сценарии с ненулевыми Account допустимы None/null.
 
-Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
+LMX вызывает операции единого ядра. Иностранные клиенты используют настоящие средства языка или установленную библиотеку; показанные рядом самостоятельные реализации в них не импортируются.
 
 ## LMX
 
 ```lmx
+MatchAccount:
+    int: id
+    @: row
+    return: int
+    matches:
+        return: row\id = id
+
 Repository:
     @[]: rows
     int: id
     return: @
     find:
-        throws: OperandArity
-        import: FindLibrary
-        return: rows findById id
+        throws:
+            copy(FxThrows\capture)
+            copy(FxThrows\predicate)
+        @: accepts partial(MatchAccount\matches; (id record))
+        return: findFirst(rows; accepts)
 ```
 
-Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.
+findFirst — прямой receiver ядра. some содержит запись найденного исходного объекта; none отделяет отсутствие от допустимого null-значения.
 
 [Отдельный листинг](examples/lmx/016_repository.lm3)
 
@@ -35,7 +44,6 @@ Repository сохраняет последовательность доменн�
 
 ```python
 from dataclasses import dataclass
-from lookup import find_by_id
 
 @dataclass
 class Account:
@@ -44,76 +52,76 @@ class Account:
 
 class Repository:
     def __init__(self, rows): self.rows = rows
-    def find(self, id): return find_by_id(self.rows, id)
+    def find(self, id): return next((row for row in self.rows if row.id == id), None)
 ```
 
-Модуль lookup.py полностью дан в companion; dataclass остаётся декларацией клиентской Account.
+Используются настоящие dataclass и next(generator, default). Реализация094 не импортируется.
 
 [Отдельный листинг](examples/python/016_repository.py)
 
 ## C#
 
 ```csharp
+#nullable enable
 using System.Collections.Generic;
-using ExampleLib;
-public sealed record Account(int Id, int Cents) : IIdentified;
+using System.Linq;
+public sealed record Account(int Id, int Cents);
 public sealed class Repository(IReadOnlyList<Account> rows) {
-    public Account? Find(int id) => Records.FindById(rows, id);
+    public Account? Find(int id) => rows.FirstOrDefault(row => row.Id == id);
 }
 ```
 
-ExampleLib.Records и IIdentified полностью даны в companion. Account — клиентский доменный record, реализующий только Id-контракт.
+Настоящий LINQ FirstOrDefault; Account сохраняет поля Id и Cents.
 
 [Отдельный листинг](examples/csharp/016_repository.cs)
 
 ## Разбор LMX
 
-Repository сохраняет последовательность доменных записей и делегирует поиск импортируемому FindLibrary. Его полный цикл показан в соседнем сравнении. import находится в CODE find, поэтому DATA Repository остаётся rows/id/return. rows findById id передаёт одну целую последовательность слева и один int справа; массив не раскрывается. Оператор наследует готовые режим 0 и приоритет + и проверяет right length=1. Возвращается ссылка на первую исходную запись либо 0; копия записи не создаётся.
+findFirst — прямой receiver ядра. some содержит запись найденного исходного объекта; none отделяет отсутствие от допустимого null-значения.
 
 ## Сопоставление
 
-Во всех трёх клиентах готовый FindById — небольшой прикладной helper для последовательности записей с id, а доменная Account и граница Repository остаются клиентскими. Соседняя реализация раскрывает цикл, ранний возврат и отсутствие во всех языках. Это не сравнение готового LINQ с ручным циклом только в LMX.
+Клиенты используют core findFirst, Python next и LINQ FirstOrDefault. Общие циклы поиска сравниваются отдельно в094; иностранные клиенты наши реализации не импортируют.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 96 | 8 |
-| Python | 194 | 9 |
-| C# | 212 | 6 |
+| LMX | 228 | 16 |
+| Python | 189 | 8 |
+| C# | 227 | 7 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
 Domain collection access hides retrieval details.
 
-**Implementation of the supplied component:** [094. FindById — implementation](094_find_by_id_implementation_comparision.md)
+**Separate implementation comparison:** [094. FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
 **Scenario.** Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.
 
 **Expected observation.** Return the existing account 9, then absence; do not create a second instance.
 
-**LMX.** Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row.
+**LMX.** findFirst is a direct core receiver. some contains the existing object record; none distinguishes absence from a valid null value.
 
-**Comparison.** All clients use a ready, narrow FindById helper over records with id while retaining the domain Account and repository boundary. The companion exposes iteration, early return, and absence in every language. Ready LINQ is not compared against a manual loop only in LMX.
+**Comparison.** The clients use core findFirst, Python next, and LINQ FirstOrDefault. The reusable first-match loops are compared separately in094; no foreign example imports our comparison implementation.
 
-**Scope and limitations.** This is an in-memory sequence matched by one integer id, returning the first duplicate. The original object is returned, not a snapshot. It is not a LINQ engine, ORM, or database index. Client dataclass/record declarations describe Account fields; the complete search algorithm is separately implemented.
+**Scope and limitations.** Ordered in-memory first match, original object identity and first duplicate preserved. This is not an ORM/index. LMX represents absence by none; the non-null Account scenario permits None/null defaults in the controls.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** Repository retains its domain-record sequence and delegates lookup to imported FindLibrary; the companion shows its full loop. import is in find CODE, so Repository DATA remains rows/id/return. rows findById id passes one whole sequence on the left and one int on the right; no array expansion occurs. The operand inherits ready mode 0 and additive priority and checks right length=1. It returns the first original record reference or 0, without copying a row.
-- **Python:** The companion fully supplies lookup.py; dataclass remains the client Account declaration.
-- **C#:** The companion fully supplies ExampleLib.Records and IIdentified. Account is the client domain record implementing the Id contract.
+- **LMX:** findFirst is a direct core receiver. some contains the existing object record; none distinguishes absence from a valid null value.
+- **Python:** Uses real dataclass and next(generator, default); implementation094 is not imported.
+- **C#:** Real LINQ FirstOrDefault; Account retains both Id and Cents.
 
 ## Источники / Sources
 
-- [Martin Fowler — Repository](https://martinfowler.com/eaaCatalog/repository.html) — Определение и границы паттерна.
+- [Python next](https://docs.python.org/3/library/functions.html#next) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
+- [LINQ FirstOrDefault](https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.firstordefault) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

@@ -1,6 +1,6 @@
 # Прямые публичные ресиверы и Expression-операнды
 
-Редакция 2026-11-22. Сохранены все 61 операции текущего загруженного комплекта; имена согласованы с новой редакцией; добавлены 14 последовательностных и 40 текстовых/Pattern-операций. Всего 115 уникальных вызовных имён.
+Редакция 2026-11-23. Сохранены все 115 вызовных имён загруженного комплекта и добавлены 8 функций из сравнений реализаций. Всего 123 уникальных публичных имён lowerCamelCase.
 
 Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.
 `BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.
@@ -124,6 +124,14 @@
 | 113 | `atLeast` | новое | `atLeast(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
 | 114 | `atMost` | новое | `atMost(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
 | 115 | `optional` | новое | `optional(left; right)` | [src/regex/operands.lmx](src/regex/operands.lmx) | BODY_WITH_BRIDGE |
+| 116 | `findFirst` | новое | `findFirst(items; accepts)` | [src/coreComparisonGroups.lmx](src/coreComparisonGroups.lmx) | BODY_WITH_BRIDGE |
+| 117 | `allOf` | новое | `allOf(predicates; contract=0)` | [src/coreComparisonGroups.lmx](src/coreComparisonGroups.lmx) | BODY_WITH_BRIDGE |
+| 118 | `equalFields` | новое | `equalFields(first; second; same)` | [src/coreComparisonGroups.lmx](src/coreComparisonGroups.lmx) | BODY_WITH_BRIDGE |
+| 119 | `retryPost` | новое | `retryPost(request; retryOn; attempts; delay; firstDelay; maxDelay; timeoutMs; complete)` | [src/coreComparisonGroups.lmx](src/coreComparisonGroups.lmx) | BODY_WITH_BRIDGE |
+| 120 | `between` | новое | `between(left; right)` | [src/coreComparisonExamples.lmx](src/coreComparisonExamples.lmx) | BODY |
+| 121 | `iterateUntilStop` | новое | `iterateUntilStop(iteration; body)` | [src/coreComparisonExamples.lmx](src/coreComparisonExamples.lmx) | BODY_WITH_BRIDGE |
+| 122 | `sort` | новое | `sort(items; compare)` | [src/corePerlExamples.lmx](src/corePerlExamples.lmx) | BODY_WITH_BRIDGE |
+| 123 | `unique` | новое | `unique(items; same)` | [src/corePerlExamples.lmx](src/corePerlExamples.lmx) | BODY_WITH_BRIDGE |
 
 ## Области применения
 
@@ -242,6 +250,14 @@
 - **atLeast** — ordinary Pattern operand with common left/right ABI.
 - **atMost** — ordinary Pattern operand with common left/right ABI.
 - **optional** — ordinary Pattern operand with common left/right ABI.
+- **findFirst** — first accepted typed element as some(record), none for absence; ordered short-circuit over dense Arrays and Structures.
+- **allOf** — arbitrary finite predicate composition with a shared ordered signature, preserved input places and short-circuit; empty set requires an explicit contract.
+- **equalFields** — ordered sequence/field equality with explicit typed comparator; unequal lengths are false, empty equal lengths are true; no implicit deep graph equality.
+- **retryPost** — Message-owned bounded retry with saturated backoff, transport timeout and policy cancellation; persistent terminal result and late-reply draining.
+- **between** — prepared operand for inclusive ordered bounds; exactly two right values, ordinary actual comparison types and the priority of <=.
+- **iterateUntilStop** — execute accepted declaration DATA and associated body in their receiving activation; source Stop terminates, other declared exits retain name/payload in FxCallFailure; requires AE01.
+- **sort** — stable nonmutating generic merge sort; three-way int comparator; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input.
+- **unique** — stable first-occurrence uniqueness with explicit typed equality predicate; fresh outer array preserving source profile and element identity; empty/singleton supported; callback failure does not modify input.
 
 ## Готовые значения, требования и исходы
 

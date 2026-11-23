@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Изъятие не равно durable acknowledgement. Сбой после take может потерять работу; для redelivery нужны leases/ack и идемпотентность. Глобальный порядок завершения не обещан.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -92,6 +90,14 @@ queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт д
 
 Worker не конкурируют за выполнение одного LMX Thread: конкурируют запросы к QueueMessage, затем работа идёт в разных Message. Go channel и .NET Channel предоставляют собственную атомарную выдачу.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -100,49 +106,7 @@ Worker не конкурируют за выполнение одного LMX Th
 | Go | 233 | 9 |
 | C# | 445 | 11 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-JobQueueMessage:
-    @: queue
-    return: int
-    take:
-        if: queue\size() = 0
-            return: -1
-        return: queue\pop()
-
-WorkerMessage:
-    int: job
-    @: queueOwner
-    @: selfAddress
-    @: process
-    start:
-        post:
-            ask:
-                queueOwner\take()
-            answer:
-                selfAddress\received
-    ---
-    received:
-        if: job = -1
-            return
-        process(job)
-        post:
-            ask:
-                queueOwner\take()
-            answer:
-                selfAddress\received
-```
-
-**Основание выбора / Selection:** Reuse WorkerMessage.start() after each successful process(job) instead of repeating its complete post/ask/answer block. The empty sentinel returns before processing or posting; queueOwner and explicit selfAddress continuation remain identical.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -158,6 +122,8 @@ Several workers request work from a single queue owner.
 
 **Scope and limitations.** Dequeue is not durable acknowledgement. Failure after take may lose work; redelivery requires leases/acks and idempotency. Global completion order is not promised.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run.
@@ -170,8 +136,6 @@ Several workers request work from a single queue owner.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

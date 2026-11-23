@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Показан детерминированный протокольный core без сбоев процесса. Для production состояние и outgoing action сохраняются атомарно, участники идемпотентны, таймауты/повторы/ошибка компенсации требуют политики. HTTP-профиль переносит те же Messages.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -105,6 +103,14 @@ SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 c
 
 Во всех трёх листингах одинаковый конечный автомат, работающий в последовательной полосе владельца. Компенсация — отдельное бизнес-действие, а не автоматический rollback графа или distributed transaction.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -113,51 +119,7 @@ SagaMessage — отдельный владелец. kind=0 start,1 reserved,2 c
 | Java | 452 | 18 |
 | Go | 359 | 14 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-SagaMessage:
-    int: phase 0
-    int: kind
-    int: ok
-    @: transport
-    handle:
-        int: action 0
-        if: kind = 0 && node\phase = 0
-            node\phase := 1
-            action := 1
-        if: kind = 1 && node\phase = 1
-            if: ok
-                node\phase := 2
-                action := 2
-            else:
-                node\phase := 4
-                action := 4
-        ---
-        if: kind = 2 && node\phase = 2
-            if: ok
-                node\phase := 5
-                action := 5
-            else:
-                node\phase := 3
-                action := 3
-        ---
-        if: kind = 3 && node\phase = 3 && ok
-            node\phase := 4
-            action := 4
-        if: action != 0
-            node\transport\publish(action)
-```
-
-**Основание выбора / Selection:** Factor the common phase write into the final action != 0 block. Each kind matches at most one transition branch, branch tests have no effects, and every original next phase equals action; phase is still committed before publishing exactly once.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -173,6 +135,8 @@ Coordinate local actions and an explicit compensating action.
 
 **Scope and limitations.** This deterministic protocol core excludes process crashes. Production requires atomic persistence of state/outgoing action, idempotent participants, retry/timeouts and compensation-failure policy. The existing HTTP profile carries the same Messages.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** SagaMessage is one owner. kind 0/1/2/3 means start/reserved/charged/released; ok is 0/1. The explicit transport port sends a Message containing saga-id and action: 1 reserve,2 charge,3 release,4 failed,5 done.
@@ -185,8 +149,6 @@ Coordinate local actions and an explicit compensating action.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

@@ -8,30 +8,22 @@ failure names; neither source review nor character counting is execution.
 
 ## Results
 
-R01 has one new equivalent, eligible alternative: `derive` returns the value
-already collected by its ordinary merge body. It takes 183 nonwhitespace
-characters versus 184 for the preserved direct formulation. Width, height,
-depth, model ordering, source independence, and one composition map remain.
-The complete 71-character helper is shown in
-[the adjacent comparison](library_comparisons/r01_derive_comparision.md).
+The 2026-11-23 revision separates real-library usage from standalone implementation
+comparisons. LMX reusable functions are proposed core entries. Foreign clients
+use actual packages/operators; no custom comparison module is imported.
 
-V02 has a Pattern alternative of 248 characters. Its competitive original is
-now a complete 462-character listing: the 263-character client plus the
-199-character local CharacterRange helper. It keeps all eleven ticket cases on its explicit byteText profile.
-It is **not eligible for the existing competitive comparison**: that control
-shows a small custom character-range helper, not a regex engine; the original
-between/RangeArity mechanism and its own tests also remain meaningful. Both
-sources are in [V02](lmx/V02.lm3), and the
-[implementation comparison](library_comparisons/v02_character_range_comparision.md)
-explains the boundary. A shorter result alone does not override eligibility.
+R01 uses derive with width, height and depth unchanged. Its one-line merge spelling
+is a note, not a second full program. H04 similarly keeps bindFields with a short
+merge-equivalence note. V03 keeps local sample reuse and describes the two changed
+lines without repeating the whole test.
 
-H02's model-qualified pointer is now `PairOperation@: selected Candidate\encode`.
-The specialized prepared left in H07 is `int@: left`; this is a type requirement,
-not an initialized universal reference to the atom int. Both changes also
-apply to variant records and the corresponding helper/source listings. H02,
-H03, H06, and H07 receiver variants now declare the current adapter allocation
-and index failures. No obsolete all-formals-required interpretation is retained
-in the regenerated apply/partial/pipe/lazy comparison descriptions.
+H09 calls the core iterateUntilStop and retains the live declaration/body protocol.
+Its complete finite failure handling needs the explicit AE01 receiving-activation
+bridge; this is documented, not disguised as an already executed implementation.
+V02 calls core between; Haskell uses Data.Ix.inRange. All eleven ASCII/invalid-input
+cases remain. The Pattern matcher is a distinct approach, not a substitute for the
+inclusive-range comparison. H07 raw/prepared occurrence tests remain distinct from
+lazy value caching. All typed heads retain current T@/T[] syntax.
 
 ## Individual decisions
 
@@ -40,13 +32,13 @@ in the regenerated apply/partial/pipe/lazy comparison descriptions.
 | H01 | Choose a callable, call it, replace the selected reference, call again | Direct calls remain shorter than generic apply; a sequence wrapper adds no useful operation |
 | H02 | Named signature admission, positional relation to candidate names, direct comparison | Keep both signature forms; migrate the typed pointer head, retain the shorter named form |
 | H03 | Two independent captured prefixes, repeated add5 use, same-name outer local | Keep the shorter partial formulation and the entire procedural capture alternative; update actual declared exits |
-| H04 | Default 5, explicit override 25, explicit zero, unchanged later default | Retain merge/bindFields variants and the fair shortest/tie rule; map or a fold would alter the call being tested |
+| H04 | Default 5, explicit override 25, explicit zero, unchanged later default | Keep bindFields and explain the small merge spelling difference without a full duplicate |
 | H05 | Copied lexical owner versus immediate-caller dynamic binding | Preserve direct calls; another ordinary receiver would change the caller boundary being observed |
 | H06 | Both composition orders and intermediate arithmetic | Direct nested calls remain shorter; retain the complete pipe alternative with current exits |
 | H07 | Prepared occurrence evaluated once versus actual raw occurrence evaluated twice | Preserve the raw source/eval mechanism. Lazy-plus-two-calls stays an explanatory alternative, not an eligible replacement |
 | H08 | Own input place versus transparent caller place | Preserve direct invocation and mutations; collection callbacks introduce a different binding context |
-| H09 | Three yielded values, four next calls including Stop, live declaration, mutable body place | Keep the live declaration and Stop protocol; include the complete Cycles helper in the counted primary |
-| R01 | width=2, height=5, depth=7, one model composition, unchanged inputs | Add equivalent derive; select its 183-character complete client; retain direct merge and Haskell control |
+| H09 | Three yielded values, four next calls including Stop, live declaration, mutable body place | Use core iterateUntilStop, retain the live declaration and Stop protocol; document AE01 and all named exits |
+| R01 | width=2, height=5, depth=7, one model composition, unchanged inputs | Keep derive and the native Haskell control; explain direct merge in a one-line note |
 | R02 | Explicit copy stream and the written anonymous assignment groups | Keep grouped assignment. Selecting indices or materializing a list would hide the expansion rule being demonstrated |
 | R03 | Import identity, ordinary dynamic binding, copied owner, subsequent owner write | Preserve those explicit operations; a selection helper is not a substitute for import/copy ownership |
 | R04 | Computed default per call, suppressed/defaulted initialization, local writes not published | Keep reached declarations and assignments; eager collection preparation would test a different mechanism |
@@ -55,8 +47,8 @@ in the regenerated apply/partial/pipe/lazy comparison descriptions.
 | R07 | OPERANDS_TEMPLATE first, one ordinary graph, executable operand tree | Keep the explicit operand; new sequence APIs do not replace the tree/execution relation |
 | R09 | Uninitialized primitive/reference, local write versus graph-fragment replacement | Preserve all states. Empty arrays, null, and initialized zero cannot replace uninit |
 | A01 | One physical slot replacement, descriptor length, new named content | The existing one-slot assignment is already shortest. replaceRange is for length-changing/range operations and adds checks/arguments here |
-| V02 | Exact length, separator, two ASCII letters/digits, NUL and Unicode rejection, custom helper contract | Keep Pattern as a separately scoped alternative; count CharacterRange with the unchanged original client and retain all eleven cases |
-| V03 | Good/biased/twice-reading candidates, exactly one observable reader call | Reuse the existing sample method in biased and readsTwice; preserve the old full listing alongside, every verdict, and the exact read count |
+| V02 | Exact length, separator, two ASCII letters/digits, NUL and Unicode rejection, custom helper contract | Use core between against real Data.Ix.inRange; keep Pattern separately and retain all eleven cases |
+| V03 | Good/biased/twice-reading candidates, exactly one observable reader call | Reuse sample; retain every verdict and read count; replace the near-identical old program with a short note |
 | V04 | Named NoSample exit differs from numeric zero success | Keep the catch path; none/false/collection filtering cannot replace a declared failure |
 | V05 | On/write/read/off/write/read acknowledgements, sensed state, counters and trace | Preserve every field and effect order. A sequence reduction could return the same Boolean while losing the protocol trace |
 | M01 | Owner-side counter mutation and reads | Retain Message-oriented ownership behavior; no shared-memory or generic collection substitute |
@@ -70,20 +62,16 @@ where their full behavior can be exercised without weakening these probes.
 
 ## Reproducibility and preserved material
 
-[variants.json](variants.json) keeps both complete sources and their cases for
-eight examples. [select_variants.py](tools/select_variants.py) selects the
-shortest eligible one and emits the other after the exact exclusion marker.
-The V02 Haskell comparison and explanatory text are preserved in the guide,
-not replaced by its Pattern listing. App-specific CharacterRange loading is
-explicitly permitted for that record; it is not a second selectable core.
+[variants.json](variants.json) contains complete source only for different approaches.
+The [deduplication decisions](validation/dedup_decisions_20261123.json) identify small
+variants compacted to notes. [select_variants.py](tools/select_variants.py) selects
+the shortest eligible complete source and permits a single retained variant.
+[expected_results.json](expected_results.json) preserves scenario observations.
 
-[expected_results.json](expected_results.json) retains all original cases and
-the variant-specific cases separately. The whole current core is shared by
-both formulations. The adjacent apply/partial/pipe/lazy implementations are
-regenerated from their actual transitive source dependencies, including the
-new common array helpers when referenced. No execution receipt is claimed
-for either LMX or Haskell.
-
-## Complete-source and local-reuse audit
-
-The later [47-example audit](../validation/reuse_review_gof_examples_20261122.json) includes all 24 clients and all 23 root GoF examples. H09 and V02 now include their complete application helpers in the primary source; their former client text is retained unchanged. V03 uses its existing sample method without changing DATA or callback counts. Foreign sources remain unchanged. This is source review, not execution.
+The client [Cabal component](haskell/lmx-examples.cabal) depends on base, array and
+monad-loops, and deliberately excludes comparison modules from its source path.
+[Implementation comparisons](libraries/README.md) retain the foreign and LMX
+algorithms, with complete source and explicit kernel integration boundaries.
+No LMX/GHC runtime receipt is claimed. The 23 GoF controls retain their original
+primary programs; only near-identical explanatory LMX copies in 12, 20 and 21
+were compacted to notes.

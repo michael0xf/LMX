@@ -60,7 +60,9 @@
           "why_ru": "Ограниченный набор исполнителей переиспользуется для последовательности заданий.",
           "why_en": "A bounded set of workers is reused for a sequence of jobs."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 59,
@@ -112,7 +114,9 @@
           "why_ru": "Производитель и потребитель связываются очередью, сохраняя порядок одного отправителя.",
           "why_en": "A producer and consumer communicate through a queue while preserving one sender order."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 60,
@@ -165,25 +169,10 @@
           "why_en": "An isolated state owner receives complete operations through messages."
         }
       ],
-      "variants": {
-        "LMX": {
-          "procedural": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: node\\total\n    read:\n        return: node\\total\n",
-          "shared_methods": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: read()\n    read:\n        return: node\\total\n"
-        }
-      },
-      "procedural_lmx": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: node\\total\n    read:\n        return: node\\total\n",
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Reuse the already included read method after the add update. read still reads node\\total from the same CounterMessage, inside the current turn; no new post or participant is introduced. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 61,
@@ -235,7 +224,9 @@
           "why_ru": "Вызов ставит операцию в очередь владельца и отделён от её исполнения.",
           "why_en": "Invocation queues an operation for its owner and is separated from execution."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 62,
@@ -281,7 +272,9 @@
           "why_ru": "Готовность дескриптора запускает обработчик, который сам выполняет неблокирующее чтение.",
           "why_en": "Descriptor readiness triggers a handler that performs a nonblocking read itself."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 63,
@@ -327,7 +320,9 @@
           "why_ru": "Операция чтения запускается заранее; обработчик получает уже завершённый результат.",
           "why_en": "Reading is initiated in advance; the handler receives an already completed result."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 64,
@@ -380,25 +375,10 @@
           "why_en": "A once-completed result is available to current waiters and later readers."
         }
       ],
-      "variants": {
-        "LMX": {
-          "procedural": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    get:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-          "shared_methods": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    get:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n"
-        }
-      },
-      "procedural_lmx": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    get:\n        if: node\\ready = 1\n            replies\\send(requestId; node\\value)\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            replies\\send(waiters\\pop(); node\\value)\n",
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Share the complete reply method between the ready fast path and FIFO drain. The ready call uses normal DATA autofill of requestId; the draining call explicitly supplies each popped ID. The helper still sends the current node\\value, and the first-resolution guard remains. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 71,
@@ -444,7 +424,9 @@
           "why_ru": "Асинхронный ввод отделён очередью от синхронной обработки и выдачи результата.",
           "why_en": "Asynchronous ingress is separated by a queue from synchronous processing and response delivery."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 88,
@@ -496,7 +478,9 @@
           "why_ru": "Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.",
           "why_en": "A parent bounds two child tasks to its scope and waits for both even after a failure."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 89,
@@ -542,7 +526,9 @@
           "why_ru": "Родитель наблюдает за прямым ребёнком и ограниченно перезапускает его после отказа.",
           "why_en": "A parent monitors its direct child and restarts it after failure under a bounded policy."
         }
-      ]
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     },
     {
       "id": 90,
@@ -595,25 +581,10 @@
           "why_en": "Map emits keys, shuffle routes them to owners, and reduce combines values per key."
         }
       ],
-      "variants": {
-        "LMX": {
-          "procedural": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: node\\count\n    read:\n        return: node\\count\n",
-          "shared_methods": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: read()\n    read:\n        return: node\\count\n"
-        }
-      },
-      "procedural_lmx": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: node\\count\n    read:\n        return: node\\count\n",
-      "primary_variant": {
-        "LMX": "shared_methods"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "shared_methods"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Reuse the reducer read method after incrementing node\\count. Mapper selection, distinct reducer owners, post/ask/answer and barrier acknowledgement are preserved. No local map/group/fold replaces the distributed protocol. The entire shared application method remains in the primary listing and character count; no dependency is moved outside it."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
     }
   ]
 }

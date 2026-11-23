@@ -1,14 +1,23 @@
-MoneyLibrary:
-    immutable: Money:
-        int: cents 100
-        int: currency 840
-    Equality:
-        copy: sys\OPERANDS_TEMPLATE
-        return: int
-        equals:
-            throws: OperandArity
-            if: length(right) != 1
-                throw: OperandArity()
-            @: a \left
-            @: b \right[0]
-            return: a\cents = b\cents && a\currency = b\currency
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same
+    required: first second same
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        private: int: count length(first)
+        if: count != length(second)
+            return: 0
+        private: int: i 0
+        while: i < count
+            private: @: a FxSeqRead\read(first; i)
+            private: @: b FxSeqRead\read(second; i)
+            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
+            if: FxSeqPredicate\truth(accepted) = 0
+                return: 0
+            i += 1
+        return: 1

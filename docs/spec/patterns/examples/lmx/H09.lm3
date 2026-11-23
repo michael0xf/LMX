@@ -1,13 +1,3 @@
-Cycles:
-    @: iteration
-    @: body
-    iterate:
-        while: 1
-            iteration()
-            catch: Stop ()
-                break
-            body()
-
 Numbers:
     int: position 0
     return: int
@@ -18,9 +8,10 @@ Numbers:
         node\position += 1
         return: node\position
     demo:
+        throws: FxCallFailure FxKernelFailure FxTypeToken
         node\position := 0
         int: total 0
-        Cycles\iterate: int: item Numbers\next()
+        iterateUntilStop: int: item Numbers\next()
             item *= 2
             total += item
         return: total

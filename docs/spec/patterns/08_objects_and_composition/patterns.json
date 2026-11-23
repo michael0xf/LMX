@@ -193,25 +193,8 @@
           "why_en": "The acquire/reuse/return resource lifecycle."
         }
       ],
-      "procedural_lmx": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
-      "variants": {
-        "LMX": {
-          "procedural": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
-          "direct_expression": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n"
-        }
-      },
-      "primary_variant": {
-        "LMX": "direct_expression"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "direct_expression"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Return the same identity/null observation as canonical Boolean int. Pool operations, resource identity, second-acquisition refusal and all fields are preserved. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 76,
@@ -350,25 +333,8 @@
           "why_en": "A real Java marker with no methods or fields."
         }
       ],
-      "procedural_lmx": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
-      "variants": {
-        "LMX": {
-          "procedural": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
-          "direct_expression": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n"
-        }
-      },
-      "primary_variant": {
-        "LMX": "direct_expression"
-      },
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "direct_expression"
-        ]
-      },
-      "fairness_notes": {
-        "LMX": "Normalize the existing satisfies result through comparison rather than a branch. The auditable marker, unmarked value field and structural-versus-nominal limitation remain. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 79,

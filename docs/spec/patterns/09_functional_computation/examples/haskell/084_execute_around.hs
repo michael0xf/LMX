@@ -1,6 +1,5 @@
 module ExecuteAroundExample where
-import Around (bracket)
-import Control.Exception (IOException, try)
+import Control.Exception (IOException, bracket, try)
 import Data.IORef (newIORef, modifyIORef', readIORef)
 
 newtype Resource = Resource Int

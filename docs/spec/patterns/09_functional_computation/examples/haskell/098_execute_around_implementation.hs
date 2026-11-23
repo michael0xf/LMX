@@ -1,11 +1,12 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Around (bracket) where
-import Control.Exception (SomeException, catch, throwIO)
+import Control.Exception (SomeException, mask, throwIO, try)
 
-bracket :: IO r -> (r -> IO ()) -> (r -> IO a) -> IO a
-bracket acquire release action = do
+bracket :: forall resource released result.
+           IO resource -> (resource -> IO released) ->
+           (resource -> IO result) -> IO result
+bracket acquire release action = mask $ \restore -> do
   resource <- acquire
-  let failed :: SomeException -> IO a
-      failed err = release resource >> throwIO err
-  value <- action resource `catch` failed
-  release resource
-  pure value
+  outcome <- try (restore (action resource)) :: IO (Either SomeException result)
+  _ <- release resource
+  either throwIO pure outcome

@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Parent-child hierarchy сама по себе не вычисляет join результата. Зависшая некооперативная Go задача задержит scope; LMX применяет свой close/watchdog профиль; Erlang shutdown может не выполнить пользовательский finally. В этом ограниченном fixture scope вызывается один раз в отдельном новом collector process с пустым mailbox; в него поступают только результаты и DOWN двух созданных monitored children. Для использования в общем mailbox необходимы scope correlation и фильтрация своих monitor references; показанный gather такой общей маршрутизацией не является.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -113,6 +111,10 @@ LMX использует отдельные исполняемые Message с с
 
 LMX использует уже описанную иерархию Message и добавляет явный result barrier. Go показывает cooperative cancellation, Erlang — monitor и принудительный shutdown; эти способы отмены не тождественны.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -121,7 +123,7 @@ LMX использует уже описанную иерархию Message и �
 | Go | 517 | 20 |
 | Erlang | 602 | 18 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -137,6 +139,8 @@ A parent bounds two child tasks to its scope and waits for both even after a fai
 
 **Scope and limitations.** Parent-child hierarchy does not automatically join results. A noncooperative Go task delays the scope; LMX uses its close/watchdog profile; Erlang shutdown may skip application cleanup. In this bounded fixture, scope runs once in a dedicated new collector process with an empty mailbox; only results and DOWN notifications from its two monitored children reach it. Use in a shared mailbox requires scope correlation and filtering of owned monitor references; the shown gather is not a general mailbox router.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0.
@@ -150,8 +154,6 @@ A parent bounds two child tasks to its scope and waits for both even after a fai
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

@@ -4,33 +4,11 @@ The current uploaded R01 scenario has all three result fields: width=2,
 height=5, depth=7. It leaves both input structures unchanged and performs one
 ordinary model composition with one copy map. The expected result remains 257.
 
-## Competing LMX variants
+## Client and one-line equivalent
 
-The new primary contains 183 nonwhitespace
-characters. Its preserved direct version contains 184.
-The one-character saving is not a new algorithm or a performance claim.
-
-```lmx
-RecordModel:
-    int: width 2
-    int: height 3
-
-RecordPatch:
-    int: height 5
-    int: depth 7
-
-MergeProbe:
-    return: int
-    run:
-        @: result derive(RecordModel; RecordPatch)
-        return: result\width * 100 + result\height * 10 + result\depth
-```
-
-The original algorithm remains alongside it in [R01.lm3](../lmx/R01.lm3), in
-[variants.json](../variants.json), and in the [guide](../../LMX_examples_and_analogies.ru.md#r01).
-Only `(merge(RecordModel; RecordPatch))` changes to
-`derive(RecordModel; RecordPatch)`. The fields, computations, and result identity
-contract are retained.
+The complete scenario lives in [R01.lm3](../lmx/R01.lm3). It uses direct core
+`derive(RecordModel; RecordPatch)`. The spelling `(merge(RecordModel; RecordPatch))`
+uses the same composition; no second full client listing is needed.
 
 ## Complete LMX implementation
 
@@ -64,7 +42,7 @@ recordExample = (Size 2 3 0) { height = 5, depth = 7 }
 Haskell uses its built-in record update. Its Size already contains depth;
 LMX's model composition can append a new field dynamically. This difference
 was already part of the scenario and is retained. No special library that
-knows RecordModel is hidden on the LMX side. The one-line helper merely names
+knows RecordModel is hidden on the LMX side. The helper merely names
 an existing ordinary composition operation.
 
 Client sizes and the helper's size describe different accounting boundaries.

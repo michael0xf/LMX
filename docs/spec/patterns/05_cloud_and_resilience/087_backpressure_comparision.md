@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Это минимальный credit protocol, не полная реализация Reactive Streams. Для remote reconnect нужны epoch/sequence и восстановление кредита; иные очереди пути тоже должны иметь предел.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -78,6 +76,10 @@ LMX: структура с суффиксом Message — шаблон отде�
 
 Кредит ограничивает передачу до заполнения downstream, а не только отказывает после перегрузки. Mailbox LMX сам по себе такого контракта не даёт; он реализован приложением.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -86,7 +88,7 @@ LMX: структура с суффиксом Message — шаблон отде�
 | Go | 194 | 6 |
 | C# | 166 | 8 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -102,6 +104,8 @@ A producer sends items only within explicit consumer-issued credit.
 
 **Scope and limitations.** This is a minimal credit protocol, not a complete Reactive Streams implementation. Remote reconnect requires epochs/sequences and credit recovery; other queues along the path must also be bounded.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. grant is sent by the consumer after freeing one slot; offer comes from upstream; both run on the serial owner. consumer.accept(int)/send(int):void admits one item. Credits are not duplicated in this reliable local scenario; completing processing grants the next credit.
@@ -114,8 +118,6 @@ A producer sends items only within explicit consumer-issued credit.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

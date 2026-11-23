@@ -2,19 +2,17 @@
 
 Общая реализация partial(F;prefix): произвольная смешанная сигнатура, 0≤k≤N, точный остаточный контракт и исходный return.
 
-**Примеры использования:** [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md)
+**Клиенты готовых средств:** [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md). Они не подключают показанные здесь foreign-реализации.
 
 ## Общий сценарий
 
-Исследовать сигнатуру F, принять и сохранить k входных записей, построить callable оставшихся N−k позиций. Захваченные примитивы — снимки значения; ссылочные значения сохраняют идентичность цели. k=0 и k=N допустимы, раннего вызова F нет.
+Реализовать произвольный типизированный префикс без привязки к int и двум входам: сохранить k из N значений в порядке и вернуть callable для N-k входов, не вызывая цель. Haskell Args/Callable и Scala Tuple/Callable задают вектор типов явно; LMX отражает существующий DATA и дополнительно сохраняет его defaults/binding.
 
 **Ожидаемое наблюдение:** Общий случай сохраняет порядок и типы входов, точный R и объявленные failures. Для клиента сложения результат — 6,101,6. Для N=0 фабрика возвращает nullary callable; для k>N отказ происходит до публикации результата.
 
-Основные варианты: LMX — **текущее ядро**, Haskell — **обобщённая реализация**, Scala — **обобщённая реализация**. Основным считается самый короткий из рассмотренных допустимых алгоритмов текущего контракта; это выбор по символам, а не заявление о большей общности.
+**Граница сравнения.** Полные реализации заявленного компонента сопоставлены отдельно от его использования. Они не заявляются исходниками всего пакета стандартной библиотеки.
 
-При одинаковом размере сохраняется прежний корректный основной вариант. Импорты, объявления и throws входят в подсчёт. Встроенные операции принадлежат одному текущему ядру; полный локальный helper допустим, когда сохраняет прикладной сценарий и включён в подсчёт. Исторические публикации остаются пояснением. Смена архитектурного механизма допустима при сохранении всей задачи, полей, эффектов и границы учитываемого кода.
-
-## LMX — основной: текущее ядро
+## LMX — прямой API ядра
 
 ```lmx
 FxPartial:
@@ -38,141 +36,95 @@ FxPartial:
 
 Основной листинг — точные определения FxPartial из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.
 
-[Основной листинг](examples/lmx/099_integer_partial_application_implementation.lm3)
+[Исходник](examples/lmx/099_integer_partial_application_implementation.lm3)
 
-## Haskell — основной: обобщённая реализация
+## Haskell — самостоятельная реализация
 
 ```haskell
-module Partial (partial) where
+{-# LANGUAGE DataKinds, GADTs, KindSignatures, TypeFamilies, TypeOperators #-}
+module Partial (Args(..), Callable(..), Append, appendArgs, partial) where
+import Data.Kind (Type)
 
-partial :: (a -> b -> r) -> a -> (b -> r)
-partial binary first = \second -> binary first second
+data Args (types :: [Type]) where
+  Nil :: Args '[]
+  (:&) :: value -> Args rest -> Args (value ': rest)
+infixr 5 :&
+
+type family Append prefix rest where
+  Append '[] rest = rest
+  Append (value ': prefix) rest = value ': Append prefix rest
+
+appendArgs :: Args prefix -> Args rest -> Args (Append prefix rest)
+appendArgs Nil rest = rest
+appendArgs (value :& prefix) rest = value :& appendArgs prefix rest
+
+newtype Callable inputs result = Callable { invoke :: Args inputs -> result }
+
+partial :: Callable (Append prefix rest) result -> Args prefix -> Callable rest result
+partial (Callable operation) prefix =
+  Callable (\rest -> operation (appendArgs prefix rest))
 ```
 
-Haskell2010; клиент компилируется вместе с соседним авторским модулем реализации. Прежний вариант также сохранён ниже; его размер не суммируется с новым.
+Самостоятельная полная реализация объявленного ниже API для сравнения с LMX; клиент её не импортирует. Это не копия всей стандартной библиотеки.
 
-[Основной листинг](examples/haskell/099_integer_partial_application_implementation.hs)
+[Исходник](examples/haskell/099_integer_partial_application_implementation.hs)
 
-## Scala — основной: обобщённая реализация
+## Scala — самостоятельная реализация
 
 ```scala
 object Partial {
-  def partial[A, B, R](binary: (A, B) => R, first: A): B => R =
-    second => binary(first, second)
+  final case class Callable[Inputs <: Tuple, Result](invoke: Inputs => Result)
+
+  def partial[Prefix <: Tuple, Rest <: Tuple, Result](
+      operation: Callable[Tuple.Concat[Prefix, Rest], Result],
+      prefix: Prefix): Callable[Rest, Result] =
+    Callable(rest => operation.invoke(prefix ++ rest))
 }
 ```
 
-Scala 3; клиент использует соседний авторский generic-компонент. Прежний вариант сохранён ниже и исключён из нового подсчёта.
+Самостоятельная полная реализация объявленного ниже API для сравнения с LMX; клиент её не импортирует. Это не копия всей стандартной библиотеки.
 
-[Основной листинг](examples/scala/099_integer_partial_application_implementation.scala)
+[Исходник](examples/scala/099_integer_partial_application_implementation.scala)
 
-Другие сохранённые LMX варианты: [before_adapter_fix](examples/lmx/variants/099_integer_partial_application_implementation_before_adapter_fix.lm3) — 605 символов (исторический, вне выбора).
-
-## Выбор основного кода и подсчёт
+## Подсчёт
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX | 533 | 17 |
-| Haskell | 101 | 3 |
-| Scala | 91 | 4 |
+| Haskell | 699 | 17 |
+| Scala | 263 | 7 |
 
-Первичная таблица считает ровно `listings[].code`. Вторые варианты ниже не прибавляются к основным. [Допустимость и выбор алгоритма](variant_selection.json) воспроизводится скриптом. [Реестр зависимостей](IMPLEMENTATION_DEPENDENCIES.md) отдельно показывает, какие компоненты текущего ядра использует клиент и сколько стоит общее ядро новых ресиверов.
+Считается только `listings[].code`, включая импорты, объявления и throws. Альтернативный подход не прибавляется к основному. [Выбор](variant_selection.json) сравнивает допустимые варианты одной границы. [Зависимости реализации](IMPLEMENTATION_DEPENDENCIES.md) показывают общие LMX-тела отдельно.
 
-## LMX — исторический процедурный пример; вне текущего подсчёта
+## Удалённые малозначимые повторы
 
-```lmx
-CapturePrototype:
-    int: saved 0
-    @: binary 0
-    inputs:
-        int: second
-        return: int
-        apply:
-            return: node\binary(node\saved; second)
-
-Curry:
-    @: binary
-    int: first
-    return: @
-    capture:
-        @: instance (copy(CapturePrototype))
-        @: owner parent(instance\inputs)
-        owner\saved := first
-        owner\binary := binary
-        return: instance\inputs\apply
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
-
-Историческая форма сохранена как объяснение исходного алгоритма. Она не объявляется действующей самостоятельной библиотекой или равной по общности заменой текущего ядра.
-
-Новые реализации доступны также в [LMX_Fn_Receivers](../LMX_Fn_Receivers/README.md). Исторический специализированный пример не ограничивает текущий общий API ядра.
-
-## Haskell — исторический специализированный пример; вне текущего подсчёта
-
-```haskell
-module CurryInt (capture) where
-
-capture :: (Int -> Int -> Int) -> Int -> (Int -> Int)
-capture binary first = \second -> binary first second
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
-
-## Scala — исторический специализированный пример; вне текущего подсчёта
-
-```scala
-object CurryInt {
-  def capture(binary: (Int, Int) => Int, first: Int): Int => Int =
-    second => binary(first, second)
-}
-```
-
-Сохранён исходный поясняющий листинг. Он использует прежний специализированный интерфейс/контейнер; отдельная старая библиотека не входит в текущее единое ядро.
-
-Исторический код сохранён для разбора, но не является другой подключаемой библиотекой и не участвует в выборе алгоритма текущего общего контракта.
+Удалены полные повторы, отличавшиеся импортом, написанием вызова, повторением общего тела либо специализацией на int. Эти отличия не образуют отдельного текущего алгоритма; исходная редакция сохраняется в базе diff.
 
 ## Семантические границы
 
-**Честная граница сравнения.** Показана реализация partial, а не только вызов готовой фабрики: текущий LMX-код проверяет длину префикса, сохраняет аргументы и строит остаточный callable. Общая граница с Haskell/Scala — произвольные типы двух аргументов и результата при захвате первого; LMX дополнительно поддерживает N аргументов, и эта более широкая возможность не объявляется бесплатной или эквивалентной бинарному контракту. Общие тела построителя и эффекты раскрыты в реестре; исторический int-only capture сохранён как пояснение.
+Все три реализации допускают пустой/полный префикс, разнородные значения, независимые захваты, ссылочную идентичность и void/Unit. Haskell/Scala отвергают неверные формы статически, а нулевой вызов получает Nil/EmptyTuple. LMX проверяет во время выполнения и дополнительно сохраняет defaults/private/dynamic binding исходного callable. Foreign Callable — только сравнение реализации; usage его не импортирует.
 
-**Основной LMX.** Показан реальный алгоритм partial из src/generic_functions.lmx. Он использует общие анализ сигнатуры, capturePrefix, построение DATA/graph и обычный generated call; ни число аргументов, ни тип результата не зашиты. Все вызываемые общие helpers перечислены и посчитаны в IMPLEMENTATION_DEPENDENCIES.md. Интерфейсы ядра являются требованиями интеграции, а не готовым проверенным бинарником.
-
-**Наблюдаемый общий сценарий.** Остаточные входы сохраняют собственные defaults, required/private и разрешённое связывание исходного F. Prefix остаётся в полном исходном DATA для зависимых defaults. Ни factory, ни общий wrapper не запускают ненужные initializers. Произвольное окружение фабрики не захватывается; полный prefix даёт отложенный nullary callable. Runtime-подтверждение требует подключения обычных call-phase hooks.
-
-**Возможности общего ядра.** Остаточные входы сохраняют собственные defaults, required/private и разрешённое связывание исходного F. Prefix остаётся в полном исходном DATA для зависимых defaults. Ни factory, ни общий wrapper не запускают ненужные initializers. Произвольное окружение фабрики не захватывается; полный prefix даёт отложенный nullary callable. Runtime-подтверждение требует подключения обычных call-phase hooks.
-
-Универсальный набор новых ресиверов может делать больше специализированного компактного примера. В частности, Maybe/Bounce общего пакета хранят произвольные записи, bracket не фиксирует R, partial принимает произвольный смешанный префикс. Сравнение символов не приравнивает дополнительные возможности к нулевой стоимости. Прямой record-API сообщает FxCallFailure с исходным именем внутри; действующий общий вариант bracket проверяет этот договор явно. Локальный прикладной Around передаёт ResourceFailure напрямую и целиком входит в свой клиентский листинг.
+[Политика очистки, ошибок и Message/post](FAILURE_BOUNDARIES.md).
 
 ## English explanation
 
 General partial(F;prefix): an arbitrary heterogeneous signature, 0≤k≤N, exact residual contract and original return.
 
-**Usage examples:** [085. Currying](085_currying_comparision.md), [083. Trampoline](083_trampoline_comparision.md)
+**Scenario.** Implement arbitrary typed prefix binding with no int-only values or fixed binary arity. Capture k of N inputs in order and return an ordinary callable for N-k inputs without calling the target. Haskell Args/Callable and Scala Tuple/Callable encode input vectors explicitly; LMX reflects existing callable DATA and preserves its richer defaults/binding contract.
 
-**Scenario.** Reflect F, admit and retain k input records, then build a callable for the remaining N−k positions. Captured primitives are snapshots; references retain target identity. k=0 and k=N are valid and F is not invoked early.
+**Expected.** The general case retains input order/types, exact R and declared failures. The addition client yields 6,101,6. N=0 produces a nullary callable; k>N fails before publishing a result.
 
-**Expected observation.** The general case retains input order/types, exact R and declared failures. The addition client yields 6,101,6. N=0 produces a nullary callable; k>N fails before publishing a result.
+**Limits.** All three implementations cover empty/full prefixes, heterogeneous records, independent captures, reference identity and void/Unit results. Haskell and Scala reject incompatible prefix shapes statically and use Nil/EmptyTuple for nullary calls. LMX checks at runtime and also preserves declaration-specific defaults/private/dynamic binding through its adapters. The typed foreign Callable is a comparison implementation, never an imported usage dependency.
 
-Primary is the shortest eligible complete current-contract algorithm for each language. Its imports, declarations and throws are included. The complete historical listing stays adjacent and is excluded from the primary count. Implementation comparisons retain their full generalized contracts. A usage scenario may instead use a complete counted local helper when it preserves that scenario. This does not select another core library edition; the generic component remains current.
-
-**Primary LMX.** The actual partial algorithm is taken from src/generic_functions.lmx. It uses shared signature analysis, capturePrefix, DATA/graph construction and an ordinary generated call; arity and result type are not hardwired. Shared helpers are listed and measured in IMPLEMENTATION_DEPENDENCIES.md. Kernel interfaces are integration requirements, not a tested binary.
-
-**LMX variant `core`.** The actual partial algorithm is taken from src/generic_functions.lmx. It uses shared signature analysis, capturePrefix, DATA/graph construction and an ordinary generated call; arity and result type are not hardwired. Shared helpers are listed and measured in IMPLEMENTATION_DEPENDENCIES.md. Kernel interfaces are integration requirements, not a tested binary.
-
-No execution of LMX or the control programs is claimed.
+Usage clients call the real language/library facility. Adjacent foreign implementations are independent comparison subjects and are not imported by usage clients. Only genuinely different approaches remain. The source listings have not been executed by an LMX/Haskell/Scala runtime in this workspace.
 
 ## Источники / Sources
 
-- [Haskell 2010 Report, expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html) — Функциональное применение, лямбда и лексически сохранённое значение.
-- [Scala Tour, Higher-order Functions](https://docs.scala-lang.org/tour/higher-order-functions.html) — Функция как вход и создаваемая лямбда; готовый Function2.curried в этой паре не используется.
+- [GHC GADTs](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/gadt.html)
+- [Scala Tuple concatenation](https://www.scala-lang.org/api/3.x/scala/Tuple.html)
 
-**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [guide](../../LMX_semantics_guide.en.md).
+**Норма LMX:** [семантика](../../LMX_semantics.en.md), [грамматика](../../LMX_grammar.en.md), [источники ядра](../LMX_Fn_Receivers/README.md).
 
 ## Проверка
 
-[Проверка вариантов и публикации](VALIDATION_2026-11-22.md) отделяет статические сверки от фактического исполнения. [Интеграция в ядро](../../kernel-implementation.en.md#receiver-kernel-integration) описывает требуемую поддержку новых общих ресиверов.
+[Проверка публикации](VALIDATION_2026-11-23.md) сверяет данные, исходники, отсутствие подмены библиотечных клиентов и границы подсчёта. [Acceptance matrix](acceptance_cases.json) отделяет подготовленные наблюдения от реального запуска.

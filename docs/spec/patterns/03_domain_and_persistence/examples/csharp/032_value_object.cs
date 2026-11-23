@@ -1,9 +1,7 @@
-using ExampleLib;
+public sealed record Money(int Cents = 100, int Currency = 840);
 public static class Example {
     public static int Demo() {
-        Money first = Money.Create();
-        Money second = Money.Create();
-        Money third = Money.Create(currency: 978);
-        return (Money.Same(first, second) ? 10 : 0) + (Money.Same(first, third) ? 1 : 0);
+        Money first = new(), second = new(), third = new(Currency: 978);
+        return (first == second ? 10 : 0) + (first == third ? 1 : 0);
     }
 }

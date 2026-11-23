@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Сама арифметика намеренно коротка; полезность проявляется при blocking/CPU work. Capacity и backpressure должны быть согласованы, иначе очередь только переместит перегрузку.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -83,6 +81,10 @@ LMX использует отдельные исполняемые Message с с
 
 Разделение ролей выражается самостоятельными Message и почтой. Go канал соединяет async-facing слой и sync worker; Erlang отделяет процесс worker от отправителя.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -91,7 +93,7 @@ LMX использует отдельные исполняемые Message с с
 | Go | 205 | 10 |
 | Erlang | 259 | 10 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -107,6 +109,8 @@ Asynchronous ingress is separated by a queue from synchronous processing and res
 
 **Scope and limitations.** Arithmetic is deliberately small; the pattern matters with blocking/CPU work. Capacity and backpressure must be coordinated or the queue merely relocates overload.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The ingress I/O adapter mails a framed int to IngressMessage without executing process on its I/O callback. writer.write(int):void is a supplied output adapter; in LMX it is another Message. The host explicitly launches ingress, worker and writer. Controls receive decoded frames and Write.
@@ -119,8 +123,6 @@ Asynchronous ingress is separated by a queue from synchronous processing and res
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

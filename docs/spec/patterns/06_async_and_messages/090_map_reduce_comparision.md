@@ -10,8 +10,6 @@ Map порождает ключи, shuffle направляет их владе�
 
 **Граница сравнения:** Протокол и порты. Нет spill-to-disk, сбойного перезапуска map, dedup, сортировки ключей и durable shuffle. Неотрицательные целые ограничены четырьмя значениями; порядок обработки не влияет на сумму.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -40,9 +38,7 @@ ReducerMessage:
         return: node\count
 ```
 
-ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.
-
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.
 
 [Отдельный листинг](examples/lmx/090_map_reduce.lm3)
 
@@ -89,11 +85,19 @@ reduce(N, Totals) ->
 
 ## Разбор LMX
 
-LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.
+LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.
 
 ## Сопоставление
 
 LMX выражает shuffle явным выбором Message-владельца ключа; Go channel и Erlang mail переносят ключи. Это раскрывает алгоритм map/group/reduce, но ещё не распределённый движок Google MapReduce.
+
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
 
 ## Объём показанного исходника
 
@@ -103,43 +107,7 @@ LMX выражает shuffle явным выбором Message-владельц�
 | Go | 290 | 16 |
 | Erlang | 267 | 7 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- shared-method-reuse-review-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
-
-```lmx
-MapperMessage:
-    int: value
-    @: even
-    @: odd
-    @: barrier
-    map:
-        @: reducer even
-        if: value % 2 = 1
-            reducer := odd
-        post:
-            ask:
-                reducer\add()
-            answer:
-                barrier\accepted
-
-ReducerMessage:
-    int: count 0
-    return: int
-    add:
-        node\count += 1
-        return: node\count
-    read:
-        return: node\count
-```
-
-**Основание выбора / Selection:** Reuse the reducer read method after incrementing node\count. Mapper selection, distinct reducer owners, post/ask/answer and barrier acknowledgement are preserved. No local map/group/fold replaces the distributed protocol.
-
-**Completeness:** ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -149,15 +117,17 @@ Map emits keys, shuffle routes them to owners, and reduce combines values per ke
 
 **Expected observation.** Result {0:2,1:2}. Final reads occur after four acknowledged reduce operations.
 
-**LMX.** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.
+**LMX.** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged.
 
 **Comparison.** LMX expresses shuffle as explicit selection of the key owner Message; Go channels and Erlang mail carry keys. This exposes map/group/reduce without claiming to implement the distributed Google MapReduce engine.
 
 **Scope and limitations.** There is no disk spill, failed-map restart, deduplication, key sorting or durable shuffle. The fixture uses four nonnegative integers; processing order does not affect the count.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
-- **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.
+- **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged.
 - **Go:** Go fragment; imports are included where needed; package/harness is separate. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.
 - **Erlang:** Erlang functions for one module; -module/-export and the test harness are separate. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.
 
@@ -168,8 +138,6 @@ Map emits keys, shuffle routes them to owners, and reduce combines values per ke
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

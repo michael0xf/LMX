@@ -1,76 +1,88 @@
-# Итератор до Stop: готовая библиотека и полный цикл
+# Iteration until Stop: usage and implementation are separate
 
-## Общая граница
+Edition: 2026-11-23. Client: [H09](../lmx/H09.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h09).
 
-Библиотека вызывает шаг, исполняет тело для каждого элемента и останавливается на отдельном признаке конца. Клиент задаёт источник и действие. Серия 1, 2, 3, Stop даёт **12**, **4** шага и **3** тела. Серия −2, 0, 4, Stop после прибавления 3 и двух чтений элемента даёт **22** с теми же счётчиками.
+## Contract
 
-Клиент: [раздел H09](../../LMX_examples_and_analogies.ru.md#h09) и [его исходник](../lmx/H09.lm3). Здесь отдельно разобран повторяемый механизм, целиком включённый также в основной H09 и его размер. Прикладные действия, входные значения и наблюдения остаются у клиента. Это компоненты данного корпуса, а не новые встроенные операции.
+The accepted declaration remains DATA until execution. Its established item and caller total stay live in the receiving activation. Only source Stop terminates; body Stop and other failures propagate in FxCallFailure. The Haskell loop passes values explicitly. AE01 is a concrete pending kernel integration boundary; see CORE_EXAMPLE_HELPERS.md.
 
-## Реализация LMX
+LMX public names: `iterateUntilStop`. These names belong to the proposed core; no user library import is needed.
 
-[Исходник](../libraries/lmx/Cycles.lm3). Та же реализация уже находится в полном H09; отдельный файл нужен для чтения, а не для повторной загрузки вместе с клиентом. import разрешает доступные имена; он не читает файл по пути.
+**Foreign usage client:** Control.Monad.Loops.whileJust_ from the actual monad-loops package. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
+
+## LMX implementation
+
+Complete entry definitions, with no omitted branch:
 
 ```lmx
-Cycles:
+FxIterateUntilStop:
     @: iteration
     @: body
-    iterate:
+    iterateUntilStop:
+        throws: copy(FxThrows\call)
         while: 1
-            iteration()
-            catch: Stop ()
-                break
-            body()
+            private: @: step FxKernel\attemptAccepted(iteration)
+            if: step\ok = 0
+                if: FxSameText\same(step\failure; "Stop")
+                    break
+                throw: FxCallFailure(step)
+            private: @: result FxKernel\attemptAccepted(body)
+            if: result\ok = 0
+                throw: FxCallFailure(result)
 ```
 
-## Реализация Haskell
+Complete canonical source files for the entry and its LMX dependencies:
 
-[Модуль](../libraries/haskell/StepIterator.hs). Папка examples/libraries/haskell добавляется к пути поиска модулей. Прикладные проверки находятся в [Analogies.hs](../haskell/Analogies.hs).
+- [coreComparisonExamples.lmx](../../LMX_Fn_Receivers/src/coreComparisonExamples.lmx)
+- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
+- [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
+
+The reachable roots are: `FxSameText`, `FxThrows`, `FxIterateUntilStop`.
+These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
+
+The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
+
+## Haskell comparison implementation
+
+[Exact standalone module](../libraries/haskell/StepIterator.hs):
 
 ```haskell
-module StepIterator (Step(..), iterateUntilStop) where
+-- Comparison implementation only; usage clients import monad-loops whileJust_.
+module StepIterator (Step(..), iterateUntilStop, whileJust) where
 
 data Step a = Yield a | Stop
 
-iterateUntilStop :: IO (Step a) -> (a -> IO ()) -> IO ()
-iterateUntilStop next body = do
-  step <- next
-  case step of
-    Stop -> pure ()
-    Yield value -> do
-      body value
-      iterateUntilStop next body
+-- This loop is polymorphic in both the yielded value and the effect carrier.
+-- Stop ends only the source; exceptions from source/body propagate unchanged.
+iterateUntilStop :: Monad m => m (Step a) -> (a -> m b) -> m ()
+iterateUntilStop next body = go
+  where
+    go = do
+      step <- next
+      case step of
+        Stop -> pure ()
+        Yield value -> body value >> go
+
+-- Same loop with the real library's Maybe protocol, shown for direct comparison.
+whileJust :: Monad m => m (Maybe a) -> (a -> m b) -> m ()
+whileJust next body = iterateUntilStop (convert <$> next) body
+  where
+    convert Nothing = Stop
+    convert (Just value) = Yield value
 ```
 
-## Контракт и ограничения
+## Size boundaries
 
-LMX-компонент перенесён из исходного H09 без изменения алгоритма. Он принимает объявление итерации и тело по существующему контракту передачи деклараций. iteration() выполняет объявление в принимающем корневом namespace; тело использует установленное место item. Повторного запуска RHS при входе в тело нет. Catch обрабатывает Stop шага; тело не вызывается после остановки.
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
+| --- | ---: | ---: | ---: |
+| LMX entry definitions shown above | 303 | 14 | 481 |
+| All reachable LMX source roots, counted once | 2008 | 160 | 3438 |
+| Complete Haskell comparison module | 644 | 19 | 830 |
 
-Haskell-модуль определяет собственный Step a = Yield a | Stop и свой цикл. Он не выдаёт встроенный list iterator или mapM_ за показанную реализацию. Получение значения выражено IO (Step a), тело — явной функцией a -> IO (). Haskell не получает способности объявлять переменную в чужом namespace. Источник на IORef и наблюдение суммы находятся в iteratorCase файла Analogies.hs.
+These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 
-Нулевой элемент попадает в Yield 0, а не становится Stop. Два чтения готового значения в теле не запускают шаг. Посторонние ошибки действий не превращаются в конец потока. Аналогия ограничена протоколом и наблюдениями; одинаковое представление ленивого списка и изменяемого LMX-источника не обещается.
+## Ownership and async scope
 
-Операторный заголовок не добавлен: здесь проверяется переданное объявление и принимаемый namespace. Prepared-операнд изменил бы момент вычисления шага, а дополнительный raw-операнд не сокращает механизм.
+The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
 
-**English scope.** Both custom loops are shown. Haskell passes yielded values explicitly and does not implement declaration injection into a caller namespace. Zero is data; Stop is a separate end signal.
-
-## Размер реализаций
-
-| Реализация | Непробельные символы | Непустые строки |
-| --- | ---: | ---: |
-| LMX | 73 | 9 |
-| Haskell | 221 | 10 |
-
-Подсчитаны полные листинги выше, включая модуль Haskell и заголовки LMX. Вызовы, наблюдения и тестовая обвязка относятся к клиентам. Основной H09 считает клиент и этот самописный цикл вместе. Здесь отдельно указан размер того же компонента; повторно прибавлять его к полному H09 не нужно. Эти размеры не оценивают быстродействие.
-
-## Проверка и источники
-
-LMX проверен по документации; исполнение ядра не заявляется. Проверки Haskell написаны в Analogies.hs; наличие теста не является сообщением о его выполнении. Из корня распакованного корпуса:
-
-```sh
-runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs
-```
-
-- [LMX: declaration arguments](../../../LMX_semantics.en.md#declaration-arguments).
-- [Исходное сравнение Iterator](../../01_iterator_comparison.md).
-- [Haskell 2010: case expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
-- [Haskell 2010: IO sequencing](https://www.haskell.org/onlinereport/haskell2010/haskellch7.html).
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).

@@ -10,8 +10,6 @@ ProjectionMessage получает события (seq=1,delta=10),(2,5),дуб�
 
 **Граница сравнения:** Протокол и порты. Это memory-only проекция, которую можно восстановить replay. Для сохранения между авариями total и checkpoint записываются атомарно; для нескольких потоков нужен checkpoint на каждый, а не общий last.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -86,6 +84,14 @@ func (p *Projection) Query() int { return p.Total }
 
 Все три варианта хранят сумму и checkpoint отдельно от источника событий. Дедупликация здесь корректна для одного упорядоченного непрерывного потока.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -94,37 +100,7 @@ func (p *Projection) Query() int { return p.Total }
 | Java | 205 | 11 |
 | Go | 269 | 11 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-ProjectionMessage:
-    int: total 0
-    int: last 0
-    int: seq
-    int: delta
-    return: int
-    apply:
-        throws: Gap
-        if: seq <= node\last
-            return: node\total
-        if: seq != node\last + 1
-            throw: Gap()
-        node\total += delta
-        node\last := seq
-        return: node\total
-    query:
-        return: node\total
-```
-
-**Основание выбора / Selection:** Reuse the existing query() for both apply return paths. Duplicate detection and Gap rejection remain before mutation, and successful total/last updates complete before query reads the total.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -140,6 +116,8 @@ Maintain a precomputed projection for cheap reads.
 
 **Scope and limitations.** This memory-only view can be rebuilt. Durable total/checkpoint must be committed atomically; multiple streams need separate checkpoints.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** One Message owns total/last. Events arrive through Message or HTTP intake. apply changes its own graph; query does not rescan the event log.
@@ -152,8 +130,6 @@ Maintain a precomputed projection for cheap reads.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

@@ -1,13 +1,11 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
-namespace ExampleLib {
-    public interface IIdentified { int Id { get; } }
-    public static class Records {
-        public static T? FindById<T>(IEnumerable<T> rows, int id) where T : class, IIdentified {
-            foreach (T row in rows) {
-                if (row.Id == id) return row;
-            }
-            return null;
-        }
+public static class FirstMatch {
+    public static (bool Found, T? Value) FindFirst<T>(IEnumerable<T> items, Func<T,bool> accepts) {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(accepts);
+        foreach (T item in items) if (accepts(item)) return (true, item);
+        return (false, default);
     }
 }

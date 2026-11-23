@@ -34,35 +34,3 @@ FxTrampoline:
             private: @: record FxApply\apply(current\next; empty)
             current := \record
         return: current\value
-
-# BEGIN ALTERNATIVE LMX (excluded from character counts)
-# BounceValue:
-#     int: done 0
-#     int: answer 0
-#     int: argument 0
-#     @: next 0
-# 
-# Bounce:
-#     int: value
-#     @: next
-#     int: argument
-#     return: @
-#     done:
-#         @: result (copy(BounceValue))
-#         result\done := 1
-#         result\answer := value
-#         return: result
-#     more:
-#         @: result (copy(BounceValue))
-#         result\next := next
-#         result\argument := argument
-#         return: result
-# 
-# BounceRunner:
-#     BounceValue@: current return: int
-#     run:
-#         while: current\done = 0
-#             @: step current\next
-#             current := step(current\argument)
-#         return: current\answer
-# END ALTERNATIVE LMX

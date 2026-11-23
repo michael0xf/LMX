@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Ядро сценария. Динамическая загрузка DLL/JAR, sandbox, ABI/version negotiation и выгрузка модулей не реализованы. Паттерн microkernel шире показанного in-process ядра.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -95,6 +93,10 @@ func demo() int {
 
 Сравнивается минимальная extension point; registry множества имён и discovery не нужны для одной точки. Все реализации используют заменяемое поведение.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -103,43 +105,7 @@ func demo() int {
 | Java | 356 | 14 |
 | Go | 326 | 10 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-Plugins:
-    int: value
-    return: int
-    twice:
-        return: value * 2
-    thrice:
-        return: value * 3
-
-Kernel:
-    @: extension Plugins\twice
-    @: implementation
-    int: value
-    return: int
-    install:
-        node\extension := implementation
-        return: 1
-    execute:
-        return: node\extension(value := value)
-    demo:
-        install(implementation := Plugins\twice)
-        int: first execute(value := 5)
-        install(implementation := Plugins\thrice)
-        return: first + execute(value := 5)
-```
-
-**Основание выбора / Selection:** Set the demo-local value to 5 once and reuse ordinary autofill for both execute() calls. Kernel.value has no default, Plugins receive the same explicit value, and both install operations and plugin bodies remain.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -167,8 +133,6 @@ A stable core provides an extension point with replaceable implementation.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

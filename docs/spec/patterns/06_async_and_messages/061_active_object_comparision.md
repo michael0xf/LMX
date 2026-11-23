@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Отмена, timeout и прекращение service требуют lifecycle policy. Завершение scope клиента не должно оставлять callback на умерший стек; destination здесь долгоживущий Message.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -82,6 +80,10 @@ LMX использует отдельные исполняемые Message с с
 
 В LMX транспорт обычного вызова уже описан через post. Go выделяет request/reply object; Erlang использует envelope с Ref. Методы результата не выбираются заново по списку слушателей.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -90,7 +92,7 @@ LMX использует отдельные исполняемые Message с с
 | Go | 247 | 11 |
 | Erlang | 194 | 9 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -106,6 +108,8 @@ Invocation queues an operation for its owner and is separated from execution.
 
 **Scope and limitations.** Cancellation, timeouts and service shutdown require lifecycle policy. Client scope exit must not leave a callback into a dead stack; the destination here is a long-lived Message.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. sink.accept(int):void is a supplied destination bound before sending. service is a separately created Message. The post tree follows the normative ask/answer contract; the source documentation contains no literal parser fixture. Go Submit may wait for unbuffered queue admission, but not compute completion.
@@ -119,8 +123,6 @@ Invocation queues an operation for its owner and is separated from execution.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

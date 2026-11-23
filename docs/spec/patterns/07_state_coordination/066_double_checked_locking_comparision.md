@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Не обещается одинаковая цена быстрого пути: LMX клиент отправляет запрос. Reentrant factory, failure/retry и асинхронная инициализация требуют явного состояния initializing и отдельной политики.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -80,6 +78,10 @@ LMX реализует координацию через отдельный Mess
 
 У LMX отсутствует необходимость двойной проверки, потому что конкурентные клиенты сериализованы у owner. Это смена механизма при той же цели once-only. В Java volatile обязателен для выбранного DCL; Rust использует готовую корректную примитиву.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -88,7 +90,7 @@ LMX реализует координацию через отдельный Mess
 | Java | 292 | 15 |
 | Rust | 179 | 8 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -104,6 +106,8 @@ Safe once-only lazy initialization under concurrent access.
 
 **Scope and limitations.** Fast-path costs differ: an LMX client sends a request. Reentrant factories, failure/retry and asynchronous initialization require an explicit initializing state and policy.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. build():int / IntSupplier / FnOnce is a supplied synchronous factory successfully returning 42. Initialization completes within one owner turn; the factory does not wait for mail to that busy owner.
@@ -117,8 +121,6 @@ Safe once-only lazy initialization under concurrent access.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

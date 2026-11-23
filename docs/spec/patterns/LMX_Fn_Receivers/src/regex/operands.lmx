@@ -31,7 +31,7 @@ RxThenOperand:
     const: int: PRIORITY sys\priority("+")
     return: @
     then:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) < 2
             throw: PatternArgument()
@@ -46,21 +46,21 @@ RxRepeatOperands:
     const: int: PRIORITY sys\priority("*")
     return: @
     times:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
     atLeast:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count)
     atMost:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
@@ -69,7 +69,7 @@ RxRepeatOperands:
             throw: PatternArgument()
         return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
     optional:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 1
             throw: PatternArgument()
@@ -90,7 +90,7 @@ RxAlternativeDispatch:
     required: right
     return: @
     probe:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: out (copy(RxAlternativeDispatchResult))
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         private: int: hasPattern 0

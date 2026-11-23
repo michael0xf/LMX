@@ -10,8 +10,6 @@ WriteMessage принимает add(5). Пока событие не доста�
 
 **Граница сравнения:** Протокол и порты. В примере один писатель и FIFO-доставка без потерь/дубликатов. Durable outbox, восстановление и версия проекции нужны отдельно для crash-safe развёртывания; отдельные методы GET/POST при общей модели сами по себе ещё не CQRS.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -95,6 +93,14 @@ WriteMessage и ReadMessage — шаблоны двух отдельных ис�
 
 Все листинги показывают обработчики двух последовательных владельцев и порт доставки; runtime запуска/сеть не входят в длину. CQRS допускает синхронную проекцию, но здесь специально показано окно eventual consistency.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -103,40 +109,7 @@ WriteMessage и ReadMessage — шаблоны двух отдельных ис�
 | Java | 395 | 16 |
 | Go | 347 | 12 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-WriteMessage:
-    int: balance 0
-    int: amount
-    @: transport
-    add:
-        throws: Amount
-        if: amount < 0
-            throw: Amount()
-        node\balance += amount
-        node\transport\publish(node\balance)
-
-ReadMessage:
-    int: visible 0
-    int: snapshot
-    return: int
-    apply:
-        node\visible := snapshot
-        return: node\visible
-    query:
-        return: node\visible
-```
-
-**Основание выбора / Selection:** Reuse the existing ReadMessage.query method for the apply result. The state write still occurs before the read; query itself remains read-only and cannot dispatch a command.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -152,6 +125,8 @@ Separate the command model from the read model.
 
 **Scope and limitations.** One writer and FIFO delivery without loss/duplicates are assumed. Durable outbox, recovery and projection versioning are separate requirements; separate GET/POST methods over one model do not alone establish CQRS.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** The two templates are launched as separate executing Messages. transport.publish is an explicit post/Message adapter to the projection. It can use the existing HTTP application/lmx profile and correlation.
@@ -164,8 +139,6 @@ Separate the command model from the read model.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

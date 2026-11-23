@@ -1,163 +1,20 @@
-# Apply: общий вызов по контейнеру аргументов
+# Apply: usage and implementation are separate
 
-Редакция: 22 ноября 2026 года. Клиент: [H01](../lmx/H01.lm3), [разбор](../../LMX_examples_and_analogies.ru.md#h01).
+Edition: 2026-11-23. Client: [H01](../lmx/H01.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h01).
 
-## Контракт общего ресивера
+## Contract
 
-У LMX вход `args` — любая допустимая последовательность по @, включая плотный Array и обычную Structure/@[]. Штатный транспорт читает фактический тип каждого actual, без reinterpretation и предварительного boxing всей последовательности. Результат — запись с реальным типом. Передаются только присутствующие actuals; собственные defaults, required/private и точный результат выбранного callable сохраняются. FxKernel\attempt открывает штатное исполнение call/catch; библиотечное тело apply оборачивает полученный отказ в FxCallFailure.
+The full typed actual vector uses real record types; failures keep their names and payload inside FxCallFailure. Haskell uses native curried function application; its generic a/b implementation is not a reflection API.
 
-Публичный ресивер `apply` уже входит в единое текущее ядро и используется прямо. Никаких import или выбираемых версий библиотек нет. Внутренние Fx/Rx-имена ниже обозначают структуры реализации ядра.
+LMX public names: `apply`. These names belong to the proposed core; no user library import is needed.
 
-Этот документ показывает исходники общего ядрового механизма и локального процедурного приёма. Это разные области контракта, а не две взаимозаменяемые версии ядра: специализированный приём не подменяет весь общий API только потому, что он короче. Основной клиент выбирается отдельно из корректных вариантов по полной длине и границе учёта, см. H01.
+**Foreign usage client:** Ordinary Haskell application, with no custom apply import. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
 
-## Полный алгоритм ресивера ядра LMX
+## LMX implementation
 
-Ниже приведено консервативное замыкание по корневым LMX-определениям от `FxApply`: полные определения перечислены один раз, включая те, которые упомянуты в генерируемом тексте тела. Это видимый исходник текущего ядра; он не подменяется строкой импорта. Общие определения повторно используются другими receivers; одинаковые определения не считаются новой самостоятельной реализацией для каждого клиента.
-
-- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
-- [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
+Complete entry definitions, with no omitted branch:
 
 ```lmx
-FxThrows:
-    adapter:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    call:
-        FxCallFailure
-        FxKernelFailure
-        FxTypeToken
-    capture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    fixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-    lazyfixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxLazyCycle
-        FxRecordArity
-        FxTypeToken
-    mutation:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceElement
-        SequenceSize
-    mutationfixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceElement
-        SequenceSize
-    permutation:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceSize
-    predicate:
-        FxCallFailure
-        FxKernelFailure
-        FxPredicate
-        FxTypeToken
-        ReceiverIndex
-    rangefixture:
-        FxArity
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        SequenceSize
-        SequenceStep
-    recordcall:
-        FxCallFailure
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-    reorder:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceSize
-    retry:
-        FxArity
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    selection:
-        FxIndex
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    sequence:
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    sequencefixture:
-        FxArity
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxPredicate
-        FxRecordArity
-        FxShape
-        FxTypeToken
-        ReceiverIndex
-        ReceiverPermutation
-        SequenceElement
-        SequenceSize
-        SequenceStep
-    snapshot:
-        FxCallFailure
-        FxIndex
-        FxKernelFailure
-        FxRecordArity
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-    traversal:
-        FxCallFailure
-        FxKernelFailure
-        FxTypeToken
-        ReceiverIndex
-        SequenceSize
-
-FxTry:
-    private:
-        @: operation
-        @: args
-    return: @
-    attempt:
-        throws: FxKernelFailure FxTypeToken
-        private: @: info FxKernel\signature(subject := operation)
-        return: FxKernel\attempt(operation; args; info\throws)
-
 FxApply:
     private:
         @: operation
@@ -171,13 +28,19 @@ FxApply:
         return: outcome\value
 ```
 
-Явная граница ядра: `FxKernel`, системные примитивы и стандартные вызовы, описанные в [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). Это требуемые адаптеры к штатным операциям графа/вызова, а не показанный здесь C-код готового ядра. Их реализация не спрятана в цифре «размер библиотеки»: статус и условия приёмки приведены отдельно. Полный [собранный файл](../../LMX_Fn_Receivers/LMX_Receivers.lmx) и [экспорт имён](../../LMX_Fn_Receivers/src/public.lmx) находятся рядом.
+Complete canonical source files for the entry and its LMX dependencies:
 
-## Реализация Haskell
+- [failures.lmx](../../LMX_Fn_Receivers/src/failures.lmx)
+- [generic_runtime.lmx](../../LMX_Fn_Receivers/src/generic_runtime.lmx)
 
-Haskell apply полиморфен по a и b. У Haskell последовательная аппликация и каррирование уже являются механизмами языка; эта запись не заявляет отдельный динамический вектор аргументов. Клиентский сценарий одинаков: вызов выбранного действия и замена выбранной ссылки.
+The reachable roots are: `FxThrows`, `FxTry`, `FxApply`.
+These shared definitions are kept once in the canonical source package rather than copied into every comparison. Their full bodies remain available by the links above and in [LMX_Receivers.lmx](../../LMX_Fn_Receivers/LMX_Receivers.lmx).
 
-[Точный исходник модуля](../libraries/haskell/IntApply.hs):
+The kernel-provider boundary is explicit in [KERNEL_REQUIREMENTS.md](../../LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md). The declaration/body bridge and ownership contract are detailed in [CORE_EXAMPLE_HELPERS.md](../../LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md). A linked integration requirement is not a claim that its native implementation has already run.
+
+## Haskell comparison implementation
+
+[Exact standalone module](../libraries/haskell/IntApply.hs):
 
 ```haskell
 module IntApply (apply) where
@@ -186,27 +49,18 @@ apply :: (a -> b) -> a -> b
 apply operation value = operation value
 ```
 
-## Процедурный механизм сценария на том же ядре
+## Size boundaries
 
-Этот обычный пользовательский код показывает явный механизм конкретного сценария. Его int-специализация не является ограничением общего core-ресивера. Он не заменяет весь общий контракт ядра и не является старой библиотечной версией. У клиента он считается, если включён в его выбранный исходник; в таблице ниже его стоимость показана отдельно.
-
-```lmx
-Application:
-    @: operation
-    int: value
-    return: int
-    apply:
-        return: operation(value)
-```
-
-## Размеры и границы сравнения
-
-| Показанный код | Непробельные символы | Непустые строки | UTF-8 байты |
+| Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
-| LMX: алгоритм и перечисленные LMX-зависимости | 1878 | 149 | 3135 |
-| Haskell: весь показанный модуль | 79 | 3 | 99 |
-| LMX: процедурный механизм сценария, отдельный контракт | 71 | 6 | 105 |
+| LMX entry definitions shown above | 199 | 11 | 299 |
+| All reachable LMX source roots, counted once | 1906 | 152 | 3185 |
+| Complete Haskell comparison module | 79 | 3 | 99 |
 
-Это механические размеры показанных исходников. LMX строит обычные графовые callable с точными сигнатурами; Haskell пользуется собственным типовым и функциональным runtime. Таблица не утверждает равенства стоимости их ядер, минимальности замыкания зависимостей или одинаковой реализации. Реализация ядра показана отдельно от клиента. Исключать её из конкурентного клиентского сравнения допустимо при сопоставимом встроенном/библиотечном/операторном механизме у контроля, либо как естественный механизм языка без скрытого предметного алгоритма. Архитектуры не обязаны совпадать; поля, состояние, копии, идентичности и эффекты обязаны сохраняться. Сравнение по клиентам и исходные сохранённые хеши — в [functional_receiver_counts.json](../validation/functional_receiver_counts.json).
+These are implementation sizes, separate from client sizes. They do not compare runtime internals or claim the same type-system representation. A language's built-in function machinery need not be reproduced as a second interpreter just to match LMX's graph representation.
 
-**Проверка:** текст, ссылки и размеры воспроизводятся [скриптом](../tools/update_receiver_comparisons.py). LMX и GHC здесь не запускались; подготовленные assertions в [Analogies.hs](../haskell/Analogies.hs) не являются receipt исполнения.
+## Ownership and async scope
+
+The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
+
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).

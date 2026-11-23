@@ -1,4 +1,8 @@
 object Partial {
-  def partial[A, B, R](binary: (A, B) => R, first: A): B => R =
-    second => binary(first, second)
+  final case class Callable[Inputs <: Tuple, Result](invoke: Inputs => Result)
+
+  def partial[Prefix <: Tuple, Rest <: Tuple, Result](
+      operation: Callable[Tuple.Concat[Prefix, Rest], Result],
+      prefix: Prefix): Callable[Rest, Result] =
+    Callable(rest => operation.invoke(prefix ++ rest))
 }

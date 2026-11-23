@@ -25,7 +25,7 @@ for (const [filename,sheetName,first,last] of [
     await fs.writeFile(path.join(output,`${stem}.${stage}.png`),new Uint8Array(await image.arrayBuffer()));
   }
   await render('before');
-  sh.getRange('F3').values=[['22 ноября 2026']];
+  sh.getRange('F3').values=[['23 ноября 2026']];
   for(let i=0;i<rows.length;i++)sh.getRange(`B${7+i}:I${7+i}`).values=[languages.map(l=>rows[i].metrics[l].characters)];
   sh.getRange(`A${totalRow+4}`).values=[['Единое ядро; из корректных вариантов основным выбран более короткий.']];
   sh.getRange(`A${totalRow+5}`).values=[['Источник: текущие *_comparison.md; нормы ../LMX_semantics.en.md.']];
@@ -46,4 +46,4 @@ for (const [filename,sheetName,first,last] of [
   reports.push({file:filename,records:rows.length,totals:sums,live_totals_verified:true,ratios_verified:true,recalculation_change_restore:true});
   console.log(JSON.stringify(reports.at(-1)));
 }
-await fs.writeFile(path.join(root,'validation/gof_workbook_validation_20261122.json'),JSON.stringify({date:'2026-11-22',engine:'@oai/artifact-tool',files:reports},null,2)+'\n');
+await fs.writeFile(path.join(root,'validation/gof_workbook_validation_20261122.json'),JSON.stringify({date:'2026-11-23',engine:'@oai/artifact-tool',files:reports},null,2)+'\n');

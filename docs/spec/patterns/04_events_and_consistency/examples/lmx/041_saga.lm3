@@ -24,37 +24,3 @@ SagaMessage:
         if: action != 0
             node\phase := action
             node\transport\publish(action)
-
-# BEGIN PROCEDURAL LMX (excluded from character counts)
-# SagaMessage:
-#     int: phase 0
-#     int: kind
-#     int: ok
-#     @: transport
-#     handle:
-#         int: action 0
-#         if: kind = 0 && node\phase = 0
-#             node\phase := 1
-#             action := 1
-#         if: kind = 1 && node\phase = 1
-#             if: ok
-#                 node\phase := 2
-#                 action := 2
-#             else:
-#                 node\phase := 4
-#                 action := 4
-#         ---
-#         if: kind = 2 && node\phase = 2
-#             if: ok
-#                 node\phase := 5
-#                 action := 5
-#             else:
-#                 node\phase := 3
-#                 action := 3
-#         ---
-#         if: kind = 3 && node\phase = 3 && ok
-#             node\phase := 4
-#             action := 4
-#         if: action != 0
-#             node\transport\publish(action)
-# END PROCEDURAL LMX

@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-23",
+  "removed_full_variants": [
+    {
+      "id": "H04",
+      "kept": "receivers",
+      "removed": [
+        "original"
+      ],
+      "reason": "Прямое merge(Addition; (int: y 5)) с выбором поля add эквивалентно bindFields. Отличающиеся две строки описаны здесь; полный дублирующий листинг удалён."
+    },
+    {
+      "id": "R01",
+      "kept": "receivers",
+      "removed": [
+        "original"
+      ],
+      "reason": "В этой задаче derive(RecordModel; RecordPatch) можно заменить на (merge(RecordModel; RecordPatch)). Это одна и та же композиция; второй полный листинг не нужен."
+    },
+    {
+      "id": "V03",
+      "kept": "reuse",
+      "removed": [
+        "original"
+      ],
+      "reason": "В biased строка sample() + 1 соответствует read() * gain + 1; в readsTwice второй вызов sample() соответствует read() * gain. Сохранён вариант с повторным использованием существующего метода; отдельного алгоритма в дублирующем листинге нет."
+    }
+  ],
+  "retained_distinct": [
+    "H01 direct call vs explicit argument-vector apply",
+    "H02 named declaration vs runtime signature construction",
+    "H03 copied lexical closure vs generic prefix adapter",
+    "H06 nested immediate calls vs stored callable composition",
+    "H07 raw occurrence evaluation vs lazy cached result",
+    "V02 interval validation vs Pattern matcher"
+  ],
+  "scenario_cases_removed": false,
+  "gof_compacted": [
+    {
+      "file": "12_composite_comparison.md",
+      "reason": "`derive(base; overlay)` можно заменить на `(merge(base; overlay))` в пяти строках создания узлов. Остальные строки и алгоритм совпадают, поэтому второго полного листинга нет."
+    },
+    {
+      "file": "20_abstract_factory_comparison.md",
+      "reason": "Четыре вызова `derive(model; overlay)` можно записать как `(merge(model; overlay))`. Это та же композиция, поэтому полный дублирующий листинг не повторяется."
+    },
+    {
+      "file": "21_flyweight_comparison.md",
+      "reason": "Исправленный отступ завершающего return уже показан в основном листинге. Нерабочая копия, отличавшаяся одним отступом, удалена; смысл исправления сохранён выше."
+    }
+  ]
+}

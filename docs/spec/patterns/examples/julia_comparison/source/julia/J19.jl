@@ -1,0 +1,1 @@
+example(matrix) = permutedims(matrix)

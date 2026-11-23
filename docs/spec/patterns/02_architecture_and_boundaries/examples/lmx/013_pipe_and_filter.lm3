@@ -10,26 +10,9 @@ Filters:
     offset:
         return: value + 1
     pipeline:
-        import: PipeLibrary
-        return: value pipe normalize double offset
+        throws: copy(FxThrows\adapter)
+        @: stages pipe(pipe(normalize; double); offset)
+        return: stages(value)
     demo:
+        throws: copy(FxThrows\adapter)
         return: pipeline(-3)
-
-# BEGIN PROCEDURAL LMX (excluded from character counts)
-# Filters:
-#     int: value
-#     return: int
-#     normalize:
-#         if: value < 0
-#             return: -value
-#         return: value
-#     double:
-#         return: value * 2
-#     offset:
-#         return: value + 1
-#     pipeline:
-#         import: PipeLibrary
-#         return: value pipe normalize double offset
-#     demo:
-#         return: pipeline(value := -3)
-# END PROCEDURAL LMX

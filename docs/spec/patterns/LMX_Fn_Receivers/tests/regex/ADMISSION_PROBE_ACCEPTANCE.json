@@ -1,0 +1,208 @@
+{
+  "gate": "AR01",
+  "bridge": "FxKernel.acceptsRequirement(candidate; requirement; consumer=0) -> int",
+  "edition": "2026-11-23",
+  "status": "NOT_RUN; kernel provider implementation and integration verification are required",
+  "scope": "Common existing interface checking only; not a new public receiver, not a Boolean ABI for satisfies, not a regex engine or a second validator.",
+  "provider_implemented_in_archive": false,
+  "runtime_executed": false,
+  "normative_sources": [
+    "../../../../LMX_semantics.en.md#three-argument-satisfies",
+    "../../../../LMX_semantics.en.md#fn-satisfies",
+    "../../../../kernel-implementation.en.md",
+    "../../../../CORE_SEQUENCES_REGEX.en.md#patterns-details",
+    "../../KERNEL_REQUIREMENTS.md#interface-probe-ar01"
+  ],
+  "known_outcomes": {
+    "compatible": "1",
+    "incompatible": "0",
+    "unresolved": "FxKernelFailure()",
+    "invalid_requirement": "FxTypeToken()"
+  },
+  "service_payload_profile": "Empty () for these internal service exits; implicit/system diagnostics are not caught or reclassified as false.",
+  "source_files": [
+    {
+      "path": "src/regex/combinators.lmx",
+      "sha256": "bdc3d0db80076d6c03a5c7dd3bbdf9b0f03adff8a107a3d2808b70f278b5aa9e"
+    },
+    {
+      "path": "src/regex/operands.lmx",
+      "sha256": "a96d9230ba48eeff5dfb6f9f0ca0ee9096364e8c45ad5a14e5bf35358f5241ea"
+    },
+    {
+      "path": "src/regex/operations.lmx",
+      "sha256": "c72d1da739de961a6968986b0c0788b11b7da6302bfa916e1a71f3808c675e27"
+    },
+    {
+      "path": "src/regex/support.lmx",
+      "sha256": "d15620436c88f9caf8d5898c9f1d195003121e22cb89687d0af6678a4a6af69f"
+    }
+  ],
+  "cases": [
+    {
+      "id": "AR01-01",
+      "title": "Ready Pattern interface",
+      "setup": "Use a candidate with the full Pattern positional contract; its body increments a fixture counter.",
+      "action": "acceptsRequirement(candidate; Pattern)",
+      "expected": {
+        "result": 1,
+        "body_calls": 0,
+        "initializer_calls": 0,
+        "test_calls": 0,
+        "converter_calls": 0
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-02",
+      "title": "Proved non-Pattern",
+      "setup": "Use an initialized int record and an ordinary noncallable Structure as separate candidates.",
+      "action": "Probe each against Pattern.",
+      "expected": {
+        "results": [
+          0,
+          0
+        ],
+        "user_effects": 0,
+        "no_pattern_wrapper_created": true
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-03",
+      "title": "Names and full compatible requirements",
+      "setup": "Use a callable whose formal labels differ and whose full input/result requirements are admitted by the same positional-signature checker. Include a permitted type relation that is not raw-code equality.",
+      "action": "Compare the bridge observation with the actual existing interface-check result in the same Message type/conversion context.",
+      "expected": {
+        "result": 1,
+        "exact_raw_type_code_equality_required": false,
+        "formal_names_not_used_as_keys": true,
+        "converters_executed_during_probe": 0
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-04",
+      "title": "Unknown is not false",
+      "setup": "Supply an instrumented checker situation where a required computed path cannot be established without execution. The existing checker must classify it unresolved, not incompatible.",
+      "action": "Probe and attempt the ordinary | dispatch path.",
+      "expected": "FxKernelFailure() service outcome; no return 0, numeric fallback, literal normalization or candidate execution.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-05",
+      "title": "Invalid requirement",
+      "setup": "Pass an invalid interned type code or malformed requirement according to the provider admission profile.",
+      "action": "Probe against that requirement.",
+      "expected": "FxTypeToken(); no conversion to a false predicate result.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-06",
+      "title": "Copied unbounded configuration",
+      "setup": "Construct an ordinary grouped copy of unbounded under the common graph-copy map; retain its full structural fields and qualifiers.",
+      "action": "Probe the original and copied configuration against RxUnbounded; construct a repetition using the copy.",
+      "expected": {
+        "results": [
+          1,
+          1
+        ],
+        "original_identity_required": false,
+        "copied_role_retained": true,
+        "pattern_body_calls_during_construction": 0
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-07",
+      "title": "Finite repetition bound",
+      "setup": "Use an ordinary finite nonnegative int maximum and a negative maximum in separate cases.",
+      "action": "Probe maximum against RxUnbounded, then use the existing finite-bound branch.",
+      "expected": {
+        "probe_result": 0,
+        "nonnegative_maximum": "ordinary int reception and bound checks retained",
+        "negative_maximum": "PatternArgument",
+        "no_reference_identity_sentinel": true
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-08",
+      "title": "Replacement text and compatible callback",
+      "setup": "Use literal char[] text and a callable admitted by RxReplacement, each with the relevant ordinary requirement.",
+      "action": "Construct replacement and then run a search with zero matches and with two selected matches.",
+      "expected": {
+        "probe_user_calls": 0,
+        "callback_calls_on_no_match": 0,
+        "callback_calls_on_two_matches": 2,
+        "literal_text_not_executed": true
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-09",
+      "title": "Positive interface observation is not value admission",
+      "setup": "Use a declared compatible converter or analytical admission test whose actual execution would fail or increment a counter.",
+      "action": "First inspect the interface, then perform one ordinary real reception in a separate step.",
+      "expected": {
+        "probe_result": 1,
+        "probe_test_calls": 0,
+        "probe_converter_calls": 0,
+        "real_reception": "retains the original conversion/test failure and effect timing; probe does not bypass it"
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-10",
+      "title": "Numeric | remains its existing operation",
+      "setup": "Provide only numeric or admitted existing non-Pattern Array operands, including zero; none satisfies Pattern.",
+      "action": "Run the unchanged | entry through its existing dispatch and compare with the original numeric/Array contract.",
+      "expected": {
+        "probe_results": "proved 0 for all non-Patterns",
+        "pattern_dispatch_handled": false,
+        "extra_argument_evaluations": 0,
+        "original_numeric_or_array_behavior_retained": true
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-11",
+      "title": "One Pattern selects ordinary Pattern admission",
+      "setup": "Provide a ready Pattern and literal text; separately provide a Pattern and a number that is inadmissible as Pattern/text.",
+      "action": "Run the existing | extension.",
+      "expected": {
+        "valid_case": "ordered choice, with no trial matcher call during construction",
+        "invalid_case": "ordinary admission failure, not numeric fallback or mismatch",
+        "original_arguments_reopened": false
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-12",
+      "title": "No added analysis effects or cache",
+      "setup": "Use defaults, computed fields and supplied callbacks with observable counters; repeat successful probes in the same legitimate type context.",
+      "action": "Read the interface multiple times without real consumption.",
+      "expected": {
+        "body_default_initializer_test_converter_calls": 0,
+        "persistent_extra_namespace_or_pattern_cache": false,
+        "common_TYPE_pair_cache_may_be_reused": true
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "AR01-13",
+      "title": "Interpreter/native agreement",
+      "setup": "Run all definitive positive/negative cases through interpreted caller/interpreted provider, interpreted/native, native/interpreted and native/native integration configurations.",
+      "action": "Inspect the same source candidates and requirements without implicit compilation.",
+      "expected": {
+        "same_directed_result": true,
+        "unknown_never_false": true,
+        "new_user_graph_fields": 0,
+        "execution_status": "NOT_RUN"
+      },
+      "status": "NOT_RUN"
+    }
+  ],
+  "required_evidence": "Attach real kernel revision, binding code for the existing checker, explicit no-effect counters, positive/negative/unknown observations and the four dispatch configurations. Source presence, a mock predicate or a standalone host-language reconstruction is not this evidence.",
+  "finite_service_declarations": "AR01_STATIC_DECLARATIONS.json"
+}

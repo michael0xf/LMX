@@ -1,60 +1,117 @@
-# 095. Specification combinator — implementation
+# 095. AllOf — predicate conjunction implementation
 
-Реализовать импортируемую бинарную композицию двух предикатов с коротким замыканием.
+Построить упорядоченную short-circuit conjunction произвольного конечного набора predicates.
 
 **Примеры использования:** [031. Specification](031_specification_comparision.md)
 
 ## Общий сценарий
 
-Сохранить две callable-ссылки и вернуть новый int-предикат. При каждом вызове проверить левую часть; правую вызывать только после true.
+Сохранить снимок ссылок callable и построить predicate, который вызывает их по порядку до false; пустой набор истинен.
 
-**Ожидаемое наблюдение:** nonnegative both below100 даёт false,true,false для -1,50,100. При false слева счётчик правых вызовов не растёт. Повторный вызов использует сохранённые ссылки.
+**Ожидаемое наблюдение:** Для исходных проверок: -1→false,50→true,100→false. После false/отказа последующие predicate не вызываются. Пустой набор истинен при известной сигнатуре.
 
-**Граница сравнения:** Реализация библиотеки. Только одна целочисленная аргументная позиция и два предиката. Ссылки должны оставаться допустимыми в одном Message/контексте; raw occurrences и сохранение завершённых активаций не применяются. В LMX лишние правые операнды дают OperandArity; это не автоматический fold.
+**Граница сравнения:** Реализация библиотеки. При построении predicate не исполняются; ссылки должны оставаться живыми. Это conjunction, не purity/SQL/новый overload resolver. LMX использует input policy первого predicate либо явного contract.
 
-Показана реализация компонента на всех трёх языках. Её код полностью включён в эту строку сравнения; связанный прикладной пример считает только использование готового компонента.
+Это самостоятельное сравнение реализаций. Весь показанный код считается здесь; связанные иностранные клиенты используют настоящие библиотечные средства. Общие runtime-примитивы и их границы перечислены отдельно.
 
 ## LMX
 
 ```lmx
-SpecificationLibrary:
-    independent: AndData:
-        @: first 0
-        @: second 0
-        inputs:
-            int: value
-            return: int
-            accepts:
-                return: node\first(value) && node\second(value)
-    ---
-    Operators:
-        copy: sys\OPERANDS_TEMPLATE
-        return: @
-        both:
-            throws: OperandArity
-            if: length(right) != 1
-                throw: OperandArity()
-            @: instance (copy(AndData))
-            @: owner parent(instance\inputs)
-            owner\first := \left
-            owner\second := \right[0]
-            return: instance\inputs\accepts
+FxAllOfTypeToken:
+    integer:
+        int: value
+
+FxAllOfState:
+    @: predicates 0
+
+FxAllOfEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex
+        private: int: i 0
+        while: i < length(state\predicates)
+            private: @: predicate \state\predicates[i]
+            private: @: flag FxApplyPlaces\apply(predicate; frame)
+            if: FxSeqPredicate\truth(flag) = 0
+                return: (0 FxRecordOperands\record)
+            i += 1
+        return: (1 FxRecordOperands\record)
+
+# Arbitrary finite count and arity. A written contract is mandatory only for
+# the empty predicate sequence, since there is then no callable to infer from.
+# Without it, the first predicate supplies the actual external input policy;
+# with it, the chosen contract supplies that policy. All predicates must accept
+# the same ordered type signature and return int truth. Forwarded places stay
+# lazy; a skipped predicate receives no call and demands no default.
+FxAllOf:
+    private:
+        @: predicates
+        @: contract 0
+    required: predicates
+    return: @
+    allOf:
+        throws: copy(FxThrows\adapter)
+        private: @: values FxSeqRecords\make(source := predicates)
+        private: @: selected contract
+        private: @: integerType FxKernel\normalizeType(FxAllOfTypeToken\integer[0])
+        private: @: policy 0
+        if: selected = 0
+            if: length(values) = 0
+                throw: FxArity()
+            private: @: first \values[0]
+            private: @: info FxKernel\signature(first)
+            selected := FxSignatures\make(info\inputTypes; integerType)
+            policy := FxFullPolicy\make(first)
+        else:
+            policy := FxOwnPolicy\make(selected)
+        private: @: shape FxKernel\signature(selected)
+        if: shape\hasResult = 0
+            throw: FxTypeToken()
+        if: \shape\resultType != \integerType
+            throw: FxTypeToken()
+        private: @: failures (copy(()))
+        private: int: i 0
+        while: i < length(values)
+            private: @: operation \values[i]
+            private: @: info FxKernel\signature(operation)
+            if: info\hasResult = 0 || length(info\inputTypes) != length(shape\inputTypes)
+                throw: FxTypeToken()
+            if: \info\resultType != \integerType
+                throw: FxTypeToken()
+            private: int: position 0
+            while: position < length(shape\inputTypes)
+                if: \info\inputTypes[position] != \shape\inputTypes[position]
+                    throw: FxTypeToken()
+                position += 1
+            failures := FxFailures\union(failures; info\throws)
+            i += 1
+        private: @: state (copy(FxAllOfState))
+        state\predicates := values
+        return: FxWrap\make(selected; FxAllOfEngine\run; state; failures; policy)
 ```
 
-Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent.
+Полный factory и engine ядра; оригинальные places передаются лениво, без снимка всех аргументов.
 
 [Отдельный листинг](examples/lmx/095_specification_combinator_implementation.lm3)
 
 ## Python
 
 ```python
-def both(left, right):
-    def accepts(value):
-        return left(value) and right(value)
+def all_of(predicates):
+    checks = tuple(predicates)
+    for predicate in checks:
+        if not callable(predicate): raise TypeError("predicate must be callable")
+    def accepts(*args, **kwargs):
+        for predicate in checks:
+            if not predicate(*args, **kwargs): return False
+        return True
     return accepts
 ```
 
-Полный specification.py; обычная closure сохраняет две ссылки, and реализует короткое замыкание.
+Произвольное число predicates и аргументов; пустой набор возвращает True. Исходная коллекция снимается один раз.
 
 [Отдельный листинг](examples/python/095_specification_combinator_implementation.py)
 
@@ -62,69 +119,73 @@ def both(left, right):
 
 ```csharp
 using System;
-namespace ExampleLib {
-    public static class Specification {
-        public static Func<int,bool> Both(Func<int,bool> left, Func<int,bool> right) {
-            return value => left(value) && right(value);
+using System.Collections.Generic;
+public static class PredicateSet {
+    public static Func<T,bool> AllOf<T>(IEnumerable<Func<T,bool>> predicates) {
+        ArgumentNullException.ThrowIfNull(predicates);
+        var checks = new List<Func<T,bool>>();
+        foreach (var predicate in predicates) {
+            ArgumentNullException.ThrowIfNull(predicate);
+            checks.Add(predicate);
         }
+        return value => {
+            foreach (var predicate in checks) if (!predicate(value)) return false;
+            return true;
+        };
     }
 }
 ```
 
-Полный компонент ExampleLib.Specification; Func — только тип callable, Both реализован здесь.
+Любой T, в том числе tuple/product аргументов; пустой список корректен, поскольку T задан статически. Никакого LINQ All внутри реализации.
 
 [Отдельный листинг](examples/csharp/095_specification_combinator_implementation.cs)
 
 ## Разбор LMX
 
-Шаблон AndData independent, чтобы копирование не захватывало внешнюю лексическую цепочку. После (copy(...)) owner выбирается как фактический parent скопированного inputs; внешний контейнер группы не считается владельцем. В owner сохраняются значения ссылок на предикаты, не адреса временных left/right ячеек. Вернувшийся accepts имеет DATA=inputs с единственным int-входом, читает сохранённые callable через node и не удерживает frame фабрики. Поэтому результат можно снова использовать и передавать в следующий both. Шаблон операнда даёт режим 0 и приоритет +; арность проверяется до сохранения ссылок. AndData выбирается обычным лексическим именем: explicit-путь к его исходной записи проходил бы через сохранённый independent.
+Полный factory и engine ядра; оригинальные places передаются лениво, без снимка всех аргументов.
 
 ## Сопоставление
 
-LMX явно строит сохраняемый граф и выбирает владельца; Python closure и C# lambda сохраняют ссылки средствами языка. Все три тела показывают собственный AND через &&/and и не вызывают готовый both. Ни SQL-expression builder, ни скрытый AST evaluator не используется.
+LMX сохраняет точную многопозиционную сигнатуру; Python передаёт args/kwargs; C# выражает вход как generic T, при необходимости tuple. Все снимают коллекцию callable один раз и сохраняют short-circuit.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 372 | 22 |
-| Python | 83 | 4 |
-| C# | 176 | 8 |
+| LMX | 2056 | 71 |
+| Python | 246 | 9 |
+| C# | 417 | 16 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
-Implement imported binary predicate composition with short-circuiting.
+Build an ordered short-circuit conjunction over a finite predicate sequence.
 
 **Usage examples:** [031. Specification](031_specification_comparision.md)
 
-**Scenario.** Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.
+**Scenario.** Retain a snapshot of callable references and construct a new predicate. Each invocation evaluates in order until false; an empty set is true.
 
-**Expected observation.** nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.
+**Expected observation.** For the two int checks: -1→false,50→true,100→false. Later predicates do not run after false or failure. Empty sets are true under an explicitly known signature.
 
-**LMX.** AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver.
+**LMX.** Complete core factory and engine; original places are forwarded lazily without snapshotting all arguments.
 
-**Comparison.** LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used.
+**Comparison.** LMX supports exact multi-position callable signatures; Python forwards args/kwargs; C# carries the input shape as generic T (a tuple when needed). Every implementation copies the callable collection once and preserves short circuit.
 
-**Scope and limitations.** There is one integer argument position and two predicates. References must remain valid in one Message/context; raw occurrences and retention of finished activations are not used. Extra right operands cause OperandArity in LMX; there is no automatic fold.
+**Scope and limitations.** No predicate is executed by construction. Callable references must remain valid. This is conjunction, not static purity analysis, SQL translation, or a new overload resolver. LMX uses the first source input policy unless the caller supplies an explicit contract.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** AndData is independent so copying does not capture an external lexical chain. After grouped copy, owner is the actual parent of the copied inputs; the receiving group is not assumed to own it. The owner stores predicate reference values, not temporary left/right-cell addresses. Returned accepts has inputs as DATA with one int formal, reads stored callables through node, and retains no factory frame. It can therefore be reused or supplied to another both. The operand template supplies mode 0 and additive priority; arity is checked before storing references. AndData is selected by ordinary lexical name; an explicit source-graph path would pass through its retained independent receiver.
-- **Python:** Complete specification.py; an ordinary closure retains two references, and implements short-circuiting.
-- **C#:** Complete ExampleLib.Specification; Func is only the callable type, and Both is implemented here.
+- **LMX:** Complete core factory and engine; original places are forwarded lazily without snapshotting all arguments.
+- **Python:** Arbitrary predicate and argument counts; an empty collection returns True. The input collection is snapshotted once.
+- **C#:** Any T, including an argument tuple/product; empty input is valid because T is statically known. The implementation does not call LINQ All.
 
 ## Источники / Sources
 
-- [Eric Evans and Martin Fowler — Specifications](https://martinfowler.com/apsupp/spec.pdf) — Определение и границы паттерна.
-- [Python — Boolean operations](https://docs.python.org/3/library/stdtypes.html#boolean-operations-and-or-not) — Правый операнд and вызывается по необходимости.
-- [Microsoft — conditional logical operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/boolean-logical-operators) — Короткое замыкание встроенного &&.
+- [Python all contract](https://docs.python.org/3/library/functions.html#all) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

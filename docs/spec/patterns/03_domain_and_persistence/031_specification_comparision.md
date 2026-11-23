@@ -2,7 +2,7 @@
 
 Комбинировать предикаты, отделённые от проверяемого значения.
 
-**Реализация используемого компонента:** [095. Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+**Отдельное сравнение реализации:** [095. AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
 ## Общий сценарий
 
@@ -10,9 +10,9 @@
 
 **Ожидаемое наблюдение:** Результаты false,true,false. Правый предикат не вызывается, если левый дал false.
 
-**Граница сравнения:** Использование библиотеки. Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не satisfies. Короткий клиент и полный код combinator измеряются отдельно.
+**Граница сравнения:** Использование библиотеки. Прикладной сценарий по-прежнему проверяет int -1,50,100. Factory допускает произвольное число predicate и общую сигнатуру, включая нулевую арность; пустому набору LMX нужен явный contract. SQL/subsumption не добавляются.
 
-Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
+LMX вызывает операции единого ядра. Иностранные клиенты используют настоящие средства языка или установленную библиотеку; показанные рядом самостоятельные реализации в них не импортируются.
 
 ## LMX
 
@@ -28,28 +28,25 @@ Predicates:
 SpecificationExample:
     return: @
     build:
-        throws: OperandArity
-        import: SpecificationLibrary\Operators
-        return: Predicates\nonnegative both Predicates\below100
+        throws: copy(FxThrows\adapter)
+        return: allOf(predicates := (Predicates\nonnegative; Predicates\below100))
 ```
 
-Клиент импортирует готовый both из SpecificationLibrary\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.
+allOf — прямой core factory; он строит callable, а не выполняет predicates при build.
 
 [Отдельный листинг](examples/lmx/031_specification.lm3)
 
 ## Python
 
 ```python
-from specification import both
-
 def nonnegative(value): return value >= 0
 def below100(value): return value < 100
 
 def build():
-    return both(nonnegative, below100)
+    return lambda value: all(p(value) for p in (nonnegative, below100))
 ```
 
-Модуль specification.py полностью показан в companion. build() возвращает callable; внешний driver проверяет три значения.
+Настоящий builtin all с ленивым generator; specification.py не подключается.
 
 [Отдельный листинг](examples/python/031_specification.py)
 
@@ -57,66 +54,68 @@ def build():
 
 ```csharp
 using System;
-using ExampleLib;
+using System.Linq;
 public static class Specifications {
     public static bool Nonnegative(int value) => value >= 0;
     public static bool Below100(int value) => value < 100;
-    public static Func<int,bool> Build() => Specification.Both(Nonnegative, Below100);
+    public static Func<int,bool> Build() {
+        Func<int,bool>[] checks = [Nonnegative, Below100];
+        return value => checks.All(p => p(value));
+    }
 }
 ```
 
-ExampleLib.Specification полностью показан в companion; внешняя точка входа Specifications.Build().
+Настоящий Enumerable.All сохраняет short-circuit.
 
 [Отдельный листинг](examples/csharp/031_specification.cs)
 
 ## Разбор LMX
 
-Клиент импортирует готовый both из SpecificationLibrary\Operators; его полный исходник находится в соседнем сравнении. Внешний driver получает predicate := SpecificationExample\build(), затем вызывает predicate(-1), predicate(50), predicate(100). Оператор бинарный: одна левая ссылка на callable и ровно одна правая; helper явно проверяет length(right)=1 и объявляет OperandArity, build распространяет этот failure. Унаследованы PASS_ARGS_AS_IS=0 и приоритет +; подготовка ссылок не исполняет предикаты. Результат — сохраняемый callable; && и сохранение ссылок показаны в реализации, а не предполагаются встроенной возможностью.
+allOf — прямой core factory; он строит callable, а не выполняет predicates при build.
 
 ## Сопоставление
 
-Все три клиента определяют конкретные nonnegative/below100 и импортируют готовый combinator для построения reusable-предиката. В LMX запись A both B делает композицию выражением; Python и C# используют вызов фабрики. Соседняя реализация сохраняет проверку значения и короткое замыкание явно во всех трёх языках.
+Оба исходных predicate остаются в каждом клиенте; conjunction выполняют allOf, all(generator), Enumerable.All. Обобщённые реализации — отдельно в095.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 225 | 13 |
-| Python | 140 | 5 |
-| C# | 231 | 7 |
+| LMX | 216 | 12 |
+| Python | 140 | 4 |
+| C# | 274 | 10 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
 Compose predicates independently of their candidate values.
 
-**Implementation of the supplied component:** [095. Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+**Separate implementation comparison:** [095. AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
 **Scenario.** Combine nonnegative and below100 with AND; test -1,50,100.
 
 **Expected observation.** Results are false,true,false; the right predicate is skipped when the left is false.
 
-**LMX.** The client imports ready both from SpecificationLibrary\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.
+**LMX.** allOf is a direct core factory: build constructs a callable without evaluating predicates.
 
-**Comparison.** Each client defines concrete nonnegative/below100 predicates and imports the combinator that builds a reusable predicate. LMX makes composition an A both B expression; Python and C# call a factory. The companion explicitly implements evaluation and short-circuiting in all three languages.
+**Comparison.** The same two predicates remain in every usage client; allOf, all(generator), and Enumerable.All perform conjunction. Generic implementations are compared separately in095.
 
-**Scope and limitations.** Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from satisfies. Client and complete combinator implementation are measured separately.
+**Scope and limitations.** The application still tests int values -1,50,100. The core factory supports arbitrary finite predicate counts and common signatures, including zero inputs; an empty collection requires an explicit LMX contract. SQL generation/subsumption are outside this scenario.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** The client imports ready both from SpecificationLibrary\Operators; the companion shows its full source. An external driver obtains predicate := SpecificationExample\build(), then invokes it for -1,50,100. The operator is binary: one left callable and exactly one right callable. The helper checks right length and declares OperandArity; build propagates it. It inherits mode 0 and additive priority; preparing references does not run predicates. The result is a reusable callable; the implementation explicitly shows reference retention and && rather than assuming a builtin combinator.
-- **Python:** The companion fully defines specification.py. build() returns a callable; the external driver checks three values.
-- **C#:** The companion fully defines ExampleLib.Specification; call Specifications.Build().
+- **LMX:** allOf is a direct core factory: build constructs a callable without evaluating predicates.
+- **Python:** Real builtin all with a lazy generator; no specification.py import.
+- **C#:** Real Enumerable.All preserves short-circuit evaluation.
 
 ## Источники / Sources
 
-- [Eric Evans and Martin Fowler — Specifications](https://martinfowler.com/apsupp/spec.pdf) — Определение и границы паттерна.
+- [Python all](https://docs.python.org/3/library/functions.html#all) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
+- [LINQ All](https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.all) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

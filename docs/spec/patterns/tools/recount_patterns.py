@@ -448,7 +448,7 @@ def audit(root: Path) -> dict:
             "nonblank_lines": "splitlines() entries with nonempty strip()",
             "utf8_bytes": "len(canonical_source.encode('utf-8')) including spaces and the final LF",
             "csv": "UTF-8 BOM required; *_utf8_bytes columns are checked if present, otherwise bytes remain in this report",
-            "procedural_originals": "Preserved in alternative/variants or procedural_lmx metadata; the separate Markdown fence and commented source section include any explicit context_prefix before the byte-exact original client. Context is checked against its named preserved source, and the client against its recorded hash and procedural snapshot. These saved listings are excluded from main metrics. The primary is shortest among eligible comparable variants.",
+            "procedural_originals": "Only materially different current approaches are retained in optional variant metadata. Any retained source must match its publication and declared full context; it is excluded from primary counts. Minor or obsolete duplicates may be removed and explained in notes. The primary is shortest among eligible variants with the same observed contract and counting boundary.",
         },
         "group_count": len(json_files),
         "pattern_count": len(pattern_ids),

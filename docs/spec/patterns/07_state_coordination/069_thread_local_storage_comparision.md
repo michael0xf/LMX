@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Нельзя переносить обещание OS-thread affinity на Message. В Java значение принадлежит потоку, а не автоматически HTTP запросу; в Rust ссылка LocalKey не должна покидать свой контракт жизни.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -65,6 +63,10 @@ LMX реализует координацию через отдельный Mess
 
 Message-local state сохраняется при миграции turn на другой OS worker. Это полезная альтернатива task/actor-local state, но не тождество TLS: для thread-affine native ресурса нужна именно политика привязки к OS thread.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -73,7 +75,7 @@ Message-local state сохраняется при миграции turn на д�
 | Java | 202 | 7 |
 | Rust | 157 | 5 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -89,6 +91,8 @@ Isolating a counter within one execution participant.
 
 **Scope and limitations.** OS-thread affinity cannot be inferred for Message. Java values belong to a thread, not automatically an HTTP request; Rust LocalKey references must obey their lifetime contract.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. The host creates two independent CounterMessages; it does not use a lexical ancestor as global storage. The control harness runs A and B on separate threads; Java clear is used at request-scope completion when a worker thread is reused.
@@ -102,8 +106,6 @@ Isolating a counter within one execution participant.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

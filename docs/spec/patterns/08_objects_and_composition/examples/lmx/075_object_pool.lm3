@@ -22,32 +22,3 @@ Demo:
         Pool\give(item := first)
         @: again Pool\take()
         return: first = again && busy = 0
-
-# BEGIN PROCEDURAL LMX (excluded from character counts)
-# Resource:
-#     int: id 7
-# 
-# Pool:
-#     @: free Resource
-#     @: item
-#     return: @
-#     take:
-#         @: result node\free
-#         node\free := 0
-#         return: result
-#     give:
-#         node\free := item
-#         return: item
-# 
-# Demo:
-#     return: int
-#     run:
-#         Pool\free := Resource
-#         @: first Pool\take()
-#         @: busy Pool\take()
-#         Pool\give(item := first)
-#         @: again Pool\take()
-#         if: first = again && busy = 0
-#             return: 1
-#         return: 0
-# END PROCEDURAL LMX

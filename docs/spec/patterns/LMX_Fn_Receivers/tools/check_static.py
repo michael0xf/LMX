@@ -91,8 +91,13 @@ if re.search(r'doubleColon|RxTypeChain', code):
     errors.append('obsolete active receiver remains')
 
 catalog = json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8'))
-if len(catalog) != 115 or len({row['name'] for row in catalog}) != 115:
-    errors.append('catalog must retain all 61 uploaded identities plus 14 sequence and 40 text operations')
+additions = json.loads((ROOT / 'CORE_ADDITIONS_20261123.json').read_text())
+expected_count = additions['baseline_public_count'] + len(additions['entries'])
+if len(catalog) != expected_count or len({row['name'] for row in catalog}) != expected_count:
+    errors.append('catalog must retain all 115 uploaded identities plus every current addition')
+for row in catalog:
+    if not re.fullmatch(r'[a-z][A-Za-z0-9]*', row['name']):
+        errors.append('public function is not lowerCamelCase: ' + row['name'])
 expected_entries = {
     'replaceRange': ('FxSeqReplaceRange\\replaceRange', 'replaceRange(target; begin; end; values)'),
     'splice': ('FxSeqSplice\\splice', 'splice(target; begin; end; values)'),
@@ -115,9 +120,9 @@ for required in ['(a b c) := (b c a)', '(a b c) := (copy(s))']:
         errors.append(f'missing current assignment example: {required}')
 
 kernel_calls = sorted(set(re.findall(r'\bFxKernel\\+(\w+)\s*\(', source)))
-expected_kernel_calls = sorted(['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData', 'currentCall', 'frameSlot', 'prepare', 'enter', 'releaseCall', 'arrayInfo', 'arrayRead', 'arrayAdmit', 'arrayWrite'])
+expected_kernel_calls = sorted(['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData', 'currentCall', 'frameSlot', 'prepare', 'enter', 'releaseCall', 'arrayInfo', 'arrayRead', 'arrayAdmit', 'arrayWrite', 'attemptAccepted', 'acceptsRequirement'])
 if kernel_calls != expected_kernel_calls:
-    errors.append(f'provider calls differ from 17 documented common interfaces: {kernel_calls}')
+    errors.append(f'provider calls differ from 19 documented common interfaces: {kernel_calls}')
 
 for row in catalog:
     if not (ROOT / row['source']).is_file():
@@ -155,7 +160,7 @@ report = {
     'prepared_assertions': len(re.findall(r'\bsys\\assert\(', code)),
     'checks': ['literal and bracket balance', 'four-space indentation',
                'explicit multi-level cutters', 'qualified root coverage',
-               'single-file assembly equality', '115-entry unique callable/operand catalog coverage',
+               'single-file assembly equality', 'complete unique callable/operand catalog coverage and lowerCamelCase names',
                'no active obsolete receiver', 'two current assignment examples',
                'exact documented provider dependencies'],
     'limitations': ['does not implement full LMX grammar or name lookup',

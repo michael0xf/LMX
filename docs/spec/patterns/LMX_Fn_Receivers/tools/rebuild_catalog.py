@@ -97,6 +97,9 @@ for e in regex['exports']:
  if e['role'] in {'builder','receiver','text_profile','operand'}:
   rows.append((e['name'],e['target'],e['source'][4:-4], 'left; right' if e['role']=='operand' else regex_signatures[e['name']],
                'ordinary Pattern operand with common left/right ABI' if e['role']=='operand' else 'ordinary text-pattern '+e['role']+'; see REGEX_IMPLEMENTATION.md'))
+additions=json.loads((R/'CORE_ADDITIONS_20261123.json').read_text())['entries']
+for entry in additions:
+ rows.append((entry['name'],entry['api'],entry['source'],entry['arguments'],entry['scope']))
 value_symbols=[x for x in regex['exports'] if x['role'] not in {'builder','receiver','text_profile','operand'}]
 (R/'value_symbols.json').write_text(json.dumps(value_symbols,ensure_ascii=False,indent=2)+'\n')
 
@@ -106,12 +109,12 @@ renamed.update({new:old for old,new in revision['map'].items()})
 for name in revision['new_receivers']:
  renamed[name]=None
 former={ 'signatureTypes':'fn','curry':'lambda','foldl':'fold','scanl':'scan','memoize':'memo','runUntil':'until','retryCall':'retry','bracket':'around'}
-no_bridge={'types','select','omit','reorder','project','defaults','diff','patch','bindFields','derive','composeData','record','some','none','ok','err','list','done'}
+no_bridge={'types','select','omit','reorder','project','defaults','diff','patch','bindFields','derive','composeData','record','some','none','ok','err','list','done','between'}
 catalog=[]
 for i,(name,api,src,args,scope) in enumerate(rows,1):
  catalog.append({'id':i,'name':name,'former_name':former.get(name,renamed.get(name,name)) if i<=61 else renamed.get(name),'public_name':name,'api':api,'signature':('R signatureTypes T0 ... TN; explicit fun\\const\\signatureTypes(left := R; right := types)' if name=='signatureTypes' else name+'('+args+')'),'source':'src/'+src+'.lmx','status':'BODY' if name in no_bridge else 'BODY_WITH_BRIDGE','scope':scope,'implementation_layer':'core','availability':'core_integration_task','namespace_root':'fun\\const','lmx_executed':False})
 (R/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n')
-lines=['# Прямые публичные ресиверы и Expression-операнды','', f'Редакция 2026-11-22. Сохранены все 61 операции текущего загруженного комплекта; имена согласованы с новой редакцией; добавлены {len(sequence_rows)} последовательностных и {len(rows)-61-len(sequence_rows)} текстовых/Pattern-операций. Всего {len(catalog)} уникальных вызовных имён.', '', 'Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.', '`BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.', '', '`replaceRange` меняет диапазон и возвращает target; `splice` возвращает удалённые элементы в отдельном контейнере. Текстовый `replace` возвращает новый текст. `hasPrefix` и `hasSuffix` проверяют соответствующую границу и возвращают int 1/0.', '', '| № | Имя | Прежнее имя | Вызов | Исходник | Статус |', '|---|---|---|---|---|---|']
+lines=['# Прямые публичные ресиверы и Expression-операнды','', f'Редакция 2026-11-23. Сохранены все 115 вызовных имён загруженного комплекта и добавлены {len(additions)} функций из сравнений реализаций. Всего {len(catalog)} уникальных публичных имён lowerCamelCase.', '', 'Все имена входят в единое ядро и доступны напрямую; собственные DATA и фактический parent каждого метода сохраняются. Клиентский import не требуется.', '`BODY` — LMX-алгоритм; `BODY_WITH_BRIDGE` — LMX-алгоритм с явно указанным интерфейсом ядра. Это не отметка запуска.', '', '`replaceRange` меняет диапазон и возвращает target; `splice` возвращает удалённые элементы в отдельном контейнере. Текстовый `replace` возвращает новый текст. `hasPrefix` и `hasSuffix` проверяют соответствующую границу и возвращают int 1/0.', '', '| № | Имя | Прежнее имя | Вызов | Исходник | Статус |', '|---|---|---|---|---|---|']
 for x in catalog:
  lines.append(f"| {x['id']} | `{x['name']}` | {x['former_name'] or 'новое'} | `{x['signature']}` | [{x['source']}]({x['source']}) | {x['status']} |")
 lines+=['','## Области применения','']

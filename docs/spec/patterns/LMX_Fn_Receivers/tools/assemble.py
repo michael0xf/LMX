@@ -21,6 +21,9 @@ PARTS = [
     'src/structures.lmx',
     'src/generic_combinators.lmx',
     'src/generic_wrappers.lmx',
+    'src/coreComparisonGroups.lmx',
+    'src/coreComparisonExamples.lmx',
+    'src/corePerlExamples.lmx',
     'src/regex/support.lmx',
     'src/regex/text.lmx',
     'src/regex/primitives.lmx',
@@ -40,10 +43,10 @@ PARTS = [
 ]
 
 HEADER = '''# LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕРЫ
-# Редакция 2026-11-22. Собрано из src/ и явно запускаемых examples/.
+# Редакция 2026-11-23. Собрано из src/ и явно запускаемых examples/.
 # DATA-описания ядра; старые Int-специализации сюда не входят.
-# 115 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
-# FxKernel: 8 исходных границ + 5 фаз обычного вызова + 4 операции доступа к Array.
+# {public_count} вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
+# FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
 # Name :: DATA и signatureTypes взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
@@ -53,7 +56,8 @@ HEADER = '''# LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕ�
 
 
 def assembled():
-    chunks = [HEADER]
+    public_count = len(json.loads((ROOT/'catalog.json').read_text()))
+    chunks = [HEADER.format(public_count=public_count)]
     for name in PARTS:
         chunks.append(f'# SOURCE: {name}\n')
         chunks.append((ROOT / name).read_text(encoding='utf-8').rstrip() + '\n\n')

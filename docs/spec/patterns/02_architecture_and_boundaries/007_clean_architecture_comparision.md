@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Ядро сценария. Числовой ответ — работа presenter, не отправка HTTP. Аутентификация, хранилище и compile-time module enforcement не показаны.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -87,6 +85,10 @@ func demo() int { return execute(100, 60, render) }
 
 Важна направленность зависимостей к policy/use case. Один файл показывает связи; отсутствие ссылок внутрь UI проверяется по выделенным модулям реального проекта.
 
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -95,81 +97,7 @@ func demo() int { return execute(100, 60, render) }
 | Java | 341 | 9 |
 | Go | 268 | 7 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- reuse-review-01-05-2026-11-22 -->
-
-## Предыдущий текущий вариант LMX — вне основного подсчёта
-
-Полный предыдущий листинг сохранён; в текущую статистику входит только основной, более короткий вариант. Все самописные вспомогательные определения остаются в основном листинге и учитываются целиком.
-
-```lmx
-Policy:
-    int: income
-    int: expense
-    return: int
-    eligible:
-        return: income - expense >= 30
-
-Presenter:
-    int: decision
-    return: int
-    render:
-        if: decision != 0
-            return: 200
-        return: 422
-
-UseCase:
-    int: income
-    int: expense
-    @: output
-    return: int
-    execute:
-        return: output(decision := Policy\eligible(income := income; expense := expense))
-    demo:
-        return: execute(income := 100; expense := 60; output := Presenter\render)
-```
-
-**Основание выбора / Selection:** Use visible input order income, expense for Policy and income, expense, output for UseCase. Keep the external output(decision := ...) contract and both complete Policy/Presenter implementations.
-
-<!-- /reuse-review-01-05-2026-11-22 -->
-
-<!-- postfix-expression-review-2026-11-22 -->
-
-## Процедурный аналог LMX — вне основного подсчёта
-
-Полный прежний вариант сохранён. Основным выбран более короткий эквивалентный вариант с обычным Expression; новые библиотеки не скрывают часть реализации.
-
-```lmx
-Policy:
-    int: income
-    int: expense
-    return: int
-    eligible:
-        if: income - expense >= 30
-            return: 1
-        return: 0
-
-Presenter:
-    int: decision
-    return: int
-    render:
-        if: decision != 0
-            return: 200
-        return: 422
-
-UseCase:
-    int: income
-    int: expense
-    @: output
-    return: int
-    execute:
-        return: output(decision := Policy\eligible(income := income; expense := expense))
-    demo:
-        return: execute(income := 100; expense := 60; output := Presenter\render)
-```
-
-**Основание выбора / Selection:** Return the existing comparison's canonical 0/1 result directly; policy, presenter and injection boundary remain complete.
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -197,8 +125,6 @@ Domain policy and the use case are separated from the outer presentation.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

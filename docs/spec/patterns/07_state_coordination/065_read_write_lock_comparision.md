@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Нельзя объявлять одинаковую пропускную способность или гарантию параллельных readers. Fairness, starvation и poison policy отличаются; Rust unwrap выбран только для безаварийного сценария.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -26,9 +24,7 @@ ValueMessage:
         return: read()
 ```
 
-write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.
-
-LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.
+LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков. write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.
 
 [Отдельный листинг](examples/lmx/065_read_write_lock.lm3)
 
@@ -76,11 +72,19 @@ impl Value {
 
 ## Разбор LMX
 
-LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков.
+LMX реализует координацию через отдельный Message-владелец; методы вызываются адресованными письмами, mutable state меняется только на его полосе. Шаблон явно создаётся хостом как исполняемый Thread со своей ареной. MESSAGE_HTTP_PROFILE.md описывает запуск и общий post/HTTP контур; листинги являются ядрами протоколов, а не полными серверами. Все операции выполняются над одним владельцем. В LMX read/write — атомарные относительно других turns обращения к value; возвращается скалярная копия, а не mutable ссылка в чужую арену. В контрольных вариантах методы могут вызываться из разных потоков. write возвращает результат уже показанного read после записи; оба вызова остаются в одном turn владельца.
 
 ## Сопоставление
 
 Это функциональная альтернатива для согласованных скалярных чтений, а не реализация самого RW-lock на L3. Параллельный доступ к большому неизменяемому снимку можно вынести в отдельный протокол.
+
+### Небольшие варианты записи
+
+Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.
+
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
 
 ## Объём показанного исходника
 
@@ -90,29 +94,7 @@ LMX реализует координацию через отдельный Mess
 | Java | 348 | 14 |
 | Rust | 239 | 10 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
-
-<!-- shared-method-reuse-review-2026-11-22 -->
-
-## Предыдущий полный вариант LMX — вне основного подсчёта
-
-Основной вариант повторно использует обычный метод, целиком включённый в тот же листинг. Предыдущая реализация сохранена без изменения.
-
-```lmx
-ValueMessage:
-    int: newValue
-    int: value 10
-    return: int
-    read:
-        return: node\value
-    write:
-        node\value := newValue
-        return: node\value
-```
-
-**Основание выбора / Selection:** Reuse the included read method after write updates node\value. Both execute within the same owner turn; the returned value comes from the updated graph rather than a copied DATA value.
-
-**Completeness:** write returns the included read result after the write; both calls remain in the same owner turn. All shown fields, effects, Message ownership and the documented HTTP/port boundary remain. This is source review; no LMX runtime execution is claimed.
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -122,15 +104,17 @@ Reading a consistent snapshot without overlapping a mutation.
 
 **Expected observation.** The sequential trace returns 10,20. Java/Rust permit concurrent readers; the LMX owner serves them serially.
 
-**LMX.** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.
+**LMX.** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn.
 
 **Comparison.** This is a functional alternative for consistent scalar reads, not an implementation of an L3 RW-lock. Parallel access to a large immutable snapshot requires a separate protocol.
 
 **Scope and limitations.** Equal throughput or parallel-reader guarantees cannot be claimed. Fairness, starvation and poisoning policies differ; Rust unwrap is selected only for the failure-free fixture.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
-- **LMX:** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.
+- **LMX:** LMX coordinates through a separate owner Message; methods are invoked by addressed mail and mutate state only on its lane. The host explicitly creates an executable Thread with its own arena. MESSAGE_HTTP_PROFILE.md describes launch and shared post/HTTP integration; listings are protocol cores, not complete servers. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads. write returns the included read result after the write; both calls remain in the same owner turn.
 - **Java:** Java 21 fragment; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.
 - **Rust:** Rust fragment using std; the launching harness is not included. All operations address one owner. LMX read/write are atomic relative to other turns; results are scalar copies, not mutable references into a foreign arena. Control methods may be invoked from different threads.
 
@@ -141,8 +125,6 @@ Reading a consistent snapshot without overlapping a mutation.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

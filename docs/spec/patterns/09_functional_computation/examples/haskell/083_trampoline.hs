@@ -1,11 +1,12 @@
 module TrampolineExample where
-import Bounce (Bounce, done, more, run)
+import Control.Monad.Free (Free(..), iter)
+import Data.Functor.Identity (Identity(..))
 
-evenStep, oddStep :: Int -> Bounce Bool
-evenStep 0 = done True
-evenStep n = more (\() -> oddStep (n - 1))
-oddStep 0 = done False
-oddStep n = more (\() -> evenStep (n - 1))
+evenStep, oddStep :: Int -> Free Identity Bool
+evenStep 0 = Pure True
+evenStep n = Free (Identity (oddStep (n - 1)))
+oddStep 0 = Pure False
+oddStep n = Free (Identity (evenStep (n - 1)))
 
 parity :: Int -> Bool
-parity n = run (evenStep n)
+parity = iter runIdentity . evenStep

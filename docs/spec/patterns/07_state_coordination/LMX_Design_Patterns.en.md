@@ -10,12 +10,6 @@ All six original patterns remain separate. Message-based LMX alternatives preser
 - [Excel](LMX_Comparison_07_state_coordination.xlsx)
 - [PDF](LMX_Comparison_07_state_coordination.pdf)
 - [CSV](LMX_Comparison_07_state_coordination.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -78,7 +72,3 @@ An object protects an invariant across a complete operation on its state.
 **Observation:** Exactly one request succeeds; final balance is 3. Separate read+write requests do not have this property.
 
 A serial turn expresses an invariant-owning object without an application L3 lock. It is not a distributed transaction: another owner does not automatically join the atomic operation.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

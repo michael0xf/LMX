@@ -1,4 +1,4 @@
-"""Run 19 bounded Python scenarios and their declared companion modules.
+"""Run 19 bounded Python scenarios and independent implementation comparisons.
 
 Needs Python 3.10+. Companion IDs are resolved from implementation_ids so the
 script remains valid after archive renumbering. No network or real database is
@@ -12,8 +12,8 @@ SOURCE_BYTES=PATTERNS_PATH.read_bytes()
 DATA=json.loads(SOURCE_BYTES)
 BY_ID={p['id']:p for p in DATA['patterns']}
 ORIGINAL_IDS=list(range(16,35))
-MODULE_NAMES={16:'lookup',31:'specification',32:'money'}
 COMPANIONS={}
+COMPARISON_MODULES={}
 def source_code(pattern):
     return next(l['code'] for l in pattern['listings'] if l['language']=='Python')
 def source_hash(code):
@@ -23,25 +23,16 @@ def load_module(name,code):
     sys.modules[name]=module
     exec(compile(code,name+'.py','exec'),module.__dict__)
     return module
-for usage_id,module_name in MODULE_NAMES.items():
-    usage=BY_ID[usage_id]
-    implementation_ids=usage.get('implementation_ids',[])
-    assert len(implementation_ids)==1,('expected one declared companion',usage_id)
-    implementation_id=implementation_ids[0]
+for implementation_id in (94,95,96):
     implementation=BY_ID[implementation_id]
-    assert implementation.get('kind')=='implementation'
-    assert usage_id in implementation.get('usage_ids',[])
     code=source_code(implementation)
-    load_module(module_name,code)
+    name=f'comparison_{implementation_id}'
+    COMPARISON_MODULES[implementation_id]=load_module(name,code)
     COMPANIONS[implementation_id]={
-        'id':implementation_id,
-        'language':'Python',
-        'module':module_name,
-        'usage_ids':implementation['usage_ids'],
-        'source_sha256':source_hash(code),
-        'check':'exact companion source loaded and exercised by its client scenarios',
-        'result':'pass',
-    }
+        'id':implementation_id,'language':'Python','module':name,
+        'usage_ids':implementation['usage_ids'], 'source_sha256':source_hash(code),
+        'check':'standalone implementation tested independently; never imported by a usage client',
+        'result':'pass'}
 RESULTS=[]
 def failed(fn,exception=Exception):
     try: fn()
@@ -141,13 +132,13 @@ for i in ORIGINAL_IDS:
         failed(lambda:n['RangeQuery'](200,100).execute(db),ValueError);assert len(calls)==1
     elif i==31:
         f=n['build']();assert [f(x) for x in [-1,50,100]]==[False,True,False]
-        calls=[];f=n['both'](lambda x:False,lambda x:calls.append(x));assert not f(1) and not calls
-        nested=n['both'](n['build'](),lambda x:x%2==0)
+        calls=[];f=COMPARISON_MODULES[95].all_of([lambda x:False,lambda x:calls.append(x)]);assert not f(1) and not calls
+        nested=COMPARISON_MODULES[95].all_of([n['build'](),lambda x:x%2==0])
         assert [nested(x) for x in [50,51,-2]]==[True,False,False]
         assert nested(50) and nested(50)
     elif i==32:
         a,b,c=n['Money'](100,840),n['Money'](100,840),n['Money'](100,978)
-        assert n['same'](a,b) and a is not b and not n['same'](a,c)
+        assert a==b and a is not b and a!=c
         assert n['demo']()==10
         failed(lambda:setattr(a,'cents',9),AttributeError)
         failed(lambda:setattr(a,'currency',9),AttributeError)
@@ -178,6 +169,22 @@ for i in ORIGINAL_IDS:
         assert e.release(7,1,41)==1 and e.acquire(7,2)==42
         assert e.save(7,1,41,99)==0 and e.save(7,2,42,150)==1 and saved==[150]
     RESULTS.append({'id':i,'language':'Python','source_sha256':source_hash(code),'implementation_ids':p.get('implementation_ids',[]),'check':'bounded scenario with explicit in-memory fixtures','result':'pass'})
+# Generic edge cases of the standalone comparison implementations.
+first=COMPARISON_MODULES[94].find_first
+assert first([None,3],lambda x:x is None)==(True,None)
+assert first([],lambda x:True)==(False,None)
+all_of=COMPARISON_MODULES[95].all_of
+assert all_of([])(1,2,unused=3)
+assert all_of([lambda a,b:a<b,lambda a,b:b<9])(2,4)
+failed(lambda:all_of([None]),TypeError)
+equal_fields=COMPARISON_MODULES[96].equal_fields
+assert equal_fields(['a','b'],['a','b'],lambda a,b:a==b)
+assert equal_fields([],[],lambda a,b:False)
+assert not equal_fields([1],[1,2],lambda *x:(_ for _ in ()).throw(AssertionError('length mismatch called comparator')))
+Money=COMPARISON_MODULES[96].Money
+a,b,c=Money(),Money(),Money(currency=978)
+assert a==b and not a!=b and a!=c and hash(a)==hash(b)
+failed(lambda:setattr(a,'cents',9),AttributeError)
 assert len(RESULTS)==19
 report={
     'engine':sys.version.split()[0],
@@ -189,7 +196,7 @@ report={
     'original_scenarios':19,
     'companion_modules_exercised':len(COMPANIONS),
     'all_passed':True,
-    'scope':'Python controls and the exact declared companion implementations only. Fixtures validate bounded client/helper logic, first-match identity/absence/early return, reusable predicate short-circuiting, and Money read-only components. In-memory fixtures do not validate real database, transaction, lock, HTTP, Message or transport providers. LMX and C# were not executed.',
+    'scope':'Python controls and the independent comparison implementations only. Fixtures validate bounded client/helper logic, first-match identity/absence/early return, reusable predicate short-circuiting, and Money read-only components. In-memory fixtures do not validate real database, transaction, lock, HTTP, Message or transport providers. LMX and C# were not executed.',
     'checks':RESULTS,
     'companions':[COMPANIONS[i] for i in sorted(COMPANIONS)],
 }

@@ -1,8 +1,8 @@
 # LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕРЫ
-# Редакция 2026-11-22. Собрано из src/ и явно запускаемых examples/.
+# Редакция 2026-11-23. Собрано из src/ и явно запускаемых examples/.
 # DATA-описания ядра; старые Int-специализации сюда не входят.
-# 115 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
-# FxKernel: 8 исходных границ + 5 фаз обычного вызова + 4 операции доступа к Array.
+# 123 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
+# FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
 # Name :: DATA и signatureTypes взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
@@ -29,6 +29,14 @@ FxKernelRaiseAPI :: (char[]: name; @: payload)
 FxKernelFieldNamesAPI :: (@: source; return: @)
 
 FxKernelRenameFieldsAPI :: (@: target; @: indices; @: labels)
+
+# AR01 observes the existing interface checker; it does not change satisfies.
+FxKernelAcceptsRequirementAPI :: (@: candidate; @: requirement; @: consumer 0; return: int)
+
+# A proven compatible/incompatible interface yields 1/0. Unresolved required
+# paths yield FxKernelFailure(), malformed requirements yield FxTypeToken().
+# No body/default/test/converter executes; ordinary real reception is separate.
+# This is a required provider contract, not a native implementation.
 
 # Five phase hooks for existing ordinary call preparation/execution.
 # A borrowed frame is service state of THIS invocation, never persistent graph.
@@ -156,6 +164,9 @@ FxThrows:
         FxIndex
         FxKernelFailure
         FxRecordArity
+        FxTypeToken
+    kernel:
+        FxKernelFailure
         FxTypeToken
     lazyfixture:
         FxArity
@@ -535,7 +546,7 @@ FxFrameAttempt:
     private: @: frame
     return: @
     attempt:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         return: FxKernel\enter(frame; frame\failures)
 
 FxFrameApply:
@@ -558,7 +569,7 @@ FxInvokeEntries:
         @: failures
     return: @
     attempt:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         private: @: prepared FxKernel\prepare(operation; entries)
         finally:
             FxKernel\releaseCall(prepared)
@@ -1222,7 +1233,7 @@ FxTry:
         @: args
     return: @
     attempt:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         private: @: info FxKernel\signature(subject := operation)
         return: FxKernel\attempt(operation; args; info\throws)
 
@@ -1293,7 +1304,7 @@ RxNames:
     private: @: source
     return: @
     names:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         return: FxKernel\fieldNames(source := source)
 
 # Один общий copy сохраняет циклы, общие рёбра и parent-карту.
@@ -1420,6 +1431,9 @@ FxListBind:
         return: FxSeqFlatMap\flatMap(items; next)
 
 # Bounce stores either a final value record or an ordinary nullary callable.
+# This is synchronous stack control, not a future or task. To run it asynchronously,
+# post the complete trampoline invocation to its owning Message; post already
+# transports completion/failure. Thunks never cross into a foreign mutable arena.
 # partial(F; allArgs) may construct that thunk for any number of F inputs.
 # trampoline stops on done, not merely on whether the value is callable.
 FxBounce:
@@ -1473,7 +1487,7 @@ FxSeqInfo:
     required: source
     return: @
     get:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         return: FxKernel\arrayInfo(source := source)
 
 FxSeqRead:
@@ -3015,12 +3029,12 @@ FxLazyEngine:
             return: state\value
         if: state\status = 1
             throw: FxLazyCycle()
-        state\status := 1
         private: int: completed 0
         finally:
             if: completed = 0
                 state\status := 0
         ---
+        state\status := 1
         private: @: result FxFrameApply\apply(frame)
         state\value := result
         state\status := 2
@@ -3118,10 +3132,19 @@ FxRetry:
             i += 1
         throw: FxCallFailure(last)
 
-# acquire() -> Resource; release(Resource) -> void;
-# action(Resource,T0,...,Tn) -> R; arguments содержит только T0,...,Tn.
-# Resource и R могут быть любыми типами. Вокруг не создаётся IntBox.
-# acquire с параметрами заранее превращают в thunk через partial.
+# acquire() -> Resource; release(Resource) -> any ignored result;
+# action(Resource,T0,...,Tn) -> R, including void; arguments contains T0,...,Tn.
+# Resource and R retain their real value records; no integer-only resource box.
+# Parameterised acquisition can be prepared with partial before entering bracket.
+# Message/post policy: post the whole owner method that performs bracket. Resource,
+# action and cleanup stay in that owner's arena and one ordinary activation; post
+# carries its eventual result. No second asynchronous bracket engine is needed.
+# Merely posting work from action and returning does NOT extend resource lifetime.
+# A timeout is not cancellation. Ordinary stop exits run registered finally blocks.
+# Cleanup is registered before acquisition and guarded by its successful outcome.
+# Transfer of a successful acquired value through FxKernel remains the ordinary
+# provider ownership/lifetime contract; this source adds no atomic/mask primitive.
+# Abrupt host-process death cannot be repaired by a language cleanup handler.
 FxAround:
     private:
         @: acquire
@@ -3132,11 +3155,18 @@ FxAround:
     around:
         throws: copy(FxThrows\traversal)
         private: @: empty (copy(()))
-        private: @: resource FxApply\apply(acquire; empty)
-        private: @: resourceArgs FxOne\make(resource)
+        private: @: resourceArgs (copy(()))
+        sys\resize(resourceArgs; 1)
+        private: @: acquired (copy(FxOutcome))
         finally:
-            FxApply\apply(release; resourceArgs)
+            if: acquired\ok != 0
+                resourceArgs[0] := acquired\value
+                FxApply\apply(release; resourceArgs)
         ---
+        acquired := FxTry\attempt(acquire; empty)
+        if: acquired\ok = 0
+            throw: FxCallFailure(acquired)
+        resourceArgs[0] := acquired\value
         private: @: actionArgs FxAppend\append(resourceArgs; arguments)
         return: FxApply\apply(action; actionArgs)
 
@@ -3241,6 +3271,533 @@ FxTrace:
         state\operation := operation
         state\sink := sink
         return: FxWrap\make(contract; FxTraceEngine\run; state; failures; FxFullPolicy\make(operation))
+
+# SOURCE: src/coreComparisonGroups.lmx
+# DIRECT CORE OPERATIONS EXTRACTED FROM THE IMPLEMENTATION COMPARISONS.
+# No example-local import is required. These bodies use the existing typed
+# record/call/Array access contracts; a Structure is already an @[] sequence.
+
+FxFindFirst:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: @
+    findFirst:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(items; i)
+            private: @: accepted FxApply\apply(accepts; FxOne\make(value))
+            if: FxSeqPredicate\truth(accepted) != 0
+                return: FxSome\some(value := value)
+            i += 1
+        return: FxNone\none()
+
+# Ordered field/sequence equality, with an explicit equality operation.
+# Neither names nor pointer identity silently replace the supplied relation.
+# Dense arrays and Structures both use real typed element access. No recursion,
+# serializer, hidden conversion, or claim of deep graph equality is introduced.
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same
+    required: first second same
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        private: int: count length(first)
+        if: count != length(second)
+            return: 0
+        private: int: i 0
+        while: i < count
+            private: @: a FxSeqRead\read(first; i)
+            private: @: b FxSeqRead\read(second; i)
+            private: @: accepted FxApply\apply(same; FxTwo\make(a; b))
+            if: FxSeqPredicate\truth(accepted) = 0
+                return: 0
+            i += 1
+        return: 1
+
+FxAllOfTypeToken:
+    integer:
+        int: value
+
+FxAllOfState:
+    @: predicates 0
+
+FxAllOfEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex
+        private: int: i 0
+        while: i < length(state\predicates)
+            private: @: predicate \state\predicates[i]
+            private: @: flag FxApplyPlaces\apply(predicate; frame)
+            if: FxSeqPredicate\truth(flag) = 0
+                return: (0 FxRecordOperands\record)
+            i += 1
+        return: (1 FxRecordOperands\record)
+
+# Arbitrary finite count and arity. A written contract is mandatory only for
+# the empty predicate sequence, since there is then no callable to infer from.
+# Without it, the first predicate supplies the actual external input policy;
+# with it, the chosen contract supplies that policy. All predicates must accept
+# the same ordered type signature and return int truth. Forwarded places stay
+# lazy; a skipped predicate receives no call and demands no default.
+FxAllOf:
+    private:
+        @: predicates
+        @: contract 0
+    required: predicates
+    return: @
+    allOf:
+        throws: copy(FxThrows\adapter)
+        private: @: values FxSeqRecords\make(source := predicates)
+        private: @: selected contract
+        private: @: integerType FxKernel\normalizeType(FxAllOfTypeToken\integer[0])
+        private: @: policy 0
+        if: selected = 0
+            if: length(values) = 0
+                throw: FxArity()
+            private: @: first \values[0]
+            private: @: info FxKernel\signature(first)
+            selected := FxSignatures\make(info\inputTypes; integerType)
+            policy := FxFullPolicy\make(first)
+        else:
+            policy := FxOwnPolicy\make(selected)
+        private: @: shape FxKernel\signature(selected)
+        if: shape\hasResult = 0
+            throw: FxTypeToken()
+        if: \shape\resultType != \integerType
+            throw: FxTypeToken()
+        private: @: failures (copy(()))
+        private: int: i 0
+        while: i < length(values)
+            private: @: operation \values[i]
+            private: @: info FxKernel\signature(operation)
+            if: info\hasResult = 0 || length(info\inputTypes) != length(shape\inputTypes)
+                throw: FxTypeToken()
+            if: \info\resultType != \integerType
+                throw: FxTypeToken()
+            private: int: position 0
+            while: position < length(shape\inputTypes)
+                if: \info\inputTypes[position] != \shape\inputTypes[position]
+                    throw: FxTypeToken()
+                position += 1
+            failures := FxFailures\union(failures; info\throws)
+            i += 1
+        private: @: state (copy(FxAllOfState))
+        state\predicates := values
+        return: FxWrap\make(selected; FxAllOfEngine\run; state; failures; policy)
+
+# retryPost: asynchronous bounded retry over the existing Message post API.
+# Each job is persistent DATA in its sender Message arena, not a captured frame.
+# The caller retains the handle until its owner Message can release all waits.
+# post itself correlates each response; no numeric request-id registry is built.
+# Timeout/cancel stop this policy, NOT an operation already running elsewhere.
+# Late replies only drain pending; they cannot publish a second result.
+# Result.read() exposes the persisted outcome even if notification is undelivered.
+# Control.settled() describes attempt/delay completion, not permission to free
+# an arena still retained by any ordinary post route. timeoutMs > maxDelay
+# leaves an explicit configured window for a delayed acknowledgement.
+# complete is a nonthrowing procedure under the selected protocol; notification
+# is one send attempt, not a promise of exactly-once external delivery.
+
+# These internal bridge failures have the explicitly empty () payload.
+# User failures retain their original name and typed payload in FxOutcome.
+FxRetryEmptyFailure:
+    private: char[]: name
+    return: @
+    make:
+        private: @: outcome (copy(FxOutcome))
+        outcome\failure := name
+        outcome\payload := (copy(()))
+        return: outcome
+
+FxRetryPostResult:
+    char[]: kind ""
+    int: attempts 0
+    @: outcome 0
+
+FxRetryPostJob:
+    private:
+        @: request 0
+        @: retryOn 0
+        @: delay 0
+        @: complete 0
+        int: limit 0
+        int: pause 0
+        int: maxPause 0
+        int: timeoutMs 0
+        int: attempts 0
+        int: completed 0
+        int: pending 0
+        @: finalResult 0
+        int: notificationUndelivered 0
+    dispatch:
+        if: node\private\completed != 0
+            return
+        node\private\attempts += 1
+        node\private\pending += 1
+        private: @: request node\private\request
+        post:
+            ask:
+                request()
+            answer:
+                Replies\accept
+            timeout:
+                ms:
+                    int: time node\private\timeoutMs
+            ---
+            undelivered:
+                Events\undelivered()
+            unanswered:
+                Events\unanswered()
+            catch: FxKernelFailure ()
+                Events\failed("FxKernelFailure")
+            catch: FxTypeToken ()
+                Events\failed("FxTypeToken")
+    ---
+    Events:
+        char[]: failure
+        failed:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("requestFailure"; FxRetryEmptyFailure\make(failure))
+        undelivered:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("undelivered"; 0)
+        unanswered:
+            private: @: job parent(node)
+            job\Completion\finish("timeout"; 0)
+    ---
+    Control:
+        cancel:
+            private: @: job parent(node)
+            private: int: accepted job\private\completed = 0
+            job\Completion\finish("cancelled"; 0)
+            return: accepted
+        return: int
+        settled:
+            private: @: job parent(node)
+            return: job\private\pending = 0
+    ---
+    Result:
+        return: @
+        read:
+            private: @: job parent(node)
+            return: job\private\finalResult
+        undelivered:
+            private: @: job parent(node)
+            job\private\notificationUndelivered := 1
+            return: job\private\finalResult
+    ---
+    Completion:
+        char[]: kind
+        @: outcome
+        finish:
+            private: @: job parent(node)
+            if: job\private\completed != 0
+                return
+            private: @: result (copy(FxRetryPostResult))
+            result\kind := kind
+            result\attempts := job\private\attempts
+            result\outcome := outcome
+            job\private\finalResult := result
+            job\private\completed := 1
+            private: @: complete job\private\complete
+            post:
+                ask:
+                    complete(result)
+                undelivered:
+                    Result\undelivered()
+    ---
+    Replies:
+        @: outcome
+        accept:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            if: job\private\completed != 0
+                return
+            if: job\private\attempts >= job\private\limit
+                job\Completion\finish("completed"; outcome)
+                return
+            private: @: accepted FxApply\apply(job\private\retryOn; FxOne\make(FxRecords\reference(outcome)))
+            if: FxSeqPredicate\truth(accepted) = 0
+                job\Completion\finish("completed"; outcome)
+                return
+            private: int: duration job\private\pause
+            private: int: maximum job\private\maxPause
+            if: duration > maximum - duration
+                job\private\pause := maximum
+            else:
+                job\private\pause := duration + duration
+            if: duration = 0
+                job\dispatch()
+                return
+            job\private\pending += 1
+            private: @: delay job\private\delay
+            post:
+                ask:
+                    delay(duration)
+                answer:
+                    job\DelayReply\elapsed
+                timeout:
+                    ms:
+                        int: time job\private\timeoutMs
+                ---
+                unanswered:
+                    DelayReply\unanswered()
+                undelivered:
+                    DelayReply\undelivered()
+            ---
+            catch: FxCallFailure (@: failure)
+                job\Completion\finish("policyFailure"; failure)
+            catch: FxKernelFailure ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxKernelFailure"))
+            catch: FxTypeToken ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxTypeToken"))
+            catch: FxPredicate ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxPredicate"))
+            catch: ReceiverIndex ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("ReceiverIndex"))
+            catch: FxRecordArity ()
+                job\Completion\finish("policyFailure"; FxRetryEmptyFailure\make("FxRecordArity"))
+    ---
+    DelayReply:
+        int: acknowledgement
+        unanswered:
+            private: @: job parent(node)
+            job\Completion\finish("delayTimeout"; 0)
+        undelivered:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            job\Completion\finish("delayUndelivered"; 0)
+        elapsed:
+            private: @: job parent(node)
+            job\private\pending -= 1
+            if: job\private\completed != 0
+                return
+            if: acknowledgement != 1
+                job\Completion\finish("delayFailure"; 0)
+                return
+            job\dispatch()
+
+# request is an addressed nullary Message method returning an FxOutcome.
+# retryOn(outcome)->int decides explicitly which completed results/failures to
+# repeat. A timeout or undelivered request is terminal, so the library never
+# silently repeats an operation with an unknown completion state.
+# delay(ms)->int is the addressed timer worker acknowledgement, not a void call.
+# complete(result)->void is an addressed completion consumer; no ACK is invented.
+# Clock waiting belongs to the existing host delay port (MESSAGE_HTTP_PROFILE).
+# The complete LMX worker below adapts that port into ordinary Message replies.
+FxRetryPost:
+    private:
+        @: request
+        @: retryOn
+        int: attempts
+        @: delay
+        int: firstDelay
+        int: maxDelay
+        int: timeoutMs
+        @: complete
+    required: request retryOn attempts delay firstDelay maxDelay timeoutMs complete
+    return: @
+    retryPost:
+        throws: FxIndex
+        if: attempts < 1 || firstDelay < 0 || maxDelay < firstDelay || timeoutMs <= maxDelay
+            throw: FxIndex()
+        private: @: job (copy(FxRetryPostJob))
+        job\private\request := request
+        job\private\retryOn := retryOn
+        job\private\limit := attempts
+        job\private\delay := delay
+        job\private\pause := firstDelay
+        job\private\maxPause := maxDelay
+        job\private\timeoutMs := timeoutMs
+        job\private\complete := complete
+        job\dispatch()
+        return: job
+
+# These are explicit Message templates. The existing host/lifecycle launches
+# them as Threads with their own arenas; copying a Structure alone does not.
+# The worker and its operation are owned by the SAME receiving Message. Passing
+# a remote raw operation pointer here never makes a legal cross-owner call.
+FxRetryOperationMessage:
+    @: operation
+    @: arguments ()
+    return: @
+    run:
+        throws: copy(FxThrows\kernel)
+        return: FxTry\attempt(operation; arguments)
+
+FxRetryDelayMessage:
+    @: wait
+    int: duration
+    return: int
+    elapsed:
+        wait(duration)
+        return: 1
+
+# SOURCE: src/coreComparisonExamples.lmx
+# Core helpers extracted from the root comparison examples.
+# All state stays in the owning Message. To run an entire loop asynchronously,
+# post its owner method; existing post supplies transport, ordering and reply.
+# No mutable declaration, callback or namespace is shared across Message arenas.
+
+FxBetween:
+    copy: sys\OPERANDS_TEMPLATE
+    const: int: PRIORITY sys\priority("<=")
+    return: int
+    between:
+        throws: RangeArity
+        if: length(right) != 2
+            throw: RangeArity()
+        return: \right[0] <= \left && \left <= \right[1]
+
+# Explicit bridge contract: see CORE_EXAMPLE_HELPERS.md. This is a required
+# kernel provider, not an implemented ordinary LMX function hidden in a comment.
+FxKernelAttemptAcceptedAPI :: (@: form; return: @)
+
+# The declaration and its body share this receiving execution's live places.
+# Only source Stop terminates; a body Stop is preserved as FxCallFailure.
+FxIterateUntilStop:
+    @: iteration
+    @: body
+    iterateUntilStop:
+        throws: copy(FxThrows\call)
+        while: 1
+            private: @: step FxKernel\attemptAccepted(iteration)
+            if: step\ok = 0
+                if: FxSameText\same(step\failure; "Stop")
+                    break
+                throw: FxCallFailure(step)
+            private: @: result FxKernel\attemptAccepted(body)
+            if: result\ok = 0
+                throw: FxCallFailure(result)
+
+# SOURCE: src/corePerlExamples.lmx
+# Generic ordered operations shared by the Perl and Julia comparison suites.
+# Every Structure is already an @[] sequence. Dense Arrays keep their real
+# profile through the common array helpers; there is no int-only element path.
+# Callbacks execute in one Message and must not mutate the source sequence or
+# the ordering/equality keys during traversal. External callback effects are
+# not rolled back. A failed comparison never publishes a partial result.
+
+# Stable, non-mutating bottom-up merge sort. compare(a,b) returns an int whose
+# sign orders a and b; zero preserves their original order. No subtraction of
+# user values is performed here, so ordering does not introduce value overflow.
+FxSort:
+    private:
+        @: items
+        @: compare
+    required: items compare
+    return: @
+    sort:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: current FxSeqSlice\slice(items; 0; count)
+        if: count < 2
+            return: current
+        private: @: scratch FxSeqAllocate\make(info\arrayType; count)
+        private: int: width 1
+        while: width < count
+            private: int: start 0
+            while: start < count
+                private: int: middle count
+                if: width < count - start
+                    middle := start + width
+                private: int: end count
+                if: width < count - middle
+                    end := middle + width
+                private: int: left start
+                private: int: right middle
+                private: int: at start
+                while: at < end
+                    private: int: takeLeft 0
+                    if: right = end
+                        takeLeft := 1
+                    else:
+                        if: left < middle
+                            private: @: a FxSeqRead\read(current; left)
+                            private: @: b FxSeqRead\read(current; right)
+                            private: @: answer FxApply\apply(compare; FxTwo\make(a; b))
+                            private: int: order FxSeqInteger\read(answer)
+                            takeLeft := order <= 0
+                    ---
+                    private: @: selected 0
+                    if: takeLeft != 0
+                        selected := FxSeqRead\read(current; left)
+                        left += 1
+                    else:
+                        selected := FxSeqRead\read(current; right)
+                        right += 1
+                    ---
+                    FxSeqStore\write(scratch; at; selected)
+                    at += 1
+                start := end
+            private: @: previous current
+            current := scratch
+            scratch := previous
+            # Guard before doubling: count bounds the array length and bytes.
+            if: width > count - width
+                width := count
+            else:
+                width += width
+        ---
+        return: current
+
+# First occurrence wins. The explicit equality callback supports arbitrary
+# typed values and references without assuming a hash/string representation.
+# The generic algorithm is quadratic in the number of distinct retained values.
+FxUnique:
+    private:
+        @: items
+        @: same
+    required: items same
+    return: @
+    unique:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxPredicate
+            FxTypeToken
+            ReceiverIndex
+            SequenceElement
+            SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(info\arrayType; count)
+        private: int: used 0
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: int: duplicate 0
+            private: int: j 0
+            while: j < used
+                private: @: previous FxSeqRead\read(result; j)
+                private: @: answer FxApply\apply(same; FxTwo\make(previous; item))
+                if: FxSeqPredicate\truth(answer) != 0
+                    duplicate := 1
+                    break
+                j += 1
+            if: duplicate = 0
+                FxSeqStore\write(result; used; item)
+                used += 1
+            i += 1
+        sys\resize(result; used)
+        return: result
 
 # SOURCE: src/regex/support.lmx
 # REGEX: ordinary callable Structures and explicit matching state.
@@ -3408,12 +3965,16 @@ RxIsPattern:
     private: @: value
     return: int
     test:
-        return: satisfies(value; Pattern)
+        throws: copy(FxThrows\kernel)
+        # Read the existing directed interface check without trial execution.
+        # Unresolved compatibility is a service failure, never a false result.
+        return: FxKernel\acceptsRequirement(candidate := value; requirement := Pattern)
 
 RxNormalize:
     private: @: value
     return: @
     make:
+        throws: copy(FxThrows\kernel)
         if: RxIsPattern\test(value := value) != 0
             return: value
         # Ordinary admission performs the rejection for numbers, arbitrary
@@ -4337,6 +4898,7 @@ RxPartsPrepare:
     private: @: patterns
     return: @
     prepare:
+        throws: copy(FxThrows\kernel)
         private: @: info FxSeqInfo\get(source := patterns)
         private: @[]: parts []
         sys\resize(parts; length(patterns))
@@ -4355,6 +4917,7 @@ RxSequence:
     required: patterns
     return: @
     sequence:
+        throws: copy(FxThrows\kernel)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: emptyPattern
@@ -4367,6 +4930,7 @@ RxChoice:
     required: patterns
     return: @
     choice:
+        throws: copy(FxThrows\kernel)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: neverPattern
@@ -4485,7 +5049,7 @@ RxRepeated:
     required: pattern
     return: @
     repeated:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         if: minimum < 0
             throw: PatternArgument()
         if: order != extendFirst && order != stopFirst
@@ -4494,7 +5058,8 @@ RxRepeated:
         config\pattern := RxNormalize\make(value := pattern)
         config\minimum := minimum
         config\order := order
-        if: satisfies(maximum; RxUnbounded) = 0
+        # A copied configuration keeps its role; identity is not its contract.
+        if: FxKernel\acceptsRequirement(candidate := maximum; requirement := RxUnbounded) = 0
             private: int: bound \maximum
             if: bound < minimum || bound < 0
                 throw: PatternArgument()
@@ -4588,6 +5153,7 @@ RxAtomic:
     required: pattern
     return: @
     atomic:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxUnaryConfig))
         config\pattern := RxNormalize\make(value := pattern)
         return: RxPatternFactory\make(RxAtomicOpen\open; config)
@@ -4629,6 +5195,7 @@ RxCapture:
     required: name pattern
     return: @
     capture:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxCaptureConfig))
         config\name := name
         config\pattern := RxNormalize\make(value := pattern)
@@ -4708,6 +5275,7 @@ RxAhead:
     required: pattern
     return: @
     ahead:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -4719,6 +5287,7 @@ RxNotAhead:
     required: pattern
     return: @
     notAhead:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -4730,6 +5299,7 @@ RxBehind:
     required: pattern
     return: @
     behind:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1
@@ -4741,6 +5311,7 @@ RxNotBehind:
     required: pattern
     return: @
     notBehind:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1
@@ -4783,6 +5354,7 @@ RxMatchAt:
     required: source pattern position
     return: @
     matchAt:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := position)
@@ -4794,6 +5366,7 @@ RxWholeMatch:
     required: source pattern
     return: @
     wholeMatch:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         return: RxSelectAt\select(source := prepared; pattern := ready; position := 0; whole := 1)
@@ -4852,6 +5425,7 @@ RxFind:
     required: source pattern
     return: @
     find:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
@@ -4878,6 +5452,7 @@ RxEachMatch:
     required: source pattern
     return: @
     eachMatch:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: owner (copy(RxFindAllOwner))
@@ -4891,6 +5466,7 @@ RxContains:
     required: source pattern
     return: int
     contains:
+        throws: copy(FxThrows\kernel)
         private: @: found RxFind\find(source := source; pattern := pattern)
         return: found\present
 
@@ -4901,6 +5477,7 @@ RxHasPrefix:
     required: source pattern
     return: int
     hasPrefix:
+        throws: copy(FxThrows\kernel)
         private: @: found RxMatchAt\matchAt(source := source; pattern := pattern; position := 0)
         return: found\present
 
@@ -4911,6 +5488,7 @@ RxHasSuffix:
     required: source pattern
     return: int
     hasSuffix:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: int: position 0
@@ -4933,6 +5511,7 @@ RxMatches:
     required: source pattern
     return: int
     matches:
+        throws: copy(FxThrows\kernel)
         private: @: found RxWholeMatch\wholeMatch(source := source; pattern := pattern)
         return: found\present
 
@@ -5023,7 +5602,8 @@ RxReplacementAccept:
     required: replacement
     return: @
     accept:
-        if: satisfies(replacement; char[]) != 0
+        throws: copy(FxThrows\kernel)
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
             private: char[]: text \replacement
             return: replacement
         private: RxReplacement@: operation replacement
@@ -5035,8 +5615,9 @@ RxReplacementText:
         Match@: matched
     return: char[]
     make:
+        throws: copy(FxThrows\kernel)
         private: char[]: text
-        if: satisfies(replacement; char[]) != 0
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
             text := \replacement
         else:
             private: RxReplacement@: operation replacement
@@ -5054,6 +5635,7 @@ RxReplaceFirst:
     required: source pattern replacement
     return: char[]
     replaceFirst:
+        throws: copy(FxThrows\kernel)
         private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
@@ -5077,6 +5659,7 @@ RxReplace:
     required: source pattern replacement
     return: char[]
     replace:
+        throws: copy(FxThrows\kernel)
         private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
@@ -5102,6 +5685,7 @@ RxSplit:
     required: source pattern
     return: @
     split:
+        throws: copy(FxThrows\kernel)
         private: @: prepared RxPrepare\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
@@ -5152,7 +5736,7 @@ RxThenOperand:
     const: int: PRIORITY sys\priority("+")
     return: @
     then:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) < 2
             throw: PatternArgument()
@@ -5167,21 +5751,21 @@ RxRepeatOperands:
     const: int: PRIORITY sys\priority("*")
     return: @
     times:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
     atLeast:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
         private: int: count \args[1]
         return: RxRepeated\repeated(pattern := args[0]; minimum := count)
     atMost:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 2
             throw: PatternArgument()
@@ -5190,7 +5774,7 @@ RxRepeatOperands:
             throw: PatternArgument()
         return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
     optional:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         if: length(args) != 1
             throw: PatternArgument()
@@ -5211,7 +5795,7 @@ RxAlternativeDispatch:
     required: right
     return: @
     probe:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         private: @: out (copy(RxAlternativeDispatchResult))
         private: @: args RxLogicalArguments\collect(left := left; right := right)
         private: int: hasPattern 0
@@ -5352,6 +5936,14 @@ fun:
         @: atLeast RxRepeatOperands\atLeast
         @: atMost RxRepeatOperands\atMost
         @: optional RxRepeatOperands\optional
+        @: findFirst FxFindFirst\findFirst
+        @: allOf FxAllOf\allOf
+        @: equalFields FxEqualFields\equalFields
+        @: retryPost FxRetryPost\retryPost
+        @: between FxBetween\between
+        @: iterateUntilStop FxIterateUntilStop\iterateUntilStop
+        @: sort FxSort\sort
+        @: unique FxUnique\unique
 
 # SOURCE: examples/generic_callable_examples.lmx
 # ПРИМЕРЫ ОБЩЕГО СЕМЕЙСТВА (не выполнены ядром).

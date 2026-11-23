@@ -19,6 +19,14 @@ FxKernelFieldNamesAPI :: (@: source; return: @)
 
 FxKernelRenameFieldsAPI :: (@: target; @: indices; @: labels)
 
+# AR01 observes the existing interface checker; it does not change satisfies.
+FxKernelAcceptsRequirementAPI :: (@: candidate; @: requirement; @: consumer 0; return: int)
+
+# A proven compatible/incompatible interface yields 1/0. Unresolved required
+# paths yield FxKernelFailure(), malformed requirements yield FxTypeToken().
+# No body/default/test/converter executes; ordinary real reception is separate.
+# This is a required provider contract, not a native implementation.
+
 # Five phase hooks for existing ordinary call preparation/execution.
 # A borrowed frame is service state of THIS invocation, never persistent graph.
 FxKernelCurrentCallAPI :: (@: owner; return: @)

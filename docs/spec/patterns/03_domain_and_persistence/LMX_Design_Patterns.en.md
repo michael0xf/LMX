@@ -10,12 +10,6 @@ All original patterns 16–34 remain separate. Each triplet shows the same bound
 - [Excel](LMX_Comparison_03_domain_and_persistence.xlsx)
 - [PDF](LMX_Comparison_03_domain_and_persistence.pdf)
 - [CSV](LMX_Comparison_03_domain_and_persistence.csv)
-- [Methodology](../COMPARISON_METHODOLOGY.en.md)
-- [All 90 patterns](../PATTERN_CATALOG_90.en.md)
-- [Validation status](../VALIDATION.md)
-- [Message and existing HTTP transport profile](../MESSAGE_HTTP_PROFILE.md)
-- [Operands and libraries: edition rules](../OPERAND_USAGE_PROFILE.md)
-- [Review of all 90 examples](../OPERAND_LIBRARY_REVIEW.md)
 
 ## Catalog
 
@@ -23,25 +17,25 @@ All original patterns 16–34 remain separate. Each triplet shows the same bound
 
 Domain collection access hides retrieval details.
 
-**Implementation of the supplied component:** [094. FindById — implementation](094_find_by_id_implementation_comparision.md)
+**Separate implementation comparison:** [094. FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
 **Scenario:** Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.
 
 **Observation:** Return the existing account 9, then absence; do not create a second instance.
 
-All clients use a ready, narrow FindById helper over records with id while retaining the domain Account and repository boundary. The companion exposes iteration, early return, and absence in every language. Ready LINQ is not compared against a manual loop only in LMX.
+The clients use core findFirst, Python next, and LINQ FirstOrDefault. The reusable first-match loops are compared separately in094; no foreign example imports our comparison implementation.
 
-### 094. [FindById — implementation](094_find_by_id_implementation_comparision.md)
+### 094. [FindFirst — generic implementation](094_find_by_id_implementation_comparision.md)
 
-Implement imported first-record lookup by integer id.
+Implement generic first-match search with explicit presence and arbitrary predicates.
 
 **Usage examples:** [016. Repository](016_repository_comparision.md)
 
-**Scenario:** Scan an ordered record sequence and return the first matching id or absence.
+**Scenario:** Scan ordered values until accepts(value) is true; return a tagged present value or absence. Preserve the original Account identity for the Repository fixture.
 
-**Observation:** Id 7 returns its original record; duplicate ids return the first; unknown ids and empty sequences return absence.
+**Observation:** Empty and no-match inputs are absent; duplicates return the first; a matching null/default value remains present; predicate failures propagate.
 
-All implementations explicitly show their own loop, id comparison, early return, and absence branch. Python next/filter and C# FirstOrDefault are not used to implement the helper. LMX/Python require id structurally; C# exposes that required access through IIdentified.
+The loops are fully written in all languages. The controls do not call next/FirstOrDefault here. No implementation hardcodes Account, id, int, or a fixed sequence length.
 
 ### 017. [Unit of Work](017_unit_of_work_comparision.md)
 
@@ -187,49 +181,49 @@ Every implementation keeps parameters separate from SQL text.
 
 Compose predicates independently of their candidate values.
 
-**Implementation of the supplied component:** [095. Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+**Separate implementation comparison:** [095. AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
 **Scenario:** Combine nonnegative and below100 with AND; test -1,50,100.
 
 **Observation:** Results are false,true,false; the right predicate is skipped when the left is false.
 
-Each client defines concrete nonnegative/below100 predicates and imports the combinator that builds a reusable predicate. LMX makes composition an A both B expression; Python and C# call a factory. The companion explicitly implements evaluation and short-circuiting in all three languages.
+The same two predicates remain in every usage client; allOf, all(generator), and Enumerable.All perform conjunction. Generic implementations are compared separately in095.
 
-### 095. [Specification combinator — implementation](095_specification_combinator_implementation_comparision.md)
+### 095. [AllOf — predicate conjunction implementation](095_specification_combinator_implementation_comparision.md)
 
-Implement imported binary predicate composition with short-circuiting.
+Build an ordered short-circuit conjunction over a finite predicate sequence.
 
 **Usage examples:** [031. Specification](031_specification_comparision.md)
 
-**Scenario:** Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.
+**Scenario:** Retain a snapshot of callable references and construct a new predicate. Each invocation evaluates in order until false; an empty set is true.
 
-**Observation:** nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.
+**Observation:** For the two int checks: -1→false,50→true,100→false. Later predicates do not run after false or failure. Empty sets are true under an explicitly known signature.
 
-LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used.
+LMX supports exact multi-position callable signatures; Python forwards args/kwargs; C# carries the input shape as generic T (a tuple when needed). Every implementation copies the callable collection once and preserves short circuit.
 
 ### 032. [Value Object](032_value_object_comparision.md)
 
 Equality follows component values rather than object identity.
 
-**Implementation of the supplied component:** [096. Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+**Separate implementation comparison:** [096. EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
 
 **Scenario:** Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.
 
 **Observation:** The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.
 
-All clients create two equal component values and a third with another currency, then call ready value equality. Implementation is separated symmetrically and shown alongside: an explicit LMX equals operand, tuple-based Python Money with same, and a C# readonly struct with Same. Neither client nor implementation size represents a universal dataclass/record generator.
+The clients use actual immutable/value facilities. LMX states its field comparator explicitly; Python and C# generate it from the record fields. Money is never promoted into a language builtin. The reusable equality loop and manual storage counterparts are in096.
 
-### 096. [Money value equality — implementation](096_money_value_equality_implementation_comparision.md)
+### 096. [EqualFields — value equality implementation](096_money_value_equality_implementation_comparision.md)
 
-Fully show the concrete two-component Money representation and imported equality.
+Implement reusable ordered field equality with an explicitly supplied relation.
 
 **Usage examples:** [032. Value Object](032_value_object_comparision.md)
 
-**Scenario:** Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.
+**Scenario:** Compare arbitrary finite sequences by length and each pair of fields; the Money fixture keeps cents and currency as read-only values.
 
-**Observation:** Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.
+**Observation:** Empty equals empty. Different lengths call no comparator. Equal lengths stop at the first unequal pair; the original Money fixture gives10. Comparator failures propagate.
 
-Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm.
+The common loop is generic in every language. Foreign manual Money types additionally expose their required field/storage/value protocols. LMX reuses the existing immutable structural mechanism instead of emulating a generated class.
 
 ### 033. [Optimistic Offline Lock](033_optimistic_offline_lock_comparision.md)
 
@@ -250,7 +244,3 @@ Reserve a row for a business session without holding one SQL transaction open.
 **Observation:** Only the current owner can save. Expired tokens never regain authority.
 
 All variants carry the token to the protected write. A process-local guard does not protect editing across HTTP requests.
-
-## Boundaries
-
-Sizes are computed from each comparison’s three listings. Paired cases count ready-component use separately from the component implementation, with the same boundary in all three languages. Runtime, HTTP hosts and databases are not hidden behind a new import. IDs 1–85 retain the supplied list, 86–90 are added patterns, and IDs above 90 identify separate library-component implementations.

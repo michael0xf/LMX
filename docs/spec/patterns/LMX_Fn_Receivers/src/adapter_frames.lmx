@@ -211,7 +211,7 @@ FxFrameAttempt:
     private: @: frame
     return: @
     attempt:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         return: FxKernel\enter(frame; frame\failures)
 
 FxFrameApply:
@@ -234,7 +234,7 @@ FxInvokeEntries:
         @: failures
     return: @
     attempt:
-        throws: FxKernelFailure FxTypeToken
+        throws: copy(FxThrows\kernel)
         private: @: prepared FxKernel\prepare(operation; entries)
         finally:
             FxKernel\releaseCall(prepared)

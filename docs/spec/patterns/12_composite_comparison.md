@@ -335,29 +335,7 @@ LMX сопоставлен с правилами docs: роли DATA/CODE, ар�
 
 
 
-## Процедурный эквивалент LMX — вне основного подсчёта
+### Небольшое отличие без повторного листинга
 
-Основной вариант с derive содержит 296 непробельных символов; этот эквивалент через merge — 301. Оба используют одно текущее ядро и дают тот же результат.
+`derive(base; overlay)` можно заменить на `(merge(base; overlay))` в пяти строках создания узлов. Остальные строки и алгоритм совпадают, поэтому второго полного листинга нет.
 
-<!-- uncounted-code: procedural-lmx -->
-```lmx
-Leaf:
-    int: value
-    return: int
-    total:
-        return: value
-
-Pair:
-    @: left
-    @: right
-    return: int
-    total:
-        return: left\total() + right\total()
-    demo:
-        @: a (merge(Leaf; (int: value 2)))
-        @: b (merge(Leaf; (int: value 3)))
-        @: c (merge(Leaf; (int: value 5)))
-        @: inner (merge(Pair; (@: left b; @: right c)))
-        @: tree (merge(Pair; (@: left a; @: right inner)))
-        return: tree\total()
-```

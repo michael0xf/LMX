@@ -193,31 +193,8 @@
           "why_en": "Store, actions, and pure state transformations."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(state := node\\state; delta := delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
-          "reuse": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(node\\state; delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n"
-        }
-      },
-      "procedural_lmx": "Reducer:\n    int: state\n    int: delta\n    return: int\n    reduce:\n        return: state + delta\n\nStore:\n    int: state 0\n    int: delta\n    dispatch:\n        node\\state := Reducer\\reduce(state := node\\state; delta := delta)\n\nDemo:\n    return: int\n    run:\n        Store\\state := 0\n        Store\\dispatch(delta := 2)\n        int: previous Store\\state\n        Store\\dispatch(delta := 3)\n        return: previous * 10 + Store\\state\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use positional state and delta for the visibly ordered Reducer DATA. Reducer invocation, current-store update and the saved intermediate state remain; no helper is hidden. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 35,
@@ -264,31 +241,8 @@
           "why_en": "Common handling of incoming requests."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(admitted := 1; route := 1)\n",
-          "reuse": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(1; 1)\n"
-        }
-      },
-      "procedural_lmx": "Front:\n    int: admitted\n    int: route\n    return: int\n    handle:\n        if: admitted = 0\n            return: 403\n        if: route = 1\n            return: 200\n        return: 404\n    demo:\n        return: handle(admitted := 1; route := 1)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the visible Front input order admitted, route in demo. Both authorization and unknown-route branches remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 36,
@@ -335,31 +289,8 @@
           "why_en": "A handler for one page or action."
         }
       ],
-      "reuse_review": {
-        "previous_primary": "procedural",
-        "previous_fairness_note": "",
-        "mechanism": "positional_simplification",
-        "review_plan": "validation/reuse_plan_01_05_20261122.json"
-      },
-      "variants": {
-        "LMX": {
-          "procedural": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(quantity := 3)\n",
-          "reuse": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(3)\n"
-        }
-      },
-      "procedural_lmx": "OrderPage:\n    int: quantity\n    return: int\n    handle:\n        if: quantity < 1\n            return: 0\n        return: quantity * 10\n    demo:\n        return: handle(quantity := 3)\n",
-      "eligible_variants": {
-        "LMX": [
-          "procedural",
-          "reuse"
-        ]
-      },
-      "primary_variant": {
-        "LMX": "reuse"
-      },
-      "fairness_notes": {
-        "LMX": "Use the sole visible quantity input in demo. The invalid-quantity branch and subtotal calculation remain unchanged. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
-      }
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами."
     },
     {
       "id": 37,

@@ -97,49 +97,10 @@ RxDerive:
         return: (merge(base; extension))
 ```
 
-### Прямой процедурный аналог — не входит в основной подсчёт
+### Небольшое отличие без повторного листинга
 
-Это корректная запись того же смысла на том же текущем ядре, а не другая версия библиотеки.
+Четыре вызова `derive(model; overlay)` можно записать как `(merge(model; overlay))`. Это та же композиция, поэтому полный дублирующий листинг не повторяется.
 
-<!-- uncounted-lmx: alternative -->
-```lmx
-Button:
-    int: value
-    return: int
-    render:
-        return: value
-
-Frame:
-    int: value
-    @: button
-    return: int
-    render:
-        return: value + button\render()
-
-Light:
-    return: @
-    button:
-        return: (merge(Button; (int: value 1)))
-    frame:
-        return: (merge(Frame; (int: value 10)))
-
-Dark:
-    return: @
-    button:
-        return: (merge(Button; (int: value 2)))
-    frame:
-        return: (merge(Frame; (int: value 20)))
-
-Client:
-    @: factory
-    return: int
-    render:
-        @: button factory\button()
-        @: frame factory\frame()
-        return: frame\render()
-    demo:
-        return: render(factory := Light) + render(factory := Dark)
-```
 
 ## 2. Python
 

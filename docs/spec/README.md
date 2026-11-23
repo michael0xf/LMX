@@ -3,8 +3,8 @@
 > **Repository note.** This directory holds the edition of 2026-11-21 in the layout of the author's packet
 > (it lay in `new_parts/newdocs/` and was removed there as a duplicate on the author's order of 2026-11-21)
 > with the author's edition of 2026-11-22 merged into it ([plan](../../next_core_tasks_v3.md#docs-20261122)).
-> The texts are verbatim; only link targets required by the placement
-> were adapted. Since 2026-11-23 the primary documents stand in `docs/spec`, with [CORE.md](CORE.md) and the
+> The uploaded base preserved those texts apart from placement links. The present
+> review additionally applies the core-function and comparison changes listed below. Since 2026-11-23 the primary documents stand in `docs/spec`, with [CORE.md](CORE.md) and the
 > [developer instruction](L2_L3_CODING_INSTRUCTION.md) among them, and the documents of patterns and
 > examples in `docs/spec/patterns` (formerly `docs/new_parts`); the author's task documents stay in
 > `docs/tasks` as history. In this repository the semantics and the grammar are generated from
@@ -22,7 +22,14 @@ inside individual files can refer to the author's wider repository; those paths 
 not change the layout or the source of this edition. The current work is summarized
 in the [revision report](REVISION_2026-11-22.md), including the [naming decisions](NAMING_2026-11-22.md).
 
-**Review edition: 2026-11-22.**
+**Review edition: 2026-11-23.** This edition starts from the author's newly uploaded
+`spec.tar.gz`, not from an earlier generated packet.
+
+**Current implementation work:** [direct core functions](CORE_FUNCTIONS.md) and
+[library-use and implementation comparisons](patterns/CORE_COMPARISONS_2026-11-23.md). Control-language clients
+use real language/library facilities; their separately authored implementations
+remain comparison material. LMX clients use the corresponding direct kernel
+functions. Only meaningfully different approaches retain full alternative code.
 
 **Author clarification — declaration arguments:** a supplied declaration is a DATA Structure,
 not an automatically executed call. Its internal name never selects an input. Unnamed actuals
@@ -74,6 +81,7 @@ static DATA replica, or namespace-shaped program copy does not.
 
 | Document | Purpose |
 | --- | --- |
+| [Core-function inventory](CORE_FUNCTIONS.md) | Complete public function list, new comparison helpers, implementation paths and integration duties |
 | [Kernel integration of the receivers](kernel-implementation.en.md#receiver-kernel-integration) | satisfies rename, direct receivers, generic containers, signature equivalence and source links |
 | [Receiver guide](patterns/RECEIVERS.md) | Complete catalog and value-record/callable distinction |
 | [Receiver sources and API](patterns/LMX_Fn_Receivers/README.md) | Transferred and generalized source package |

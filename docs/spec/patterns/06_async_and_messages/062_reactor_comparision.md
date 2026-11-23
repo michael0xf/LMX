@@ -10,8 +10,6 @@
 
 **Граница сравнения:** Протокол и порты. Это не реализация epoll/kqueue и не zero-copy I/O. Буферы, edge-triggered drain, повторная регистрация и ошибки провайдера требуют расширения контракта.
 
-Все три листинга относятся к указанному сценарию. Предоставленные порты и библиотеки перечислены рядом с кодом; их реализации не входят в размер листинга.
-
 ## LMX
 
 ```lmx
@@ -73,6 +71,10 @@ LMX использует отдельные исполняемые Message с с
 
 У LMX событие готовности становится Message. Существенный признак Reactor сохранён: реальные байты читает handler после уведомления. Go/Erlang loops показывают тот же adapter boundary.
 
+### Асинхронная граница
+
+Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры.
+
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
@@ -81,7 +83,7 @@ LMX использует отдельные исполняемые Message с с
 | Go | 157 | 8 |
 | Erlang | 168 | 8 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
@@ -97,6 +99,8 @@ Descriptor readiness triggers a handler that performs a nonblocking read itself.
 
 **Scope and limitations.** This does not implement epoll/kqueue or zero-copy I/O. Buffers, edge-triggered draining, rearming and provider errors require an extended contract.
 
+The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.
+
 ### Dependencies and execution boundaries
 
 - **LMX:** LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.readReady(fd:int):int is a supplied nonblocking adapter: >0 byte count, 0 would-block, -1 closure; unregister(fd):void disables readiness. sink.write(int):void records the byte count. The I/O provider owns readiness demultiplexing and mails the owner without starting a second turn.
@@ -109,8 +113,6 @@ Descriptor readiness triggers a handler that performs a nonblocking read itself.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

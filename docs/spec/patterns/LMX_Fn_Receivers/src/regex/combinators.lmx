@@ -9,6 +9,7 @@ RxPartsPrepare:
     private: @: patterns
     return: @
     prepare:
+        throws: copy(FxThrows\kernel)
         private: @: info FxSeqInfo\get(source := patterns)
         private: @[]: parts []
         sys\resize(parts; length(patterns))
@@ -27,6 +28,7 @@ RxSequence:
     required: patterns
     return: @
     sequence:
+        throws: copy(FxThrows\kernel)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: emptyPattern
@@ -39,6 +41,7 @@ RxChoice:
     required: patterns
     return: @
     choice:
+        throws: copy(FxThrows\kernel)
         private: @: config RxPartsPrepare\prepare(patterns := patterns)
         if: length(config\parts) = 0
             return: neverPattern
@@ -157,7 +160,7 @@ RxRepeated:
     required: pattern
     return: @
     repeated:
-        throws: PatternArgument
+        throws: FxKernelFailure FxTypeToken PatternArgument
         if: minimum < 0
             throw: PatternArgument()
         if: order != extendFirst && order != stopFirst
@@ -166,7 +169,8 @@ RxRepeated:
         config\pattern := RxNormalize\make(value := pattern)
         config\minimum := minimum
         config\order := order
-        if: satisfies(maximum; RxUnbounded) = 0
+        # A copied configuration keeps its role; identity is not its contract.
+        if: FxKernel\acceptsRequirement(candidate := maximum; requirement := RxUnbounded) = 0
             private: int: bound \maximum
             if: bound < minimum || bound < 0
                 throw: PatternArgument()
@@ -260,6 +264,7 @@ RxAtomic:
     required: pattern
     return: @
     atomic:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxUnaryConfig))
         config\pattern := RxNormalize\make(value := pattern)
         return: RxPatternFactory\make(RxAtomicOpen\open; config)
@@ -301,6 +306,7 @@ RxCapture:
     required: name pattern
     return: @
     capture:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxCaptureConfig))
         config\name := name
         config\pattern := RxNormalize\make(value := pattern)
@@ -380,6 +386,7 @@ RxAhead:
     required: pattern
     return: @
     ahead:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -391,6 +398,7 @@ RxNotAhead:
     required: pattern
     return: @
     notAhead:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 0
@@ -402,6 +410,7 @@ RxBehind:
     required: pattern
     return: @
     behind:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1
@@ -413,6 +422,7 @@ RxNotBehind:
     required: pattern
     return: @
     notBehind:
+        throws: copy(FxThrows\kernel)
         private: @: config (copy(RxLookConfig))
         config\pattern := RxNormalize\make(value := pattern)
         config\backward := 1

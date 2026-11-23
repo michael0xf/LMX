@@ -2,7 +2,7 @@
 
 Ограниченный повтор временного отказа с задержкой между попытками.
 
-**Реализация используемого компонента:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
+**Отдельное сравнение реализации:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
 
 ## Общий сценарий
 
@@ -10,101 +10,138 @@
 
 **Ожидаемое наблюдение:** Итог 200; три обращения и две задержки. Статус 400 прекращает повторы сразу.
 
-**Граница сравнения:** Использование библиотеки. Дедлайн, jitter, Retry-After и защита неидемпотентных операций не реализованы. Повтор после timeout может дублировать уже выполненный эффект.
+**Граница сравнения:** Использование библиотеки. Сохранены идемпотентные503,503,200 и задержки1,2мс. В LMX явно указан timeout письма1000мс; контроли могут задать deadline контекстом. Timeout не означает остановку удалённой работы. Jitter/Retry-After вне этой конечной политики.
 
-Готовые компоненты одинаково доступны всем трём языкам. Здесь считается клиентский код; полные реализации вынесенных компонентов показаны в связанных сравнениях выше.
+LMX вызывает операции единого ядра. Иностранные клиенты используют настоящие средства языка или установленную библиотеку; показанные рядом самостоятельные реализации в них не импортируются.
 
 ## LMX
 
 ```lmx
-RetryMessage:
-    @: request
-    @: delay
+RetryPolicy:
+    @: outcome
     return: int
+    unavailable:
+        if: outcome\ok = 0
+            return: 0
+        return: \outcome\value = 503
+
+RetryMessage:
+    @: worker
+    @: clock
+    @: sink
+    return: @
     run:
-        throws: Attempts
-        import: RetryLibrary
-        return: request retry 3 delay
+        throws: FxIndex
+        return: retryPost(worker\run; RetryPolicy\unavailable; 3; clock\elapsed; 1; 2; 1000; sink\complete)
 ```
 
-LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.
+worker и clock — явные Message из реализации097: отдельные арены, обычные post/reply. sink получает один итог;1 и2 — миллисекунды задержки.
 
 [Отдельный листинг](examples/lmx/039_retry.lm3)
 
 ## Go
 
 ```go
-import "example/retryhelper"
-func Retry(request func() int, delay func(int)) int {
-    return retryhelper.Run(request, 3, delay)
+package example
+import (
+    "context"
+    "errors"
+    "time"
+    backoff "github.com/cenkalti/backoff/v5"
+)
+func Retry(ctx context.Context, request func(context.Context) (int,error)) (int,error) {
+    unavailable := errors.New("503")
+    policy := backoff.NewExponentialBackOff()
+    policy.InitialInterval = time.Millisecond
+    policy.MaxInterval = 2*time.Millisecond
+    policy.Multiplier, policy.RandomizationFactor = 2,0
+    value,err := backoff.Retry(ctx, func() (int,error) {
+        status,e := request(ctx)
+        if e != nil { return status,backoff.Permanent(e) }
+        if status == 503 { return status,unavailable }
+        return status,nil
+    }, backoff.WithBackOff(policy), backoff.WithMaxTries(3), backoff.WithMaxElapsedTime(0))
+    if errors.Is(err,unavailable) { err=nil }
+    return value,err
 }
 ```
 
-request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Module path example/retryhelper — заданное в сборке имя показанного package retryhelper; это не внешняя скрытая зависимость. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2.
+Настоящий cenkalti/backoff v5.0.3; код097 не используется. Context задаёт внешний deadline/cancellation; только завершённый503 повторяется.
 
 [Отдельный листинг](examples/go/039_retry.go)
 
 ## C#
 
 ```csharp
-using PatternHelpers;
-static int Retry(System.Func<int> request, System.Action<int> delay) {
-    return RetryLibrary.Run(request, 3, delay);
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Polly;
+using Polly.Retry;
+public static class Example {
+    public static ValueTask<int> Retry(Func<CancellationToken,ValueTask<int>> request, CancellationToken token) {
+        var pipeline = new ResiliencePipelineBuilder<int>().AddRetry(new RetryStrategyOptions<int> {
+            MaxRetryAttempts=2,
+            ShouldHandle=new PredicateBuilder<int>().HandleResult(503),
+            Delay=TimeSpan.FromMilliseconds(1), MaxDelay=TimeSpan.FromMilliseconds(2),
+            BackoffType=DelayBackoffType.Exponential, UseJitter=false
+        }).Build();
+        return pipeline.ExecuteAsync(request,token);
+    }
 }
 ```
 
-request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Namespace PatternHelpers содержит показанный рядом статический RetryLibrary; клиентское приложение включает эту реализацию. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2.
+Настоящий Polly.Core8 Retry;2 означает повтора после первой попытки, всего3. Цепочка await не блокирует поток таймером.
 
 [Отдельный листинг](examples/csharp/039_retry.cs)
 
 ## Разбор LMX
 
-LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.
+worker и clock — явные Message из реализации097: отдельные арены, обычные post/reply. sink получает один итог;1 и2 — миллисекунды задержки.
 
 ## Сопоставление
 
-Во всех трёх языках это клиент одного и того же готового helper: приложение задаёт операцию, три попытки и таймер. LMX выражает применение обычным пользовательским операндом с подготовленными ссылками, Go/C# — вызовом функции. Полный цикл и backoff вынесены в отдельный сравниваемый пример реализации общей библиотеки; собственная почта LMX не добавляет автоматический retry.
+Используются direct LMX retryPost и настоящие Go/.NET retry libraries. Самостоятельные asynchronous реализации сравниваются только в097; отдельно указаны итог и окончание cleanup.
 
 ## Объём показанного исходника
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 102 | 8 |
-| Go | 112 | 4 |
-| C# | 125 | 4 |
+| LMX | 242 | 15 |
+| Go | 662 | 22 |
+| C# | 565 | 16 |
 
-Подсчёт включает комментарии и весь показанный код. Первая метрика исключает все пробельные символы, в том числе внутри строковых литералов. Исходный код при этом не изменяется. Это измерение листинга, не производительности, трудоёмкости или размера полной системы. Общий метод: [METHODOLOGY](../COMPARISON_METHODOLOGY.ru.md).
+Подсчёт включает весь показанный код и комментарии; исключаются только пробельные символы. Это размер листинга, не скорость или размер полной системы. [Методика](../COMPARISON_METHODOLOGY.ru.md).
 
 ## English explanation
 
 Bounded retry of a transient failure with delay between attempts.
 
-**Implementation of the supplied component:** [097. Retry Library — Implementation](097_retry_library_implementation_comparision.md)
+**Separate implementation comparison:** [097. RetryPost — asynchronous retry implementation](097_retry_library_implementation_comparision.md)
 
 **Scenario.** An idempotent read returns 503,503,200. Allow three attempts and delays of 1 and 2 units.
 
 **Expected observation.** Final status 200; three calls and two delays. Status 400 stops retries immediately.
 
-**LMX.** LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit.
+**LMX.** worker and clock are explicit Messages from097 with separate arenas and ordinary post/reply. sink receives one result;1 and2 are milliseconds of backoff.
 
-**Comparison.** All three languages show clients of the same ready helper: the application selects the operation, three attempts and timer. LMX uses an ordinary user operand with prepared references; Go/C# use a function call. The complete loop and backoff appear in a separately compared shared-library implementation; LMX mail does not add automatic retry.
+**Comparison.** Usage calls direct LMX retryPost and real Go/.NET retry libraries. Independently written asynchronous implementations are compared only in097. Their result and cleanup-settled boundaries are stated separately.
 
-**Scope and limitations.** Deadline, jitter, Retry-After and non-idempotent-operation protection are outside this core. Retrying after timeout may duplicate an already completed effect.
+**Scope and limitations.** The same idempotent503,503,200 fixture and1,2ms delays are preserved. LMΧ adds an explicit per-letter1000ms timeout in this client; control contexts may impose their own deadline. A timeout does not prove remote work stopped. Jitter and Retry-After are configurable concerns outside this bounded policy.
 
 ### Dependencies and execution boundaries
 
-- **LMX:** LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit.
-- **Go:** request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Module path example/retryhelper is the build-assigned path of the shown retryhelper package, not a hidden external dependency. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2.
-- **C#:** request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. This C# fragment uses supplied delegates; namespace and test entry are shared harness. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Namespace PatternHelpers contains the adjacent static RetryLibrary implementation, included by the client application. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2.
+- **LMX:** worker and clock are explicit Messages from097 with separate arenas and ordinary post/reply. sink receives one result;1 and2 are milliseconds of backoff.
+- **Go:** Real cenkalti/backoff v5.0.3;097 is not used. Context supplies outer deadline/cancellation; only completed503 results are retried.
+- **C#:** Real Polly.Core8 Retry;2 means retries after the first attempt,3 attempts total. Awaited delays do not block a thread.
 
 ## Источники / Sources
 
-- [Microsoft Azure — Retry](https://learn.microsoft.com/en-us/azure/architecture/patterns/retry) — Ограниченный повтор временного отказа с задержкой между попытками.
+- [cenkalti/backoff v5](https://pkg.go.dev/github.com/cenkalti/backoff/v5) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
+- [Polly retry](https://www.pollydocs.org/strategies/retry) — Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.
 
 **Норма LMX:** [CORE](../../CORE.md), [семантика](../../LMX_semantics.en.md), [guide](../../LMX_semantics_guide.en.md).
 
-Сетевые источники использованы для определения паттерна и проверки контрактов контрольных языков. Листинги созданы для общего сценария; заимствованные идеи не являются заявлением об исполнении исходного репозитория.
-
 ## Проверка
 
-Текущий статус см. в [VALIDATION](../VALIDATION.md). Ожидаемое наблюдение выше — критерий приёмки. Приложенный архив документации не содержит запускаемого LMX-ядра; выполнение LMX здесь не заявляется.
+Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).

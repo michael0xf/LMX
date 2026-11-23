@@ -573,7 +573,7 @@ cycles\iterate(body := (); iteration := int(item stream\next()))
 
 **Basis:** [positional counter](../LMX_semantics.en.md#named-actuals) and the [named record of the same call](../LMX_semantics.en.md#declaration-arguments).
 
-### D-03 — A matched declaration is retained, while an ordinary callable actual still executes
+### D-03 — A declaration is a Structure that no `int` input admits, while an ordinary callable actual still executes
 
 ```lmx
 Producer:
@@ -597,11 +597,11 @@ Run from counter 0 in separate fixtures:
 
 | Call | Result | Producer calls | Meaning |
 |---|---:|---:|---|
-| `Receiver\ignore(int: second Producer\make())` | 4 | 0 | Found name `second` receives its declaration form, which is unused |
-| `Receiver\read(int: second Producer\make())` | 14 | 1 | First consumed value evaluates the retained description once |
+| `Receiver\ignore(int: second Producer\make())` | refusal | 0 | The declaration is one Structure at the first position; `int: first` admits no Structure |
+| `Receiver\read(second := int(second Producer\make()))` | refusal | 0 | Naming the destination changes nothing: `int: second` admits no declaration Structure |
 | `Receiver\ignore(second := Producer\make())` | 4 | 1 | Ordinary callable actual executes under the ordinary call contract |
 
-The first declaration does not fill position `first`; the name exists in the callee data, so the named branch applies. Unlike D-01, this is not the unknown inner-name positional branch. Passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
+The declaration is not matched with the input `second` by its inner name: it is one Structure, and no `int` input takes it as a value, whether the destination is named or not. Unlike D-01, the receiving inputs here are not references. The refused calls run no `make`, and passing the declaration form must not overwrite `Receiver`'s source graph. Do not apply blanket quotation to every callable actual.
 
 **Basis:** [passing a declaration receiver](../LMX_semantics.en.md#declaration-arguments); [the boundary between a declaration receiver and a call](../LMX_semantics.en.md#declaration-arguments); [the call frame](../LMX_semantics.en.md#call-frame-20261115).
 

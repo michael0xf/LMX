@@ -61,8 +61,21 @@ Fable's pins were written before any build. Two of the helper's did not hold, an
 
 ## Mutants
 
-Six, by the helper, three of them builds of the frontend: run after this acceptance in a private stage; their
-table is added to this note when they are done.
+Six, by the helper, run after the acceptance in a private stage on the accepted commit; three are builds of the
+frontend.
+
+| Mutant | Result |
+| --- | --- |
+| c1: the head's text is parsed without the entry | killed: the static gate, the pair, the typed twin, the refusal |
+| c2: the entry skips the pass | killed by the same four |
+| c3: the entry calls the pass and ignores its result | killed by the refusal row alone |
+| c4: the entry does not test for an absent document | equivalent: a parse without an error always gives one |
+| c5: a predef document is parsed without the entry | killed by the static gate, which names the place |
+| c6: the header of the receiver table is parsed without the entry | killed by the static gate, the same |
+
+What the table shows: that the pass reaches the text of a head is held by the pair and two rows; that a refusal
+of the pass reaches the caller is held by the refusal row alone; that every reader goes through the entry is
+held only by the static gate, since no behaviour can tell it while L1 is not in the typed notation.
 
 ## Known limits
 

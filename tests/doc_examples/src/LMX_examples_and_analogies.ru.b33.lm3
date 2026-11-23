@@ -1,21 +1,8 @@
-CharacterRange:
-    copy: sys\OPERANDS_TEMPLATE
-    return: int
-    between:
-        throws: RangeArity
-        if: length(right) != 2
-            throw: RangeArity()
-        char: value \left
-        char: lower \right[0]
-        char: upper \right[1]
-        return: lower <= value && value <= upper
-
 TicketCode:
     char[]: candidate
     return: int
     accepts:
         throws: RangeArity
-        import: CharacterRange
         if: length(candidate) != 5
             return: 0
         if: candidate[2] != '-'

@@ -1,0 +1,14 @@
+FxIterateUntilStop:
+    @: iteration
+    @: body
+    iterateUntilStop:
+        throws: copy(FxThrows\call)
+        while: 1
+            private: @: step FxKernel\attemptAccepted(iteration)
+            if: step\ok = 0
+                if: FxSameText\same(step\failure; "Stop")
+                    break
+                throw: FxCallFailure(step)
+            private: @: result FxKernel\attemptAccepted(body)
+            if: result\ok = 0
+                throw: FxCallFailure(result)

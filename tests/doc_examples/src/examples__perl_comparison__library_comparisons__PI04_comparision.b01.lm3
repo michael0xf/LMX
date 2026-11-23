@@ -1,0 +1,38 @@
+FxGroup:
+    @: key 0
+    @: items 0
+
+FxGroupBy:
+    private:
+        @: items
+        @: keyOf
+        @: sameKey
+    required: items keyOf sameKey
+    return: @
+    groupBy:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: key FxApply\apply(keyOf; FxOne\make(item))
+            private: @: group 0
+            private: int: j 0
+            while: j < length(result)
+                private: FxGroup@: candidate result[j]
+                private: @: flagRecord FxApply\apply(sameKey; FxTwo\make(candidate\key; key))
+                private: int: flag \flagRecord
+                if: flag != 0
+                    group := candidate
+                    break
+                j += 1
+            if: group = 0
+                group := (copy(FxGroup))
+                group\key := key
+                group\items := FxSeqAllocate\make(@[]; 0)
+                FxSeqPush\append(result; group)
+            FxSeqPush\append(group\items; item)
+            i += 1
+        return: result

@@ -1,11 +1,9 @@
-TicketCode:
-    char[]: candidate
+FxBetween:
+    copy: sys\OPERANDS_TEMPLATE
+    const: int: PRIORITY sys\priority("<=")
     return: int
-    accepts:
+    between:
         throws: RangeArity
-        import: CharacterRange
-        if: length(candidate) != 5
-            return: 0
-        if: candidate[2] != '-'
-            return: 0
-        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
+        if: length(right) != 2
+            throw: RangeArity()
+        return: \right[0] <= \left && \left <= \right[1]

@@ -1,0 +1,17 @@
+Order:
+    @: first
+    @: second
+    return: int
+    compare:
+        if: first\key < second\key
+            return: -1
+        if: first\key > second\key
+            return: 1
+        return: 0
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        return: sort(items; Order\compare)

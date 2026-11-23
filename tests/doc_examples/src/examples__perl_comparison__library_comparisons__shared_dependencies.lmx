@@ -1,0 +1,1325 @@
+FxAppend:
+    private:
+        @: first
+        @: second
+    return: @
+    append:
+        throws: copy(FxThrows\sequence)
+        private: @: empty (copy(()))
+        return: FxSeqConcat\concat(parts := (empty; first; second))
+
+FxApply:
+    private:
+        @: operation
+        @: args
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        private: @: outcome FxTry\attempt(operation := operation; args := args)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
+FxBuild:
+    private:
+        @: contract
+        char[]: bodyText
+        @: state
+        @: failures
+        @: policy 0
+    return: @
+    make:
+        throws: FxIndex FxKernelFailure FxTypeToken
+        private: @: shape FxKernel\signature(subject := contract)
+        private: @: bodyGraph sys\fromLmx(bodyText)
+        private: @: selectedPolicy policy
+        if: selectedPolicy = 0
+            selectedPolicy := FxOwnPolicy\make(contract)
+        return: FxKernel\callable(contract; shape\names; bodyGraph; state; failures; selectedPolicy)
+
+FxCharIndex:
+    private:
+        char[]: chars
+        char: value
+    return: int
+    index:
+        private: int: i 0
+        while: i < length(chars)
+            if: chars[i] = value
+                return: i
+            i += 1
+        return: -1
+
+FxConcat:
+    private:
+        char[]: first
+        char[]: second
+    return: char[]
+    concat:
+        throws: copy(FxThrows\sequence)
+        private: @: out FxSeqConcat\concat(parts := (first; second))
+        return: \out
+
+FxDecimal:
+    private: int: number
+    return: char[]
+    decimal:
+        throws: copy(FxThrows\selection)
+        if: number < 0
+            throw: FxIndex()
+        return: FxFormatInt\formatInt(number)
+
+FxFormatInt:
+    private:
+        bigint: value
+        int: base 10
+    return: char[]
+    formatInt:
+        throws: copy(FxThrows\selection)
+        if: base < 2 || base > 36
+            throw: FxIndex()
+        private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
+        private: bigint: magnitude value
+        private: int: negative value < 0
+        if: negative != 0
+            magnitude := -magnitude
+        private: char[]: out []
+        private: @: info FxSeqInfo\get(out)
+        while: 1
+            private: int: digit magnitude % base
+            private: int: at length(out)
+            sys\resize(out; FxSeqSize\sum(at; 1; info\maxLength))
+            out[at] := digits[digit]
+            magnitude := magnitude / base
+            if: magnitude = 0
+                break
+        ---
+        if: negative != 0
+            out := \FxSeqConcat\concat((out; "-"))
+        return: \FxSeqReverse\reverse(out)
+
+FxIdentity:
+    private: @: typeToken
+    return: @
+    identity:
+        throws: copy(FxThrows\selection)
+        private: @: requirement FxKernel\normalizeType(token := typeToken)
+        private: @: contract FxSignatures\make(FxOne\make(requirement); requirement)
+        private: @: state (copy(()))
+        private: @: failures (copy(()))
+        return: FxBuild\make(contract; "return: p0\n"; state; failures)
+
+FxIndices:
+    private:
+        int: start
+        int: count
+    return: @
+    make:
+        throws: FxIndex
+        if: start < 0 || count < 0
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := start + i
+            i += 1
+        return: out
+
+FxInputPolicy:
+    @: source 0
+    @: positions 0
+    @: boundPositions 0
+    @: boundValues 0
+    @: pendingPositions 0
+    int: sourcePolicy 0
+
+FxLabels:
+    private: int: count
+    return: @
+    labels:
+        throws: copy(FxThrows\selection)
+        if: count < 0
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := FxConcat\concat("p"; FxDecimal\decimal(i))
+            i += 1
+        return: out
+
+FxMaybe:
+    int: present 0
+    @: value 0
+
+FxNone:
+    return: @
+    none:
+        return: (copy(FxMaybe))
+
+FxOne:
+    private: @: value
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 1)
+        out[0] := value
+        return: out
+
+FxOwnPolicy:
+    private: @: contract
+    return: @
+    make:
+        throws: FxIndex FxKernelFailure FxTypeToken
+        private: @: info FxKernel\signature(contract)
+        private: @: out (copy(FxInputPolicy))
+        out\source := contract
+        out\positions := FxIndices\make(0; length(info\inputTypes))
+        out\boundPositions := (copy(()))
+        out\boundValues := (copy(()))
+        out\pendingPositions := (copy(()))
+        return: out
+
+FxRecordOperands:
+    copy: sys\OPERANDS_TEMPLATE
+    required: left right
+    return: @
+    record:
+        throws: FxRecordArity
+        if: length(right) != 0
+            throw: FxRecordArity()
+        return: left
+
+FxRecords:
+    private: @: value
+    return: @
+    reference:
+        throws: FxRecordArity
+        return: (value FxRecordOperands\record)
+
+FxRepeatText:
+    private:
+        char[]: text
+        int: count
+    return: char[]
+    repeatText:
+        throws: copy(FxThrows\sequence)
+        if: count < 0
+            throw: SequenceSize()
+        return: \FxStdCycle\cycle(text; count)
+
+FxSameText:
+    private:
+        char[]: first
+        char[]: second
+    return: int
+    same:
+        if: length(first) != length(second)
+            return: 0
+        char[]: unitSource first
+        char[]: unitPart second
+        return: FxUnitRange\equal(0)
+
+FxSeqAdmit:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    admit:
+        throws: FxKernelFailure FxTypeToken SequenceElement
+        return: FxKernel\arrayAdmit(target := target; value := value)
+
+FxSeqAllocate:
+    private:
+        int: arrayType
+        int: count
+    required: arrayType count
+    return: @
+    make:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        if: count < 0
+            throw: SequenceSize()
+        private: @: out (arrayType: [])
+        private: @: info FxSeqInfo\get(out)
+        if: count > info\maxLength
+            throw: SequenceSize()
+        sys\resize(out; count)
+        return: out
+
+FxSeqBounds:
+    private:
+        @: source
+        int: begin
+        int: end
+    required: source begin end
+    return: int
+    count:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        FxSeqInfo\get(source)
+        if: begin < 0 || end < begin || end > length(source)
+            throw: ReceiverIndex()
+        return: end - begin
+
+FxSeqCompress:
+    private:
+        @: source
+        @: mask
+    required: source mask
+    return: @
+    compress:
+        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(source)
+        FxSeqInfo\get(mask)
+        private: int: count length(source)
+        if: length(mask) != count
+            throw: FxShape()
+        private: @: flags FxSeqAllocate\make(int[]; count)
+        private: int: accepted 0
+        private: int: i 0
+        # Validate every mask value before constructing the selected result.
+        while: i < count
+            private: @: value FxSeqRead\read(mask; i)
+            private: int: flag FxSeqInteger\read(value)
+            flags[i] := flag
+            if: flag != 0
+                accepted += 1
+            i += 1
+        private: @: out FxSeqAllocate\make(info\arrayType; accepted)
+        private: int: written 0
+        i := 0
+        while: i < count
+            if: flags[i] != 0
+                private: @: value FxSeqRead\read(source; i)
+                FxKernel\arrayWrite(target := out; index := written; value := value)
+                written += 1
+            i += 1
+        return: out
+
+FxSeqConcat:
+    private: @: parts
+    required: parts
+    return: @
+    concat:
+        throws: copy(FxThrows\sequence)
+        FxSeqInfo\get(parts)
+        private: int: count length(parts)
+        private: int: arrayType @[]
+        private: int: elementType 0
+        private: int: allDense 1
+        private: int: i 0
+        # Inspect all parts, including empty dense parts. Comparison uses
+        # canonical full element codes from the common type resolver.
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            private: @: info FxSeqInfo\get(part)
+            if: i = 0
+                arrayType := info\arrayType
+                elementType := info\elementType
+            if: info\dense = 0 || info\elementType != elementType
+                allDense := 0
+            i += 1
+        if: count = 0 || allDense = 0
+            arrayType := @[]
+        private: @: out FxSeqAllocate\make(arrayType; 0)
+        private: @: outInfo FxSeqInfo\get(out)
+        private: int: total 0
+        i := 0
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            total := FxSeqSize\sum(total; length(part); outInfo\maxLength)
+            i += 1
+        sys\resize(out; total)
+        private: int: at 0
+        i := 0
+        while: i < count
+            private: @: part FxSeqRead\read(parts; i)
+            private: int: partSize length(part)
+            private: int: j 0
+            while: j < partSize
+                private: @: value FxSeqRead\read(part; j)
+                FxKernel\arrayWrite(target := out; index := at; value := value)
+                at += 1
+                j += 1
+            i += 1
+        return: out
+
+FxSeqEmpty:
+    private: @: source
+    required: source
+    return: @
+    make:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        private: @: info FxSeqInfo\get(source)
+        return: FxSeqAllocate\make(info\arrayType; 0)
+
+FxSeqInfo:
+    private: @: source
+    required: source
+    return: @
+    get:
+        throws: copy(FxThrows\kernel)
+        return: FxKernel\arrayInfo(source := source)
+
+FxSeqInteger:
+    private: @: value
+    required: value
+    return: int
+    read:
+        throws: SequenceElement
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: SequenceElement()
+        return: \value
+
+FxSeqPredicate:
+    private: @: value
+    required: value
+    return: int
+    truth:
+        throws: FxPredicate
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: FxPredicate()
+        private: int: flag \value
+        return: flag != 0
+
+FxSeqPush:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    append:
+        throws: copy(FxThrows\mutation)
+        private: @: info FxSeqInfo\get(target)
+        private: @: ready FxSeqAdmit\admit(target; value)
+        private: int: oldSize length(target)
+        private: int: newSize FxSeqSize\sum(oldSize; 1; info\maxLength)
+        sys\resize(target; newSize)
+        FxKernel\arrayWrite(target := target; index := oldSize; value := ready)
+        return: target
+
+FxSeqRead:
+    private:
+        @: source
+        int: index
+    required: source index
+    return: @
+    read:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        return: FxKernel\arrayRead(source := source; index := index)
+
+FxSeqReverse:
+    private: @: source
+    required: source
+    return: @
+    reverse:
+        throws: copy(FxThrows\sequence)
+        private: @: info FxSeqInfo\get(source)
+        private: int: count length(source)
+        private: @: out FxSeqAllocate\make(info\arrayType; count)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(source; count - 1 - i)
+            FxKernel\arrayWrite(target := out; index := i; value := value)
+            i += 1
+        return: out
+
+FxSeqSize:
+    private:
+        int: base
+        int: extra
+        int: limit
+    required: base extra limit
+    return: int
+    sum:
+        throws: SequenceSize
+        if: base < 0 || extra < 0 || base > limit
+            throw: SequenceSize()
+        if: extra > limit - base
+            throw: SequenceSize()
+        return: base + extra
+
+FxSeqStore:
+    private:
+        @: target
+        int: index
+        @: value
+    required: target index value
+    write:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement
+        private: @: ready FxSeqAdmit\admit(target; value)
+        FxKernel\arrayWrite(target := target; index := index; value := ready)
+
+FxSignatures:
+    private:
+        @: inputs
+        @: result
+    return: @
+    make:
+        throws: copy(FxThrows\selection)
+        private: @: labels FxLabels\labels(length(inputs))
+        private: @: data FxKernel\signatureData(inputs := inputs; result := result; labels := labels)
+        Built :: data
+        return: Built
+
+FxSome:
+    private: @: value
+    return: @
+    some:
+        private: @: result (copy(FxMaybe))
+        result\present := 1
+        result\value := value
+        return: result
+
+FxStdCollect:
+    private:
+        @: next
+        int: limit -1
+    required: next
+    return: @
+    collect:
+        throws: copy(FxThrows\mutation) FxCallFailure
+        if: limit < -1
+            throw: SequenceSize()
+        private: @: out FxSeqAllocate\make(@[]; 0)
+        while: limit = -1 || length(out) < limit
+            private: @: outcome FxTry\attempt(next; ())
+            if: outcome\ok = 0
+                if: FxSameText\same(outcome\failure; sys\name(Stop)) != 0
+                    return: out
+                throw: FxCallFailure(outcome)
+            FxSeqPush\append(out; outcome\value)
+        return: out
+
+FxStdCycle:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    cycle:
+        throws: copy(FxThrows\sequence)
+        private: @: info FxSeqInfo\get(items)
+        if: count <= 0 || length(items) = 0
+            return: FxSeqEmpty\make(items)
+        if: count > info\maxLength / length(items)
+            throw: SequenceSize()
+        return: FxSeqConcat\concat(FxStdReplicate\replicate(items; count))
+
+FxStdReplicate:
+    private:
+        @: value
+        int: count
+    required: value count
+    return: @
+    replicate:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        private: int: size count
+        if: size < 0
+            size := 0
+        private: @: out FxSeqAllocate\make(@[]; size)
+        private: int: i 0
+        while: i < size
+            out[i] := value
+            i += 1
+        return: out
+
+FxThrows:
+    adapter:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    call:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+    capture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    fixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    kernel:
+        FxKernelFailure
+        FxTypeToken
+    lazyfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxLazyCycle
+        FxRecordArity
+        FxTypeToken
+    mutation:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    mutationfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    permutation:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    predicate:
+        FxCallFailure
+        FxKernelFailure
+        FxPredicate
+        FxTypeToken
+        ReceiverIndex
+    rangefixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        SequenceSize
+        SequenceStep
+    recordcall:
+        FxCallFailure
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    reorder:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    retry:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    selection:
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequence:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequencefixture:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceElement
+        SequenceSize
+        SequenceStep
+    snapshot:
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    traversal:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+
+FxTranslate:
+    private:
+        char[]: text
+        char[]: from
+        char[]: to
+    return: char[]
+    translate:
+        throws: copy(FxThrows\sequence)
+        if: length(from) != length(to)
+            throw: SequenceSize()
+        private: char[]: out \FxSeqSlice\slice(text; 0; length(text))
+        private: int: i 0
+        while: i < length(text)
+            private: int: found FxCharIndex\index(from; text[i])
+            if: found >= 0
+                out[i] := to[found]
+            i += 1
+        return: out
+
+FxTry:
+    private:
+        @: operation
+        @: args
+    return: @
+    attempt:
+        throws: copy(FxThrows\kernel)
+        private: @: info FxKernel\signature(subject := operation)
+        return: FxKernel\attempt(operation; args; info\throws)
+
+FxTwo:
+    private:
+        @: first
+        @: second
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 2)
+        out[0] := first
+        out[1] := second
+        return: out
+
+FxUnitRange:
+    private: int: at
+    return: int
+    equal:
+        if: at < 0 || at > length(unitSource)
+            return: 0
+        if: length(unitPart) > length(unitSource) - at
+            return: 0
+        private: int: i 0
+        while: i < length(unitPart)
+            if: unitSource[at + i] != unitPart[i]
+                return: 0
+            i += 1
+        return: 1
+
+RxCandidate:
+    int: position 0
+    @: captures 0
+
+RxCandidateMake:
+    private:
+        int: position
+        @: captures
+    return: @
+    make:
+        private: @: out (copy(RxCandidate))
+        out\position := position
+        out\captures := captures
+        return: out
+
+RxCaptureAdd:
+    private:
+        @: previous
+        char[]: name
+        int: begin
+        int: end
+    return: @
+    add:
+        private: @: out (copy(RxCaptureEntry))
+        out\previous := previous
+        out\name := name
+        out\begin := begin
+        out\end := end
+        return: out
+
+RxCaptureEntry:
+    @: previous 0
+    char[]: name ""
+    int: begin 0
+    int: end 0
+
+RxCaptureLatest:
+    private:
+        @: captures
+        char[]: name
+    return: @
+    find:
+        private: @: cursor captures
+        while: cursor != 0
+            if: FxSameText\same(cursor\name; name) != 0
+                return: FxSome\some(value := cursor)
+            cursor := cursor\previous
+        return: FxNone\none()
+
+RxCaptureOpen:
+    private:
+        @: config
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        private: @: state (copy(RxCaptureState))
+        state\name := config\name
+        state\begin := position
+        state\cursor := RxOpen\open(config\pattern; source; position; captures)
+        return: RxCursorFactory\make(RxCaptureStep\step; state)
+
+RxCaptureState:
+    char[]: name ""
+    int: begin 0
+    @: cursor 0
+
+RxCaptureStep:
+    private: @: state
+    return: @
+    step:
+        private: @: cursor state\cursor
+        private: @: next cursor()
+        if: next\present = 0
+            return: next
+        private: @: candidate next\value
+        private: @: captures RxCaptureAdd\add(candidate\captures; state\name; state\begin; candidate\position)
+        return: FxSome\some(value := RxCandidateMake\make(candidate\position; captures))
+
+RxCursorFactory:
+    private:
+        @: engine
+        @: state
+    return: @
+    make:
+        private: @: owner (copy(RxCursorOwner))
+        owner\private\engine := engine
+        owner\private\state := state
+        return: owner\Next\next
+
+RxCursorOwner:
+    private:
+        @: engine 0
+        @: state 0
+    Next:
+        return: @
+        next:
+            private: @: owner parent()
+            private: @: engine owner\private\engine
+            return: engine(state := owner\private\state)
+
+RxIsPattern:
+    private: @: value
+    return: int
+    test:
+        throws: copy(FxThrows\kernel)
+        # Read the existing directed interface check without trial execution.
+        # Unresolved compatibility is a service failure, never a false result.
+        return: FxKernel\acceptsRequirement(candidate := value; requirement := Pattern)
+
+RxLiteralProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        private: @: text RxTextBuild\make(payload\text; source\profile)
+        int[]: unitSource source\units
+        int[]: unitPart text\units
+        if: FxUnitRange\equal(position) = 0
+            return: -1
+        return: position + length(text\units)
+
+RxMatchMake:
+    private:
+        RxPreparedText@: source
+        int: begin
+        @: candidate
+    return: @
+    make:
+        private: @: out (copy(Match))
+        out\source := source\view
+        out\private\prepared := source
+        out\begin := begin
+        out\end := candidate\position
+        out\captures := candidate\captures
+        return: out
+
+RxNameConfig:
+    char[]: name ""
+
+RxNormalize:
+    private: @: value
+    return: @
+    make:
+        throws: copy(FxThrows\kernel)
+        if: RxIsPattern\test(value := value) != 0
+            return: value
+        # Ordinary admission performs the rejection for numbers, arbitrary
+        # Structures and absent values. It does not turn a number into a char.
+        private: char[]: text \value
+        return: RxLiteral\literal(text := text)
+
+RxOctet:
+    private:
+        char[]: source
+        int: index
+    return: int
+    read:
+        private: int: value source[index]
+        if: value < 0
+            value += 256
+        return: value
+
+RxOpen:
+    private:
+        Pattern@: pattern
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        throws: PatternPosition
+        if: position < 0 || position > length(source\units)
+            throw: PatternPosition()
+        # The signature-qualified reference applies its ordinary label map.
+        return: pattern(source := source; position := position; captures := captures)
+
+RxPatternFactory:
+    private:
+        @: engine
+        @: config
+    return: @
+    make:
+        private: @: owner (copy(RxPatternOwner))
+        owner\private\engine := engine
+        owner\private\config := config
+        return: owner\Call\open
+
+RxPatternOwner:
+    private:
+        @: engine 0
+        @: config 0
+    Call:
+        private:
+            RxPreparedText@: source
+            int: position
+            @: captures
+        required: source position captures
+        return: @
+        open:
+            private: @: owner parent()
+            private: @: engine owner\private\engine
+            return: engine(config := owner\private\config; source := source; position := position; captures := captures)
+
+RxPreparedText:
+    TextView@: view 0
+    int: profile
+    char[]: source
+    int[]: units
+    int[]: byteOffsets
+
+Span:
+    TextView@: source
+    int: begin
+    int: end
+    private: RxPreparedText@: prepared
+
+Match:
+    TextView@: source
+    int: begin
+    int: end
+    @: captures
+    private: RxPreparedText@: prepared
+
+Pattern :: (RxPreparedText@: source; int: position; @: captures; return: @)
+
+RxPrimitiveConfig:
+    @: probe 0
+    @: payload 0
+
+RxPrimitiveMake:
+    private:
+        @: probe
+        @: payload 0
+    return: @
+    make:
+        private: @: config (copy(RxPrimitiveConfig))
+        config\probe := probe
+        config\payload := payload
+        return: RxPatternFactory\make(RxPrimitiveOpen\open; config)
+
+RxPrimitiveOpen:
+    private:
+        @: config
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        private: @: state (copy(RxPrimitiveState))
+        state\source := source
+        state\position := position
+        state\captures := captures
+        state\probe := config\probe
+        state\payload := config\payload
+        return: RxCursorFactory\make(RxPrimitiveStep\step; state)
+
+RxPrimitiveState:
+    @: source 0
+    int: position 0
+    @: captures 0
+    @: probe 0
+    @: payload 0
+    int: finished 0
+
+RxPrimitiveStep:
+    private: @: state
+    return: @
+    step:
+        if: state\finished != 0
+            return: FxNone\none()
+        state\finished := 1
+        private: @: probe state\probe
+        private: int: end probe(payload := state\payload; source := state\source; position := state\position; captures := state\captures)
+        if: end < 0
+            return: FxNone\none()
+        return: FxSome\some(value := RxCandidateMake\make(end; state\captures))
+
+RxRepeatFrame:
+    @: previous 0
+    @: candidate 0
+    int: count 0
+    int: lastWasEmpty 0
+    int: stopReturned 0
+    int: extendFinished 0
+    @: cursor 0
+
+RxRepeatFrameMake:
+    private:
+        @: previous
+        @: candidate
+        int: count
+        int: lastWasEmpty
+    return: @
+    make:
+        private: @: frame (copy(RxRepeatFrame))
+        frame\previous := previous
+        frame\candidate := candidate
+        frame\count := count
+        frame\lastWasEmpty := lastWasEmpty
+        return: frame
+
+RxRepeatOpen:
+    private:
+        @: config
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        private: @: state (copy(RxRepeatState))
+        state\source := source
+        state\config := config
+        state\top := RxRepeatFrameMake\make(0; RxCandidateMake\make(position; captures); 0; 0)
+        return: RxCursorFactory\make(RxRepeatStep\step; state)
+
+RxRepeatState:
+    @: source 0
+    @: config 0
+    @: top 0
+
+RxRepeatStep:
+    private: @: state
+    return: @
+    step:
+        private: @: config state\config
+        while: state\top != 0
+            private: @: frame state\top
+            private: int: mayStop frame\count >= config\minimum
+            if: config\order = stopFirst && mayStop && frame\stopReturned = 0
+                frame\stopReturned := 1
+                return: FxSome\some(value := frame\candidate)
+            private: int: mayExtend frame\extendFinished = 0
+            if: config\bounded != 0 && frame\count >= config\maximum
+                mayExtend := 0
+            # A nonprogressing iteration may only be followed by still
+            # mandatory iterations. Alternative candidates remain on cursor.
+            if: frame\lastWasEmpty != 0 && mayStop
+                mayExtend := 0
+            if: mayExtend != 0
+                if: frame\cursor = 0
+                    frame\cursor := RxOpen\open(config\pattern; state\source; frame\candidate\position; frame\candidate\captures)
+                private: @: cursor frame\cursor
+                private: @: next cursor()
+                if: next\present != 0
+                    private: @: child next\value
+                    private: int: didNotMove child\position = frame\candidate\position
+                    state\top := RxRepeatFrameMake\make(frame; child; frame\count + 1; didNotMove)
+                    continue
+                frame\extendFinished := 1
+            if: config\order = extendFirst && mayStop && frame\stopReturned = 0
+                frame\stopReturned := 1
+                return: FxSome\some(value := frame\candidate)
+            state\top := frame\previous
+        return: FxNone\none()
+
+RxReplacement :: (Match@: matched; return: char[])
+
+PatternArgument:
+
+PatternEncoding:
+
+PatternPosition:
+
+RxSameAsProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        private: @: found RxCaptureLatest\find(captures; payload\name)
+        if: found\present = 0
+            return: -1
+        private: @: capture found\value
+        private: int: count capture\end - capture\begin
+        if: count > length(source\units) - position
+            return: -1
+        private: int: i 0
+        while: i < count
+            if: source\units[position + i] != source\units[capture\begin + i]
+                return: -1
+            i += 1
+        return: position + count
+
+RxSelect:
+    private:
+        @: source
+        @: indices
+    required: source indices
+    return: @
+    select:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSelect\select(source; indices)
+
+RxSequenceFrame:
+    @: previous 0
+    int: index 0
+    @: cursor 0
+
+RxSequenceFrameMake:
+    private:
+        RxPreparedText@: source
+        @: parts
+        int: index
+        @: candidate
+        @: previous
+    return: @
+    make:
+        private: @: frame (copy(RxSequenceFrame))
+        frame\previous := previous
+        frame\index := index
+        frame\cursor := RxOpen\open(parts[index]; source; candidate\position; candidate\captures)
+        return: frame
+
+RxSequenceOpen:
+    private:
+        @: config
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        private: @: state (copy(RxSequenceState))
+        state\source := source
+        state\parts := config\parts
+        state\top := RxSequenceFrameMake\make(source; config\parts; 0; RxCandidateMake\make(position; captures); 0)
+        return: RxCursorFactory\make(RxSequenceStep\step; state)
+
+RxSequenceState:
+    @: source 0
+    @: parts 0
+    @: top 0
+
+RxSequenceStep:
+    private: @: state
+    return: @
+    step:
+        while: state\top != 0
+            private: @: frame state\top
+            private: @: cursor frame\cursor
+            private: @: next cursor()
+            if: next\present = 0
+                state\top := frame\previous
+            else:
+                private: @: candidate next\value
+                if: frame\index + 1 = length(state\parts)
+                    return: next
+                state\top := RxSequenceFrameMake\make(state\source; state\parts; frame\index + 1; candidate; frame)
+        ---
+        return: FxNone\none()
+
+RxSpanMake:
+    private:
+        RxPreparedText@: source
+        int: begin
+        int: end
+    return: @
+    make:
+        private: @: out (copy(Span))
+        out\source := source\view
+        out\private\prepared := source
+        out\begin := begin
+        out\end := end
+        return: out
+
+RxTextAppend:
+    private:
+        char[]: target
+        char[]: fragment
+    append:
+        private: int: oldLength length(target)
+        private: @: info FxSeqInfo\get(source := target)
+        private: int: needed FxSeqSize\sum(oldLength; length(fragment); info\maxLength)
+        sys\resize(target; needed)
+        private: int: i 0
+        while: i < length(fragment)
+            target[oldLength + i] := fragment[i]
+            i += 1
+
+RxTextAppendSpan:
+    private:
+        char[]: target
+        RxPreparedText@: source
+        int: begin
+        int: end
+    append:
+        private: int: first source\byteOffsets[begin]
+        private: int: last source\byteOffsets[end]
+        private: int: oldLength length(target)
+        private: @: info FxSeqInfo\get(source := target)
+        private: int: needed FxSeqSize\sum(oldLength; last - first; info\maxLength)
+        sys\resize(target; needed)
+        private: int: i first
+        while: i < last
+            target[oldLength + i - first] := source\source[i]
+            i += 1
+
+RxTextBuild:
+    private:
+        char[]: source
+        int: profile
+    return: @
+    make:
+        throws: PatternArgument PatternEncoding
+        private: @: info FxSeqInfo\get(source := source)
+        if: info\elementBits != 8
+            throw: PatternEncoding()
+        if: profile != 0 && profile != 1
+            throw: PatternArgument()
+        private: int[]: units []
+        private: int[]: offsets []
+        # Exact upper bounds: an octet cannot create more than one scalar.
+        private: @: unitInfo FxSeqInfo\get(source := units)
+        private: int: unitCapacity FxSeqSize\sum(0; length(source); unitInfo\maxLength)
+        private: int: offsetCapacity FxSeqSize\sum(length(source); 1; unitInfo\maxLength)
+        sys\resize(units; unitCapacity)
+        sys\resize(offsets; offsetCapacity)
+        private: int: byteAt 0
+        private: int: used 0
+        while: byteAt < length(source)
+            offsets[used] := byteAt
+            private: int: first RxOctet\read(source; byteAt)
+            private: int: code first
+            private: int: width 1
+            private: int: lower 0
+            if: profile = 0
+                if: first < 128
+                    width := 1
+                else:
+                    if: first >= 194 && first <= 223
+                        width := 2
+                        code := first - 192
+                        lower := 128
+                    else:
+                        if: first >= 224 && first <= 239
+                            width := 3
+                            code := first - 224
+                            lower := 2048
+                        else:
+                            if: first >= 240 && first <= 244
+                                width := 4
+                                code := first - 240
+                                lower := 65536
+                            else:
+                                throw: PatternEncoding()
+                ---
+                if: width > length(source) - byteAt
+                    throw: PatternEncoding()
+                private: int: tail 1
+                while: tail < width
+                    private: int: nextByte RxOctet\read(source; byteAt + tail)
+                    if: nextByte < 128 || nextByte > 191
+                        throw: PatternEncoding()
+                    code := code * 64 + nextByte - 128
+                    tail += 1
+                if: code < lower || code > 1114111
+                    throw: PatternEncoding()
+                if: code >= 55296 && code <= 57343
+                    throw: PatternEncoding()
+            ---
+            units[used] := code
+            used += 1
+            byteAt += width
+        offsets[used] := byteAt
+        sys\resize(units; used)
+        sys\resize(offsets; used + 1)
+        private: @: out (copy(RxPreparedText))
+        out\profile := profile
+        out\source := source
+        out\units := units
+        out\byteOffsets := offsets
+        return: out
+
+RxTextSlice:
+    private:
+        RxPreparedText@: source
+        int: begin
+        int: end
+    return: char[]
+    copyText:
+        throws: PatternPosition
+        if: begin < 0 || end < begin || end > length(source\units)
+            throw: PatternPosition()
+        private: int: first source\byteOffsets[begin]
+        private: int: last source\byteOffsets[end]
+        private: char[]: out []
+        sys\resize(out; last - first)
+        private: int: i first
+        while: i < last
+            out[i - first] := source\source[i]
+            i += 1
+        return: out
+
+RxUnbounded:
+    const: int: upperBoundAbsent 1
+
+const: int: extendFirst 0
+
+const: int: stopFirst 1
+
+const: @: unbounded RxUnbounded

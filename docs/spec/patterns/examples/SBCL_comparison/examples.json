@@ -2688,17 +2688,17 @@
       },
       "notes_ru": "В первичный исходник включены producer и worker. Симметричный хостовый bootstrap вынесен в source/common-lisp/S24_host.lisp; он создаёт mailbox/thread и ждёт завершения. Это действующие API SBCL, а не модель в одном потоке.\n\nMessage имеют отдельные арены; host заранее передаёт адреса worker и collector и данные items. Адресованные методы приведены полностью: WorkerMessage/Add/add, WorkerMessage/Finish/finish, CollectorMessage/accept. post не считается синхронным join. Producer сохраняется до обработки его pending reply, worker заканчивается только после finish, collector — после результата. Полный L3 bootstrap и parser fixture post в текущем пакете отсутствуют, поэтому пример исключён из суммарных отношений размеров.",
       "alternatives": [],
-      "lmx": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    start:\n        int: i 0\n        while: i < length(items)\n            post:\n                ask:\n                    worker\\Add\\add(value := items[i])\n            i += 1\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
+      "lmx": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    start:\n        int: i 0\n        while: i < length(items)\n            post:\n                ask:\n                    worker\\Add\\add(value := items[i])\n            ---\n            i += 1\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
       "foreign": "(require :sb-concurrency)\n\n(defun worker (inbox)\n  (loop for message = (sb-concurrency:receive-message inbox)\n        until (eq message :stop)\n        sum message))\n\n(defun produce (inbox items)\n  (dolist (item items) (sb-concurrency:send-message inbox item))\n  (sb-concurrency:send-message inbox :stop))\n",
       "counts": {
         "lmx": {
-          "characters_nonwhitespace": 432,
-          "without_complex_throws_characters": 432,
+          "characters_nonwhitespace": 435,
+          "without_complex_throws_characters": 435,
           "complex_throws_removed_characters": 0,
-          "characters_all": 812,
-          "nonblank_lines": 38,
-          "utf8_bytes": 812,
-          "sha256": "30d38ec02521f86b7c3694dc8111e8b31cba33d73c6b40e4c341b56afe519b89"
+          "characters_all": 828,
+          "nonblank_lines": 39,
+          "utf8_bytes": 828,
+          "sha256": "0f976a09059894682b13ab1a8dba0d0062e72fa43c6ff92957db253e1b37a6d7"
         },
         "foreign": {
           "characters_nonwhitespace": 251,

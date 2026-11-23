@@ -112,7 +112,7 @@
 | [sbcl / S21](SBCL_comparison/source/lmx/S21.lm3) | Условие и HANDLER-CASE | Полная пара | 187 / 15 | 187 | 178 / 7 | 0.952 |
 | [sbcl / S22](SBCL_comparison/source/lmx/S22.lm3) | UNWIND-PROTECT: полный жизненный цикл | Полная пара | 489 / 31 | 489 | 532 / 19 | 1.088 |
 | [sbcl / S23](SBCL_comparison/source/lmx/S23.lm3) | Мемоизация через HASH-TABLE | Полная пара | 368 / 28 | 368 | 231 / 8 | 0.628 |
-| [sbcl / S24](SBCL_comparison/source/lmx/S24.lm3) | SBCL: очередь сообщений и отдельный поток | Поясняющая аналогия | 432 / 38 | 432 | 251 / 8 | — |
+| [sbcl / S24](SBCL_comparison/source/lmx/S24.lm3) | SBCL: очередь сообщений и отдельный поток | Поясняющая аналогия | 435 / 39 | 435 | 251 / 8 | — |
 
 ## Сравнения реализаций
 

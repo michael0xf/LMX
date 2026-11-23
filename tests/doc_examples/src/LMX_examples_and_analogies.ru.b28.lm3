@@ -7,10 +7,13 @@ Indicator:
     int: reads 0
     int: trace 0
     return: int
+    mark:
+        node\trace := node\trace * 10 + command
+        return: 1
     set:
         node\commanded := command
         node\writes += 1
-        node\trace := node\trace * 10 + command
+        mark()
         if: node\fault = 0
             node\sensed := command
         if: node\fault = 1
@@ -20,15 +23,18 @@ Indicator:
         return: 1
     observe:
         node\reads += 1
-        node\trace := node\trace * 10 + 2
+        mark(2)
         return: node\sensed
 
 Commissioning:
     @: candidate
+    int: command
     return: int
+    cycle:
+        int: ack candidate\set(command := command)
+        int: seen candidate\observe()
+        return: ack = 1 && seen = command
     check:
-        int: onAck candidate\set(command := 1)
-        int: onSeen candidate\observe()
-        int: offAck candidate\set(command := 0)
-        int: offSeen candidate\observe()
-        return: onAck = 1 && onSeen = 1 && offAck = 1 && offSeen = 0
+        int: on cycle(command := 1)
+        int: off cycle(command := 0)
+        return: on && off

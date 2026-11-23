@@ -1,0 +1,9 @@
+AmbassadorMessage:
+    @: http
+    return: int
+    read:
+        return: node\http\post("https://catalog.example"; "/catalog/read")
+    catalog:
+        throws: Attempts
+        import: RetryLibrary
+        return: read retry 2

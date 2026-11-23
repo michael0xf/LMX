@@ -8,12 +8,7 @@ Addition:
 DefaultProbe:
     return: int
     run:
-        throws:
-            ReceiverParent
         int: y 100
-        @: add5 bindFields(Addition\add; (int: y 5))
-        int: first add5(1)
-        int: explicit add5(1; y := 25)
-        int: zero add5(1; y := 0)
-        int: again add5(1)
-        return: first * 1000000 + explicit * 10000 + zero * 100 + again
+        @: fiveContext (merge(Addition; (int: y 5)))
+        @: add5 fiveContext\add
+        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)

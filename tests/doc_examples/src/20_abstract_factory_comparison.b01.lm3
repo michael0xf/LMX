@@ -12,18 +12,14 @@ Frame:
         return: value + button\render()
 
 Light:
+    int: theme 1
     return: @
     button:
-        return: derive(Button; (int: value 1))
+        return: derive(Button; (int: value theme))
     frame:
-        return: derive(Frame; (int: value 10))
+        return: derive(Frame; (int: value theme * 10))
 
-Dark:
-    return: @
-    button:
-        return: derive(Button; (int: value 2))
-    frame:
-        return: derive(Frame; (int: value 20))
+Dark: merge(Light; (int: theme 2))
 
 Client:
     @: factory

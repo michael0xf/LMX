@@ -2325,22 +2325,22 @@
     "path": "tests/parser/current/t236_f01_path_base.lmx",
     "lower_types": true,
     "exit": 0,
-    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the base is a path: the internal form writes it with several fields; left for step 23.8",
-    "stdout_exact": "structure fields=1\n  frame head=\"a\\b@\" body=structure fields=2\n    atom \"p\"\n    atom \"x\"\n"
+    "authority": "Step 23.6, rule of the internal form: `a\\b@: p x` lowers to `@: p a\\b x`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the base is a path: the fields that P0 reads from the text of the base stand after the name",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=5\n    atom \"p\"\n    atom \"a\"\n    atom \"\\\"\n    atom \"b\"\n    atom \"x\"\n"
   },
   {
     "path": "tests/parser/current/t236_f02_group_base.lmx",
     "lower_types": true,
     "exit": 0,
-    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the base is a group",
-    "stdout_exact": "structure fields=1\n  frame head=\"(Model)@@\" body=structure fields=2\n    atom \"p\"\n    atom \"x\"\n"
+    "authority": "Step 23.6, rule of the internal form: `(Model)@@: p x` lowers to `@@: p (Model) x`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the base is a group",
+    "stdout_exact": "structure fields=1\n  frame head=\"@@\" body=structure fields=3\n    atom \"p\"\n    structure fields=1\n      atom \"Model\"\n    atom \"x\"\n"
   },
   {
     "path": "tests/parser/current/t236_f03_postfix_after_path.lmx",
     "lower_types": true,
     "exit": 0,
-    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). a postfix right after a path: the operand would be one of several fields",
-    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=4\n          atom \"a\"\n          atom \"\\\"\n          atom \"b\"\n          Postfix atom \"@\"\n        atom \"x\"\n"
+    "authority": "Step 23.6, rule of the internal form: `int: z (cast: (a\\b@) x)` lowers to `int: z (cast: (@: a\\b) x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a postfix right after a path: the operand is the whole path",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=1\n          frame head=\"@\" body=structure fields=3\n            atom \"a\"\n            atom \"\\\"\n            atom \"b\"\n        atom \"x\"\n"
   },
   {
     "path": "tests/parser/current/t236_f04_postfix_after_group.lmx",
@@ -2456,5 +2456,166 @@
     "exit": 1,
     "authority": "The parser correction keeps this reading: a string followed by `@` still needs a separator (code 18 at the `@`). The accepted Graph gives the diagnostic.",
     "diagnostic": "18@1:9"
+  },
+  {
+    "path": "tests/parser/current/t236_g01_path_base_value.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `Holder\\f@: p x` lowers to `@: p Holder\\f x`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the base is a path, a value after the name",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=5\n    atom \"p\"\n    atom \"Holder\"\n    atom \"\\\"\n    atom \"f\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g02_path_base_depth2.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `Holder\\f@@: pp @ p` lowers to `@@: pp Holder\\f @ p`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a series `@@` with a path base",
+    "stdout_exact": "structure fields=1\n  frame head=\"@@\" body=structure fields=6\n    atom \"pp\"\n    atom \"Holder\"\n    atom \"\\\"\n    atom \"f\"\n    atom \"@\"\n    atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g03_path_base_long.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `Outer\\Inner\\f@: p` lowers to `@: p Outer\\Inner\\f`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a path of three segments, no value",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=6\n    atom \"p\"\n    atom \"Outer\"\n    atom \"\\\"\n    atom \"Inner\"\n    atom \"\\\"\n    atom \"f\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g04_group_base_value.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `(Model)@@: p x` lowers to `@@: p (Model) x`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the base is a group",
+    "stdout_exact": "structure fields=1\n  frame head=\"@@\" body=structure fields=3\n    atom \"p\"\n    structure fields=1\n      atom \"Model\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g05_path_base_comma.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `Holder\\f@: p, \\q` lowers to `@: p Holder\\f, \\q`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the comma after the name stands after the last field of the base",
+    "stdout_exact": "structure fields=1\n  frame head=\"@\" body=structure fields=6\n    atom \"p\"\n    atom \"Holder\"\n    atom \"\\\"\n    atom \"f\"\n    atom \"\\\"\n    atom \"q\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g06_path_base_formal.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `fn: f (Holder\\f@: p) int /     return: p` lowers to `fn: f (@: p Holder\\f) int /     return: p`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a formal with a path base",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=1\n      frame head=\"@\" body=structure fields=4\n        atom \"p\"\n        atom \"Holder\"\n        atom \"\\\"\n        atom \"f\"\n    atom \"int\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g07_path_base_const_group.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `const: (Holder\\f@: q x)` lowers to `const: (@: q Holder\\f x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the place inside a qualifier group",
+    "stdout_exact": "structure fields=1\n  frame head=\"const\" body=structure fields=1\n    structure fields=1\n      frame head=\"@\" body=structure fields=5\n        atom \"q\"\n        atom \"Holder\"\n        atom \"\\\"\n        atom \"f\"\n        atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g08_index_base.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). a base with an index is left as written (the internal form has no spelling of an index in a type)",
+    "stdout_exact": "structure fields=1\n  frame head=\"a[1]@\" body=structure fields=2\n    atom \"p\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_g09_path_index_base.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). a path with an index is left as written",
+    "stdout_exact": "structure fields=1\n  frame head=\"a\\b[1]@\" body=structure fields=2\n    atom \"p\"\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h01_cast_path_operand.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z (cast: (Holder\\f@) x)` lowers to `int: z (cast: (@: Holder\\f) x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the operand of a cast is a path: one Frame with the fields of the path",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=1\n          frame head=\"@\" body=structure fields=3\n            atom \"Holder\"\n            atom \"\\\"\n            atom \"f\"\n        atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h02_result_path.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `fn: f () Holder\\f@ /     return: 0` lowers to `fn: f () @: Holder\\f /     return: 0`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the result of a function is a path",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=0\n    frame head=\"@\" body=structure fields=3\n      atom \"Holder\"\n      atom \"\\\"\n      atom \"f\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h03_sizeof_path.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z sizeof(Holder\\f@)` lowers to `int: z sizeof(@: Holder\\f)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the argument of sizeof is a path",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    frame head=\"sizeof\" body=structure fields=1\n      frame head=\"@\" body=structure fields=3\n        atom \"Holder\"\n        atom \"\\\"\n        atom \"f\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h04_cast_path_depth2.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z (cast: (Holder\\f@@) x)` lowers to `int: z (cast: (@@: Holder\\f) x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a series `@@` after a path",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=1\n          frame head=\"@@\" body=structure fields=3\n            atom \"Holder\"\n            atom \"\\\"\n            atom \"f\"\n        atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h05_deref_target.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the path after a bare `\\` in front is a dereference, no operand: left as written (spacing is style: `z \\a\\b` is one path)",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    frame head=\"f\" body=structure fields=5\n      atom \"\\\"\n      atom \"a\"\n      atom \"\\\"\n      atom \"b\"\n      Postfix atom \"@\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_h06_exact_name_path.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z (cast: (`a b`\\f@) x)` lowers to `int: z (cast: (@: `a b`\\f) x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). an exact name as the first segment",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=1\n          frame head=\"@\" body=structure fields=3\n            atom \"`a b`\"\n            atom \"\\\"\n            atom \"f\"\n        atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i01_result_bare.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `fn: f (@: p int) @ /     return: p` lowers to `fn: f (@: p int) @: void /     return: p`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the result of a function is the reference to void",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=1\n      frame head=\"@\" body=structure fields=2\n        atom \"p\"\n        atom \"int\"\n    frame head=\"@\" body=structure fields=1\n      atom \"void\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i02_result_bare_depth2.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `fn: f () @@ /     return: 0` lowers to `fn: f () @@: void /     return: 0`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). a series `@@` as the result",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=0\n    frame head=\"@@\" body=structure fields=1\n      atom \"void\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i03_sizeof_bare.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z sizeof(@)` lowers to `int: z sizeof(@: void)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the argument of sizeof",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    frame head=\"sizeof\" body=structure fields=1\n      frame head=\"@\" body=structure fields=1\n        atom \"void\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i04_const_bare.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `int: z (cast: (const: @) x)` lowers to `int: z (cast: (const: @: void) x)`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the operand of const: in the type group of a cast",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    structure fields=1\n      frame head=\"cast\" body=structure fields=2\n        structure fields=1\n          frame head=\"const\" body=structure fields=1\n            frame head=\"@\" body=structure fields=1\n              atom \"void\"\n        atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i05_all_places.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6, rule of the internal form: `fn: f (@: p int) @ /     return: sizeof(@) + (cast: (size_t) (cast: (const: @) p))` lowers to `fn: f (@: p int) @: void /     return: sizeof(@: void) + (cast: (size_t) (cast: (const: @: void) p))`; the tree after the pass is the tree P0 builds for the internal form (the accepted Graph gives it for the second text). the four places in one function",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=1\n      frame head=\"@\" body=structure fields=2\n        atom \"p\"\n        atom \"int\"\n    frame head=\"@\" body=structure fields=1\n      atom \"void\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=3\n        frame head=\"sizeof\" body=structure fields=1\n          frame head=\"@\" body=structure fields=1\n            atom \"void\"\n        atom \"+\"\n        structure fields=1\n          frame head=\"cast\" body=structure fields=2\n            structure fields=1\n              atom \"size_t\"\n            structure fields=1\n              frame head=\"cast\" body=structure fields=2\n                structure fields=1\n                  frame head=\"const\" body=structure fields=1\n                    frame head=\"@\" body=structure fields=1\n                      atom \"void\"\n                atom \"p\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i06_qualifier_group.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the qualifier group of a place is no operand of a type",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    structure fields=2\n      frame head=\"const\" body=structure fields=1\n        structure fields=1\n          frame head=\"@\" body=structure fields=3\n            atom \"q\"\n            atom \"int\"\n            atom \"5\"\n      frame head=\"return\" body=structure fields=1\n        atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i07_address_prefix_in_sizeof.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). a prefix `@` before a name: two fields, no type",
+    "stdout_exact": "structure fields=1\n  frame head=\"int\" body=structure fields=2\n    atom \"z\"\n    frame head=\"sizeof\" body=structure fields=2\n      atom \"@\"\n      atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/t236_i08_formals_not_result.lmx",
+    "lower_types": true,
+    "exit": 0,
+    "authority": "Step 23.6: the pass leaves this text as written, so the tree after the pass is the tree of the parser alone (the accepted Graph gives it). the third field is the result `int`: nothing to lower; the formals have `@` as a head",
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=4\n    atom \"f\"\n    structure fields=2\n      frame head=\"@\" body=structure fields=2\n        atom \"a\"\n        atom \"int\"\n      frame head=\"@\" body=structure fields=2\n        atom \"b\"\n        atom \"int\"\n    atom \"int\"\n    structure fields=1\n      frame head=\"return\" body=structure fields=1\n        atom \"a\"\n"
   }
 ]

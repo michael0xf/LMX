@@ -101,14 +101,19 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-k1b2-tool02/lmxtool-tool.exe` | 14f39872 |
-| hosted frontend | `S/fable-k1b2-feh01/l2trans.exe` | f0b6c521 |
-| runtime | `S/fable-k1b2-rt02` | driver.o bc9377ce, driver-observe.o f943d725 |
-| Graph | `S/fable-k1b2-graph02/graph_trans-prod.exe` | 7abdcd82 |
-| манифест исходников | `selfbuild/inputs.sha256` | 1644 файла, c9081b98 |
-| tool для проверки документов | тот же `S/fable-k1b2-tool02/lmxtool-tool.exe` | 14f39872 |
+| tool | `S/fable-s36b-tool02/lmxtool-tool.exe` | 81dd449e |
+| hosted frontend | `S/fable-s36b-feh01/l2trans.exe` | ebc3181d |
+| runtime | `S/fable-s36b-rt02` | driver.o bc9377ce, driver-observe.o f943d725 |
+| Graph | `S/fable-s36b-graph02/graph_trans-prod.exe` | fc75e868 |
+| манифест исходников | `selfbuild/inputs.sha256` | 1644 файла, 59d5933f |
+| tool для проверки документов | тот же `S/fable-s36b-tool02/lmxtool-tool.exe` | 81dd449e |
 
-Сейчас действует набор второй части среза K1b шага 21.7 (`fable-k1b2-*`): R0 без данных. Все четыре
+Сейчас действует набор второго среза шага 23.6 (`fable-s36b-*`): проход транслятора L2 принимает
+основание-путь, основание-группу и одинокую ссылку. Все четыре компонента собраны мной из итоговых исходников
+набором второй части K1b; runtime побайтно равен прежнему — ядро в срез не входит. Набор `fable-k1b2-*` остаётся
+в стадии как база.
+
+Прежде действовал набор второй части среза K1b шага 21.7 (`fable-k1b2-*`): R0 без данных. Все четыре
 компонента собраны мной из итоговых исходников набором шага 23.6, по одному шагу под сторожем фиксируемой
 памяти. Набор `fable-s36-*` остаётся в стадии как база.
 

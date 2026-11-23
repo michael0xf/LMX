@@ -1,0 +1,14 @@
+# The names of the root's callables are visible in both directions (the book #declaration-visibility, #root-entry):
+# the call of P above its line runs it, and got is 7. The root's sub show writes got to `shared\Observed\out`;
+# it names the root by `node[0]`, and got is the root's place, denoted transparently (#binding-caller-place).
+(
+    Observed:
+        int: out 0
+)
+int: got P()
+fn: P () int
+    return: 7
+sub: show ()
+    @: shared node[0]
+    shared\Observed\out := got
+show()

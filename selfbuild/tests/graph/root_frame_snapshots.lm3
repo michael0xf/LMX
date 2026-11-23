@@ -1,4 +1,19 @@
 # Local primitive/reference snapshots survive a child's direct publication.
+# R0's declarations are its own places (the book #root-entry); the root's methods change the graph by
+# `node\...`. The root's sub observe writes R0's places, read by bare name (#binding-caller-place), and the graph's
+# fields, read by `node\...`, to `shared\Observed`. `@value` addresses R0's place, written 3 (#binding-places);
+# that write does not touch the graph field, so `node\value` gives 1.
+(
+    Observed:
+        int: snapshot 0
+        int: again 0
+        int: direct 0
+        int: reference_snapshot 0
+        int: reference_direct 0
+        int: address_before_publication 0
+        int: local_before_publication 0
+        int: physical_before_publication 0
+)
 int: x 1
 fn: change () int
     node\x := 8
@@ -6,7 +21,6 @@ fn: change () int
 int: ignored change()
 int: snapshot x
 int: again snapshot
-int: direct data\x
 int: left 10
 int: right 20
 @: p int @left
@@ -14,10 +28,19 @@ sub: move () ()
     node\p := @(node\right)
 move()
 int: reference_snapshot \p
-int: reference_direct \(data\p)
 int: value 1
 value := 3
 @: address int @value
 int: address_before_publication \address
 int: local_before_publication value
-int: physical_before_publication data\value
+sub: observe ()
+    @: shared node[0]
+    shared\Observed\snapshot := snapshot
+    shared\Observed\again := again
+    shared\Observed\direct := node\x
+    shared\Observed\reference_snapshot := reference_snapshot
+    shared\Observed\reference_direct := \(node\p)
+    shared\Observed\address_before_publication := address_before_publication
+    shared\Observed\local_before_publication := local_before_publication
+    shared\Observed\physical_before_publication := node\value
+observe()

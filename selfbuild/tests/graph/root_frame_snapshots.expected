@@ -1,24 +1,45 @@
+---
+    Observed:
+        int: snapshot 1
+        int: again 1
+        int: direct 8
+        int: reference_snapshot 10
+        int: reference_direct 20
+        int: address_before_publication 3
+        int: local_before_publication 3
+        int: physical_before_publication 1
+    end: Observed
+---
 int: x 8
 fn: change () int
     :=: (node \ x) 8
     return: 0
 end: change
-int: ignored 0
-int: snapshot 1
-int: again 1
-int: direct 8
+int: ignored (change)
+int: snapshot x
+int: again snapshot
 int: left 10
 int: right 20
-@: p int @right
+@: p int (@ right)
 sub: move ()
     :=: (node \ p) (@ (node \ right))
 end: move
 move:
-int: reference_snapshot 10
-int: reference_direct 20
-int: value 3
+int: reference_snapshot (\ p)
+int: value 1
 :=: value 3
-@: address int @value
-int: address_before_publication 1
-int: local_before_publication 3
-int: physical_before_publication 1
+@: address int (@ value)
+int: address_before_publication (\ address)
+int: local_before_publication value
+sub: observe ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ snapshot) snapshot
+    :=: ((shared \ Observed) \ again) again
+    :=: ((shared \ Observed) \ direct) (node \ x)
+    :=: ((shared \ Observed) \ reference_snapshot) reference_snapshot
+    :=: ((shared \ Observed) \ reference_direct) (\ (node \ p))
+    :=: ((shared \ Observed) \ address_before_publication) address_before_publication
+    :=: ((shared \ Observed) \ local_before_publication) local_before_publication
+    :=: ((shared \ Observed) \ physical_before_publication) (node \ value)
+end: observe
+observe:

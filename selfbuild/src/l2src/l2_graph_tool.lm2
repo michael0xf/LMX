@@ -220,20 +220,6 @@ fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap; si
 return: status
 
 
-# The emitter's table of the declarations its native body has emitted so far (§3.5: the translator's own resolution,
-# a table of its traversal): a declaration with a computed initializer names its slot from its statement on.
-fn: lm_graph_emit_resolve (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: name char) size_t
-    size_t: i 0U
-    while: i < decl_n
-        if: decl_names[i] = name
-            return: decl_slots[i]
-        i := i + 1U
-    ---
-    # A place of the root is written by its name above and below its line: the only record of the name in the root's
-    # registry, when it is a place (lmx_graph_visible_slot; plan M11 5a).
-    return: c.lmx_graph_visible_slot(g, root, name)
-end: lm_graph_emit_resolve
-
 # Emit the address of a written substructure relative to this native activation's code. These field coordinates
 # belong to emitted code only; the source graph has no saved lookup plan. Code mutation invalidates this entry.
 fn: lm_graph_emit_address (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: target c.Lmx) int
@@ -1870,8 +1856,8 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     ---
     c.fputs("        return: 0\n    end: lm_graph_root\nend: external\n\n", f)
     # The root's entry: the run of the program is a traversal with its own namespace (lmx_graph_space_open), shared
-    # when it is entered inside a live one.
-    c.fputs("external:\n    fn: lm_graph_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        LmxGraphFrame: l2_frame\n        int: l2_opened 0\n        int: l2_status 0\n        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n        if: lmx_graph_space_open(l2_g, lmx_call_code, @ l2_opened) != 0\n            return: 1\n        l2_status: lmx_graph_work_open_data(l2_g, lmx_call_code, (cast: (@: Lmx) owner), @ l2_frame)\n        if: l2_status != 0\n            lmx_graph_space_close(l2_opened)\n            return: 1\n        l2_status: lm_graph_root(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n        l2_status: lmx_graph_work_finish(l2_g, @ l2_frame, l2_status)\n", f)
+    # when it is entered inside a live one. R0's frame has no data (the book #root-entry).
+    c.fputs("external:\n    fn: lm_graph_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        LmxGraphFrame: l2_frame\n        int: l2_opened 0\n        int: l2_status 0\n        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n        if: lmx_graph_space_open(l2_g, lmx_call_code, @ l2_opened) != 0\n            return: 1\n        l2_status: lmx_graph_work_open_data(l2_g, lmx_call_code, 0, @ l2_frame)\n        if: l2_status != 0\n            lmx_graph_space_close(l2_opened)\n            return: 1\n        l2_status: lm_graph_root(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n        l2_status: lmx_graph_work_finish(l2_g, @ l2_frame, l2_status)\n", f)
     if: check_root = 0
         c.fputs("        if: l2_status = 0\n            if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"AFTER\") != 0\n                l2_status: 1\n            ---\n        ---\n", f)
     c.fputs("        lmx_graph_space_close(l2_opened)\n        return: l2_status\n    end: lm_graph_body\nend: external\n\n", f)

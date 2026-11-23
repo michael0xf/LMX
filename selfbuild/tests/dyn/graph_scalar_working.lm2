@@ -245,7 +245,7 @@ fn: gs_pending_actuals () int
     file := c.fopen("graph_pending_actuals.lm3", "wb")
     if: g = 0 || file = 0
         return: 124
-    if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer 0\nanswer := Pending(@number; Collect())\nanswer := Pending(@number; Collect())\ndata\\answer := answer\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer 0\nanswer := Pending(@number; Collect())\nanswer := Pending(@number; Collect())\nsub: publish ()\n    node\\answer := answer\npublish()\n", file) < 0 || c.fclose(file) != 0
         return: 124
     status := c.lm_graph_build_file(g, "graph_pending_actuals.lm3", @ root)
     c.remove("graph_pending_actuals.lm3")

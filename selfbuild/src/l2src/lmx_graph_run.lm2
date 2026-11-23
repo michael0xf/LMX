@@ -994,9 +994,9 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
 
 # A reached declaration takes its place on the lexical level it stands on (the book, #shadowing-levels): a visible row of
 # its name on this very level is the place of a repeat, kept with its value; a declaration of DATA binds its physical
-# place; one on the root level of the code takes the DATA place of its name, as before (whether that level is nested in
-# the data is step 5 of the plan); otherwise the row this level gets again on each entry, or a new activation-owned row
-# on this level. A place of an outer level is never taken: the new row shadows it until the level is left. Never a
+# place; one on the root level of the code takes the DATA place of its name (R0 has no data, #root-entry: there it
+# gets a row of R0's own); otherwise the row this level gets again on each entry, or a new activation-owned row on
+# this level. A place of an outer level is never taken: the new row shadows it until the level is left. Never a
 # field appended to DATA; each physical DATA occurrence stays independently addressable.
 fn: lmx_graph_work_site (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: holder c.Lmx; size_t: index; @: at size_t) int
     @: raw void c.lmx_graph_get_in(g, holder, index)
@@ -1411,6 +1411,7 @@ fn: lmx_graph_input_field (@: g c.LmxGraph; @: data c.Lmx; size_t: index) int
 # One invocation owns its namespace. Only DATA root fields are installed at
 # entry; CODE declarations create their local rows when reached. No default
 # expression or initializer runs here, and no local is published to the graph.
+# data 0 is a launch without data, as R0 (the book #root-entry): no input rows; the namespace is the body's.
 fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: body c.Lmx; @: result char; @: frame c.LmxGraphFrame) int
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     size_t: i 0U
@@ -1418,7 +1419,7 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @:
     size_t: ordinal 0U
     int: status 0
     int: view 0
-    if: frame = 0 || active = 0 || active\code != code || data = 0 || body = 0
+    if: frame = 0 || active = 0 || active\code != code || body = 0
         return: 5
     c.memset((cast: (@: void) frame), 0, c.sizeof(c.LmxGraphFrame))
     frame\code := code
@@ -2499,7 +2500,6 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
     @: row c.LmxGraphWork 0
     @: value void 0
     @: input c.LmxWalkValue 0
-    @: space c.LmxGraphSpace c.lmx_graph_space()
     @: head char 0
     size_t: slot 0U
     size_t: at 0U
@@ -2545,6 +2545,8 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
                     held[0] := input
                 return: row\cell
             ---
+            # The reserved data answers the data of the live launch; R0 has none (the book #root-entry), so there it
+            # names nothing.
             if: activation = g\arena\activation && name = state\w_data
                 active_frame := (cast: (@: c.LmxGraphFrame) activation\frame)
                 return: (cast: (@: void) active_frame\data)
@@ -2596,10 +2598,6 @@ fn: lmx_graph_select_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@:
         ---
         activation := c.lmx_activation_next(activation)
     ---
-    # The special name `data` read by the root of a unit run over itself, with no frame, answers the root itself (the
-    # author 2026-11-11, R6; plan M11 5a): `data\[1]Model` selects an occurrence of the root.
-    if: state != 0 && name = state\w_data && space != 0 && space\root = scope
-        return: (cast: (@: void) scope)
     return: lmx_graph_lexical_binding(g, scope, name, selected, held, declared, prepare, status)
 end: lmx_graph_select_binding
 
@@ -4097,7 +4095,7 @@ fn: lmx_graph_preflight (@: g c.LmxGraph; @: root c.Lmx) int
     int: status lmx_graph_space_open(g, root, @ opened)
     if: status != 0 || opened = 0
         return: status
-    status := lmx_graph_preflight_scope(g, root, root, root, 0)
+    status := lmx_graph_preflight_scope(g, root, root, 0, 0)
     space := c.lmx_graph_space()
     while: status = 0
         while: i < space\count && status = 0
@@ -5705,8 +5703,8 @@ fn: lmx_graph_eval (@: g c.LmxGraph; @: scope c.Lmx; @: expr c.Lmx; size_t: from
 end: lmx_graph_eval
 
 # The root executes its code role in field order. Values stand; written named
-# Frames apply their receiver or launch their selected value. Data declarations
-# remain available through the whole registry independently of this traversal.
+# Frames apply their receiver or launch their selected value. R0 has no data (the book #root-entry): a declaration
+# of the root is a place of R0 from the line that reaches it; the root's fn and sub answer through its namespace.
 fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: active c.LmxActivation 0
@@ -5727,7 +5725,7 @@ fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
         status := 5
     else:
         if: active\frame = 0
-            status := lmx_graph_work_open_data(g, root, root, @ frame)
+            status := lmx_graph_work_open_data(g, root, 0, @ frame)
             if: status = 0
                 owned := 1
             ---
@@ -9148,8 +9146,9 @@ end: lmx_graph_visible_slot
 
 # Begin the namespace of a traversal of root (§5.2): when no traversal is live, a new empty table and the Structures of
 # the declarations of fn and sub created in it (they answer in their whole block); the places and named Structures of the
-# root answer in the whole root, read whole by its registry (lmx_graph_resolve; plan M11 5a). A traversal begun inside a live
-# one goes on with it. opened[0] says which (the argument of lmx_graph_space_close). 0; 1 without memory;
+# root answer the code nested in the root, read whole by its registry (lmx_graph_resolve; plan M11 5a); R0 itself,
+# without data (the book #root-entry), finds a place of the root from the line that reaches it. A traversal begun
+# inside a live one goes on with it. opened[0] says which (the argument of lmx_graph_space_close). 0; 1 without memory;
 # 5 for a declaration form this slice does not execute.
 fn: lmx_graph_space_open (@: g c.LmxGraph; @: root c.Lmx; @: opened int) int
     int: status 0

@@ -1,6 +1,14 @@
-# Declared again at the root, x is one more occurrence (the author 2026-11-11): nothing is replaced, and the bare name
-# x is ambiguous -- no first occurrence is chosen, answer 3 (plan M11 5a).
-# Plan M11 5v: the root declares no ordinary Structure; the occurrences are the places x (they were the records Model).
+# Declared again at the root, x is the same place (the book #shadowing-levels: a repeated declaration on the same
+# level works with its existing place, and its RHS is assigned), so `int: seen x` gives 2. The root's sub main
+# writes seen to `shared\Observed\seen`; it names the root by `node[0]`.
+(
+    Observed:
+        int: seen 0
+)
 int: x 1
 int: x 2
-int: seen data\x
+int: seen x
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := seen
+main()

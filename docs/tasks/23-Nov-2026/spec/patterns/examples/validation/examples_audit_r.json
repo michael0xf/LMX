@@ -1,0 +1,449 @@
+{
+  "reviewed_at_utc": "2026-11-21T14:10:42.196721+00:00",
+  "scope": "Root examples/lmx: R01,R02,R03,R04,R06a,R06b,R07,R09,A01",
+  "reviewed_count": 9,
+  "changed_ids": [
+    "R07"
+  ],
+  "unchanged_ids": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R06a",
+    "R06b",
+    "R09",
+    "A01"
+  ],
+  "new_application_helpers": [],
+  "new_library_comparisons": [],
+  "metric": "non-whitespace Unicode characters, including comments if present",
+  "normative_sources": [
+    "newdocs/CORE.md",
+    "newdocs/LMX_semantics_guide.en.md#stream-grouping",
+    "newdocs/LMX_semantics_guide.en.md#import-selection",
+    "newdocs/LMX_semantics_guide.en.md#copy-relations",
+    "newdocs/LMX_semantics_guide.en.md#operand-values",
+    "OPERAND_USAGE_PROFILE.md",
+    "23_interpreter_comparison.md"
+  ],
+  "runtime_executed": false,
+  "items": [
+    {
+      "id": "R01",
+      "file": "examples/lmx/R01.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Пример непосредственно проверяет стандартный merge: замену height на месте модели и добавление depth. У отдельной обёртки нет повторно используемой логики; она скрыла бы проверяемую композицию графа.",
+      "reason_en": "The example directly tests standard merge: replace height in the model slot and append depth. A wrapper has no reusable algorithm and would hide the graph composition under test.",
+      "old_chars": 184,
+      "new_chars": 184,
+      "saved_chars": 0,
+      "before": {
+        "chars": 184,
+        "nonempty_lines": 11,
+        "bytes_utf8": 258,
+        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+      },
+      "after": {
+        "chars": 184,
+        "nonempty_lines": 11,
+        "bytes_utf8": 258,
+        "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "merge has two explicit source references",
+        "grouping collects one result without changing source values",
+        "model height replaced; depth appended; expected 257"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R02",
+      "file": "examples/lmx/R02.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Важен видимый негруппированный поток copy и позиционное присваивание двум местам. Вызов helper с готовым контейнером изменил бы границу stream/grouping/W/E.",
+      "reason_en": "The ungrouped copy stream and positional assignment to two places must remain visible. A helper returning a ready container would alter the stream/grouping/W/E boundary.",
+      "old_chars": 93,
+      "new_chars": 93,
+      "saved_chars": 0,
+      "before": {
+        "chars": 93,
+        "nonempty_lines": 10,
+        "bytes_utf8": 169,
+        "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+      },
+      "after": {
+        "chars": 93,
+        "nonempty_lines": 10,
+        "bytes_utf8": 169,
+        "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "copy has one source and produces two fields",
+        "assignment remains ungrouped on RHS and positional",
+        "all RHS values precede LHS writes; expected 27"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "StreamProbe\\run()",
+          "expected": 27,
+          "components": [
+            2,
+            7
+          ]
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R03",
+      "file": "examples/lmx/R03.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Прямые import, copy и parent нужны для сравнения исходного владельца метода, его скопированного владельца и отдельного группирующего контейнера. Это диагностический пример namespace, а не повторяемая прикладная функция.",
+      "reason_en": "Direct import, copy, and parent calls distinguish the original method owner, the copied owner, and the separate grouping container. This is a namespace diagnostic, not a reusable application function.",
+      "old_chars": 244,
+      "new_chars": 244,
+      "saved_chars": 0,
+      "before": {
+        "chars": 244,
+        "nonempty_lines": 16,
+        "bytes_utf8": 376,
+        "sha256": "cd7f248391d45e2b9fcddc6c01de237172a8e578ffda65218e258b14880eafd5"
+      },
+      "after": {
+        "chars": 244,
+        "nonempty_lines": 16,
+        "bytes_utf8": 376,
+        "sha256": "cd7f248391d45e2b9fcddc6c01de237172a8e578ffda65218e258b14880eafd5"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "import stays in CODE",
+        "local value 99 cannot replace the method own ready 7",
+        "actual copied owner selected by parent(copied\\read)",
+        "owner 12; grouping slot 7; original owner 7; expected 712"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "ImportProbe\\run()",
+          "expected": 712,
+          "provider_value_after": 7,
+          "copied_owner_value_after": 12,
+          "grouping_container_value_after": 7
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R04",
+      "file": "examples/lmx/R04.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Пример проверяет число исполнений вычисляемого default и отсутствие публикации локальных записей в исходную форму. Вынесение источника или инициализации в новый helper изменило бы наблюдаемый контекст; ReadSource уже выделяет нужную повторяемую операцию.",
+      "reason_en": "The example checks computed-default execution count and the absence of local-write publication into source forms. Another wrapper would change the observed context; ReadSource already isolates the operation reused by the fixture.",
+      "old_chars": 383,
+      "new_chars": 383,
+      "saved_chars": 0,
+      "before": {
+        "chars": 383,
+        "nonempty_lines": 26,
+        "bytes_utf8": 595,
+        "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+      },
+      "after": {
+        "chars": 383,
+        "nonempty_lines": 26,
+        "bytes_utf8": 595,
+        "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "computed DATA initializer remains a source form",
+        "node\\calls addresses graph state explicitly",
+        "two independent activations obtain 41 and 42",
+        "explicit local initialization gives 44; local 99/44 not published"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "LocalProbe\\run()",
+          "expected": 4142,
+          "producer_calls": 2
+        },
+        {
+          "invoke": "LocalProbe\\explicitInitialization()",
+          "expected": 44,
+          "producer_calls": 1
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R06a",
+      "file": "examples/lmx/R06a.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Стандартный copy и последующая явная запись показывают одну общую скопированную цель и независимость оригинала. Новый helper не добавит композиции; он спрячет проверяемый aliasing.",
+      "reason_en": "Standard copy followed by an explicit write exposes one shared copied target and an unchanged original. A new helper adds no composition and would obscure the aliasing test.",
+      "old_chars": 189,
+      "new_chars": 189,
+      "saved_chars": 0,
+      "before": {
+        "chars": 189,
+        "nonempty_lines": 11,
+        "bytes_utf8": 262,
+        "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+      },
+      "after": {
+        "chars": 189,
+        "nonempty_lines": 11,
+        "bytes_utf8": 262,
+        "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "one operation-wide copy map preserves shared target",
+        "explicit write reaches one copied target through both links",
+        "original mutable target remains 7; expected 2107"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "SharingProbe\\run()",
+          "expected": 2107,
+          "identity": "copied left and right share one copied target; original is distinct"
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R06b",
+      "file": "examples/lmx/R06b.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Установка self, один copy и запись через copied\\self должны остаться видимыми: проверяются внутренняя замкнутость цикла и отличие внешнего группирующего контейнера.",
+      "reason_en": "Assigning self, performing one copy, and writing through copied\\self must remain visible: the test checks the internal cycle and the distinct outer grouping container.",
+      "old_chars": 139,
+      "new_chars": 139,
+      "saved_chars": 0,
+      "before": {
+        "chars": 139,
+        "nonempty_lines": 10,
+        "bytes_utf8": 213,
+        "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+      },
+      "after": {
+        "chars": 139,
+        "nonempty_lines": 10,
+        "bytes_utf8": 213,
+        "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "self-cycle is established before copy",
+        "write follows copied\\self to the copied Ring owner",
+        "grouping-container value remains 3; copied ring value 8; expected 83"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "CycleProbe\\run()",
+          "expected": 83,
+          "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+          "copied_ring_value_after": 8,
+          "grouping_container_value_after": 3
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R07",
+      "file": "examples/lmx/R07.lm3",
+      "decision": "changed",
+      "reason_ru": "Четыре стандартных поля заменены одним copy: sys\\OPERANDS_TEMPLATE первым в DATA. Готовые mode 0 и приоритет + совпадают с прежним заголовком; тело add, вложенный Example и два вычисления сохранены. Новый прикладной helper не требуется: это демонстрация реализации операнда, а стандартный заголовок уже предоставлен ядром.",
+      "reason_en": "Four standard fields are replaced by copy: sys\\OPERANDS_TEMPLATE first in DATA. Its prepared-value mode 0 and addition priority match the old header; the add body, nested Example, and both computations remain visible. No application helper is needed: this demonstrates an operand implementation using an already supplied kernel header.",
+      "old_chars": 209,
+      "new_chars": 159,
+      "saved_chars": 50,
+      "before": {
+        "chars": 209,
+        "nonempty_lines": 15,
+        "bytes_utf8": 339,
+        "sha256": "dea0430e1605286c4d0fab52e8d294f02dad24248a5157e380b1869d420fe100"
+      },
+      "after": {
+        "chars": 159,
+        "nonempty_lines": 12,
+        "bytes_utf8": 266,
+        "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+      },
+      "operand_decision": "use_supplied_template",
+      "library_decision": "reuse_supplied_kernel_header",
+      "library_boundary_ru": "Стандартный заголовок ядра; алгоритм add полностью остаётся в исходнике. Нового импортируемого прикладного компонента нет.",
+      "library_boundary_en": "Supplied kernel header; the full add algorithm remains in this source. No new imported application component.",
+      "preserved_checks": [
+        "copied standard header is first in operand DATA",
+        "mode 0 and addition priority inherited unchanged",
+        "return remains explicitly int and is absent from the standard header",
+        "nested Example remains actual DATA of calculate/demo",
+        "each demonstrated add has exactly one left and one right int",
+        "source expression remains visible and is evaluated at n=2 and n=5; expected 7+13=20"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "Operands\\Example\\demo()",
+          "expected": 20,
+          "components": [
+            7,
+            13
+          ]
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "R09",
+      "file": "examples/lmx/R09.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Различие локальной записи и замены фрагмента исходного графа требует именно двух явных путей присваивания и свежего uninit-состояния. Обёртка не даёт повторного использования и может скрыть выбранное логическое место.",
+      "reason_en": "The local-write versus source-graph-replacement distinction requires both explicit assignment paths and a fresh uninit state. A wrapper offers no reusable logic and could obscure the selected logical place.",
+      "old_chars": 189,
+      "new_chars": 189,
+      "saved_chars": 0,
+      "before": {
+        "chars": 189,
+        "nonempty_lines": 13,
+        "bytes_utf8": 276,
+        "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+      },
+      "after": {
+        "chars": 189,
+        "nonempty_lines": 13,
+        "bytes_utf8": 276,
+        "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "uninit value payload size is zero",
+        "local write changes activation place only",
+        "explicit path write replaces graph fragment",
+        "ready numeric 0 and null reference 0 remain distinct from typed absence"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "UninitializedGraph\\localWrite()",
+          "expected": 5,
+          "source_record_after": "uninit:int",
+          "source_value_size_after": 0
+        },
+        {
+          "invoke": "UninitializedGraph\\graphWrite()",
+          "expected": 5,
+          "source_record_after": "int",
+          "source_value_after": 5,
+          "require_old_new_raw_address_equality": false
+        },
+        {
+          "inspection": "Fresh source before either entry",
+          "uninitialized_value_size": 0,
+          "ready_controls": [
+            "numeric 0",
+            "null reference 0"
+          ],
+          "nil_means": "typed absence"
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    },
+    {
+      "id": "A01",
+      "file": "examples/lmx/A01.lm3",
+      "decision": "unchanged",
+      "reason_ru": "Индексная замена через alias и последующее чтение нового имени — сама проверка общего дескриптора Structure/Array<@>. Дополнительный операнд либо helper скрыл бы эту операцию без выигрыша.",
+      "reason_en": "Indexed replacement through an alias followed by reading the new name is the actual Structure/Array<@> descriptor test. An extra operand or helper would hide that operation without a benefit.",
+      "old_chars": 126,
+      "new_chars": 126,
+      "saved_chars": 0,
+      "before": {
+        "chars": 126,
+        "nonempty_lines": 11,
+        "bytes_utf8": 199,
+        "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+      },
+      "after": {
+        "chars": 126,
+        "nonempty_lines": 11,
+        "bytes_utf8": 199,
+        "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+      },
+      "operand_decision": "keep_explicit_core_mechanism",
+      "library_decision": "no_application_extraction",
+      "library_boundary_ru": "Видимые операции уже являются средствами ядра; дополнительного прикладного helper нет.",
+      "library_boundary_en": "The visible operations are already language-core facilities; no additional application helper.",
+      "preserved_checks": [
+        "same references the Slots descriptor",
+        "raw index write replaces the second slot reference",
+        "new name z belongs to replacement leaf; old y is not retained",
+        "target is not copied or reparented; expected length 2 and result 209"
+      ],
+      "expected_cases": [
+        {
+          "invoke": "SlotProbe\\run()",
+          "expected": 209,
+          "length_after": 2,
+          "new_field_name": "z"
+        }
+      ],
+      "expected_results_changed": false,
+      "haskell_changes_required": false,
+      "validation": "document-based semantic review and source-diff checks; not executed in an LMX runtime"
+    }
+  ],
+  "publication_status": "historical report from the prior revision; superseded for current sources",
+  "superseded_by": "receiver_revision.json"
+}

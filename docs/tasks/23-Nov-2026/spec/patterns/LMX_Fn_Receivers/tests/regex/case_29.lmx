@@ -1,0 +1,6 @@
+# Source acceptance fixture, NOT an executed test report.
+# Expected: (1,1,0); each written literal builder runs once
+Pattern[]: alternatives [literal("cat") literal("dog")]
+@: named choice(patterns := alternatives)
+@: unnamed choice(patterns := (Pattern[]: [literal("cat") literal("dog")]))
+(matches(utf8Text("cat"); named); matches(utf8Text("dog"); unnamed); matches(utf8Text("cow"); named))

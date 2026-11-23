@@ -1,0 +1,41 @@
+Functions:
+    int: x
+    return: int
+    twice:
+        return: x * 2
+    next:
+        return: x + 1
+
+CompositionProbe:
+    return: int
+    run:
+        int: a Functions\next(Functions\twice(4))
+        int: b Functions\twice(Functions\next(4))
+        return: a * 100 + b
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Вариант с общими ресиверами LMX — отдельный подход; вне основного размера.
+# Functions:
+#     int: x
+#     return: int
+#     twice:
+#         return: x * 2
+#     next:
+#         return: x + 1
+# 
+# CompositionProbe:
+#     return: int
+#     run:
+#         throws:
+#             FxArity
+#             FxIndex
+#             FxTypeToken
+#             FxKernelFailure
+#             SequenceSize
+#             ReceiverIndex
+#         @: forward pipe(Functions\twice; Functions\next)
+#         @: backward pipe(Functions\next; Functions\twice)
+#         int: a forward(4)
+#         int: b backward(4)
+#         return: a * 100 + b
+# END ALTERNATIVE LMX

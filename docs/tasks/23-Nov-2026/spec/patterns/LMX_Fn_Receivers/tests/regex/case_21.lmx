@@ -1,0 +1,7 @@
+# Pending fixture: one Unicode scalar versus four octets.
+# Expected (1,4,1,1); Match.source retains the original public views.
+@: scalars utf8Text("😀")
+@: octets byteText("😀")
+@: scalarMatch wholeMatch(scalars; anyChar)
+@: byteMatch wholeMatch(octets; anyChar times 4)
+(scalarMatch\value\end; byteMatch\value\end; scalarMatch\value\source = scalars; byteMatch\value\source = octets)

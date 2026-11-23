@@ -1,0 +1,10 @@
+BufferMessage:
+    int: job
+    @: queue
+    @: process
+    accept:
+        queue\push(job)
+    tick:
+        if: queue\size() > 0
+            int: next queue\pop()
+            process(next)

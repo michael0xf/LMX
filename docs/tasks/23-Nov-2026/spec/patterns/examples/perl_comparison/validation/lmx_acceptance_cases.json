@@ -1,0 +1,71 @@
+{
+  "status": "NOT_RUN",
+  "scope": "Explicit acceptance requirements for the generic new sort/unique source, not an execution report.",
+  "cases": [
+    {
+      "id": "S01",
+      "input": "empty dense int[]",
+      "expected": "fresh int[] with length zero; comparator is not called"
+    },
+    {
+      "id": "S02",
+      "input": "singleton @[] containing a structure reference",
+      "expected": "fresh outer array, same element reference, no comparator call"
+    },
+    {
+      "id": "S03",
+      "input": "records with equal priority and distinct width/id fields",
+      "expected": "stable ordering, every field preserved, source slots unchanged"
+    },
+    {
+      "id": "S04",
+      "input": "char[] and an ordering comparator over char",
+      "expected": "fresh char[] preserving the complete character profile"
+    },
+    {
+      "id": "S05",
+      "input": "comparator throws after its second comparison",
+      "expected": "FxCallFailure retains declared name/payload; source is unchanged; no result publication"
+    },
+    {
+      "id": "S06",
+      "input": "comparator returns a non-int record",
+      "expected": "SequenceElement; source unchanged"
+    },
+    {
+      "id": "S07",
+      "input": "length near admitted profile maximum",
+      "expected": "no width/end addition before safe difference check; no fixed word-width constants"
+    },
+    {
+      "id": "U01",
+      "input": "empty array and singleton reference array",
+      "expected": "fresh same-profile array; same is not called"
+    },
+    {
+      "id": "U02",
+      "input": "different records equal under user-supplied same",
+      "expected": "first original record reference retained; output group order stable"
+    },
+    {
+      "id": "U03",
+      "input": "same throws on a later candidate",
+      "expected": "FxCallFailure; input unchanged and no partial result"
+    },
+    {
+      "id": "U04",
+      "input": "same returns non-int",
+      "expected": "FxPredicate"
+    },
+    {
+      "id": "U05",
+      "input": "initialized, uninitialized and void records with a callback comparing explicit type codes only",
+      "expected": "values remain whole typed records; there is no mandatory numeric payload read in unique"
+    },
+    {
+      "id": "M01",
+      "input": "post owning method that performs sort/unique/bracket",
+      "expected": "whole operation remains inside owning Message arena; ordinary completion/failure delivered; no shared mutable pointer across arenas"
+    }
+  ]
+}

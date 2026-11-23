@@ -1,0 +1,24 @@
+First:
+    int: value 0
+
+Second:
+    int: value 0
+
+Registry:
+    int: key
+    return: @
+    get:
+        if: key = 0
+            return: First
+        return: Second
+
+Demo:
+    return: int
+    run:
+        First\value := 0
+        Second\value := 0
+        @: a Registry\get(key := 0)
+        @: b Registry\get(key := 0)
+        @: c Registry\get(key := 1)
+        a\value := 7
+        return: b\value * 10 + c\value

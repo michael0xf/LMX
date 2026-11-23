@@ -1,0 +1,13 @@
+InboxMessage:
+    @: db
+    @: broker
+    int: subscriber
+    int: eventId
+    int: delta
+    apply:
+        if: db\tryInsert(subscriber; eventId)
+            db\addBalance(delta)
+    ---
+    receiveEvent:
+        db\atomic(body := apply)
+        broker\ack(eventId)

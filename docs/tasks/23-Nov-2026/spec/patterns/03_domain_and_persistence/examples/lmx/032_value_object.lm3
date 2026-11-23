@@ -1,0 +1,19 @@
+immutable: Money:
+    int: cents 100
+    int: currency 840
+
+NumberEquality:
+    int: first
+    int: second
+    return: int
+    same:
+        return: first = second
+
+Demo:
+    return: int
+    run:
+        throws: copy(FxThrows\predicate)
+        @: first (copy(Money))
+        @: second (copy(Money))
+        @: third (merge(Money; immutable: (int: currency 978)))
+        return: equalFields(first; second; NumberEquality\same) * 10 + equalFields(first; third; NumberEquality\same)

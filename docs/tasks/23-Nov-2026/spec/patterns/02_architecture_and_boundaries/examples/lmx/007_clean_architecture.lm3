@@ -1,0 +1,24 @@
+Policy:
+    int: income
+    int: expense
+    return: int
+    eligible:
+        return: income - expense >= 30
+
+Presenter:
+    int: decision
+    return: int
+    render:
+        if: decision != 0
+            return: 200
+        return: 422
+
+UseCase:
+    int: income
+    int: expense
+    @: output
+    return: int
+    execute:
+        return: output(decision := Policy\eligible(income; expense))
+    demo:
+        return: execute(100; 60; Presenter\render)

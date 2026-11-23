@@ -1,0 +1,11 @@
+# Source acceptance fixture, NOT an executed test report.
+# Expected: (1, 1); neverPattern is not matched
+Meter:
+    int: calls 0
+    return: @
+    makeP:
+        node\calls += 1
+        return: neverPattern
+
+@: pattern (Meter\makeP() times 0)
+(matches(utf8Text(""); pattern); Meter\calls)

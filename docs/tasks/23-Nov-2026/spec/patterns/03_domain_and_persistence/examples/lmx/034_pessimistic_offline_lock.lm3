@@ -1,0 +1,14 @@
+Edit:
+    @: locks
+    @: db
+    int: id
+    int: session
+    int: token
+    int: cents
+    return: int
+    acquire:
+        return: locks\reserve(id; session)
+    save:
+        return: db\writeWithLease(id; session; token; cents)
+    release:
+        return: locks\release(id; session; token)

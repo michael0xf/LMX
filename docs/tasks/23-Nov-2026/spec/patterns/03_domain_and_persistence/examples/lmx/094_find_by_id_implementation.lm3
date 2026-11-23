@@ -1,0 +1,18 @@
+FxFindFirst:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: @
+    findFirst:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(items; i)
+            private: @: accepted FxApply\apply(accepts; FxOne\make(value))
+            if: FxSeqPredicate\truth(accepted) != 0
+                return: FxSome\some(value := value)
+            i += 1
+        return: FxNone\none()

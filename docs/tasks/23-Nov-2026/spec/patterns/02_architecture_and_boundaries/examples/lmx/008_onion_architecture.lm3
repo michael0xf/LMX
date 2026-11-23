@@ -1,0 +1,22 @@
+Order:
+    int: quantity 3
+    int: price 10
+    return: int
+    total:
+        return: quantity * price
+
+Repository:
+    @: last 0
+    @: order
+    save:
+        node\last := order
+
+Application:
+    @: order
+    @: save
+    return: int
+    submit:
+        save(order := order)
+        return: order\total()
+    demo:
+        return: submit(Order; Repository\save)

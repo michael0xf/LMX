@@ -1,0 +1,238 @@
+{
+  "format": "perl-suite-revision-v1",
+  "date": "2026-11-23",
+  "baseline": "current uploaded spec.tar.gz only",
+  "baseline_sha256": "4b142bab169cf7cc3fd89766da35b90561f913b68dca3ab1f0725793e4ecb932",
+  "canonical": "patterns/examples/perl_comparison/examples.json",
+  "schema": "suite, foreign_language, edition, examples[{id,title,category,contract,inputs,expected,lmx,foreign,core_functions,foreign_dependencies,sources,alternatives,test_cases}], implementations[{id,title,core_functions,lmx,foreign,contract,sources,source_files,lmx_extract,canonical_sources}]",
+  "clients": 24,
+  "implementation_pairs": 7,
+  "new_core": [
+    {
+      "name": "sort",
+      "api": "FxSort\\sort",
+      "arguments": "items; compare"
+    },
+    {
+      "name": "unique",
+      "api": "FxUnique\\unique",
+      "arguments": "items; same"
+    }
+  ],
+  "new_source": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
+  "new_contract": "patterns/LMX_Fn_Receivers/CORE_PERL_EXAMPLES.md",
+  "core_inventory": "2 additions integrated by root; public total 123; native integration providers 19",
+  "coverage": {
+    "map": [
+      "PI01"
+    ],
+    "filter": [
+      "PI01"
+    ],
+    "foldl": [
+      "PI01"
+    ],
+    "scanl": [
+      "PI01"
+    ],
+    "any": [
+      "PI01"
+    ],
+    "all": [
+      "PI01"
+    ],
+    "flatMap": [
+      "PI01"
+    ],
+    "select": [
+      "PI02"
+    ],
+    "splice": [
+      "PI02"
+    ],
+    "sort": [
+      "PI03"
+    ],
+    "unique": [
+      "PI03"
+    ],
+    "groupBy": [
+      "PI04"
+    ],
+    "derive": [
+      "PI05"
+    ],
+    "bracket": [
+      "PI06"
+    ],
+    "split": [
+      "PI07"
+    ],
+    "matches": [
+      "PI07"
+    ],
+    "wholeMatch": [
+      "PI07"
+    ],
+    "captureText": [
+      "PI07"
+    ],
+    "eachMatch": [
+      "PI07"
+    ],
+    "matchedText": [
+      "PI07"
+    ],
+    "replace": [
+      "PI07"
+    ]
+  },
+  "missing_library_coverage": [],
+  "pattern_constructor_coverage": [
+    "byteText",
+    "literal",
+    "sequence",
+    "repeated",
+    "capture",
+    "sameAs",
+    "then",
+    "times",
+    "atLeast",
+    "atMost",
+    "optional"
+  ],
+  "foreign_client_dependencies": [
+    "%+",
+    "CORE::defined",
+    "CORE::die",
+    "CORE::eval",
+    "CORE::exists",
+    "CORE::grep",
+    "CORE::map",
+    "CORE::push",
+    "CORE::sort",
+    "CORE::splice",
+    "CORE::split",
+    "List::Util::all",
+    "List::Util::any",
+    "List::Util::reductions",
+    "List::Util::sum0",
+    "List::Util::uniq",
+    "\\Q...\\E",
+    "anonymous subroutine",
+    "array slice",
+    "closure iterator",
+    "feature defer",
+    "hash",
+    "hash autovivification",
+    "hash construction",
+    "lexical closure",
+    "named backreference",
+    "named captures",
+    "regex /g in list context",
+    "regex anchors",
+    "regex character classes",
+    "s///ger",
+    "s///gr",
+    "sort pragma",
+    "string repetition x",
+    "tr///r"
+  ],
+  "custom_comparison_imports_in_clients": [],
+  "dedup": "No near-identical alternatives or discarded scenario fields. Each client source is complete. Common algorithms live in separate implementation pairs and official proposed LMX core.",
+  "comparability_decisions": [
+    "uniq Perl uses string equality/undef; integer usage is a common domain; generic unique(same) implementation comparison is separate.",
+    "splice client converts end-exclusive bound to Perl length visibly; changed target and removed values are both returned.",
+    "split empty string gives one empty field by shared contract; Perl normalization is counted.",
+    "literal empty regex wrapped in a noncapturing group; regression covers caller previous successful regex.",
+    "record width fields retained in sort/group/resource scenarios; fixed-width masking preserves every matched digit position.",
+    "derive client is flat compatible scalar/string settings; no false shallow-identity claim for general LMX copy/merge.",
+    "copied Counter/Squares methods use actual copied lexical owner; Trace writes use explicitly qualified graph cells.",
+    "regex comparison uses an explicit common byte/ASCII profile and declared shared matching engine; no claim to implement all Perl regex or every LMX Pattern facility.",
+    "generic Perl bracket handles acquire/action/release failure and deterministic release failure precedence through eval; native defer is used only in client with infallible release."
+  ],
+  "async_contract": "All 24 scenarios are synchronous. State belongs to one Message; post the entire owner method for asynchronous execution. No cross-arena mutable pointer or extra scheduler, and posting action does not extend bracket resource lifetime.",
+  "validation": {
+    "perl_runtime": "v5.40.1 / List::Util 1.63",
+    "client_status": "PASS",
+    "client_fixtures": 77,
+    "implementation_status": "PASS",
+    "implementation_checks": 87,
+    "implementation_modules_parse": 7,
+    "lmx_text_checks": "PASS",
+    "lmx_runtime": "NOT_RUN",
+    "original_examples_source_check": "PASS, 24 cases after final source sync",
+    "original_library_comparisons_rebuilt": 6,
+    "entrypoint": "python patterns/examples/perl_comparison/tools/validate.py (clients + implementation runtime + source/hash checks; requires completion report)"
+  },
+  "statistics": {
+    "client": {
+      "LMX": {
+        "characters": 9597,
+        "nonwhitespace": 6490,
+        "nonblank_lines": 352
+      },
+      "Perl": {
+        "characters": 4102,
+        "nonwhitespace": 3073,
+        "nonblank_lines": 190
+      }
+    },
+    "implementation": {
+      "LMX": {
+        "characters": 30112,
+        "nonwhitespace": 19921,
+        "nonblank_lines": 868
+      },
+      "Perl": {
+        "characters": 13257,
+        "nonwhitespace": 9752,
+        "nonblank_lines": 451
+      }
+    }
+  },
+  "output_artifacts": "README.md, LMX_Design_Patterns.Perl.md, LMX_Comparison_Perl.md, P01..P24_comparision.md, 7 library pairs, sources, JSON/CSV and validation. Parent builds final PDF/XLSX and archive.",
+  "limitations": [
+    "LMX execution unavailable; text/shape checks do not prove runtime behavior.",
+    "Perl numeric scalar/type admission is not the LMX typed-record ABI.",
+    "Perl byte regex profile and unique capture names are explicit.",
+    "Callbacks may not change source slots/length/order keys during traversal; external callback effects are not rolled back."
+  ],
+  "sources": [
+    "https://perldoc.perl.org/5.40.1/List::Util",
+    "https://perldoc.perl.org/5.40.1/List::Util#all",
+    "https://perldoc.perl.org/5.40.1/List::Util#any",
+    "https://perldoc.perl.org/5.40.1/List::Util#reductions",
+    "https://perldoc.perl.org/5.40.1/List::Util#sum0",
+    "https://perldoc.perl.org/5.40.1/List::Util#uniq",
+    "https://perldoc.perl.org/5.40.1/Scalar::Util#refaddr",
+    "https://perldoc.perl.org/5.40.1/functions/defined",
+    "https://perldoc.perl.org/5.40.1/functions/die",
+    "https://perldoc.perl.org/5.40.1/functions/eval",
+    "https://perldoc.perl.org/5.40.1/functions/exists",
+    "https://perldoc.perl.org/5.40.1/functions/grep",
+    "https://perldoc.perl.org/5.40.1/functions/map",
+    "https://perldoc.perl.org/5.40.1/functions/pos",
+    "https://perldoc.perl.org/5.40.1/functions/sort",
+    "https://perldoc.perl.org/5.40.1/functions/splice",
+    "https://perldoc.perl.org/5.40.1/functions/split",
+    "https://perldoc.perl.org/5.40.1/perldata",
+    "https://perldoc.perl.org/5.40.1/perldata#List-value-constructors",
+    "https://perldoc.perl.org/5.40.1/perldata#Slices",
+    "https://perldoc.perl.org/5.40.1/perldsc",
+    "https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS",
+    "https://perldoc.perl.org/5.40.1/perllol",
+    "https://perldoc.perl.org/5.40.1/perlop#Multiplicative-Operators",
+    "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators",
+    "https://perldoc.perl.org/5.40.1/perlop#The-empty-pattern",
+    "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer",
+    "https://perldoc.perl.org/5.40.1/perlop#tr/SEARCHLIST/REPLACEMENTLIST/cdsr",
+    "https://perldoc.perl.org/5.40.1/perlre",
+    "https://perldoc.perl.org/5.40.1/perlre#Capture-groups",
+    "https://perldoc.perl.org/5.40.1/perlref",
+    "https://perldoc.perl.org/5.40.1/perlref#Anonymous-Subroutines",
+    "https://perldoc.perl.org/5.40.1/perlsub#Persistent-Private-Variables",
+    "https://perldoc.perl.org/5.40.1/perlsyn#defer-blocks",
+    "https://perldoc.perl.org/5.40.1/sort"
+  ]
+}

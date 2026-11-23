@@ -1,0 +1,1604 @@
+{
+  "format": "new-receivers-review-v1",
+  "date": "2026-11-22",
+  "scope": "Extended groups05–08 (41 records) plus root GoF13–23 (11 records)",
+  "decision_rule": "Rewrite only when an equivalent complete main listing including import/throws is strictly shorter; preserve old source inline and disclose actual helper source and separate cost. Scope bug fixes are recorded separately.",
+  "reviewed_count": 52,
+  "extended_count": 41,
+  "root_count": 11,
+  "rewritten_shorter": [
+    {
+      "scope": "root_gof",
+      "id": 16,
+      "characters_before": 226,
+      "characters_after": 180,
+      "saved": 46
+    },
+    {
+      "scope": "root_gof",
+      "id": 20,
+      "characters_before": 462,
+      "characters_after": 458,
+      "saved": 4
+    }
+  ],
+  "independent_bugfixes": [
+    {
+      "scope": "root_gof",
+      "id": 21,
+      "description": "Final return moved inside demo CODE; same nonwhitespace count."
+    }
+  ],
+  "protocols_unchanged": [
+    "Message ownership and separate turn execution",
+    "post/ask/answer semantics",
+    "HTTP URL/path/status distinctions",
+    "retry status/backoff behavior",
+    "callback counts and resource identities"
+  ],
+  "runtime_executed": false,
+  "entries": [
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 38,
+      "name": "Circuit Breaker",
+      "file": "05_cloud_and_resilience/038_circuit_breaker_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "retryCall",
+        "guard"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "При открытом breaker запрос вообще не вызывается до now>=until; два последовательных отказа открывают окно, успех сбрасывает счётчик. retryCall немедленно повторяет объявленные отказы и не заменяет это сохраняемое состояние/часы. guard дал бы ошибку вместо -1.",
+      "before": {
+        "characters": 216,
+        "nonblank_lines": 18,
+        "utf8_bytes": 397,
+        "sha256": "e4dde05cdfb0feecad8d956aea8098f3f17745a292b9937e96f9d3365a92ee90"
+      },
+      "after": {
+        "characters": 216,
+        "nonblank_lines": 18,
+        "utf8_bytes": 397,
+        "sha256": "e4dde05cdfb0feecad8d956aea8098f3f17745a292b9937e96f9d3365a92ee90"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 39,
+      "name": "Retry",
+      "file": "05_cloud_and_resilience/039_retry_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "retryCall"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Текущий протокол повторяет HTTP-статус503, принимает delay и сохраняет интервалы1,2,...; общий retryCall работает с объявленными исключениями и не содержит callback задержки. Статус503 является нормальным числовым результатом, поэтому замена без адаптера вообще не повторит его.",
+      "before": {
+        "characters": 102,
+        "nonblank_lines": 8,
+        "utf8_bytes": 159,
+        "sha256": "85e04c1014099d9df2c5f11ff090cd70a3581ee109a86010cdc1b33349f572bb"
+      },
+      "after": {
+        "characters": 102,
+        "nonblank_lines": 8,
+        "utf8_bytes": 159,
+        "sha256": "85e04c1014099d9df2c5f11ff090cd70a3581ee109a86010cdc1b33349f572bb"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 97,
+      "name": "Retry Library — Implementation",
+      "file": "05_cloud_and_resilience/097_retry_library_implementation_comparision.md",
+      "kind": "implementation",
+      "decision": "kept",
+      "considered_receivers": [
+        "retryCall"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Реализация RetryLibrary включает распознавание503, ограничение числа попыток, необязательный delay и экспоненциальную паузу. Для retryCall понадобились бы преобразование статуса в объявленный отказ, обратное преобразование и отдельный backoff. Эти алгоритмы не исчезают, и заменой одного имени полный код не сокращается.",
+      "before": {
+        "characters": 366,
+        "nonblank_lines": 24,
+        "utf8_bytes": 668,
+        "sha256": "b96013057669cd161137067b9a6fb326cd1ad31f7aa48f881d7be21ff1c0df1c"
+      },
+      "after": {
+        "characters": 366,
+        "nonblank_lines": 24,
+        "utf8_bytes": 668,
+        "sha256": "b96013057669cd161137067b9a6fb326cd1ad31f7aa48f881d7be21ff1c0df1c"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 40,
+      "name": "Bulkhead",
+      "file": "05_cloud_and_resilience/040_bulkhead_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "bracket",
+        "once"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Сервер предоставляет раздельные acquire/release и возвращает0 при занятом единственном слоте. bracket управляет лексическим временем уже полученного ресурса, но не реализует эту admission-политику и не заменяет два серверных состояния.",
+      "before": {
+        "characters": 113,
+        "nonblank_lines": 11,
+        "utf8_bytes": 205,
+        "sha256": "e7dd949e54f71be367ead41264fbcb1916c86ce67dec3335d21a4f8c63a517af"
+      },
+      "after": {
+        "characters": 113,
+        "nonblank_lines": 11,
+        "utf8_bytes": 205,
+        "sha256": "e7dd949e54f71be367ead41264fbcb1916c86ce67dec3335d21a4f8c63a517af"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 42,
+      "name": "API Gateway",
+      "file": "05_cloud_and_resilience/042_api_gateway_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "overload",
+        "apply"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Две ветви выбирают разные HTTP URL/paths и возвращают404 для остальных route. overload потребует два предиката, два callable, список candidates и ошибки выбора вместо прямых условий; apply добавит контейнер фактических аргументов и чтение записи результата к уже прямым вызовам http.post.",
+      "before": {
+        "characters": 189,
+        "nonblank_lines": 10,
+        "utf8_bytes": 277,
+        "sha256": "61eef87b7c9c7b71d69639899d39ba2a6bb4e982ce8dea11c8fefd5937b34f97"
+      },
+      "after": {
+        "characters": 189,
+        "nonblank_lines": 10,
+        "utf8_bytes": 277,
+        "sha256": "61eef87b7c9c7b71d69639899d39ba2a6bb4e982ce8dea11c8fefd5937b34f97"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 43,
+      "name": "Backends for Frontends",
+      "file": "05_cloud_and_resilience/043_backends_for_frontends_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "compose",
+        "pipe"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "MobileBff возвращает один backend.price, WebBff складывает два независимых запроса. pipe передаёт результат первой стадии второй и меняет интерфейс shipping; compose не выражает сумму двух чтений. Нужные прикладные тела всё равно остаются, а фабрика/импорт добавляются.",
+      "before": {
+        "characters": 146,
+        "nonblank_lines": 10,
+        "utf8_bytes": 205,
+        "sha256": "8cf173450295adca912070b8c9419a0229a8c3e7cf584e2ea56dc8cdd2a27262"
+      },
+      "after": {
+        "characters": 146,
+        "nonblank_lines": 10,
+        "utf8_bytes": 205,
+        "sha256": "8cf173450295adca912070b8c9419a0229a8c3e7cf584e2ea56dc8cdd2a27262"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 44,
+      "name": "Sidecar",
+      "file": "05_cloud_and_resilience/044_sidecar_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "trace",
+        "apply"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Sidecar — отдельный Message, append отправляется через post/ask и возвращаемого значения нет. trace — локальная обёртка вызова со своими событиями входа/выхода; она не заменяет почтовый адрес, доставку и sink.write.",
+      "before": {
+        "characters": 132,
+        "nonblank_lines": 12,
+        "utf8_bytes": 219,
+        "sha256": "1134019e9983cce06c9d3daf8cd726554553d067a8f4af751cba851072b0d7e1"
+      },
+      "after": {
+        "characters": 132,
+        "nonblank_lines": 12,
+        "utf8_bytes": 219,
+        "sha256": "1134019e9983cce06c9d3daf8cd726554553d067a8f4af751cba851072b0d7e1"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 45,
+      "name": "Ambassador",
+      "file": "05_cloud_and_resilience/045_ambassador_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "retryCall"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Ambassador повторяет нормальный HTTP503 через RetryLibrary, сохраняя URL/path. retryCall видит успешный числовой возврат и не повторяет его; необходимый HTTP/error адаптер длиннее существующего `read retry 2`.",
+      "before": {
+        "characters": 162,
+        "nonblank_lines": 9,
+        "utf8_bytes": 228,
+        "sha256": "40227fd4f3e163e811fee3d3e2b07240c8272a0e9cacecfc50b905ea2892aaa0"
+      },
+      "after": {
+        "characters": 162,
+        "nonblank_lines": 9,
+        "utf8_bytes": 228,
+        "sha256": "40227fd4f3e163e811fee3d3e2b07240c8272a0e9cacecfc50b905ea2892aaa0"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 49,
+      "name": "Cache-Aside",
+      "file": "05_cloud_and_resilience/049_cache_aside_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "lazy",
+        "memoize"
+      ],
+      "reason_class": "size",
+      "reason_ru": "После store.write кеш обязательно инвалидируется. lazy без сброса хранит первый успех навсегда; корректный вариант обязан заменять thunk при put и хранить его в node. Даже ограниченный нульарным read кандидат длиннее текущего клиента; обычный read() дополнительно допускает DATA/autofill, которые generic lazy не скрывает.",
+      "before": {
+        "characters": 182,
+        "nonblank_lines": 15,
+        "utf8_bytes": 307,
+        "sha256": "cb8885c8492d4abc5ce2273cf7a973dfd8eaebba7fb44f84f3ac654dfc98fbee"
+      },
+      "after": {
+        "characters": 182,
+        "nonblank_lines": 15,
+        "utf8_bytes": 307,
+        "sha256": "cb8885c8492d4abc5ce2273cf7a973dfd8eaebba7fb44f84f3ac654dfc98fbee"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false,
+      "measured_rejected_candidate": {
+        "code": "CacheMessage:\n    @: store\n    int: value\n    @: cached 0\n    return: int\n    get:\n        throws:\n            FxArity\n            FxIndex\n            FxRecordArity\n            FxTypeToken\n            FxKernelFailure\n            FxLazyCycle\n        if: node\\cached = 0\n            node\\cached := lazy(store\\read)\n        @: pending node\\cached\n        return: pending()\n    put:\n        store\\write(value)\n        node\\cached := 0\n        return: value\n",
+        "metrics": {
+          "characters": 252,
+          "nonblank_lines": 21,
+          "utf8_bytes": 453,
+          "sha256": "d8d18c143c520ce9456b86e465e663648c54d6a46db6110582a3f20d79587696"
+        },
+        "assumptions": [
+          "Callback has a truly nullary signature, no implicit DATA inputs/defaults to fill.",
+          "Target has no additional declared failure; arbitrary target failures would require additional handling."
+        ],
+        "adopted": false,
+        "strictly_shorter": false,
+        "single_core": true
+      }
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 52,
+      "name": "Throttling",
+      "file": "05_cloud_and_resilience/052_throttling_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "memoize",
+        "once"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Счётчик обнуляется при любом изменении now/10, в том числе при возврате к прежнему окну. memoize по номеру окна сохранял бы прежнее значение/кеш вместо нового окна, once не сбрасывает счётчик. Часы и admission-проверки остаются отдельным алгоритмом.",
+      "before": {
+        "characters": 179,
+        "nonblank_lines": 14,
+        "utf8_bytes": 313,
+        "sha256": "127480cec48e8e52851e8c0246b5b30564dcce0d610b0cf882ae98e59e84600c"
+      },
+      "after": {
+        "characters": 179,
+        "nonblank_lines": 14,
+        "utf8_bytes": 313,
+        "sha256": "127480cec48e8e52851e8c0246b5b30564dcce0d610b0cf882ae98e59e84600c"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 53,
+      "name": "Queue-Based Load Leveling",
+      "file": "05_cloud_and_resilience/053_queue_based_load_leveling_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "map",
+        "repeat"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "accept только ставит работу в очередь, tick забирает не более одной текущей работы. map/repeat обрабатывают уже переданный набор/число вызовов и не заменяют разделённые во времени enqueue/tick и проверку текущего размера очереди.",
+      "before": {
+        "characters": 113,
+        "nonblank_lines": 10,
+        "utf8_bytes": 191,
+        "sha256": "cdad32d196acc2dda240138c1fd1629c7b0da93a14ef8f944d63102016d36494"
+      },
+      "after": {
+        "characters": 113,
+        "nonblank_lines": 10,
+        "utf8_bytes": 191,
+        "sha256": "cdad32d196acc2dda240138c1fd1629c7b0da93a14ef8f944d63102016d36494"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 54,
+      "name": "Competing Consumers",
+      "file": "05_cloud_and_resilience/054_competing_consumers_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "repeat",
+        "runUntil"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Worker должен дождаться semantic answer take, вызвать process и отправить следующий запрос. Локальный цикл runUntil/repeat изменил бы ожидание ответа и turn. Возврат-1 как конец очереди также не является исключением retryCall.",
+      "before": {
+        "characters": 288,
+        "nonblank_lines": 28,
+        "utf8_bytes": 555,
+        "sha256": "6df866e0d28b991fbb8f6afa50f95061a91f1b40c1d7dfedd5f2de0410bc4e15"
+      },
+      "after": {
+        "characters": 288,
+        "nonblank_lines": 28,
+        "utf8_bytes": 555,
+        "sha256": "6df866e0d28b991fbb8f6afa50f95061a91f1b40c1d7dfedd5f2de0410bc4e15"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 56,
+      "name": "Health Endpoint Monitoring",
+      "file": "05_cloud_and_resilience/056_health_endpoint_monitoring_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "predicate",
+        "guard"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "readiness возвращает200 только для probe()=1 и503 иначе; predicate нормализует любое ненулевое значение, а guard сообщает отказ. Нужное точное сравнение и отображение в HTTP-код всё равно остаются.",
+      "before": {
+        "characters": 96,
+        "nonblank_lines": 9,
+        "utf8_bytes": 165,
+        "sha256": "e513405649f09c0f54005ec9012ac84b6ed6497d3aaffbf2698527bac90bd9df"
+      },
+      "after": {
+        "characters": 96,
+        "nonblank_lines": 9,
+        "utf8_bytes": 165,
+        "sha256": "e513405649f09c0f54005ec9012ac84b6ed6497d3aaffbf2698527bac90bd9df"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "05_cloud_and_resilience",
+      "id": 87,
+      "name": "Backpressure",
+      "file": "05_cloud_and_resilience/087_backpressure_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "guard",
+        "contract"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Кредит изменяется у Message-владельца до post, offer без кредита возвращает0 без отправки. guard/contract вводят FxPredicate вместо0 и не убирают учёт кредитов или почтовую операцию.",
+      "before": {
+        "characters": 187,
+        "nonblank_lines": 17,
+        "utf8_bytes": 341,
+        "sha256": "f9480b2a8072d766672c7027894b332ae56da6390ccdd16f5302837737bc182e"
+      },
+      "after": {
+        "characters": 187,
+        "nonblank_lines": 17,
+        "utf8_bytes": 341,
+        "sha256": "f9480b2a8072d766672c7027894b332ae56da6390ccdd16f5302837737bc182e"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 58,
+      "name": "Thread Pool",
+      "file": "06_async_and_messages/058_thread_pool_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "map",
+        "repeat"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Round-robin выбирает получателя и отправляет job в его Message; ответ worker отправляет collector. Локальный map/repeat не сохраняет распределение по владельцам, очередь и два независимых turn.",
+      "before": {
+        "characters": 233,
+        "nonblank_lines": 20,
+        "utf8_bytes": 418,
+        "sha256": "ab954febaa5b0b73f6248ebcc67dad366ade0038db0d188b05f7fa2a48b36c20"
+      },
+      "after": {
+        "characters": 233,
+        "nonblank_lines": 20,
+        "utf8_bytes": 418,
+        "sha256": "ab954febaa5b0b73f6248ebcc67dad366ade0038db0d188b05f7fa2a48b36c20"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 59,
+      "name": "Producer-Consumer",
+      "file": "06_async_and_messages/059_producer_consumer_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "repeat",
+        "map"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Четыре формы ask выражают три сообщения с разными значениями и отдельный finish в одном post. repeat одной функции не создаёт те же сообщения автоматически; callback с post добавляет другой turn/конверт, а готовый список/mapper длиннее четырёх записанных вызовов.",
+      "before": {
+        "characters": 225,
+        "nonblank_lines": 17,
+        "utf8_bytes": 384,
+        "sha256": "abbb789a17b46c949c8669dc462a9f524c2cc9f54dbf9f5f9453f0dcb867f5f0"
+      },
+      "after": {
+        "characters": 225,
+        "nonblank_lines": 17,
+        "utf8_bytes": 384,
+        "sha256": "abbb789a17b46c949c8669dc462a9f524c2cc9f54dbf9f5f9453f0dcb867f5f0"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 60,
+      "name": "Actor Model",
+      "file": "06_async_and_messages/060_actor_model_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "scanl",
+        "foldl"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Actor хранит total между отдельными сообщениями и предоставляет read. foldl/scanl потребуют заранее собранную последовательность, не заменяют Message-владение и не дают чтение между независимыми приходами.",
+      "before": {
+        "characters": 104,
+        "nonblank_lines": 9,
+        "utf8_bytes": 165,
+        "sha256": "5ee280710cca95278cc3c9ae016107ea55cdfc1064156ad8ba47b8c48651d991"
+      },
+      "after": {
+        "characters": 104,
+        "nonblank_lines": 9,
+        "utf8_bytes": 165,
+        "sha256": "5ee280710cca95278cc3c9ae016107ea55cdfc1064156ad8ba47b8c48651d991"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 61,
+      "name": "Active Object",
+      "file": "06_async_and_messages/061_active_object_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "apply",
+        "pipe"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Active Object содержит post/ask/answer и отдельный адрес sink.accept. apply был бы локальным синхронным вызовом; pipe не заменяет доставку результата. При сохранении post новые вызовы только добавляются к короткому протоколу.",
+      "before": {
+        "characters": 143,
+        "nonblank_lines": 14,
+        "utf8_bytes": 263,
+        "sha256": "31af3e6545ef4b7cbd998d7b270c3b76bbfe25b231243488bfe9c63c326e41e0"
+      },
+      "after": {
+        "characters": 143,
+        "nonblank_lines": 14,
+        "utf8_bytes": 263,
+        "sha256": "31af3e6545ef4b7cbd998d7b270c3b76bbfe25b231243488bfe9c63c326e41e0"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 62,
+      "name": "Reactor",
+      "file": "06_async_and_messages/062_reactor_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "guard",
+        "predicate"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Reactor отдельно обрабатывает n>0 и n<0, а n=0 не делает ничего. guard с ошибкой или boolean predicate не передают три разных исхода readReady и необходимость unregister; обе ветви остаются.",
+      "before": {
+        "characters": 100,
+        "nonblank_lines": 10,
+        "utf8_bytes": 185,
+        "sha256": "6945ac2ec48d8366b88646384abe515b7ed5706c1b6c086ff4055861939657c3"
+      },
+      "after": {
+        "characters": 100,
+        "nonblank_lines": 10,
+        "utf8_bytes": 185,
+        "sha256": "6945ac2ec48d8366b88646384abe515b7ed5706c1b6c086ff4055861939657c3"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 63,
+      "name": "Proactor",
+      "file": "06_async_and_messages/063_proactor_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "partial",
+        "apply"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "submitRead регистрирует completionTarget и token7, completed позже проверяет token перед sink.write. partial не заменяет существующий completion-порт и жизненный цикл I/O, apply не убирает ни регистрацию, ни проверку токена.",
+      "before": {
+        "characters": 140,
+        "nonblank_lines": 11,
+        "utf8_bytes": 217,
+        "sha256": "74f6ce0587bce895d7134f0f2dc34d726903895d255fac35f62f40e248f28aa1"
+      },
+      "after": {
+        "characters": 140,
+        "nonblank_lines": 11,
+        "utf8_bytes": 217,
+        "sha256": "74f6ce0587bce895d7134f0f2dc34d726903895d255fac35f62f40e248f28aa1"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 64,
+      "name": "Future / Promise",
+      "file": "06_async_and_messages/064_future_promise_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "once",
+        "lazy"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Future сохраняет waiter IDs и рассылает один опубликованный результат; resolve после первого результата ничего не меняет. once может кешировать локальный вызов, но не создаёт очередь ожидающих и replies.send; его состояние не заменяет ready/value, используемые get.",
+      "before": {
+        "characters": 273,
+        "nonblank_lines": 19,
+        "utf8_bytes": 443,
+        "sha256": "db9316245d22f7535767fdb76abb1b55072852bd7c01f3c310fab6bdb347c4db"
+      },
+      "after": {
+        "characters": 273,
+        "nonblank_lines": 19,
+        "utf8_bytes": 443,
+        "sha256": "db9316245d22f7535767fdb76abb1b55072852bd7c01f3c310fab6bdb347c4db"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 71,
+      "name": "Half-Sync / Half-Async",
+      "file": "06_async_and_messages/071_half_sync_half_async_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "pipe",
+        "apply"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Ingress пересылает frame в worker, worker отдельно отправляет результат writer. Синхронная pipe сместила бы обработку в одного владельца вместо half-sync/half-async, а оборачивание уже написанных post не сокращает протокол.",
+      "before": {
+        "characters": 174,
+        "nonblank_lines": 15,
+        "utf8_bytes": 306,
+        "sha256": "a16829ce3594d36fdf292191369e16a987f264349f1e1f4e8af9a5b5183a3fd6"
+      },
+      "after": {
+        "characters": 174,
+        "nonblank_lines": 15,
+        "utf8_bytes": 306,
+        "sha256": "a16829ce3594d36fdf292191369e16a987f264349f1e1f4e8af9a5b5183a3fd6"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 88,
+      "name": "Structured Concurrency",
+      "file": "06_async_and_messages/088_structured_concurrency_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "map",
+        "foldl",
+        "traverse"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Scope ждёт остановки обоих детей, подавляет повторное уведомление каждого childId, запрашивает остановку остальных после ошибки и завершает только при remaining=0. Последовательный foldl/traverse не является барьером жизненного цикла и не заменяет эти состояния.",
+      "before": {
+        "characters": 364,
+        "nonblank_lines": 28,
+        "utf8_bytes": 661,
+        "sha256": "cb7b0cc6f62de4ea55206ae3baf497499b77768946cfd3d1c284634ac66a2958"
+      },
+      "after": {
+        "characters": 364,
+        "nonblank_lines": 28,
+        "utf8_bytes": 661,
+        "sha256": "cb7b0cc6f62de4ea55206ae3baf497499b77768946cfd3d1c284634ac66a2958"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 89,
+      "name": "Supervision Tree",
+      "file": "06_async_and_messages/089_supervision_tree_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "retryCall"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Supervisor запускает новый child после отдельного уведомления stopped, ограничивает число рестартов и сохраняет новый адрес. retryCall повторяет синхронную операцию в текущей активации и не управляет завершением/перезапуском Message-ребёнка.",
+      "before": {
+        "characters": 204,
+        "nonblank_lines": 14,
+        "utf8_bytes": 326,
+        "sha256": "757183035fc098349e3923c1f7f76aaf5dc6349e1fdf4240545f1174c880fcc6"
+      },
+      "after": {
+        "characters": 204,
+        "nonblank_lines": 14,
+        "utf8_bytes": 326,
+        "sha256": "757183035fc098349e3923c1f7f76aaf5dc6349e1fdf4240545f1174c880fcc6"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "06_async_and_messages",
+      "id": 90,
+      "name": "MapReduce",
+      "file": "06_async_and_messages/090_map_reduce_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "map",
+        "foldl"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "MapReduce в этом примере — маршрутизация сообщений в even/odd reducers и подтверждение barrier.accepted. map/foldl общего fun являются последовательными локальными операциями над Structure; без сохранения post/answer/barrier получился бы другой сценарий.",
+      "before": {
+        "characters": 220,
+        "nonblank_lines": 22,
+        "utf8_bytes": 415,
+        "sha256": "5e918f342589603c728003dd809cbe622ab56be919451daeb20f211a7f9d68fc"
+      },
+      "after": {
+        "characters": 220,
+        "nonblank_lines": 22,
+        "utf8_bytes": 415,
+        "sha256": "5e918f342589603c728003dd809cbe622ab56be919451daeb20f211a7f9d68fc"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 65,
+      "name": "Read-Write Lock",
+      "file": "07_state_coordination/065_read_write_lock_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "guard",
+        "apply"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Последовательные read/write уже обеспечены владельцем ValueMessage. Локальный guard не реализует отдельную блокировку или очередь читателей; apply добавляет упаковку к прямому доступу и не сокращает код.",
+      "before": {
+        "characters": 111,
+        "nonblank_lines": 9,
+        "utf8_bytes": 172,
+        "sha256": "9da7c4efbd5162375cbc7fce1bc07d171f3158bbdfd58a1ec999bf18508592e1"
+      },
+      "after": {
+        "characters": 111,
+        "nonblank_lines": 9,
+        "utf8_bytes": 172,
+        "sha256": "9da7c4efbd5162375cbc7fce1bc07d171f3158bbdfd58a1ec999bf18508592e1"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 66,
+      "name": "Double-Checked Locking",
+      "file": "07_state_coordination/066_double_checked_locking_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "lazy",
+        "once"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Нужно один раз вызвать build и сохранять значение между Message-turn. Generic lazy требует сохранённый thunk и его начальную установку, а не вычисляемый default, который мог бы создаваться при каждом get. Полный кандидат с этими условиями и throws длиннее; ограничение build нульарной сигнатурой тоже не подразумевается одним вызовом build().",
+      "before": {
+        "characters": 117,
+        "nonblank_lines": 10,
+        "utf8_bytes": 201,
+        "sha256": "316649a391acd1b91f58493df704f60f0e0ee639b37e42bdb28e47c659910c15"
+      },
+      "after": {
+        "characters": 117,
+        "nonblank_lines": 10,
+        "utf8_bytes": 201,
+        "sha256": "316649a391acd1b91f58493df704f60f0e0ee639b37e42bdb28e47c659910c15"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false,
+      "measured_rejected_candidate": {
+        "code": "LazyMessage:\n    @: build\n    @: cached 0\n    return: int\n    get:\n        throws:\n            FxArity\n            FxIndex\n            FxRecordArity\n            FxTypeToken\n            FxKernelFailure\n            FxLazyCycle\n        if: node\\cached = 0\n            node\\cached := lazy(build)\n        @: pending node\\cached\n        return: pending()\n",
+        "metrics": {
+          "characters": 189,
+          "nonblank_lines": 16,
+          "utf8_bytes": 349,
+          "sha256": "90e10c1f35414a97c952e140e2d85b70891421ecf5f22a2facbce47490e7c5f2"
+        },
+        "assumptions": [
+          "Callback has a truly nullary signature, no implicit DATA inputs/defaults to fill.",
+          "Target has no additional declared failure; arbitrary target failures would require additional handling."
+        ],
+        "adopted": false,
+        "strictly_shorter": false,
+        "single_core": true
+      }
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 67,
+      "name": "Guarded Suspension",
+      "file": "07_state_coordination/067_guarded_suspension_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "lazy",
+        "guard"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "awaitValue регистрирует requestId до publish и отправляет отложенные ответы после публикации. lazy не ставит запросы в очередь, guard сигнализирует отказ вместо ожидания; прежний цикл waiters и replies.send обязателен.",
+      "before": {
+        "characters": 258,
+        "nonblank_lines": 17,
+        "utf8_bytes": 403,
+        "sha256": "00669c4b1c202a5a5ef5e6762c855ee3d011c0edb5d22cc3704157b5356299ea"
+      },
+      "after": {
+        "characters": 258,
+        "nonblank_lines": 17,
+        "utf8_bytes": 403,
+        "sha256": "00669c4b1c202a5a5ef5e6762c855ee3d011c0edb5d22cc3704157b5356299ea"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 68,
+      "name": "Balking",
+      "file": "07_state_coordination/068_balking_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "once",
+        "guard"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "start возвращает0 при busy, finish вновь открывает доступ. once не сбрасывается после finish, guard меняет нулевой отказ на исключение. Два перехода состояния уже короче соответствующих адаптеров.",
+      "before": {
+        "characters": 106,
+        "nonblank_lines": 11,
+        "utf8_bytes": 198,
+        "sha256": "7db0a1c240693c3d0d74916853e2ec36ca8e56fa06238fb445ede1972420be5a"
+      },
+      "after": {
+        "characters": 106,
+        "nonblank_lines": 11,
+        "utf8_bytes": 198,
+        "sha256": "7db0a1c240693c3d0d74916853e2ec36ca8e56fa06238fb445ede1972420be5a"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 69,
+      "name": "Thread-Local Storage",
+      "file": "07_state_coordination/069_thread_local_storage_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "memoize",
+        "once"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Смысл — отдельный count каждого владельца Message и его увеличение при каждом next. memoize/once подавляли бы повторное действие; общий статический счётчик нарушил бы изоляцию. Никакого повторяемого функционального алгоритма здесь нет.",
+      "before": {
+        "characters": 70,
+        "nonblank_lines": 6,
+        "utf8_bytes": 110,
+        "sha256": "1bcde9e313dab6d5cb796c600422b3485c5412321f5dc131303c930d6834a478"
+      },
+      "after": {
+        "characters": 70,
+        "nonblank_lines": 6,
+        "utf8_bytes": 110,
+        "sha256": "1bcde9e313dab6d5cb796c600422b3485c5412321f5dc131303c930d6834a478"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "07_state_coordination",
+      "id": 70,
+      "name": "Monitor Object",
+      "file": "07_state_coordination/070_monitor_object_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "guard",
+        "contract"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "withdraw должен возвращать0 без изменения баланса для отрицательной суммы и недостатка средств. guard/contract дадут объявленный отказ и потребуют его преобразовать обратно в0; проверка balance и запись остаются у того же владельца.",
+      "before": {
+        "characters": 158,
+        "nonblank_lines": 13,
+        "utf8_bytes": 271,
+        "sha256": "5eaa0d32f9dbb623b310b932d434c95379aad13e12dd763ae32051e4c063299a"
+      },
+      "after": {
+        "characters": 158,
+        "nonblank_lines": 13,
+        "utf8_bytes": 271,
+        "sha256": "5eaa0d32f9dbb623b310b932d434c95379aad13e12dd763ae32051e4c063299a"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 72,
+      "name": "Dependency Injection",
+      "file": "08_objects_and_composition/072_dependency_injection_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "apply",
+        "partial"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Два execute с явно переданным read уже выражают dependency injection; apply добавляет контейнер и разыменование результата, partial создаёт две фабрики с throws вместо двух готовых named actuals. Сам умножающий callback остаётся в клиенте.",
+      "before": {
+        "characters": 163,
+        "nonblank_lines": 13,
+        "utf8_bytes": 252,
+        "sha256": "ca56abb0e6b98216f45a3ab6da613f0830c3e5b8701617a40327eda829c32bf6"
+      },
+      "after": {
+        "characters": 163,
+        "nonblank_lines": 13,
+        "utf8_bytes": 252,
+        "sha256": "ca56abb0e6b98216f45a3ab6da613f0830c3e5b8701617a40327eda829c32bf6"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 73,
+      "name": "Service Locator",
+      "file": "08_objects_and_composition/073_service_locator_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "overload",
+        "partial"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Locator разрешает один ключ и возвращает fallback для любого другого, после чего клиент вызывает полученный метод. overload добавляет предикаты и исходы отсутствия/неоднозначности, а partial не заменяет сам выбор fallback.",
+      "before": {
+        "characters": 223,
+        "nonblank_lines": 19,
+        "utf8_bytes": 358,
+        "sha256": "de3603e71fed649a32d6402eab4a8948eb5cdb8574f2772204876c181d708209"
+      },
+      "after": {
+        "characters": 223,
+        "nonblank_lines": 19,
+        "utf8_bytes": 358,
+        "sha256": "de3603e71fed649a32d6402eab4a8948eb5cdb8574f2772204876c181d708209"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 74,
+      "name": "Null Object",
+      "file": "08_objects_and_composition/074_null_object_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "identity",
+        "guard"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Silent.write — процедура, принимающая значение и не возвращающая результат. identity возвращает аргумент, guard проверяет условие; ни один не является более короткой заменой этого no-op с тем же контрактом.",
+      "before": {
+        "characters": 138,
+        "nonblank_lines": 13,
+        "utf8_bytes": 223,
+        "sha256": "9dea4a65cc02cf7f43f5004fcd127de253109d5b76dc95b3a867c103e8751f2b"
+      },
+      "after": {
+        "characters": 138,
+        "nonblank_lines": 13,
+        "utf8_bytes": 223,
+        "sha256": "9dea4a65cc02cf7f43f5004fcd127de253109d5b76dc95b3a867c103e8751f2b"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 75,
+      "name": "Object Pool",
+      "file": "08_objects_and_composition/075_object_pool_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "bracket",
+        "once"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Pool.take выдаёт текущий ресурс либо@0, give возвращает его в пул; demo проверяет идентичность после возврата и нулевой второй take. bracket требует отдельный action и release-адаптер и не сокращает серверную выдачу/возврат. once запретил бы повторную выдачу после give.",
+      "before": {
+        "characters": 278,
+        "nonblank_lines": 24,
+        "utf8_bytes": 478,
+        "sha256": "bce61c94173757a650846e32f61bd7341691d26ee2fc713890e79dbdcc1b284e"
+      },
+      "after": {
+        "characters": 278,
+        "nonblank_lines": 24,
+        "utf8_bytes": 478,
+        "sha256": "bce61c94173757a650846e32f61bd7341691d26ee2fc713890e79dbdcc1b284e"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 76,
+      "name": "Simple Factory",
+      "file": "08_objects_and_composition/076_simple_factory_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "derive",
+        "overload"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Два исходных объекта выбираются по kind=0 либоfallback, затем копируются. derive добавляет пустое наложение к готовому copy; overload требует дополнительные предикаты и обработку fallback. Проверяемая независимость новых экземпляров не допускает возврата общего исходного объекта.",
+      "before": {
+        "characters": 201,
+        "nonblank_lines": 17,
+        "utf8_bytes": 324,
+        "sha256": "7dfc258cf84c02e2355b97a441a0fb64fcfb74dabe1a906b4ca3ace77aebe04b"
+      },
+      "after": {
+        "characters": 201,
+        "nonblank_lines": 17,
+        "utf8_bytes": 324,
+        "sha256": "7dfc258cf84c02e2355b97a441a0fb64fcfb74dabe1a906b4ca3ace77aebe04b"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 77,
+      "name": "Multiton",
+      "file": "08_objects_and_composition/077_multiton_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "memoize"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Реестр уже имеет два постоянных экземпляра и возвращает второй для любого ненулевого ключа. memoize потребовал бы фабрику, сравнение векторов ключей и сохранение кеширующего callable; он не устраняет существующие экземпляры или правило fallback.",
+      "before": {
+        "characters": 246,
+        "nonblank_lines": 21,
+        "utf8_bytes": 417,
+        "sha256": "937e1dc4ef46b10d010c2fcd3cb246c229216f06a92d35e548da32174ce8155d"
+      },
+      "after": {
+        "characters": 246,
+        "nonblank_lines": 21,
+        "utf8_bytes": 417,
+        "sha256": "937e1dc4ef46b10d010c2fcd3cb246c229216f06a92d35e548da32174ce8155d"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 78,
+      "name": "Marker Interface",
+      "file": "08_objects_and_composition/078_marker_interface_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "predicate"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Пригодность непосредственно проверяется satisfies(item;Marker). predicate — фабрика callable с дополнительной сигнатурой/ошибками; он длиннее явного отображения результата проверки в0/1 и не заменяет само требование Marker.",
+      "before": {
+        "characters": 184,
+        "nonblank_lines": 15,
+        "utf8_bytes": 283,
+        "sha256": "a37d3a1be45384cce8db57cb1693e955af31a1f649b1d58564a6e9e1f5fcedfc"
+      },
+      "after": {
+        "characters": 184,
+        "nonblank_lines": 15,
+        "utf8_bytes": 283,
+        "sha256": "a37d3a1be45384cce8db57cb1693e955af31a1f649b1d58564a6e9e1f5fcedfc"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 79,
+      "name": "Fluent Interface",
+      "file": "08_objects_and_composition/079_fluent_interface_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "bindFields",
+        "derive",
+        "patch"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "withCount/withPrice изменяют тот же объект и возвращают его для fluent-цепочки. bindFields возвращает метод с копией DATA, derive/patch создают новый контейнер; они меняют идентичность и наблюдаемые записи Options. Для сохранения mutation те же setters остаются.",
+      "before": {
+        "characters": 285,
+        "nonblank_lines": 19,
+        "utf8_bytes": 436,
+        "sha256": "36b082e5272e1b05d9f01c7c1e70366b20da7429a2277043bb60117ec051df9e"
+      },
+      "after": {
+        "characters": 285,
+        "nonblank_lines": 19,
+        "utf8_bytes": 436,
+        "sha256": "36b082e5272e1b05d9f01c7c1e70366b20da7429a2277043bb60117ec051df9e"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 80,
+      "name": "Type Object",
+      "file": "08_objects_and_composition/080_type_object_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "project",
+        "apply"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Оба объекта разделяют одну изменяемую TypeData, и второе чтение должно увидеть damage3 после изменения общего объекта. project делает копию, apply добавляет вызов/запись результата к единственному чтению item.kind.damage.",
+      "before": {
+        "characters": 225,
+        "nonblank_lines": 16,
+        "utf8_bytes": 336,
+        "sha256": "3970d32887b7692fbc4759071165fd4ad23d2b2e88186eb911637f769c4c4dd4"
+      },
+      "after": {
+        "characters": 225,
+        "nonblank_lines": 16,
+        "utf8_bytes": 336,
+        "sha256": "3970d32887b7692fbc4759071165fd4ad23d2b2e88186eb911637f769c4c4dd4"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "extended",
+      "group": "08_objects_and_composition",
+      "id": 81,
+      "name": "Extension Object",
+      "file": "08_objects_and_composition/081_extension_object_comparision.md",
+      "kind": "pattern",
+      "decision": "kept",
+      "considered_receivers": [
+        "derive",
+        "bindFields"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Extension устанавливается в существующий Host и возвращается query с той же идентичностью. derive копирует, bindFields предназначен для DATA callable; они не заменяют эту установку и запрос без изменения владельца и API.",
+      "before": {
+        "characters": 255,
+        "nonblank_lines": 21,
+        "utf8_bytes": 400,
+        "sha256": "5cecfa56f9da2141d73d9dfb86508c96991a6a036f9dffe90cc249933b2de876"
+      },
+      "after": {
+        "characters": 255,
+        "nonblank_lines": 21,
+        "utf8_bytes": 400,
+        "sha256": "5cecfa56f9da2141d73d9dfb86508c96991a6a036f9dffe90cc249933b2de876"
+      },
+      "primary_changed": false,
+      "protocols_preserved": true,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 13,
+      "file": "13_proxy_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "guard",
+        "recover"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Proxy возвращает0 без вызова real для отрицательного value; guard даёт FxPredicate, recover потребует handler и дополнительную фабрику/throws. Реальная цель должна остаться невызванной при отказе, поэтому простое предварительное преобразование value в0 тоже не эквивалентно.",
+      "before": {
+        "characters": 191,
+        "nonblank_lines": 15,
+        "utf8_bytes": 325,
+        "sha256": "3040e72753514d033447af79bf281029b5f410cafb6805f975fc85305eb94d0b"
+      },
+      "after": {
+        "characters": 191,
+        "nonblank_lines": 15,
+        "utf8_bytes": 325,
+        "sha256": "3040e72753514d033447af79bf281029b5f410cafb6805f975fc85305eb94d0b"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 14,
+      "file": "14_facade_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "compose",
+        "pipe"
+      ],
+      "reason_class": "size",
+      "reason_ru": "quote суммирует два независимых результата subtotal и fee из общего DATA. pipe передал бы subtotal как аргумент fee; compose не выражает параллельное чтение независимых входов и сумму. Новые callback сохраняют ту же арифметику и добавляют обвязку.",
+      "before": {
+        "characters": 170,
+        "nonblank_lines": 14,
+        "utf8_bytes": 274,
+        "sha256": "a8a3a9ba82f851c1bcf564a92464faa458489797662f1fdb0a37ddf34731f77e"
+      },
+      "after": {
+        "characters": 170,
+        "nonblank_lines": 14,
+        "utf8_bytes": 274,
+        "sha256": "a8a3a9ba82f851c1bcf564a92464faa458489797662f1fdb0a37ddf34731f77e"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 15,
+      "file": "15_builder_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "bindFields",
+        "derive"
+      ],
+      "reason_class": "semantics",
+      "reason_ru": "Builder намеренно настраивается несколькими последовательными setters, повторно используется и finish создаёт независимые продукты. Один constructor с наложением был бы короче, но убрал бы пошаговый Builder API; сохранение setters и finish не сокращается новым helper.",
+      "before": {
+        "characters": 355,
+        "nonblank_lines": 24,
+        "utf8_bytes": 569,
+        "sha256": "db1f6b041876a04c18d9f01cf0e18281181243718c6bda722fff7a45303f435e"
+      },
+      "after": {
+        "characters": 355,
+        "nonblank_lines": 24,
+        "utf8_bytes": 569,
+        "sha256": "db1f6b041876a04c18d9f01cf0e18281181243718c6bda722fff7a45303f435e"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 16,
+      "file": "16_prototype_comparison.md",
+      "decision": "rewritten_shorter",
+      "considered_receivers": [
+        "bindFields"
+      ],
+      "reason_class": "rewritten_shorter",
+      "reason_ru": "bindFields объединяет копирование фактического DATA и overlay; второй owner копируется из первого настроенного. Импорт не требуется: полный клиент226→180. x,y, оба экземпляра и независимость копий сохранены; естественная архитектура LMX не заменяется OOP-имитацией.",
+      "before": {
+        "characters": 226,
+        "nonblank_lines": 14,
+        "utf8_bytes": 349,
+        "sha256": "11b212dc29b8ce4237fbf53636f7a48c3d0a92d7074e8563309dfe2836a423a5"
+      },
+      "after": {
+        "characters": 180,
+        "nonblank_lines": 11,
+        "utf8_bytes": 275,
+        "sha256": "8ee0ce1c8ae587d8177f7e5b25b6b73eba5b93d88f9ec5f4d77eb96cf4c1894a"
+      },
+      "primary_changed": true,
+      "procedural_preserved": true,
+      "runtime_executed": false,
+      "details": "root16_receiver_revision.json",
+      "single_core": true,
+      "fairness_note": "copy/merge/default binding is a natural dynamic LMX mechanism. All controls perform prototype copying and field override using their own ordinary language mechanisms; different architectures alone are not a fairness failure. No domain-specific behavior is hidden. x and y and clone independence remain observable through actual owners."
+    },
+    {
+      "scope": "root_gof",
+      "id": 17,
+      "file": "17_memento_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "diff",
+        "patch"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Memento сохраняет снимок значения state и восстанавливает только это состояние в прежнего владельца. Общий diff/patch описывает идентичности ссылок вектора и требует базу/проверку формы; это не короткий заменитель одной записи node.state из снимка и не обещает глубокий value-diff.",
+      "before": {
+        "characters": 333,
+        "nonblank_lines": 26,
+        "utf8_bytes": 562,
+        "sha256": "6f3cb2e9141fb1a3c369efa5049ce815839859a64726f174f1abaadef180ef62"
+      },
+      "after": {
+        "characters": 333,
+        "nonblank_lines": 26,
+        "utf8_bytes": 562,
+        "sha256": "6f3cb2e9141fb1a3c369efa5049ce815839859a64726f174f1abaadef180ef62"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 18,
+      "file": "18_bridge_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "compose",
+        "partial"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Bridge независимо меняет output и control; boost изменяет level текущей активации, а затем вызывает выбранный output с её DATA/autofill. Сохраняемый partial закрепил бы параметры/публичную арность, compose вводит другой вызов и не устраняет обе независимые оси выбора.",
+      "before": {
+        "characters": 276,
+        "nonblank_lines": 23,
+        "utf8_bytes": 475,
+        "sha256": "dc9de10fde43fdd04c8d8020945b2be2d67237d98ec4876dfcc65b95015479a1"
+      },
+      "after": {
+        "characters": 276,
+        "nonblank_lines": 23,
+        "utf8_bytes": 475,
+        "sha256": "dc9de10fde43fdd04c8d8020945b2be2d67237d98ec4876dfcc65b95015479a1"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 19,
+      "file": "19_singleton_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "once",
+        "identity"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Settings уже является единственным существующим объектом графа; get просто возвращает его. once добавляет фабрику/хранилище, identity требует токен типа и аргумент. Создание ещё одного экземпляра вместо возврата Settings нарушило бы проверяемую идентичность.",
+      "before": {
+        "characters": 141,
+        "nonblank_lines": 12,
+        "utf8_bytes": 226,
+        "sha256": "2fdb7104cde5246f25195aa944f4fffd7b8d0406a8d342df9077ea98687e73cb"
+      },
+      "after": {
+        "characters": 141,
+        "nonblank_lines": 12,
+        "utf8_bytes": 226,
+        "sha256": "2fdb7104cde5246f25195aa944f4fffd7b8d0406a8d342df9077ea98687e73cb"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 20,
+      "file": "20_abstract_factory_comparison.md",
+      "decision": "rewritten_shorter",
+      "considered_receivers": [
+        "derive",
+        "defaults"
+      ],
+      "reason_class": "rewritten_shorter",
+      "reason_ru": "При прямом доступе derive в едином ядре четыре эквивалентных merge-формы сокращены на4 символа. Поля, две семьи и методы сохранены; полный исходник core-ресивера показан отдельно. Предыдущая причина отказа из-за import больше не действует.",
+      "before": {
+        "characters": 462,
+        "nonblank_lines": 36,
+        "utf8_bytes": 687,
+        "sha256": "d62f2b7fa92c5bcb43045e4688882e4a966ffd608def2f714b681ddf7798bbb9"
+      },
+      "after": {
+        "characters": 458,
+        "nonblank_lines": 36,
+        "utf8_bytes": 683,
+        "sha256": "0d4b3e0a2fde854bff71bb9370f330659e3d4f606df3fc7c3f5ae6f13ea96531"
+      },
+      "primary_changed": true,
+      "procedural_preserved": true,
+      "runtime_executed": false,
+      "details": "root20_receiver_revision.json",
+      "single_core": true,
+      "fairness_note": "A generic merge constructor composes the same fields and product families. No domain algorithm is hidden; all controls also instantiate/initialize objects with their ordinary language mechanisms. Different architecture is not a reason to force LMX to imitate a class."
+    },
+    {
+      "scope": "root_gof",
+      "id": 21,
+      "file": "21_flyweight_comparison.md",
+      "decision": "scope_bugfix_no_shortening_claim",
+      "considered_receivers": [
+        "memoize"
+      ],
+      "reason_class": "scope_bugfix_no_shortening_claim",
+      "reason_ru": "Два неизменяемых glyph уже существуют; get возвращает thin для0 и thick для остальных ключей. memoize добавляет фабрику, сравнение ключей и кеш вместо этого конечного выбора. Отдельно исправлен реальный дефект отступа последнего return в demo; это не объявляется сокращением.",
+      "before": {
+        "characters": 281,
+        "nonblank_lines": 20,
+        "utf8_bytes": 486,
+        "sha256": "e39fed005635ea6c9fcd6138cc32d17693d5197631c91781ad415a5b8ffd406e"
+      },
+      "after": {
+        "characters": 281,
+        "nonblank_lines": 20,
+        "utf8_bytes": 490,
+        "sha256": "d45d84d2bcc1d145cf5c3b45c9282234f3af226a91753c946164cdfe12a2e961"
+      },
+      "primary_changed": true,
+      "procedural_preserved": true,
+      "runtime_executed": false,
+      "details": "root21_scope_fix.json"
+    },
+    {
+      "scope": "root_gof",
+      "id": 22,
+      "file": "22_mediator_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "map",
+        "compose"
+      ],
+      "reason_class": "size",
+      "reason_ru": "Mediator связывает две конкретные записи разных вложенных владельцев после событий1/2. map потребует данные действий и callback, compose изменит сам механизм уведомления. Существующие записи и ветви короче такой обвязки и сохраняют связь с копией Room.",
+      "before": {
+        "characters": 350,
+        "nonblank_lines": 27,
+        "utf8_bytes": 605,
+        "sha256": "a23b1e9c2b8ab6d058ae7cd3785d0943b7ae03c13cb2e70863697dfb990993af"
+      },
+      "after": {
+        "characters": 350,
+        "nonblank_lines": 27,
+        "utf8_bytes": 605,
+        "sha256": "a23b1e9c2b8ab6d058ae7cd3785d0943b7ae03c13cb2e70863697dfb990993af"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    },
+    {
+      "scope": "root_gof",
+      "id": 23,
+      "file": "23_interpreter_comparison.md",
+      "decision": "kept",
+      "considered_receivers": [
+        "apply",
+        "fn"
+      ],
+      "reason_class": "semantics_and_size",
+      "reason_ru": "Предмет Interpreter — собственный add, его OPERANDS_TEMPLATE, приоритеты и граф выражения. Замена на built-in+ убрала бы демонстрацию операнда; apply/fn добавляют контракт вызова, но не реализуют тело add и не сокращают две операции выражения.",
+      "before": {
+        "characters": 159,
+        "nonblank_lines": 12,
+        "utf8_bytes": 266,
+        "sha256": "3b7d8517da1b050f43a5943e04745a3307737ebff09eae8b825a9ac04d19208b"
+      },
+      "after": {
+        "characters": 159,
+        "nonblank_lines": 12,
+        "utf8_bytes": 266,
+        "sha256": "3b7d8517da1b050f43a5943e04745a3307737ebff09eae8b825a9ac04d19208b"
+      },
+      "primary_changed": false,
+      "procedural_preserved": false,
+      "runtime_executed": false
+    }
+  ],
+  "single_core": true,
+  "fairness_rule": "Behavior and accounting boundary, not identical algorithmic shape; no state/fields/identity/effects are removed to reduce size."
+}

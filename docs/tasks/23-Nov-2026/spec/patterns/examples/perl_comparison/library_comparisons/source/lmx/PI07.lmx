@@ -1,0 +1,444 @@
+RxTextViewMake:
+    private:
+        char[]: source
+        int: profile
+    return: @
+    make:
+        private: @: validated RxTextBuild\make(source := source; profile := profile)
+        private: @: out (copy(TextView))
+        out\source := source
+        out\profile := profile
+        return: out
+
+RxPrepare:
+    private: TextView@: source
+    required: source
+    return: @
+    make:
+        private: @: prepared RxTextBuild\make(source := source\source; profile := source\profile)
+        prepared\view := source
+        return: prepared
+
+RxByteText:
+    private: char[]: source
+    required: source
+    return: @
+    byteText:
+        return: RxTextViewMake\make(source := source; profile := 1)
+
+RxTextConfig:
+    char[]: text ""
+
+RxLiteral:
+    private: char[]: text
+    required: text
+    return: @
+    literal:
+        private: @: payload (copy(RxTextConfig))
+        payload\text := text
+        return: RxPrimitiveMake\make(RxLiteralProbe\probe; payload)
+
+RxSameAs:
+    private: char[]: name
+    required: name
+    return: @
+    sameAs:
+        private: @: payload (copy(RxNameConfig))
+        payload\name := name
+        return: RxPrimitiveMake\make(RxSameAsProbe\probe; payload)
+
+RxPartsConfig:
+    @: originalParts 0
+    @[]: parts []
+
+RxPartsPrepare:
+    private: @: patterns
+    return: @
+    prepare:
+        throws: copy(FxThrows\kernel)
+        private: @: info FxSeqInfo\get(source := patterns)
+        private: @[]: parts []
+        sys\resize(parts; length(patterns))
+        private: int: i 0
+        while: i < length(patterns)
+            private: @: item FxSeqRead\read(patterns; i)
+            parts[i] := RxNormalize\make(value := item)
+            i += 1
+        private: @: config (copy(RxPartsConfig))
+        config\originalParts := patterns
+        config\parts := parts
+        return: config
+
+RxSequence:
+    private: @: patterns
+    required: patterns
+    return: @
+    sequence:
+        throws: copy(FxThrows\kernel)
+        private: @: config RxPartsPrepare\prepare(patterns := patterns)
+        if: length(config\parts) = 0
+            return: emptyPattern
+        if: length(config\parts) = 1
+            return: config\parts[0]
+        return: RxPatternFactory\make(RxSequenceOpen\open; config)
+
+RxRepeatConfig:
+    @: pattern 0
+    int: minimum 0
+    int: bounded 0
+    int: maximum 0
+    int: order 0
+
+RxRepeated:
+    private:
+        @: pattern
+        int: minimum 0
+        @: maximum unbounded
+        int: order extendFirst
+    required: pattern
+    return: @
+    repeated:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        if: minimum < 0
+            throw: PatternArgument()
+        if: order != extendFirst && order != stopFirst
+            throw: PatternArgument()
+        private: @: config (copy(RxRepeatConfig))
+        config\pattern := RxNormalize\make(value := pattern)
+        config\minimum := minimum
+        config\order := order
+        # A copied configuration keeps its role; identity is not its contract.
+        if: FxKernel\acceptsRequirement(candidate := maximum; requirement := RxUnbounded) = 0
+            private: int: bound \maximum
+            if: bound < minimum || bound < 0
+                throw: PatternArgument()
+            config\bounded := 1
+            config\maximum := bound
+        return: RxPatternFactory\make(RxRepeatOpen\open; config)
+
+RxCaptureConfig:
+    char[]: name ""
+    @: pattern 0
+
+RxCapture:
+    private:
+        char[]: name
+        @: pattern
+    required: name pattern
+    return: @
+    capture:
+        throws: copy(FxThrows\kernel)
+        private: @: config (copy(RxCaptureConfig))
+        config\name := name
+        config\pattern := RxNormalize\make(value := pattern)
+        return: RxPatternFactory\make(RxCaptureOpen\open; config)
+
+RxLogicalArguments:
+    private:
+        @: left
+        @[]: right
+    required: right
+    return: @
+    collect:
+        private: int: extra 0
+        if: left != nil
+            extra := 1
+        private: @[]: out []
+        sys\resize(out; length(right) + extra)
+        if: extra != 0
+            out[0] := left
+        private: int: i 0
+        while: i < length(right)
+            out[i + extra] := right[i]
+            i += 1
+        return: out
+
+RxThenOperand:
+    private:
+        @: left
+        @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+    return: @
+    then:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) < 2
+            throw: PatternArgument()
+        return: RxSequence\sequence(patterns := args)
+
+RxRepeatOperands:
+    private:
+        @: left
+        @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("*")
+    return: @
+    times:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
+    atLeast:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        return: RxRepeated\repeated(pattern := args[0]; minimum := count)
+    atMost:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        if: count < 0
+            throw: PatternArgument()
+        return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
+    optional:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 1
+            throw: PatternArgument()
+        return: RxRepeated\repeated(pattern := args[0]; maximum := 1)
+
+RxSelectAt:
+    private:
+        RxPreparedText@: source
+        Pattern@: pattern
+        int: position
+        int: whole 0
+        int: nonEmpty 0
+    return: @
+    select:
+        # whole filters the END position only; the supplied start may be nonzero.
+        private: @: cursor RxOpen\open(pattern; source; position; 0)
+        private: @: next cursor()
+        while: next\present != 0
+            private: @: candidate next\value
+            private: int: accepted 1
+            if: whole != 0 && candidate\position != length(source\units)
+                accepted := 0
+            if: nonEmpty != 0 && candidate\position = position
+                accepted := 0
+            if: accepted != 0
+                return: FxSome\some(value := RxMatchMake\make(source; position; candidate))
+            next := cursor()
+        return: FxNone\none()
+
+RxWholeMatch:
+    private:
+        TextView@: source
+        @: pattern
+    required: source pattern
+    return: @
+    wholeMatch:
+        throws: copy(FxThrows\kernel)
+        private: @: prepared RxPrepare\make(source := source)
+        private: @: ready RxNormalize\make(value := pattern)
+        return: RxSelectAt\select(source := prepared; pattern := ready; position := 0; whole := 1)
+
+RxFindState:
+    @: source 0
+    @: pattern 0
+    int: position 0
+    int: nonEmpty 0
+    int: finished 0
+
+RxFindStateMake:
+    private:
+        RxPreparedText@: source
+        Pattern@: pattern
+    return: @
+    make:
+        private: @: out (copy(RxFindState))
+        out\source := source
+        out\pattern := pattern
+        return: out
+
+RxFindNext:
+    private: @: state
+    return: @
+    step:
+        if: state\finished != 0
+            return: FxNone\none()
+        private: int: end length(state\source\units)
+        while: state\position <= end
+            private: @: selected RxSelectAt\select(source := state\source; pattern := state\pattern; position := state\position; nonEmpty := state\nonEmpty)
+            if: selected\present != 0
+                private: @: matched selected\value
+                if: matched\end > matched\begin
+                    state\position := matched\end
+                    state\nonEmpty := 0
+                else:
+                    if: matched\end = end
+                        state\finished := 1
+                    else:
+                        state\nonEmpty := 1
+                ---
+                return: selected
+            state\nonEmpty := 0
+            if: state\position = end
+                state\finished := 1
+                return: FxNone\none()
+            state\position += 1
+        state\finished := 1
+        return: FxNone\none()
+
+RxFindAllOwner:
+    private: @: state 0
+    Next:
+        return: @
+        next:
+            throws: Stop
+            private: @: owner parent()
+            private: @: state owner\private\state
+            while: 1
+                private: @: selected RxFindNext\step(state := state)
+                if: selected\present = 0
+                    throw: Stop()
+                yield: selected\value
+
+RxEachMatch:
+    private:
+        TextView@: source
+        @: pattern
+    required: source pattern
+    return: @
+    eachMatch:
+        throws: copy(FxThrows\kernel)
+        private: @: prepared RxPrepare\make(source := source)
+        private: @: ready RxNormalize\make(value := pattern)
+        private: @: owner (copy(RxFindAllOwner))
+        owner\private\state := RxFindStateMake\make(prepared; ready)
+        return: owner\Next\next
+
+RxMatches:
+    private:
+        TextView@: source
+        @: pattern
+    required: source pattern
+    return: int
+    matches:
+        throws: copy(FxThrows\kernel)
+        private: @: found RxWholeMatch\wholeMatch(source := source; pattern := pattern)
+        return: found\present
+
+RxMatchedText:
+    private: Match@: result
+    required: result
+    return: char[]
+    matchedText:
+        return: RxTextSlice\copyText(result\private\prepared; result\begin; result\end)
+
+RxLastCapture:
+    private:
+        Match@: result
+        char[]: name
+    required: result name
+    return: @
+    lastCapture:
+        private: @: latest RxCaptureLatest\find(result\captures; name)
+        if: latest\present = 0
+            return: latest
+        private: @: entry latest\value
+        return: FxSome\some(value := RxSpanMake\make(result\private\prepared; entry\begin; entry\end))
+
+RxCaptureText:
+    private:
+        Match@: result
+        char[]: name
+    required: result name
+    return: @
+    captureText:
+        private: @: latest RxLastCapture\lastCapture(result; name)
+        if: latest\present = 0
+            return: latest
+        private: @: span latest\value
+        private: char[]: text RxTextSlice\copyText(span\private\prepared; span\begin; span\end)
+        return: FxSome\some(value := FxRecords\reference(value := text))
+
+RxReplacementAccept:
+    private: @: replacement
+    required: replacement
+    return: @
+    accept:
+        throws: copy(FxThrows\kernel)
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
+            private: char[]: text \replacement
+            return: replacement
+        private: RxReplacement@: operation replacement
+        return: operation
+
+RxReplacementText:
+    private:
+        @: replacement
+        Match@: matched
+    return: char[]
+    make:
+        throws: copy(FxThrows\kernel)
+        private: char[]: text
+        if: FxKernel\acceptsRequirement(candidate := replacement; requirement := char[]) != 0
+            text := \replacement
+        else:
+            private: RxReplacement@: operation replacement
+            # The callback is reached once, after selection, with one whole
+            # Match by named actual. Its ordinary failure is never a mismatch.
+            text := operation(matched := matched)
+        private: @: checked RxTextBuild\make(text; matched\private\prepared\profile)
+        return: text
+
+RxReplace:
+    private:
+        TextView@: source
+        @: pattern
+        @: replacement
+    required: source pattern replacement
+    return: char[]
+    replace:
+        throws: copy(FxThrows\kernel)
+        private: @: admittedReplacement RxReplacementAccept\accept(replacement := replacement)
+        private: @: prepared RxPrepare\make(source := source)
+        private: @: ready RxNormalize\make(value := pattern)
+        private: @: state RxFindStateMake\make(prepared; ready)
+        private: char[]: out []
+        private: int: copiedUntil 0
+        private: @: selected RxFindNext\step(state := state)
+        while: selected\present != 0
+            private: @: matched selected\value
+            private: char[]: replacementText RxReplacementText\make(admittedReplacement; matched)
+            RxTextAppendSpan\append(out; prepared; copiedUntil; matched\begin)
+            RxTextAppend\append(out; replacementText)
+            copiedUntil := matched\end
+            selected := RxFindNext\step(state := state)
+        # Search position and source-copy position remain separate.
+        RxTextAppendSpan\append(out; prepared; copiedUntil; length(prepared\units))
+        return: out
+
+RxSplit:
+    private:
+        TextView@: source
+        @: pattern
+    required: source pattern
+    return: @
+    split:
+        throws: copy(FxThrows\kernel)
+        private: @: prepared RxPrepare\make(source := source)
+        private: @: ready RxNormalize\make(value := pattern)
+        private: @: state RxFindStateMake\make(prepared; ready)
+        private: @[]: parts []
+        private: int: copiedUntil 0
+        private: @: selected RxFindNext\step(state := state)
+        while: selected\present != 0
+            private: @: matched selected\value
+            private: char[]: text RxTextSlice\copyText(prepared; copiedUntil; matched\begin)
+            FxSeqPush\append(parts; FxRecords\reference(value := text))
+            copiedUntil := matched\end
+            selected := RxFindNext\step(state := state)
+        private: char[]: tail RxTextSlice\copyText(prepared; copiedUntil; length(prepared\units))
+        FxSeqPush\append(parts; FxRecords\reference(value := tail))
+        return: parts

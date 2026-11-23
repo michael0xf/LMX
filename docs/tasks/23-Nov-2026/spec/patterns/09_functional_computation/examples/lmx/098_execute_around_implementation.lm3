@@ -1,0 +1,24 @@
+FxAround:
+    private:
+        @: acquire
+        @: release
+        @: action
+        @: arguments ()
+    return: @
+    around:
+        throws: copy(FxThrows\traversal)
+        private: @: empty (copy(()))
+        private: @: resourceArgs (copy(()))
+        sys\resize(resourceArgs; 1)
+        private: @: acquired (copy(FxOutcome))
+        finally:
+            if: acquired\ok != 0
+                resourceArgs[0] := acquired\value
+                FxApply\apply(release; resourceArgs)
+        ---
+        acquired := FxTry\attempt(acquire; empty)
+        if: acquired\ok = 0
+            throw: FxCallFailure(acquired)
+        resourceArgs[0] := acquired\value
+        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
+        return: FxApply\apply(action; actionArgs)

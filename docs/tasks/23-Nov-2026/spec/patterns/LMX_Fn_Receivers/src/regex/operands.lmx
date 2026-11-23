@@ -1,0 +1,109 @@
+# The common executor already prepares left/right exactly once, including the
+# one conditional RIGHT-only opening. Nothing in this file opens a container.
+# An absent left stays nil; it is not replaced by null/zero or autofill.
+
+RxLogicalArguments:
+    private:
+        @: left
+        @[]: right
+    required: right
+    return: @
+    collect:
+        private: int: extra 0
+        if: left != nil
+            extra := 1
+        private: @[]: out []
+        sys\resize(out; length(right) + extra)
+        if: extra != 0
+            out[0] := left
+        private: int: i 0
+        while: i < length(right)
+            out[i + extra] := right[i]
+            i += 1
+        return: out
+
+RxThenOperand:
+    private:
+        @: left
+        @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+    return: @
+    then:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) < 2
+            throw: PatternArgument()
+        return: RxSequence\sequence(patterns := args)
+
+RxRepeatOperands:
+    private:
+        @: left
+        @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("*")
+    return: @
+    times:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        return: RxRepeated\repeated(pattern := args[0]; minimum := count; maximum := args[1])
+    atLeast:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        return: RxRepeated\repeated(pattern := args[0]; minimum := count)
+    atMost:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 2
+            throw: PatternArgument()
+        private: int: count \args[1]
+        if: count < 0
+            throw: PatternArgument()
+        return: RxRepeated\repeated(pattern := args[0]; maximum := args[1])
+    optional:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        if: length(args) != 1
+            throw: PatternArgument()
+        return: RxRepeated\repeated(pattern := args[0]; maximum := 1)
+
+RxAlternativeDispatchResult:
+    int: handled 0
+    @: value 0
+
+# Call this branch INSIDE the existing | body, after its existing preparation.
+# If handled=0, run that body's original implementation with the ORIGINAL
+# left/right. Its header, defaults, modifiers and priority are not replaced.
+# This is a normal LMX helper, not an overload registry or another parser.
+RxAlternativeDispatch:
+    private:
+        @: left
+        @[]: right
+    required: right
+    return: @
+    probe:
+        throws: FxKernelFailure FxTypeToken PatternArgument
+        private: @: out (copy(RxAlternativeDispatchResult))
+        private: @: args RxLogicalArguments\collect(left := left; right := right)
+        private: int: hasPattern 0
+        private: int: i 0
+        while: i < length(args)
+            if: RxIsPattern\test(value := args[i]) != 0
+                hasPattern := 1
+                break
+            i += 1
+        if: hasPattern = 0
+            return: out
+        if: length(args) < 2
+            throw: PatternArgument()
+        out\value := RxChoice\choice(patterns := args)
+        out\handled := 1
+        return: out

@@ -1,0 +1,15 @@
+Example:
+    char[]: text
+    return: @
+    run:
+        throws: FxRecordArity PatternArgument PatternEncoding PatternPosition FxKernelFailure FxTypeToken ReceiverIndex SequenceSize
+        @: next eachMatch(byteText(text); (asciiLetter atLeast 1))
+        @[]: result []
+        while: 1
+            @: found next()
+            catch: Stop ()
+                break
+            int: at length(result)
+            sys\resize(result; at + 1)
+            result[at] := (matchedText(found) record)
+        return: result

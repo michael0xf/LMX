@@ -1,0 +1,16 @@
+# Source acceptance fixture, NOT an executed test report.
+# Expected: (1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1).
+@: view utf8Text("abc")
+@: ready literal("ab")
+int: literalPrefix hasPrefix(view; "ab")
+int: patternPrefix hasPrefix(view; ready)
+int: partialAsWhole matches(view; "ab")
+int: laterIsNotPrefix hasPrefix(view; "bc")
+int: laterIsPresent contains(view; "bc")
+int: emptyLiteral hasPrefix(view; "")
+int: emptyPatternPrefix hasPrefix(view; emptyPattern)
+int: emptyInput hasPrefix(utf8Text(""); "")
+int: absent hasPrefix(view; neverPattern)
+int: fullInput matches(view; "abc")
+int: literalPunctuation hasPrefix(utf8Text("a.b"); "a.")
+(literalPrefix; patternPrefix; partialAsWhole; laterIsNotPrefix; laterIsPresent; emptyLiteral; emptyPatternPrefix; emptyInput; absent; fullInput; literalPunctuation)

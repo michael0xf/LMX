@@ -8,7 +8,7 @@
 
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-fn: fs_entries_free (@@: names char; @: kinds unsigned; size_t: count) int
+fn: fs_entries_free (char@@: names; unsigned@: kinds; size_t: count) int
     size_t: at 0U
     if: names != 0
         while: at < count
@@ -23,15 +23,15 @@ end: fs_entries_free
 
 # name ownership transfers only on success. Growing the pair is atomic:
 # allocate both, copy both, then swap/free the old arrays.
-fn: fs_entry_append (@@@: names char; @@: kinds unsigned; @: count size_t; @: capacity size_t; @: name char; unsigned: kind) int
-    @@: new_names char 0
-    @: new_kinds unsigned 0
+fn: fs_entry_append (char@@@: names; unsigned@@: kinds; size_t@: count; size_t@: capacity; char@: name; unsigned: kind) int
+    char@@: new_names 0
+    unsigned@: new_kinds 0
     size_t: limit (cast: (size_t) -1)
     size_t: kind_limit (cast: (size_t) -1)
     size_t: grown 0U
     if: names = 0 || kinds = 0 || count = 0 || capacity = 0 || name = 0
         return: -1
-    limit := limit / sizeof(@: char)
+    limit := limit / sizeof(char@)
     kind_limit := kind_limit / c.sizeof(c.unsigned)
     if: kind_limit < limit
         limit := kind_limit
@@ -47,14 +47,14 @@ fn: fs_entry_append (@@@: names char; @@: kinds unsigned; @: count size_t; @: ca
         ---
         if: grown > limit
             grown := limit
-        new_names := c.calloc(grown, sizeof(@: char))
+        new_names := c.calloc(grown, sizeof(char@))
         new_kinds := c.calloc(grown, c.sizeof(c.unsigned))
         if: new_names = 0 || new_kinds = 0
             c.free(new_names)
             c.free(new_kinds)
             return: -1
         if: count[0] > 0U
-            c.memcpy(new_names, names[0], count[0] * sizeof(@: char))
+            c.memcpy(new_names, names[0], count[0] * sizeof(char@))
             c.memcpy(new_kinds, kinds[0], count[0] * c.sizeof(c.unsigned))
         ---
         c.free(names[0])
@@ -76,10 +76,10 @@ os:
         # Follow the target, including symbolic links; attributes of the link
         # itself must not make a broken link an existing file/directory.
         # 0 absent/stat error,1 regular disk file,2 directory,3 other,-1 memory.
-        fn: os_path_kind (@: path char) int
-            @: wpath c.void 0
-            @: handle c.void c.INVALID_HANDLE_VALUE
-            @: info c.BY_HANDLE_FILE_INFORMATION 0
+        fn: os_path_kind (char@: path) int
+            c.void@: wpath 0
+            c.void@: handle c.INVALID_HANDLE_VALUE
+            c.BY_HANDLE_FILE_INFORMATION@: info 0
             unsigned: file_type 0U
             unsigned: attrs 0U
             int: kind 0
@@ -114,15 +114,15 @@ os:
             c.free(info)
             return: kind
         end: os_path_kind
-        fn: os_directory_entries (@: dir char; @@@: out_names char; @@: out_kinds unsigned; @: out_count size_t) int
-            @: pattern char 0
-            @: wpattern c.void 0
-            @: wdir c.void 0
-            @: fd c.WIN32_FIND_DATAW 0
-            @: handle c.void c.INVALID_HANDLE_VALUE
-            @@: names char 0
-            @: kinds unsigned 0
-            @: name char 0
+        fn: os_directory_entries (char@: dir; char@@@: out_names; unsigned@@: out_kinds; size_t@: out_count) int
+            char@: pattern 0
+            c.void@: wpattern 0
+            c.void@: wdir 0
+            c.WIN32_FIND_DATAW@: fd 0
+            c.void@: handle c.INVALID_HANDLE_VALUE
+            char@@: names 0
+            unsigned@: kinds 0
+            char@: name 0
             size_t: count 0U
             size_t: capacity 0U
             unsigned: attrs 0U
@@ -156,7 +156,7 @@ os:
                 ---
             ---
             while: result = 0 && handle != c.INVALID_HANDLE_VALUE
-                name := os_from_native((cast: (@: void) fd\cFileName))
+                name := os_from_native((cast: (@) fd\cFileName))
                 if: name = 0
                     result := -1
                 else:
@@ -205,8 +205,8 @@ os:
         include: "<dirent.h>" "<sys/stat.h>" "<errno.h>"
         define: LmxFsDirent struct dirent
         define: LmxFsStat struct stat
-        fn: os_path_kind (@: path char) int
-            @: status c.LmxFsStat 0
+        fn: os_path_kind (char@: path) int
+            c.LmxFsStat@: status 0
             int: kind 0
             if: path = 0 || path[0] = (cast: (char) 0)
                 return: 0
@@ -224,16 +224,16 @@ os:
             c.free(status)
             return: kind
         end: os_path_kind
-        fn: os_directory_entries (@: dir char; @@@: out_names char; @@: out_kinds unsigned; @: out_count size_t) int
-            @: directory c.DIR 0
-            @: entry c.LmxFsDirent 0
-            @: status c.LmxFsStat 0
-            @: error_cell int (cast: (@: int) (@ c.errno))
-            @@: names char 0
-            @: kinds unsigned 0
-            @: borrowed char 0
-            @: name char 0
-            @: full char 0
+        fn: os_directory_entries (char@: dir; char@@@: out_names; unsigned@@: out_kinds; size_t@: out_count) int
+            c.DIR@: directory 0
+            c.LmxFsDirent@: entry 0
+            c.LmxFsStat@: status 0
+            int@: error_cell (cast: (int@) (@ c.errno))
+            char@@: names 0
+            unsigned@: kinds 0
+            char@: borrowed 0
+            char@: name 0
+            char@: full 0
             size_t: count 0U
             size_t: capacity 0U
             unsigned: kind 0U

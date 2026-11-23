@@ -25,7 +25,7 @@
 # (the driver's exit 1); 7 RUN a run that ended otherwise; 8 NEEDLE a refusal without its needle; 9 REFUSE a row
 # that should refuse and did not; 10 L1LEFT an L1 a refusal left; 11 NATIVE a native word not as required;
 # 12 WALKED a walked count not as required; 13 CONTROL a control not satisfied. cls[15] counts the checks run.
-fn: cls_name (int: k) @: char
+fn: cls_name (int: k) char@
     if: k = 0
         return: "SCHEMA"
     if: k = 1
@@ -58,7 +58,7 @@ fn: cls_name (int: k) @: char
 end: cls_name
 
 # The class named s, or -1.
-fn: cls_index (@: s char) int
+fn: cls_index (char@: s) int
     int: k 0
     while: k < 14
         if: c.strcmp(s, cls_name(k)) = 0
@@ -70,8 +70,8 @@ end: cls_index
 
 # A classified check: PASS, or FAIL with its class k counted in cls[k] and written to fl as a failure line (log 0
 # is written `-`); cls[15] counts the check. 0 passed, 1 failed.
-fn: ccheck (int: ok; @: name char; @: why char; @: cls int; int: k; @: log char; @: fl c.FILE) int
-    @: lg char log
+fn: ccheck (int: ok; char@: name; char@: why; int@: cls; int: k; char@: log; c.FILE@: fl) int
+    char@: lg log
     cls[15] := cls[15] + 1
     if: ok != 0
         c.printf("PASS %s\n", name)
@@ -86,7 +86,7 @@ fn: ccheck (int: ok; @: name char; @: why char; @: cls int; int: k; @: log char;
 end: ccheck
 
 # The class of a failed build (bld_program_k): INFRA when its failing step did not end by itself, else the step's.
-fn: cls_build (int: step; @: res int) int
+fn: cls_build (int: step; int@: res) int
     if: res[0] != 0
         return: 1
     return: step + 1
@@ -101,8 +101,8 @@ fn: cls_run (int: x) int
     return: 7
 end: cls_run
 
-fn: suite_dir_of (@: path char) @: char
-    @: d char txt_dup(path)
+fn: suite_dir_of (char@: path) char@
+    char@: d txt_dup(path)
     size_t: n 0U
     size_t: i 0U
     if: d = 0
@@ -122,16 +122,16 @@ fn: suite_dir_of (@: path char) @: char
 end: suite_dir_of
 
 # A row's path: an absolute one (`/...`, `C:...`) as written, a relative one joined to dir.
-fn: suite_path (@: dir char; @: rel char) @: char
+fn: suite_path (char@: dir; char@: rel) char@
     if: rel[0] = (cast: (char) 47) || (rel[0] != (cast: (char) 0) && rel[1] = (cast: (char) 58))
         return: txt_dup(rel)
     return: txt_path(dir, rel)
 end: suite_path
 
 # The comma-separated relative paths of list, each joined to dir, comma-separated again.
-fn: suite_abs_list (@: dir char; @: list char) @: char
-    @: out char txt_dup("")
-    @: part char 0
+fn: suite_abs_list (char@: dir; char@: list) char@
+    char@: out txt_dup("")
+    char@: part 0
     size_t: p 0U
     size_t: q c.strlen(list)
     while: out != 0 && p < q
@@ -146,7 +146,7 @@ end: suite_abs_list
 
 # s as a decimal C int -- an optional minus sign and digits, nothing else, within INT_MIN .. INT_MAX -- in out[0]:
 # 0, or 1 when it is no such number (not atoi: no sign but -, no blank, no tail, no wrap).
-fn: parse_entry (@: s char; @: out int) int
+fn: parse_entry (char@: s; int@: out) int
     size_t: i 0U
     size_t: mag 0U
     size_t: lim 2147483647U
@@ -177,7 +177,7 @@ fn: parse_entry (@: s char; @: out int) int
 end: parse_entry
 
 # MODES: n, f, nf or fn. 1 valid.
-fn: modes_ok (@: m char) int
+fn: modes_ok (char@: m) int
     if: m = 0
         return: 0
     if: c.strcmp(m, "n") = 0 || c.strcmp(m, "f") = 0 || c.strcmp(m, "nf") = 0 || c.strcmp(m, "fn") = 0
@@ -188,7 +188,7 @@ end: modes_ok
 # MODES of a runs row: the build modes (n, f, nf or fn) optionally followed by the roots the program runs: 0
 # (root0 only), 1 (root1 only), 01 or 10 (both -- the default without a suffix). 1 valid. Only runs rows take
 # the suffix; refuses, twins and links keep modes_ok (a root flag does not apply to them).
-fn: runs_modes_ok (@: m char) int
+fn: runs_modes_ok (char@: m) int
     size_t: p 0U
     if: m = 0
         return: 0
@@ -203,20 +203,20 @@ fn: runs_modes_ok (@: m char) int
 end: runs_modes_ok
 
 # A comma-separated list with no empty item. 1 valid.
-fn: names_ok (@: s char) int
+fn: names_ok (char@: s) int
     size_t: n 0U
     if: s = 0 || s[0] = (cast: (char) 0)
         return: 0
     n := c.strlen(s)
-    if: s[0] = (cast: (char) 44) || s[n - 1U] = (cast: (char) 44) || (cast: (@: char) (c.strstr(s, ",,"))) != 0
+    if: s[0] = (cast: (char) 44) || s[n - 1U] = (cast: (char) 44) || (cast: (char@) (c.strstr(s, ",,"))) != 0
         return: 0
     return: 1
 end: names_ok
 
 # A comma-separated list whose every item is PATH=NAME: a non-empty PATH, one '=', a non-empty NAME. 1 valid.
-fn: libs_ok (@: s char) int
-    @: item char 0
-    @: eq char 0
+fn: libs_ok (char@: s) int
+    char@: item 0
+    char@: eq 0
     size_t: p 0U
     size_t: q 0U
     if: names_ok(s) = 0
@@ -237,7 +237,7 @@ fn: libs_ok (@: s char) int
 end: libs_ok
 
 # The schema of a row of nf fields (R170-2): 0 valid, its ENTRY in entry[0]; 1 not, the reason in why[0].
-fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
+fn: suite_row_check (char@@: fld; int: nf; int@: entry; char@@: why) int
     entry[0] := 0
     if: nf > 8
         why[0] := "more fields than any kind takes"
@@ -331,8 +331,8 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
 end: suite_row_check
 
 # The first missing file of the comma-separated paths of list, or 0.
-fn: missing_of (@: list char) @: char
-    @: part char 0
+fn: missing_of (char@: list) char@
+    char@: part 0
     size_t: p 0U
     size_t: q c.strlen(list)
     while: p < q
@@ -344,15 +344,15 @@ fn: missing_of (@: list char) @: char
     return: 0
 end: missing_of
 
-fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: extra char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
-    @@: tags char c.calloc(1U, sizeof(@: char))
-    @@: objs char c.calloc(1U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @@: lp char c.calloc(1U, sizeof(@: char))
-    @: dir char 0
-    @: mode char 0
-    @: flag char 0
-    @: log char 0
+fn: suite_runs (char@: repo; char@: stage; char@: base; char@: fe; char@: prod; char@: source; char@: extra; int: entry; char@: modes; char@: out; char@: name; c.FILE@: rec; int@: cls; c.FILE@: fl) int
+    char@@: tags c.calloc(1U, sizeof(char@))
+    char@@: objs c.calloc(1U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@@: lp c.calloc(1U, sizeof(char@))
+    char@: dir 0
+    char@: mode 0
+    char@: flag 0
+    char@: log 0
     int: f 0
     int: m 0
     int: x 0
@@ -364,12 +364,12 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     tags[0] := "prod"
     objs[0] := prod
     # The roots the row runs (runs_modes_ok): a digit in MODES selects; no digit -- root0 and root1 as before.
-    if: (cast: (@: char) (c.strchr(modes, 48))) != 0 || (cast: (@: char) (c.strchr(modes, 49))) != 0
+    if: (cast: (char@) (c.strchr(modes, 48))) != 0 || (cast: (char@) (c.strchr(modes, 49))) != 0
         run0 := 0
         run1 := 0
-        if: (cast: (@: char) (c.strchr(modes, 48))) != 0
+        if: (cast: (char@) (c.strchr(modes, 48))) != 0
             run0 := 1
-        if: (cast: (@: char) (c.strchr(modes, 49))) != 0
+        if: (cast: (char@) (c.strchr(modes, 49))) != 0
             run1 := 1
     ---
     while: m < 2
@@ -379,7 +379,7 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
             mode := "forced"
             flag := "--walk-methods"
         ---
-        if: (m = 0 && (cast: (@: char) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (@: char) (c.strchr(modes, 102))) != 0)
+        if: (m = 0 && (cast: (char@) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (char@) (c.strchr(modes, 102))) != 0)
             dir := txt_cat3(out, "/", txt_cat3(name, "-", mode))
             os_mkdir(dir)
             x := bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec, res, lp, 900000U)
@@ -403,17 +403,17 @@ end: suite_runs
 # A maintained machine-ABI unit is translated once by the existing module
 # route. The ordinary generated L2 owner then uses the usual n/f/root gates.
 # Its C call does not claim that the machine unit's assertions were walked.
-fn: suite_machine (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: export char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE; @: primitive char) int
-    @@: names char c.calloc(1U, sizeof(@: char))
-    @@: args char c.calloc(3U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @: src char txt_path(stage, "src")
-    @: dir char txt_path(out, txt_cat(name, "-machine"))
-    @: stem char txt_cat3("lmx_unit_", export, txt_cat("_", name))
-    @: unit_source char txt_path(src, txt_cat3("l2src/", stem, ".lm2"))
-    @: owner char txt_path(dir, "owner.lm2")
-    @: file c.FILE 0
-    @: backend char bld_bundle_backend(fe)
+fn: suite_machine (char@: repo; char@: stage; char@: base; char@: fe; char@: prod; char@: source; char@: export; int: entry; char@: modes; char@: out; char@: name; c.FILE@: rec; int@: cls; c.FILE@: fl; char@: primitive) int
+    char@@: names c.calloc(1U, sizeof(char@))
+    char@@: args c.calloc(3U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@: src txt_path(stage, "src")
+    char@: dir txt_path(out, txt_cat(name, "-machine"))
+    char@: stem txt_cat3("lmx_unit_", export, txt_cat("_", name))
+    char@: unit_source txt_path(src, txt_cat3("l2src/", stem, ".lm2"))
+    char@: owner txt_path(dir, "owner.lm2")
+    c.FILE@: file 0
+    char@: backend bld_bundle_backend(fe)
     int: status 0
     if: names = 0 || args = 0 || res = 0 || src = 0 || dir = 0 || stem = 0 || unit_source = 0 || owner = 0 || backend = 0
         return: 1
@@ -447,25 +447,25 @@ fn: suite_machine (@: repo char; @: stage char; @: base char; @: fe char; @: pro
 # owner: natively, and with `--walk-methods` in the forced mode, so that a library's method bodies run walked there as
 # the owner's do. The owner source is built in each of its modes as a runs row's is, with `--provider NAME` for every
 # library, linked with that mode's objects, and run at the root and walked. Every run must exit with entry.
-fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: dir char; @: source char; @: libs char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
-    @@: tags char c.calloc(1U, sizeof(@: char))
-    @@: objs char c.calloc(1U, sizeof(@: char))
-    @@: none char c.calloc(1U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @@: lp char c.calloc(1U, sizeof(@: char))
-    @: lout char txt_cat3(out, "/", txt_cat(name, "-libs"))
-    @: item char 0
-    @: path char 0
-    @: export char 0
-    @: stem char 0
-    @: lib char 0
-    @: providers char ""
-    @: objects char 0
-    @: rdir char 0
-    @: mode char 0
-    @: walk char 0
-    @: flag char 0
-    @: log char 0
+fn: suite_links (char@: repo; char@: stage; char@: base; char@: fe; char@: prod; char@: dir; char@: source; char@: libs; int: entry; char@: modes; char@: out; char@: name; c.FILE@: rec; int@: cls; c.FILE@: fl) int
+    char@@: tags c.calloc(1U, sizeof(char@))
+    char@@: objs c.calloc(1U, sizeof(char@))
+    char@@: none c.calloc(1U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@@: lp c.calloc(1U, sizeof(char@))
+    char@: lout txt_cat3(out, "/", txt_cat(name, "-libs"))
+    char@: item 0
+    char@: path 0
+    char@: export 0
+    char@: stem 0
+    char@: lib 0
+    char@: providers ""
+    char@: objects 0
+    char@: rdir 0
+    char@: mode 0
+    char@: walk 0
+    char@: flag 0
+    char@: log 0
     size_t: p 0U
     size_t: q c.strlen(libs)
     int: f 0
@@ -485,7 +485,7 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
             mode := "forced"
             walk := "--walk-methods "
         ---
-        if: (m = 0 && (cast: (@: char) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (@: char) (c.strchr(modes, 102))) != 0)
+        if: (m = 0 && (cast: (char@) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (char@) (c.strchr(modes, 102))) != 0)
             providers := ""
             objects := 0
             p := 0U
@@ -534,12 +534,12 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
     return: f
 end: suite_links
 
-fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
-    @@: a char c.calloc(16U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @: mode char 0
-    @: log char 0
-    @: lm1 char 0
+fn: suite_refuses (char@: stage; char@: base; char@: fe; char@: source; char@: needle; char@: modes; char@: out; char@: name; c.FILE@: rec; int@: cls; c.FILE@: fl) int
+    char@@: a c.calloc(16U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@: mode 0
+    char@: log 0
+    char@: lm1 0
     int: f 0
     int: m 0
     int: n 0
@@ -550,7 +550,7 @@ fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: n
         mode := "native"
         if: m = 1
             mode := "forced"
-        if: (m = 0 && (cast: (@: char) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (@: char) (c.strchr(modes, 102))) != 0)
+        if: (m = 0 && (cast: (char@) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (char@) (c.strchr(modes, 102))) != 0)
             log := txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".log")))
             lm1 := txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".lm1")))
             n := bld_frontend_launch(a, 8, fe)
@@ -580,20 +580,20 @@ fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: n
 end: suite_refuses
 
 # How many observed runs walked the body of nm (`LMX_OBSERVE WALK_BODY nm` lines of the log), or -1.
-fn: suite_walked (@: dir char; int: root; @: nm char) int
+fn: suite_walked (char@: dir; int: root; char@: nm) int
     return: file_count_line(txt_cat3(dir, "/run-obs-root", txt_cat(txt_int(root), ".log")), txt_cat("LMX_OBSERVE WALK_BODY ", nm))
 end: suite_walked
 
-fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @@: src char; @@: label char; int: entry; @: modes char; @: names char; @: out char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
-    @@: tags char c.calloc(2U, sizeof(@: char))
-    @@: objs char c.calloc(2U, sizeof(@: char))
-    @@: dirs char c.calloc(2U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @@: lp char c.calloc(1U, sizeof(@: char))
-    @: mode char 0
-    @: flag char 0
-    @: nm char 0
-    @: log char 0
+fn: suite_twins (char@: repo; char@: stage; char@: base; char@: fe; char@: prod; char@: obs; char@@: src; char@@: label; int: entry; char@: modes; char@: names; char@: out; c.FILE@: rec; int@: cls; c.FILE@: fl) int
+    char@@: tags c.calloc(2U, sizeof(char@))
+    char@@: objs c.calloc(2U, sizeof(char@))
+    char@@: dirs c.calloc(2U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@@: lp c.calloc(1U, sizeof(char@))
+    char@: mode 0
+    char@: flag 0
+    char@: nm 0
+    char@: log 0
     int: f 0
     int: m 0
     int: s 0
@@ -620,7 +620,7 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
             mode := "forced"
             flag := "--walk-methods"
         ---
-        if: (m = 0 && (cast: (@: char) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (@: char) (c.strchr(modes, 102))) != 0)
+        if: (m = 0 && (cast: (char@) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (char@) (c.strchr(modes, 102))) != 0)
             built := 0
             s := 0
             while: s < 2
@@ -670,32 +670,32 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
 end: suite_twins
 
 # The name of a row's source: its file name up to the first dot.
-fn: suite_stem (@: rel char) @: char
-    @: slash char c.strrchr(rel, 47)
+fn: suite_stem (char@: rel) char@
+    char@: slash c.strrchr(rel, 47)
     if: slash = 0
         return: txt_until(rel, ".")
     return: txt_until(slash + 1, ".")
 end: suite_stem
 
-fn: fixture_suite (@: list char; @: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @: out char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char c.calloc(9U, sizeof(@: char))
-    @@: pair char c.calloc(2U, sizeof(@: char))
-    @@: label char c.calloc(2U, sizeof(@: char))
-    @@: why char c.calloc(1U, sizeof(@: char))
-    @: cls int c.calloc(16U, c.sizeof(c.int))
-    @: entry int c.calloc(1U, c.sizeof(c.int))
-    @: dir char suite_dir_of(list)
-    @: data char 0
-    @: line char 0
-    @: rec c.FILE 0
-    @: fl c.FILE 0
-    @: source char 0
-    @: name char 0
-    @: extra char 0
-    @: gone char 0
-    @: here char 0
+fn: fixture_suite (char@: list; char@: repo; char@: stage; char@: base; char@: fe; char@: prod; char@: obs; char@: out) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@@: fld c.calloc(9U, sizeof(char@))
+    char@@: pair c.calloc(2U, sizeof(char@))
+    char@@: label c.calloc(2U, sizeof(char@))
+    char@@: why c.calloc(1U, sizeof(char@))
+    int@: cls c.calloc(16U, c.sizeof(c.int))
+    int@: entry c.calloc(1U, c.sizeof(c.int))
+    char@: dir suite_dir_of(list)
+    char@: data 0
+    char@: line 0
+    c.FILE@: rec 0
+    c.FILE@: fl 0
+    char@: source 0
+    char@: name 0
+    char@: extra 0
+    char@: gone 0
+    char@: here 0
     int: f 0
     int: nf 0
     int: rows 0
@@ -778,15 +778,15 @@ end: fixture_suite
 # of its own under out_dir, row-<k>.tsv (its paths made absolute from src's directory), and its expectation as
 # row-<k>.expect: the count of rows written, or -1 (an unreadable list, or a row without its expectation and a
 # kind).
-fn: suite_split_rows (@: src char; @: out_dir char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char c.calloc(9U, sizeof(@: char))
-    @: dir char suite_dir_of(src)
-    @: data char 0
-    @: line char 0
-    @: row char 0
-    @: rec c.FILE 0
+fn: suite_split_rows (char@: src; char@: out_dir) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@@: fld c.calloc(9U, sizeof(char@))
+    char@: dir suite_dir_of(src)
+    char@: data 0
+    char@: line 0
+    char@: row 0
+    c.FILE@: rec 0
     int: nf 0
     int: k 0
     int: i 0
@@ -833,8 +833,8 @@ fn: suite_split_rows (@: src char; @: out_dir char) int
 end: suite_split_rows
 
 # A one-row suite list at path: `runs SOURCE ENTRY n`.
-fn: suite_one_runs (@: path char; @: source char; int: entry) int
-    @: rec c.FILE os_file_open(path, "wb")
+fn: suite_one_runs (char@: path; char@: source; int: entry) int
+    c.FILE@: rec os_file_open(path, "wb")
     if: rec = 0
         return: 1
     c.fprintf(rec, "runs\t%s\t%d\tn\n", source, entry)
@@ -845,17 +845,17 @@ end: suite_one_runs
 # Whether the failures of a run (failures.tsv at path) are what a control expects (R170-3): expect is
 # CLASS[,CLASS...][|NEEDLE] -- every failure is of one of those classes, each of them occurs, and with a needle
 # every failure of the first class says it in its log or its why. 0 satisfied, else 1 and the reason in why[0].
-fn: control_eval_r (@: path char; @: expect char; @@: why char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: ff char c.calloc(5U, sizeof(@: char))
-    @: mask int c.calloc(16U, c.sizeof(c.int))
-    @: seen int c.calloc(16U, c.sizeof(c.int))
-    @: classes char txt_until(expect, "|")
-    @: needle char c.strchr(expect, 124)
-    @: data char 0
-    @: line char 0
-    @: item char 0
+fn: control_eval_r (char@: path; char@: expect; char@@: why) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@@: ff c.calloc(5U, sizeof(char@))
+    int@: mask c.calloc(16U, c.sizeof(c.int))
+    int@: seen c.calloc(16U, c.sizeof(c.int))
+    char@: classes txt_until(expect, "|")
+    char@: needle c.strchr(expect, 124)
+    char@: data 0
+    char@: line 0
+    char@: item 0
     size_t: p 0U
     size_t: q 0U
     int: first -1
@@ -899,7 +899,7 @@ fn: control_eval_r (@: path char; @: expect char; @@: why char) int
                 return: 1
             seen[k] := 1
             if: needle != 0 && k = first
-                hit := (cast: (int) ((cast: (@: char) (c.strstr(ff[2], needle))) != 0))
+                hit := (cast: (int) ((cast: (char@) (c.strstr(ff[2], needle))) != 0))
                 if: hit = 0 && c.strcmp(ff[3], "-") != 0
                     hit := file_has(ff[3], needle)
                 if: hit = 0
@@ -925,8 +925,8 @@ fn: control_eval_r (@: path char; @: expect char; @@: why char) int
 end: control_eval_r
 
 # control_eval_r as a check named label: PASS when the control is satisfied.
-fn: control_eval (@: path char; @: expect char; @: label char) int
-    @@: why char c.calloc(1U, sizeof(@: char))
+fn: control_eval (char@: path; char@: expect; char@: label) int
+    char@@: why c.calloc(1U, sizeof(char@))
     int: r 1
     if: why = 0
         return: tool_check(0, label, "no memory")
@@ -935,10 +935,10 @@ fn: control_eval (@: path char; @: expect char; @: label char) int
 end: control_eval
 
 # The first line of the file at path (its LF and a CR before it cut), or 0.
-fn: first_line (@: path char) @: char
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
+fn: first_line (char@: path) char@
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
     if: len = 0 || at = 0
         return: 0
     data := file_read(path, len)
@@ -948,8 +948,8 @@ fn: first_line (@: path char) @: char
 end: first_line
 
 # The size in bytes of the file at path in out[0] (file_read): 0 read, 1 not.
-fn: file_size_at (@: path char; @: out size_t) int
-    @: data char file_read(path, out)
+fn: file_size_at (char@: path; size_t@: out) int
+    char@: data file_read(path, out)
     if: data = 0
         return: 1
     c.free(data)
@@ -964,19 +964,19 @@ end: file_size_at
 # touched copy is one byte longer and the other copies are their originals' bytes; the untouched one translates and
 # leaves every copy its original's bytes. The record of these steps is out/record.txt. 0 when every check passed,
 # else the failures.
-fn: gate_snapshot (@: stage char; @: base char; @: fe char; @: source char; @: out char) int
-    @@: a char c.calloc(18U, sizeof(@: char))
-    @@: copy char c.calloc(3U, sizeof(@: char))
-    @@: from char c.calloc(3U, sizeof(@: char))
-    @@: label char c.calloc(3U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @: sizes size_t c.calloc(3U, c.sizeof(c.size_t))
-    @: now size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: rec c.FILE 0
-    @: dir char 0
-    @: lm1 char 0
-    @: log char 0
-    @: name char 0
+fn: gate_snapshot (char@: stage; char@: base; char@: fe; char@: source; char@: out) int
+    char@@: a c.calloc(18U, sizeof(char@))
+    char@@: copy c.calloc(3U, sizeof(char@))
+    char@@: from c.calloc(3U, sizeof(char@))
+    char@@: label c.calloc(3U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    size_t@: sizes c.calloc(3U, c.sizeof(c.size_t))
+    size_t@: now c.calloc(1U, c.sizeof(c.size_t))
+    c.FILE@: rec 0
+    char@: dir 0
+    char@: lm1 0
+    char@: log 0
+    char@: name 0
     int: f 0
     int: k 0
     int: i 0
@@ -1074,14 +1074,14 @@ end: gate_snapshot
 # (os/os_select_header_poison.lm2) fails the C compile naming it (CC); fe_both, a frontend that also translates the
 # unselected branch as a late-#ifdef design would (the translate-then-hide mutant), refuses os_select_only.lm2 at the
 # root's call of the selected branch's own method (L2). 0 when every check passed, else the failures.
-fn: gate_os_selection (@: repo char; @: stage char; @: base char; @: fe char; @: fe_both char; @: prod char; @: obs char; @: dir char; @: built char; @: out char) int
-    @@: progs char c.calloc(2U, sizeof(@: char))
-    @@: stems char c.calloc(2U, sizeof(@: char))
-    @@: heads char c.calloc(2U, sizeof(@: char))
-    @: lm1 char 0
-    @: cfile char 0
-    @: one char 0
-    @: name char 0
+fn: gate_os_selection (char@: repo; char@: stage; char@: base; char@: fe; char@: fe_both; char@: prod; char@: obs; char@: dir; char@: built; char@: out) int
+    char@@: progs c.calloc(2U, sizeof(char@))
+    char@@: stems c.calloc(2U, sizeof(char@))
+    char@@: heads c.calloc(2U, sizeof(char@))
+    char@: lm1 0
+    char@: cfile 0
+    char@: one 0
+    char@: name 0
     int: f 0
     int: k 0
     if: progs = 0 || stems = 0 || heads = 0
@@ -1121,11 +1121,11 @@ end: gate_os_selection
 # A built program exe run at the root with the expected result entry, as a suite row runs it (bld_run), in the new
 # directory out: its record, its log and out/failures.tsv (the run's class, cls_run, when it fails). 0 it gave
 # entry, else 1.
-fn: run_expect (@: exe char; int: entry; @: out char) int
-    @: cls int c.calloc(16U, c.sizeof(c.int))
-    @: rec c.FILE 0
-    @: fl c.FILE 0
-    @: log char txt_path(out, "run-root0.log")
+fn: run_expect (char@: exe; int: entry; char@: out) int
+    int@: cls c.calloc(16U, c.sizeof(c.int))
+    c.FILE@: rec 0
+    c.FILE@: fl 0
+    char@: log txt_path(out, "run-root0.log")
     int: x 0
     int: f 0
     if: cls = 0 || log = 0
@@ -1158,16 +1158,16 @@ end: run_expect
 # L1 step is not started (INFRA). Controls of the controls: an infrastructure failure, a needle not said, a run
 # without failures and a failure of another class satisfy no control. Then no record of these runs started a
 # script host. GATE <failures> on stdout and in out/gate.txt; out must be new.
-fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census char; @: fe_mutant char; @: fe_both char; @: prod char; @: obs char; @: list char; @: census char; @: out char) int
-    @: dir char suite_dir_of(list)
-    @@: why char c.calloc(1U, sizeof(@: char))
-    @: wv char 0
-    @: wc char 0
-    @: one char 0
-    @: rows char 0
-    @: name char 0
-    @: expect char 0
-    @: rec c.FILE 0
+fn: gate (char@: repo; char@: stage; char@: base; char@: fe; char@: fe_census; char@: fe_mutant; char@: fe_both; char@: prod; char@: obs; char@: list; char@: census; char@: out) int
+    char@: dir suite_dir_of(list)
+    char@@: why c.calloc(1U, sizeof(char@))
+    char@: wv 0
+    char@: wc 0
+    char@: one 0
+    char@: rows 0
+    char@: name 0
+    char@: expect 0
+    c.FILE@: rec 0
     int: f 0
     int: x 0
     int: n 0
@@ -1260,9 +1260,9 @@ fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census ch
 end: gate
 
 # Whether the files at a and b hold the same bytes, by their SHA-256: 1 yes, 0 no, -1 one cannot be hashed.
-fn: file_hash_same (@: a char; @: b char) int
-    @: ha char c.calloc(65U, 1U)
-    @: hb char c.calloc(65U, 1U)
+fn: file_hash_same (char@: a; char@: b) int
+    char@: ha c.calloc(65U, 1U)
+    char@: hb c.calloc(65U, 1U)
     if: ha = 0 || hb = 0 || os_sha256_file(a, ha) != 0 || os_sha256_file(b, hb) != 0
         return: -1
     if: c.strcmp(ha, hb) = 0
@@ -1273,14 +1273,14 @@ end: file_hash_same
 # Whether the tool at exe works: run as a child in out/<tag>-run (`exe 0 entry 0 -- sha256 path`), it starts,
 # exits 0 and prints the digest this process computes for path -- its platform adapter and its L2 code ran. Its
 # step in out/<tag>-record.txt. 0 it does, else 1 (said as FAIL).
-fn: tool_works (@: exe char; @: path char; @: out char; @: tag char) int
-    @@: a char c.calloc(8U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @: hex char c.calloc(65U, 1U)
-    @: cwd char txt_path(out, txt_cat(tag, "-run"))
-    @: log char txt_path(out, txt_cat(tag, "-sha256.log"))
-    @: name char txt_cat3("the tool ", tag, " starts and hashes a file as this tool does")
-    @: rec c.FILE 0
+fn: tool_works (char@: exe; char@: path; char@: out; char@: tag) int
+    char@@: a c.calloc(8U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
+    char@: hex c.calloc(65U, 1U)
+    char@: cwd txt_path(out, txt_cat(tag, "-run"))
+    char@: log txt_path(out, txt_cat(tag, "-sha256.log"))
+    char@: name txt_cat3("the tool ", tag, " starts and hashes a file as this tool does")
+    c.FILE@: rec 0
     if: a = 0 || res = 0 || hex = 0 || cwd = 0 || log = 0 || name = 0
         return: 1
     if: os_sha256_file(path, hex) != 0
@@ -1303,8 +1303,8 @@ fn: tool_works (@: exe char; @: path char; @: out char; @: tag char) int
 end: tool_works
 
 # The end of a bootstrap: its summary in out/bootstrap.txt and on stdout; f.
-fn: bootstrap_end (@: out char; @: mode char; int: f) int
-    @: rec c.FILE 0
+fn: bootstrap_end (char@: out; char@: mode; int: f) int
+    c.FILE@: rec 0
     rec := os_file_open(txt_path(out, "bootstrap.txt"), "wb")
     if: rec != 0
         c.fprintf(rec, "BOOTSTRAP %s %d failures\n", mode, f)
@@ -1324,16 +1324,16 @@ end: bootstrap_end
 # Retain the generated inputs that the next generation will overwrite in the
 # shared stage. These four closed producer directories are not a project scan.
 # Existing manifest/stage_copy preserve and check the actual bytes.
-fn: generation_snapshot (@: stage char; @: out char) int
-    @@: dirs char c.calloc(4U, sizeof(@: char))
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: line char 0
-    @: list char txt_path(out, "consumed-inputs.list.txt")
-    @: manifest char txt_path(out, "consumed-inputs.sha256")
-    @: listing char 0
-    @: rec c.FILE 0
+fn: generation_snapshot (char@: stage; char@: out) int
+    char@@: dirs c.calloc(4U, sizeof(char@))
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: line 0
+    char@: list txt_path(out, "consumed-inputs.list.txt")
+    char@: manifest txt_path(out, "consumed-inputs.sha256")
+    char@: listing 0
+    c.FILE@: rec 0
     int: d 0
     if: dirs = 0 || len = 0 || at = 0 || list = 0 || manifest = 0
         return: 1
@@ -1373,8 +1373,8 @@ end: generation_snapshot
 
 # One successful bundle has all its selected compiler/runtime/tool companions
 # recorded together. These hashes are saved artifacts, not interface admission.
-fn: generation_bundle (@: out char) int
-    @: rec c.FILE os_file_open(txt_path(out, "bundle.sha256"), "wb")
+fn: generation_bundle (char@: out) int
+    c.FILE@: rec os_file_open(txt_path(out, "bundle.sha256"), "wb")
     int: bad 0
     if: rec = 0
         return: 1
@@ -1400,9 +1400,9 @@ end: generation_bundle
 # A promotion selects this tested versioned bundle and replaces the working
 # tool. A failed copy/hash never reports a completed promotion. The following
 # child receives this bundle's explicit frontend and its adjacent backend/libc.
-fn: generation_promote (@: candidate char; @: out char; @: tag char) int
-    @: exe char txt_path(candidate, "tool/lmxtool-tool.exe")
-    @: working char txt_path(out, "lmxtool.exe")
+fn: generation_promote (char@: candidate; char@: out; char@: tag) int
+    char@: exe txt_path(candidate, "tool/lmxtool-tool.exe")
+    char@: working txt_path(out, "lmxtool.exe")
     if: exe = 0 || working = 0
         return: 1
     if: file_copy(exe, working) != 0 || file_hash_same(exe, working) != 1
@@ -1418,12 +1418,12 @@ end: generation_promote
 # launch declared by its bundle -- translates the new frontend's objects and the runtime's kernel modules, those of the
 # frontend's clean-graph input (lmx_schedule, lmx_clock, lmx_process_deadline) from their graph; the new frontend is linked last with that
 # runtime and translates everything after it. No standalone frontend is built.
-fn: build_generation (@: mode char; @: repo char; @: stage char; @: base char; @: previous_fe char; @: label char; @: smoke char; @: full char) int
-    @: out char txt_path(stage, label)
-    @: fe char 0
-    @: prod char 0
-    @: obs char 0
-    @: tool char 0
+fn: build_generation (char@: mode; char@: repo; char@: stage; char@: base; char@: previous_fe; char@: label; char@: smoke; char@: full) int
+    char@: out txt_path(stage, label)
+    char@: fe 0
+    char@: prod 0
+    char@: obs 0
+    char@: tool 0
     int: whole 0
     int: x 0
     if: out = 0 || mode = 0 || previous_fe = 0
@@ -1493,18 +1493,18 @@ end: build_generation
 # The same one-generation leaf is invoked exactly twice: directly by G0,
 # then by the actual G1 tool with G1's frontend/backend/libc as its seed.
 # The child is not bootstrap, so no recursive or unbounded generation chain.
-fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: previous_fe char; @: label char; @: smoke char; @: full char) int
-    @: out char txt_path(stage, label)
-    @: first char txt_path(label, "g1")
-    @: second char txt_path(label, "g2")
-    @: one char txt_path(stage, first)
-    @: two char txt_path(stage, second)
-    @: g1 char txt_path(one, "tool/lmxtool-tool.exe")
-    @: g2 char txt_path(two, "tool/lmxtool-tool.exe")
-    @: fe char txt_path(one, "frontend/l2trans.exe")
-    @: rec c.FILE 0
-    @@: a char c.calloc(16U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
+fn: bootstrap (char@: mode; char@: repo; char@: stage; char@: base; char@: previous_fe; char@: label; char@: smoke; char@: full) int
+    char@: out txt_path(stage, label)
+    char@: first txt_path(label, "g1")
+    char@: second txt_path(label, "g2")
+    char@: one txt_path(stage, first)
+    char@: two txt_path(stage, second)
+    char@: g1 txt_path(one, "tool/lmxtool-tool.exe")
+    char@: g2 txt_path(two, "tool/lmxtool-tool.exe")
+    char@: fe txt_path(one, "frontend/l2trans.exe")
+    c.FILE@: rec 0
+    char@@: a c.calloc(16U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
     int: count 13
     int: whole 0
     int: f 0
@@ -1575,15 +1575,15 @@ end: bootstrap
 # the smoke list run with fe and it; tool -- this tool built from
 # the stage's tools sources by fe with rt's driver.o, which hashes a file as this process does (tool_works) and
 # runs the smoke list itself with fe and rt; none -- the smoke list run with fe and rt. 0, or the failures.
-fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char; @: smoke char) int
-    @: out char txt_path(stage, label)
-    @: front char fe
-    @: prod char txt_path(rt, "driver.o")
-    @: obs char txt_path(rt, "driver-observe.o")
-    @: tool char 0
-    @: rec c.FILE 0
-    @@: a char c.calloc(16U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
+fn: rebuild (char@: what; char@: repo; char@: stage; char@: base; char@: fe; char@: rt; char@: label; char@: smoke) int
+    char@: out txt_path(stage, label)
+    char@: front fe
+    char@: prod txt_path(rt, "driver.o")
+    char@: obs txt_path(rt, "driver-observe.o")
+    char@: tool 0
+    c.FILE@: rec 0
+    char@@: a c.calloc(16U, sizeof(char@))
+    int@: res c.calloc(2U, c.sizeof(c.int))
     int: x 0
     if: out = 0 || prod = 0 || obs = 0 || a = 0 || res = 0
         return: 1
@@ -1640,10 +1640,10 @@ end: rebuild
 
 # Run the existing P0 expectation objects without recompiling cases or invoking a script host.
 # Refusals check the P0 diagnostic separately from the graph tool answer and the driver exit.
-fn: parser_diagnostic (@: path char; @: diagnostic char) int
+fn: parser_diagnostic (char@: path; char@: diagnostic) int
     size_t: count 0U
-    @: raw char file_read(path, @ count)
-    @: found char 0
+    char@: raw file_read(path, @ count)
+    char@: found 0
     int: code 0
     size_t: line 0U
     size_t: column 0U
@@ -1659,11 +1659,11 @@ fn: parser_diagnostic (@: path char; @: diagnostic char) int
     c.free(raw)
 return: ok
 
-fn: parser_output (@: path char; @: count size_t) @: char
+fn: parser_output (char@: path; size_t@: count) char@
     size_t: raw_count 0U
-    @: raw char file_read(path, @ raw_count)
-    @: text char 0
-    @: tail char 0
+    char@: raw file_read(path, @ raw_count)
+    char@: text 0
+    char@: tail 0
     count[0] := 0U
     if: raw != 0
         if: dt_text(raw, raw_count, 0, @ text, count) != 0
@@ -1678,14 +1678,14 @@ fn: parser_output (@: path char; @: count size_t) @: char
 return: text
 
 # Optional text checks retain the byte count, including JSON-escaped NUL. 0 absent, 1 checked, -1 failed.
-fn: parser_text_check (@: repo char; @: json char; size_t: count; size_t: row; @: key char; @: actual char; size_t: actual_count; int: from_file) int
+fn: parser_text_check (char@: repo; char@: json; size_t: count; size_t: row; char@: key; char@: actual; size_t: actual_count; int: from_file) int
     size_t: first 0U
     size_t: after 0U
     size_t: expected_count 0U
     size_t: raw_count 0U
-    @: expected char 0
-    @: path char 0
-    @: raw char 0
+    char@: expected 0
+    char@: path 0
+    char@: raw 0
     int: present dj_property(json, count, row, key, @ first, @ after)
     int: ok 0
     if: present != 1
@@ -1713,12 +1713,12 @@ fn: parser_text_check (@: repo char; @: json char; size_t: count; size_t: row; @
         return: -1
 return: 1
 
-fn: parser_contains_checks (@: json char; size_t: count; size_t: row; @: actual char; @: checked int) int
+fn: parser_contains_checks (char@: json; size_t: count; size_t: row; char@: actual; int@: checked) int
     size_t: pos 0U
     size_t: after 0U
     size_t: next 0U
     size_t: text_count 0U
-    @: text char 0
+    char@: text 0
     int: present dj_property(json, count, row, "stdout_contains", @ pos, @ after)
     int: failed 0
     if: present = 0
@@ -1742,18 +1742,18 @@ fn: parser_contains_checks (@: json char; size_t: count; size_t: row; @: actual 
             failed := dj_array_next(json, count, next, @ pos)
 return: failed
 
-fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_t: row; @: out char; int: index; @: report c.FILE) int
-    @: name char 0
-    @: source char 0
-    @: number char txt_int(index)
-    @: dir char txt_path(out, number)
-    @: stdout_path char txt_path(dir, "stdout")
-    @: stderr_path char txt_path(dir, "stderr")
-    @: actual char 0
-    @: expected_diag char 0
-    @: diagnostic char c.calloc(96U, 1U)
-    @@: words char c.calloc(5U, sizeof(@: char))
-    @: detail int c.calloc(1U, sizeof(c.int))
+fn: parser_case (char@: repo; char@: graph; char@: json; size_t: count; size_t: row; char@: out; int: index; c.FILE@: report) int
+    char@: name 0
+    char@: source 0
+    char@: number txt_int(index)
+    char@: dir txt_path(out, number)
+    char@: stdout_path txt_path(dir, "stdout")
+    char@: stderr_path txt_path(dir, "stderr")
+    char@: actual 0
+    char@: expected_diag 0
+    char@: diagnostic c.calloc(96U, 1U)
+    char@@: words c.calloc(5U, sizeof(char@))
+    int@: detail c.calloc(1U, sizeof(c.int))
     size_t: actual_count 0U
     size_t: diag_count 0U
     int: word_count 2
@@ -1845,14 +1845,14 @@ fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_
     c.free(detail)
 return: check
 
-fn: parser_suite (@: repo char; @: graph char; @: expectations char; @: out char) int
+fn: parser_suite (char@: repo; char@: graph; char@: expectations; char@: out) int
     size_t: count 0U
     size_t: pos 0U
     size_t: after 0U
     size_t: next 0U
-    @: json char file_read(expectations, @ count)
-    @: report_path char txt_path(out, "report.tsv")
-    @: report c.FILE 0
+    char@: json file_read(expectations, @ count)
+    char@: report_path txt_path(out, "report.tsv")
+    c.FILE@: report 0
     int: cases 0
     int: failed 0
     if: json = 0 || report_path = 0 || file_exists(graph) = 0

@@ -3,7 +3,7 @@ predef: "l1src/p0.h.lm1"
 predef: "l2src/p0_text.h.lm1"
 include: "<ctype.h>"
 
-fn: lm_p0_scan_registry_compact_atom_piece (const: (@: text char); size_t: end_index; size_t: start) size_t
+fn: lm_p0_scan_registry_compact_atom_piece (const: (char@: text); size_t: end_index; size_t: start) size_t
     size_t: best 0U
     if: start >= end_index
         return: start
@@ -52,7 +52,7 @@ fn: lm_p0_is_hex_digit (char: character) int
     return: c.isxdigit((cast: (c.uchar) character)) != 0
 end: lm_p0_is_hex_digit
 
-fn: lm_p0_scan_number_token (const: (@: text char); size_t: end_index; size_t: start; @: out_end size_t) int
+fn: lm_p0_scan_number_token (const: (char@: text); size_t: end_index; size_t: start; size_t@: out_end) int
     size_t: i start
     int: saw_digit 0
     size_t: hex_exponent_start 0U
@@ -126,7 +126,7 @@ fn: lm_p0_scan_number_token (const: (@: text char); size_t: end_index; size_t: s
     return: saw_digit
 end: lm_p0_scan_number_token
 
-fn: lm_p0_scan_c_quoted_token (const: (@: text char); size_t: end_index; size_t: quote_index) size_t
+fn: lm_p0_scan_c_quoted_token (const: (char@: text); size_t: end_index; size_t: quote_index) size_t
     size_t: i 0U
     char: quote 0
     size_t: line_break_width 0U
@@ -151,17 +151,17 @@ fn: lm_p0_scan_c_quoted_token (const: (@: text char); size_t: end_index; size_t:
     return: quote_index + 1U
 end: lm_p0_scan_c_quoted_token
 
-fn: lm_p0_starts_c_prefixed_quote (const: (@: text char); size_t: end_index; size_t: start) int
+fn: lm_p0_starts_c_prefixed_quote (const: (char@: text); size_t: end_index; size_t: start) int
     return: start + 1U < end_index && text[start] = 'L' && (text[start + 1U] = '\'' || text[start + 1U] = '"')
 end: lm_p0_starts_c_prefixed_quote
 
-fn: lm_p0_scan_c_char_token (const: (@: text char); size_t: end_index; size_t: start) size_t
+fn: lm_p0_scan_c_char_token (const: (char@: text); size_t: end_index; size_t: start) size_t
     if: start >= end_index || text[start] != '\''
         return: start
     return: lm_p0_scan_c_quoted_token(text, end_index, start)
 end: lm_p0_scan_c_char_token
 
-fn: lm_p0_scan_c_prefixed_quote_token (const: (@: text char); size_t: end_index; size_t: start) size_t
+fn: lm_p0_scan_c_prefixed_quote_token (const: (char@: text); size_t: end_index; size_t: start) size_t
     size_t: quoted_end 0U
     if: lm_p0_starts_c_prefixed_quote(text, end_index, start) = 0
         return: start
@@ -171,7 +171,7 @@ fn: lm_p0_scan_c_prefixed_quote_token (const: (@: text char); size_t: end_index;
     return: start + 1U
 end: lm_p0_scan_c_prefixed_quote_token
 
-fn: lm_p0_starts_c_surface_atom (const: (@: text char); size_t: end_index; size_t: start) int
+fn: lm_p0_starts_c_surface_atom (const: (char@: text); size_t: end_index; size_t: start) int
     return: start + 1U < end_index && text[start] = 'c' && text[start + 1U] = '.'
 end: lm_p0_starts_c_surface_atom
 
@@ -179,7 +179,7 @@ fn: lm_p0_is_c_surface_top_boundary (char: value) int
     return: c.lm_p0_is_field_space(value) || c.lm_p0_is_field_separator(value) || value = '(' || value = ')' || value = ':' || value = '#' || value = '{' || value = '}'
 end: lm_p0_is_c_surface_top_boundary
 
-fn: lm_p0_scan_c_surface_atom (const: (@: text char); size_t: end_index; size_t: start) size_t
+fn: lm_p0_scan_c_surface_atom (const: (char@: text); size_t: end_index; size_t: start) size_t
     size_t: i 0U
     size_t: bracket_depth 0U
     if: lm_p0_starts_c_surface_atom(text, end_index, start) = 0
@@ -202,7 +202,7 @@ end: lm_p0_scan_c_surface_atom
 
 # The piece of a C surface atom (`c.name`, `c.buf[i]`) in a run of compact pieces: the atom ends before a series of `@` outside the brackets -- the series is the postfix of the operand (`c.FILE@`) and a
 # piece of its own. The extent of a field (lm_p0_scan_c_surface_atom, used where a field starts) stays the whole of it, so a head `c.FILE@: p` is read whole.
-fn: lm_p0_scan_c_surface_piece (const: (@: text char); size_t: end_index; size_t: start) size_t
+fn: lm_p0_scan_c_surface_piece (const: (char@: text); size_t: end_index; size_t: start) size_t
     size_t: i 0U
     size_t: piece_stop 0U
     size_t: bracket_depth 0U
@@ -221,7 +221,7 @@ fn: lm_p0_scan_c_surface_piece (const: (@: text char); size_t: end_index; size_t
     return: piece_stop
 end: lm_p0_scan_c_surface_piece
 
-fn: lm_p0_scan_compact_atom_piece (const: (@: text char); size_t: end_index; size_t: start; int: allow_signed_number) size_t
+fn: lm_p0_scan_compact_atom_piece (const: (char@: text); size_t: end_index; size_t: start; int: allow_signed_number) size_t
     size_t: i 0U
     size_t: number_end 0U
     char: first 0

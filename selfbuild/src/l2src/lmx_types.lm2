@@ -36,8 +36,8 @@ include: "<limits.h>"
 sub: lmx_types_enter ()
     int: acquired 0
     while: acquired = 0
-        if: c.__atomic_load_n((cast: (@: int) (@ c.lmx_types_gate)), c.__ATOMIC_RELAXED) = 0
-            if: c.__atomic_exchange_n((cast: (@: int) (@ c.lmx_types_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
+        if: c.__atomic_load_n((cast: (int@) (@ c.lmx_types_gate)), c.__ATOMIC_RELAXED) = 0
+            if: c.__atomic_exchange_n((cast: (int@) (@ c.lmx_types_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
                 acquired := 1
             ---
         ---
@@ -45,7 +45,7 @@ sub: lmx_types_enter ()
 end: lmx_types_enter
 
 sub: lmx_types_leave ()
-    c.__atomic_store_n((cast: (@: int) (@ c.lmx_types_gate)), 0, c.__ATOMIC_RELEASE)
+    c.__atomic_store_n((cast: (int@) (@ c.lmx_types_gate)), 0, c.__ATOMIC_RELEASE)
 end: lmx_types_leave
 
 # 1 when tcode is a code of LmxType that names a type today: the base and service codes up to LMX_TYPE_FOREIGN, the
@@ -78,11 +78,11 @@ fn: lmx_types_key_hash (int: ctor; int: operand; size_t: cap) size_t
 fn: lmx_types_code_hash (int: tcode; size_t: cap) size_t
     return: lmx_types_hash((cast: (size_t) (cast: (unsigned) tcode)), 1U, cap)
 
-fn: lmx_types_model_hash (@: model c.Lmx; size_t: cap) size_t
+fn: lmx_types_model_hash (c.Lmx@: model; size_t: cap) size_t
     return: lmx_types_hash((cast: (size_t) model) / 16U, 2U, cap)
 
 # Put entry (a row slot + 1) at the first empty or removed position from hash. The index is never more than half full.
-sub: lmx_types_put (@: index size_t; size_t: cap; size_t: hash; size_t: entry)
+sub: lmx_types_put (size_t@: index; size_t: cap; size_t: hash; size_t: entry)
     size_t: at hash
     while: index[at] != 0U && index[at] != (cast: (size_t) -1)
         at := (at + 1U) & (cap - 1U)
@@ -91,7 +91,7 @@ sub: lmx_types_put (@: index size_t; size_t: cap; size_t: hash; size_t: entry)
 end: lmx_types_put
 
 # Mark the position of entry removed, probing from hash.
-sub: lmx_types_unput (@: index size_t; size_t: cap; size_t: hash; size_t: entry)
+sub: lmx_types_unput (size_t@: index; size_t: cap; size_t: hash; size_t: entry)
     size_t: at hash
     size_t: probes 0U
     while: probes < cap && index[at] != 0U
@@ -106,16 +106,16 @@ sub: lmx_types_unput (@: index size_t; size_t: cap; size_t: hash; size_t: entry)
 end: lmx_types_unput
 
 # The row of slot e (a slot + 1, never 0).
-fn: lmx_types_row (@: ctx c.LmxTypes; size_t: e) @: c.LmxTypeRow
-    @: rows c.LmxTypeRow (cast: (@: c.LmxTypeRow) ctx\rows)
+fn: lmx_types_row (c.LmxTypes@: ctx; size_t: e) c.LmxTypeRow@
+    c.LmxTypeRow@: rows (cast: (c.LmxTypeRow@) ctx\rows)
     return: rows + (e - 1U)
 
 # The row slot + 1 of a code, or 0.
-fn: lmx_types_find_code (@: ctx c.LmxTypes; int: tcode) size_t
+fn: lmx_types_find_code (c.LmxTypes@: ctx; int: tcode) size_t
     size_t: at lmx_types_code_hash(tcode, ctx\index_cap)
     size_t: probes 0U
     size_t: e 0U
-    @: row c.LmxTypeRow 0
+    c.LmxTypeRow@: row 0
     while: probes < ctx\index_cap
         e := ctx\by_code[at]
         if: e = 0U
@@ -132,11 +132,11 @@ fn: lmx_types_find_code (@: ctx c.LmxTypes; int: tcode) size_t
     return: 0U
 
 # The row slot + 1 of the type (ctor, operand), or 0.
-fn: lmx_types_find_key (@: ctx c.LmxTypes; int: ctor; int: operand) size_t
+fn: lmx_types_find_key (c.LmxTypes@: ctx; int: ctor; int: operand) size_t
     size_t: at lmx_types_key_hash(ctor, operand, ctx\index_cap)
     size_t: probes 0U
     size_t: e 0U
-    @: row c.LmxTypeRow 0
+    c.LmxTypeRow@: row 0
     while: probes < ctx\index_cap
         e := ctx\by_key[at]
         if: e = 0U
@@ -153,11 +153,11 @@ fn: lmx_types_find_key (@: ctx c.LmxTypes; int: ctor; int: operand) size_t
     return: 0U
 
 # The row slot + 1 of the model row of model, or 0.
-fn: lmx_types_find_model (@: ctx c.LmxTypes; @: model c.Lmx) size_t
+fn: lmx_types_find_model (c.LmxTypes@: ctx; c.Lmx@: model) size_t
     size_t: at lmx_types_model_hash(model, ctx\index_cap)
     size_t: probes 0U
     size_t: e 0U
-    @: row c.LmxTypeRow 0
+    c.LmxTypeRow@: row 0
     while: probes < ctx\index_cap
         e := ctx\by_model[at]
         if: e = 0U
@@ -175,32 +175,32 @@ fn: lmx_types_find_model (@: ctx c.LmxTypes; @: model c.Lmx) size_t
 
 # Make the three indexes anew with cap entries from the live rows: removed positions are gone afterwards. 0, or 1
 # without memory (the old indexes stay).
-fn: lmx_types_rebuild (@: ctx c.LmxTypes; size_t: cap) int
-    @: by_key size_t (cast: (@: size_t) c.calloc(cap, c.sizeof(c.size_t)))
-    @: by_model size_t (cast: (@: size_t) c.calloc(cap, c.sizeof(c.size_t)))
-    @: by_code size_t (cast: (@: size_t) c.calloc(cap, c.sizeof(c.size_t)))
-    @: row c.LmxTypeRow 0
+fn: lmx_types_rebuild (c.LmxTypes@: ctx; size_t: cap) int
+    size_t@: by_key (cast: (size_t@) c.calloc(cap, c.sizeof(c.size_t)))
+    size_t@: by_model (cast: (size_t@) c.calloc(cap, c.sizeof(c.size_t)))
+    size_t@: by_code (cast: (size_t@) c.calloc(cap, c.sizeof(c.size_t)))
+    c.LmxTypeRow@: row 0
     size_t: i 0U
     if: by_key = 0 || by_model = 0 || by_code = 0
-        c.free((cast: (@: void) by_key))
-        c.free((cast: (@: void) by_model))
-        c.free((cast: (@: void) by_code))
+        c.free((cast: (@) by_key))
+        c.free((cast: (@) by_model))
+        c.free((cast: (@) by_code))
         return: 1
     while: i < ctx\used
         row := lmx_types_row(ctx, i + 1U)
         if: row\tcode != 0
             lmx_types_put(by_code, cap, lmx_types_code_hash(row\tcode, cap), i + 1U)
             if: row\ctor = c.LMX_TYPE_CTOR_MODEL
-                lmx_types_put(by_model, cap, lmx_types_model_hash((cast: (@: c.Lmx) row\model), cap), i + 1U)
+                lmx_types_put(by_model, cap, lmx_types_model_hash((cast: (c.Lmx@) row\model), cap), i + 1U)
             else:
                 lmx_types_put(by_key, cap, lmx_types_key_hash(row\ctor, row\operand, cap), i + 1U)
             ---
         ---
         i := i + 1U
     ---
-    c.free((cast: (@: void) ctx\by_key))
-    c.free((cast: (@: void) ctx\by_model))
-    c.free((cast: (@: void) ctx\by_code))
+    c.free((cast: (@) ctx\by_key))
+    c.free((cast: (@) ctx\by_model))
+    c.free((cast: (@) ctx\by_code))
     ctx\by_key := by_key
     ctx\by_model := by_model
     ctx\by_code := by_code
@@ -211,7 +211,7 @@ fn: lmx_types_rebuild (@: ctx c.LmxTypes; size_t: cap) int
 
 # Room in the indexes for one more row: they are rebuilt when live and removed entries would fill half of them, doubled
 # when the live ones alone would fill a quarter. 0, or 1 without memory.
-fn: lmx_types_index_room (@: ctx c.LmxTypes) int
+fn: lmx_types_index_room (c.LmxTypes@: ctx) int
     size_t: cap ctx\index_cap
     if: (ctx\code_live + ctx\code_dead + 1U) * 2U <= ctx\index_cap
         return: 0
@@ -220,22 +220,22 @@ fn: lmx_types_index_room (@: ctx c.LmxTypes) int
     return: lmx_types_rebuild(ctx, cap)
 
 # A free row slot + 1: a recycled one first, else a new one at the end. 0 without memory.
-fn: lmx_types_slot (@: ctx c.LmxTypes) size_t
-    @: rows c.LmxTypeRow 0
-    @: row c.LmxTypeRow 0
+fn: lmx_types_slot (c.LmxTypes@: ctx) size_t
+    c.LmxTypeRow@: rows 0
+    c.LmxTypeRow@: row 0
     size_t: e ctx\free_head
     size_t: cap 0U
     if: e != 0U
         row := lmx_types_row(ctx, e)
         ctx\free_head := row\next_in_arena
-        c.memset((cast: (@: void) row), 0, c.sizeof(c.LmxTypeRow))
+        c.memset((cast: (@) row), 0, c.sizeof(c.LmxTypeRow))
         return: e
     if: ctx\used = ctx\cap
         cap := ctx\cap * 2U
-        rows := (cast: (@: c.LmxTypeRow) c.realloc((cast: (@: void) ctx\rows), cap * c.sizeof(c.LmxTypeRow)))
+        rows := (cast: (c.LmxTypeRow@) c.realloc((cast: (@) ctx\rows), cap * c.sizeof(c.LmxTypeRow)))
         if: rows = 0
             return: 0U
-        c.memset((cast: (@: void) (rows + ctx\cap)), 0, (cap - ctx\cap) * c.sizeof(c.LmxTypeRow))
+        c.memset((cast: (@) (rows + ctx\cap)), 0, (cap - ctx\cap) * c.sizeof(c.LmxTypeRow))
         ctx\rows := rows
         ctx\cap := cap
     ---
@@ -244,13 +244,13 @@ fn: lmx_types_slot (@: ctx c.LmxTypes) size_t
 
 # A new row of code tcode: on the list of arena when its root is a model of that arena, in the index by code and in
 # the index by model (a model row) or by its constructor and operand. 0, or 1 without memory.
-fn: lmx_types_add (@: ctx c.LmxTypes; int: tcode; int: ctor; int: operand; @: model c.Lmx; @: arena c.LmxArena) int
+fn: lmx_types_add (c.LmxTypes@: ctx; int: tcode; int: ctor; int: operand; c.Lmx@: model; c.LmxArena@: arena) int
     size_t: e 0U
     size_t: cap 0U
-    @: row c.LmxTypeRow 0
-    @: by_code size_t 0
-    @: by_model size_t 0
-    @: by_key size_t 0
+    c.LmxTypeRow@: row 0
+    size_t@: by_code 0
+    size_t@: by_model 0
+    size_t@: by_key 0
     if: lmx_types_index_room(ctx) != 0
         return: 1
     e := lmx_types_slot(ctx)
@@ -258,9 +258,9 @@ fn: lmx_types_add (@: ctx c.LmxTypes; int: tcode; int: ctor; int: operand; @: mo
         return: 1
     # The indexes as they stand after a rebuild by lmx_types_index_room.
     cap := ctx\index_cap
-    by_code := (cast: (@: size_t) ctx\by_code)
-    by_model := (cast: (@: size_t) ctx\by_model)
-    by_key := (cast: (@: size_t) ctx\by_key)
+    by_code := (cast: (size_t@) ctx\by_code)
+    by_model := (cast: (size_t@) ctx\by_model)
+    by_key := (cast: (size_t@) ctx\by_key)
     row := lmx_types_row(ctx, e)
     row\tcode := tcode
     row\ctor := ctor
@@ -284,24 +284,24 @@ fn: lmx_types_add (@: ctx c.LmxTypes; int: tcode; int: ctor; int: operand; @: mo
     return: 0
 
 # An alias row: a derived type of LmxType under its own number, of no arena.
-fn: lmx_types_seed (@: ctx c.LmxTypes; int: tcode; int: ctor; int: operand) int
+fn: lmx_types_seed (c.LmxTypes@: ctx; int: tcode; int: ctor; int: operand) int
     return: lmx_types_add(ctx, tcode, ctor, operand, 0, 0)
 
 # Take the row of slot e out of the indexes and give its slot to the free list. The caller has already taken it off
 # its arena's list.
-sub: lmx_types_drop_row (@: ctx c.LmxTypes; size_t: e)
-    @: row c.LmxTypeRow lmx_types_row(ctx, e)
+sub: lmx_types_drop_row (c.LmxTypes@: ctx; size_t: e)
+    c.LmxTypeRow@: row lmx_types_row(ctx, e)
     size_t: cap ctx\index_cap
-    @: by_code size_t (cast: (@: size_t) ctx\by_code)
-    @: by_model size_t (cast: (@: size_t) ctx\by_model)
-    @: by_key size_t (cast: (@: size_t) ctx\by_key)
+    size_t@: by_code (cast: (size_t@) ctx\by_code)
+    size_t@: by_model (cast: (size_t@) ctx\by_model)
+    size_t@: by_key (cast: (size_t@) ctx\by_key)
     lmx_types_unput(by_code, cap, lmx_types_code_hash(row\tcode, cap), e)
     if: row\ctor = c.LMX_TYPE_CTOR_MODEL
-        lmx_types_unput(by_model, cap, lmx_types_model_hash((cast: (@: c.Lmx) row\model), cap), e)
+        lmx_types_unput(by_model, cap, lmx_types_model_hash((cast: (c.Lmx@) row\model), cap), e)
     else:
         lmx_types_unput(by_key, cap, lmx_types_key_hash(row\ctor, row\operand, cap), e)
     ---
-    c.memset((cast: (@: void) row), 0, c.sizeof(c.LmxTypeRow))
+    c.memset((cast: (@) row), 0, c.sizeof(c.LmxTypeRow))
     row\next_in_arena := ctx\free_head
     ctx\free_head := e
     ctx\code_live := ctx\code_live - 1U
@@ -311,31 +311,31 @@ sub: lmx_types_drop_row (@: ctx c.LmxTypes; size_t: e)
 end: lmx_types_drop_row
 
 # Free a context that could not be made whole.
-sub: lmx_types_free (@: ctx c.LmxTypes)
-    c.free((cast: (@: void) ctx\rows))
-    c.free((cast: (@: void) ctx\by_key))
-    c.free((cast: (@: void) ctx\by_model))
-    c.free((cast: (@: void) ctx\by_code))
-    c.free((cast: (@: void) ctx))
+sub: lmx_types_free (c.LmxTypes@: ctx)
+    c.free((cast: (@) ctx\rows))
+    c.free((cast: (@) ctx\by_key))
+    c.free((cast: (@) ctx\by_model))
+    c.free((cast: (@) ctx\by_code))
+    c.free((cast: (@) ctx))
 end: lmx_types_free
 
 # The context of the process, made on its first use with the alias rows of the codes of LmxType. Called under the
 # gate. 0 without memory.
-fn: lmx_types_state () @: c.LmxTypes
-    @@: anchor c.LmxTypes (cast: (@@: c.LmxTypes) (@ c.lmx_types_anchor))
-    @: ctx c.LmxTypes 0
+fn: lmx_types_state () c.LmxTypes@
+    c.LmxTypes@@: anchor (cast: (c.LmxTypes@@) (@ c.lmx_types_anchor))
+    c.LmxTypes@: ctx 0
     int: bad 0
     if: \anchor != 0
         return: \anchor
-    ctx := (cast: (@: c.LmxTypes) c.calloc(1U, c.sizeof(c.LmxTypes)))
+    ctx := (cast: (c.LmxTypes@) c.calloc(1U, c.sizeof(c.LmxTypes)))
     if: ctx = 0
         return: 0
     ctx\cap := 64U
-    ctx\rows := (cast: (@: c.LmxTypeRow) c.calloc(ctx\cap, c.sizeof(c.LmxTypeRow)))
+    ctx\rows := (cast: (c.LmxTypeRow@) c.calloc(ctx\cap, c.sizeof(c.LmxTypeRow)))
     ctx\index_cap := 128U
-    ctx\by_key := (cast: (@: size_t) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
-    ctx\by_model := (cast: (@: size_t) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
-    ctx\by_code := (cast: (@: size_t) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
+    ctx\by_key := (cast: (size_t@) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
+    ctx\by_model := (cast: (size_t@) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
+    ctx\by_code := (cast: (size_t@) c.calloc(ctx\index_cap, c.sizeof(c.size_t)))
     ctx\next_code := c.LMX_TYPE_TYPES_BASE
     if: ctx\rows = 0 || ctx\by_key = 0 || ctx\by_model = 0 || ctx\by_code = 0
         lmx_types_free(ctx)
@@ -359,7 +359,7 @@ fn: lmx_types_state () @: c.LmxTypes
 
 # 1 when tcode names a type: a code of LmxType that names one, or a live row; a negative code is the immutable variant
 # of its absolute value. Under the gate.
-fn: lmx_types_known_in (@: ctx c.LmxTypes; int: tcode) int
+fn: lmx_types_known_in (c.LmxTypes@: ctx; int: tcode) int
     int: t tcode
     if: t = c.INT_MIN || t = 0
         return: 0
@@ -374,9 +374,9 @@ fn: lmx_types_known_in (@: ctx c.LmxTypes; int: tcode) int
     return: 1
 
 # 1 when tcode is uninit:T: a row of the uninit constructor (the alias rows included).
-fn: lmx_types_is_uninit (@: ctx c.LmxTypes; int: tcode) int
+fn: lmx_types_is_uninit (c.LmxTypes@: ctx; int: tcode) int
     size_t: e lmx_types_find_code(ctx, tcode)
-    @: row c.LmxTypeRow 0
+    c.LmxTypeRow@: row 0
     if: e = 0U
         return: 0
     row := lmx_types_row(ctx, e)
@@ -387,12 +387,12 @@ fn: lmx_types_is_uninit (@: ctx c.LmxTypes; int: tcode) int
 # The code of ctor applied to operand: the row that holds it, or a new one numbered next. 0 for an unknown constructor
 # or operand, for an immutable variant or an uninit:T as the operand (uninit is the state of a place, the outermost
 # word of its type), when the codes are exhausted, or without memory.
-fn: lmx_types_intern_in (@: ctx c.LmxTypes; int: ctor; int: operand) int
+fn: lmx_types_intern_in (c.LmxTypes@: ctx; int: ctor; int: operand) int
     size_t: e 0U
     size_t: root 0U
-    @: row c.LmxTypeRow 0
-    @: model c.Lmx 0
-    @: arena c.LmxArena 0
+    c.LmxTypeRow@: row 0
+    c.Lmx@: model 0
+    c.LmxArena@: arena 0
     int: tcode 0
     if: ctor != c.LMX_TYPE_CTOR_ARRAY && ctor != c.LMX_TYPE_CTOR_POINTER && ctor != c.LMX_TYPE_CTOR_UNINIT
         return: 0
@@ -406,8 +406,8 @@ fn: lmx_types_intern_in (@: ctx c.LmxTypes; int: ctor; int: operand) int
     root := lmx_types_find_code(ctx, operand)
     if: root != 0U
         row := lmx_types_row(ctx, root)
-        model := (cast: (@: c.Lmx) row\model)
-        arena := (cast: (@: c.LmxArena) row\arena)
+        model := (cast: (c.Lmx@) row\model)
+        arena := (cast: (c.LmxArena@) row\arena)
     ---
     if: ctx\next_code = c.INT_MAX
         return: 0
@@ -419,13 +419,13 @@ fn: lmx_types_intern_in (@: ctx c.LmxTypes; int: ctor; int: operand) int
 
 # Remove from arena's list the rows whose root model has a model row numbered from mark: the types built over such
 # models (models = 0), or those model rows themselves (models = 1). Under the gate.
-sub: lmx_types_take_back (@: ctx c.LmxTypes; @: arena c.LmxArena; int: mark; int: models)
+sub: lmx_types_take_back (c.LmxTypes@: ctx; c.LmxArena@: arena; int: mark; int: models)
     size_t: e arena\type_rows
     size_t: prev 0U
     size_t: next 0U
     size_t: root 0U
-    @: row c.LmxTypeRow 0
-    @: before c.LmxTypeRow 0
+    c.LmxTypeRow@: row 0
+    c.LmxTypeRow@: before 0
     int: take 0
     while: e != 0U
         row := lmx_types_row(ctx, e)
@@ -434,7 +434,7 @@ sub: lmx_types_take_back (@: ctx c.LmxTypes; @: arena c.LmxArena; int: mark; int
         if: models != 0 && row\ctor = c.LMX_TYPE_CTOR_MODEL && row\tcode >= mark
             take := 1
         if: models = 0 && row\ctor != c.LMX_TYPE_CTOR_MODEL && row\tcode >= mark
-            root := lmx_types_find_model(ctx, (cast: (@: c.Lmx) row\model))
+            root := lmx_types_find_model(ctx, (cast: (c.Lmx@) row\model))
             if: root != 0U
                 before := lmx_types_row(ctx, root)
                 if: before\tcode >= mark
@@ -461,8 +461,8 @@ end: lmx_types_take_back
 # ---- The exports -----------------------------------------------------------------------------------------------------
 
 # The context of the process, for its counters (rows_live, rows_removed, index_rebuilds, next_code). 0 without memory.
-fn: lmx_types_context () @: c.LmxTypes
-    @: ctx c.LmxTypes 0
+fn: lmx_types_context () c.LmxTypes@
+    c.LmxTypes@: ctx 0
     lmx_types_enter()
     ctx := lmx_types_state()
     lmx_types_leave()
@@ -471,7 +471,7 @@ fn: lmx_types_context () @: c.LmxTypes
 # The code of ctor (LMX_TYPE_CTOR_ARRAY, _POINTER or _UNINIT) applied to the code operand; the same type always gives
 # the same code. 0 when no such type can be made.
 fn: lmx_types_intern (int: ctor; int: operand) int
-    @: ctx c.LmxTypes 0
+    c.LmxTypes@: ctx 0
     int: tcode 0
     lmx_types_enter()
     ctx := lmx_types_state()
@@ -482,14 +482,14 @@ fn: lmx_types_intern (int: ctor; int: operand) int
 
 # The code of a model: the Structure model of arena as a complete requirement, by its identity. 0 when model is no
 # Structure of arena, when the codes are exhausted, or without memory.
-fn: lmx_types_intern_model (@: arena c.LmxArena; @: model c.Lmx) int
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
+fn: lmx_types_intern_model (c.LmxArena@: arena; c.Lmx@: model) int
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
     size_t: e 0U
     int: tcode 0
     if: arena = 0 || model = 0
         return: 0
-    if: c.lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+    if: c.lmx_range_classify(arena, (cast: (@) model)) != c.LMX_KIND_STRUCT
         return: 0
     lmx_types_enter()
     ctx := lmx_types_state()
@@ -509,7 +509,7 @@ fn: lmx_types_intern_model (@: arena c.LmxArena; @: model c.Lmx) int
 
 # 1 when tcode names a type of the process, 0 for an unknown or unavailable code.
 fn: lmx_types_known (int: tcode) int
-    @: ctx c.LmxTypes 0
+    c.LmxTypes@: ctx 0
     int: known 0
     lmx_types_enter()
     ctx := lmx_types_state()
@@ -520,8 +520,8 @@ fn: lmx_types_known (int: tcode) int
 
 # The constructor of tcode's row (LMX_TYPE_CTOR_*), LMX_TYPE_CTOR_NONE for a code without a row (a base code).
 fn: lmx_types_ctor (int: tcode) int
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
     size_t: e 0U
     int: ctor c.LMX_TYPE_CTOR_NONE
     lmx_types_enter()
@@ -536,8 +536,8 @@ fn: lmx_types_ctor (int: tcode) int
 
 # The operand code of tcode's row, 0 for a model row or a code without a row.
 fn: lmx_types_operand (int: tcode) int
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
     size_t: e 0U
     int: operand 0
     lmx_types_enter()
@@ -551,10 +551,10 @@ fn: lmx_types_operand (int: tcode) int
     return: operand
 
 # The model of a model row, 0 otherwise.
-fn: lmx_types_model (int: tcode) @: c.Lmx
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
-    @: model c.Lmx 0
+fn: lmx_types_model (int: tcode) c.Lmx@
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
+    c.Lmx@: model 0
     size_t: e 0U
     lmx_types_enter()
     ctx := lmx_types_state()
@@ -563,7 +563,7 @@ fn: lmx_types_model (int: tcode) @: c.Lmx
     if: e != 0U
         row := lmx_types_row(ctx, e)
         if: row\ctor = c.LMX_TYPE_CTOR_MODEL
-            model := (cast: (@: c.Lmx) row\model)
+            model := (cast: (c.Lmx@) row\model)
         ---
     ---
     lmx_types_leave()
@@ -571,7 +571,7 @@ fn: lmx_types_model (int: tcode) @: c.Lmx
 
 # The checkpoint of a construction: the next code to be given. 0 without memory.
 fn: lmx_types_checkpoint () int
-    @: ctx c.LmxTypes 0
+    c.LmxTypes@: ctx 0
     int: mark 0
     lmx_types_enter()
     ctx := lmx_types_state()
@@ -585,8 +585,8 @@ fn: lmx_types_checkpoint () int
 # models made before the mark, rows over fixed codes only and the rows of other arenas stay: they name no memory the
 # construction takes back, and another lane may hold their codes (codes are process-wide; a model row of an arena is
 # made only on that arena's lane). The numbers stay used. 0, or 1 without arena or for a mark that is no checkpoint.
-fn: lmx_types_rollback (@: arena c.LmxArena; int: mark) int
-    @: ctx c.LmxTypes 0
+fn: lmx_types_rollback (c.LmxArena@: arena; int: mark) int
+    c.LmxTypes@: ctx 0
     int: status 0
     if: arena = 0
         return: 1
@@ -606,10 +606,10 @@ fn: lmx_types_rollback (@: arena c.LmxArena; int: mark) int
 
 # Remove the rows of arena: all of its list (all != 0, the arena is released), or those whose root model lies in
 # [lo, hi) (a block of the arena leaves, lmx_arena_drop). Addresses are compared, never read. 0, or 1 without arena.
-fn: lmx_types_forget (@: arena c.LmxArena; @: lo void; @: hi void; int: all) int
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
-    @: before c.LmxTypeRow 0
+fn: lmx_types_forget (c.LmxArena@: arena; @: lo; @: hi; int: all) int
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
+    c.LmxTypeRow@: before 0
     size_t: e 0U
     size_t: prev 0U
     size_t: next 0U
@@ -645,9 +645,9 @@ fn: lmx_types_forget (@: arena c.LmxArena; @: lo void; @: hi void; int: all) int
 
 # The rows of the donor's models follow them into arena: their codes do not change (lmx_arena_attach). 0, or 1 without
 # arena or other.
-fn: lmx_types_attach (@: arena c.LmxArena; @: other c.LmxArena) int
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
+fn: lmx_types_attach (c.LmxArena@: arena; c.LmxArena@: other) int
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
     size_t: e 0U
     size_t: tail 0U
     if: arena = 0 || other = 0
@@ -675,9 +675,9 @@ fn: lmx_types_attach (@: arena c.LmxArena; @: other c.LmxArena) int
 
 # The next row of arena's list after the cursor after (0: the first), its model in model[0]: the cursor of that row,
 # or 0 after the last. The collection marks those models (lmx_gc_graph.lm2): model rows are strong.
-fn: lmx_types_arena_next (@: arena c.LmxArena; size_t: after; @@: model void) size_t
-    @: ctx c.LmxTypes 0
-    @: row c.LmxTypeRow 0
+fn: lmx_types_arena_next (c.LmxArena@: arena; size_t: after; @@: model) size_t
+    c.LmxTypes@: ctx 0
+    c.LmxTypeRow@: row 0
     size_t: e 0U
     if: arena = 0 || model = 0
         return: 0U
@@ -692,7 +692,7 @@ fn: lmx_types_arena_next (@: arena c.LmxArena; size_t: after; @@: model void) si
     ---
     if: e != 0U
         row := lmx_types_row(ctx, e)
-        model[0] := (cast: (@: void) row\model)
+        model[0] := (cast: (@) row\model)
     ---
     lmx_types_leave()
     return: e

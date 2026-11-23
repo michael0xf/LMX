@@ -10,7 +10,7 @@ fn: ce_white (unsigned: byte) int
     return: 0
 end: ce_white
 
-fn: ce_word (@: data char; size_t: first; size_t: last; @: word char) int
+fn: ce_word (char@: data; size_t: first; size_t: last; char@: word) int
     size_t: count c.strlen(word)
     if: last - first = count && c.memcmp(data + first, word, count) = 0
         return: 1
@@ -22,13 +22,13 @@ os:
         fn: ce_path_separator (unsigned: byte) int
             return: (cast: (int) (byte = 47U || byte = 92U))
         end: ce_path_separator
-        fn: ce_path_drive (@: data char; size_t: count) int
+        fn: ce_path_drive (char@: data; size_t: count) int
             return: (cast: (int) (count > 1U && data[1U] = (cast: (char) 58)))
         end: ce_path_drive
-        fn: ce_build_component (@: data char; size_t: count) int
+        fn: ce_build_component (char@: data; size_t: count) int
             size_t: at 0U
             unsigned: byte 0U
-            @: word char "build"
+            char@: word "build"
             if: count != 5U
                 return: 0
             while: at < count
@@ -45,10 +45,10 @@ os:
         fn: ce_path_separator (unsigned: byte) int
             return: (cast: (int) (byte = 47U))
         end: ce_path_separator
-        fn: ce_path_drive (@: data char; size_t: count) int
+        fn: ce_path_drive (char@: data; size_t: count) int
             return: 0
         end: ce_path_drive
-        fn: ce_build_component (@: data char; size_t: count) int
+        fn: ce_build_component (char@: data; size_t: count) int
             return: ce_word(data, 0U, count, "build")
         end: ce_build_component
 end: os
@@ -58,7 +58,7 @@ end: os
 # working files), rather than omitting that input and later claiming that all
 # tracked files passed. git ls-files -z reads names from the index, not the
 # file bodies. Git paths are repository-relative.
-fn: ce_readable_name (@: data char; size_t: count) int
+fn: ce_readable_name (char@: data; size_t: count) int
     size_t: pos 0U
     size_t: base 0U
     size_t: first_component count
@@ -85,7 +85,7 @@ fn: ce_readable_name (@: data char; size_t: count) int
     return: 1
 end: ce_readable_name
 
-fn: ce_names_preflight (@: data char; size_t: count) int
+fn: ce_names_preflight (char@: data; size_t: count) int
     size_t: first 0U
     size_t: after 0U
     if: data = 0 || dj_utf8(data, count) != 0
@@ -107,7 +107,7 @@ end: ce_names_preflight
 
 # offsets: index[first,last], work[first,last], path[first,last], attr-exempt.
 # The first TAB separates the head from the complete (possibly tab/LF) path.
-fn: ce_record (@: data char; size_t: first; size_t: last; @: offsets size_t) int
+fn: ce_record (char@: data; size_t: first; size_t: last; size_t@: offsets) int
     size_t: tab first
     size_t: pos first
     size_t: word_after 0U
@@ -145,7 +145,7 @@ fn: ce_record (@: data char; size_t: first; size_t: last; @: offsets size_t) int
     return: 0
 end: ce_record
 
-fn: ce_diagnostic (@: data char; size_t: first; size_t: last; @: path char; @: note char; @: bad size_t) int
+fn: ce_diagnostic (char@: data; size_t: first; size_t: last; char@: path; char@: note; size_t@: bad) int
     if: bad[0] < 12U
         c.fputs("DOCS-EOL ", c.stderr)
         if: c.fwrite(data + first, 1U, last - first, c.stderr) != last - first
@@ -155,11 +155,11 @@ fn: ce_diagnostic (@: data char; size_t: first; size_t: last; @: path char; @: n
     return: 0
 end: ce_diagnostic
 
-fn: ce_endings (@: data char; size_t: count; @: tracked size_t; @: offsets size_t) int
+fn: ce_endings (char@: data; size_t: count; size_t@: tracked; size_t@: offsets) int
     size_t: first 0U
     size_t: after 0U
     size_t: bad 0U
-    @: path char 0
+    char@: path 0
     int: failed 0
     tracked[0] := 0U
     while: first < count && failed = 0
@@ -200,7 +200,7 @@ fn: ce_endings (@: data char; size_t: count; @: tracked size_t; @: offsets size_
     return: failed
 end: ce_endings
 
-fn: ce_controls (@: repo char; @: data char; size_t: count; @: offsets size_t) int
+fn: ce_controls (char@: repo; char@: data; size_t: count; size_t@: offsets) int
     size_t: first 0U
     size_t: after 0U
     size_t: size 0U
@@ -209,9 +209,9 @@ fn: ce_controls (@: repo char; @: data char; size_t: count; @: offsets size_t) i
     size_t: bad 0U
     unsigned: byte 0U
     int: hit 0
-    @: path char 0
-    @: full char 0
-    @: raw char 0
+    char@: path 0
+    char@: full 0
+    char@: raw 0
     while: first < count
         after := first
         while: after < count && data[after] != (cast: (char) 0)
@@ -269,12 +269,12 @@ fn: ce_controls (@: repo char; @: data char; size_t: count; @: offsets size_t) i
     return: 0
 end: ce_controls
 
-fn: docs_eol_check (@: repo char; @: git char; @: private_out char; @: tracked size_t) int
-    @@: args char 0
-    @: offsets size_t 0
-    @: out char 0
-    @: err char 0
-    @: raw char 0
+fn: docs_eol_check (char@: repo; char@: git; char@: private_out; size_t@: tracked) int
+    char@@: args 0
+    size_t@: offsets 0
+    char@: out 0
+    char@: err 0
+    char@: raw 0
     size_t: count 0U
     int: detail 0
     int: failed 1
@@ -283,7 +283,7 @@ fn: docs_eol_check (@: repo char; @: git char; @: private_out char; @: tracked s
     tracked[0] := 0U
     out := txt_path(private_out, "docs-eol.stdout")
     err := txt_path(private_out, "docs-eol.stderr")
-    args := c.calloc(7U, sizeof(@: char))
+    args := c.calloc(7U, sizeof(char@))
     offsets := c.calloc(7U, c.sizeof(c.size_t))
     if: out != 0 && err != 0 && args != 0 && offsets != 0
         args[0U] := git

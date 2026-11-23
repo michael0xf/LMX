@@ -59,12 +59,12 @@
 os:
     win:
         include: "<windows.h>" "<winioctl.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
-        fn: fpw_u16 (@: bytes char; size_t: at) unsigned
+        fn: fpw_u16 (char@: bytes; size_t: at) unsigned
             unsigned: lo (cast: (unsigned) bytes[at]) & 255U
             unsigned: hi (cast: (unsigned) bytes[at + 1U]) & 255U
             return: lo | (hi << 8)
         end: fpw_u16
-        fn: fpw_u32 (@: bytes char; size_t: at) unsigned
+        fn: fpw_u32 (char@: bytes; size_t: at) unsigned
             unsigned: lo fpw_u16(bytes, at)
             unsigned: hi fpw_u16(bytes, at + 2U)
             return: lo | (hi << 16)
@@ -72,8 +72,8 @@ os:
         # Counted UTF-16 is not borrowed as a NUL-terminated string. Invalid
         # or embedded-NUL path text must not become a different existing path.
         # Valid scalar filenames preserve their exact UTF-8 bytes.
-        fn: fpw_from_counted (@: wide c.WCHAR; size_t: count; @@: out char) int
-            @: text char 0
+        fn: fpw_from_counted (c.WCHAR@: wide; size_t: count; char@@: out) int
+            char@: text 0
             size_t: at 0U
             int: needed 0
             out[0] := 0
@@ -103,10 +103,10 @@ os:
             out[0] := text
             return: 0
         end: fpw_from_counted
-        fn: fpw_finalpath (@: path char; @@: out char; @: error unsigned) int
-            @: wpath c.void 0
-            @: handle c.void c.INVALID_HANDLE_VALUE
-            @: buffer c.WCHAR 0
+        fn: fpw_finalpath (char@: path; char@@: out; unsigned@: error) int
+            c.void@: wpath 0
+            c.void@: handle c.INVALID_HANDLE_VALUE
+            c.WCHAR@: buffer 0
             unsigned: capacity 256U
             unsigned: got 0U
             int: result 0
@@ -147,11 +147,11 @@ os:
             c.free(wpath)
             return: result
         end: fpw_finalpath
-        fn: fpw_findleaf (@: path char; @@: out char; @: error unsigned) int
-            @: wpath c.void 0
-            @: fd c.WIN32_FIND_DATAW 0
-            @: handle c.void c.INVALID_HANDLE_VALUE
-            @: leaf c.WCHAR 0
+        fn: fpw_findleaf (char@: path; char@@: out; unsigned@: error) int
+            c.void@: wpath 0
+            c.WIN32_FIND_DATAW@: fd 0
+            c.void@: handle c.INVALID_HANDLE_VALUE
+            c.WCHAR@: leaf 0
             size_t: count 0U
             int: result 0
             out[0] := 0
@@ -166,7 +166,7 @@ os:
                     error[0] := (cast: (unsigned) c.GetLastError())
                     result := 1
                 else:
-                    leaf := (cast: (@: c.WCHAR) fd\cFileName)
+                    leaf := (cast: (c.WCHAR@) fd\cFileName)
                     while: (cast: (unsigned) leaf[count]) != 0U
                         count := count + 1U
                     result := fpw_from_counted(leaf, count, out)
@@ -180,12 +180,12 @@ os:
         end: fpw_findleaf
         # kind1=symlink,2=mount point,0=unsupported. Only Substitute is read;
         # PrintName, Reserved and unused Flags do not become acceptance gates.
-        fn: fpw_readlink (@: path char; @@: out char; @: kind int; @: error unsigned) int
-            @: wpath c.void 0
-            @: handle c.void c.INVALID_HANDLE_VALUE
-            @: buffer char 0
-            @: returned c.DWORD 0
-            @: wide c.WCHAR 0
+        fn: fpw_readlink (char@: path; char@@: out; int@: kind; unsigned@: error) int
+            c.void@: wpath 0
+            c.void@: handle c.INVALID_HANDLE_VALUE
+            char@: buffer 0
+            c.DWORD@: returned 0
+            c.WCHAR@: wide 0
             size_t: got 0U
             size_t: payload 0U
             size_t: bound 0U
@@ -287,8 +287,8 @@ os:
         fn: fpw_separator (unsigned: byte) int
             return: (cast: (int) (byte = 47U || byte = 92U))
         end: fpw_separator
-        fn: fpw_slashes (@: path char) @: char
-            @: copy char txt_dup(path)
+        fn: fpw_slashes (char@: path) char@
+            char@: copy txt_dup(path)
             size_t: at 0U
             if: copy = 0
                 return: 0
@@ -301,7 +301,7 @@ os:
         end: fpw_slashes
         # Original byte slices, but colon-at-WCHAR1 follows the native
         # splitroot contract. A supplementary point occupies two WCHARs.
-        fn: fpw_parts (@: path char; @: drive_after size_t; @: tail_at size_t) int
+        fn: fpw_parts (char@: path; size_t@: drive_after; size_t@: tail_at) int
             size_t: count c.strlen(path)
             size_t: first 0U
             size_t: second 0U
@@ -350,7 +350,7 @@ os:
             ---
             return: 0
         end: fpw_parts
-        fn: fpw_isabs (@: path char) int
+        fn: fpw_isabs (char@: path) int
             size_t: count c.strlen(path)
             size_t: width 0U
             unsigned: point 0U
@@ -365,7 +365,7 @@ os:
                 return: 1
             return: 0
         end: fpw_isabs
-        fn: os_path_join (@: base char; @: tail char) @: char
+        fn: os_path_join (char@: base; char@: tail) char@
             size_t: bn 0U
             size_t: tn 0U
             size_t: bd 0U
@@ -375,8 +375,8 @@ os:
             size_t: used 0U
             size_t: dn 0U
             size_t: limit (cast: (size_t) -1)
-            @: drive char base
-            @: out char 0
+            char@: drive base
+            char@: out 0
             int: same 0
             if: base = 0 || tail = 0
                 return: 0
@@ -438,7 +438,7 @@ os:
         end: os_path_join
         # split returns a caller-owned head and the byte index of the original
         # tail. Trim only the tail-head's separators, never the drive/root.
-        fn: fpw_split (@: path char; @@: head char; @: tail_at size_t) int
+        fn: fpw_split (char@: path; char@@: head; size_t@: tail_at) int
             size_t: count c.strlen(path)
             size_t: drive 0U
             size_t: first 0U
@@ -458,19 +458,19 @@ os:
                 return: 1
             return: 0
         end: fpw_split
-        fn: os_path_dirname (@: path char) @: char
-            @: head char 0
+        fn: os_path_dirname (char@: path) char@
+            char@: head 0
             size_t: tail 0U
             if: fpw_split(path, @ head, @ tail) != 0
                 return: 0
             return: head
         end: os_path_dirname
-        fn: fpw_norm (@: input char) @: char
-            @: path char fpw_slashes(input)
-            @: part char 0
-            @: out char 0
-            @@: parts char 0
-            @: kinds unsigned 0
+        fn: fpw_norm (char@: input) char@
+            char@: path fpw_slashes(input)
+            char@: part 0
+            char@: out 0
+            char@@: parts 0
+            unsigned@: kinds 0
             size_t: count 0U
             size_t: drive 0U
             size_t: first 0U
@@ -551,10 +551,10 @@ os:
         end: fpw_norm
         # normcase is exactly the native invariant lowercase route used by
         # ntpath._readlink_deep, NOT Python str.lower from os_path_join.
-        fn: fpw_normcase (@: path char; @@: out char; @: error unsigned) int
-            @: spelling char fpw_slashes(path)
-            @: wide c.void 0
-            @: mapped c.WCHAR 0
+        fn: fpw_normcase (char@: path; char@@: out; unsigned@: error) int
+            char@: spelling fpw_slashes(path)
+            c.void@: wide 0
+            c.WCHAR@: mapped 0
             int: needed 0
             int: result 0
             out[0] := 0
@@ -600,14 +600,14 @@ os:
         end: fpw_final_stops
         # Operation-local seen keys, not an arbitrary link-count limit. A
         # relative target is meaningful here only for an actual symlink.
-        fn: fpw_deep (@: input char; @@: out char; @: error unsigned) int
-            @: path char txt_dup(input)
-            @: key char 0
-            @: target char 0
-            @: parent char 0
-            @: joined char 0
-            @: next_path char 0
-            @@: seen char 0
+        fn: fpw_deep (char@: input; char@@: out; unsigned@: error) int
+            char@: path txt_dup(input)
+            char@: key 0
+            char@: target 0
+            char@: parent 0
+            char@: joined 0
+            char@: next_path 0
+            char@@: seen 0
             size_t: count 0U
             size_t: capacity 0U
             size_t: at 0U
@@ -684,13 +684,13 @@ os:
         end: fpw_deep
         # Find the resolvable prefix, retaining the unresolved suffix and the
         # original native query error. Unexpected OS errors still propagate.
-        fn: fpw_nonstrict (@: input char; @@: out char; @: error unsigned) int
-            @: path char txt_dup(input)
-            @: tail char txt_dup("")
-            @: target char 0
-            @: head char 0
-            @: name char 0
-            @: next_tail char 0
+        fn: fpw_nonstrict (char@: input; char@@: out; unsigned@: error) int
+            char@: path txt_dup(input)
+            char@: tail txt_dup("")
+            char@: target 0
+            char@: head 0
+            char@: name 0
+            char@: next_tail 0
             size_t: tail_at 0U
             unsigned: query_error 0U
             unsigned: deep_error 0U
@@ -788,14 +788,14 @@ os:
         end: fpw_nonstrict
         # Same counted-path interface as the POSIX adapter. A successful
         # result is owned, scalar UTF-8, and has an explicit byte count.
-        fn: os_path_resolve_nonstrict (@: input char; size_t: input_count; @@: out char; @: out_count size_t) int
-            @: initial char 0
-            @: path char 0
-            @: cwd char 0
-            @: folded char 0
-            @: joined char 0
-            @: target char 0
-            @: stripped char 0
+        fn: os_path_resolve_nonstrict (char@: input; size_t: input_count; char@@: out; size_t@: out_count) int
+            char@: initial 0
+            char@: path 0
+            char@: cwd 0
+            char@: folded 0
+            char@: joined 0
+            char@: target 0
+            char@: stripped 0
             unsigned: initial_error 0U
             unsigned: query_error 0U
             size_t: count 0U

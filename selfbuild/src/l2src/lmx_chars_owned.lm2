@@ -21,12 +21,12 @@ include: "<stdlib.h>"
 # the same descriptor, never an array of its own.  The storage is the arena's, the
 # descriptor says KIND_PRIMITIVE / CHAR, and the arena's index names that descriptor for
 # every cell.
-fn: lmx_chars_new_owned (@: arena c.LmxArena) @: char
+fn: lmx_chars_new_owned (c.LmxArena@: arena) char@
     size_t: index 0U
-    @: chars char 0
+    char@: chars 0
     if: arena = 0
         return: 0
-    chars := (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    chars := (cast: (char@) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
     if: chars = 0
         return: 0
     while: index < 256U
@@ -37,8 +37,8 @@ fn: lmx_chars_new_owned (@: arena c.LmxArena) @: char
 end: lmx_chars_new_owned
 
 # chars is null or the live base returned by construction, not a validator.
-fn: lmx_char_cell_known (@: chars char; int: value) @: void
+fn: lmx_char_cell_known (char@: chars; int: value) @
     if: chars = 0 || value < 0 || value > 255
         return: 0
-    return: (cast: (@: void) (chars + value))
+    return: (cast: (@) (chars + value))
 end: lmx_char_cell_known

@@ -4,7 +4,7 @@
 
 # Next closing run of exactly width backticks. Suffix Unicode whitespace is
 # greedy; $ is EOF or just before LF. -1 invalid,0 absent,1 found.
-fn: dl_fence_close (@: data char; size_t: count; size_t: begin; size_t: width; @: after size_t) int
+fn: dl_fence_close (char@: data; size_t: count; size_t: begin; size_t: width; size_t@: after) int
     size_t: scan begin
     size_t: first 0U
     size_t: run 0U
@@ -50,7 +50,7 @@ end: dl_fence_close
 # Opening capture is greedy, body lazy: try run lengths L,L-1,...,3, and for
 # each length take the first valid closer. A later L-closer beats an early
 # (L-1)-closer. Opening-line trailing text is allowed; closing text is not.
-fn: dl_next_fence (@: data char; size_t: count; size_t: begin; @: first size_t; @: after size_t) int
+fn: dl_next_fence (char@: data; size_t: count; size_t: begin; size_t@: first; size_t@: after) int
     size_t: scan begin
     size_t: opening 0U
     size_t: run 0U
@@ -82,8 +82,8 @@ end: dl_next_fence
 
 # Nonoverlapping substitutions over the original text, followed by a returned
 # contiguous buffer. Subsequent links may cross the removed fence boundary.
-fn: docs_links_strip_fences (@: data char; size_t: count; @@: out char; @: out_count size_t) int
-    @: stream c.FILE 0
+fn: docs_links_strip_fences (char@: data; size_t: count; char@@: out; size_t@: out_count) int
+    c.FILE@: stream 0
     size_t: scan 0U
     size_t: first 0U
     size_t: after 0U

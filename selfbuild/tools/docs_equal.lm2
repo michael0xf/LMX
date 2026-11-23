@@ -6,8 +6,8 @@
 
 # Byte-length key lookup; embedded NUL cannot alias a shorter property.
 # Documents have already passed dj_document. Last duplicate key wins.
-fn: de_property (@: data char; size_t: count; size_t: object_at; @: key char; size_t: key_count; @: first size_t; @: last size_t) int
-    @: decoded char 0
+fn: de_property (char@: data; size_t: count; size_t: object_at; char@: key; size_t: key_count; size_t@: first; size_t@: last) int
+    char@: decoded 0
     size_t: decoded_count 0U
     size_t: pos dj_ws(data, count, object_at + 1U)
     size_t: value_at 0U
@@ -44,7 +44,7 @@ fn: de_property (@: data char; size_t: count; size_t: object_at; @: key char; si
     return: found
 end: de_property
 
-fn: de_uint (@: data char; size_t: first; size_t: last; @: value size_t) int
+fn: de_uint (char@: data; size_t: first; size_t: last; size_t@: value) int
     size_t: pos first
     size_t: result 0U
     size_t: digit 0U
@@ -73,12 +73,12 @@ end: de_uint
 # Actual integer tokens are exact, not rounded through double. A token with
 # fraction/exponent is first rounded to binary64, as json.loads does by default.
 # Overflow/underflow of that float are numeric results, not schema errors.
-fn: de_number_with_float (@: expected char; size_t: efirst; size_t: elast; @: actual char; size_t: afirst; size_t: alast; int: actual_kind; c.double: number) int
+fn: de_number_with_float (char@: expected; size_t: efirst; size_t: elast; char@: actual; size_t: afirst; size_t: alast; int: actual_kind; c.double: number) int
     size_t: wanted 0U
     size_t: got 0U
     size_t: scan afirst
-    @: spelling char 0
-    @: stopped char 0
+    char@: spelling 0
+    char@: stopped 0
     int: floating 0
     int: same 0
     if: de_uint(expected, efirst, elast, @ wanted) = 0
@@ -110,17 +110,17 @@ fn: de_number_with_float (@: expected char; size_t: efirst; size_t: elast; @: ac
 end: de_number_with_float
 
 # Existing native scalar formal, not a by-value language-double local.
-fn: de_number (@: expected char; size_t: efirst; size_t: elast; @: actual char; size_t: afirst; size_t: alast; int: actual_kind) int
+fn: de_number (char@: expected; size_t: efirst; size_t: elast; char@: actual; size_t: afirst; size_t: alast; int: actual_kind) int
     return: de_number_with_float(expected, efirst, elast, actual, afirst, alast, actual_kind, (cast: (c.double) 0))
 end: de_number
 
 # For each key on both sides, compare the final value once in the first pass
 # and verify membership in the reverse pass. Earlier duplicate values do not
 # count as extra keys. No strcmp is used for decoded JSON member names.
-fn: de_object (@: expected char; size_t: expected_count; size_t: expected_at; @: actual char; size_t: actual_count; size_t: actual_at) int
-    @: data char expected
-    @: other char actual
-    @: key char 0
+fn: de_object (char@: expected; size_t: expected_count; size_t: expected_at; char@: actual; size_t: actual_count; size_t: actual_at) int
+    char@: data expected
+    char@: other actual
+    char@: key 0
     size_t: count expected_count
     size_t: other_count actual_count
     size_t: object_at expected_at
@@ -184,9 +184,9 @@ fn: de_object (@: expected char; size_t: expected_count; size_t: expected_at; @:
     return: 1
 end: de_object
 
-fn: de_value (@: expected char; size_t: expected_count; size_t: efirst; size_t: elast; @: actual char; size_t: actual_count; size_t: afirst; size_t: alast) int
-    @: evalue char 0
-    @: avalue char 0
+fn: de_value (char@: expected; size_t: expected_count; size_t: efirst; size_t: elast; char@: actual; size_t: actual_count; size_t: afirst; size_t: alast) int
+    char@: evalue 0
+    char@: avalue 0
     size_t: ecount 0U
     size_t: acount 0U
     size_t: eafter 0U
@@ -238,7 +238,7 @@ fn: de_value (@: expected char; size_t: expected_count; size_t: efirst; size_t: 
 end: de_value
 
 # 1 equal,0 mismatch,-1 invalid/I/O/allocation. Caller reports ordinary exit1.
-fn: docs_inventory_equal (@: expected char; size_t: expected_count; @: actual char; size_t: actual_count) int
+fn: docs_inventory_equal (char@: expected; size_t: expected_count; char@: actual; size_t: actual_count) int
     size_t: efirst 0U
     size_t: elast 0U
     size_t: afirst 0U

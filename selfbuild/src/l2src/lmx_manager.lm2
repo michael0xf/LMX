@@ -4,8 +4,8 @@ predef: "l2src/lmx_turn.h.lm1"
 
 # The manager traverses its owner's sole children Array; cursor is not membership.
 # Its API is stored in this caller-owned record, never in module state.
-fn: lmx_manager_init (@: m c.LmxManager) int
-    @: api c.LmxManagerApi
+fn: lmx_manager_init (c.LmxManager@: m) int
+    c.LmxManagerApi@: api
     if: m = 0
         return: c.LMX_MANAGER_INVALID
     m\owner := 0
@@ -20,7 +20,7 @@ fn: lmx_manager_init (@: m c.LmxManager) int
     api\round := (cast: (c.LmxManagerRound) c.lmx_manager_round)
     return: c.LMX_MANAGER_OK
 
-fn: lmx_manager_bind (@: m c.LmxManager; @: owner c.LmxThread) int
+fn: lmx_manager_bind (c.LmxManager@: m; c.LmxThread@: owner) int
     if: m = 0 || owner = 0
         return: c.LMX_MANAGER_INVALID
     if: m\owner != 0 && m\owner != owner
@@ -31,20 +31,20 @@ fn: lmx_manager_bind (@: m c.LmxManager; @: owner c.LmxThread) int
     ---
     return: c.LMX_MANAGER_OK
 
-fn: lmx_manager_api (@: m c.LmxManager) @: c.LmxManagerApi
-    @: api c.LmxManagerApi
+fn: lmx_manager_api (c.LmxManager@: m) c.LmxManagerApi@
+    c.LmxManagerApi@: api
     if: m = 0
         return: 0
     api := @ m\api
     return: api
 
 # Compatibility validation only. Child add/remove own the one membership Array.
-fn: lmx_manager_add (@: m c.LmxManager; @: slot c.LmxSchedule) int
-    @: child c.LmxThread
-    @: parent c.LmxThread
+fn: lmx_manager_add (c.LmxManager@: m; c.LmxSchedule@: slot) int
+    c.LmxThread@: child
+    c.LmxThread@: parent
     if: m = 0 || slot = 0 || slot\owner = 0
         return: c.LMX_MANAGER_INVALID
-    child := (cast: (@: c.LmxThread) slot\owner)
+    child := (cast: (c.LmxThread@) slot\owner)
     if: c.lmx_domain_type(slot\arena, slot\owner) != c.LMX_DOMAIN_THREAD
         return: c.LMX_MANAGER_INVALID
     parent := c.lmx_thread_parent(child)
@@ -56,20 +56,20 @@ fn: lmx_manager_add (@: m c.LmxManager; @: slot c.LmxSchedule) int
         return: c.LMX_MANAGER_INVALID
     return: c.LMX_MANAGER_OK
 
-fn: lmx_manager_remove (@: m c.LmxManager; @: slot c.LmxSchedule) int
-    @: child c.LmxThread
-    @: owner c.LmxThread
+fn: lmx_manager_remove (c.LmxManager@: m; c.LmxSchedule@: slot) int
+    c.LmxThread@: child
+    c.LmxThread@: owner
     if: m = 0 || m\owner = 0 || slot = 0 || slot\owner = 0
         return: c.LMX_MANAGER_INVALID
-    child := (cast: (@: c.LmxThread) slot\owner)
+    child := (cast: (c.LmxThread@) slot\owner)
     owner := m\owner
     if: c.lmx_thread_parent(child) != owner || c.lmx_thread_child_is(owner, child) = 0
         return: c.LMX_MANAGER_INVALID
     return: c.LMX_MANAGER_OK
 
-fn: lmx_manager_take (@: m c.LmxManager) @: c.LmxSchedule
-    @: child c.LmxThread
-    @: owner c.LmxThread
+fn: lmx_manager_take (c.LmxManager@: m) c.LmxSchedule@
+    c.LmxThread@: child
+    c.LmxThread@: owner
     size_t: count
     if: m = 0 || m\owner = 0
         return: 0
@@ -84,24 +84,24 @@ fn: lmx_manager_take (@: m c.LmxManager) @: c.LmxSchedule
     m\cursor := m\cursor + 1U
     if: child = 0
         return: 0
-    return: (cast: (@: c.LmxSchedule) child\slot)
+    return: (cast: (c.LmxSchedule@) child\slot)
 
-fn: lmx_manager_count (@: m c.LmxManager) size_t
-    @: owner c.LmxThread
+fn: lmx_manager_count (c.LmxManager@: m) size_t
+    c.LmxThread@: owner
     if: m = 0 || m\owner = 0
         return: 0U
     owner := m\owner
     return: c.lmx_thread_child_count(owner)
 
-fn: lmx_manager_step (@: m c.LmxManager; ulong: now) int
-    @: slot c.LmxSchedule
-    @: t c.LmxThread
+fn: lmx_manager_step (c.LmxManager@: m; ulong: now) int
+    c.LmxSchedule@: slot
+    c.LmxThread@: t
     if: m = 0
         return: c.LMX_MANAGER_INVALID
     slot := lmx_manager_take(m)
     if: slot = 0
         return: c.LMX_MANAGER_EMPTY
-    t := (cast: (@: c.LmxThread) slot\owner)
+    t := (cast: (c.LmxThread@) slot\owner)
     if: t = 0
         return: c.LMX_MANAGER_INVALID
     c.lmx_thread_turn(t, 0, now)
@@ -111,7 +111,7 @@ fn: lmx_manager_step (@: m c.LmxManager; ulong: now) int
     ---
     return: c.LMX_MANAGER_OK
 
-fn: lmx_manager_round (@: m c.LmxManager; unsigned: ticks; ulong: now) int
+fn: lmx_manager_round (c.LmxManager@: m; unsigned: ticks; ulong: now) int
     unsigned: i
     int: code
     if: m = 0 || ticks = 0U

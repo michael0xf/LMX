@@ -6,7 +6,7 @@
 # The common native pathname API: 1 regular file, 2 another existing
 # kind, 0 absent/stat failure, -1 no memory/invalid input. The Windows
 # adapter follows the target with native Unicode paths, not narrow stat.
-fn: sem_file_kind (@: path char) int
+fn: sem_file_kind (char@: path) int
     int: kind 0
     if: path = 0
         return: -1
@@ -22,12 +22,12 @@ end: sem_file_kind
 # exclude line endings/one initial UTF8 BOM. Caller owns all three results.
 # Parent makes the archive directory in render mode before calling this.
 # 0 success, 1 missing/changed/invalid/no memory/I/O error.
-fn: semantics_source_read (@: preferred char; @: snapshot char; int: check_mode; @: expected_sha char; size_t: expected_sha_count; @@: out_raw char; @: out_size size_t; @@: out_starts size_t; @@: out_lengths size_t; @: out_lines size_t; @: digest char) int
-    @: selected char snapshot
-    @: raw char 0
-    @: saved char 0
-    @: starts size_t 0
-    @: lengths size_t 0
+fn: semantics_source_read (char@: preferred; char@: snapshot; int: check_mode; char@: expected_sha; size_t: expected_sha_count; char@@: out_raw; size_t@: out_size; size_t@@: out_starts; size_t@@: out_lengths; size_t@: out_lines; char@: digest) int
+    char@: selected snapshot
+    char@: raw 0
+    char@: saved 0
+    size_t@: starts 0
+    size_t@: lengths 0
     size_t: raw_count 0U
     size_t: saved_count 0U
     size_t: lines 0U
@@ -109,7 +109,7 @@ end: semantics_source_read
 
 # Next exact re.M '^@@ (.+)$' header. The header's trailing LF is not consumed.
 # 1 found, 0 absent. Offsets are bytes in the caller-owned complete book.
-fn: sem_next_header (@: data char; size_t: count; size_t: begin; @: header_at size_t; @: header_end size_t) int
+fn: sem_next_header (char@: data; size_t: count; size_t: begin; size_t@: header_at; size_t@: header_end) int
     size_t: scan begin
     size_t: found 0U
     size_t: line_end 0U
@@ -133,7 +133,7 @@ end: sem_next_header
 
 # Four pipe-delimited header fields, each with Python Unicode strip. Stored
 # as [start,length] pairs: id, RU title, EN title, source_sections/origin.
-fn: sem_header_fields (@: data char; size_t: header_at; size_t: header_end; @: fields size_t) int
+fn: sem_header_fields (char@: data; size_t: header_at; size_t: header_end; size_t@: fields) int
     size_t: column_at header_at + 3U
     size_t: column_end 0U
     size_t: found 0U
@@ -164,9 +164,9 @@ end: sem_header_fields
 # Caller owns flat 12-cell chapter rows. First8 cells are header fields,
 # then [RU start,length,EN start,length]. No strings are rewritten or copied.
 # Retains exact marker, nonempty chapter collection and duplicate-id checks.
-fn: semantics_book_read (@: data char; size_t: count; @@: out size_t; @: chapter_count size_t) int
-    @: chapters size_t 0
-    @: row size_t 0
+fn: semantics_book_read (char@: data; size_t: count; size_t@@: out; size_t@: chapter_count) int
+    size_t@: chapters 0
+    size_t@: row 0
     size_t: number 0U
     size_t: header_at 0U
     size_t: header_end 0U

@@ -15,9 +15,9 @@
 predef: "l2src/lmx_arena_blocks.h.lm1"
 include: "<stdlib.h>"
 
-fn: lmx_arena_blocks_tail (@: head c.LmxArenaBlock; @@: tail c.LmxArenaBlock) int
-    @: slow c.LmxArenaBlock 0
-    @: fast c.LmxArenaBlock 0
+fn: lmx_arena_blocks_tail (c.LmxArenaBlock@: head; c.LmxArenaBlock@@: tail) int
+    c.LmxArenaBlock@: slow 0
+    c.LmxArenaBlock@: fast 0
     slow := head
     fast := head
     \tail := 0
@@ -41,7 +41,7 @@ end: lmx_arena_blocks_tail
 # the same act (lmx_pool_add_chunk, lmx_pool_make_profiled, the descriptor record lmx_arena_array takes from
 # it).  Constant time: the list is not walked.  A null slot or node, a node that links onward, a slot that is
 # the node's own link, or a block with no storage for its length is refused, and nothing changes.
-fn: lmx_arena_blocks_push (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock) int
+fn: lmx_arena_blocks_push (c.LmxArenaBlock@@: head; c.LmxArenaBlock@: block) int
     if: head = 0 || block = 0
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: block\next != 0 || head = @ block\next
@@ -55,10 +55,10 @@ end: lmx_arena_blocks_push
 
 # Detach one exact member; keep its allocation and graph payload untouched.
 # The caller decides reachability; the arena retires the entry before calling this.
-fn: lmx_arena_blocks_remove (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock) int
-    @: tail c.LmxArenaBlock 0
-    @: entry c.LmxArenaBlock 0
-    @@: slot c.LmxArenaBlock 0
+fn: lmx_arena_blocks_remove (c.LmxArenaBlock@@: head; c.LmxArenaBlock@: block) int
+    c.LmxArenaBlock@: tail 0
+    c.LmxArenaBlock@: entry 0
+    c.LmxArenaBlock@@: slot 0
     slot := head
     if: head = 0 || block = 0
         return: c.LMX_ARENA_BLOCKS_INVALID
@@ -79,9 +79,9 @@ end: lmx_arena_blocks_remove
 
 # Read-only preflight, also usable before attaching a separately prepared block.
 # Valid acyclic lists intersect iff their non-null tails are identical.
-fn: lmx_arena_blocks_can_move (@@: dst c.LmxArenaBlock; @@: src c.LmxArenaBlock) int
-    @: src_tail c.LmxArenaBlock 0
-    @: dst_tail c.LmxArenaBlock 0
+fn: lmx_arena_blocks_can_move (c.LmxArenaBlock@@: dst; c.LmxArenaBlock@@: src) int
+    c.LmxArenaBlock@: src_tail 0
+    c.LmxArenaBlock@: dst_tail 0
     if: dst = 0 || src = 0 || dst = src
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: lmx_arena_blocks_tail(\src, @ src_tail) != c.LMX_ARENA_BLOCKS_OK
@@ -97,8 +97,8 @@ end: lmx_arena_blocks_can_move
 
 # Preserve each list's order, put src before dst, and clear the source owner.
 # Checking metadata is linear; transfer itself changes three pointers only.
-fn: lmx_arena_blocks_move_all (@@: dst c.LmxArenaBlock; @@: src c.LmxArenaBlock) int
-    @: src_tail c.LmxArenaBlock 0
+fn: lmx_arena_blocks_move_all (c.LmxArenaBlock@@: dst; c.LmxArenaBlock@@: src) int
+    c.LmxArenaBlock@: src_tail 0
     if: lmx_arena_blocks_can_move(dst, src) != c.LMX_ARENA_BLOCKS_OK
         return: c.LMX_ARENA_BLOCKS_INVALID
     lmx_arena_blocks_tail(\src, @ src_tail)
@@ -113,10 +113,10 @@ end: lmx_arena_blocks_move_all
 # Detach the owner's whole list before invoking any disposer. Repeating cleanup
 # (including reentry using this same head) sees an empty list, never freed nodes.
 # Payload aliases/OS users must already be settled by the Message lifecycle.
-fn: lmx_arena_blocks_dispose_all (@@: head c.LmxArenaBlock) int
-    @: block c.LmxArenaBlock 0
-    @: next c.LmxArenaBlock 0
-    @: tail c.LmxArenaBlock 0
+fn: lmx_arena_blocks_dispose_all (c.LmxArenaBlock@@: head) int
+    c.LmxArenaBlock@: block 0
+    c.LmxArenaBlock@: next 0
+    c.LmxArenaBlock@: tail 0
     if: head = 0
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: lmx_arena_blocks_tail(\head, @ tail) != c.LMX_ARENA_BLOCKS_OK

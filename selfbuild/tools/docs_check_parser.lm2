@@ -4,7 +4,7 @@
 # The native text/FS/path parts must be selected with this part. No old script
 # is invoked and no successful translation or filesystem run is claimed.
 
-fn: pi_array (@: data char; size_t: count; size_t: object_at; @: key char; @: first size_t) int
+fn: pi_array (char@: data; size_t: count; size_t: object_at; char@: key; size_t@: first) int
     size_t: after 0U
     if: dj_property(data, count, object_at, key, first, @ after) != 1
         return: 1
@@ -15,7 +15,7 @@ fn: pi_array (@: data char; size_t: count; size_t: object_at; @: key char; @: fi
 end: pi_array
 
 # Filesystem strings cannot silently truncate at an escaped JSON NUL.
-fn: pi_path_string (@: data char; size_t: count; size_t: object_at; @: key char; @@: out char) int
+fn: pi_path_string (char@: data; size_t: count; size_t: object_at; char@: key; char@@: out) int
     size_t: path_count 0U
     int: failed dc_string(data, count, object_at, key, out, @ path_count)
     if: failed = 0 && c.strlen(out[0]) != path_count
@@ -26,14 +26,14 @@ fn: pi_path_string (@: data char; size_t: count; size_t: object_at; @: key char;
     return: failed
 end: pi_path_string
 
-fn: pi_origins (@: data char; size_t: count; size_t: file_at; @: raw char; size_t: raw_count) int
+fn: pi_origins (char@: data; size_t: count; size_t: file_at; char@: raw; size_t: raw_count) int
     size_t: pos 0U
     size_t: after 0U
     size_t: source_count 0U
-    @: root char 0
-    @: path char 0
-    @: full char 0
-    @: source char 0
+    char@: root 0
+    char@: path 0
+    char@: full 0
+    char@: source 0
     int: kind 0
     int: failed pi_array(data, count, file_at, "origins", @ pos)
     while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
@@ -77,12 +77,12 @@ fn: pi_origins (@: data char; size_t: count; size_t: file_at; @: raw char; size_
     return: failed
 end: pi_origins
 
-fn: pi_import (@: repo char; @: data char; size_t: count; size_t: file_at) int
-    @: path char 0
-    @: full char 0
-    @: raw char 0
-    @: expected char 0
-    @: digest char 0
+fn: pi_import (char@: repo; char@: data; size_t: count; size_t: file_at) int
+    char@: path 0
+    char@: full 0
+    char@: raw 0
+    char@: expected 0
+    char@: digest 0
     size_t: raw_count 0U
     size_t: expected_count 0U
     size_t: first 0U
@@ -134,7 +134,7 @@ end: pi_import
 # Gather eagerly from ALL files/origins with that stage, not by root. The
 # original set comprehension reads every origin's stage before rglob begins.
 # A counted list preserves set membership without a new hash/cache subsystem.
-fn: pi_represented (@: data char; size_t: count; size_t: files_at; @: stage char; size_t: stage_count; @@@: out char; @: out_count size_t) int
+fn: pi_represented (char@: data; size_t: count; size_t: files_at; char@: stage; size_t: stage_count; char@@@: out; size_t@: out_count) int
     size_t: file_pos dj_ws(data, count, files_at + 1U)
     size_t: file_after 0U
     size_t: origin_pos 0U
@@ -143,10 +143,10 @@ fn: pi_represented (@: data char; size_t: count; size_t: files_at; @: stage char
     size_t: path_count 0U
     size_t: used 0U
     size_t: capacity 0U
-    @@: paths char 0
-    @: kinds unsigned 0
-    @: candidate char 0
-    @: path char 0
+    char@@: paths 0
+    unsigned@: kinds 0
+    char@: candidate 0
+    char@: path 0
     int: same 0
     int: failed 0
     out[0] := 0
@@ -195,7 +195,7 @@ fn: pi_represented (@: data char; size_t: count; size_t: files_at; @: stage char
     return: 0
 end: pi_represented
 
-fn: pi_member (@@: represented char; size_t: count; @: relative char) int
+fn: pi_member (char@@: represented; size_t: count; char@: relative) int
     size_t: at 0U
     while: at < count
         if: c.strcmp(represented[at], relative) = 0
@@ -207,11 +207,11 @@ end: pi_member
 
 os:
     win:
-        fn: pi_lmx_name (@: name char) int
+        fn: pi_lmx_name (char@: name) int
             size_t: name_count c.strlen(name)
             size_t: at 0U
             unsigned: byte 0U
-            @: suffix char ".lmx"
+            char@: suffix ".lmx"
             if: name_count < 4U
                 return: 0
             while: at < 4U
@@ -225,7 +225,7 @@ os:
             return: 1
         end: pi_lmx_name
     default:
-        fn: pi_lmx_name (@: name char) int
+        fn: pi_lmx_name (char@: name) int
             return: txt_ends(name, ".lmx")
         end: pi_lmx_name
 end: os
@@ -233,11 +233,11 @@ end: os
 # rglob emits matching names of any kind, but does not recursively enter
 # symbolic-link directories. Windows junctions are NOT all symlinks.
 # An OS scandir failure is ignored as in glob; internal allocation is not.
-fn: pi_walk (@: base char; @: relative char; @@: represented char; size_t: represented_count) int
-    @: directory char os_path_join(base, relative)
-    @: child char 0
-    @@: names char 0
-    @: kinds unsigned 0
+fn: pi_walk (char@: base; char@: relative; char@@: represented; size_t: represented_count) int
+    char@: directory os_path_join(base, relative)
+    char@: child 0
+    char@@: names 0
+    unsigned@: kinds 0
     size_t: entries 0U
     size_t: at 0U
     int: scanned 0
@@ -283,14 +283,14 @@ fn: pi_walk (@: base char; @: relative char; @@: represented char; size_t: repre
     return: failed
 end: pi_walk
 
-fn: pi_sources (@: data char; size_t: count; size_t: root; size_t: files_at) int
+fn: pi_sources (char@: data; size_t: count; size_t: root; size_t: files_at) int
     size_t: pos 0U
     size_t: after 0U
     size_t: stage_count 0U
     size_t: represented_count 0U
-    @@: represented char 0
-    @: base char 0
-    @: stage char 0
+    char@@: represented 0
+    char@: base 0
+    char@: stage 0
     int: kind 0
     int: failed pi_array(data, count, root, "sources", @ pos)
     while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
@@ -324,9 +324,9 @@ fn: pi_sources (@: data char; size_t: count; size_t: root; size_t: files_at) int
     return: failed
 end: pi_sources
 
-fn: docs_parser_inventory_check (@: repo char; @: imported size_t) int
-    @: path char 0
-    @: data char 0
+fn: docs_parser_inventory_check (char@: repo; size_t@: imported) int
+    char@: path 0
+    char@: data 0
     size_t: count 0U
     size_t: root 0U
     size_t: after 0U

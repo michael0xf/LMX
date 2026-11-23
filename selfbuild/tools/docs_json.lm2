@@ -3,7 +3,7 @@
 # Spans use byte offsets; decoded strings always carry their byte length.
 # This source is not yet translated or part of the running source90 bootstrap.
 
-fn: dj_ws (@: data char; size_t: count; size_t: begin) size_t
+fn: dj_ws (char@: data; size_t: count; size_t: begin) size_t
     size_t: pos begin
     while: pos < count
         if: data[pos] != (cast: (char) 32) && data[pos] != (cast: (char) 9) && data[pos] != (cast: (char) 10) && data[pos] != (cast: (char) 13)
@@ -24,7 +24,7 @@ fn: dj_hex (unsigned: byte) int
 end: dj_hex
 
 # Strict UTF-8, without a BOM convention: the JSON text itself has no BOM.
-fn: dj_utf8 (@: data char; size_t: count) int
+fn: dj_utf8 (char@: data; size_t: count) int
     size_t: pos 0U
     size_t: tail 0U
     unsigned: byte 0U
@@ -72,8 +72,8 @@ end: dj_utf8
 
 # Decode a JSON string at begin. Caller owns out[0]; embedded NUL is retained.
 # after is the first byte after the closing quote. 0 decoded, 1 invalid/no memory.
-fn: dj_string (@: data char; size_t: count; size_t: begin; @@: out char; @: decoded_length size_t; @: after size_t) int
-    @: decoded char 0
+fn: dj_string (char@: data; size_t: count; size_t: begin; char@@: out; size_t@: decoded_length; size_t@: after) int
+    char@: decoded 0
     size_t: pos begin
     size_t: used 0U
     size_t: digits 0U
@@ -212,7 +212,7 @@ end: dj_string
 # Syntax-only string scan. json.loads accepts escaped lone surrogates, even
 # in values later overwritten by a duplicate property. Do not decode those
 # discarded values as UTF-8 strings. Used strings still use dj_string.
-fn: dj_string_span (@: data char; size_t: count; size_t: begin; @: after size_t) int
+fn: dj_string_span (char@: data; size_t: count; size_t: begin; size_t@: after) int
     size_t: pos begin
     size_t: digits 0U
     unsigned: byte 0U
@@ -255,7 +255,7 @@ end: dj_string_span
 # JSON values accepted by the former reader: string1,object2,array3,number4,
 # true5,false6,null7,NaN8,Infinity9,-Infinity10; 0 invalid. Extension constants
 # are data-reader compatibility, not L2 syntax. No decoded value is retained.
-fn: dj_span (@: data char; size_t: count; size_t: begin; @: after size_t) int
+fn: dj_span (char@: data; size_t: count; size_t: begin; size_t@: after) int
     size_t: pos dj_ws(data, count, begin)
     size_t: mark 0U
     int: kind 0
@@ -360,7 +360,7 @@ fn: dj_span (@: data char; size_t: count; size_t: begin; @: after size_t) int
     return: 4
 end: dj_span
 
-fn: dj_document (@: data char; size_t: count; @: begin size_t; @: after size_t) int
+fn: dj_document (char@: data; size_t: count; size_t@: begin; size_t@: after) int
     size_t: pos 0U
     int: kind 0
     if: data = 0 || begin = 0 || after = 0 || dj_utf8(data, count) != 0
@@ -375,12 +375,12 @@ fn: dj_document (@: data char; size_t: count; @: begin size_t; @: after size_t) 
 end: dj_document
 
 # Last property wins, as in the existing JSON reader. 1 found, 0 absent, -1 invalid.
-fn: dj_property (@: data char; size_t: count; size_t: object_at; @: key char; @: value_at size_t; @: value_after size_t) int
+fn: dj_property (char@: data; size_t: count; size_t: object_at; char@: key; size_t@: value_at; size_t@: value_after) int
     size_t: pos object_at
     size_t: key_n 0U
     size_t: first 0U
     size_t: last 0U
-    @: decoded char 0
+    char@: decoded 0
     int: found 0
     if: key = 0 || value_at = 0 || value_after = 0 || pos >= count || data[pos] != (cast: (char) 123)
         return: -1
@@ -422,7 +422,7 @@ end: dj_property
 
 # After a complete member of an already validated array, locate its next
 # member or closing bracket. The caller distinguishes ']' from a member.
-fn: dj_array_next (@: data char; size_t: count; size_t: member_after; @: following size_t) int
+fn: dj_array_next (char@: data; size_t: count; size_t: member_after; size_t@: following) int
     size_t: pos dj_ws(data, count, member_after)
     if: following = 0 || pos >= count
         return: 1
@@ -442,7 +442,7 @@ end: dj_array_next
 # JSON ensure_ascii=False string output for validated UTF-8 text with an
 # explicit byte length. Retains embedded NUL as \u0000; no locale conversion.
 # The caller owns the stream. 0 success, 1 invalid text or write failure.
-fn: dj_write_string (@: out c.FILE; @: data char; size_t: count) int
+fn: dj_write_string (c.FILE@: out; char@: data; size_t: count) int
     size_t: scan 0U
     size_t: plain 0U
     unsigned: byte 0U

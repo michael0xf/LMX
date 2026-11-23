@@ -19,22 +19,22 @@ include: "<string.h>"
 
 # Attach can join several pools of the same service type. Lookup/retirement
 # visits their ordinary inventory; there is no owner-global shadow registry.
-fn: lmx_source_name_local (@: arena c.LmxArena; @: key void; size_t: port) @: c.LmxSourceName
-    @: pool c.LmxPool 0
-    @: chunk c.LmxChunk 0
-    @: rows c.LmxSourceName 0
-    @: row c.LmxSourceName 0
+fn: lmx_source_name_local (c.LmxArena@: arena; @: key; size_t: port) c.LmxSourceName@
+    c.LmxPool@: pool 0
+    c.LmxChunk@: chunk 0
+    c.LmxSourceName@: rows 0
+    c.LmxSourceName@: row 0
     size_t: i 0U
     size_t: n 0U
-    pool := (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (LmxPool@) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-            chunk := (cast: (@: LmxChunk) pool\head)
+            chunk := (cast: (LmxChunk@) pool\head)
             while: chunk != 0
                 # Revert may retire storage without removing the chunk record.
                 # Only its still-registered local interval belongs to this table.
-                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                    rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                if: (cast: (LmxPool@) c.lmx_range_interval_pool(arena, (cast: (@) c.lmx_chunk_data(chunk)))) = pool
+                    rows := (cast: (LmxSourceName@) c.lmx_chunk_data(chunk))
                     n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
                     i := 0U
                     while: i < n
@@ -44,10 +44,10 @@ fn: lmx_source_name_local (@: arena c.LmxArena; @: key void; size_t: port) @: c.
                         i := i + 1U
                     ---
                 ---
-                chunk := (cast: (@: LmxChunk) chunk\next)
+                chunk := (cast: (LmxChunk@) chunk\next)
             ---
         ---
-        pool := (cast: (@: LmxPool) pool\next)
+        pool := (cast: (LmxPool@) pool\next)
     ---
     return: 0
 end: lmx_source_name_local
@@ -55,28 +55,28 @@ end: lmx_source_name_local
 # The row of a key's port: this arena's, or else the one of the key's true home. Inspection/copy runs with exclusive
 # ownership of the searched source inventories, including a foreign home. Sealing a key alone does not make its owner's
 # still-mutable metadata inventory concurrent-readable.
-fn: lmx_source_name_row_at (@: arena c.LmxArena; @: key void; size_t: port) @: c.LmxSourceName
-    @: row c.LmxSourceName 0
-    @: home c.LmxArena 0
+fn: lmx_source_name_row_at (c.LmxArena@: arena; @: key; size_t: port) c.LmxSourceName@
+    c.LmxSourceName@: row 0
+    c.LmxArena@: home 0
     if: arena = 0 || key = 0
         return: 0
     row := lmx_source_name_local(arena, key, port)
     if: row != 0
         return: row
-    home := (cast: (@: LmxArena) c.lmx_range_home(arena, key))
+    home := (cast: (LmxArena@) c.lmx_range_home(arena, key))
     if: home != 0 && home != arena
         return: lmx_source_name_local(home, key, port)
     return: 0
 end: lmx_source_name_row_at
 
-fn: lmx_source_name_get (@: arena c.LmxArena; @: key void) size_t
+fn: lmx_source_name_get (c.LmxArena@: arena; @: key) size_t
     return: lmx_source_name_get_at(arena, key, 0U)
 end: lmx_source_name_get
 
 # Port zero names the physical occurrence. Positive ports name the ordinary Structure's own free inputs in declaration
 # order. The code of the port's spelling, 0 for none.
-fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) size_t
-    @: row c.LmxSourceName lmx_source_name_row_at(arena, key, port)
+fn: lmx_source_name_get_at (c.LmxArena@: arena; @: key; size_t: port) size_t
+    c.LmxSourceName@: row lmx_source_name_row_at(arena, key, port)
     if: row = 0
         return: 0U
     return: row\code
@@ -84,7 +84,7 @@ end: lmx_source_name_get_at
 
 # A separate port records metadata of the physical occurrence/field. Its
 # optional compiled interface and private binding bit share the same weak key.
-fn: lmx_source_places (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
+fn: lmx_source_places (c.LmxArena@: arena; @: key) c.LmxSourceName@
     if: arena = 0 || key = 0
         return: 0
     return: lmx_source_name_row_at(arena, key, (cast: (size_t) -1))
@@ -92,10 +92,10 @@ end: lmx_source_places
 
 # Store the written receiver's layout on its physical slot. The current
 # value of that slot can change after construction.
-fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout void) int
+fn: lmx_source_place_model_set (c.LmxArena@: arena; @: slot; @: layout) int
     if: slot = 0 || layout = 0
         return: 1
-    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    c.LmxSourceName@: row lmx_source_places(arena, slot)
     if: row != 0
         if: row\model_layout = 0
             row\model_layout := layout
@@ -109,10 +109,10 @@ end: lmx_source_place_model_set
 
 # What the known Consumers of this place use of the value standing there (the translator's static cells, LmxImplUses): the requirement of the place.  No row of it says nothing is
 # known of them, which is no requirement.  It is of this physical place: a copy's place has its own Consumers, so a copy does not carry it.
-fn: lmx_source_place_uses_set (@: arena c.LmxArena; @: slot void; @: cells size_t) int
+fn: lmx_source_place_uses_set (c.LmxArena@: arena; @: slot; size_t@: cells) int
     if: slot = 0 || cells = 0
         return: 1
-    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    c.LmxSourceName@: row lmx_source_places(arena, slot)
     if: row = 0
         return: 1
     row\place_uses := cells
@@ -121,10 +121,10 @@ end: lmx_source_place_uses_set
 
 # The compiled data interface of an occurrence: its spec (m, SIZE_MAX, then a pair of the name's code and the required
 # type per name), the generated word's static table.
-fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: spec size_t) int
+fn: lmx_source_places_set (c.LmxArena@: arena; @: key; size_t@: spec) int
     if: spec = 0
         return: 1
-    @: row c.LmxSourceName lmx_source_places(arena, key)
+    c.LmxSourceName@: row lmx_source_places(arena, key)
     if: row != 0
         if: row\place_spec = 0
             row\place_spec := spec
@@ -138,8 +138,8 @@ end: lmx_source_places_set
 
 # Private belongs to this actual owning child-cell, never to its current
 # referent or spelling. Clearing an absent flag needs no service allocation.
-fn: lmx_source_place_private_set (@: arena c.LmxArena; @: slot void; int: flag) int
-    @: row c.LmxSourceName 0
+fn: lmx_source_place_private_set (c.LmxArena@: arena; @: slot; int: flag) int
+    c.LmxSourceName@: row 0
     if: arena = 0 || slot = 0
         return: 1
     flag := (cast: (int) (flag != 0))
@@ -157,13 +157,13 @@ fn: lmx_source_place_private_set (@: arena c.LmxArena; @: slot void; int: flag) 
 end: lmx_source_place_private_set
 
 # A stable arena service cell. prepare leaves key zero until publication.
-fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; size_t: code; @@: out c.LmxSourceName) int
+fn: lmx_source_name_prepare (c.LmxArena@: arena; @: key; size_t: code; c.LmxSourceName@@: out) int
     return: lmx_source_name_prepare_at(arena, key, 0U, code, out)
 end: lmx_source_name_prepare
 
-fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; size_t: code; @@: out c.LmxSourceName) int
-    @: known c.LmxSourceName 0
-    @: row c.LmxSourceName 0
+fn: lmx_source_name_prepare_at (c.LmxArena@: arena; @: key; size_t: port; size_t: code; c.LmxSourceName@@: out) int
+    c.LmxSourceName@: known 0
+    c.LmxSourceName@: row 0
     if: out = 0
         return: 1
     out[0] := 0
@@ -177,11 +177,11 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     # New rows belong to actual local source places. An imported occurrence
     # consults its existing true owner's table; a borrower cannot invent a
     # second owner for the name of a foreign/raw key.
-    if: (cast: (@: LmxPool) c.lmx_range_pool(arena, key)) = 0
+    if: (cast: (LmxPool@) c.lmx_range_pool(arena, key)) = 0
         return: 1
     # Append one real service cell. key=0 is unpublished, not a reusable slot:
     # several pending rows must have distinct places.
-    row := (cast: (@: LmxSourceName) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
+    row := (cast: (LmxSourceName@) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
     if: row = 0
         return: 1
     row\key := 0
@@ -197,14 +197,14 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     return: 0
 end: lmx_source_name_prepare_at
 
-sub: lmx_source_name_publish (@: row c.LmxSourceName; @: key void)
+sub: lmx_source_name_publish (c.LmxSourceName@: row; @: key)
     if: row != 0
         row\pending_next := 0
         row\key := key
     ---
 end: lmx_source_name_publish
 
-sub: lmx_source_name_cancel (@: row c.LmxSourceName)
+sub: lmx_source_name_cancel (c.LmxSourceName@: row)
     if: row != 0
         row\key := 0
         row\pending_next := 0
@@ -213,12 +213,12 @@ sub: lmx_source_name_cancel (@: row c.LmxSourceName)
     ---
 end: lmx_source_name_cancel
 
-fn: lmx_source_name_set (@: arena c.LmxArena; @: key void; size_t: code) int
+fn: lmx_source_name_set (c.LmxArena@: arena; @: key; size_t: code) int
     return: lmx_source_name_set_at(arena, key, 0U, code)
 end: lmx_source_name_set
 
-fn: lmx_source_name_set_at (@: arena c.LmxArena; @: key void; size_t: port; size_t: code) int
-    @: row c.LmxSourceName 0
+fn: lmx_source_name_set_at (c.LmxArena@: arena; @: key; size_t: port; size_t: code) int
+    c.LmxSourceName@: row 0
     if: lmx_source_name_prepare_at(arena, key, port, code, @ row) != 0
         return: 1
     lmx_source_name_publish(row, key)
@@ -227,11 +227,11 @@ end: lmx_source_name_set_at
 
 # Retire before an address can be reused. The range has not been freed yet. The addresses are compared as integers
 # held by size_t, as the arena's module does (a system header's typedef names no L2 local).
-sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
-    @: pool c.LmxPool 0
-    @: chunk c.LmxChunk 0
-    @: rows c.LmxSourceName 0
-    @: row c.LmxSourceName 0
+sub: lmx_source_names_drop (c.LmxArena@: arena; @: lo; @: hi)
+    c.LmxPool@: pool 0
+    c.LmxChunk@: chunk 0
+    c.LmxSourceName@: rows 0
+    c.LmxSourceName@: row 0
     size_t: i 0U
     size_t: n 0U
     size_t: low (cast: (size_t) lo)
@@ -240,13 +240,13 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     size_t: place 0U
     size_t: declared 0U
     c.lmx_graph_names_drop(arena, lo, hi)
-    pool := (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (LmxPool@) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-            chunk := (cast: (@: LmxChunk) pool\head)
+            chunk := (cast: (LmxChunk@) pool\head)
             while: chunk != 0
-                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                    rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                if: (cast: (LmxPool@) c.lmx_range_interval_pool(arena, (cast: (@) c.lmx_chunk_data(chunk)))) = pool
+                    rows := (cast: (LmxSourceName@) c.lmx_chunk_data(chunk))
                     n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
                     i := 0U
                     while: i < n
@@ -263,23 +263,23 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
                         i := i + 1U
                     ---
                 ---
-                chunk := (cast: (@: LmxChunk) chunk\next)
+                chunk := (cast: (LmxChunk@) chunk\next)
             ---
         ---
-        pool := (cast: (@: LmxPool) pool\next)
+        pool := (cast: (LmxPool@) pool\next)
     ---
 end: lmx_source_names_drop
 
 # Run only after a complete ordinary graph mark. Keys are weak: this pass never marks them; it cancels the rows of dead
 # occurrences and marks the service chunks of the live ones. A row holds a code, no spelling storage, so nothing else
 # is marked: the spellings live in the process's tables (lmx_ids), outside every arena.
-fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
-    @: pool c.LmxPool 0
-    @: owner c.LmxPool 0
-    @: chunk c.LmxChunk 0
-    @: held c.LmxChunk 0
-    @: rows c.LmxSourceName 0
-    @: row c.LmxSourceName 0
+fn: lmx_source_names_mark (c.LmxArena@: arena; unsigned: gen) int
+    c.LmxPool@: pool 0
+    c.LmxPool@: owner 0
+    c.LmxChunk@: chunk 0
+    c.LmxChunk@: held 0
+    c.LmxSourceName@: rows 0
+    c.LmxSourceName@: row 0
     size_t: i 0U
     size_t: n 0U
     int: live 0
@@ -287,13 +287,13 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
     # Decide every weak key against the completed ordinary mark FIRST, then mark the chunks of the rows kept, so a
     # stamped row chunk never turns a previously dead occurrence into a live one.
     while: pass < 2
-        pool := (cast: (@: LmxPool) arena\arrays)
+        pool := (cast: (LmxPool@) arena\arrays)
         while: pool != 0
             if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-                chunk := (cast: (@: LmxChunk) pool\head)
+                chunk := (cast: (LmxChunk@) pool\head)
                 while: chunk != 0
-                    if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                        rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                    if: (cast: (LmxPool@) c.lmx_range_interval_pool(arena, (cast: (@) c.lmx_chunk_data(chunk)))) = pool
+                        rows := (cast: (LmxSourceName@) c.lmx_chunk_data(chunk))
                         n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
                         i := 0U
                         while: i < n
@@ -301,12 +301,12 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
                             if: row\key != 0
                                 if: pass = 0
                                     live := 0
-                                    owner := (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
+                                    owner := (cast: (LmxPool@) c.lmx_range_pool(arena, row\key))
                                     if: owner != 0
                                         if: c.lmx_pool_is_sealed(owner) != 0
                                             live := 1
                                         else:
-                                            held := (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
+                                            held := (cast: (LmxChunk@) c.lmx_pool_chunk_at(owner, row\key))
                                             if: held != 0 && held\mark = gen
                                                 live := 1
                                             ---
@@ -322,10 +322,10 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
                             i := i + 1U
                         ---
                     ---
-                    chunk := (cast: (@: LmxChunk) chunk\next)
+                    chunk := (cast: (LmxChunk@) chunk\next)
                 ---
             ---
-            pool := (cast: (@: LmxPool) pool\next)
+            pool := (cast: (LmxPool@) pool\next)
         ---
         pass := pass + 1
     ---
@@ -336,10 +336,10 @@ end: lmx_source_names_mark
 # its physical slot.  The slot's declaration, as a Structure field's model is (lmx_source_place_model_set): it survives later
 # assignments there, and every later write there is admitted against it (lmx_implements_receive_cell).  The declared callable
 # is a live dependency of its slot (lmx_gc_mark_impl).
-fn: lmx_source_place_callable_set (@: arena c.LmxArena; @: slot void; @: declared void) int
+fn: lmx_source_place_callable_set (c.LmxArena@: arena; @: slot; @: declared) int
     if: slot = 0 || declared = 0
         return: 1
-    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    c.LmxSourceName@: row lmx_source_places(arena, slot)
     if: row != 0
         if: row\place_callable = 0
             row\place_callable := declared

@@ -2,8 +2,8 @@
 # The three strings below are the original expected bytes, not a new norm.
 # Normal text reads retain BOM and normalize CR/CRLF as read_text(utf-8) does.
 
-fn: dc_text_file (@: path char; @@: out char; @: out_count size_t) int
-    @: raw char 0
+fn: dc_text_file (char@: path; char@@: out; size_t@: out_count) int
+    char@: raw 0
     size_t: count 0U
     int: failed 0
     out[0] := 0
@@ -16,7 +16,7 @@ fn: dc_text_file (@: path char; @@: out char; @: out_count size_t) int
     return: failed
 end: dc_text_file
 
-fn: dc_paragraphs (@: data char; size_t: count) size_t
+fn: dc_paragraphs (char@: data; size_t: count) size_t
     size_t: at 0U
     size_t: found 0U
     size_t: result 1U
@@ -30,8 +30,8 @@ fn: dc_paragraphs (@: data char; size_t: count) size_t
     return: result
 end: dc_paragraphs
 
-fn: dc_author_opening (@: ru char; size_t: count) int
-    @: expected char 0
+fn: dc_author_opening (char@: ru; size_t: count) int
+    char@: expected 0
     size_t: paragraph 0U
     size_t: first 0U
     size_t: last 0U
@@ -63,11 +63,11 @@ fn: dc_author_opening (@: ru char; size_t: count) int
     return: 0
 end: dc_author_opening
 
-fn: docs_opening_check (@: repo char) int
-    @: ru_path char txt_path(repo, "docs/spec/LMX_semantics.ru.md")
-    @: en_path char txt_path(repo, "docs/spec/LMX_semantics.en.md")
-    @: ru char 0
-    @: en char 0
+fn: docs_opening_check (char@: repo) int
+    char@: ru_path txt_path(repo, "docs/spec/LMX_semantics.ru.md")
+    char@: en_path txt_path(repo, "docs/spec/LMX_semantics.en.md")
+    char@: ru 0
+    char@: en 0
     size_t: ru_count 0U
     size_t: en_count 0U
     int: failed 0

@@ -56,10 +56,10 @@
 
 # Add reversed slash-separated components, including empty ones, to the stack.
 # A failed partial append is owned by the caller's normal stack cleanup.
-fn: fp_reverse_parts (@: text char; @@@: names char; @@: kinds unsigned; @: count size_t; @: capacity size_t; @: parts size_t) int
+fn: fp_reverse_parts (char@: text; char@@@: names; unsigned@@: kinds; size_t@: count; size_t@: capacity; size_t@: parts) int
     size_t: after c.strlen(text)
     size_t: first 0U
-    @: name char 0
+    char@: name 0
     while: 1
         first := after
         while: first > 0U && text[first - 1U] != (cast: (char) 47)
@@ -80,12 +80,12 @@ end: fp_reverse_parts
 
 # Each seen row is [owned key, owned resolved value or NULL=pending].
 # Growing a single vector preserves old ownership on realloc failure.
-fn: fp_seen_add (@@@: rows char; @: count size_t; @: capacity size_t; @: key char) int
+fn: fp_seen_add (char@@@: rows; size_t@: count; size_t@: capacity; char@: key) int
     size_t: limit (cast: (size_t) -1)
     size_t: grown 0U
-    @@: next_rows char 0
-    @: owned char 0
-    limit := limit / sizeof(@: char) / 2U
+    char@@: next_rows 0
+    char@: owned 0
+    limit := limit / sizeof(char@) / 2U
     if: count[0] >= limit
         return: -1
     owned := txt_dup(key)
@@ -101,7 +101,7 @@ fn: fp_seen_add (@@@: rows char; @: count size_t; @: capacity size_t; @: key cha
         ---
         if: grown > limit
             grown := limit
-        next_rows := c.realloc(rows[0], 2U * grown * sizeof(@: char))
+        next_rows := c.realloc(rows[0], 2U * grown * sizeof(char@))
         if: next_rows = 0
             c.free(owned)
             return: -1
@@ -114,7 +114,7 @@ fn: fp_seen_add (@@@: rows char; @: count size_t; @: capacity size_t; @: key cha
     return: 0
 end: fp_seen_add
 
-fn: fp_seen_free (@@: rows char; size_t: count) int
+fn: fp_seen_free (char@@: rows; size_t: count) int
     size_t: at 0U
     while: at < 2U * count
         c.free(rows[at])
@@ -131,7 +131,7 @@ os:
     default:
         include: "<unistd.h>" "<sys/stat.h>" "<errno.h>" "<limits.h>"
         define: LmxPathStat struct stat
-        fn: os_path_join (@: base char; @: tail char) @: char
+        fn: os_path_join (char@: base; char@: tail) char@
             size_t: count 0U
             if: base = 0 || tail = 0
                 return: 0
@@ -142,7 +142,7 @@ os:
                 return: txt_cat(base, tail)
             return: txt_path(base, tail)
         end: os_path_join
-        fn: os_path_dirname (@: path char) @: char
+        fn: os_path_dirname (char@: path) char@
             size_t: after c.strlen(path)
             size_t: at 0U
             int: all_slashes 1
@@ -160,7 +160,7 @@ os:
                 ---
             return: txt_ndup(path, after)
         end: os_path_dirname
-        fn: fp_posix_parent (@: path char) @: char
+        fn: fp_posix_parent (char@: path) char@
             size_t: count c.strlen(path)
             while: count > 0U && path[count - 1U] != (cast: (char) 47)
                 count := count - 1U
@@ -172,8 +172,8 @@ os:
         end: fp_posix_parent
         # Unlike an OS failure, memory/length failure is never ignored.
         # readlink's ssize_t is converted as a whole before a size_t local.
-        fn: fp_posix_readlink (@: path char; @@: out char) int
-            @: buffer char 0
+        fn: fp_posix_readlink (char@: path; char@@: out) int
+            char@: buffer 0
             size_t: capacity 256U
             size_t: got 0U
             size_t: limit (cast: (size_t) c.SSIZE_MAX)
@@ -199,9 +199,9 @@ os:
                 capacity := 2U * capacity
             ---
         end: fp_posix_readlink
-        fn: fp_posix_cwd () @: char
-            @: buffer char 0
-            @: error_cell int (cast: (@: int) (@ c.errno))
+        fn: fp_posix_cwd () char@
+            char@: buffer 0
+            int@: error_cell (cast: (int@) (@ c.errno))
             size_t: capacity 256U
             size_t: limit (cast: (size_t) -1)
             int: error 0
@@ -221,18 +221,18 @@ os:
         end: fp_posix_cwd
         # Input has explicit length: embedded NUL must not truncate into a
         # different existing pathname. A result is fresh and NUL-terminated.
-        fn: os_path_resolve_nonstrict (@: input char; size_t: input_count; @@: out char; @: out_count size_t) int
-            @: initial char 0
-            @: path char 0
-            @: name char 0
-            @: next_path char 0
-            @: target char 0
-            @: marker char 0
-            @: copy char 0
-            @: status c.LmxPathStat 0
-            @@: stack char 0
-            @: kinds unsigned 0
-            @@: seen char 0
+        fn: os_path_resolve_nonstrict (char@: input; size_t: input_count; char@@: out; size_t@: out_count) int
+            char@: initial 0
+            char@: path 0
+            char@: name 0
+            char@: next_path 0
+            char@: target 0
+            char@: marker 0
+            char@: copy 0
+            c.LmxPathStat@: status 0
+            char@@: stack 0
+            unsigned@: kinds 0
+            char@@: seen 0
             size_t: stack_count 0U
             size_t: stack_capacity 0U
             size_t: parts 0U

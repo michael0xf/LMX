@@ -1,17 +1,17 @@
 # Ordinary L2 Windows backend platform bodies. Native headers own their ABI.
 include: "<stddef.h>" "<windows.h>" "<direct.h>"
 
-fn: l1_replace_file (const: (@: tmp char); const: (@: out_path char)) int
+fn: l1_replace_file (const: (char@: tmp); const: (char@: out_path)) int
     if: c.MoveFileExA(tmp, out_path, 1U) = 0
         return: (cast: (int) 1)
     return: (cast: (int) 0)
 end: l1_replace_file
 
-fn: l1_getcwd (@: buffer char; size_t: size) @: char
-    return: (cast: (@: char) c._getcwd(buffer, (cast: (int) size)))
+fn: l1_getcwd (char@: buffer; size_t: size) char@
+    return: (cast: (char@) c._getcwd(buffer, (cast: (int) size)))
 end: l1_getcwd
 
-fn: l1_path_is_absolute (const: (@: path char)) int
+fn: l1_path_is_absolute (const: (char@: path)) int
     if: path = 0 || path[0] = 0
         return: (cast: (int) 0)
     if: (path[0] = 47 || path[0] = 92) && (path[1] = 47 || path[1] = 92)

@@ -9,7 +9,7 @@
 # scalar sets are expressed as ordinary L2 predicates; decoding/spans are L2.
 
 # One strict UTF-8 scalar: byte width, or 0 for invalid/incomplete input.
-fn: dt_point (@: data char; size_t: count; size_t: at; @: point unsigned) size_t
+fn: dt_point (char@: data; size_t: count; size_t: at; unsigned@: point) size_t
     size_t: width 0U
     size_t: scan 0U
     unsigned: lead 0U
@@ -74,8 +74,8 @@ end: dt_linebreak
 # Strict read_text UTF-8/newline behavior; an optional one initial BOM is only
 # for utf-8-sig source snapshots. Hash/snapshot selection uses the RAW buffer,
 # not this normalized copy. Caller owns out[0], including its final NUL.
-fn: dt_text (@: raw char; size_t: count; int: drop_bom; @@: out char; @: out_count size_t) int
-    @: result char 0
+fn: dt_text (char@: raw; size_t: count; int: drop_bom; char@@: out; size_t@: out_count) int
+    char@: result 0
     size_t: scan 0U
     size_t: used 0U
     size_t: width 0U
@@ -118,7 +118,7 @@ end: dt_text
 # Unicode strip/rstrip spans in the original validated byte sequence. The two
 # modes independently trim leading/trailing whitespace. An empty result is
 # represented by a valid empty half-open byte interval.
-fn: dt_trim (@: data char; size_t: count; int: trim_left; int: trim_right; @: begin size_t; @: after size_t) int
+fn: dt_trim (char@: data; size_t: count; int: trim_left; int: trim_right; size_t@: begin; size_t@: after) int
     size_t: scan 0U
     size_t: width 0U
     size_t: first count
@@ -155,7 +155,7 @@ end: dt_trim
 # Counts with starts=lengths=0; a second pass fills caller-owned arrays.
 # CRLF is one boundary, all Unicode linebreaks count, and there is no extra
 # final empty line. Embedded NUL remains ordinary line content.
-fn: dt_lines (@: data char; size_t: count; int: drop_bom; @: starts size_t; @: lengths size_t; size_t: capacity; @: line_count size_t) int
+fn: dt_lines (char@: data; size_t: count; int: drop_bom; size_t@: starts; size_t@: lengths; size_t: capacity; size_t@: line_count) int
     size_t: scan 0U
     size_t: line_at 0U
     size_t: width 0U
@@ -205,7 +205,7 @@ fn: dt_lines (@: data char; size_t: count; int: drop_bom; @: starts size_t; @: l
 end: dt_lines
 
 # Literal byte search, with explicit lengths and SIZE_MAX meaning no match.
-fn: dt_find (@: data char; size_t: count; size_t: begin; @: needle char; size_t: needle_count) size_t
+fn: dt_find (char@: data; size_t: count; size_t: begin; char@: needle; size_t: needle_count) size_t
     size_t: scan begin
     if: begin > count || needle_count > count - begin
         return: (cast: (size_t) -1)

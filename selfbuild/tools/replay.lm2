@@ -8,8 +8,8 @@
 # A program part: methods only (the program includes <stdio.h>, <stdlib.h>, <string.h>).
 
 # Every directory of the parent chain of path made (an existing one is fine).
-fn: path_make_parent (@: path char) int
-    @: p char txt_dup(path)
+fn: path_make_parent (char@: path) int
+    char@: p txt_dup(path)
     size_t: n 0U
     size_t: i 1U
     if: p = 0
@@ -28,8 +28,8 @@ end: path_make_parent
 
 # The directory path made with every directory above it (an existing one is fine): os_mkdir's answer for
 # path itself (0 made or there, else the OS error).
-fn: dir_make (@: path char) int
-    @: probe char txt_path(path, "x")
+fn: dir_make (char@: path) int
+    char@: probe txt_path(path, "x")
     if: probe = 0
         return: 1
     path_make_parent(probe)
@@ -38,9 +38,9 @@ fn: dir_make (@: path char) int
 end: dir_make
 
 # The file at from as the file at to (its directories made): 0 copied, 1 not.
-fn: file_copy (@: from char; @: to char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
+fn: file_copy (char@: from; char@: to) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
     int: r 1
     if: len = 0
         return: 1
@@ -55,31 +55,31 @@ fn: file_copy (@: from char; @: to char) int
 end: file_copy
 
 # The text at s up to the first byte of stop (or its end) as a heap copy.
-fn: txt_until (@: s char; @: stop char) @: char
+fn: txt_until (char@: s; char@: stop) char@
     return: txt_ndup(s, (cast: (size_t) c.strcspn(s, stop)))
 end: txt_until
 
 # The text after the first key in row, or 0.
-fn: field_after (@: row char; @: key char) @: char
-    @: at char c.strstr(row, key)
+fn: field_after (char@: row; char@: key) char@
+    char@: at c.strstr(row, key)
     if: at = 0
         return: 0
     return: at + (cast: (size_t) c.strlen(key))
 end: field_after
 
 # The single-quoted value after key in row ("" without one), as a heap copy.
-fn: field_quoted (@: row char; @: key char) @: char
-    @: at char field_after(row, key)
+fn: field_quoted (char@: row; char@: key) char@
+    char@: at field_after(row, key)
     if: at = 0
         return: txt_dup("")
     return: txt_until(at, "'")
 end: field_quoted
 
 # The list @('a', 'b') after key in row as "a,b" ("" without one).
-fn: field_list (@: row char; @: key char) @: char
-    @: at char field_after(row, key)
-    @: raw char 0
-    @: out char 0
+fn: field_list (char@: row; char@: key) char@
+    char@: at field_after(row, key)
+    char@: raw 0
+    char@: out 0
     size_t: n 0U
     size_t: i 0U
     size_t: o 0U
@@ -104,17 +104,17 @@ fn: field_list (@: row char; @: key char) @: char
     return: out
 end: field_list
 
-fn: field_has (@: row char; @: key char) int
-    if: (cast: (@: char) (c.strstr(row, key))) != 0
+fn: field_has (char@: row; char@: key) int
+    if: (cast: (char@) (c.strstr(row, key))) != 0
         return: 1
     return: 0
 end: field_has
 
 # Whether the row sets the flag key (` Key = `) true: `$true` or 1.
-fn: field_true (@: row char; @: key char) int
-    @: t char txt_cat(key, "$true")
-    @: one char txt_cat(key, "1;")
-    @: one_end char txt_cat(key, "1 ")
+fn: field_true (char@: row; char@: key) int
+    char@: t txt_cat(key, "$true")
+    char@: one txt_cat(key, "1;")
+    char@: one_end txt_cat(key, "1 ")
     int: r 0
     if: t = 0 || one = 0 || one_end = 0
         return: 0
@@ -129,15 +129,15 @@ end: field_true
 # One row of the table (the text from its `[pscustomobject]@{ Name = '` to the next row) as one line:
 # name, Expect, Source, flags, Table, Primitive, Impl, Parts. The flags: w WalkMethods, l library (Library or
 # Expect library-links), r RootSource, m Missing, f FaultAlloc, o P0Oracle.
-fn: row_emit (@: out c.FILE; @: row char) int
-    @: name char field_quoted(row, "Name = '")
-    @: expect char field_quoted(row, " Expect = '")
-    @: source char field_quoted(row, " Source = '")
-    @: tbl char field_quoted(row, " Table = '")
-    @: primitive char field_quoted(row, " Primitive = '")
-    @: impl char field_quoted(row, " Impl = '")
-    @: parts char field_list(row, " Parts = @(")
-    @: flags char c.calloc(8U, 1U)
+fn: row_emit (c.FILE@: out; char@: row) int
+    char@: name field_quoted(row, "Name = '")
+    char@: expect field_quoted(row, " Expect = '")
+    char@: source field_quoted(row, " Source = '")
+    char@: tbl field_quoted(row, " Table = '")
+    char@: primitive field_quoted(row, " Primitive = '")
+    char@: impl field_quoted(row, " Impl = '")
+    char@: parts field_list(row, " Parts = @(")
+    char@: flags c.calloc(8U, 1U)
     int: k 0
     if: name = 0 || expect = 0 || source = 0 || tbl = 0 || primitive = 0 || impl = 0 || parts = 0 || flags = 0
         return: 1
@@ -172,13 +172,13 @@ fn: row_emit (@: out c.FILE; @: row char) int
 end: row_emit
 
 # The rows of the fixture table in the file ps1, one line each in out_path; the row count, or -1.
-fn: rows_extract (@: ps1 char; @: out_path char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: out c.FILE 0
-    @: p char 0
-    @: next char 0
-    @: head char "[pscustomobject]@{ Name = '"
+fn: rows_extract (char@: ps1; char@: out_path) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    c.FILE@: out 0
+    char@: p 0
+    char@: next 0
+    char@: head "[pscustomobject]@{ Name = '"
     int: n 0
     if: len = 0
         return: -1
@@ -208,10 +208,10 @@ fn: rows_extract (@: ps1 char; @: out_path char) int
 end: rows_extract
 
 # The fields of the tab-separated line s into f[0 .. max - 1] (s is cut at every tab); the count.
-fn: tsv_split (@: s char; @@: f char; int: max) int
+fn: tsv_split (char@: s; char@@: f; int: max) int
     int: n 0
-    @: p char s
-    @: t char 0
+    char@: p s
+    char@: t 0
     while: p != 0 && n < max
         f[n] := p
         n := n + 1
@@ -229,7 +229,7 @@ end: tsv_split
 # The next line of the text at s[at[0] ..] (s NUL-terminated at n, as file_read leaves it; a NUL byte inside
 # ends a line as LF does), NUL-terminated in place (its LF and a CR before it cut), or 0 at the end; at[0] is
 # moved past it.
-fn: next_line (@: s char; size_t: n; @: at size_t) @: char
+fn: next_line (char@: s; size_t: n; size_t@: at) char@
     size_t: i at[0]
     size_t: e at[0]
     if: i >= n
@@ -248,14 +248,14 @@ end: next_line
 
 # The files a stage manifest lists (`<sha256>  <path>` lines) copied from from_root to to_root, each copy's
 # hash verified: the count of files that failed (0 = all copied and equal).
-fn: stage_copy (@: manifest char; @: from_root char; @: to_root char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: line char 0
-    @: from char 0
-    @: to char 0
-    @: got char c.calloc(65U, 1U)
+fn: stage_copy (char@: manifest; char@: from_root; char@: to_root) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: line 0
+    char@: from 0
+    char@: to 0
+    char@: got c.calloc(65U, 1U)
     int: bad 0
     int: total 0
     if: len = 0 || at = 0 || got = 0
@@ -290,14 +290,14 @@ end: stage_copy
 # A manifest of the files a list names (one path relative to root per line; `#` lines and empty lines are
 # skipped): `<sha256>  <path>` lines written to out in the list's order. The count of files that could not be
 # hashed or written (0 = all), or -1 when the list or out cannot be opened.
-fn: manifest_write (@: list char; @: root char; @: out char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: line char 0
-    @: path char 0
-    @: got char c.calloc(65U, 1U)
-    @: rec c.FILE 0
+fn: manifest_write (char@: list; char@: root; char@: out) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: line 0
+    char@: path 0
+    char@: got c.calloc(65U, 1U)
+    c.FILE@: rec 0
     int: bad 0
     int: total 0
     int: ok 0
@@ -340,13 +340,13 @@ end: manifest_write
 
 # The files a manifest lists, each hashed under root and compared with its line: the count that differ or
 # cannot be read (0 = all equal), or -1 when the manifest cannot be read.
-fn: manifest_verify (@: manifest char; @: root char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: line char 0
-    @: path char 0
-    @: got char c.calloc(65U, 1U)
+fn: manifest_verify (char@: manifest; char@: root) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: line 0
+    char@: path 0
+    char@: got c.calloc(65U, 1U)
     int: bad 0
     int: total 0
     if: len = 0 || at = 0 || got = 0
@@ -377,8 +377,8 @@ fn: manifest_verify (@: manifest char; @: root char) int
 end: manifest_verify
 
 # How many times key occurs in s (occurrences may share bytes).
-fn: txt_count (@: s char; @: key char) int
-    @: p char c.strstr(s, key)
+fn: txt_count (char@: s; char@: key) int
+    char@: p c.strstr(s, key)
     int: n 0
     while: p != 0
         n := n + 1
@@ -389,8 +389,8 @@ end: txt_count
 
 # Whether the executable path names a script host or a script: PowerShell, Python, a shell, cmd, or a .ps1,
 # .py, .sh, .bat or .cmd file (ASCII letters of any case).
-fn: exe_scripted (@: exe char) int
-    @: low char txt_dup(exe)
+fn: exe_scripted (char@: exe) int
+    char@: low txt_dup(exe)
     size_t: i 0U
     int: r 0
     if: low = 0
@@ -400,7 +400,7 @@ fn: exe_scripted (@: exe char) int
             low[i] := (cast: (char) (low[i] + 32))
         i := i + 1U
     ---
-    if: (cast: (@: char) (c.strstr(low, "powershell"))) != 0 || (cast: (@: char) (c.strstr(low, "pwsh"))) != 0 || (cast: (@: char) (c.strstr(low, "python"))) != 0 || (cast: (@: char) (c.strstr(low, "bash"))) != 0 || (cast: (@: char) (c.strstr(low, "cmd.exe"))) != 0
+    if: (cast: (char@) (c.strstr(low, "powershell"))) != 0 || (cast: (char@) (c.strstr(low, "pwsh"))) != 0 || (cast: (char@) (c.strstr(low, "python"))) != 0 || (cast: (char@) (c.strstr(low, "bash"))) != 0 || (cast: (char@) (c.strstr(low, "cmd.exe"))) != 0
         r := 1
     if: txt_ends(low, ".ps1") != 0 || txt_ends(low, ".py") != 0 || txt_ends(low, ".sh") != 0 || txt_ends(low, ".bat") != 0 || txt_ends(low, ".cmd") != 0
         r := 1
@@ -411,15 +411,15 @@ end: exe_scripted
 # The executables a run record (bld_note's `$ argv...` lines) started: `EXE <count> <path>` for each, in the
 # order they first start, then `DEPS <n> executables, <k> script hosts or scripts`. Returns k (0 = the run
 # started no script host and no script), or -1 when the record cannot be read.
-fn: record_exes (@: record char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: line char 0
-    @: exe char 0
-    @: seen char txt_dup("\n")
-    @: all char txt_dup("\n")
-    @: p char 0
+fn: record_exes (char@: record) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: line 0
+    char@: exe 0
+    char@: seen txt_dup("\n")
+    char@: all txt_dup("\n")
+    char@: p 0
     int: n 0
     int: k 0
     if: len = 0 || at = 0 || seen = 0 || all = 0
@@ -432,7 +432,7 @@ fn: record_exes (@: record char) int
         if: line[0] = (cast: (char) 36) && line[1] = (cast: (char) 32)
             exe := txt_until(line + 2, " ")
             all := txt_cat(all, txt_cat(exe, "\n"))
-            if: (cast: (@: char) (c.strstr(seen, txt_cat3("\n", exe, "\n")))) = 0
+            if: (cast: (char@) (c.strstr(seen, txt_cat3("\n", exe, "\n")))) = 0
                 seen := txt_cat(seen, txt_cat(exe, "\n"))
                 n := n + 1
             ---
@@ -457,16 +457,16 @@ end: record_exes
 # -- `exe <sha>` of its command's executable, `in`, `out` and `log` lines `<sha> <path>` -- whose path no later
 # hash line names (a later step may rewrite a file an earlier one wrote or read) is checked against the file's
 # bytes now; an `exe-changed` line is a failure itself. RECORD <n> hashes, <m> failed; the failures, -1 unread.
-fn: verify_record (@: record char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: got char c.calloc(65U, 1U)
-    @: seen char txt_dup("\n")
-    @: data char 0
-    @: line char 0
-    @: exe char 0
-    @@: hashes char 0
-    @@: paths char 0
+fn: verify_record (char@: record) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: got c.calloc(65U, 1U)
+    char@: seen txt_dup("\n")
+    char@: data 0
+    char@: line 0
+    char@: exe 0
+    char@@: hashes 0
+    char@@: paths 0
     int: n 0
     int: k 0
     int: bad 0
@@ -483,8 +483,8 @@ fn: verify_record (@: record char) int
         line := next_line(data, len[0], at)
     ---
     c.free(data)
-    hashes := (cast: (@@: char) c.calloc((cast: (size_t) n) + 1U, sizeof(@: char)))
-    paths := (cast: (@@: char) c.calloc((cast: (size_t) n) + 1U, sizeof(@: char)))
+    hashes := (cast: (char@@) c.calloc((cast: (size_t) n) + 1U, sizeof(char@)))
+    paths := (cast: (char@@) c.calloc((cast: (size_t) n) + 1U, sizeof(char@)))
     data := file_read(record, len)
     if: hashes = 0 || paths = 0 || data = 0
         return: -1
@@ -518,7 +518,7 @@ fn: verify_record (@: record char) int
     ---
     k := n - 1
     while: k >= 0
-        if: (cast: (@: char) (c.strstr(seen, txt_cat3("\n", paths[k], "\n")))) = 0
+        if: (cast: (char@) (c.strstr(seen, txt_cat3("\n", paths[k], "\n")))) = 0
             seen := txt_cat(seen, txt_cat(paths[k], "\n"))
             total := total + 1
             if: os_sha256_file(paths[k], got) != 0 || c.strcmp(got, hashes[k]) != 0
@@ -534,15 +534,15 @@ end: verify_record
 
 # The sandbox files every row may name staged in work: its root tables and receivers, and its tests' headers
 # (*.h.lm1, *.h) under l2src/tests, as the table's runner stages them.
-fn: replay_stage_shared (@: sandbox char; @: work char; @: out_dir char) int
-    @: list char txt_path(out_dir, "tests-dir.txt")
-    @: tests char txt_path(sandbox, "tests")
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
-    @: name char 0
-    @: from char 0
-    @: to char 0
+fn: replay_stage_shared (char@: sandbox; char@: work; char@: out_dir) int
+    char@: list txt_path(out_dir, "tests-dir.txt")
+    char@: tests txt_path(sandbox, "tests")
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
+    char@: name 0
+    char@: from 0
+    char@: to 0
     int: bad 0
     if: list = 0 || tests = 0 || len = 0 || at = 0
         return: 1
@@ -574,9 +574,9 @@ fn: replay_stage_shared (@: sandbox char; @: work char; @: out_dir char) int
 end: replay_stage_shared
 
 # One translation of a row by the frontend fe: its kind and exit in res[0], res[1].
-fn: replay_one (@: fe char; @: work char; @@: words char; int: nwords; @: lm1 char; @: log char; @: res int) int
-    @@: argv char c.calloc((cast: (size_t) (nwords + 10)), sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
+fn: replay_one (char@: fe; char@: work; char@@: words; int: nwords; char@: lm1; char@: log; int@: res) int
+    char@@: argv c.calloc((cast: (size_t) (nwords + 10)), sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
     int: i 0
     int: n 0
     if: argv = 0 || detail = 0
@@ -602,33 +602,33 @@ end: replay_one
 # row in out_dir/results.tsv (row, name, A kind:exit, B kind:exit, L1 same/differ/none/one, log same/differ,
 # verdict SAME or DIFF; counted as DIFFs, MALFORMED for a row not of eight fields with a .lm2 name and INFRA for a
 # comparison that did not run) and the totals. The count of DIFF rows, or -1.
-fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b char; @: out_dir char; int: first; int: count) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: f char c.calloc(9U, sizeof(@: char))
-    @@: words char 0
-    @: ra int c.calloc(2U, c.sizeof(c.int))
-    @: rb int c.calloc(2U, c.sizeof(c.int))
-    @: dir_a char txt_path(out_dir, "A")
-    @: dir_b char txt_path(out_dir, "B")
-    @: results char txt_path(out_dir, "results.tsv")
-    @: data char 0
-    @: line char 0
-    @: out c.FILE 0
-    @: stem char 0
-    @: src char 0
-    @: staged char 0
-    @: lm1_a char 0
-    @: lm1_b char 0
-    @: log_a char 0
-    @: log_b char 0
-    @: plist char 0
-    @: part char 0
-    @: pfrom char 0
-    @: pto char 0
-    @: l1 char 0
-    @: lg char 0
-    @: verdict char 0
+fn: replay (char@: rows; char@: sandbox; char@: work; char@: fe_a; char@: fe_b; char@: out_dir; int: first; int: count) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@@: f c.calloc(9U, sizeof(char@))
+    char@@: words 0
+    int@: ra c.calloc(2U, c.sizeof(c.int))
+    int@: rb c.calloc(2U, c.sizeof(c.int))
+    char@: dir_a txt_path(out_dir, "A")
+    char@: dir_b txt_path(out_dir, "B")
+    char@: results txt_path(out_dir, "results.tsv")
+    char@: data 0
+    char@: line 0
+    c.FILE@: out 0
+    char@: stem 0
+    char@: src 0
+    char@: staged 0
+    char@: lm1_a 0
+    char@: lm1_b 0
+    char@: log_a 0
+    char@: log_b 0
+    char@: plist 0
+    char@: part 0
+    char@: pfrom 0
+    char@: pto 0
+    char@: l1 0
+    char@: lg 0
+    char@: verdict 0
     int: k 0
     int: nw 0
     int: nf 0
@@ -666,7 +666,7 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
             stem := txt_ndup(f[0], (cast: (size_t) c.strlen(f[0])) - 4U)
             staged := txt_path(work, f[0])
             src := 0
-            if: (cast: (@: char) (c.strchr(f[3], 114))) != 0
+            if: (cast: (char@) (c.strchr(f[3], 114))) != 0
                 src := txt_path(sandbox, f[0])
             if: src = 0 && f[2][0] != (cast: (char) 0)
                 src := txt_cat3(sandbox, "/tests/", f[2])
@@ -687,23 +687,23 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
             if: f[7][0] != (cast: (char) 0)
                 plist := txt_cat3(plist, f[7], ",")
             # One word per flag, the source and each part: the row's own count, no cut.
-            words := c.calloc((cast: (size_t) (4 + txt_count(plist, ","))), sizeof(@: char))
+            words := c.calloc((cast: (size_t) (4 + txt_count(plist, ","))), sizeof(char@))
             if: words = 0
                 c.fclose(out)
                 return: -1
             nw := 0
-            if: (cast: (@: char) (c.strchr(f[3], 119))) != 0
+            if: (cast: (char@) (c.strchr(f[3], 119))) != 0
                 words[nw] := "--walk-methods"
                 nw := nw + 1
             ---
-            if: (cast: (@: char) (c.strchr(f[3], 108))) != 0
+            if: (cast: (char@) (c.strchr(f[3], 108))) != 0
                 words[nw] := "--library"
                 nw := nw + 1
             ---
-            if: (cast: (@: char) (c.strchr(f[3], 109))) != 0
+            if: (cast: (char@) (c.strchr(f[3], 109))) != 0
                 words[nw] := txt_cat("absent/", f[0])
             missing := 0
-            if: (cast: (@: char) (c.strchr(f[3], 109))) = 0
+            if: (cast: (char@) (c.strchr(f[3], 109))) = 0
                 words[nw] := f[0]
                 if: file_copy(src, staged) != 0
                     missing := 1

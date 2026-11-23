@@ -13,16 +13,16 @@ predef: "l2src/lmx_scratch.h.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 
-fn: lmx_scratch_open (@: s c.LmxScratch; @: arena c.LmxArena; @: cells c.LmxPool; size_t: chunk_cells) int
+fn: lmx_scratch_open (c.LmxScratch@: s; c.LmxArena@: arena; c.LmxPool@: cells; size_t: chunk_cells) int
     if: s = 0 || arena = 0 || cells = 0 || chunk_cells = 0U
         return: c.LMX_SCRATCH_INVALID
     if: s\cells != 0
         return: c.LMX_SCRATCH_INVALID
-    if: c.lmx_pool_open(arena, cells, sizeof(@: void), chunk_cells, c.LMX_DOMAIN_KIND_SCRATCH, c.LMX_DOMAIN_SCRATCH) != 0
+    if: c.lmx_pool_open(arena, cells, sizeof(@), chunk_cells, c.LMX_DOMAIN_KIND_SCRATCH, c.LMX_DOMAIN_SCRATCH) != 0
         return: c.LMX_SCRATCH_NOMEM
     s\arena := arena
     s\cells := cells
-    s\at := (cast: (@: LmxChunk) c.lmx_pool_chunk_head(cells))
+    s\at := (cast: (LmxChunk@) c.lmx_pool_chunk_head(cells))
     s\used := 0U
     s\top := 0U
     s\serial := 0U
@@ -30,8 +30,8 @@ fn: lmx_scratch_open (@: s c.LmxScratch; @: arena c.LmxArena; @: cells c.LmxPool
     return: c.LMX_SCRATCH_OK
 end: lmx_scratch_open
 
-fn: lmx_scratch_take (@: s c.LmxScratch; size_t: bytes; @@: out void) int
-    @: chunk c.LmxChunk 0
+fn: lmx_scratch_take (c.LmxScratch@: s; size_t: bytes; @@: out) int
+    c.LmxChunk@: chunk 0
     @: got void 0
     @: expected void 0
     size_t: word 0U
@@ -44,19 +44,19 @@ fn: lmx_scratch_take (@: s c.LmxScratch; size_t: bytes; @@: out void) int
     \out := 0
     if: s = 0 || s\cells = 0 || bytes = 0U
         return: c.LMX_SCRATCH_INVALID
-    word := sizeof(@: void)
+    word := sizeof(@)
     # Rounding up to whole cells must not wrap.
     if: bytes > ((cast: (size_t) -1) - (word - 1U))
         return: c.LMX_SCRATCH_INVALID
     cells := (bytes + (word - 1U)) / word
-    chunk := (cast: (@: LmxChunk) s\at)
+    chunk := (cast: (LmxChunk@) s\at)
     from := (cast: (size_t) s\used)
     while: seeking != 0 && chunk != 0
         # Warm: cells this chunk has already handed out once and nobody is using now.
         if: from <= (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride))) && cells <= (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride))) - from
             s\at := chunk
             s\used := from + cells
-            \out := (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + from * word))
+            \out := (cast: (@) ((cast: (char@) c.lmx_chunk_data(chunk)) + from * word))
             return: c.LMX_SCRATCH_OK
         # The tail has the room but has not handed all of it out yet.  The cursor sits at
         # or below the chunk's high-water mark, so what is missing is taken FROM THE POOL:
@@ -64,28 +64,28 @@ fn: lmx_scratch_take (@: s c.LmxScratch; size_t: bytes; @@: out void) int
         # the cursor past the mark without telling the pool would let a later take_n hand
         # out cells that are live.
         if: chunk\next = 0 && from <= (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride))) && from <= (cast: (size_t) c.lmx_chunk_room(chunk, (cast: (size_t) s\cells\stride))) && cells <= (cast: (size_t) c.lmx_chunk_room(chunk, (cast: (size_t) s\cells\stride))) - from
-            expected := (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride))) * word))
+            expected := (cast: (@) ((cast: (char@) c.lmx_chunk_data(chunk)) + (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride))) * word))
             issued := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) s\cells\stride)))
-            got := (cast: (@: void) c.lmx_pool_take_n(s\arena, s\cells, (from + cells) - issued))
+            got := (cast: (@) c.lmx_pool_take_n(s\arena, s\cells, (from + cells) - issued))
             if: got = 0
                 return: c.LMX_SCRATCH_NOMEM
             if: got = expected
                 s\at := chunk
                 s\used := from + cells
-                \out := (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + from * word))
+                \out := (cast: (@) ((cast: (char@) c.lmx_chunk_data(chunk)) + from * word))
                 return: c.LMX_SCRATCH_OK
             # The pool seated them elsewhere (it no longer counts that chunk as its own):
             # they stay taken as a small gap, and the request goes to the cold path.
             seeking := 0
         ---
         if: seeking != 0
-            chunk := (cast: (@: LmxChunk) chunk\next)
+            chunk := (cast: (LmxChunk@) chunk\next)
             from := 0U
         ---
     ---
     # Cold: no chunk seats the request.  The pool grows by one chunk -- of the request's
     # own size when that is larger than the step -- and the cursor moves to its end.
-    got := (cast: (@: void) c.lmx_pool_take_n(s\arena, s\cells, cells))
+    got := (cast: (@) c.lmx_pool_take_n(s\arena, s\cells, cells))
     if: got = 0
         return: c.LMX_SCRATCH_NOMEM
     s\at := s\cells\tail
@@ -94,7 +94,7 @@ fn: lmx_scratch_take (@: s c.LmxScratch; size_t: bytes; @@: out void) int
     return: c.LMX_SCRATCH_OK
 end: lmx_scratch_take
 
-fn: lmx_scratch_mark (@: s c.LmxScratch; @: m c.LmxScratchMark) int
+fn: lmx_scratch_mark (c.LmxScratch@: s; c.LmxScratchMark@: m) int
     if: s = 0 || s\cells = 0 || m = 0
         return: c.LMX_SCRATCH_INVALID
     s\serial := s\serial + 1U
@@ -107,7 +107,7 @@ fn: lmx_scratch_mark (@: s c.LmxScratch; @: m c.LmxScratchMark) int
     return: c.LMX_SCRATCH_OK
 end: lmx_scratch_mark
 
-fn: lmx_scratch_rewind (@: s c.LmxScratch; @: m c.LmxScratchMark) int
+fn: lmx_scratch_rewind (c.LmxScratch@: s; c.LmxScratchMark@: m) int
     if: s = 0 || s\cells = 0 || m = 0
         return: c.LMX_SCRATCH_INVALID
     # Only the most recent outstanding mark of THIS store: another store's mark, a mark
@@ -122,7 +122,7 @@ fn: lmx_scratch_rewind (@: s c.LmxScratch; @: m c.LmxScratchMark) int
     return: c.LMX_SCRATCH_OK
 end: lmx_scratch_rewind
 
-fn: lmx_scratch_close (@: s c.LmxScratch) int
+fn: lmx_scratch_close (c.LmxScratch@: s) int
     if: s = 0 || s\cells = 0
         return: c.LMX_SCRATCH_INVALID
     if: s\top != 0U

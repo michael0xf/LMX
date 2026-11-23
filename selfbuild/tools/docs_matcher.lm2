@@ -54,7 +54,7 @@
 # agrees to be bound by the terms and conditions of this License
 # Agreement.
 
-fn: dm_line_equal (@@: left char; @: left_lengths size_t; size_t: left_at; @@: right char; @: right_lengths size_t; size_t: right_at) int
+fn: dm_line_equal (char@@: left; size_t@: left_lengths; size_t: left_at; char@@: right; size_t@: right_lengths; size_t: right_at) int
     if: left_lengths[left_at] != right_lengths[right_at]
         return: 0
     if: left_lengths[left_at] = 0U
@@ -64,7 +64,7 @@ fn: dm_line_equal (@@: left char; @: left_lengths size_t; size_t: left_at; @@: r
     return: 0
 end: dm_line_equal
 
-fn: dm_hash_line (@: data char; size_t: count) unsigned
+fn: dm_hash_line (char@: data; size_t: count) unsigned
     unsigned: hash 2166136261U
     size_t: scan 0U
     while: scan < count
@@ -77,8 +77,8 @@ end: dm_hash_line
 # Increasing B occurrence chains, including blank and popular lines. A local
 # dictionary avoids scanning every B line per key. Hash collisions always
 # compare the complete bytes; the relation is exact, never hash-only.
-fn: dm_chains (@@: left char; @: left_lengths size_t; size_t: left_count; @@: right char; @: right_lengths size_t; size_t: right_count; @: heads size_t; @: following size_t) int
-    @: chain_table size_t 0
+fn: dm_chains (char@@: left; size_t@: left_lengths; size_t: left_count; char@@: right; size_t@: right_lengths; size_t: right_count; size_t@: heads; size_t@: following) int
+    size_t@: chain_table 0
     size_t: left_at 0U
     size_t: right_at right_count
     size_t: table_count 2U
@@ -122,10 +122,10 @@ end: dm_chains
 
 # Same increasing i/j order and strictly-greater update as find_longest_match.
 # work_a and work_b are distinct rows of right_count+1 size_t cells.
-fn: dm_longest (@@: left char; @: left_lengths size_t; @@: right char; @: right_lengths size_t; size_t: right_count; @: heads size_t; @: following size_t; size_t: left_lo; size_t: left_hi; size_t: right_lo; size_t: right_hi; @: work_a size_t; @: work_b size_t; @: found size_t) int
-    @: previous size_t work_a
-    @: current size_t work_b
-    @: swap_row size_t 0
+fn: dm_longest (char@@: left; size_t@: left_lengths; char@@: right; size_t@: right_lengths; size_t: right_count; size_t@: heads; size_t@: following; size_t: left_lo; size_t: left_hi; size_t: right_lo; size_t: right_hi; size_t@: work_a; size_t@: work_b; size_t@: found) int
+    size_t@: previous work_a
+    size_t@: current work_b
+    size_t@: swap_row 0
     size_t: left_at left_lo
     size_t: right_at 0U
     size_t: run 0U
@@ -175,7 +175,7 @@ end: dm_longest
 
 # Lexicographic triples, followed by adjacency collapse on BOTH axes and the
 # one (len(a),len(b),0) sentinel. Sorting is local; no callback or global state.
-fn: dm_sort_merge (@: triples size_t; size_t: count; size_t: left_count; size_t: right_count) size_t
+fn: dm_sort_merge (size_t@: triples; size_t: count; size_t: left_count; size_t: right_count) size_t
     size_t: at 1U
     size_t: insert_at 0U
     size_t: scan 0U
@@ -242,15 +242,15 @@ end: dm_sort_merge
 # Result: flat [tag,i1,i2,j1,j2] cells owned by the caller. Tags: replace1,
 # delete2, insert3, equal4. Indices are zero-based half-open, including empty
 # insertion/deletion spans. 0 success, 1 allocation/size/input failure.
-fn: docs_match_opcodes (@@: left char; @: left_lengths size_t; size_t: left_count; @@: right char; @: right_lengths size_t; size_t: right_count; @@: out size_t; @: out_count size_t) int
-    @: heads size_t 0
-    @: following size_t 0
-    @: work_a size_t 0
-    @: work_b size_t 0
-    @: queue size_t 0
-    @: triples size_t 0
-    @: result size_t 0
-    @: found size_t 0
+fn: docs_match_opcodes (char@@: left; size_t@: left_lengths; size_t: left_count; char@@: right; size_t@: right_lengths; size_t: right_count; size_t@@: out; size_t@: out_count) int
+    size_t@: heads 0
+    size_t@: following 0
+    size_t@: work_a 0
+    size_t@: work_b 0
+    size_t@: queue 0
+    size_t@: triples 0
+    size_t@: result 0
+    size_t@: found 0
     size_t: bound left_count
     size_t: limit (cast: (size_t) -1)
     size_t: queued 0U

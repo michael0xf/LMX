@@ -4,7 +4,7 @@
 
 # os_mkdir alone treats EEXIST as success even for a regular file. The old
 # archive.mkdir(exist_ok=True) requires a directory, including after a race.
-fn: ds_archive (@: path char) int
+fn: ds_archive (char@: path) int
     int: kind os_path_kind(path)
     if: kind = 2
         return: 0
@@ -15,8 +15,8 @@ fn: ds_archive (@: path char) int
     return: 1
 end: ds_archive
 
-fn: ds_encoded_path (@: path char; @@: out char; @: out_count size_t) int
-    @: stream c.FILE 0
+fn: ds_encoded_path (char@: path; char@@: out; size_t@: out_count) int
+    c.FILE@: stream 0
     int: failed 0
     out[0] := 0
     out_count[0] := 0U
@@ -38,7 +38,7 @@ end: ds_encoded_path
 # In check mode path is saved[key]['path'] itself, not a newly resolved path.
 # Keep its complete validated JSON value, not only a string or C-string prefix.
 # The expected hash is a decoded length-bearing string, never strlen-based.
-fn: ds_saved_source (@: saved char; size_t: saved_count; size_t: saved_root; @: key char; @@: path_json char; @: path_count size_t; @@: digest char; @: digest_count size_t) int
+fn: ds_saved_source (char@: saved; size_t: saved_count; size_t: saved_root; char@: key; char@@: path_json; size_t@: path_count; char@@: digest; size_t@: digest_count) int
     size_t: object_at 0U
     size_t: object_after 0U
     size_t: first 0U
@@ -83,33 +83,33 @@ end: ds_saved_source
 # RU is checked/written before EN; inventory is checked/written only afterwards.
 # 0 success,1 refusal/I/O/allocation. phase is an internal diagnostic location,
 # not a replacement collection of CLI exit codes. Check does not publish files.
-fn: docs_semantics_build (@: repo char; @: preferred_l1 char; @: preferred_older char; int: check_mode; @: out_chapters size_t; @: phase int) int
-    @: archive char 0
-    @: inventory_path char 0
-    @: book_path char 0
-    @: ru_path char 0
-    @: en_path char 0
-    @: l1_snapshot char 0
-    @: older_snapshot char 0
-    @: saved char 0
-    @: l1_path_json char 0
-    @: older_path_json char 0
-    @: l1_expected char 0
-    @: older_expected char 0
-    @: l1_digest char 0
-    @: older_digest char 0
-    @: l1 char 0
-    @: older char 0
-    @: l1_starts size_t 0
-    @: l1_lengths size_t 0
-    @: older_starts size_t 0
-    @: older_lengths size_t 0
-    @: book_raw char 0
-    @: book char 0
-    @: rows size_t 0
-    @@: bodies char 0
-    @: body_lengths size_t 0
-    @: inventory char 0
+fn: docs_semantics_build (char@: repo; char@: preferred_l1; char@: preferred_older; int: check_mode; size_t@: out_chapters; int@: phase) int
+    char@: archive 0
+    char@: inventory_path 0
+    char@: book_path 0
+    char@: ru_path 0
+    char@: en_path 0
+    char@: l1_snapshot 0
+    char@: older_snapshot 0
+    char@: saved 0
+    char@: l1_path_json 0
+    char@: older_path_json 0
+    char@: l1_expected 0
+    char@: older_expected 0
+    char@: l1_digest 0
+    char@: older_digest 0
+    char@: l1 0
+    char@: older 0
+    size_t@: l1_starts 0
+    size_t@: l1_lengths 0
+    size_t@: older_starts 0
+    size_t@: older_lengths 0
+    char@: book_raw 0
+    char@: book 0
+    size_t@: rows 0
+    char@@: bodies 0
+    size_t@: body_lengths 0
+    char@: inventory 0
     size_t: saved_count 0U
     size_t: saved_root 0U
     size_t: saved_after 0U

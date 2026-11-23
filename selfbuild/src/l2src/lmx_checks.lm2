@@ -18,8 +18,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # region of the address): 0 nothing of the graph, 1 an int, 2 a word, 3 the pointer of a place without a value, 4 an Lmx
 # (a Structure or a callable), 5 a pointer to an int, 6 a pointer to a Structure or a method, 7 an untyped reference
 # (the value the index of a Structure reads), 8 and 9 a pointer to an int and to an Lmx declared without an address.
-fn: lmx_l3_type (@: arena c.LmxArena; @: address void) int
-    @: pool c.LmxPool 0
+fn: lmx_l3_type (c.LmxArena@: arena; @: address) int
+    c.LmxPool@: pool 0
     int: kind 0
     int: type 0
     if: arena = 0 || address = 0
@@ -56,8 +56,8 @@ fn: lmx_l3_type (@: arena c.LmxArena; @: address void) int
 # The access to an element of a Structure (the book #structure-index: an element is checked against the current
 # length): 0 when index selects one of the elements of lmx, 7 otherwise -- a negative index converts to a size beyond
 # every length. 4 when there is no lmx.
-fn: lmx_check_index (@: lmx c.Lmx; int: index) int
-    @: va c.VoidArray 0
+fn: lmx_check_index (c.Lmx@: lmx; int: index) int
+    c.VoidArray@: va 0
     if: lmx = 0
         return: 4
     va := @ lmx\array

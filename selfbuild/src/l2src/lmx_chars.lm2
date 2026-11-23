@@ -40,14 +40,14 @@ predef: "l2src/lmx_pool.h.lm1"
 # constructors' to keep: lmx_array_owned's ARRAY_OF_CHAR branch and
 # lmx_value_owned's fresh CHAR allocation initialize the table before taking
 # mutable CHAR storage. An existing initialized pool needs no second init call.
-fn: lmx_chars_init (@: arena c.LmxArena) int
-    @: cells char 0
+fn: lmx_chars_init (c.LmxArena@: arena) int
+    char@: cells 0
     size_t: index 0U
     if: arena = 0
         return: 1
-    if: (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) != 0
+    if: (cast: (LmxPool@) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) != 0
         return: 1
-    cells := (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    cells := (cast: (char@) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
     if: cells = 0
         return: 1
     while: index < 256U
@@ -62,20 +62,20 @@ end: lmx_chars_init
 # consult -- and the table of this arena must be the interned one: the first chunk
 # of the array holds all 256 cells. Out of range, or without a laid-out table,
 # yields nothing rather than a wrong cell.
-fn: lmx_char_cell (@: arena c.LmxArena; int: value) @: void
-    @: array c.LmxPool 0
-    @: cells char 0
+fn: lmx_char_cell (c.LmxArena@: arena; int: value) @
+    c.LmxPool@: array 0
+    char@: cells 0
     if: arena = 0
         return: 0
     if: value < 0
         return: 0
     if: value > 255
         return: 0
-    array := (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
+    array := (cast: (LmxPool@) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
     if: array = 0 || array\head = 0 || (cast: (size_t) c.lmx_chunk_room(array\head, (cast: (size_t) array\stride))) < 256U
         return: 0
-    cells := (cast: (@: char) c.lmx_chunk_data(array\head))
-    return: (cast: (@: void) (cells + value))
+    cells := (cast: (char@) c.lmx_chunk_data(array\head))
+    return: (cast: (@) (cells + value))
 end: lmx_char_cell
 
 # Reads the character back through its address.  The type is known statically --
@@ -84,11 +84,11 @@ end: lmx_char_cell
 # дескриптор типа код сразу делает приведение типа указателя и пишет напрямую в
 # ячейку_ _Это обязательно_").  The re-check through the table that stood here is
 # removed, so a null cell is the only thing refused.
-fn: lmx_char_value (@: cell void) int
-    @: p char 0
+fn: lmx_char_value (@: cell) int
+    char@: p 0
     if: cell = 0
         return: -1
-    p := (cast: (@: char) cell)
+    p := (cast: (char@) cell)
     # Numeric value, not the unsigned index of this cell in the intern table.
     return: (cast: (int) p[0])
 end: lmx_char_value

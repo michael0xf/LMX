@@ -14,10 +14,10 @@ os:
         include: "<windows.h>"
         include: "<shellapi.h>"
         # The platform's API text as UTF-8 on the heap, or 0.
-        fn: os_from_native (@: p c.void) @: char
-            @: w c.WCHAR (cast: (@: c.WCHAR) p)
+        fn: os_from_native (c.void@: p) char@
+            c.WCHAR@: w (cast: (c.WCHAR@) p)
             int: n c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, 0, 0, 0, 0)
-            @: s char 0
+            char@: s 0
             if: n <= 0
                 return: 0
             s := c.malloc((cast: (size_t) n))
@@ -33,10 +33,10 @@ os:
             return: 0
         end: os_sleep_ms
         # This process's working directory as UTF-8 on the heap, or 0.
-        fn: os_cwd () @: char
+        fn: os_cwd () char@
             unsigned: n c.GetCurrentDirectoryW(0U, 0)
-            @: w c.WCHAR 0
-            @: s char 0
+            c.WCHAR@: w 0
+            char@: s 0
             if: n = 0U
                 return: 0
             w := c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
@@ -45,17 +45,17 @@ os:
             if: c.GetCurrentDirectoryW(n, w) = 0U
                 c.free(w)
                 return: 0
-            s := os_from_native((cast: (@: void) w))
+            s := os_from_native((cast: (@) w))
             c.free(w)
             return: s
         end: os_cwd
         # The arguments this process was given after `--`, as the platform parses its command line: a line
         # `ARGC n` and a line `ARG i <hex of its UTF-8 bytes>` for each. 0 printed, 1 not.
         fn: os_args_print () int
-            @: count int c.calloc(1U, c.sizeof(c.int))
-            @@: list c.WCHAR 0
-            @: s char 0
-            @: hex char 0
+            int@: count c.calloc(1U, c.sizeof(c.int))
+            c.WCHAR@@: list 0
+            char@: s 0
+            char@: hex 0
             int: i 0
             int: at -1
             if: count = 0
@@ -65,7 +65,7 @@ os:
                 c.free(count)
                 return: 1
             while: i < count[0] && at < 0
-                s := os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@) list[i]))
                 if: s != 0 && c.strcmp(s, "--") = 0
                     at := i + 1
                 c.free(s)
@@ -76,7 +76,7 @@ os:
             c.printf("ARGC %d\n", count[0] - at)
             i := at
             while: i < count[0]
-                s := os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@) list[i]))
                 if: s = 0
                     c.LocalFree(list)
                     c.free(count)
@@ -93,8 +93,8 @@ os:
         end: os_args_print
     default:
         include: "<unistd.h>"
-        fn: os_from_native (@: p c.void) @: char
-            return: txt_dup((cast: (@: char) p))
+        fn: os_from_native (c.void@: p) char@
+            return: txt_dup((cast: (char@) p))
         end: os_from_native
         fn: os_sleep_ms (unsigned: ms) int
             unsigned: left ms
@@ -108,9 +108,9 @@ os:
             ---
             return: 0
         end: os_sleep_ms
-        fn: os_cwd () @: char
+        fn: os_cwd () char@
             size_t: cap 256U
-            @: s char 0
+            char@: s 0
             while: cap < 1048576U
                 s := c.malloc(cap)
                 if: s = 0
@@ -127,9 +127,9 @@ os:
         end: os_args_print
 end: os
 
-fn: child_main (@@: args char; int: n) int
-    @: here char 0
-    @: f c.FILE 0
+fn: child_main (char@@: args; int: n) int
+    char@: here 0
+    c.FILE@: f 0
     if: n >= 2 && c.strcmp(args[1], "echo-args") = 0
         return: os_args_print()
     if: n >= 3 && c.strcmp(args[1], "exit-with") = 0
@@ -165,8 +165,8 @@ size_t: n length(m\mainArgs)
 size_t: i 0U
 size_t: j 0U
 size_t: len 0U
-@@: args char c.calloc(n + 1U, sizeof(@: char))
-@: buf char 0
+char@@: args c.calloc(n + 1U, sizeof(char@))
+char@: buf 0
 int: rc 2
 while: i < n && args != 0
     len := length(m\mainArgs[i])

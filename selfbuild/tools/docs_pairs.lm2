@@ -4,7 +4,7 @@
 # Byte spans preserve the exact Python string matches, including embedded NUL.
 
 # Next line whose prefix is marker, at/after begin; SIZE_MAX if absent.
-fn: dp_line_marker (@: data char; size_t: count; size_t: begin; @: marker char; size_t: width) size_t
+fn: dp_line_marker (char@: data; size_t: count; size_t: begin; char@: marker; size_t: width) size_t
     size_t: at begin
     size_t: newline 0U
     if: at > count || width = 0U
@@ -31,13 +31,13 @@ end: dp_line_marker
 # 3 anchor capture <a id="([^"]+)"
 # 4 link capture ]\(([^)]+)\)
 # Return1 found,0 absent,-1 bad kind/arguments; after advances past full match.
-fn: dp_match (@: data char; size_t: count; size_t: begin; int: kind; @: first size_t; @: last size_t; @: after size_t) int
+fn: dp_match (char@: data; size_t: count; size_t: begin; int: kind; size_t@: first; size_t@: last; size_t@: after) int
     size_t: at begin
     size_t: found 0U
     size_t: end_at 0U
     size_t: start 0U
-    @: prefix char 0
-    @: closer char 0
+    char@: prefix 0
+    char@: closer 0
     size_t: width 0U
     if: data = 0 || first = 0 || last = 0 || after = 0 || begin > count || kind < 1 || kind > 4
         return: -1
@@ -102,7 +102,7 @@ end: dp_match
 # Streaming form of re.sub(([._])(ru|en)(?=\.md), separator + LANG).
 # pending1..4 emits L,A,N,G after the separator; 256 means end, NUL is byte0.
 # Literal LANG in the input compares equal to a normalized language token.
-fn: dp_link_byte (@: data char; size_t: count; @: at size_t; @: pending int) unsigned
+fn: dp_link_byte (char@: data; size_t: count; size_t@: at; int@: pending) unsigned
     unsigned: byte 0U
     int: step pending[0]
     if: step != 0
@@ -130,7 +130,7 @@ fn: dp_link_byte (@: data char; size_t: count; @: at size_t; @: pending int) uns
     return: byte
 end: dp_link_byte
 
-fn: dp_links_equal (@: a char; size_t: na; @: b char; size_t: nb) int
+fn: dp_links_equal (char@: a; size_t: na; char@: b; size_t: nb) int
     size_t: ia 0U
     size_t: ib 0U
     int: pa 0
@@ -148,7 +148,7 @@ fn: dp_links_equal (@: a char; size_t: na; @: b char; size_t: nb) int
 end: dp_links_equal
 
 # Ordered findall equality for the four fixed match shapes.
-fn: dp_matches_equal (@: a char; size_t: na; @: b char; size_t: nb; int: kind) int
+fn: dp_matches_equal (char@: a; size_t: na; char@: b; size_t: nb; int: kind) int
     size_t: ia 0U
     size_t: ib 0U
     size_t: a0 0U
@@ -178,7 +178,7 @@ fn: dp_matches_equal (@: a char; size_t: na; @: b char; size_t: nb; int: kind) i
     ---
 end: dp_matches_equal
 
-fn: dp_paragraphs (@: data char; size_t: count) size_t
+fn: dp_paragraphs (char@: data; size_t: count) size_t
     size_t: scan 0U
     size_t: found 0U
     size_t: number 1U
@@ -193,12 +193,12 @@ fn: dp_paragraphs (@: data char; size_t: count) size_t
 end: dp_paragraphs
 
 # Same boolean search as ]\([^)]*[._]opposite\.md: no final ')' is required.
-fn: dp_wrong_language (@: data char; size_t: count; int: ru) int
+fn: dp_wrong_language (char@: data; size_t: count; int: ru) int
     size_t: scan 0U
     size_t: found 0U
     size_t: end_at 0U
-    @: dotted char ".en.md"
-    @: underscored char "_en.md"
+    char@: dotted ".en.md"
+    char@: underscored "_en.md"
     if: ru = 0
         dotted := ".ru.md"
         underscored := "_ru.md"
@@ -224,7 +224,7 @@ end: dp_wrong_language
 # Original assertion order, after body expansion/admission-case insertion:
 # paragraph,code,heading,anchor,wrong-RU,wrong-EN,normalized-link lists.
 # Return0 pass,1 mismatch,-1 invalid; failed_kind carries 1..7 on mismatch.
-fn: docs_semantics_pair_check (@: ru char; size_t: nru; @: en char; size_t: nen; @: failed_kind int) int
+fn: docs_semantics_pair_check (char@: ru; size_t: nru; char@: en; size_t: nen; int@: failed_kind) int
     int: kind 1
     int: equal 0
     if: ru = 0 || en = 0 || failed_kind = 0

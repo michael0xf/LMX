@@ -23,7 +23,7 @@ define: driver_merge_owned l2_driver_merge_owned
 define: driver_merge_profiles_owned l2_driver_merge_profiles_owned
 define: driver_merge_used_owned l2_driver_merge_used_owned
 
-fn: numeric_type (const: (@: word char)) int
+fn: numeric_type (const: (char@: word)) int
     if: c.strcmp(word, "size") = 0
         return: c.LMX_TYPE_SIZE_T
     if: c.strcmp(word, "int") = 0
@@ -35,7 +35,7 @@ fn: numeric_type (const: (@: word char)) int
     return: 0
 end: numeric_type
 
-fn: numeric_holds (@: cell void; int: ty; int: want) int
+fn: numeric_holds (@: cell; int: ty; int: want) int
     if: ty = c.LMX_TYPE_SIZE_T && c.lmx_size_value_known(cell) = (cast: (size_t) want)
         return: 1
     if: ty = c.LMX_TYPE_INT && c.lmx_int_value_known(cell) = want
@@ -47,7 +47,7 @@ fn: numeric_holds (@: cell void; int: ty; int: want) int
     return: 0
 end: numeric_holds
 
-fn: merge_fact_width (const: (@: word char)) int
+fn: merge_fact_width (const: (char@: word)) int
     if: c.strcmp(word, "merge_width") = 0
         return: 3
     if: c.strcmp(word, "merge_value") = 0 || c.strcmp(word, "merge_same") = 0 || c.strcmp(word, "merge_fresh") = 0 || c.strcmp(word, "merge_native") = 0 || c.strcmp(word, "merge_array") = 0
@@ -57,7 +57,7 @@ fn: merge_fact_width (const: (@: word char)) int
     return: 0
 end: merge_fact_width
 
-fn: shape_op_code (const: (@: word char)) int
+fn: shape_op_code (const: (char@: word)) int
     if: c.strcmp(word, "RET") = 0
         return: c.LMX_WALK_OP_RET
     if: c.strcmp(word, "SET") = 0
@@ -157,7 +157,7 @@ fn: shape_op_code (const: (@: word char)) int
     return: 0 - 1
 end: shape_op_code
 
-fn: shape_int_parse (const: (@: word char); @: out int) int
+fn: shape_int_parse (const: (char@: word); int@: out) int
     size_t: i 0U
     size_t: magnitude 0U
     size_t: digit 0U
@@ -192,7 +192,7 @@ fn: shape_int_parse (const: (@: word char); @: out int) int
     return: 1
 end: shape_int_parse
 
-fn: shape_spell_is (const: (@: text char); const: (@: word char)) int
+fn: shape_spell_is (const: (char@: text); const: (char@: word)) int
     int: n 0
     int: i 0
     if: text = 0 || word = 0
@@ -212,49 +212,49 @@ fn: shape_spell_is (const: (@: text char); const: (@: word char)) int
     return: 0
 end: shape_spell_is
 
-fn: root_profile (@: arena c.LmxArena; @: root c.Lmx) @: c.Lmx
+fn: root_profile (c.LmxArena@: arena; c.Lmx@: root) c.Lmx@
     if: arena = 0 || root = 0
         return: 0
-    return: c.lmx_range_profile(arena, (cast: (@: void) root))
+    return: c.lmx_range_profile(arena, (cast: (@) root))
 end: root_profile
 
-fn: sealed_here (@: arena c.LmxArena; @: value void) int
-    @: pool c.LmxPool c.lmx_range_pool(arena, value)
+fn: sealed_here (c.LmxArena@: arena; @: value) int
+    c.LmxPool@: pool c.lmx_range_pool(arena, value)
     if: pool = 0
         return: 0
     return: c.lmx_pool_is_sealed(pool)
 end: sealed_here
 
-fn: shape_node_op (@: item void; @: arena c.LmxArena) int
+fn: shape_node_op (@: item; c.LmxArena@: arena) int
     @: head void item
     int: code
     if: item = 0
         return: 0 - 1
     if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_STRUCT
-        head := c.lmx_arena_ref_value((cast: (@: c.Lmx) item), 0U)
+        head := c.lmx_arena_ref_value((cast: (c.Lmx@) item), 0U)
     if: head = 0 || c.lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_OP || c.lmx_domain_type(arena, head) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
         return: 0 - 1
-    @: typed_head c.LmxOp (cast: (@: c.LmxOp) head)
+    c.LmxOp@: typed_head (cast: (c.LmxOp@) head)
     code := typed_head\code
     if: code < 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
         return: 0 - 1
     return: code % c.LMX_WALK_OP_COUNT
 end: shape_node_op
 
-fn: shape_source_role (@: item c.Lmx; @: arena c.LmxArena) int
+fn: shape_source_role (c.Lmx@: item; c.LmxArena@: arena) int
     @: head void c.lmx_arena_ref_value(item, 0U)
     int: code
     if: shape_node_op(head, arena) < 0
         return: 0 - 1
-    @: typed_head c.LmxOp (cast: (@: c.LmxOp) head)
+    c.LmxOp@: typed_head (cast: (c.LmxOp@) head)
     code := typed_head\code
     return: code / c.LMX_WALK_OP_COUNT
 end: shape_source_role
 
 # The dump prints a name through the informational code -> name table (IDENTIFIER-CODES).
-sub: shape_dump_source_name (@: out c.FILE; @: arena c.LmxArena; @: key void)
+sub: shape_dump_source_name (c.FILE@: out; c.LmxArena@: arena; @: key)
     size_t: name c.lmx_source_name_get(arena, key)
-    @: bytes char 0
+    char@: bytes 0
     size_t: nb 0U
     size_t: i 0U
     if: name = 0U || c.lmx_ids_name(name, @ bytes, @ nb) != 0 || bytes = 0
@@ -269,23 +269,23 @@ sub: shape_dump_source_name (@: out c.FILE; @: arena c.LmxArena; @: key void)
     return
 end: shape_dump_source_name
 
-sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; size_t: depth; size_t: via)
+sub: shape_dump_owned_node (c.FILE@: out; c.LmxArena@: arena; c.Lmx@: item; size_t: depth; size_t: via)
     size_t: i 0U
     size_t: byte_index 0U
-    @: item_fields c.VoidArray @ item\array
+    c.VoidArray@: item_fields @ item\array
     size_t: width item_fields\size
     @@: slot void 0
     @: value void 0
-    @: child c.Lmx 0
-    @: byte_array c.LmxArray 0
-    @: byte_data char 0
+    c.Lmx@: child 0
+    c.LmxArray@: byte_array 0
+    char@: byte_data 0
     int: kind 0
     int: ty 0
     int: op 0
     int: source_role 0
     int: owned 0
-    c.fprintf(out, "begin depth=%zu via=%zu width=%zu node=%p parent=%p name=", depth, via, width, (cast: (@: void) item), (cast: (@: void) item\parent))
-    shape_dump_source_name(out, arena, (cast: (@: void) item))
+    c.fprintf(out, "begin depth=%zu via=%zu width=%zu node=%p parent=%p name=", depth, via, width, (cast: (@) item), (cast: (@) item\parent))
+    shape_dump_source_name(out, arena, (cast: (@) item))
     c.fprintf(out, "\n")
     while: i < item_fields\size
         slot := c.lmx_arena_ref_cell(item, i)
@@ -296,7 +296,7 @@ sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; s
         source_role := 0 - 1
         owned := 0
         if: kind = c.LMX_KIND_STRUCT
-            child := (cast: (@: c.Lmx) value)
+            child := (cast: (c.Lmx@) value)
             if: child\parent = item
                 owned := 1
             ---
@@ -304,8 +304,8 @@ sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; s
                 source_role := shape_source_role(child, arena)
             ---
         ---
-        c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@: void) slot), value, kind, ty, op, source_role, owned)
-        shape_dump_source_name(out, arena, (cast: (@: void) slot))
+        c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@) slot), value, kind, ty, op, source_role, owned)
+        shape_dump_source_name(out, arena, (cast: (@) slot))
         c.fprintf(out, " value_name=")
         shape_dump_source_name(out, arena, value)
         if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_INT
@@ -316,10 +316,10 @@ sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; s
             c.fprintf(out, " size=%zu", c.lmx_size_value_known(value))
         ---
         if: kind = c.LMX_KIND_ARRAY && ty = c.LMX_TYPE_ARRAY_OF_CHAR
-            byte_array := (cast: (@: c.LmxArray) value)
-            @: byte_array_fields c.VoidArray @ byte_array\array
+            byte_array := (cast: (c.LmxArray@) value)
+            c.VoidArray@: byte_array_fields @ byte_array\array
             c.fprintf(out, " array=%zu:", (byte_array_fields\size))
-            byte_data := (cast: (@: char) byte_array_fields\data)
+            byte_data := (cast: (char@) byte_array_fields\data)
             if: byte_array_fields\size > 0U && byte_data = 0
                 c.fprintf(out, "INVALID")
             else:
@@ -340,9 +340,9 @@ sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; s
     return
 end: shape_dump_owned_node
 
-fn: shape_dump_graph_events (@: arena c.LmxArena; @: graph c.Lmx) int
-    const: (@: path char c.getenv("LMX_GRAPH_EVENTS_OUT"))
-    @: out c.FILE 0
+fn: shape_dump_graph_events (c.LmxArena@: arena; c.Lmx@: graph) int
+    const: (char@: path c.getenv("LMX_GRAPH_EVENTS_OUT"))
+    c.FILE@: out 0
     int: bad 0
     if: path = 0 || path[0] = 0
         return: 0
@@ -361,16 +361,16 @@ fn: shape_dump_graph_events (@: arena c.LmxArena; @: graph c.Lmx) int
     return: bad != 0
 end: shape_dump_graph_events
 
-fn: shape_find_op (@: arena c.LmxArena; @: item void; int: code) @: void
+fn: shape_find_op (c.LmxArena@: arena; @: item; int: code) @
     size_t: i 0U
     @: child void 0
-    @: holder c.Lmx 0
+    c.Lmx@: holder 0
     if: shape_node_op(item, arena) = code
         return: item
     if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
-    holder := (cast: (@: c.Lmx) item)
-    @: holder_fields c.VoidArray @ holder\array
+    holder := (cast: (c.Lmx@) item)
+    c.VoidArray@: holder_fields @ holder\array
     while: i < holder_fields\size
         child := c.lmx_arena_ref_value(holder, i)
         if: shape_node_op(child, arena) = code
@@ -380,13 +380,13 @@ fn: shape_find_op (@: arena c.LmxArena; @: item void; int: code) @: void
     return: 0
 end: shape_find_op
 
-fn: shape_lit_int (@: arena c.LmxArena; @: item void; int: want) int
+fn: shape_lit_int (c.LmxArena@: arena; @: item; int: want) int
     @: cell void 0
-    @: holder c.Lmx 0
+    c.Lmx@: holder 0
     if: shape_node_op(item, arena) != c.LMX_WALK_OP_LIT || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
-    holder := (cast: (@: c.Lmx) item)
-    @: holder_fields c.VoidArray @ holder\array
+    holder := (cast: (c.Lmx@) item)
+    c.VoidArray@: holder_fields @ holder\array
     if: holder_fields\size < 2U
         return: 0
     cell := c.lmx_arena_ref_value(holder, 1U)
@@ -395,17 +395,17 @@ fn: shape_lit_int (@: arena c.LmxArena; @: item void; int: want) int
     return: 0
 end: shape_lit_int
 
-fn: shape_body (@: arena c.LmxArena; @: item void) @: void
+fn: shape_body (c.LmxArena@: arena; @: item) @
     int: op
     size_t: n 0U
-    @: holder c.Lmx 0
+    c.Lmx@: holder 0
     if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
     op := shape_node_op(item, arena)
     if: op != c.LMX_WALK_OP_IF && op != c.LMX_WALK_OP_WHILE && op != c.LMX_WALK_OP_FOR && op != c.LMX_WALK_OP_ELSE
         return: 0
-    holder := (cast: (@: c.Lmx) item)
-    @: holder_fields c.VoidArray @ holder\array
+    holder := (cast: (c.Lmx@) item)
+    c.VoidArray@: holder_fields @ holder\array
     n := holder_fields\size
     if: op = c.LMX_WALK_OP_ELSE
         if: n < 2U
@@ -417,14 +417,14 @@ fn: shape_body (@: arena c.LmxArena; @: item void) @: void
     return: c.lmx_arena_ref_value(holder, 2U)
 end: shape_body
 
-fn: shape_swap_values (@: arena c.LmxArena; @: holder c.Lmx) int
+fn: shape_swap_values (c.LmxArena@: arena; c.Lmx@: holder) int
     size_t: i 0U
     size_t: first 0U
     int: found 0
     @: child void 0
     @: previous void 0
-    @: nested c.Lmx 0
-    @: holder_fields c.VoidArray @ holder\array
+    c.Lmx@: nested 0
+    c.VoidArray@: holder_fields @ holder\array
     while: i < holder_fields\size
         child := c.lmx_arena_ref_value(holder, i)
         if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_PRIMITIVE && c.lmx_domain_type(arena, child) = c.LMX_TYPE_INT
@@ -444,7 +444,7 @@ fn: shape_swap_values (@: arena c.LmxArena; @: holder c.Lmx) int
     while: i < holder_fields\size
         child := c.lmx_arena_ref_value(holder, i)
         if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            nested := (cast: (@: c.Lmx) child)
+            nested := (cast: (c.Lmx@) child)
             if: nested\parent = holder && shape_swap_values(arena, nested) != 0
                 return: 1
             ---
@@ -454,19 +454,19 @@ fn: shape_swap_values (@: arena c.LmxArena; @: holder c.Lmx) int
     return: 0
 end: shape_swap_values
 
-fn: shape_add_owner (@: arena c.LmxArena; @: holder c.Lmx; int: left; int: right; @@: selected c.Lmx) int
+fn: shape_add_owner (c.LmxArena@: arena; c.Lmx@: holder; int: left; int: right; c.Lmx@@: selected) int
     size_t: i 0U
     int: found 0
     @: child void 0
-    @: nested c.Lmx 0
+    c.Lmx@: nested 0
     if: holder = 0
         return: 0
-    @: holder_fields c.VoidArray @ holder\array
+    c.VoidArray@: holder_fields @ holder\array
     while: i < holder_fields\size
         child := c.lmx_arena_ref_value(holder, i)
         if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            nested := (cast: (@: c.Lmx) child)
-            @: nested_fields c.VoidArray @ nested\array
+            nested := (cast: (c.Lmx@) child)
+            c.VoidArray@: nested_fields @ nested\array
             if: nested\parent = holder
                 if: shape_node_op(holder, arena) < 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_ADD && nested_fields\size = 3U
                     if: shape_lit_int(arena, c.lmx_arena_ref_value(nested, 1U), left) != 0 && shape_lit_int(arena, c.lmx_arena_ref_value(nested, 2U), right) != 0
@@ -484,13 +484,13 @@ end: shape_add_owner
 
 # The check's word is its input: normalized once by the name -> code table, then names compare by code. A char Array is
 # a user string value, compared as such.
-fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) int
+fn: shape_has_spell (c.LmxArena@: arena; @: item; const: (char@: word)) int
     size_t: i 0U
     @: cell void 0
     size_t: name 0U
     size_t: wanted 0U
-    @: chars c.LmxArray 0
-    @: holder c.Lmx 0
+    c.LmxArray@: chars 0
+    c.Lmx@: holder 0
     size_t: text_length
     if: item = 0 || word = 0
         return: 0
@@ -500,13 +500,13 @@ fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) i
     if: name != 0U && name = wanted
         return: 1
     if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_ARRAY && c.lmx_domain_type(arena, item) = c.LMX_TYPE_ARRAY_OF_CHAR
-        chars := (cast: (@: c.LmxArray) item)
-        @: chars_fields c.VoidArray @ chars\array
-        return: (cast: (int) (chars_fields\size = text_length && (text_length = 0U || c.memcmp((chars_fields\data), (cast: (@: void) word), text_length) = 0)))
+        chars := (cast: (c.LmxArray@) item)
+        c.VoidArray@: chars_fields @ chars\array
+        return: (cast: (int) (chars_fields\size = text_length && (text_length = 0U || c.memcmp((chars_fields\data), (cast: (@) word), text_length) = 0)))
     if: c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
-    holder := (cast: (@: c.Lmx) item)
-    @: holder_fields c.VoidArray @ holder\array
+    holder := (cast: (c.Lmx@) item)
+    c.VoidArray@: holder_fields @ holder\array
     while: i < holder_fields\size
         cell := c.lmx_arena_ref_value(holder, i)
         if: cell != 0
@@ -520,29 +520,29 @@ fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) i
     return: 0
 end: shape_has_spell
 
-fn: shape_int_declaration (@: arena c.LmxArena; @: box c.Lmx; size_t: at; int: want) int
-    @: cell void
-    @: init c.Lmx
-    @: own c.Lmx
-    @: lit c.Lmx
-    @: index void
+fn: shape_int_declaration (c.LmxArena@: arena; c.Lmx@: box; size_t: at; int: want) int
+    @: cell
+    c.Lmx@: init
+    c.Lmx@: own
+    c.Lmx@: lit
+    @: index
     cell := c.lmx_arena_ref_value(box, at)
     if: cell = 0 || c.lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type(arena, cell) != c.LMX_TYPE_INT
         return: 0
     if: c.lmx_int_value_known(cell) != want
         return: 0
-    init := (cast: (@: c.Lmx) c.lmx_arena_ref_value(box, at + 1U))
+    init := (cast: (c.Lmx@) c.lmx_arena_ref_value(box, at + 1U))
     if: init = 0 || c.lmx_domain_kind(arena, init) != c.LMX_KIND_STRUCT
         return: 0
-    @: init_fields c.VoidArray @ init\array
+    c.VoidArray@: init_fields @ init\array
     if: init\parent != box || init_fields\size != 3U || shape_node_op(init, arena) != c.LMX_WALK_OP_SET || shape_source_role(init, arena) != c.LMX_WALK_SOURCE_INITIALIZER
         return: 0
-    own := (cast: (@: c.Lmx) c.lmx_arena_ref_value(init, 1U))
-    lit := (cast: (@: c.Lmx) c.lmx_arena_ref_value(init, 2U))
+    own := (cast: (c.Lmx@) c.lmx_arena_ref_value(init, 1U))
+    lit := (cast: (c.Lmx@) c.lmx_arena_ref_value(init, 2U))
     if: own = 0 || lit = 0 || c.lmx_domain_kind(arena, own) != c.LMX_KIND_STRUCT || c.lmx_domain_kind(arena, lit) != c.LMX_KIND_STRUCT
         return: 0
-    @: own_fields c.VoidArray @ own\array
-    @: lit_fields c.VoidArray @ lit\array
+    c.VoidArray@: own_fields @ own\array
+    c.VoidArray@: lit_fields @ lit\array
     if: own\parent != init || own_fields\size != 3U || shape_node_op(own, arena) != c.LMX_WALK_OP_OWN || shape_source_role(own, arena) != c.LMX_WALK_SOURCE_ORDINARY || c.lmx_arena_ref_value(own, 1U) != 0
         return: 0
     index := c.lmx_arena_ref_value(own, 2U)
@@ -553,42 +553,42 @@ fn: shape_int_declaration (@: arena c.LmxArena; @: box c.Lmx; size_t: at; int: w
     return: 1
 end: shape_int_declaration
 
-fn: shape_one_int (@: arena c.LmxArena; @: item void) int
-    @: box c.Lmx
+fn: shape_one_int (c.LmxArena@: arena; @: item) int
+    c.Lmx@: box
     if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
-    box := (cast: (@: c.Lmx) item)
-    @: box_fields c.VoidArray @ box\array
+    box := (cast: (c.Lmx@) item)
+    c.VoidArray@: box_fields @ box\array
     if: box_fields\size != 2U
         return: 0
     return: shape_int_declaration(arena, box, 0U, 1)
 end: shape_one_int
 
-fn: shape_two_ints (@: arena c.LmxArena; @: item void) int
-    @: box c.Lmx
+fn: shape_two_ints (c.LmxArena@: arena; @: item) int
+    c.Lmx@: box
     if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
         return: 0
-    box := (cast: (@: c.Lmx) item)
-    @: box_fields c.VoidArray @ box\array
+    box := (cast: (c.Lmx@) item)
+    c.VoidArray@: box_fields @ box\array
     if: box_fields\size != 4U
         return: 0
     return: shape_int_declaration(arena, box, 0U, 1) != 0 && shape_int_declaration(arena, box, 2U, 3) != 0
 end: shape_two_ints
 
-fn: shape_find_holder (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
+fn: shape_find_holder (c.LmxArena@: arena; c.Lmx@: graph) c.Lmx@
     size_t: i 0U
-    @: child void
-    @: box c.Lmx
-    @: found c.Lmx
+    @: child
+    c.Lmx@: box
+    c.Lmx@: found
     if: graph = 0
         return: 0
-    @: graph_fields c.VoidArray @ graph\array
+    c.VoidArray@: graph_fields @ graph\array
     if: shape_two_ints(arena, graph) != 0
         return: graph
     while: i < graph_fields\size
         child := c.lmx_arena_ref_value(graph, i)
         if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            box := (cast: (@: c.Lmx) child)
+            box := (cast: (c.Lmx@) child)
             if: box\parent = graph
                 found := shape_find_holder(arena, box)
                 if: found != 0
@@ -598,19 +598,19 @@ fn: shape_find_holder (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
     return: 0
 end: shape_find_holder
 
-fn: shape_find_nest (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
+fn: shape_find_nest (c.LmxArena@: arena; c.Lmx@: graph) c.Lmx@
     size_t: i 0U
     @: child void 0
-    @: box c.Lmx
-    @: mid void
+    c.Lmx@: box
+    @: mid
     if: graph = 0
         return: 0
-    @: graph_fields c.VoidArray @ graph\array
+    c.VoidArray@: graph_fields @ graph\array
     while: i < graph_fields\size
         child := c.lmx_arena_ref_value(graph, i)
         if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            box := (cast: (@: c.Lmx) child)
-            @: box_fields c.VoidArray @ box\array
+            box := (cast: (c.Lmx@) child)
+            c.VoidArray@: box_fields @ box\array
             if: box_fields\size = 1U
                 mid := c.lmx_arena_ref_value(box, 0U)
                 if: shape_one_int(arena, mid) != 0
@@ -620,9 +620,9 @@ fn: shape_find_nest (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
     return: 0
 end: shape_find_nest
 
-fn: shape_arena_cells (@: arena c.LmxArena) size_t
-    @: pool c.LmxPool arena\arrays
-    @: chunk c.LmxChunk 0
+fn: shape_arena_cells (c.LmxArena@: arena) size_t
+    c.LmxPool@: pool arena\arrays
+    c.LmxChunk@: chunk 0
     size_t: total 0U
     while: pool != 0
         chunk := pool\head
@@ -637,22 +637,22 @@ end: shape_arena_cells
 
 # Explicit owner of the former four argv-bounded C VLAs. The original matcher
 # returns through this one cleanup; successful-path assertions stay in the body.
-fn: shape_check (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
+fn: shape_check (c.LmxArena@: arena; c.Lmx@: graph; c.Lmx@: settings) int
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
     size_t: capacity (cast: (size_t) gargc_cell[0])
-    @@: stack_box c.Lmx 0
-    @: stack_at size_t 0
-    @: stack_lim size_t 0
+    c.Lmx@@: stack_box 0
+    size_t@: stack_at 0
+    size_t@: stack_lim 0
     @@: seen_node void 0
     int: status 0
-    if: gargc_cell[0] <= 0 || capacity > c.SIZE_MAX / sizeof(@: c.Lmx) || capacity > c.SIZE_MAX / c.sizeof(c.size_t) || capacity > c.SIZE_MAX / sizeof(@: void)
+    if: gargc_cell[0] <= 0 || capacity > c.SIZE_MAX / sizeof(c.Lmx@) || capacity > c.SIZE_MAX / c.sizeof(c.size_t) || capacity > c.SIZE_MAX / sizeof(@)
         check((cast: (int) (0)), "shape observation capacity cannot be allocated")
         c.abort()
     ---
-    stack_box := (cast: (@@: c.Lmx) c.malloc(capacity * sizeof(@: c.Lmx)))
-    stack_at := (cast: (@: size_t) c.malloc(capacity * c.sizeof(c.size_t)))
-    stack_lim := (cast: (@: size_t) c.malloc(capacity * c.sizeof(c.size_t)))
-    seen_node := (cast: (@@: void) c.malloc(capacity * sizeof(@: void)))
+    stack_box := (cast: (c.Lmx@@) c.malloc(capacity * sizeof(c.Lmx@)))
+    stack_at := (cast: (size_t@) c.malloc(capacity * c.sizeof(c.size_t)))
+    stack_lim := (cast: (size_t@) c.malloc(capacity * c.sizeof(c.size_t)))
+    seen_node := (cast: (@@) c.malloc(capacity * sizeof(@)))
     if: stack_box = 0 || stack_at = 0 || stack_lim = 0 || seen_node = 0
         c.free(stack_box)
         c.free(stack_at)
@@ -669,9 +669,9 @@ fn: shape_check (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
     return: status
 end: shape_check
 
-sub: check (int: ok; const: (@: label char))
-    @: checks_cell int (cast: (@: int) (@ c.checks))
-    @: failures_cell int (cast: (@: int) (@ c.failures))
+sub: check (int: ok; const: (char@: label))
+    int@: checks_cell (cast: (int@) (@ c.checks))
+    int@: failures_cell (cast: (int@) (@ c.failures))
     const: @@(phase_cell char (cast: (const: @@(char)) (@ c.phase)))
     checks_cell[0] := checks_cell[0] + 1
     if: ok = 0
@@ -692,17 +692,17 @@ sub: ids_check ()
     size_t: b c.lmx_ids_code("ids_check_beta", 14U)
     size_t: a2 c.lmx_ids_code("ids_check_alpha", 15U)
     size_t: at2 c.lmx_ids_code("@@", 2U)
-    @: text char 0
+    char@: text 0
     size_t: nb 0U
-    @: unit size_t 0
-    @: other size_t 0
-    @: t1 size_t (cast: (@: size_t) c.calloc(2U, c.sizeof(c.size_t)))
-    @: t2 size_t (cast: (@: size_t) c.calloc(2U, c.sizeof(c.size_t)))
-    @: t3 size_t (cast: (@: size_t) c.calloc(1U, c.sizeof(c.size_t)))
+    size_t@: unit 0
+    size_t@: other 0
+    size_t@: t1 (cast: (size_t@) c.calloc(2U, c.sizeof(c.size_t)))
+    size_t@: t2 (cast: (size_t@) c.calloc(2U, c.sizeof(c.size_t)))
+    size_t@: t3 (cast: (size_t@) c.calloc(1U, c.sizeof(c.size_t)))
     check((cast: (int) (c.lmx_ids_code("merge", 5U) = (cast: (size_t) c.LMX_ID_MERGE) && c.lmx_ids_code("call", 4U) = (cast: (size_t) c.LMX_ID_CALL) && c.lmx_ids_code("data", 4U) = (cast: (size_t) c.LMX_ID_DATA) && before >= (cast: (size_t) c.LMX_ID_WORDS))), "ids: the words of the language have their fixed first codes")
     check((cast: (int) (a != 0U && a = a2)), "ids: one spelling has one code, asked again after another")
     check((cast: (int) (b != 0U && b != a && a = before + 1U && b = before + 2U)), "ids: another spelling has another code, numbered next")
-    check((cast: (int) (c.lmx_ids_name(a, @ text, @ nb) = 0 && nb = 15U && text != 0 && c.memcmp((cast: (@: void) text), (cast: (@: void) "ids_check_alpha"), 15U) = 0)), "ids: code -> name gives the spelling back")
+    check((cast: (int) (c.lmx_ids_name(a, @ text, @ nb) = 0 && nb = 15U && text != 0 && c.memcmp((cast: (@) text), (cast: (@) "ids_check_alpha"), 15U) = 0)), "ids: code -> name gives the spelling back")
     check((cast: (int) (at2 != 0U && c.lmx_ids_reference(at2) = 1 && c.lmx_ids_reference(a) = 0)), "ids: a reference head of any depth is marked when its code is given")
     if: t1 = 0 || t2 = 0 || t3 = 0
         check(0, "ids: the unit tables of the check allocate")
@@ -715,7 +715,7 @@ sub: ids_check ()
     check((cast: (int) (c.lmx_ids_unit_loaded((@ unit)) = 0 && c.lmx_ids_unit_publish((@ unit), t1, 2U) = 0 && unit = t1 && c.lmx_ids_unit_loaded((@ unit)) = 1)), "ids: a unit's table is published once")
     check((cast: (int) (c.lmx_ids_unit_publish((@ unit), t2, 2U) = 0 && unit = t1)), "ids: a second load's table is freed and the first stays")
     check((cast: (int) (c.lmx_ids_unit_publish((@ other), t3, 1U) = 1 && other = 0)), "ids: a table holding a code 0 is not published")
-    c.free((cast: (@: void) unit))
+    c.free((cast: (@) unit))
 end: ids_check
 
 # Slice 253 (design 4.4): the kernel's code links and the native reset, on a private arena, before the program runs.
@@ -730,71 +730,71 @@ sub: code_links_check ()
     c.LmxWalkFrame: code_frame
     c.LmxWalkContext: code_context
     c.LmxWalkValue: code_result
-    @: code_fp c.LmxWalkFrame @ code_frame
-    @: a c.LmxArena 0
-    @: root c.Lmx 0
+    c.LmxWalkFrame@: code_fp @ code_frame
+    c.LmxArena@: a 0
+    c.Lmx@: root 0
     # The check's own names are its input, normalized once (IDENTIFIER-CODES).
     size_t: id_t c.lmx_ids_code("T", 1U)
-    @: holder c.Lmx 0
-    @: child c.Lmx 0
-    @: data c.Lmx 0
-    @: later c.Lmx 0
+    c.Lmx@: holder 0
+    c.Lmx@: child 0
+    c.Lmx@: data 0
+    c.Lmx@: later 0
     @: cell void 0
-    @: mark c.LmxArenaBlock 0
-    @: h1 c.Lmx 0
-    @: h2 c.Lmx 0
+    c.LmxArenaBlock@: mark 0
+    c.Lmx@: h1 0
+    c.Lmx@: h2 0
     @: cell2 void 0
-    @: ar8 c.Lmx 0
-    @: arb c.Lmx 0
-    @: arc c.Lmx 0
-    @: frame2 c.Lmx 0
+    c.Lmx@: ar8 0
+    c.Lmx@: arb 0
+    c.Lmx@: arc 0
+    c.Lmx@: frame2 0
     @@: cellb void 0
     @@: cellc void 0
     size_t: slot_out 0U
-    @: top c.Lmx 0
-    @: referred c.Lmx 0
-    @: built c.Lmx 0
-    @: statement c.Lmx 0
-    @: named c.Lmx 0
-    @: renamed c.Lmx 0
-    @: owner c.Lmx 0
-    @: machine c.Lmx 0
-    @: other_owner c.Lmx 0
+    c.Lmx@: top 0
+    c.Lmx@: referred 0
+    c.Lmx@: built 0
+    c.Lmx@: statement 0
+    c.Lmx@: named 0
+    c.Lmx@: renamed 0
+    c.Lmx@: owner 0
+    c.Lmx@: machine 0
+    c.Lmx@: other_owner 0
     c.LmxEntry: word (cast: (c.LmxEntry) c.stop_first)
-    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@) (@ arena)), 0, c.sizeof(c.LmxArena))
     a := @ arena
     if: c.lmx_arena_open(a) != 0
         check(0, "code links: a private arena opens")
         return
-    root := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    root := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
     if: root = 0 || c.lmx_arena_refs_open_owned(a, root, 2U) != 0
         check(0, "code links: the root Structure opens with two slots")
         c.lmx_arena_release(a)
         return
     root\native := word
-    holder := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    holder := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
     check((cast: (int) (holder != 0 && root\native != 0)), "code links: a frame's head install is construction and keeps the parent's native")
     if: holder = 0
         c.lmx_arena_release(a)
         return
-    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@: void) holder)) = 0 && root\native = 0)), "code links: installing an operation into the root is a write of code")
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@) holder)) = 0 && root\native = 0)), "code links: installing an operation into the root is a write of code")
     root\native := word
     holder\native := word
-    child := (cast: (@: c.Lmx) c.lmx_walk_frame(a, holder, c.LMX_WALK_OP_SET, 2U))
+    child := (cast: (c.Lmx@) c.lmx_walk_frame(a, holder, c.LMX_WALK_OP_SET, 2U))
     check((cast: (int) (child != 0 && holder\native != 0 && root\native != 0)), "code links: making a frame under a holder writes nothing into it")
-    data := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
-    cell := (cast: (@: void) c.lmx_int_new_owned(a))
+    data := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 2U))
+    cell := (cast: (@) c.lmx_int_new_owned(a))
     if: child = 0 || data = 0 || cell = 0
         check(0, "code links: a child frame, a data Structure and an int cell allocate")
         c.lmx_arena_release(a)
         return
-    check((cast: (int) (c.lmx_arena_ref_store(a, holder, 1U, (cast: (@: void) child)) = 0 && holder\native = 0 && root\native = 0)), "code links: installing a code child resets the holder's native and the holders above it")
+    check((cast: (int) (c.lmx_arena_ref_store(a, holder, 1U, (cast: (@) child)) = 0 && holder\native = 0 && root\native = 0)), "code links: installing a code child resets the holder's native and the holders above it")
     data\native := word
     root\native := word
-    check((cast: (int) (c.lmx_arena_ref_store(a, root, 1U, (cast: (@: void) data)) = 0 && root\native != 0)), "code links: installing a data Structure into the root keeps its native")
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 1U, (cast: (@) data)) = 0 && root\native != 0)), "code links: installing a data Structure into the root keeps its native")
     check((cast: (int) (c.lmx_arena_ref_store(a, data, 0U, cell) = 0 && data\native != 0 && root\native != 0)), "code links: a data install keeps native")
-    later := (cast: (@: c.Lmx) c.lmx_walk_frame(a, data, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (later != 0 && c.lmx_arena_ref_store(a, data, 1U, (cast: (@: void) later)) = 0 && data\native = 0 && root\native != 0)), "code links: a code child under a data holder resets the holder, not the root above the data edge")
+    later := (cast: (c.Lmx@) c.lmx_walk_frame(a, data, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (later != 0 && c.lmx_arena_ref_store(a, data, 1U, (cast: (@) later)) = 0 && data\native = 0 && root\native != 0)), "code links: a code child under a data holder resets the holder, not the root above the data edge")
     data\native := word
     holder\native := word
     check((cast: (int) (c.lmx_arena_ref_store(a, holder, 2U, cell) = 0 && holder\native = 0 && root\native = 0)), "code links: a cell installed as an operand of code resets")
@@ -807,96 +807,96 @@ sub: code_links_check ()
     root\native := word
     c.lmx_code_changed_cell(a, cell)
     check((cast: (int) (holder\native != 0 && root\native != 0)), "code links: a cell that left its place of code no longer resets")
-    mark := (cast: (@: c.LmxArenaBlock) c.lmx_arena_mark(a))
-    later := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
+    mark := (cast: (c.LmxArenaBlock@) c.lmx_arena_mark(a))
+    later := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
     check((cast: (int) (later != 0 && c.lmx_arena_ref_store(a, later, 1U, cell) = 0)), "code links: a cell installs as an operand of a holder made after the mark")
-    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@: void) later)) = 0)), "code links: the later holder stands in the root's place of code")
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@) later)) = 0)), "code links: the later holder stands in the root's place of code")
     check((cast: (int) (c.lmx_arena_revert(a, mark) = 0)), "code links: the arena reverts to the mark")
     root\native := word
     c.lmx_code_changed_cell(a, cell)
     check((cast: (int) (root\native != 0)), "code links: the reverted holder's record left with its storage")
     # A cycle of code edges: two operations holding each other; a value written into an operand of one resets both, once.
-    h1 := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
-    h2 := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
-    cell2 := (cast: (@: void) c.lmx_int_new_owned(a))
+    h1 := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    h2 := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    cell2 := (cast: (@) c.lmx_int_new_owned(a))
     if: h1 = 0 || h2 = 0 || cell2 = 0
         check(0, "code links: two frames and a cell for the cycle allocate")
         c.lmx_arena_release(a)
         return
-    check((cast: (int) (c.lmx_arena_ref_store(a, h1, 1U, (cast: (@: void) h2)) = 0 && c.lmx_arena_ref_store(a, h2, 1U, (cast: (@: void) h1)) = 0 && c.lmx_arena_ref_store(a, h2, 2U, cell2) = 0)), "code links: a cycle of two operations builds")
+    check((cast: (int) (c.lmx_arena_ref_store(a, h1, 1U, (cast: (@) h2)) = 0 && c.lmx_arena_ref_store(a, h2, 1U, (cast: (@) h1)) = 0 && c.lmx_arena_ref_store(a, h2, 2U, cell2) = 0)), "code links: a cycle of two operations builds")
     h1\native := word
     h2\native := word
     c.lmx_code_changed_cell(a, cell2)
     check((cast: (int) (h1\native = 0 && h2\native = 0)), "code links: a reset through a cycle of code edges ends and reaches both")
     # Slice 274.  Replacing an operand changes the operation; a change inside what an unchanged operand refers to does not,
     # while a node built for the operation is its code.
-    top := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
-    referred := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
-    built := (cast: (@: c.Lmx) c.lmx_walk_plain(a, top, 2U))
-    named := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
-    renamed := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
-    owner := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
-    machine := (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SOURCE_MACHINE, 2U))
-    if: top = 0 || referred = 0 || built = 0 || named = 0 || renamed = 0 || owner = 0 || machine = 0 || c.lmx_source_name_set(a, (cast: (@: void) named), id_t) != 0 || c.lmx_source_name_set(a, (cast: (@: void) renamed), id_t) != 0
+    top := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    referred := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 2U))
+    built := (cast: (c.Lmx@) c.lmx_walk_plain(a, top, 2U))
+    named := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 1U))
+    renamed := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 1U))
+    owner := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 2U))
+    machine := (cast: (c.Lmx@) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SOURCE_MACHINE, 2U))
+    if: top = 0 || referred = 0 || built = 0 || named = 0 || renamed = 0 || owner = 0 || machine = 0 || c.lmx_source_name_set(a, (cast: (@) named), id_t) != 0 || c.lmx_source_name_set(a, (cast: (@) renamed), id_t) != 0
         check(0, "code links: the nodes of the operand checks allocate")
         c.lmx_arena_release(a)
         return
     top\native := word
-    check((cast: (int) (c.lmx_arena_ref_store(a, top, 1U, (cast: (@: void) referred)) = 0 && top\native = 0)), "code links: replacing an operand is a write of code")
+    check((cast: (int) (c.lmx_arena_ref_store(a, top, 1U, (cast: (@) referred)) = 0 && top\native = 0)), "code links: replacing an operand is a write of code")
     top\native := word
     referred\native := word
-    statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@: void) statement)) = 0 && referred\native = 0 && top\native != 0)), "code links: a write of code inside a referred node drops its word, not the word of the operation that refers to it")
-    check((cast: (int) (c.lmx_arena_ref_store(a, top, 2U, (cast: (@: void) built)) = 0)), "code links: a node built for an operation installs")
+    statement := (cast: (c.Lmx@) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@) statement)) = 0 && referred\native = 0 && top\native != 0)), "code links: a write of code inside a referred node drops its word, not the word of the operation that refers to it")
+    check((cast: (int) (c.lmx_arena_ref_store(a, top, 2U, (cast: (@) built)) = 0)), "code links: a node built for an operation installs")
     top\native := word
-    statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, built, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, built, 0U, (cast: (@: void) statement)) = 0 && top\native = 0)), "code links: a write of code inside a node built for an operation drops the operation's word")
+    statement := (cast: (c.Lmx@) c.lmx_walk_frame(a, built, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, built, 0U, (cast: (@) statement)) = 0 && top\native = 0)), "code links: a write of code inside a node built for an operation drops the operation's word")
     # One operation standing in two places of code is in both.
-    other_owner := (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
-    statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
-    check((cast: (int) (other_owner != 0 && statement != 0 && c.lmx_arena_ref_store(a, other_owner, 0U, (cast: (@: void) statement)) = 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@: void) statement)) = 0)), "code links: one operation installs in two holders")
+    other_owner := (cast: (c.Lmx@) c.lmx_walk_plain(a, root, 1U))
+    statement := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    check((cast: (int) (other_owner != 0 && statement != 0 && c.lmx_arena_ref_store(a, other_owner, 0U, (cast: (@) statement)) = 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@) statement)) = 0)), "code links: one operation installs in two holders")
     other_owner\native := word
     referred\native := word
     check((cast: (int) (c.lmx_arena_ref_store(a, statement, 1U, cell2) = 0 && other_owner\native = 0 && referred\native = 0)), "code links: a write of code inside a shared operation drops the words of both holders")
     # A named node in a slot is that slot's value: the code reads it when it runs.
     referred\native := word
-    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) named)) = 0 && referred\native != 0)), "code links: installing a named Structure keeps the word")
-    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) renamed)) = 0 && referred\native != 0)), "code links: a named Structure replacing a named Structure keeps the word")
-    statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) statement)) = 0 && referred\native = 0)), "code links: an operation arriving over a named Structure is a write of code")
+    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@) named)) = 0 && referred\native != 0)), "code links: installing a named Structure keeps the word")
+    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@) renamed)) = 0 && referred\native != 0)), "code links: a named Structure replacing a named Structure keeps the word")
+    statement := (cast: (c.Lmx@) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 1U, (cast: (@) statement)) = 0 && referred\native = 0)), "code links: an operation arriving over a named Structure is a write of code")
     # Code writes clear native entries. Suitability is checked only on execution.
-    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) machine)) = 0)), "code links: a machine operation installs under a node without a word")
+    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@) machine)) = 0)), "code links: a machine operation installs under a node without a word")
     owner\native := word
-    statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, owner, 1U, (cast: (@: void) statement)) = 0)), "code links: writing code beside a machine operation succeeds")
-    check((cast: (int) (owner\native = 0 && c.lmx_arena_ref_value(owner, 1U) = (cast: (@: void) statement) && c.lmx_range_links_of(a, (cast: (@: void) statement)) != 0)), "code links: the successful write updates the slot and links and clears native")
-    c.memset((cast: (@: void) code_fp), 0, c.sizeof(c.LmxWalkFrame))
-    c.memset((cast: (@: void) (@ code_context)), 0, c.sizeof(c.LmxWalkContext))
+    statement := (cast: (c.Lmx@) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, owner, 1U, (cast: (@) statement)) = 0)), "code links: writing code beside a machine operation succeeds")
+    check((cast: (int) (owner\native = 0 && c.lmx_arena_ref_value(owner, 1U) = (cast: (@) statement) && c.lmx_range_links_of(a, (cast: (@) statement)) != 0)), "code links: the successful write updates the slot and links and clears native")
+    c.memset((cast: (@) code_fp), 0, c.sizeof(c.LmxWalkFrame))
+    c.memset((cast: (@) (@ code_context)), 0, c.sizeof(c.LmxWalkContext))
     code_fp\arena := a
-    code_fp\context := (cast: (@: void) (@ code_context))
+    code_fp\context := (cast: (@) (@ code_context))
     check((cast: (int) (c.lmx_walk_eval(code_fp, machine, @ code_result) = c.LMX_WALK_UNSUPPORTED)), "code links: a reached machine operation is still unsupported by the walker")
-    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) statement)) = 0 && owner\native = 0 && c.lmx_arena_ref_value(owner, 0U) = (cast: (@: void) statement))), "code links: a write taking the machine operation out is admitted and drops the word")
+    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@) statement)) = 0 && owner\native = 0 && c.lmx_arena_ref_value(owner, 0U) = (cast: (@) statement))), "code links: a write taking the machine operation out is admitted and drops the word")
     # Two Arrays whose backings share one REF interval: the pool's chunk step is the first request's count (eight), so
     # the second Array fills a new chunk's first two cells and the third, made after a mark, the next two; each
     # descriptor is its own one-cell chunk.  The third's descriptor leaves with the revert while the second lives.
-    ar8 := (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 8U, a))
-    arb := (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
-    frame2 := (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
-    mark := (cast: (@: c.LmxArenaBlock) c.lmx_arena_mark(a))
-    arc := (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
+    ar8 := (cast: (c.Lmx@) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 8U, a))
+    arb := (cast: (c.Lmx@) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
+    frame2 := (cast: (c.Lmx@) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
+    mark := (cast: (c.LmxArenaBlock@) c.lmx_arena_mark(a))
+    arc := (cast: (c.Lmx@) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
     if: ar8 = 0 || arb = 0 || arc = 0 || frame2 = 0
         check(0, "code links: three reference Arrays and a frame allocate")
         c.lmx_arena_release(a)
         return
-    cellb := (cast: (@@: void) c.lmx_arena_ref_cell(arb, 0U))
-    cellc := (cast: (@@: void) c.lmx_arena_ref_cell(arc, 0U))
-    check((cast: (int) (cellb != 0 && cellc != 0 && c.lmx_range_entry_at(a, (cast: (@: void) cellb)) = c.lmx_range_entry_at(a, (cast: (@: void) cellc)))), "code links: the second and third Arrays' backings share one REF interval")
-    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellc), @ slot_out) = arc && slot_out = 0U)), "code links: a REF cell names its Array and slot")
-    check((cast: (int) (c.lmx_arena_ref_store(a, arc, 0U, (cast: (@: void) frame2)) = 0 && c.lmx_range_links_of(a, (cast: (@: void) frame2)) != 0)), "code links: an operation installed in the third Array is recorded")
+    cellb := (cast: (@@) c.lmx_arena_ref_cell(arb, 0U))
+    cellc := (cast: (@@) c.lmx_arena_ref_cell(arc, 0U))
+    check((cast: (int) (cellb != 0 && cellc != 0 && c.lmx_range_entry_at(a, (cast: (@) cellb)) = c.lmx_range_entry_at(a, (cast: (@) cellc)))), "code links: the second and third Arrays' backings share one REF interval")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@) cellc), @ slot_out) = arc && slot_out = 0U)), "code links: a REF cell names its Array and slot")
+    check((cast: (int) (c.lmx_arena_ref_store(a, arc, 0U, (cast: (@) frame2)) = 0 && c.lmx_range_links_of(a, (cast: (@) frame2)) != 0)), "code links: an operation installed in the third Array is recorded")
     check((cast: (int) (c.lmx_arena_revert(a, mark) = 0)), "code links: the arena reverts to the mark before the third Array")
-    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellc), @ slot_out) = 0)), "code links: the departed Array's cells in the shared REF interval have no owner")
-    check((cast: (int) (c.lmx_range_links_of(a, (cast: (@: void) frame2)) = 0)), "code links: the record naming the departed Array left with it")
-    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellb), @ slot_out) = arb && c.lmx_arena_ref_store(a, arb, 1U, cell) = 0)), "code links: the surviving Array of the shared interval keeps its owner and takes a store")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@) cellc), @ slot_out) = 0)), "code links: the departed Array's cells in the shared REF interval have no owner")
+    check((cast: (int) (c.lmx_range_links_of(a, (cast: (@) frame2)) = 0)), "code links: the record naming the departed Array left with it")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@) cellb), @ slot_out) = arb && c.lmx_arena_ref_store(a, arb, 1U, cell) = 0)), "code links: the surviving Array of the shared interval keeps its owner and takes a store")
     check((cast: (int) (c.lmx_arena_release(a) = 0)), "code links: the arena releases with its side storage")
     return
 end: code_links_check
@@ -907,46 +907,46 @@ end: code_links_check
 # absent; a registered working cell of a native frame resolves; the records leave in order and the chain is empty.
 sub: activation_check ()
     c.LmxArena: arena
-    @: a c.LmxArena 0
-    @: root c.Lmx 0
+    c.LmxArena@: a 0
+    c.Lmx@: root 0
     # The check's own names are its input, normalized once (IDENTIFIER-CODES).
     size_t: id_x c.lmx_ids_code("x", 1U)
     size_t: id_y c.lmx_ids_code("y", 1U)
     size_t: id_z c.lmx_ids_code("z", 1U)
     size_t: id_q c.lmx_ids_code("q", 1U)
-    @: fnode c.Lmx 0
-    @: header c.Lmx 0
-    @: gnode c.Lmx 0
-    @: gheader c.Lmx 0
+    c.Lmx@: fnode 0
+    c.Lmx@: header 0
+    c.Lmx@: gnode 0
+    c.Lmx@: gheader 0
     c.LmxActivation: ra
     c.LmxActivation: rb
     c.LmxActivation: rc
     c.LmxActivation: rd
-    @: vals c.LmxWalkValue 0
-    @: gvals c.LmxWalkValue 0
+    c.LmxWalkValue@: vals 0
+    c.LmxWalkValue@: gvals 0
     c.LmxWalkValue: found
-    @: fp c.LmxWalkValue @ found
-    @: v0 c.LmxWalkValue 0
-    @: g0 c.LmxWalkValue 0
+    c.LmxWalkValue@: fp @ found
+    c.LmxWalkValue@: v0 0
+    c.LmxWalkValue@: g0 0
     int: cellv 5
-    @: fe4 c.Lmx 0
-    @: fe2 c.Lmx 0
+    c.Lmx@: fe4 0
+    c.Lmx@: fe2 0
     c.LmxActivation: rf
     c.LmxActivation: rg
     c.LmxActivation: rw
     c.LmxActivation: rh
     c.LmxWalkFrame: fr
-    @: frp c.LmxWalkFrame @ fr
+    c.LmxWalkFrame@: frp @ fr
     c.LmxWalkWork: row
-    @: rp c.LmxWalkWork @ row
+    c.LmxWalkWork@: rp @ row
     int: cellx 9
-    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    vals := (cast: (@: c.LmxWalkValue) c.calloc(2U, c.sizeof(c.LmxWalkValue)))
-    gvals := (cast: (@: c.LmxWalkValue) c.calloc(1U, c.sizeof(c.LmxWalkValue)))
+    c.memset((cast: (@) (@ arena)), 0, c.sizeof(c.LmxArena))
+    vals := (cast: (c.LmxWalkValue@) c.calloc(2U, c.sizeof(c.LmxWalkValue)))
+    gvals := (cast: (c.LmxWalkValue@) c.calloc(1U, c.sizeof(c.LmxWalkValue)))
     if: vals = 0 || gvals = 0
         check(0, "activation chain: two input arrays allocate")
         return
-    c.memset((cast: (@: void) fp), 0, c.sizeof(c.LmxWalkValue))
+    c.memset((cast: (@) fp), 0, c.sizeof(c.LmxWalkValue))
     v0 := vals
     g0 := gvals
     a := @ arena
@@ -954,54 +954,54 @@ sub: activation_check ()
         check(0, "activation chain: a private arena opens")
         return
     check((cast: (int) (a\activation = 0)), "activation chain: an open arena has no activation")
-    root := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
-    fnode := (cast: (@: c.Lmx) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
-    gnode := (cast: (@: c.Lmx) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
+    root := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
+    fnode := (cast: (c.Lmx@) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
+    gnode := (cast: (c.Lmx@) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
     if: root = 0 || fnode = 0 || gnode = 0 || c.lmx_arena_refs_open_owned(a, fnode, 4U) != 0 || c.lmx_arena_refs_open_owned(a, gnode, 4U) != 0
         check(0, "activation chain: two callables allocate")
         c.lmx_arena_release(a)
         return
-    header := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
-    gheader := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    header := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
+    gheader := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
     if: header = 0 || gheader = 0 || c.lmx_arena_refs_open_owned(a, header, 2U) != 0 || c.lmx_arena_refs_open_owned(a, gheader, 1U) != 0
         check(0, "activation chain: two args headers allocate")
         c.lmx_arena_release(a)
         return
-    check((cast: (int) (c.lmx_arena_ref_store(a, fnode, 0U, (cast: (@: void) header)) = 0 && c.lmx_arena_ref_store(a, gnode, 0U, (cast: (@: void) gheader)) = 0)), "activation chain: the headers stand in part 0")
-    check((cast: (int) (c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 0U)), id_x) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 1U)), id_y) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(gheader, 0U)), id_x) = 0)), "activation chain: the header cells carry their spellings")
+    check((cast: (int) (c.lmx_arena_ref_store(a, fnode, 0U, (cast: (@) header)) = 0 && c.lmx_arena_ref_store(a, gnode, 0U, (cast: (@) gheader)) = 0)), "activation chain: the headers stand in part 0")
+    check((cast: (int) (c.lmx_source_name_set(a, (cast: (@) c.lmx_arena_ref_cell(header, 0U)), id_x) = 0 && c.lmx_source_name_set(a, (cast: (@) c.lmx_arena_ref_cell(header, 1U)), id_y) = 0 && c.lmx_source_name_set(a, (cast: (@) c.lmx_arena_ref_cell(gheader, 0U)), id_x) = 0)), "activation chain: the header cells carry their spellings")
     check((cast: (int) (c.lmx_walk_value_num(v0, c.LMX_TYPE_INT, 7U) = c.LMX_WALK_OK)), "activation chain: the caller's input x is 7")
-    check((cast: (int) (c.lmx_activation_push(a, @ ra, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && a\activation = (cast: (@: void) (@ ra)))), "activation chain: the caller's record is current")
-    check((cast: (int) (c.lmx_activation_push(a, @ rb, 2, 0, 0, 0, 0U, 0) = 0 && rb\parent = (cast: (@: c.LmxActivation) (@ ra)))), "activation chain: a forwarder's record follows with nothing in it")
+    check((cast: (int) (c.lmx_activation_push(a, @ ra, 2, fnode, 0, (cast: (@) vals), 2U, 0) = 0 && a\activation = (cast: (@) (@ ra)))), "activation chain: the caller's record is current")
+    check((cast: (int) (c.lmx_activation_push(a, @ rb, 2, 0, 0, 0, 0U, 0) = 0 && rb\parent = (cast: (c.LmxActivation@) (@ ra)))), "activation chain: a forwarder's record follows with nothing in it")
     c.lmx_walk_value_free_mark(g0)
-    check((cast: (int) (c.lmx_activation_push(a, @ rc, 2, gnode, 0, (cast: (@: void) gvals), 1U, 0) = 0)), "activation chain: the callee's record is current")
+    check((cast: (int) (c.lmx_activation_push(a, @ rc, 2, gnode, 0, (cast: (@) gvals), 1U, 0) = 0)), "activation chain: the callee's record is current")
     check((cast: (int) (c.lmx_activation_resolve_input(a, 0U, 0, 0, 0U, 0) = 1 && g0\present != 0 && g0\number = 7 && g0\kind = c.LMX_WALK_VALUE_NUMBER)), "activation chain: the callee's free input x resolves through the forwarder to the caller's 7")
-    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rb)), id_z, fp) = 0 && fp\present = 0)), "activation chain: an unbound name is absent")
-    check((cast: (int) (c.lmx_activation_bind(a, id_q, (cast: (@: void) (@ cellv)), c.LMX_TYPE_INT, 0) = 0)), "activation chain: the callee registers a working cell q")
-    check((cast: (int) (c.lmx_activation_push(a, @ rd, 2, 0, 0, 0, 0U, 0) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), id_q, fp) = 1 && fp\present != 0 && fp\number = 5)), "activation chain: a nested activation resolves the registered cell q to 5")
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rb)), id_z, fp) = 0 && fp\present = 0)), "activation chain: an unbound name is absent")
+    check((cast: (int) (c.lmx_activation_bind(a, id_q, (cast: (@) (@ cellv)), c.LMX_TYPE_INT, 0) = 0)), "activation chain: the callee registers a working cell q")
+    check((cast: (int) (c.lmx_activation_push(a, @ rd, 2, 0, 0, 0, 0U, 0) = 0 && c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rc)), id_q, fp) = 1 && fp\present != 0 && fp\number = 5)), "activation chain: a nested activation resolves the registered cell q to 5")
     cellv := 6
-    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), id_q, fp) = 1 && fp\number = 6)), "activation chain: a working cell is read at the resolution, not at the registration")
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rc)), id_q, fp) = 1 && fp\number = 6)), "activation chain: a working cell is read at the resolution, not at the registration")
     # The order within one record (book :729/:779; Codex P1-B1-1): a written formal -- an args header entry of four
     # fields -- before a working cell; a working cell before an inherited free input (an entry of two fields).
-    fe4 := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
-    fe2 := (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    fe4 := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
+    fe2 := (cast: (c.Lmx@) c.lmx_node_new_owned(a))
     if: fe4 = 0 || fe2 = 0 || c.lmx_arena_refs_open_owned(a, fe4, 4U) != 0 || c.lmx_arena_refs_open_owned(a, fe2, 2U) != 0
         check(0, "activation chain: two header entries allocate")
     else:
-        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe4)) = 0 && c.lmx_arena_ref_store(a, header, 1U, (cast: (@: void) fe2)) = 0)), "activation chain: x has a formal's header entry, y a free input's")
+        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@) fe4)) = 0 && c.lmx_arena_ref_store(a, header, 1U, (cast: (@) fe2)) = 0)), "activation chain: x has a formal's header entry, y a free input's")
         check((cast: (int) (c.lmx_activation_input_formal(a, fnode, 0U) = 1 && c.lmx_activation_input_formal(a, fnode, 1U) = 0 && c.lmx_activation_input_formal(a, gnode, 0U) = 0)), "activation chain: the header tells a formal from a free input by its entry")
-        check((cast: (int) (c.lmx_activation_push(a, @ rf, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && c.lmx_activation_bind(a, id_x, (cast: (@: void) (@ cellx)), c.LMX_TYPE_INT, 0) = 0 && c.lmx_activation_push(a, @ rg, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a record with the formal x 7 and a working cell x 9, then its callee's record")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), id_x, fp) = 1 && fp\number = 7)), "activation chain: the written formal x is the nearest binding of its record")
-        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe2)) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), id_x, fp) = 1 && fp\number = 9)), "activation chain: the working cell x shadows the inherited free input x of its record")
+        check((cast: (int) (c.lmx_activation_push(a, @ rf, 2, fnode, 0, (cast: (@) vals), 2U, 0) = 0 && c.lmx_activation_bind(a, id_x, (cast: (@) (@ cellx)), c.LMX_TYPE_INT, 0) = 0 && c.lmx_activation_push(a, @ rg, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a record with the formal x 7 and a working cell x 9, then its callee's record")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rf)), id_x, fp) = 1 && fp\number = 7)), "activation chain: the written formal x is the nearest binding of its record")
+        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@) fe2)) = 0 && c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rf)), id_x, fp) = 1 && fp\number = 9)), "activation chain: the working cell x shadows the inherited free input x of its record")
         # A walker frame's record (kind 1): the rows its entry loaded are its working cells; the other fields of its
         # data node are no binding (Codex P1-B1-2).
-        c.memset((cast: (@: void) frp), 0, c.sizeof(c.LmxWalkFrame))
-        c.memset((cast: (@: void) rp), 0, c.sizeof(c.LmxWalkWork))
+        c.memset((cast: (@) frp), 0, c.sizeof(c.LmxWalkFrame))
+        c.memset((cast: (@) rp), 0, c.sizeof(c.LmxWalkWork))
         rp\slot := c.lmx_arena_ref_cell(header, 1U)
-        frp\work := (cast: (@: void) rp)
+        frp\work := (cast: (@) rp)
         frp\nwork := 1U
-        check((cast: (int) (c.lmx_walk_value_num((cast: (@: c.LmxWalkValue) (@ rp\value)), c.LMX_TYPE_INT, 4U) = c.LMX_WALK_OK && c.lmx_activation_push(a, @ rw, 1, 0, 0, 0, 0U, (cast: (@: void) frp)) = 0 && c.lmx_activation_push(a, @ rh, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a walker frame's record with the row y 4, then its callee's record")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), id_y, fp) = 1 && fp\number = 4)), "activation chain: the walker's row y resolves for its callee")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), id_x, fp) = 1 && fp\number = 9)), "activation chain: a name the walker frame holds no row of climbs to the native caller's working cell")
+        check((cast: (int) (c.lmx_walk_value_num((cast: (c.LmxWalkValue@) (@ rp\value)), c.LMX_TYPE_INT, 4U) = c.LMX_WALK_OK && c.lmx_activation_push(a, @ rw, 1, 0, 0, 0, 0U, (cast: (@) frp)) = 0 && c.lmx_activation_push(a, @ rh, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a walker frame's record with the row y 4, then its callee's record")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rw)), id_y, fp) = 1 && fp\number = 4)), "activation chain: the walker's row y resolves for its callee")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (c.LmxActivation@) (@ rw)), id_x, fp) = 1 && fp\number = 9)), "activation chain: a name the walker frame holds no row of climbs to the native caller's working cell")
         c.lmx_activation_pop(a, @ rh)
         c.lmx_activation_pop(a, @ rw)
         c.lmx_activation_pop(a, @ rg)
@@ -1013,26 +1013,26 @@ sub: activation_check ()
     c.lmx_activation_pop(a, @ ra)
     check((cast: (int) (a\activation = 0 && rc\bindings = 0)), "activation chain: the records leave in order and the chain is empty")
     check((cast: (int) (c.lmx_arena_release(a) = 0)), "activation chain: the arena releases")
-    c.free((cast: (@: void) vals))
-    c.free((cast: (@: void) gvals))
+    c.free((cast: (@) vals))
+    c.free((cast: (@) gvals))
     return
 end: activation_check
 
-fn: dispatch_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @@: dispatch_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.dispatch_arena))
-    @: dispatch_calls_cell int (cast: (@: int) (@ c.dispatch_calls))
-    @@: dispatch_selected_cell c.Lmx (cast: (@@: c.Lmx) (@ c.dispatch_selected))
-    @: dispatch_throws_cell int (cast: (@: int) (@ c.dispatch_throws))
-    @@: dispatch_payload_cell c.Lmx (cast: (@@: c.Lmx) (@ c.dispatch_payload))
-    @: dispatch_second_cells_cell size_t (cast: (@: size_t) (@ c.dispatch_second_cells))
-    @: pool c.LmxPool dispatch_arena_cell[0]\arrays
+fn: dispatch_probe (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxArena@@: dispatch_arena_cell (cast: (c.LmxArena@@) (@ c.dispatch_arena))
+    int@: dispatch_calls_cell (cast: (int@) (@ c.dispatch_calls))
+    c.Lmx@@: dispatch_selected_cell (cast: (c.Lmx@@) (@ c.dispatch_selected))
+    int@: dispatch_throws_cell (cast: (int@) (@ c.dispatch_throws))
+    c.Lmx@@: dispatch_payload_cell (cast: (c.Lmx@@) (@ c.dispatch_payload))
+    size_t@: dispatch_second_cells_cell (cast: (size_t@) (@ c.dispatch_second_cells))
+    c.LmxPool@: pool dispatch_arena_cell[0]\arrays
     size_t: occupied 0U
     size_t: expected_wide 4294967303U
     @: pointer void 0
     dispatch_calls_cell[0] := dispatch_calls_cell[0] + 1
     # The selected copied occurrence determines unary call data by its arena
     # role: an fn uses its var; an ordinary Structure uses itself.
-    check((cast: (int) (owner = (cast: (@: void) c.lmx_call_unary_data(dispatch_arena_cell[0], dispatch_selected_cell[0])))), "dispatch uses the selected copied occurrence's data as owner")
+    check((cast: (int) (owner = (cast: (@) c.lmx_call_unary_data(dispatch_arena_cell[0], dispatch_selected_cell[0])))), "dispatch uses the selected copied occurrence's data as owner")
     check((cast: (int) (nargs = 5U && refs != 0 && dest != 0 && out != 0)), "dispatch passes the complete typed signature")
     if: nargs != 5U || refs = 0 || dest = 0 || out = 0
         return: 1
@@ -1046,7 +1046,7 @@ fn: dispatch_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @
         # A result-looking destination must not become the successful value
         # when status selects the separately allocated throw payload.
         c.lmx_int_store_known(dest, 999)
-        out[0] := (cast: (@: void) dispatch_payload_cell[0])
+        out[0] := (cast: (@) dispatch_payload_cell[0])
         return: 1
     while: pool != 0
         occupied := occupied + c.lmx_pool_count(pool)
@@ -1061,23 +1061,23 @@ fn: dispatch_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @
     return: 0
 end: dispatch_probe
 
-fn: dispatch_rewrite_return (@: arena c.LmxArena; @: frame c.Lmx) int
-    @: frame_fields c.VoidArray 0
-    @: child_fields c.VoidArray 0
+fn: dispatch_rewrite_return (c.LmxArena@: arena; c.Lmx@: frame) int
+    c.VoidArray@: frame_fields 0
+    c.VoidArray@: child_fields 0
     frame_fields := 0
     if: frame != 0
         frame_fields := @ frame\array
     ---
     size_t: i 0U
     int: found 0
-    @: child c.Lmx 0
+    c.Lmx@: child 0
     @: value void 0
     @: head void 0
     if: frame = 0
         return: 0
     head := c.lmx_arena_ref_value(frame, 0U)
     if: frame_fields\size = 2U && c.lmx_domain_kind(arena, head) = c.LMX_DOMAIN_KIND_OP
-        @: typed_head c.LmxOp (cast: (@: c.LmxOp) head)
+        c.LmxOp@: typed_head (cast: (c.LmxOp@) head)
         if: typed_head\code % c.LMX_WALK_OP_COUNT = c.LMX_WALK_OP_RET
             child := c.lmx_arena_ref_struct(frame, 1U)
             child_fields := 0
@@ -1095,7 +1095,7 @@ fn: dispatch_rewrite_return (@: arena c.LmxArena; @: frame c.Lmx) int
     while: i < frame_fields\size
         value := c.lmx_arena_ref_value(frame, i)
         if: value != 0 && c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-            child := (cast: (@: c.Lmx) value)
+            child := (cast: (c.Lmx@) value)
             child_fields := 0
             if: child != 0
                 child_fields := @ child\array
@@ -1108,21 +1108,21 @@ fn: dispatch_rewrite_return (@: arena c.LmxArena; @: frame c.Lmx) int
     return: found
 end: dispatch_rewrite_return
 
-fn: dispatch_install (@: arena c.LmxArena; @: graph c.Lmx; int: original_slot; int: walked_slot; int: caller_slot) int
-    @: graph_fields c.VoidArray 0
+fn: dispatch_install (c.LmxArena@: arena; c.Lmx@: graph; int: original_slot; int: walked_slot; int: caller_slot) int
+    c.VoidArray@: graph_fields 0
     graph_fields := 0
     if: graph != 0
         graph_fields := @ graph\array
     ---
-    @@: dispatch_selected_cell c.Lmx (cast: (@@: c.Lmx) (@ c.dispatch_selected))
-    @@: dispatch_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.dispatch_arena))
-    @: dispatch_throws_cell int (cast: (@: int) (@ c.dispatch_throws))
-    @@: dispatch_payload_cell c.Lmx (cast: (@@: c.Lmx) (@ c.dispatch_payload))
-    @: original c.Lmx c.lmx_arena_ref_struct(graph, (cast: (size_t) original_slot))
-    @: walked c.Lmx c.lmx_arena_ref_struct(graph, (cast: (size_t) walked_slot))
-    @: caller c.Lmx c.lmx_arena_ref_struct(graph, (cast: (size_t) caller_slot))
-    @: holder c.Lmx 0
-    @: copy c.Lmx 0
+    c.Lmx@@: dispatch_selected_cell (cast: (c.Lmx@@) (@ c.dispatch_selected))
+    c.LmxArena@@: dispatch_arena_cell (cast: (c.LmxArena@@) (@ c.dispatch_arena))
+    int@: dispatch_throws_cell (cast: (int@) (@ c.dispatch_throws))
+    c.Lmx@@: dispatch_payload_cell (cast: (c.Lmx@@) (@ c.dispatch_payload))
+    c.Lmx@: original c.lmx_arena_ref_struct(graph, (cast: (size_t) original_slot))
+    c.Lmx@: walked c.lmx_arena_ref_struct(graph, (cast: (size_t) walked_slot))
+    c.Lmx@: caller c.lmx_arena_ref_struct(graph, (cast: (size_t) caller_slot))
+    c.Lmx@: holder 0
+    c.Lmx@: copy 0
     @: value void 0
     size_t: i 0U
     int: paths 0
@@ -1135,14 +1135,14 @@ fn: dispatch_install (@: arena c.LmxArena; @: graph c.Lmx; int: original_slot; i
     while: i < graph_fields\size
         value := c.lmx_arena_ref_value(graph, i)
         if: value != 0 && c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-            holder := (cast: (@: c.Lmx) value)
-            if: c.lmx_arena_ref_value(holder, 0U) = (cast: (@: void) original)
+            holder := (cast: (c.Lmx@) value)
+            if: c.lmx_arena_ref_value(holder, 0U) = (cast: (@) original)
                 paths := paths + 1
                 if: c.lmx_graph_copy_owned(original, arena, arena, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0
                     return: 1
                 copy\parent := holder
                 copy\native := (cast: (c.LmxEntry) c.dispatch_probe)
-                if: c.lmx_arena_ref_store(arena, holder, 0U, (cast: (@: void) copy)) != 0
+                if: c.lmx_arena_ref_store(arena, holder, 0U, (cast: (@) copy)) != 0
                     return: 1
                 dispatch_selected_cell[0] := copy
             ---
@@ -1167,23 +1167,23 @@ fn: dispatch_install (@: arena c.LmxArena; @: graph c.Lmx; int: original_slot; i
 end: dispatch_install
 
 fn: arg (int: at) int
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     if: at < 0 || at >= gargc_cell[0]
         return: -1
     return: c.atoi(gargv_cell[0][at])
 end: arg
 
-fn: inspect_profile_ranges (@: arena c.LmxArena) int
-    @: failures_cell int (cast: (@: int) (@ c.failures))
-    @: profile_complete_seen_cell int (cast: (@: int) (@ c.profile_complete_seen))
+fn: inspect_profile_ranges (c.LmxArena@: arena) int
+    int@: failures_cell (cast: (int@) (@ c.failures))
+    int@: profile_complete_seen_cell (cast: (int@) (@ c.profile_complete_seen))
     size_t: root 0U
     size_t: index
     size_t: found
     int: before failures_cell[0]
-    @: physical_profile c.Lmx
-    @: range c.LmxRange
-    @: pool c.LmxPool
+    c.Lmx@: physical_profile
+    c.LmxRange@: range
+    c.LmxPool@: pool
     profile_complete_seen_cell[0] := profile_complete_seen_cell[0] + 1
     while: root < c.l2_program_qualified_count()
         physical_profile := root_profile(arena, c.l2_program_qualified_at(root))
@@ -1205,20 +1205,20 @@ fn: inspect_profile_ranges (@: arena c.LmxArena) int
     return: failures_cell[0] = before
 end: inspect_profile_ranges
 
-sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena)
-    @: result_fields c.VoidArray 0
-    @: copied_fields c.VoidArray 0
-    @: source_fields c.VoidArray 0
-    @: copied_array_fields c.VoidArray 0
-    @: source_array_fields c.VoidArray 0
+sub: inspect_merge (c.Lmx@@: operands; size_t: count; c.Lmx@: result; c.LmxArena@: src_arena; c.LmxArena@: dst_arena)
+    c.VoidArray@: result_fields 0
+    c.VoidArray@: copied_fields 0
+    c.VoidArray@: source_fields 0
+    c.VoidArray@: copied_array_fields 0
+    c.VoidArray@: source_array_fields 0
     result_fields := 0
     if: result != 0
         result_fields := @ result\array
     ---
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
-    @: merge_calls_cell int (cast: (@: int) (@ c.merge_calls))
-    @: merge_facts_seen_cell int (cast: (@: int) (@ c.merge_facts_seen))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
+    int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))
+    int@: merge_facts_seen_cell (cast: (int@) (@ c.merge_facts_seen))
     int: at 2
     int: width
     int: slot
@@ -1227,10 +1227,10 @@ sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_a
     int: ty
     @: value void 0
     @: original void 0
-    @: copied c.Lmx 0
-    @: source c.Lmx 0
-    @: copied_array c.LmxArray 0
-    @: source_array c.LmxArray 0
+    c.Lmx@: copied 0
+    c.Lmx@: source 0
+    c.LmxArray@: copied_array 0
+    c.LmxArray@: source_array 0
     while: at < gargc_cell[0]
         width := merge_fact_width(gargv_cell[0][at])
         if: width != 0 && at + width <= gargc_cell[0]
@@ -1256,8 +1256,8 @@ sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_a
                         src := arg(at + 4)
                         original := 0
                         if: op >= 0 && (cast: (size_t) op) < count && operands[op] != 0 && src >= 0
-                            @: operand c.Lmx operands[op]
-                            @: operand_fields c.VoidArray @ operand\array
+                            c.Lmx@: operand operands[op]
+                            c.VoidArray@: operand_fields @ operand\array
                             if: (cast: (size_t) src) < operand_fields\size
                                 original := c.lmx_arena_ref_value(operands[op], (cast: (size_t) src))
                             ---
@@ -1269,12 +1269,12 @@ sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_a
                         if: c.strcmp(gargv_cell[0][at], "merge_native") = 0 || c.strcmp(gargv_cell[0][at], "merge_child") = 0
                             check((cast: (int) (value != 0 && original != 0 && c.lmx_domain_kind(dst_arena, value) = c.LMX_KIND_STRUCT && c.lmx_domain_kind(src_arena, original) = c.LMX_KIND_STRUCT)), "observed callable pair has Structure descriptors")
                             if: value != 0 && original != 0 && c.lmx_domain_kind(dst_arena, value) = c.LMX_KIND_STRUCT && c.lmx_domain_kind(src_arena, original) = c.LMX_KIND_STRUCT
-                                copied := (cast: (@: c.Lmx) value)
+                                copied := (cast: (c.Lmx@) value)
                                 copied_fields := 0
                                 if: copied != 0
                                     copied_fields := @ copied\array
                                 ---
-                                source := (cast: (@: c.Lmx) original)
+                                source := (cast: (c.Lmx@) original)
                                 source_fields := 0
                                 if: source != 0
                                     source_fields := @ source\array
@@ -1293,12 +1293,12 @@ sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_a
                         if: c.strcmp(gargv_cell[0][at], "merge_array") = 0
                             check((cast: (int) (value != 0 && original != 0 && c.lmx_domain_kind(dst_arena, value) = c.LMX_KIND_ARRAY && c.lmx_domain_kind(src_arena, original) = c.LMX_KIND_ARRAY)), "observed pair has Array descriptors")
                             if: value != 0 && original != 0 && c.lmx_domain_kind(dst_arena, value) = c.LMX_KIND_ARRAY && c.lmx_domain_kind(src_arena, original) = c.LMX_KIND_ARRAY
-                                copied_array := (cast: (@: c.LmxArray) value)
+                                copied_array := (cast: (c.LmxArray@) value)
                                 copied_array_fields := 0
                                 if: copied_array != 0
                                     copied_array_fields := @ copied_array\array
                                 ---
-                                source_array := (cast: (@: c.LmxArray) original)
+                                source_array := (cast: (c.LmxArray@) original)
                                 source_array_fields := 0
                                 if: source_array != 0
                                     source_array_fields := @ source_array\array
@@ -1316,13 +1316,13 @@ sub: inspect_merge (@@: operands c.Lmx; size_t: count; @: result c.Lmx; @: src_a
     ---
 end: inspect_merge
 
-fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
-    @: value c.Lmx 0
-    @: other c.Lmx 0
-    @: member c.Lmx 0
-    @: physical_profile c.Lmx 0
+fn: inspect (c.LmxArena@: arena; c.Lmx@: graph) int
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
+    c.Lmx@: value 0
+    c.Lmx@: other 0
+    c.Lmx@: member 0
+    c.Lmx@: physical_profile 0
     @: cell void 0
     @: field void 0
     size_t: produced c.l2_program_qualified_count()
@@ -1336,7 +1336,7 @@ fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
     check((cast: (int) (graph != 0 && c.l2_program_graph() = graph)), "the builder built the program unit in R0's own graph")
     # R0's graph is independent: the host above it is Message supervision, not a lexical space.
     check((cast: (int) (graph != 0 && graph\parent = 0)), "program unit is a lexical root: its parent Message is supervision, not a lexical node")
-    check((cast: (int) (c.lmx_domain_kind(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT && c.lmx_domain_type(arena, (cast: (@: void) graph)) = c.LMX_TYPE_STRUCT)), "program unit is a live Structure of R0's arena")
+    check((cast: (int) (c.lmx_domain_kind(arena, (cast: (@) graph)) = c.LMX_KIND_STRUCT && c.lmx_domain_type(arena, (cast: (@) graph)) = c.LMX_TYPE_STRUCT)), "program unit is a live Structure of R0's arena")
     check((cast: (int) (expected >= 0 && produced = (cast: (size_t) expected))), "producer count is the translation-known number of qualified roots")
     if: expected < 0 || produced != (cast: (size_t) expected)
         return: 0
@@ -1352,9 +1352,9 @@ fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
         else:
             physical_profile := root_profile(arena, value)
             check((cast: (int) (value\parent = 0)), "qualified root remains parentless")
-            check((cast: (int) (c.lmx_domain_kind(arena, (cast: (@: void) value)) = c.LMX_KIND_STRUCT && c.lmx_domain_type(arena, (cast: (@: void) value)) = c.LMX_TYPE_STRUCT)), "qualified root is an exact Structure range value")
-            check((cast: (int) (physical_profile != 0 && sealed_here(arena, (cast: (@: void) value)) != 0)), "qualified root has a nonzero exact profile in a sealed owner range")
-            check((cast: (int) (sealed_here(arena, (cast: (@: void) physical_profile)) != 0 && c.lmx_domain_kind(arena, (cast: (@: void) physical_profile)) = c.LMX_KIND_STRUCT)), "receiver-expression profile is itself a sealed physical Structure")
+            check((cast: (int) (c.lmx_domain_kind(arena, (cast: (@) value)) = c.LMX_KIND_STRUCT && c.lmx_domain_type(arena, (cast: (@) value)) = c.LMX_TYPE_STRUCT)), "qualified root is an exact Structure range value")
+            check((cast: (int) (physical_profile != 0 && sealed_here(arena, (cast: (@) value)) != 0)), "qualified root has a nonzero exact profile in a sealed owner range")
+            check((cast: (int) (sealed_here(arena, (cast: (@) physical_profile)) != 0 && c.lmx_domain_kind(arena, (cast: (@) physical_profile)) = c.LMX_KIND_STRUCT)), "receiver-expression profile is itself a sealed physical Structure")
             j := 0
             while: j < i
                 if: c.l2_program_qualified_at((cast: (size_t) j)) = value
@@ -1414,7 +1414,7 @@ fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
             if: c.strcmp(gargv_cell[0][at], "same") = 0 && at + 3 < gargc_cell[0]
                 value := c.l2_program_qualified_at((cast: (size_t) arg(at + 1)))
                 other := c.l2_program_qualified_at((cast: (size_t) arg(at + 3)))
-                check((cast: (int) (other != 0 && c.lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = (cast: (@: void) other))), "same field retains the other root's exact physical reference")
+                check((cast: (int) (other != 0 && c.lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = (cast: (@) other))), "same field retains the other root's exact physical reference")
                 at := at + 4
             else:
                 if: c.strcmp(gargv_cell[0][at], "slot") = 0 && at + 4 < gargc_cell[0]
@@ -1422,7 +1422,7 @@ fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
                     other := c.l2_program_qualified_at((cast: (size_t) arg(at + 3)))
                     cell := c.lmx_arena_ref_value(other, (cast: (size_t) arg(at + 4)))
                     check((cast: (int) (cell != 0 && c.lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = cell)), "slot field retains the other branch member's exact physical reference")
-                    member := (cast: (@: c.Lmx) cell)
+                    member := (cast: (c.Lmx@) cell)
                     check((cast: (int) (member != 0 && member\parent = other && c.lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0)), "slot member keeps its lexical parent and exact sealed profile")
                     at := at + 5
                 else:
@@ -1449,17 +1449,17 @@ fn: inspect (@: arena c.LmxArena; @: graph c.Lmx) int
     return: 1
 end: inspect
 
-fn: shape_path (@: arena c.LmxArena; @: graph c.Lmx; @: at int; int: omit_last) @: void
-    @: holder_fields c.VoidArray 0
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+fn: shape_path (c.LmxArena@: arena; c.Lmx@: graph; int@: at; int: omit_last) @
+    c.VoidArray@: holder_fields 0
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     int: n arg(\at)
     int: j 0
     int: limit n - omit_last
     int: index
     int: ty
-    @: value void (cast: (@: void) graph)
-    @: holder c.Lmx
+    @: value void (cast: (@) graph)
+    c.Lmx@: holder
     check((cast: (int) (\at >= 0 && \at < gargc_cell[0] && n >= 0 && limit >= 0 && n <= gargc_cell[0] - \at - 1)), "physical path supplies its complete nonnegative depth")
     if: \at < 0 || \at >= gargc_cell[0] || n < 0 || limit < 0 || n > gargc_cell[0] - \at - 1
         return: 0
@@ -1478,18 +1478,18 @@ fn: shape_path (@: arena c.LmxArena; @: graph c.Lmx; @: at int; int: omit_last) 
             check((cast: (int) (value != 0 && c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "physical path climbs from an actual Structure")
             if: value = 0 || c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
                 return: 0
-            holder := (cast: (@: c.Lmx) value)
+            holder := (cast: (c.Lmx@) value)
             holder_fields := 0
             if: holder != 0
                 holder_fields := @ holder\array
             ---
-            value := (cast: (@: void) holder\parent)
+            value := (cast: (@) holder\parent)
             j := j + 1
             continue
         check((cast: (int) (value != 0 && c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "physical path crosses an actual Structure")
         if: value = 0 || c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
             return: 0
-        holder := (cast: (@: c.Lmx) value)
+        holder := (cast: (c.Lmx@) value)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -1505,19 +1505,19 @@ fn: shape_path (@: arena c.LmxArena; @: graph c.Lmx; @: at int; int: omit_last) 
     return: value
 end: shape_path
 
-fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
-    @: holder_fields c.VoidArray 0
-    @: failures_cell int (cast: (@: int) (@ c.failures))
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+fn: shape_paths_check (c.LmxArena@: arena; c.Lmx@: graph; int: late) int
+    c.VoidArray@: holder_fields 0
+    int@: failures_cell (cast: (int@) (@ c.failures))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     int: at 2
     int: before failures_cell[0]
     int: mode
-    @: value void
-    @: other void
-    @: holder c.Lmx
+    @: value
+    @: other
+    c.Lmx@: holder
     size_t: name_code 0U
-    @: pool c.LmxPool
+    c.LmxPool@: pool
     size_t: text_length
     int: selected
     int: active (cast: (int) (late = 0))
@@ -1575,7 +1575,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             check((cast: (int) (value != 0 && c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "nullpath selects an actual holder Structure")
             if: value = 0 || c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
                 return: 0
-            holder := (cast: (@: c.Lmx) value)
+            holder := (cast: (c.Lmx@) value)
             holder_fields := 0
             if: holder != 0
                 holder_fields := @ holder\array
@@ -1592,7 +1592,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             check((cast: (int) (c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "name place belongs to an actual Structure")
             if: c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
                 return: 0
-            holder := (cast: (@: c.Lmx) value)
+            holder := (cast: (c.Lmx@) value)
             holder_fields := 0
             if: holder != 0
                 holder_fields := @ holder\array
@@ -1601,7 +1601,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             check((cast: (int) (selected >= 0 && (cast: (size_t) selected) < (holder_fields\size))), "name place is an existing owning child cell")
             if: selected < 0 || (cast: (size_t) selected) >= (holder_fields\size)
                 return: 0
-            value := (cast: (@: void) c.lmx_arena_ref_cell(holder, (cast: (size_t) selected)))
+            value := (cast: (@) c.lmx_arena_ref_cell(holder, (cast: (size_t) selected)))
         ---
         if: value = 0
             check((cast: (int) (0)), "physical path reaches its selected nonnull object")
@@ -1620,12 +1620,12 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             if: mode = 2
                 check((cast: (int) (c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "parentpath selects an actual Structure")
                 if: c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-                    holder := (cast: (@: c.Lmx) value)
+                    holder := (cast: (c.Lmx@) value)
                     holder_fields := 0
                     if: holder != 0
                         holder_fields := @ holder\array
                     ---
-                    check((cast: (int) (other != 0 && (cast: (@: void) holder\parent) = other)), "selected Structure has its actual containing parent")
+                    check((cast: (int) (other != 0 && (cast: (@) holder\parent) = other)), "selected Structure has its actual containing parent")
                 ---
             ---
         if: mode = 3 || mode = 4
@@ -1640,7 +1640,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             else:
                 check((cast: (int) (c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "widthpath selects an actual Structure")
                 if: c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-                    holder := (cast: (@: c.Lmx) value)
+                    holder := (cast: (c.Lmx@) value)
                     holder_fields := 0
                     if: holder != 0
                         holder_fields := @ holder\array
@@ -1656,7 +1656,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
                 return: 0
             check((cast: (int) (c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "nativepath selects an actual Structure")
             if: c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-                holder := (cast: (@: c.Lmx) value)
+                holder := (cast: (c.Lmx@) value)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -1701,7 +1701,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
                 return: 0
             check((cast: (int) (c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT)), "source role assertion selects an actual application")
             if: c.lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
-                holder := (cast: (@: c.Lmx) value)
+                holder := (cast: (c.Lmx@) value)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -1709,7 +1709,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
                 other := c.lmx_arena_ref_value(holder, 0U)
                 check((cast: (int) (other != 0 && c.lmx_domain_kind(arena, other) = c.LMX_DOMAIN_KIND_OP)), "application head is a typed operation record")
                 if: other != 0 && c.lmx_domain_kind(arena, other) = c.LMX_DOMAIN_KIND_OP
-                    @: typed_other c.LmxOp (cast: (@: c.LmxOp) other)
+                    c.LmxOp@: typed_other (cast: (c.LmxOp@) other)
                     check((cast: (int) (typed_other\code % c.LMX_WALK_OP_COUNT = arg(at) && typed_other\code / c.LMX_WALK_OP_COUNT = arg(at + 1))), "application retains its exact execution opcode and source boundary")
                 ---
             ---
@@ -1736,15 +1736,15 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
     return: failures_cell[0] = before
 end: shape_paths_check
 
-fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
-    @: holder_fields c.VoidArray 0
-    @: graph_fields c.VoidArray 0
+fn: shape_mutate (c.LmxArena@: arena; c.Lmx@: graph) int
+    c.VoidArray@: holder_fields 0
+    c.VoidArray@: graph_fields 0
     graph_fields := 0
     if: graph != 0
         graph_fields := @ graph\array
     ---
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     int: found_int 0
     int: code 0
     int: at 2
@@ -1752,17 +1752,17 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
     size_t: k 0U
     size_t: width 0U
     @: child void 0
-    @: typed_op c.LmxOp 0
+    c.LmxOp@: typed_op 0
     @: frame void 0
     @: outer void 0
     @: body void 0
-    @: holder c.Lmx 0
+    c.Lmx@: holder 0
     int: path_at
     int: last_at
     int: parsed 0
     int: replacement 0
-    @@: place void
-    @: extended c.LmxPool 0
+    @@: place
+    c.LmxPool@: extended 0
     @@: original void 0
     if: graph = 0
         return: 0
@@ -1781,14 +1781,14 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT)), "append-null-path-field selects an actual source holder")
         if: frame = 0 || c.lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT
             return: 0
-        holder := (cast: (@: c.Lmx) frame)
+        holder := (cast: (c.Lmx@) frame)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
         ---
         width := holder_fields\size
-        original := (cast: (@@: void) holder_fields\data)
-        extended := c.lmx_pool_make(arena, (width + 1U) * sizeof(@: void), sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS)
+        original := (cast: (@@) holder_fields\data)
+        extended := c.lmx_pool_make(arena, (width + 1U) * sizeof(@), sizeof(@), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS)
         if: extended = 0
             return: 0
         holder_fields\data := c.lmx_chunk_data(extended\head)
@@ -1842,14 +1842,14 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && path_at < gargc_cell[0])), "source-facet selects an actual application and a replacement facet")
         if: frame = 0 || c.lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT || path_at >= gargc_cell[0]
             return: 0
-        child := c.lmx_arena_ref_value((cast: (@: c.Lmx) frame), 0U)
+        child := c.lmx_arena_ref_value((cast: (c.Lmx@) frame), 0U)
         code := c.lmx_walk_code_in(arena, child)
         check((cast: (int) (code != 0 && arg(path_at) >= 0 && arg(path_at) < c.LMX_WALK_SOURCE_COUNT && code / c.LMX_WALK_OP_COUNT != arg(path_at))), "source-facet selects a typed operation and a different valid facet")
         if: code = 0 || arg(path_at) < 0 || arg(path_at) >= c.LMX_WALK_SOURCE_COUNT || code / c.LMX_WALK_OP_COUNT = arg(path_at)
             return: 0
         # This is intentional damage after construction, even if the owner's
         # range is sealed. Normal source_mark must refuse that mutation.
-        typed_op := (cast: (@: c.LmxOp) child)
+        typed_op := (cast: (c.LmxOp@) child)
         typed_op\code := arg(path_at) * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
         check((cast: (int) (child != 0 && c.lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at))), "source-facet changed the selected local operation")
         return: (cast: (int) (child != 0 && c.lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at)))
@@ -1861,13 +1861,13 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && path_at < gargc_cell[0])), "op-path selects an actual operation and a replacement opcode")
         if: frame = 0 || c.lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT || path_at >= gargc_cell[0]
             return: 0
-        child := c.lmx_arena_ref_value((cast: (@: c.Lmx) frame), 0U)
+        child := c.lmx_arena_ref_value((cast: (c.Lmx@) frame), 0U)
         code := c.lmx_walk_code_in(arena, child)
         replacement := arg(path_at)
         check((cast: (int) (code != 0 && replacement >= 0 && replacement < c.LMX_WALK_OP_COUNT && code % c.LMX_WALK_OP_COUNT != replacement)), "op-path selects a different valid opcode")
         if: code = 0 || replacement < 0 || replacement >= c.LMX_WALK_OP_COUNT || code % c.LMX_WALK_OP_COUNT = replacement
             return: 0
-        typed_op := (cast: (@: c.LmxOp) child)
+        typed_op := (cast: (c.LmxOp@) child)
         typed_op\code := (code / c.LMX_WALK_OP_COUNT) * c.LMX_WALK_OP_COUNT + replacement
         check((cast: (int) (c.lmx_walk_code_in(arena, child) % c.LMX_WALK_OP_COUNT = replacement)), "op-path changed the selected physical opcode")
         return: (cast: (int) (c.lmx_walk_code_in(arena, child) % c.LMX_WALK_OP_COUNT = replacement))
@@ -1878,7 +1878,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && last_at < gargc_cell[0])), "null-path reaches its real field holder")
         if: outer = 0 || c.lmx_domain_kind(arena, outer) != c.LMX_KIND_STRUCT || last_at >= gargc_cell[0]
             return: 0
-        holder := (cast: (@: c.Lmx) outer)
+        holder := (cast: (c.Lmx@) outer)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -1900,7 +1900,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && path_at + 1 < gargc_cell[0])), "move-path-field names a real holder and two positions")
         if: frame = 0 || c.lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT || path_at + 1 >= gargc_cell[0]
             return: 0
-        holder := (cast: (@: c.Lmx) frame)
+        holder := (cast: (c.Lmx@) frame)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -1949,7 +1949,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && last_at < gargc_cell[0])), "replace-pointer-abi reaches its real field holder")
         if: outer = 0 || c.lmx_domain_kind(arena, outer) != c.LMX_KIND_STRUCT || last_at >= gargc_cell[0]
             return: 0
-        holder := (cast: (@: c.Lmx) outer)
+        holder := (cast: (c.Lmx@) outer)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -1962,10 +1962,10 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         if: place = 0 || \place = 0
             return: 0
         extended := c.lmx_pointer_pool_in(arena, (\place))
-        check((cast: (int) (extended != 0 && extended\stride = sizeof(@: void) && extended\pointer_read = c.lmx_arena_pointer_void_read && extended\pointer_write = c.lmx_arena_pointer_void_write)), "replace-pointer-abi starts at a canonical pointer cell")
-        if: extended = 0 || extended\stride != sizeof(@: void) || extended\pointer_read != c.lmx_arena_pointer_void_read || extended\pointer_write != c.lmx_arena_pointer_void_write
+        check((cast: (int) (extended != 0 && extended\stride = sizeof(@) && extended\pointer_read = c.lmx_arena_pointer_void_read && extended\pointer_write = c.lmx_arena_pointer_void_write)), "replace-pointer-abi starts at a canonical pointer cell")
+        if: extended = 0 || extended\stride != sizeof(@) || extended\pointer_read != c.lmx_arena_pointer_void_read || extended\pointer_write != c.lmx_arena_pointer_void_write
             return: 0
-        frame := c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
+        frame := c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
         check((cast: (int) (frame != 0 && c.lmx_pointer_pool_in(arena, frame) != extended)), "replace-pointer-abi makes another pool of the same numeric type")
         if: frame = 0 || c.lmx_pointer_pool_in(arena, frame) = extended
             return: 0
@@ -1982,7 +1982,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && last_at < gargc_cell[0])), "replace-pointer-abi-pair reaches its witness holder")
         if: outer = 0 || c.lmx_domain_kind(arena, outer) != c.LMX_KIND_STRUCT || last_at >= gargc_cell[0]
             return: 0
-        holder := (cast: (@: c.Lmx) outer)
+        holder := (cast: (c.Lmx@) outer)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -1996,7 +1996,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         extended := c.lmx_pointer_pool_in(arena, (\place))
         if: extended = 0 || extended\type != c.lmx_range_type_of(arena, frame)
             return: 0
-        frame := c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
+        frame := c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
         if: frame = 0
             return: 0
         return: (cast: (int) (c.lmx_arena_ref_store(arena, holder, (cast: (size_t) arg(last_at)), frame) = 0))
@@ -2034,14 +2034,14 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (holder != graph && holder\parent != 0)), "reparent-add starts from a non-root owned container")
         if: holder = graph || holder\parent = 0
             return: 0
-        outer := (cast: (@: void) holder\parent)
+        outer := (cast: (@) holder\parent)
         if: holder\parent = graph
             holder\parent := 0
         else:
             holder\parent := graph
         ---
-        check((cast: (int) ((cast: (@: void) holder\parent) != outer)), "reparent-add changed only the parent pointer")
-        if: (cast: (@: void) holder\parent) = outer
+        check((cast: (int) ((cast: (@) holder\parent) != outer)), "reparent-add changed only the parent pointer")
+        if: (cast: (@) holder\parent) = outer
             return: 0
         return: 1
     # Test an alias after the former sixteen-entry observation limit. The
@@ -2050,7 +2050,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         while: i < graph_fields\size
             child := c.lmx_arena_ref_value(graph, i)
             if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-                holder := (cast: (@: c.Lmx) child)
+                holder := (cast: (c.Lmx@) child)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -2075,8 +2075,8 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
     if: c.strcmp(gargv_cell[0][at + 1], "retarget-init") = 0 || c.strcmp(gargv_cell[0][at + 1], "move-init") = 0 || c.strcmp(gargv_cell[0][at + 1], "change-init-candidate") = 0
         while: i < graph_fields\size
             child := c.lmx_arena_ref_value(graph, i)
-            if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: c.Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
-                holder := (cast: (@: c.Lmx) child)
+            if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (c.Lmx@) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
+                holder := (cast: (c.Lmx@) child)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -2093,7 +2093,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                     while: k < graph_fields\size
                         outer := c.lmx_arena_ref_value(graph, k)
                         if: outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_PRIMITIVE && c.lmx_domain_type(arena, outer) = c.LMX_TYPE_INT
-                            c.lmx_size_store_known(c.lmx_arena_ref_value((cast: (@: c.Lmx) frame), 2U), k)
+                            c.lmx_size_store_known(c.lmx_arena_ref_value((cast: (c.Lmx@) frame), 2U), k)
                             return: 1
                         k := k + 1U
                     ---
@@ -2104,12 +2104,12 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                     check((cast: (int) (shape_lit_int(arena, frame, 5) != 0)), "candidate mutation starts from the expected literal")
                     if: shape_lit_int(arena, frame, 5) = 0
                         return: 0
-                    c.lmx_int_store_known(c.lmx_arena_ref_value((cast: (@: c.Lmx) frame), 1U), 77)
+                    c.lmx_int_store_known(c.lmx_arena_ref_value((cast: (c.Lmx@) frame), 1U), 77)
                     return: 1
                 k := i + 1U
                 while: k < graph_fields\size
                     outer := c.lmx_arena_ref_value(graph, k)
-                    if: outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: c.Lmx) outer), arena) = c.LMX_WALK_SOURCE_ORDINARY && shape_node_op(outer, arena) = c.LMX_WALK_OP_SET
+                    if: outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && shape_source_role((cast: (c.Lmx@) outer), arena) = c.LMX_WALK_SOURCE_ORDINARY && shape_node_op(outer, arena) = c.LMX_WALK_OP_SET
                         c.lmx_arena_ref_store(arena, graph, i, outer)
                         c.lmx_arena_ref_store(arena, graph, k, child)
                         return: 1
@@ -2125,8 +2125,8 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
     if: c.strcmp(gargv_cell[0][at + 1], "erase-init-role") = 0
         while: i < graph_fields\size
             child := c.lmx_arena_ref_value(graph, i)
-            if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: c.Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
-                check((cast: (int) (c.lmx_walk_source_mark(arena, (cast: (@: c.Lmx) child), c.LMX_WALK_SOURCE_ORDINARY) = 0)), "mutation changes source role only")
+            if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (c.Lmx@) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
+                check((cast: (int) (c.lmx_walk_source_mark(arena, (cast: (c.Lmx@) child), c.LMX_WALK_SOURCE_ORDINARY) = 0)), "mutation changes source role only")
                 return: 1
             ---
             i := i + 1U
@@ -2144,7 +2144,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
             child := c.lmx_arena_ref_value(graph, i)
             frame := shape_find_op(arena, child, c.LMX_WALK_OP_ADD)
             if: frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT
-                holder := (cast: (@: c.Lmx) frame)
+                holder := (cast: (c.Lmx@) frame)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -2164,7 +2164,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
             child := c.lmx_arena_ref_value(graph, i)
             frame := shape_body(arena, child)
             if: frame != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT
-                holder := (cast: (@: c.Lmx) frame)
+                holder := (cast: (c.Lmx@) frame)
                 holder_fields := 0
                 if: holder != 0
                     holder_fields := @ holder\array
@@ -2194,7 +2194,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
             i := i + 1U
         ---
         if: outer != 0 && body != 0 && c.lmx_domain_kind(arena, body) = c.LMX_KIND_STRUCT
-            holder := (cast: (@: c.Lmx) body)
+            holder := (cast: (c.Lmx@) body)
             holder_fields := 0
             if: holder != 0
                 holder_fields := @ holder\array
@@ -2215,15 +2215,15 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
     return: 0
 end: shape_mutate
 
-fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
-    @: holder_fields c.VoidArray 0
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+fn: shape_take (c.LmxArena@: arena; @: item; int: at) int
+    c.VoidArray@: holder_fields 0
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     int: code
     int: got
     @: frame void 0
-    @: holder c.Lmx 0
-    @: text char 0
+    c.Lmx@: holder 0
+    char@: text 0
     if: at < 0 || at >= gargc_cell[0]
         return: 0
     if: c.strcmp(gargv_cell[0][at], "null") = 0
@@ -2232,7 +2232,7 @@ fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
         return: 0
     if: c.strcmp(gargv_cell[0][at], "role") = 0 && at + 2 < gargc_cell[0]
         if: c.lmx_domain_kind(arena, item) = c.LMX_DOMAIN_KIND_OP && shape_node_op(item, arena) = arg(at + 1)
-            @: typed_item c.LmxOp (cast: (@: c.LmxOp) item)
+            c.LmxOp@: typed_item (cast: (c.LmxOp@) item)
             if: typed_item\code / c.LMX_WALK_OP_COUNT = arg(at + 2)
                 return: 3
             ---
@@ -2251,7 +2251,7 @@ fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
             code := c.LMX_WALK_SOURCE_INITIALIZER
         if: c.strcmp(gargv_cell[0][at], "implicit") = 0
             code := c.LMX_WALK_SOURCE_IMPLICIT
-        if: shape_source_role((cast: (@: c.Lmx) item), arena) = code && shape_node_op(item, arena) = shape_op_code(gargv_cell[0][at + 1])
+        if: shape_source_role((cast: (c.Lmx@) item), arena) = code && shape_node_op(item, arena) = shape_op_code(gargv_cell[0][at + 1])
             return: 2
         return: 0
     if: c.strcmp(gargv_cell[0][at], "intvalue") = 0 && at + 1 < gargc_cell[0]
@@ -2272,7 +2272,7 @@ fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
         if: shape_has_spell(arena, item, gargv_cell[0][at + 1]) != 0
             return: 2
         if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_PRIMITIVE && c.lmx_domain_type(arena, item) = c.LMX_TYPE_CHAR_PTR
-            text := c.lmx_charptr_value_known((cast: (@: void) item))
+            text := c.lmx_charptr_value_known((cast: (@) item))
             if: shape_spell_is(text, gargv_cell[0][at + 1]) != 0
                 return: 2
             ---
@@ -2297,7 +2297,7 @@ fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
         frame := shape_find_op(arena, item, c.LMX_WALK_OP_ADD)
         if: frame = 0 || c.lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT
             return: 0
-        holder := (cast: (@: c.Lmx) frame)
+        holder := (cast: (c.Lmx@) frame)
         holder_fields := 0
         if: holder != 0
             holder_fields := @ holder\array
@@ -2318,15 +2318,15 @@ fn: shape_take (@: arena c.LmxArena; @: item void; int: at) int
     return: 0
 end: shape_take
 
-fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; size_t: capacity; @@: stack_box c.Lmx; @: stack_at size_t; @: stack_lim size_t; @@: seen_node void) int
-    @: graph_fields c.VoidArray 0
-    @: box_fields c.VoidArray 0
+fn: shape_check_body (c.LmxArena@: arena; c.Lmx@: graph; c.Lmx@: settings; size_t: capacity; c.Lmx@@: stack_box; size_t@: stack_at; size_t@: stack_lim; @@: seen_node) int
+    c.VoidArray@: graph_fields 0
+    c.VoidArray@: box_fields 0
     graph_fields := 0
     if: graph != 0
         graph_fields := @ graph\array
     ---
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
     int: at 2
     int: stop 0
     int: tok 0
@@ -2335,7 +2335,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
     @: child void 0
     int: saw 0
     int: opened 0
-    @: box c.Lmx graph
+    c.Lmx@: box graph
     box_fields := 0
     if: box != 0
         box_fields := @ box\array
@@ -2353,7 +2353,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
     int: skip 0
     int: exact 0
     int: owned 0
-    @: owned_child c.Lmx 0
+    c.Lmx@: owned_child 0
     @: last void 0
     if: graph = 0
         return: 0
@@ -2414,7 +2414,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             stack_at[depth] := i
             stack_lim[depth] := lim
             depth := depth + 1U
-            box := (cast: (@: c.Lmx) child)
+            box := (cast: (c.Lmx@) child)
             box_fields := 0
             if: box != 0
                 box_fields := @ box\array
@@ -2447,7 +2447,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             stack_at[depth] := i
             stack_lim[depth] := lim
             depth := depth + 1U
-            box := (cast: (@: c.Lmx) last)
+            box := (cast: (c.Lmx@) last)
             box_fields := 0
             if: box != 0
                 box_fields := @ box\array
@@ -2484,7 +2484,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             stack_at[depth] := i + 1U
             stack_lim[depth] := lim
             depth := depth + 1U
-            box := (cast: (@: c.Lmx) child)
+            box := (cast: (c.Lmx@) child)
             box_fields := 0
             if: box != 0
                 box_fields := @ box\array
@@ -2523,7 +2523,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             stack_at[depth] := i + 1U
             stack_lim[depth] := lim
             depth := depth + 1U
-            box := (cast: (@: c.Lmx) child)
+            box := (cast: (c.Lmx@) child)
             box_fields := 0
             if: box != 0
                 box_fields := @ box\array
@@ -2562,7 +2562,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
             stack_at[depth] := i + 1U
             stack_lim[depth] := lim
             depth := depth + 1U
-            box := (cast: (@: c.Lmx) child)
+            box := (cast: (c.Lmx@) child)
             box_fields := 0
             if: box != 0
                 box_fields := @ box\array
@@ -2649,7 +2649,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
                     check((cast: (int) (child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT)), "owned matches an actual Structure")
                     if: child = 0 || c.lmx_domain_kind(arena, child) != c.LMX_KIND_STRUCT
                         return: 0
-                    owned_child := (cast: (@: c.Lmx) child)
+                    owned_child := (cast: (c.Lmx@) child)
                     check((cast: (int) (owned_child\parent = box)), "owned Structure has its actual containing parent")
                     if: owned_child\parent != box
                         return: 0
@@ -2684,7 +2684,7 @@ fn: shape_check_body (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx; si
     return: 1
 end: shape_check_body
 
-sub: stop_probe_adapter (@: method c.Lmx; @: arena c.LmxArena)
+sub: stop_probe_adapter (c.Lmx@: method; c.LmxArena@: arena)
     @: dest void c.malloc(128U)
     @: before void c.malloc(128U)
     @: result void 0
@@ -2695,21 +2695,21 @@ sub: stop_probe_adapter (@: method c.Lmx; @: arena c.LmxArena)
     c.memset(dest, 165, 128U)
     c.memset(before, 165, 128U)
     c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) method\native)
-    status := entry((cast: (@: void) method), 0, 0U, dest, @ result, arena, method, 0, 0)
+    status := entry((cast: (@) method), 0, 0U, dest, @ result, arena, method, 0, 0)
     check((cast: (int) (status = 0 && result = 0)), "stopped typed adapter has no result or throw")
     check((cast: (int) (c.memcmp(dest, before, 128U) = 0)), "stopped typed adapter leaves destination untouched")
     c.free(dest)
     c.free(before)
 end: stop_probe_adapter
 
-fn: stop_first (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
-    @: stop_calls_cell int (cast: (@: int) (@ c.stop_calls))
-    @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
-    @@: stop_extra_view c.Lmx (cast: (@@: c.Lmx) (@ c.stop_extra))
+fn: stop_first (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    @@: stop_received_cell void (cast: (@@) (@ c.stop_received))
+    int@: stop_calls_cell (cast: (int@) (@ c.stop_calls))
+    c.LmxPrimitiveEntry@: stop_saved_view (cast: (c.LmxPrimitiveEntry@) (@ c.stop_saved))
+    c.Lmx@@: stop_extra_view (cast: (c.Lmx@@) (@ c.stop_extra))
     int: status
     int: k 0
-    @: current c.LmxThread c.lmx_thread_current()
+    c.LmxThread@: current c.lmx_thread_current()
     @: receiver void stop_received_cell[0]
     stop_calls_cell[0] := stop_calls_cell[0] + 1
     check((cast: (int) (current != 0 && c.lmx_msg_poll_escape() = 0)), "stop is requested in a genuinely running Message")
@@ -2729,28 +2729,28 @@ fn: stop_first (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: o
     return: status
 end: stop_first
 
-fn: stop_later_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: stop_late_calls_cell int (cast: (@: int) (@ c.stop_late_calls))
+fn: stop_later_probe (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    int@: stop_late_calls_cell (cast: (int@) (@ c.stop_late_calls))
     stop_late_calls_cell[0] := stop_late_calls_cell[0] + 1
     c.lmx_int_store_known(dest, 31)
     out[0] := dest
     return: 0
 end: stop_later_probe
 
-fn: stop_receiver_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: stop_receiver_calls_cell int (cast: (@: int) (@ c.stop_receiver_calls))
+fn: stop_receiver_probe (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    int@: stop_receiver_calls_cell (cast: (int@) (@ c.stop_receiver_calls))
     stop_receiver_calls_cell[0] := stop_receiver_calls_cell[0] + 1
     c.lmx_int_store_known(dest, 47)
     out[0] := dest
     return: 0
 end: stop_receiver_probe
 
-fn: stop_root_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
-    @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
-    @: stop_root_returns_cell int (cast: (@: int) (@ c.stop_root_returns))
-    @: stop_late_calls_cell int (cast: (@: int) (@ c.stop_late_calls))
-    @: stop_receiver_calls_cell int (cast: (@: int) (@ c.stop_receiver_calls))
+fn: stop_root_probe (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxPrimitiveEntry@: stop_saved_view (cast: (c.LmxPrimitiveEntry@) (@ c.stop_saved))
+    @@: stop_received_cell void (cast: (@@) (@ c.stop_received))
+    int@: stop_root_returns_cell (cast: (int@) (@ c.stop_root_returns))
+    int@: stop_late_calls_cell (cast: (int@) (@ c.stop_late_calls))
+    int@: stop_receiver_calls_cell (cast: (int@) (@ c.stop_receiver_calls))
     int: status
     c.LmxPrimitiveEntry: entry stop_saved_view[1]
     status := entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
@@ -2763,8 +2763,8 @@ fn: stop_root_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; 
     return: status
 end: stop_root_probe
 
-fn: stop_int_cell (@: arena c.LmxArena; @: host c.Lmx; int: nth) @: void
-    @: host_fields c.VoidArray 0
+fn: stop_int_cell (c.LmxArena@: arena; c.Lmx@: host; int: nth) @
+    c.VoidArray@: host_fields 0
     host_fields := 0
     if: host != 0
         host_fields := @ host\array
@@ -2785,16 +2785,16 @@ fn: stop_int_cell (@: arena c.LmxArena; @: host c.Lmx; int: nth) @: void
     return: 0
 end: stop_int_cell
 
-fn: stop_install (@: arena c.LmxArena; @: graph c.Lmx; int: at) int
-    @@: stop_caller_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_caller))
-    @@: stop_received_cell void (cast: (@@: void) (@ c.stop_received))
-    @@: stop_later_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_later))
-    @@: stop_receiver_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_receiver))
-    @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
-    @@: stop_extra_view c.Lmx (cast: (@@: c.Lmx) (@ c.stop_extra))
-    @: stop_walk_caller_cell int (cast: (@: int) (@ c.stop_walk_caller))
-    @: first c.Lmx c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 1)))
-    @: stop_cells c.Lmx 0
+fn: stop_install (c.LmxArena@: arena; c.Lmx@: graph; int: at) int
+    c.Lmx@@: stop_caller_cell (cast: (c.Lmx@@) (@ c.stop_caller))
+    @@: stop_received_cell void (cast: (@@) (@ c.stop_received))
+    c.Lmx@@: stop_later_cell (cast: (c.Lmx@@) (@ c.stop_later))
+    c.Lmx@@: stop_receiver_cell (cast: (c.Lmx@@) (@ c.stop_receiver))
+    c.LmxPrimitiveEntry@: stop_saved_view (cast: (c.LmxPrimitiveEntry@) (@ c.stop_saved))
+    c.Lmx@@: stop_extra_view (cast: (c.Lmx@@) (@ c.stop_extra))
+    int@: stop_walk_caller_cell (cast: (int@) (@ c.stop_walk_caller))
+    c.Lmx@: first c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 1)))
+    c.Lmx@: stop_cells 0
     int: k 0
     stop_caller_cell[0] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 8)))
     # The four-part fn layout holds the caller's own declaration cells in its
@@ -2821,26 +2821,26 @@ fn: stop_install (@: arena c.LmxArena; @: graph c.Lmx; int: at) int
             return: 1
         k := k + 1
     ---
-    @: later_target c.Lmx stop_later_cell[0]
+    c.Lmx@: later_target stop_later_cell[0]
     later_target\native := (cast: (c.LmxEntry) c.stop_later_probe)
-    @: receiver_target c.Lmx stop_receiver_cell[0]
+    c.Lmx@: receiver_target stop_receiver_cell[0]
     receiver_target\native := (cast: (c.LmxEntry) c.stop_receiver_probe)
     stop_saved_view[1] := (cast: (c.LmxPrimitiveEntry) graph\native)
     graph\native := (cast: (c.LmxEntry) c.stop_root_probe)
     if: stop_walk_caller_cell[0] != 0
-        @: caller_target c.Lmx stop_caller_cell[0]
+        c.Lmx@: caller_target stop_caller_cell[0]
         caller_target\native := 0
         check((cast: (int) (stop_caller_cell[0]\native = 0 && first\native != 0 && graph\native != 0)), "only caller is actually walked, typed stop body and root remain native")
     ---
     return: 0
 end: stop_install
 
-fn: shape_merge_nest (@: arena c.LmxArena; @: graph c.Lmx) int
-    @: merged_fields c.VoidArray 0
-    @: outer c.Lmx 0
-    @: one c.Lmx 0
-    @: merged c.Lmx 0
-    @: inner c.Lmx 0
+fn: shape_merge_nest (c.LmxArena@: arena; c.Lmx@: graph) int
+    c.VoidArray@: merged_fields 0
+    c.Lmx@: outer 0
+    c.Lmx@: one 0
+    c.Lmx@: merged 0
+    c.Lmx@: inner 0
     @: cell void 0
     @: old_cell void 0
     size_t: n 0U
@@ -2857,35 +2857,35 @@ fn: shape_merge_nest (@: arena c.LmxArena; @: graph c.Lmx) int
     check((cast: (int) (n = 1U)), "merge keeps the one nested field")
     # The result's parent is the copy's own: the copy of outer's lexical parent, not the place running the merge
     # and not outer's source parent (the author, LMX_blog/2026-10-05.md#merge-parent).
-    @: merged_parent_fields c.VoidArray 0
-    @: model_parent_fields c.VoidArray 0
+    c.VoidArray@: merged_parent_fields 0
+    c.VoidArray@: model_parent_fields 0
     if: merged\parent != 0
-        @: merged_parent c.Lmx merged\parent
+        c.Lmx@: merged_parent merged\parent
         merged_parent_fields := @ merged_parent\array
     ---
     if: outer\parent != 0
-        @: model_parent c.Lmx outer\parent
+        c.Lmx@: model_parent outer\parent
         model_parent_fields := @ model_parent\array
     ---
     check((cast: (int) ((outer\parent = 0 && merged\parent = 0) || (outer\parent != 0 && merged\parent != 0 && merged\parent != outer\parent && merged_parent_fields\size = model_parent_fields\size))), "merge parents the nested result at the copy of its model's parent")
-    inner := (cast: (@: c.Lmx) c.lmx_arena_ref_value(merged, 0U))
-    check((cast: (int) (inner != 0 && inner != (cast: (@: c.Lmx) c.lmx_arena_ref_value(outer, 0U)))), "merge copies the inner Structure")
+    inner := (cast: (c.Lmx@) c.lmx_arena_ref_value(merged, 0U))
+    check((cast: (int) (inner != 0 && inner != (cast: (c.Lmx@) c.lmx_arena_ref_value(outer, 0U)))), "merge copies the inner Structure")
     if: inner = 0
         return: 1
     check((cast: (int) (inner\parent = merged)), "merge parents the copied inner Structure at the result")
     check((cast: (int) (shape_one_int(arena, inner) != 0)), "merge keeps the exact inner declaration and initializer with copied owners")
-    check((cast: (int) (c.lmx_arena_ref_value(inner, 1U) != c.lmx_arena_ref_value((cast: (@: c.Lmx) c.lmx_arena_ref_value(outer, 0U)), 1U))), "merge copies the inner initializer instead of borrowing it")
+    check((cast: (int) (c.lmx_arena_ref_value(inner, 1U) != c.lmx_arena_ref_value((cast: (c.Lmx@) c.lmx_arena_ref_value(outer, 0U)), 1U))), "merge copies the inner initializer instead of borrowing it")
     cell := c.lmx_arena_ref_value(inner, 0U)
-    old_cell := c.lmx_arena_ref_value((cast: (@: c.Lmx) c.lmx_arena_ref_value(outer, 0U)), 0U)
+    old_cell := c.lmx_arena_ref_value((cast: (c.Lmx@) c.lmx_arena_ref_value(outer, 0U)), 0U)
     check((cast: (int) (cell != 0 && cell != old_cell && c.lmx_domain_type(arena, cell) = c.LMX_TYPE_INT && c.lmx_int_value_known(cell) = 1)), "merge keeps the nested int")
     return: 0
 end: shape_merge_nest
 
-fn: shape_merge_holder (@: arena c.LmxArena; @: graph c.Lmx) int
-    @: merged_fields c.VoidArray 0
-    @: holder c.Lmx 0
-    @: one c.Lmx 0
-    @: merged c.Lmx 0
+fn: shape_merge_holder (c.LmxArena@: arena; c.Lmx@: graph) int
+    c.VoidArray@: merged_fields 0
+    c.Lmx@: holder 0
+    c.Lmx@: one 0
+    c.Lmx@: merged 0
     @: a void 0
     @: b void 0
     size_t: n 0U
@@ -2900,14 +2900,14 @@ fn: shape_merge_holder (@: arena c.LmxArena; @: graph c.Lmx) int
     merged_fields := @ merged\array
     n := merged_fields\size
     check((cast: (int) (n = 4U)), "merge keeps both cells and both written initializers")
-    @: merged_parent_fields c.VoidArray 0
-    @: model_parent_fields c.VoidArray 0
+    c.VoidArray@: merged_parent_fields 0
+    c.VoidArray@: model_parent_fields 0
     if: merged\parent != 0
-        @: merged_parent c.Lmx merged\parent
+        c.Lmx@: merged_parent merged\parent
         merged_parent_fields := @ merged_parent\array
     ---
     if: holder\parent != 0
-        @: model_parent c.Lmx holder\parent
+        c.Lmx@: model_parent holder\parent
         model_parent_fields := @ model_parent\array
     ---
     check((cast: (int) ((holder\parent = 0 && merged\parent = 0) || (holder\parent != 0 && merged\parent != 0 && merged\parent != holder\parent && merged_parent_fields\size = model_parent_fields\size))), "merge parents the result at the copy of its model's parent")
@@ -2921,11 +2921,11 @@ fn: shape_merge_holder (@: arena c.LmxArena; @: graph c.Lmx) int
     return: 0
 end: shape_merge_holder
 
-sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot; int: expected)
+sub: shape_copy_native_call (c.LmxArena@: source; c.Lmx@: graph; size_t: slot; int: expected)
     c.LmxArena: destination
-    @: copied c.Lmx 0
-    @: method c.Lmx 0
-    @: original c.Lmx 0
+    c.Lmx@: copied 0
+    c.Lmx@: method 0
+    c.Lmx@: original 0
     size_t: source_head 0U
     size_t: copied_head 0U
     size_t: source_field 0U
@@ -2933,7 +2933,7 @@ sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot;
     size_t: source_before 0U
     size_t: destination_before 0U
     int: result 0
-    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@) (@ destination)), 0, c.sizeof(c.LmxArena))
     if: c.lmx_arena_open(@ destination) != 0
         check((cast: (int) (0)), "cross-arena native call opens its destination arena")
         return
@@ -2950,11 +2950,11 @@ sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot;
         c.lmx_arena_release(@ destination)
         return
     ---
-    source_head := c.lmx_source_name_get(source, (cast: (@: void) original))
-    copied_head := c.lmx_source_name_get(@ destination, (cast: (@: void) method))
+    source_head := c.lmx_source_name_get(source, (cast: (@) original))
+    copied_head := c.lmx_source_name_get(@ destination, (cast: (@) method))
     check((cast: (int) (source_head = copied_head)), "copied method keeps its external receiver-head name")
-    source_field := c.lmx_source_name_get(source, (cast: (@: void) c.lmx_arena_ref_cell(graph, slot)))
-    copied_field := c.lmx_source_name_get(@ destination, (cast: (@: void) c.lmx_arena_ref_cell(copied, slot)))
+    source_field := c.lmx_source_name_get(source, (cast: (@) c.lmx_arena_ref_cell(graph, slot)))
+    copied_field := c.lmx_source_name_get(@ destination, (cast: (@) c.lmx_arena_ref_cell(copied, slot)))
     check((cast: (int) (source_field = copied_field)), "copied method keeps its external owning-field name")
     source_before := shape_arena_cells(source)
     destination_before := shape_arena_cells(@ destination)
@@ -2966,29 +2966,29 @@ sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot;
     return
 end: shape_copy_native_call
 
-fn: driver_program (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
-    @: graph_fields c.VoidArray 0
+fn: driver_program (c.LmxArena@: arena; c.Lmx@: graph; c.Lmx@: settings) int
+    c.VoidArray@: graph_fields 0
     graph_fields := 0
     if: graph != 0
         graph_fields := @ graph\array
     ---
-    @: builds_cell int (cast: (@: int) (@ c.builds))
-    @: build_rc_cell int (cast: (@: int) (@ c.build_rc))
+    int@: builds_cell (cast: (int@) (@ c.builds))
+    int@: build_rc_cell (cast: (int@) (@ c.build_rc))
     const: @@(phase_cell char (cast: (const: @@(char)) (@ c.phase)))
-    @@: post_paths_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.post_paths_arena))
-    @@: post_paths_graph_cell c.Lmx (cast: (@@: c.Lmx) (@ c.post_paths_graph))
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
-    @: graph_mutation_requested_cell int (cast: (@: int) (@ c.graph_mutation_requested))
-    @: failures_cell int (cast: (@: int) (@ c.failures))
-    @: graph_mutation_baseline_ok_cell int (cast: (@: int) (@ c.graph_mutation_baseline_ok))
-    @: pointer_abi_mutation_requested_cell int (cast: (@: int) (@ c.pointer_abi_mutation_requested))
-    @: graph_mutation_setup_failures_cell int (cast: (@: int) (@ c.graph_mutation_setup_failures))
-    @: graph_mutation_setup_ok_cell int (cast: (@: int) (@ c.graph_mutation_setup_ok))
-    @: graph_mutation_shape_failures_cell int (cast: (@: int) (@ c.graph_mutation_shape_failures))
-    @: graph_mutation_compared_cell int (cast: (@: int) (@ c.graph_mutation_compared))
-    @: stop_walk_caller_cell int (cast: (@: int) (@ c.stop_walk_caller))
-    @: dispatch_throws_cell int (cast: (@: int) (@ c.dispatch_throws))
+    c.LmxArena@@: post_paths_arena_cell (cast: (c.LmxArena@@) (@ c.post_paths_arena))
+    c.Lmx@@: post_paths_graph_cell (cast: (c.Lmx@@) (@ c.post_paths_graph))
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
+    int@: graph_mutation_requested_cell (cast: (int@) (@ c.graph_mutation_requested))
+    int@: failures_cell (cast: (int@) (@ c.failures))
+    int@: graph_mutation_baseline_ok_cell (cast: (int@) (@ c.graph_mutation_baseline_ok))
+    int@: pointer_abi_mutation_requested_cell (cast: (int@) (@ c.pointer_abi_mutation_requested))
+    int@: graph_mutation_setup_failures_cell (cast: (int@) (@ c.graph_mutation_setup_failures))
+    int@: graph_mutation_setup_ok_cell (cast: (int@) (@ c.graph_mutation_setup_ok))
+    int@: graph_mutation_shape_failures_cell (cast: (int@) (@ c.graph_mutation_shape_failures))
+    int@: graph_mutation_compared_cell (cast: (int@) (@ c.graph_mutation_compared))
+    int@: stop_walk_caller_cell (cast: (int@) (@ c.stop_walk_caller))
+    int@: dispatch_throws_cell (cast: (int@) (@ c.dispatch_throws))
     int: rc
     int: before
     int: observed
@@ -2999,7 +2999,7 @@ fn: driver_program (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
     size_t: k
     int: steps 0
     int: copy_at 2
-    @: copied c.Lmx 0
+    c.Lmx@: copied 0
     @: child void 0
     @: head void 0
     size_t: ci 0U
@@ -3099,7 +3099,7 @@ fn: driver_program (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
                 child := c.lmx_arena_ref_value(graph, i)
                 head := child
                 if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-                    head := c.lmx_arena_ref_value((cast: (@: c.Lmx) child), 0U)
+                    head := c.lmx_arena_ref_value((cast: (c.Lmx@) child), 0U)
                 if: shape_node_op(child, arena) >= 0
                     steps := steps + 1
                 ---
@@ -3113,22 +3113,22 @@ fn: driver_program (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
     return: rc
 end: driver_program
 
-fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
-    @: pointer_abi_mutation_requested_cell int (cast: (@: int) (@ c.pointer_abi_mutation_requested))
+fn: driver_before_turn (c.LmxRoot@: root; c.LmxMsg@: r0) int
+    int@: pointer_abi_mutation_requested_cell (cast: (int@) (@ c.pointer_abi_mutation_requested))
     const: @@(phase_cell char (cast: (const: @@(char)) (@ c.phase)))
-    @: failures_cell int (cast: (@: int) (@ c.failures))
-    @: graph_mutation_setup_failures_cell int (cast: (@: int) (@ c.graph_mutation_setup_failures))
-    @: graph_mutation_setup_ok_cell int (cast: (@: int) (@ c.graph_mutation_setup_ok))
-    @: l2_ref_active_cell int (cast: (@: int) (@ c.l2_ref_active))
-    @@: l2_ref_peer_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.l2_ref_peer_arena))
-    @@: l2_ref_peer_cell c.LmxMsg (cast: (@@: c.LmxMsg) (@ c.l2_ref_peer))
-    @@: l2_ref_peer_mail_cell c.LmxPost (cast: (@@: c.LmxPost) (@ c.l2_ref_peer_mail))
-    @@: l2_ref_parent_addr_cell void (cast: (@@: void) (@ c.l2_ref_parent_addr))
-    @: peer_slot c.LmxSchedule 0
-    @: peer_thread c.LmxThread 0
-    @: peer_graph c.Lmx 0
-    @: letter_arena c.LmxArena 0
-    @: executing c.LmxThread (cast: (@: c.LmxThread) r0)
+    int@: failures_cell (cast: (int@) (@ c.failures))
+    int@: graph_mutation_setup_failures_cell (cast: (int@) (@ c.graph_mutation_setup_failures))
+    int@: graph_mutation_setup_ok_cell (cast: (int@) (@ c.graph_mutation_setup_ok))
+    int@: l2_ref_active_cell (cast: (int@) (@ c.l2_ref_active))
+    c.LmxArena@@: l2_ref_peer_arena_cell (cast: (c.LmxArena@@) (@ c.l2_ref_peer_arena))
+    c.LmxMsg@@: l2_ref_peer_cell (cast: (c.LmxMsg@@) (@ c.l2_ref_peer))
+    c.LmxPost@@: l2_ref_peer_mail_cell (cast: (c.LmxPost@@) (@ c.l2_ref_peer_mail))
+    @@: l2_ref_parent_addr_cell void (cast: (@@) (@ c.l2_ref_parent_addr))
+    c.LmxSchedule@: peer_slot 0
+    c.LmxThread@: peer_thread 0
+    c.Lmx@: peer_graph 0
+    c.LmxArena@: letter_arena 0
+    c.LmxThread@: executing (cast: (c.LmxThread@) r0)
     @: membership void c.lmx_thread_children(executing)
     int: mutation_rc 0
     int: before 0
@@ -3137,7 +3137,7 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
         # is correctly refused by the host's construction check, before the promised entry read is reachable.
         phase_cell[0] := "graph mutation setup"
         before := failures_cell[0]
-        mutation_rc := shape_mutate((cast: (@: c.LmxArena) executing\slot\arena), (cast: (@: c.Lmx) r0\graph))
+        mutation_rc := shape_mutate((cast: (c.LmxArena@) executing\slot\arena), (cast: (c.Lmx@) r0\graph))
         graph_mutation_setup_failures_cell[0] := failures_cell[0] - before
         graph_mutation_setup_ok_cell[0] := mutation_rc != 0 && failures_cell[0] = before
         if: graph_mutation_setup_ok_cell[0] = 0
@@ -3150,25 +3150,25 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     check((cast: (int) (executing != 0 && membership != 0)), "R0 construction completed its record-owned membership List")
     if: executing != 0 && executing\slot != 0
         check((cast: (int) (c.lmx_range_classify(executing\slot\arena, membership) = c.LMX_KIND_LIST && c.lmx_range_type_of(executing\slot\arena, membership) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD && c.lmx_range_home(executing\slot\arena, membership) = executing\slot\arena)), "membership has its exact List type and Thread owner arena")
-        check((cast: (int) (membership != (cast: (@: void) c.lmx_thread_children(root\thread)))), "host and R0 do not share a membership set")
+        check((cast: (int) (membership != (cast: (@) c.lmx_thread_children(root\thread)))), "host and R0 do not share a membership set")
     ---
-    @: letter c.LmxMsg 0
-    @: letter_graph c.Lmx 0
-    @: payload c.Lmx 0
+    c.LmxMsg@: letter 0
+    c.Lmx@: letter_graph 0
+    c.Lmx@: payload 0
     @: ncell void 0
     @: sender_cell void 0
     int: st
     if: root = 0 || r0 = 0 || l2_ref_peer_arena_cell[0] = 0
         return: 1
     ---
-    c.memset((cast: (@: void) l2_ref_peer_arena_cell[0]), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@) l2_ref_peer_arena_cell[0]), 0, c.sizeof(c.LmxArena))
     if: c.lmx_arena_open(l2_ref_peer_arena_cell[0]) != 0
         return: 1
     ---
-    l2_ref_peer_cell[0] := (cast: (@: c.LmxMsg) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
-    l2_ref_peer_mail_cell[0] := (cast: (@: c.LmxPost) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    peer_slot := (cast: (@: c.LmxSchedule) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    peer_thread := (cast: (@: c.LmxThread) l2_ref_peer_cell[0])
+    l2_ref_peer_cell[0] := (cast: (c.LmxMsg@) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    l2_ref_peer_mail_cell[0] := (cast: (c.LmxPost@) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    peer_slot := (cast: (c.LmxSchedule@) c.lmx_arena_take(l2_ref_peer_arena_cell[0], c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    peer_thread := (cast: (c.LmxThread@) l2_ref_peer_cell[0])
     if: l2_ref_peer_cell[0] = 0 || l2_ref_peer_mail_cell[0] = 0 || peer_slot = 0
         return: 1
     ---
@@ -3179,7 +3179,7 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     if: c.lmx_post_init(l2_ref_peer_arena_cell[0], l2_ref_peer_mail_cell[0]) != c.LMX_POST_OK
         return: 1
     ---
-    if: c.lmx_schedule_init(peer_slot, l2_ref_peer_arena_cell[0], (cast: (@: void) peer_thread), 120000U) != c.LMX_SCHEDULE_OK
+    if: c.lmx_schedule_init(peer_slot, l2_ref_peer_arena_cell[0], (cast: (@) peer_thread), 120000U) != c.LMX_SCHEDULE_OK
         return: 1
     ---
     if: c.lmx_thread_init(l2_ref_peer_arena_cell[0], peer_thread, peer_graph, l2_ref_peer_mail_cell[0], peer_slot) != c.LMX_THREAD_OK
@@ -3188,12 +3188,12 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     if: c.lmx_service_register(c.lmx_root_service(root), peer_thread, l2_ref_peer_arena_cell[0]) != c.LMX_SERVICE_OK
         return: 1
     ---
-    l2_ref_parent_addr_cell[0] := (cast: (@: void) c.lmx_thread_parent((cast: (@: c.LmxThread) r0)))
-    letter_arena := (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    l2_ref_parent_addr_cell[0] := (cast: (@) c.lmx_thread_parent((cast: (c.LmxThread@) r0)))
+    letter_arena := (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
     if: letter_arena = 0 || c.lmx_arena_open(letter_arena) != 0
         return: 1
     ---
-    letter := (cast: (@: c.LmxMsg) c.lmx_arena_take(letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter := (cast: (c.LmxMsg@) c.lmx_arena_take(letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     letter_graph := c.lmx_node_new_owned(letter_arena)
     payload := c.lmx_node_new_owned(letter_arena)
     ncell := c.lmx_int_new_owned(letter_arena)
@@ -3209,29 +3209,29 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     # The sender is a pointer cell holding the peer's own address (author's Q26.2 ruling -- the
     # same shape lmx_root_launch_tapped now builds mainArgs's own sender with).
     sender_cell := c.lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, letter_arena)
-    if: sender_cell = 0 || c.lmx_pointer_store_known(sender_cell, (cast: (@: void) l2_ref_peer_cell[0])) != 0
+    if: sender_cell = 0 || c.lmx_pointer_store_known(sender_cell, (cast: (@) l2_ref_peer_cell[0])) != 0
         return: 1
     ---
-    if: c.lmx_arena_ref_store(letter_arena, letter_graph, 0U, sender_cell) != 0 || c.lmx_arena_ref_store(letter_arena, letter_graph, 1U, (cast: (@: void) payload)) != 0
+    if: c.lmx_arena_ref_store(letter_arena, letter_graph, 0U, sender_cell) != 0 || c.lmx_arena_ref_store(letter_arena, letter_graph, 1U, (cast: (@) payload)) != 0
         return: 1
     ---
     letter\running := 1
     letter\success := 0
     letter\handoff_ready := 0
     letter\graph := letter_graph
-    st := c.lmx_service_post(c.lmx_root_service(root), (cast: (@: void) r0), letter, letter_arena)
+    st := c.lmx_service_post(c.lmx_root_service(root), (cast: (@) r0), letter, letter_arena)
     return: (cast: (int) (st != c.LMX_SERVICE_OK))
 end: driver_before_turn
 
-sub: post_log (@: arena c.LmxArena; @: letter c.LmxMsg)
-    @: g_fields c.VoidArray 0
-    @: p_fields c.VoidArray 0
-    @: t_fields c.VoidArray 0
-    @: post_log_n_cell int (cast: (@: int) (@ c.post_log_n))
-    @: g c.Lmx 0
-    @: p c.Lmx 0
+sub: post_log (c.LmxArena@: arena; c.LmxMsg@: letter)
+    c.VoidArray@: g_fields 0
+    c.VoidArray@: p_fields 0
+    c.VoidArray@: t_fields 0
+    int@: post_log_n_cell (cast: (int@) (@ c.post_log_n))
+    c.Lmx@: g 0
+    c.Lmx@: p 0
     @: v void 0
-    @: t c.LmxArray 0
+    c.LmxArray@: t 0
     size_t: j 0U
     post_log_n_cell[0] := post_log_n_cell[0] + 1
     c.printf("post %d:", post_log_n_cell[0])
@@ -3258,12 +3258,12 @@ sub: post_log (@: arena c.LmxArena; @: letter c.LmxMsg)
             c.printf(" %d", c.lmx_int_value_known(v))
         else:
             if: v != 0 && c.lmx_domain_type(arena, v) = c.LMX_TYPE_ARRAY_OF_CHAR
-                t := (cast: (@: c.LmxArray) v)
+                t := (cast: (c.LmxArray@) v)
                 t_fields := 0
                 if: t != 0
                     t_fields := @ t\array
                 ---
-                c.printf(" \"%.*s\"", (cast: (int) t_fields\size), (cast: (@: char) t_fields\data))
+                c.printf(" \"%.*s\"", (cast: (int) t_fields\size), (cast: (char@) t_fields\data))
             else:
                 c.printf(" ?")
             ---
@@ -3273,19 +3273,19 @@ sub: post_log (@: arena c.LmxArena; @: letter c.LmxMsg)
     c.printf("\n")
 end: post_log
 
-fn: driver_service_post (@: service c.LmxService; @: address void; @: letter c.LmxMsg; @: letter_arena c.LmxArena) int
+fn: driver_service_post (c.LmxService@: service; @: address; c.LmxMsg@: letter; c.LmxArena@: letter_arena) int
     const: @@(phase_cell char (cast: (const: @@(char)) (@ c.phase)))
-    @: post_paths_requested_cell int (cast: (@: int) (@ c.post_paths_requested))
-    @: post_paths_seen_cell int (cast: (@: int) (@ c.post_paths_seen))
-    @@: post_paths_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.post_paths_arena))
-    @@: post_paths_graph_cell c.Lmx (cast: (@@: c.Lmx) (@ c.post_paths_graph))
-    @@: l2_ref_peer_cell c.LmxMsg (cast: (@@: c.LmxMsg) (@ c.l2_ref_peer))
-    @: l2_ref_reply_to_sender_cell int (cast: (@: int) (@ c.l2_ref_reply_to_sender))
-    @@: l2_ref_parent_addr_cell void (cast: (@@: void) (@ c.l2_ref_parent_addr))
-    @: l2_ref_reply_to_parent_cell int (cast: (@: int) (@ c.l2_ref_reply_to_parent))
-    @: post_log_requested_cell int (cast: (@: int) (@ c.post_log_requested))
+    int@: post_paths_requested_cell (cast: (int@) (@ c.post_paths_requested))
+    int@: post_paths_seen_cell (cast: (int@) (@ c.post_paths_seen))
+    c.LmxArena@@: post_paths_arena_cell (cast: (c.LmxArena@@) (@ c.post_paths_arena))
+    c.Lmx@@: post_paths_graph_cell (cast: (c.Lmx@@) (@ c.post_paths_graph))
+    c.LmxMsg@@: l2_ref_peer_cell (cast: (c.LmxMsg@@) (@ c.l2_ref_peer))
+    int@: l2_ref_reply_to_sender_cell (cast: (int@) (@ c.l2_ref_reply_to_sender))
+    @@: l2_ref_parent_addr_cell void (cast: (@@) (@ c.l2_ref_parent_addr))
+    int@: l2_ref_reply_to_parent_cell (cast: (int@) (@ c.l2_ref_reply_to_parent))
+    int@: post_log_requested_cell (cast: (int@) (@ c.post_log_requested))
     int: st
-    const: (@: saved_phase char phase_cell[0])
+    const: (char@: saved_phase phase_cell[0])
     if: post_paths_requested_cell[0] != 0 && post_paths_seen_cell[0] = 0
         post_paths_seen_cell[0] := post_paths_seen_cell[0] + 1
         phase_cell[0] := "generated program post paths"
@@ -3295,7 +3295,7 @@ fn: driver_service_post (@: service c.LmxService; @: address void; @: letter c.L
         ---
         phase_cell[0] := saved_phase
     ---
-    if: l2_ref_peer_cell[0] != 0 && address = (cast: (@: void) l2_ref_peer_cell[0])
+    if: l2_ref_peer_cell[0] != 0 && address = (cast: (@) l2_ref_peer_cell[0])
         l2_ref_reply_to_sender_cell[0] := l2_ref_reply_to_sender_cell[0] + 1
     ---
     if: l2_ref_parent_addr_cell[0] != 0 && address = l2_ref_parent_addr_cell[0]
@@ -3305,23 +3305,23 @@ fn: driver_service_post (@: service c.LmxService; @: address void; @: letter c.L
         post_log(letter_arena, letter)
     ---
     st := c.lmx_service_post(service, address, letter, letter_arena)
-    if: st = c.LMX_SERVICE_OK && l2_ref_peer_cell[0] != 0 && address = (cast: (@: void) l2_ref_peer_cell[0])
-        c.lmx_service_unregister(service, (cast: (@: c.LmxThread) l2_ref_peer_cell[0]))
+    if: st = c.LMX_SERVICE_OK && l2_ref_peer_cell[0] != 0 && address = (cast: (@) l2_ref_peer_cell[0])
+        c.lmx_service_unregister(service, (cast: (c.LmxThread@) l2_ref_peer_cell[0]))
     ---
     return: st
 end: driver_service_post
 
-fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; @: out void; @: err void) int
-    @: launches_cell int (cast: (@: int) (@ c.launches))
-    @: program_passed_cell int (cast: (@: int) (@ c.program_passed))
-    @: l2_ref_active_cell int (cast: (@: int) (@ c.l2_ref_active))
-    @: pointer_abi_mutation_requested_cell int (cast: (@: int) (@ c.pointer_abi_mutation_requested))
-    @: walk_thrown_cell int (cast: (@: int) (@ c.walk_thrown))
-    @: host_state_cell int (cast: (@: int) (@ c.host_state))
-    @: r0_stopped_cell int (cast: (@: int) (@ c.r0_stopped))
+fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; @: out; @: err) int
+    int@: launches_cell (cast: (int@) (@ c.launches))
+    int@: program_passed_cell (cast: (int@) (@ c.program_passed))
+    int@: l2_ref_active_cell (cast: (int@) (@ c.l2_ref_active))
+    int@: pointer_abi_mutation_requested_cell (cast: (int@) (@ c.pointer_abi_mutation_requested))
+    int@: walk_thrown_cell (cast: (int@) (@ c.walk_thrown))
+    int@: host_state_cell (cast: (int@) (@ c.host_state))
+    int@: r0_stopped_cell (cast: (int@) (@ c.r0_stopped))
     int: code
     @: cap void 0
-    @: text char 0
+    char@: text 0
     size_t: n 0U
     launches_cell[0] := launches_cell[0] + 1
     if: program = c.l2_program_build
@@ -3330,7 +3330,7 @@ fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootPr
     # The host's stderr goes through a file of the driver's own, so the driver reads what the host
     # reported and then hands it on to the stream main gave; read back, the file is removed and nothing of
     # it stays in the working directory (the author 2026-11-11 through fable2, plan M11 5b part 2).
-    cap := (cast: (@: void) c.fopen("l2_driver_launch.err", "w+b"))
+    cap := (cast: (@) c.fopen("l2_driver_launch.err", "w+b"))
     if: cap = 0
         cap := err
     ---
@@ -3344,17 +3344,17 @@ fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootPr
     if: cap != err
         c.fflush(cap)
         c.rewind(cap)
-        text := (cast: (@: char) c.calloc(65536U, 1U))
+        text := (cast: (char@) c.calloc(65536U, 1U))
         if: text != 0
-            n := c.fread((cast: (@: void) text), 1U, 65535U, cap)
+            n := c.fread((cast: (@) text), 1U, 65535U, cap)
             text[n] := 0
             if: c.strstr(text, "R0 was stopped") != 0
                 r0_stopped_cell[0] := 1
             ---
             if: err != 0 && n != 0U
-                c.fwrite((cast: (@: void) text), 1U, n, err)
+                c.fwrite((cast: (@) text), 1U, n, err)
             ---
-            c.free((cast: (@: void) text))
+            c.free((cast: (@) text))
         ---
         c.fclose(cap)
         c.remove("l2_driver_launch.err")
@@ -3362,9 +3362,9 @@ fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootPr
     return: code
 end: driver_root_launch
 
-fn: driver_merge_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
-    @: merge_calls_cell int (cast: (@: int) (@ c.merge_calls))
-    @: merge_fail_at_cell int (cast: (@: int) (@ c.merge_fail_at))
+fn: driver_merge_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@@: out) int
+    int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))
+    int@: merge_fail_at_cell (cast: (int@) (@ c.merge_fail_at))
     int: status
     merge_calls_cell[0] := merge_calls_cell[0] + 1
     if: merge_fail_at_cell[0] > 0 && merge_calls_cell[0] = merge_fail_at_cell[0]
@@ -3379,9 +3379,9 @@ fn: driver_merge_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src
     return: status
 end: driver_merge_owned
 
-fn: driver_merge_profiles_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
-    @: merge_calls_cell int (cast: (@: int) (@ c.merge_calls))
-    @: merge_fail_at_cell int (cast: (@: int) (@ c.merge_fail_at))
+fn: driver_merge_profiles_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@@: out) int
+    int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))
+    int@: merge_fail_at_cell (cast: (int@) (@ c.merge_fail_at))
     int: status
     merge_calls_cell[0] := merge_calls_cell[0] + 1
     if: merge_fail_at_cell[0] > 0 && merge_calls_cell[0] = merge_fail_at_cell[0]
@@ -3396,9 +3396,9 @@ fn: driver_merge_profiles_owned (@@: operands c.Lmx; size_t: count; @: body c.Lm
     return: status
 end: driver_merge_profiles_owned
 
-fn: driver_merge_used_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: use_anchor c.Lmx; @: use_sel size_t; @: use_slot size_t; @: use_len size_t; size_t: use_count; size_t: use_slots; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
-    @: merge_calls_cell int (cast: (@: int) (@ c.merge_calls))
-    @: merge_fail_at_cell int (cast: (@: int) (@ c.merge_fail_at))
+fn: driver_merge_used_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@@: out) int
+    int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))
+    int@: merge_fail_at_cell (cast: (int@) (@ c.merge_fail_at))
     int: status
     merge_calls_cell[0] := merge_calls_cell[0] + 1
     if: merge_fail_at_cell[0] > 0 && merge_calls_cell[0] = merge_fail_at_cell[0]
@@ -3413,48 +3413,48 @@ fn: driver_merge_used_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @
     return: status
 end: driver_merge_used_owned
 
-fn: main (int: argc; @@: argv char) int
-    @: gargc_cell int (cast: (@: int) (@ c.gargc))
-    @@@: gargv_cell char (cast: (@@@: char) (@ c.gargv))
-    @: pargc_cell int (cast: (@: int) (@ c.pargc))
-    @@@: pargv_cell char (cast: (@@@: char) (@ c.pargv))
-    @: merge_facts_expected_cell int (cast: (@: int) (@ c.merge_facts_expected))
-    @: graph_mutation_requested_cell int (cast: (@: int) (@ c.graph_mutation_requested))
-    @: pointer_abi_mutation_requested_cell int (cast: (@: int) (@ c.pointer_abi_mutation_requested))
-    @: post_paths_requested_cell int (cast: (@: int) (@ c.post_paths_requested))
-    @: profile_complete_requested_cell int (cast: (@: int) (@ c.profile_complete_requested))
-    @: post_log_requested_cell int (cast: (@: int) (@ c.post_log_requested))
-    @: merge_fail_at_cell int (cast: (@: int) (@ c.merge_fail_at))
-    @: l2_ref_active_cell int (cast: (@: int) (@ c.l2_ref_active))
-    @@: l2_ref_peer_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.l2_ref_peer_arena))
+fn: main (int: argc; char@@: argv) int
+    int@: gargc_cell (cast: (int@) (@ c.gargc))
+    char@@@: gargv_cell (cast: (char@@@) (@ c.gargv))
+    int@: pargc_cell (cast: (int@) (@ c.pargc))
+    char@@@: pargv_cell (cast: (char@@@) (@ c.pargv))
+    int@: merge_facts_expected_cell (cast: (int@) (@ c.merge_facts_expected))
+    int@: graph_mutation_requested_cell (cast: (int@) (@ c.graph_mutation_requested))
+    int@: pointer_abi_mutation_requested_cell (cast: (int@) (@ c.pointer_abi_mutation_requested))
+    int@: post_paths_requested_cell (cast: (int@) (@ c.post_paths_requested))
+    int@: profile_complete_requested_cell (cast: (int@) (@ c.profile_complete_requested))
+    int@: post_log_requested_cell (cast: (int@) (@ c.post_log_requested))
+    int@: merge_fail_at_cell (cast: (int@) (@ c.merge_fail_at))
+    int@: l2_ref_active_cell (cast: (int@) (@ c.l2_ref_active))
+    c.LmxArena@@: l2_ref_peer_arena_cell (cast: (c.LmxArena@@) (@ c.l2_ref_peer_arena))
     const: @@(phase_cell char (cast: (const: @@(char)) (@ c.phase)))
-    @: launches_cell int (cast: (@: int) (@ c.launches))
-    @: program_passed_cell int (cast: (@: int) (@ c.program_passed))
-    @: builds_cell int (cast: (@: int) (@ c.builds))
-    @: build_rc_cell int (cast: (@: int) (@ c.build_rc))
-    @: host_state_cell int (cast: (@: int) (@ c.host_state))
-    @: merge_calls_cell int (cast: (@: int) (@ c.merge_calls))
-    @: merge_facts_seen_cell int (cast: (@: int) (@ c.merge_facts_seen))
-    @: profile_complete_seen_cell int (cast: (@: int) (@ c.profile_complete_seen))
-    @: post_paths_seen_cell int (cast: (@: int) (@ c.post_paths_seen))
-    @@: dispatch_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.dispatch_arena))
-    @: dispatch_calls_cell int (cast: (@: int) (@ c.dispatch_calls))
-    @@: stop_caller_cell c.Lmx (cast: (@@: c.Lmx) (@ c.stop_caller))
-    @: stop_calls_cell int (cast: (@: int) (@ c.stop_calls))
-    @: stop_root_returns_cell int (cast: (@: int) (@ c.stop_root_returns))
-    @: stop_late_calls_cell int (cast: (@: int) (@ c.stop_late_calls))
-    @: stop_receiver_calls_cell int (cast: (@: int) (@ c.stop_receiver_calls))
-    @: walk_thrown_cell int (cast: (@: int) (@ c.walk_thrown))
-    @: r0_stopped_cell int (cast: (@: int) (@ c.r0_stopped))
-    @: l2_ref_reply_to_sender_cell int (cast: (@: int) (@ c.l2_ref_reply_to_sender))
-    @: l2_ref_reply_to_parent_cell int (cast: (@: int) (@ c.l2_ref_reply_to_parent))
-    @: graph_mutation_shape_failures_cell int (cast: (@: int) (@ c.graph_mutation_shape_failures))
-    @: graph_mutation_baseline_ok_cell int (cast: (@: int) (@ c.graph_mutation_baseline_ok))
-    @: graph_mutation_setup_ok_cell int (cast: (@: int) (@ c.graph_mutation_setup_ok))
-    @: graph_mutation_compared_cell int (cast: (@: int) (@ c.graph_mutation_compared))
-    @: graph_mutation_setup_failures_cell int (cast: (@: int) (@ c.graph_mutation_setup_failures))
-    @: failures_cell int (cast: (@: int) (@ c.failures))
-    @: checks_cell int (cast: (@: int) (@ c.checks))
+    int@: launches_cell (cast: (int@) (@ c.launches))
+    int@: program_passed_cell (cast: (int@) (@ c.program_passed))
+    int@: builds_cell (cast: (int@) (@ c.builds))
+    int@: build_rc_cell (cast: (int@) (@ c.build_rc))
+    int@: host_state_cell (cast: (int@) (@ c.host_state))
+    int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))
+    int@: merge_facts_seen_cell (cast: (int@) (@ c.merge_facts_seen))
+    int@: profile_complete_seen_cell (cast: (int@) (@ c.profile_complete_seen))
+    int@: post_paths_seen_cell (cast: (int@) (@ c.post_paths_seen))
+    c.LmxArena@@: dispatch_arena_cell (cast: (c.LmxArena@@) (@ c.dispatch_arena))
+    int@: dispatch_calls_cell (cast: (int@) (@ c.dispatch_calls))
+    c.Lmx@@: stop_caller_cell (cast: (c.Lmx@@) (@ c.stop_caller))
+    int@: stop_calls_cell (cast: (int@) (@ c.stop_calls))
+    int@: stop_root_returns_cell (cast: (int@) (@ c.stop_root_returns))
+    int@: stop_late_calls_cell (cast: (int@) (@ c.stop_late_calls))
+    int@: stop_receiver_calls_cell (cast: (int@) (@ c.stop_receiver_calls))
+    int@: walk_thrown_cell (cast: (int@) (@ c.walk_thrown))
+    int@: r0_stopped_cell (cast: (int@) (@ c.r0_stopped))
+    int@: l2_ref_reply_to_sender_cell (cast: (int@) (@ c.l2_ref_reply_to_sender))
+    int@: l2_ref_reply_to_parent_cell (cast: (int@) (@ c.l2_ref_reply_to_parent))
+    int@: graph_mutation_shape_failures_cell (cast: (int@) (@ c.graph_mutation_shape_failures))
+    int@: graph_mutation_baseline_ok_cell (cast: (int@) (@ c.graph_mutation_baseline_ok))
+    int@: graph_mutation_setup_ok_cell (cast: (int@) (@ c.graph_mutation_setup_ok))
+    int@: graph_mutation_compared_cell (cast: (int@) (@ c.graph_mutation_compared))
+    int@: graph_mutation_setup_failures_cell (cast: (int@) (@ c.graph_mutation_setup_failures))
+    int@: failures_cell (cast: (int@) (@ c.failures))
+    int@: checks_cell (cast: (int@) (@ c.checks))
     int: status
     int: expected 0
     int: letters -1
@@ -3480,7 +3480,7 @@ fn: main (int: argc; @@: argv char) int
     if: dash < argc
         pargc_cell[0] := argc - dash
     ---
-    pargv_cell[0] := (cast: (@@: char) c.calloc((cast: (size_t) (pargc_cell[0] + 1)), sizeof(@: char)))
+    pargv_cell[0] := (cast: (char@@) c.calloc((cast: (size_t) (pargc_cell[0] + 1)), sizeof(char@)))
     if: pargv_cell[0] = 0
         c.fputs("l2_eternal_driver: out of memory\n", c.l1_stdout())
         return: 2
@@ -3543,7 +3543,7 @@ fn: main (int: argc; @@: argv char) int
         at := at + 1
     ---
     if: l2_ref_active_cell[0] != 0
-        l2_ref_peer_arena_cell[0] := (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+        l2_ref_peer_arena_cell[0] := (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
         if: l2_ref_peer_arena_cell[0] = 0
             c.fputs("l2_eternal_driver: out of memory\n", c.l1_stdout())
             return: 2

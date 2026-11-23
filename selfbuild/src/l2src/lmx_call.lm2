@@ -47,7 +47,7 @@ end: lmx_call_note_walk_fail
 # An executed native access consumes one already installed numeric place.
 # Query adapters may return an unavailable sentinel; an actual typed access
 # must preserve the operation error before any pointer or null-path use.
-fn: lmx_call_index (@: arena c.LmxArena; @: data c.Lmx; @: code c.Lmx; size_t: edge) size_t
+fn: lmx_call_index (c.LmxArena@: arena; c.Lmx@: data; c.Lmx@: code; size_t: edge) size_t
     size_t: slot (cast: (size_t) -1)
     int: answer
     int: status c.lmx_implements_code_slot(arena, data, code, edge, @ slot, @ answer)
@@ -69,7 +69,7 @@ end: lmx_call_index
 # This is an actual graph-payload read, not a receiving proof. A non-null
 # foreign/unregistered payload has no graph-domain interpretation yet.
 # Explicit raw C ABI input/result storage does not use this graph path.
-fn: lmx_call_cell (@: arena c.LmxArena; @: cell void) @: void
+fn: lmx_call_cell (c.LmxArena@: arena; @: cell) @
     if: cell != 0 && c.lmx_domain_kind(arena, cell) = c.LMX_KIND_NONE
         lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)
         c.abort()
@@ -77,19 +77,19 @@ fn: lmx_call_cell (@: arena c.LmxArena; @: cell void) @: void
     return: cell
 end: lmx_call_cell
 
-fn: lmx_call_ready (@: arena c.LmxArena; @: callable c.Lmx) int
+fn: lmx_call_ready (c.LmxArena@: arena; c.Lmx@: callable) int
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
-    if: c.lmx_graph_node_in(arena, (cast: (@: void) callable)) = 0
+    if: c.lmx_graph_node_in(arena, (cast: (@) callable)) = 0
         return: c.LMX_CALL_NOT_CALLABLE
     ---
     return: c.LMX_CALL_OK
 end: lmx_call_ready
 
-fn: lmx_call_node (@: callable c.Lmx) @: c.Lmx
+fn: lmx_call_node (c.Lmx@: callable) c.Lmx@
     if: callable = 0
         return: 0
-    return: (cast: (@: c.Lmx) callable\parent)
+    return: (cast: (c.Lmx@) callable\parent)
 end: lmx_call_node
 
 # ---- The activation chain (slice 254, design 4.5 B1) ----------------------------------------------------------------
@@ -102,70 +102,70 @@ end: lmx_call_node
 # rows).  The resolver of free inputs (lmx_activation_resolve, lmx_walk_values.lm2) climbs this chain once, at the
 # callee's entry.  Nothing here is graph storage: no root, no companion graph, no registry; a record is gone with its
 # activation.
-fn: lmx_activation_push (@: arena c.LmxArena; @: record c.LmxActivation; int: kind; @: code c.Lmx; @@: refs void; @: values void; size_t: width; @: frame void) int
+fn: lmx_activation_push (c.LmxArena@: arena; c.LmxActivation@: record; int: kind; c.Lmx@: code; @@: refs; @: values; size_t: width; @: frame) int
     if: arena = 0 || record = 0
         return: 1
-    c.memset((cast: (@: void) record), 0, c.sizeof(c.LmxActivation))
-    record\parent := (cast: (@: c.LmxActivation) arena\activation)
+    c.memset((cast: (@) record), 0, c.sizeof(c.LmxActivation))
+    record\parent := (cast: (c.LmxActivation@) arena\activation)
     record\kind := kind
     record\code := code
     record\refs := refs
     record\values := values
     record\width := width
     record\frame := frame
-    arena\activation := (cast: (@: void) record)
+    arena\activation := (cast: (@) record)
     return: 0
 end: lmx_activation_push
 
 # The record leaves with its activation; its bindings are freed.  The chain goes back to the record's parent whatever
 # the current record is: the frame below is gone.
-sub: lmx_activation_pop (@: arena c.LmxArena; @: record c.LmxActivation)
+sub: lmx_activation_pop (c.LmxArena@: arena; c.LmxActivation@: record)
     if: arena = 0 || record = 0
         return
     if: record\bindings != 0
-        c.free((cast: (@: void) record\bindings))
+        c.free((cast: (@) record\bindings))
     ---
     record\bindings := 0
     record\nbind := 0U
     record\cap := 0U
     if: record\origins_owned != 0
-        c.free((cast: (@: void) record\input_origins))
-        c.free((cast: (@: void) record\input_private))
+        c.free((cast: (@) record\input_origins))
+        c.free((cast: (@) record\input_private))
     ---
     record\input_origins := 0
     record\input_private := 0
     record\origin_count := 0U
     record\origins_owned := 0
-    arena\activation := (cast: (@: void) record\parent)
+    arena\activation := (cast: (@) record\parent)
     return
 end: lmx_activation_pop
 
 # A native frame registers one of its own working cells in the current record: `code` (the code of its name,
 # IDENTIFIER-CODES; the unit normalized its spelling once at its input boundary) with its `storage` and `type`, or a
 # complete LmxWalkValue record (`value`) where the cell holds one.  1 for no code, or when the C heap refuses.
-fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void) int
+fn: lmx_activation_bind (c.LmxArena@: arena; size_t: code; @: storage; int: type; @: value) int
     return: lmx_activation_bind_origin(arena, code, storage, type, value, 0)
 end: lmx_activation_bind
 
 # Slice 412: a binding with an origin and no name -- an actual a launch supplied to an unnamed root of its data -- is
 # found only by that origin (lookup mode 2); no name lookup matches code 0 (lmx_activation_name_is).  1 for neither a
 # code nor an origin, or when the C heap refuses.
-fn: lmx_activation_bind_origin (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void; @: origin void) int
-    @: record c.LmxActivation 0
-    @: grown c.LmxActivationBinding 0
-    @: slot c.LmxActivationBinding 0
-    @: metadata c.LmxSourceName 0
+fn: lmx_activation_bind_origin (c.LmxArena@: arena; size_t: code; @: storage; int: type; @: value; @: origin) int
+    c.LmxActivation@: record 0
+    c.LmxActivationBinding@: grown 0
+    c.LmxActivationBinding@: slot 0
+    c.LmxSourceName@: metadata 0
     size_t: cap 0U
     if: arena = 0 || (code = 0U && origin = 0)
         return: 1
-    record := (cast: (@: c.LmxActivation) arena\activation)
+    record := (cast: (c.LmxActivation@) arena\activation)
     if: record = 0
         return: 1
     if: record\nbind = record\cap
         cap := 8U
         if: record\cap != 0U
             cap := record\cap * 2U
-        grown := (cast: (@: c.LmxActivationBinding) c.realloc((cast: (@: void) record\bindings), cap * c.sizeof(c.LmxActivationBinding)))
+        grown := (cast: (c.LmxActivationBinding@) c.realloc((cast: (@) record\bindings), cap * c.sizeof(c.LmxActivationBinding)))
         if: grown = 0
             return: 1
         record\bindings := grown
@@ -187,11 +187,11 @@ end: lmx_activation_bind_origin
 
 # A call owns these mutable metadata spans until its activation returns.
 # Entry may replace a short borrow with its own padded spans.
-fn: lmx_activation_origins (@: arena c.LmxArena; @@: origins void; @: private_flags int; size_t: count) int
-    @: record c.LmxActivation 0
+fn: lmx_activation_origins (c.LmxArena@: arena; @@: origins; int@: private_flags; size_t: count) int
+    c.LmxActivation@: record 0
     if: arena = 0 || (count != 0U && (origins = 0 || private_flags = 0))
         return: 1
-    record := (cast: (@: c.LmxActivation) arena\activation)
+    record := (cast: (c.LmxActivation@) arena\activation)
     if: record = 0
         return: 1
     if: record\input_origins = origins && record\input_private = private_flags
@@ -201,8 +201,8 @@ fn: lmx_activation_origins (@: arena c.LmxArena; @@: origins void; @: private_fl
         return: 0
     ---
     if: record\origins_owned != 0
-        c.free((cast: (@: void) record\input_origins))
-        c.free((cast: (@: void) record\input_private))
+        c.free((cast: (@) record\input_origins))
+        c.free((cast: (@) record\input_private))
     ---
     record\input_origins := origins
     record\input_private := private_flags
@@ -213,18 +213,18 @@ end: lmx_activation_origins
 
 # Explicit typed borrows, including operations before the first activation.
 # A checkpoint closes an operation, including every nested temporary span.
-fn: lmx_execution_roots_mark (@: arena c.LmxArena) @: c.LmxExecutionRoots
+fn: lmx_execution_roots_mark (c.LmxArena@: arena) c.LmxExecutionRoots@
     if: arena = 0
         return: 0
     return: arena\execution_roots
 
-sub: lmx_execution_roots_push (@: arena c.LmxArena; @: roots c.LmxExecutionRoots; @: values void; size_t: value_count; @@: refs void; size_t: ref_count; @: held void; @: place void)
+sub: lmx_execution_roots_push (c.LmxArena@: arena; c.LmxExecutionRoots@: roots; @: values; size_t: value_count; @@: refs; size_t: ref_count; @: held; @: place)
     if: arena = 0 || roots = 0
         return
     roots\prior := arena\execution_roots
     roots\next := 0
-    roots\lane := (cast: (@: void) arena)
-    @: prior c.LmxExecutionRoots (cast: (@: c.LmxExecutionRoots) roots\prior)
+    roots\lane := (cast: (@) arena)
+    c.LmxExecutionRoots@: prior (cast: (c.LmxExecutionRoots@) roots\prior)
     if: prior != 0
         prior\next := roots
     roots\values := values
@@ -241,7 +241,7 @@ sub: lmx_execution_roots_push (@: arena c.LmxArena; @: roots c.LmxExecutionRoots
     arena\execution_roots := roots
     return
 
-sub: lmx_execution_roots_restore (@: arena c.LmxArena; @: mark c.LmxExecutionRoots)
+sub: lmx_execution_roots_restore (c.LmxArena@: arena; c.LmxExecutionRoots@: mark)
     if: arena != 0
         arena\execution_roots := mark
         if: mark != 0
@@ -251,13 +251,13 @@ sub: lmx_execution_roots_restore (@: arena c.LmxArena; @: mark c.LmxExecutionRoo
 
 # Remove a helper's local span while younger call-scratch argument spans stay
 # alive. Constant-time unlink; there is no lookup on any value access.
-sub: lmx_execution_roots_remove (@: arena c.LmxArena; @: roots c.LmxExecutionRoots)
-    @: prior c.LmxExecutionRoots 0
-    @: next c.LmxExecutionRoots 0
-    if: arena = 0 || roots = 0 || roots\lane != (cast: (@: void) arena)
+sub: lmx_execution_roots_remove (c.LmxArena@: arena; c.LmxExecutionRoots@: roots)
+    c.LmxExecutionRoots@: prior 0
+    c.LmxExecutionRoots@: next 0
+    if: arena = 0 || roots = 0 || roots\lane != (cast: (@) arena)
         return
-    prior := (cast: (@: c.LmxExecutionRoots) roots\prior)
-    next := (cast: (@: c.LmxExecutionRoots) roots\next)
+    prior := (cast: (c.LmxExecutionRoots@) roots\prior)
+    next := (cast: (c.LmxExecutionRoots@) roots\next)
     if: next != 0
         next\prior := prior
     else:
@@ -271,7 +271,7 @@ sub: lmx_execution_roots_remove (@: arena c.LmxArena; @: roots c.LmxExecutionRoo
 
 # Host/root nullary transport: status is the result, activation int travels through value.
 # This is not the language unary-call data selection; the host executes its complete program graph over itself.
-fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: value int) int
+fn: lmx_call0_mode (c.LmxArena@: arena; c.Lmx@: callable; int@: route; int@: value) int
     @: out void 0
     int: st
     if: route != 0
@@ -290,9 +290,9 @@ fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: val
         \route := c.LMX_CALL_ROUTE_NATIVE
     c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
     c.LmxActivation: act
-    @: roots_mark c.LmxExecutionRoots lmx_execution_roots_mark(arena)
+    c.LmxExecutionRoots@: roots_mark lmx_execution_roots_mark(arena)
     lmx_activation_push(arena, @ act, 2, callable, 0, 0, 0U, 0)
-    st := entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) value), @ out, arena, callable, 0, 0)
+    st := entry((cast: (@) callable), 0, 0U, (cast: (@) value), @ out, arena, callable, 0, 0)
     lmx_execution_roots_restore(arena, roots_mark)
     lmx_activation_pop(arena, @ act)
     if: c.lmx_msg_poll_escape() != 0
@@ -301,22 +301,22 @@ fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: val
     return: st
 end: lmx_call0_mode
 
-fn: lmx_call0 (@: arena c.LmxArena; @: callable c.Lmx; @: value int) int
+fn: lmx_call0 (c.LmxArena@: arena; c.Lmx@: callable; int@: value) int
     return: lmx_call0_mode(arena, callable, 0, value)
 end: lmx_call0
 
 # The ordinary selected code/data ABI: actual declared-width storage and value context, no runtime backend registry.
-fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+fn: lmx_call_prim_values (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@: data; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
     return: lmx_call_prim_values_origins(arena, code, data, refs, nargs, dest, out, lmx_input_values, lmx_result_context, 0, 0, 0U)
 end: lmx_call_prim_values
 
-fn: lmx_call_prim_values_origins (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue; @@: origins void; @: private_flags int; size_t: origin_count) int
+fn: lmx_call_prim_values_origins (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@: data; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context; @@: origins; int@: private_flags; size_t: origin_count) int
     int: status
     c.LmxWalkValue: result_context
     c.LmxExecutionRoots: result_roots
     c.LmxExecutionRoots: input_roots
     c.LmxExecutionRoots: origin_roots
-    @: roots_mark c.LmxExecutionRoots 0
+    c.LmxExecutionRoots@: roots_mark 0
     size_t: input_count 0U
     if: out = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(c.l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
@@ -325,21 +325,21 @@ fn: lmx_call_prim_values_origins (@: arena c.LmxArena; @: code c.Lmx; @: data c.
     \out := 0
     if: origin_count != 0U && (origins = 0 || private_flags = 0)
         return: lmx_call_note_walk_fail(c.LMX_WALK_INVALID)
-    c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
+    c.memset((cast: (@) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     roots_mark := lmx_execution_roots_mark(arena)
     if: lmx_input_values != 0
         input_count := nargs
-    lmx_execution_roots_push(arena, @ input_roots, (cast: (@: void) lmx_input_values), input_count, refs, nargs, (cast: (@: void) data), 0)
+    lmx_execution_roots_push(arena, @ input_roots, (cast: (@) lmx_input_values), input_count, refs, nargs, (cast: (@) data), 0)
     lmx_execution_roots_push(arena, @ origin_roots, 0, 0U, origins, origin_count, 0, 0)
-    lmx_execution_roots_push(arena, @ result_roots, (cast: (@: void) (@ result_context)), 1U, out, 1U, dest, 0)
+    lmx_execution_roots_push(arena, @ result_roots, (cast: (@) (@ result_context)), 1U, out, 1U, dest, 0)
     c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
     c.LmxActivation: act
     if: addr != 0
         c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
         # The native activation's record (slice 254): its inputs are the arrays the entry receives.
-        lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@: void) lmx_input_values), nargs, 0)
+        lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@) lmx_input_values), nargs, 0)
         lmx_activation_origins(arena, origins, private_flags, origin_count)
-        status := entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
+        status := entry((cast: (@) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
         # The entry's stack Values have ended. Drop its typed borrows before
         # any other runtime action; caller inputs/result remain below them.
         lmx_execution_roots_restore(arena, @ result_roots)
@@ -350,19 +350,19 @@ fn: lmx_call_prim_values_origins (@: arena c.LmxArena; @: code c.Lmx; @: data c.
     if: c.lmx_msg_poll_escape() != 0
         \out := 0
         status := 0
-        c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
+        c.memset((cast: (@) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     if: lmx_result_context != 0
         # Do not clear an aliased caller input before the selected entry consumes it.
-        c.memset((cast: (@: void) lmx_result_context), 0, c.sizeof(c.LmxWalkValue))
+        c.memset((cast: (@) lmx_result_context), 0, c.sizeof(c.LmxWalkValue))
         if: status = 0
-            c.memcpy((cast: (@: void) lmx_result_context), (cast: (const: @: void) (@ result_context)), c.sizeof(c.LmxWalkValue))
+            c.memcpy((cast: (@) lmx_result_context), (cast: (const: @) (@ result_context)), c.sizeof(c.LmxWalkValue))
         ---
     ---
     lmx_execution_roots_restore(arena, roots_mark)
     return: status
 end: lmx_call_prim_values_origins
 
-fn: lmx_call_prim (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void) int
+fn: lmx_call_prim (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@: data; @@: refs; size_t: nargs; @: dest; @@: out) int
     return: lmx_call_prim_values(arena, code, data, refs, nargs, dest, out, 0, 0)
 end: lmx_call_prim
 
@@ -371,17 +371,17 @@ end: lmx_call_prim
 # computation runs by the owner's rule (the book #path-reads-no-execution; Р110 item 4) and the physical chain keeps every activation it
 # passes over: the collector marks them, a push takes its parent from the top, a pop goes back to it. It carries the
 # owner's code, inputs and frame. A search of names reads the owner for it: the owner of the frame it carries.
-fn: lmx_activation_stand (@: record c.LmxActivation) @: c.LmxActivation
-    @: frame c.LmxGraphFrame 0
+fn: lmx_activation_stand (c.LmxActivation@: record) c.LmxActivation@
+    c.LmxGraphFrame@: frame 0
     if: record = 0 || record\kind != 3
         return: record
-    frame := (cast: (@: c.LmxGraphFrame) record\frame)
+    frame := (cast: (c.LmxGraphFrame@) record\frame)
     return: frame\activation
 
 # The record a search of names reads after record: the parent of the record it stands for, read in turn for the
 # record that one stands for. The physical chain is record\parent, as before.
-fn: lmx_activation_next (@: record c.LmxActivation) @: c.LmxActivation
-    @: owner c.LmxActivation lmx_activation_stand(record)
+fn: lmx_activation_next (c.LmxActivation@: record) c.LmxActivation@
+    c.LmxActivation@: owner lmx_activation_stand(record)
     if: owner = 0
         return: 0
-    return: lmx_activation_stand((cast: (@: c.LmxActivation) owner\parent))
+    return: lmx_activation_stand((cast: (c.LmxActivation@) owner\parent))

@@ -29,8 +29,8 @@ include: "<stdlib.h>"
 sub: lmx_ids_enter ()
     int: acquired 0
     while: acquired = 0
-        if: c.__atomic_load_n((cast: (@: int) (@ c.lmx_ids_gate)), c.__ATOMIC_RELAXED) = 0
-            if: c.__atomic_exchange_n((cast: (@: int) (@ c.lmx_ids_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
+        if: c.__atomic_load_n((cast: (int@) (@ c.lmx_ids_gate)), c.__ATOMIC_RELAXED) = 0
+            if: c.__atomic_exchange_n((cast: (int@) (@ c.lmx_ids_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
                 acquired := 1
             ---
         ---
@@ -38,18 +38,18 @@ sub: lmx_ids_enter ()
 end: lmx_ids_enter
 
 sub: lmx_ids_leave ()
-    c.__atomic_store_n((cast: (@: int) (@ c.lmx_ids_gate)), 0, c.__ATOMIC_RELEASE)
+    c.__atomic_store_n((cast: (int@) (@ c.lmx_ids_gate)), 0, c.__ATOMIC_RELEASE)
 end: lmx_ids_leave
 
 # The order of two spellings, by their bytes and then by their lengths: below 0, 0 or above 0. Only the name -> code
 # table compares spellings, at the input boundary.
-fn: lmx_ids_order (const: (@: a char); size_t: an; const: (@: b char); size_t: bn) int
+fn: lmx_ids_order (const: (char@: a); size_t: an; const: (char@: b); size_t: bn) int
     size_t: n an
     int: r 0
     if: bn < n
         n := bn
     if: n != 0U
-        r := c.memcmp((cast: (@: void) a), (cast: (@: void) b), n)
+        r := c.memcmp((cast: (@) a), (cast: (@) b), n)
     if: r != 0
         return: r
     if: an < bn
@@ -60,7 +60,7 @@ fn: lmx_ids_order (const: (@: a char); size_t: an; const: (@: b char); size_t: b
 end: lmx_ids_order
 
 # 1 when the spelling is a reference head of any depth: one or more `@` and nothing else.
-fn: lmx_ids_all_at (const: (@: text char); size_t: nb) int
+fn: lmx_ids_all_at (const: (char@: text); size_t: nb) int
     size_t: i 0U
     if: text = 0 || nb = 0U
         return: 0
@@ -74,30 +74,30 @@ end: lmx_ids_all_at
 
 # Room for one more code: the arrays by code (spellings, lengths, reference marks; code 0 unused) and the order of the
 # codes. 0, or 1 without memory (the arrays already grown stay valid, the capacity is unchanged).
-fn: lmx_ids_room (@: ids c.LmxIds) int
+fn: lmx_ids_room (c.LmxIds@: ids) int
     size_t: cap 0U
-    @@: texts char 0
-    @: sizes size_t 0
-    @: order size_t 0
-    @: marks char 0
+    char@@: texts 0
+    size_t@: sizes 0
+    size_t@: order 0
+    char@: marks 0
     if: ids\count + 2U <= ids\cap
         return: 0
     cap := 64U
     if: ids\cap != 0U
         cap := ids\cap * 2U
-    texts := (cast: (@@: char) c.realloc((cast: (@: void) ids\text), cap * sizeof(@: char)))
+    texts := (cast: (char@@) c.realloc((cast: (@) ids\text), cap * sizeof(char@)))
     if: texts = 0
         return: 1
     ids\text := texts
-    sizes := (cast: (@: size_t) c.realloc((cast: (@: void) ids\size), cap * c.sizeof(c.size_t)))
+    sizes := (cast: (size_t@) c.realloc((cast: (@) ids\size), cap * c.sizeof(c.size_t)))
     if: sizes = 0
         return: 1
     ids\size := sizes
-    order := (cast: (@: size_t) c.realloc((cast: (@: void) ids\order), cap * c.sizeof(c.size_t)))
+    order := (cast: (size_t@) c.realloc((cast: (@) ids\order), cap * c.sizeof(c.size_t)))
     if: order = 0
         return: 1
     ids\order := order
-    marks := (cast: (@: char) c.realloc((cast: (@: void) ids\marks), cap * c.sizeof(c.char)))
+    marks := (cast: (char@) c.realloc((cast: (@) ids\marks), cap * c.sizeof(c.char)))
     if: marks = 0
         return: 1
     ids\marks := marks
@@ -106,17 +106,17 @@ fn: lmx_ids_room (@: ids c.LmxIds) int
 end: lmx_ids_room
 
 # The code of a spelling under the gate: the one the table holds, or a new one numbered next. 0 without memory.
-fn: lmx_ids_put (@: ids c.LmxIds; const: (@: text char); size_t: nb) size_t
+fn: lmx_ids_put (c.LmxIds@: ids; const: (char@: text); size_t: nb) size_t
     size_t: lo 0U
     size_t: hi ids\count
     size_t: mid 0U
     size_t: code 0U
     int: r 0
-    @@: texts char ids\text
-    @: sizes size_t ids\size
-    @: order size_t ids\order
-    @: marks char 0
-    @: bytes char 0
+    char@@: texts ids\text
+    size_t@: sizes ids\size
+    size_t@: order ids\order
+    char@: marks 0
+    char@: bytes 0
     while: lo < hi
         mid := lo + (hi - lo) / 2U
         code := order[mid]
@@ -131,10 +131,10 @@ fn: lmx_ids_put (@: ids c.LmxIds; const: (@: text char); size_t: nb) size_t
     ---
     if: lmx_ids_room(ids) != 0
         return: 0U
-    bytes := (cast: (@: char) c.malloc(nb))
+    bytes := (cast: (char@) c.malloc(nb))
     if: bytes = 0
         return: 0U
-    c.memcpy((cast: (@: void) bytes), (cast: (@: void) text), nb)
+    c.memcpy((cast: (@) bytes), (cast: (@) text), nb)
     code := ids\count + 1U
     texts := ids\text
     sizes := ids\size
@@ -144,14 +144,14 @@ fn: lmx_ids_put (@: ids c.LmxIds; const: (@: text char); size_t: nb) size_t
     sizes[code] := nb
     marks[code] := (cast: (char) lmx_ids_all_at(text, nb))
     if: lo < ids\count
-        c.memmove((cast: (@: void) (order + lo + 1U)), (cast: (@: void) (order + lo)), (ids\count - lo) * c.sizeof(c.size_t))
+        c.memmove((cast: (@) (order + lo + 1U)), (cast: (@) (order + lo)), (ids\count - lo) * c.sizeof(c.size_t))
     order[lo] := code
     ids\count := code
     return: code
 end: lmx_ids_put
 
 # One word of the language under the gate: 0 when its code is the expected constant, 1 otherwise.
-fn: lmx_ids_seed_word (@: ids c.LmxIds; const: (@: text char); size_t: nb; int: expected) int
+fn: lmx_ids_seed_word (c.LmxIds@: ids; const: (char@: text); size_t: nb; int: expected) int
     return: (cast: (int) (lmx_ids_put(ids, text, nb) != (cast: (size_t) expected)))
 end: lmx_ids_seed_word
 
@@ -159,7 +159,7 @@ end: lmx_ids_seed_word
 # throws in the order of the walker's names (LMX_WALK_NAME_MERGE .. LMX_WALK_NAME_CALL), so an implicit throw's key is
 # its name's code, then the receiving and type words of a declaration and `data`. 0, or 1 when a code differs from its
 # constant (the header and this list disagree) or without memory.
-fn: lmx_ids_seed (@: ids c.LmxIds) int
+fn: lmx_ids_seed (c.LmxIds@: ids) int
     int: bad 0
     bad := bad + lmx_ids_seed_word(ids, "merge", 5U, c.LMX_ID_MERGE)
     bad := bad + lmx_ids_seed_word(ids, "satisfies", 9U, c.LMX_ID_IMPLEMENTS)
@@ -186,12 +186,12 @@ end: lmx_ids_seed
 
 # The process's tables under the gate, made and seeded on their first use. 0 without memory or when the seeding does not
 # match the constants.
-fn: lmx_ids_ready () @: c.LmxIds
-    @@: anchor c.LmxIds (cast: (@@: c.LmxIds) (@ c.lmx_ids_anchor))
-    @: ids c.LmxIds anchor[0]
+fn: lmx_ids_ready () c.LmxIds@
+    c.LmxIds@@: anchor (cast: (c.LmxIds@@) (@ c.lmx_ids_anchor))
+    c.LmxIds@: ids anchor[0]
     if: ids != 0
         return: ids
-    ids := (cast: (@: c.LmxIds) c.calloc(1U, c.sizeof(c.LmxIds)))
+    ids := (cast: (c.LmxIds@) c.calloc(1U, c.sizeof(c.LmxIds)))
     if: ids = 0
         return: 0
     if: lmx_ids_seed(ids) != 0
@@ -202,8 +202,8 @@ end: lmx_ids_ready
 
 # name -> code: the code of the spelling of length bytes at text, a new one numbered next; 0 for no spelling or without
 # memory. The input boundary of a unit and fromLmx call it; an executor holds codes.
-fn: lmx_ids_code (const: (@: text char); size_t: nb) size_t
-    @: ids c.LmxIds 0
+fn: lmx_ids_code (const: (char@: text); size_t: nb) size_t
+    c.LmxIds@: ids 0
     size_t: code 0U
     if: text = 0 || nb = 0U
         return: 0U
@@ -217,10 +217,10 @@ end: lmx_ids_code
 
 # code -> name: the spelling of code in text/length (its bytes are never moved or freed); 0, or 1 for no such code.
 # toLmx, diagnostics and the observed walk print by it; no executor decides by it.
-fn: lmx_ids_name (size_t: code; @@: text char; @: nb size_t) int
-    @: ids c.LmxIds 0
-    @@: texts char 0
-    @: sizes size_t 0
+fn: lmx_ids_name (size_t: code; char@@: text; size_t@: nb) int
+    c.LmxIds@: ids 0
+    char@@: texts 0
+    size_t@: sizes 0
     int: status 1
     if: text = 0 || nb = 0
         return: 1
@@ -240,7 +240,7 @@ end: lmx_ids_name
 
 # The number of codes given so far, the words of the language included.
 fn: lmx_ids_count () size_t
-    @: ids c.LmxIds 0
+    c.LmxIds@: ids 0
     size_t: n 0U
     lmx_ids_enter()
     ids := lmx_ids_ready()
@@ -252,8 +252,8 @@ end: lmx_ids_count
 
 # 1 when the spelling of code was a reference head of any depth when the code was given, 0 otherwise.
 fn: lmx_ids_reference (size_t: code) int
-    @: ids c.LmxIds 0
-    @: marks char 0
+    c.LmxIds@: ids 0
+    char@: marks 0
     int: r 0
     if: code = 0U
         return: 0
@@ -268,7 +268,7 @@ end: lmx_ids_reference
 
 # A unit's table of codes (the cell l2_ids of an emitted unit, IDENTIFIER-CODES): 1 once a load of the unit published
 # it, 0 before. Read under the gate, as the publication writes it; the codes in the table are then read without it.
-fn: lmx_ids_unit_loaded (@@: cell size_t) int
+fn: lmx_ids_unit_loaded (size_t@@: cell) int
     int: r 0
     if: cell = 0
         return: 0
@@ -281,14 +281,14 @@ end: lmx_ids_unit_loaded
 # Publish the table of count codes a unit's load made from the unit's spellings (the unit's input boundary, once per
 # process): 0, or 1 when a code is 0 -- a spelling the tables could not take without memory -- or there is no cell, and
 # the table is freed. When another load of the same unit published first, that table stays and this one is freed.
-fn: lmx_ids_unit_publish (@@: cell size_t; @: codes size_t; size_t: count) int
+fn: lmx_ids_unit_publish (size_t@@: cell; size_t@: codes; size_t: count) int
     size_t: i 0U
     if: cell = 0 || codes = 0
-        c.free((cast: (@: void) codes))
+        c.free((cast: (@) codes))
         return: 1
     while: i < count
         if: codes[i] = 0U
-            c.free((cast: (@: void) codes))
+            c.free((cast: (@) codes))
             return: 1
         i := i + 1U
     ---
@@ -297,6 +297,6 @@ fn: lmx_ids_unit_publish (@@: cell size_t; @: codes size_t; size_t: count) int
         cell[0] := codes
         codes := 0
     lmx_ids_leave()
-    c.free((cast: (@: void) codes))
+    c.free((cast: (@) codes))
     return: 0
 end: lmx_ids_unit_publish

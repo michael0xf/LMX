@@ -5,8 +5,8 @@ predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_clock.lm1"
 
 # One end-turn outcome controls both staged mail and child publication.
-fn: lmx_turn_outcome (@: t c.LmxThread) int
-    @: message c.LmxMsg
+fn: lmx_turn_outcome (c.LmxThread@: t) int
+    c.LmxMsg@: message
     message := c.lmx_thread_message(t)
     if: message = 0
         return: c.LMX_TURN_INVALID
@@ -17,23 +17,23 @@ fn: lmx_turn_outcome (@: t c.LmxThread) int
 fn: lmx_turn_cycle_reading (ulong: v) ulong
     return: v
 
-fn: lmx_turn_end (@: t c.LmxThread; ulong: now) int
+fn: lmx_turn_end (c.LmxThread@: t; ulong: now) int
     return: lmx_turn_end_status(t, now, c.LMX_TURN_BODY_OK)
 
-fn: lmx_turn_boundary_fail (@: t c.LmxThread) int
+fn: lmx_turn_boundary_fail (c.LmxThread@: t) int
     return: c.LMX_TURN_INVALID
 
-fn: lmx_turn_end_status (@: t c.LmxThread; ulong: now; int: body_status) int
+fn: lmx_turn_end_status (c.LmxThread@: t; ulong: now; int: body_status) int
     int: outcome
-    @: arena c.LmxArena
+    c.LmxArena@: arena
     size_t: mark
     ulong: reading
     ulong: stamp
-    @: slot c.LmxSchedule
-    @: band c.LmxArena
-    @: mail c.LmxPost
+    c.LmxSchedule@: slot
+    c.LmxArena@: band
+    c.LmxPost@: mail
     int: overdue
-    @: message c.LmxMsg
+    c.LmxMsg@: message
     reading := lmx_turn_cycle_reading(now)
     message := c.lmx_thread_message(t)
     if: message = 0

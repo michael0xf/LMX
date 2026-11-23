@@ -4,8 +4,8 @@
 
 # Caller owns returned bytes and keeps the FILE. Signed C-long position stays
 # in the already supported private formal, never an unsupported c.long local.
-fn: db_stream_at (@: stream c.FILE; c.long: position; @@: out char; @: out_count size_t) int
-    @: data char 0
+fn: db_stream_at (c.FILE@: stream; c.long: position; char@@: out; size_t@: out_count) int
+    char@: data 0
     size_t: count 0U
     if: position < 0
         return: 1
@@ -24,7 +24,7 @@ fn: db_stream_at (@: stream c.FILE; c.long: position; @@: out char; @: out_count
     return: 0
 end: db_stream_at
 
-fn: db_stream_read (@: stream c.FILE; @@: out char; @: out_count size_t) int
+fn: db_stream_read (c.FILE@: stream; char@@: out; size_t@: out_count) int
     if: stream = 0 || out = 0 || out_count = 0
         return: 1
     out[0] := 0
@@ -37,7 +37,7 @@ end: db_stream_read
 # Exact ASCII punctuation/keys with Unicode-Nd decimal runs. Return1 found,
 # 0 none,-1 invalid. Only a complete regex match is returned; malformed '{{'
 # remains ordinary text here and is rejected by the final expanded-body check.
-fn: db_excerpt_next (@: data char; size_t: count; size_t: begin; @: first size_t; @: after size_t; @: source_key int; @: a size_t; @: b size_t; @: overflow int) int
+fn: db_excerpt_next (char@: data; size_t: count; size_t: begin; size_t@: first; size_t@: after; int@: source_key; size_t@: a; size_t@: b; int@: overflow) int
     size_t: scan begin
     size_t: found 0U
     size_t: at 0U
@@ -88,7 +88,7 @@ end: db_excerpt_next
 
 # Exact inclusive source excerpt, joining line slices with LF and no trailing LF.
 # Range and allocation/line-view validity are established by the caller/reader.
-fn: db_source_lines (@: out c.FILE; @: raw char; @: starts size_t; @: lengths size_t; size_t: a; size_t: b) int
+fn: db_source_lines (c.FILE@: out; char@: raw; size_t@: starts; size_t@: lengths; size_t: a; size_t: b) int
     size_t: line a - 1U
     while: line < b
         if: line != a - 1U && c.fputc(10, out) < 0
@@ -103,9 +103,9 @@ end: db_source_lines
 # A nonrecursive re.sub: only original-body matches are visited. The final '{{'
 # check also sees markers in inserted verbatim source, exactly as the old script.
 # Overflow is a guaranteed out-of-range source index, not a truncated integer.
-fn: docs_semantics_expand (@: body char; size_t: count; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines; @@: out char; @: out_count size_t) int
-    @: stream c.FILE 0
-    @: result char 0
+fn: docs_semantics_expand (char@: body; size_t: count; char@: l1; size_t@: l1_starts; size_t@: l1_lengths; size_t: l1_lines; char@: older; size_t@: older_starts; size_t@: older_lengths; size_t: older_lines; char@@: out; size_t@: out_count) int
+    c.FILE@: stream 0
+    char@: result 0
     size_t: result_count 0U
     size_t: cursor 0U
     size_t: first 0U
@@ -168,7 +168,7 @@ end: docs_semantics_expand
 
 # Next ^### (UnicodeNd+)\. match, including those inside code fences.
 # first marks '### ', digits_end marks '.', after is one byte beyond '.'.
-fn: db_case_next (@: data char; size_t: count; size_t: begin; @: first size_t; @: digits_end size_t; @: after size_t) int
+fn: db_case_next (char@: data; size_t: count; size_t: begin; size_t@: first; size_t@: digits_end; size_t@: after) int
     size_t: scan begin
     size_t: found 0U
     size_t: end_at 0U
@@ -195,7 +195,7 @@ end: db_case_next
 
 # Validate capture SPELLINGS, not their numeric values: exactly "1".."14".
 # Leadingzero/Unicode digit spellings must not be normalized into those strings.
-fn: db_cases_validate (@: data char; size_t: count) int
+fn: db_cases_validate (char@: data; size_t: count) int
     size_t: scan 0U
     size_t: first 0U
     size_t: end_at 0U
@@ -230,9 +230,9 @@ fn: db_cases_validate (@: data char; size_t: count) int
 end: db_cases_validate
 
 # A second pass inserts anchors only after the complete capture list passed.
-fn: docs_semantics_cases (@: body char; size_t: count; @@: out char; @: out_count size_t) int
-    @: stream c.FILE 0
-    @: result char 0
+fn: docs_semantics_cases (char@: body; size_t: count; char@@: out; size_t@: out_count) int
+    c.FILE@: stream 0
+    char@: result 0
     size_t: result_count 0U
     size_t: cursor 0U
     size_t: first 0U

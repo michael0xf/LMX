@@ -34,7 +34,7 @@ end: lmx_gc_note
 
 # Is this chunk a bag of VALUES rather than of references?  Scalar primitive domains
 # are; pointer domains are read through their physical pool contract below.
-fn: lmx_gc_scalar (@: pool c.LmxPool) int
+fn: lmx_gc_scalar (c.LmxPool@: pool) int
     int: base_type
     if: pool = 0
         return: 0
@@ -54,7 +54,7 @@ end: lmx_gc_scalar
 
 # One word of a cell, followed as a candidate address.  A word that resolves in this arena is
 # followed; anything else is a terminal.
-fn: lmx_gc_word (@: arena c.LmxArena; @@: slot void; unsigned: gen; int: depth) int
+fn: lmx_gc_word (c.LmxArena@: arena; @@: slot; unsigned: gen; int: depth) int
     if: slot = 0
         return: c.LMX_GC_OK
     if: slot[0] = 0
@@ -64,34 +64,34 @@ end: lmx_gc_word
 
 # Complete Values retain their explicit graph dependencies. Exact scalar ABI
 # records are module metadata; only their owned storage is an arena edge.
-fn: lmx_gc_value (@: arena c.LmxArena; @: value c.LmxWalkValue; unsigned: gen; int: depth) int
+fn: lmx_gc_value (c.LmxArena@: arena; c.LmxWalkValue@: value; unsigned: gen; int: depth) int
     @: referent_owner void 0
     int: status c.LMX_GC_OK
     if: value = 0
         return: status
     if: value\present != 0 && (value\kind = c.LMX_WALK_VALUE_REFERENCE || (value\kind = c.LMX_WALK_VALUE_FOREIGN && value\scalar_abi != 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\ref), gen, depth + 1))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\model), gen, depth + 1))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\references), gen, depth + 1))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\physical_profile), gen, depth + 1))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\source_type), gen, depth + 1))
-    referent_owner := c.lmx_value_context_cell_in(arena, (cast: (@: c.LmxWalkValue) value\referent))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\ref), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\model), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\references), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\physical_profile), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\source_type), gen, depth + 1))
+    referent_owner := c.lmx_value_context_cell_in(arena, (cast: (c.LmxWalkValue@) value\referent))
     if: referent_owner != 0
         return: lmx_gc_note(status, lmx_gc_mark_value(arena, referent_owner, gen, depth + 1))
-    return: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\referent), gen, depth + 1))
+    return: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) value\referent), gen, depth + 1))
 
 # Every cell of one chunk, walked by what the chunk IS (the array's kind and type).
-fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; unsigned: gen; int: depth) int
+fn: lmx_gc_cells (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; unsigned: gen; int: depth) int
     size_t: index 0U
     size_t: cells 0U
     size_t: stride 0U
     size_t: words 0U
     size_t: word 0U
-    @: cell char 0
-    @: header c.Lmx 0
-    @: backing c.VoidArray 0
-    @: contexts c.LmxWalkValue 0
-    @: context c.LmxWalkValue 0
+    char@: cell 0
+    c.Lmx@: header 0
+    c.VoidArray@: backing 0
+    c.LmxWalkValue@: contexts 0
+    c.LmxWalkValue@: context 0
     @: held void 0
     @: referent_owner void 0
     int: status 0
@@ -114,10 +114,10 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
     # Marking allocates nothing, so the chunk's count of cells does not change during the walk.
     cells := (cast: (size_t) c.lmx_chunk_cells(chunk, stride))
     if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) pool\profile), gen, depth + 1))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) pool\profile), gen, depth + 1))
     index := 0U
     while: index < cells
-        cell := (cast: (@: char) c.lmx_chunk_data(chunk)) + (index * stride)
+        cell := (cast: (char@) c.lmx_chunk_data(chunk)) + (index * stride)
         if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
             if: chunk\value_contexts != 0
                 contexts := chunk\value_contexts
@@ -127,11 +127,11 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
         if: pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY
             # Structure and Array have the same graph header. Follow their
             # parent and physical backing; neither size nor native is an edge.
-            header := (cast: (@: Lmx) cell)
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) header\parent), gen, depth + 1))
+            header := (cast: (Lmx@) cell)
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) header\parent), gen, depth + 1))
             # The header's by-value VoidArray is read through its address.
             backing := @ header\array
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) backing\data), gen, depth + 1))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) backing\data), gen, depth + 1))
         else:
             if: pool\kind = c.LMX_DOMAIN_KIND_POST
                 # Post.nodes.next is the arena inventory, not a graph edge.
@@ -141,38 +141,38 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
                 if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\pointer_read != 0
                     # A machine T * cell is not a void * object. The pool's
                     # exact C99 read supplies its one held address.
-                    held := (cast: (@: void) pool\pointer_read((cast: (@: void) cell)))
+                    held := (cast: (@) pool\pointer_read((cast: (@) cell)))
                     status := lmx_gc_note(status, lmx_gc_mark_value(arena, held, gen, depth + 1))
                     # Current stored-value dependencies belong to this live
                     # typed cell,not to an admission-history registry. Their
                     # storage is part of the same chunk record allocation.
                     if: chunk\value_contexts != 0
-                        contexts := (cast: (@: LmxWalkValue) chunk\value_contexts)
+                        contexts := (cast: (LmxWalkValue@) chunk\value_contexts)
                         context := contexts + index
-                        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\model), gen, depth + 1))
-                        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\references), gen, depth + 1))
+                        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) context\model), gen, depth + 1))
+                        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) context\references), gen, depth + 1))
                         # A cell companion is outside the indexed payload.
                         # Keep its actual indexed owner, not just that metadata
                         # address. Unresolved scratch/activation contexts retain
                         # their existing mark behavior and lifetime boundary.
-                        referent_owner := c.lmx_value_context_cell_in(arena, (cast: (@: c.LmxWalkValue) context\referent))
+                        referent_owner := c.lmx_value_context_cell_in(arena, (cast: (c.LmxWalkValue@) context\referent))
                         if: referent_owner != 0
                             status := lmx_gc_note(status, lmx_gc_mark_value(arena, referent_owner, gen, depth + 1))
                         else:
-                            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\referent), gen, depth + 1))
+                            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) context\referent), gen, depth + 1))
                         ---
                     ---
                 else:
                     if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
-                        held := (cast: (@: void) c.lmx_charptr_value_known((cast: (@: void) cell)))
+                        held := (cast: (@) c.lmx_charptr_value_known((cast: (@) cell)))
                         status := lmx_gc_note(status, lmx_gc_mark_value(arena, held, gen, depth + 1))
                     else:
                         # CHILDREN/REF slots are physically void * objects.
                         # Legacy kernel records still use word scanning here.
-                        words := stride / sizeof(@: void)
+                        words := stride / sizeof(@)
                         word := 0U
                         while: word < words
-                            status := lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * sizeof(@: void)))), gen, depth))
+                            status := lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@) (cell + (word * sizeof(@)))), gen, depth))
                             word := word + 1U
                         ---
                     ---
@@ -185,15 +185,15 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
 end: lmx_gc_cells
 
 # The value at one address: mark its chunk (once per pass) and walk what the chunk holds.
-fn: lmx_gc_mark_value (@: arena c.LmxArena; @: p void; unsigned: gen; int: depth) int
-    @: pool c.LmxPool 0
-    @: chunk c.LmxChunk 0
+fn: lmx_gc_mark_value (c.LmxArena@: arena; @: p; unsigned: gen; int: depth) int
+    c.LmxPool@: pool 0
+    c.LmxChunk@: chunk 0
     int: status c.LMX_GC_OK
     if: p = 0
         return: c.LMX_GC_OK
     if: depth > c.LMX_GC_DEPTH
         return: c.LMX_GC_PARTIAL
-    pool := (cast: (@: LmxPool) c.lmx_range_pool(arena, p))
+    pool := (cast: (LmxPool@) c.lmx_range_pool(arena, p))
     if: pool = 0
         # An address this arena never handed out: not this arena's to keep or to free.
         return: c.LMX_GC_OK
@@ -202,7 +202,7 @@ fn: lmx_gc_mark_value (@: arena c.LmxArena; @: p void; unsigned: gen; int: depth
     if: c.lmx_pool_is_sealed(pool) != 0
         return: c.LMX_GC_OK
     # p is a live cell of pool here, so the chunk that holds it is the index's (no walk of the chain).
-    chunk := (cast: (@: LmxChunk) c.lmx_range_cell_chunk(arena, p))
+    chunk := (cast: (LmxChunk@) c.lmx_range_cell_chunk(arena, p))
     if: chunk = 0
         return: c.LMX_GC_OK
     if: chunk\mark = gen
@@ -211,7 +211,7 @@ fn: lmx_gc_mark_value (@: arena c.LmxArena; @: p void; unsigned: gen; int: depth
     chunk\mark := gen
     # A pool's physical profile is a graph dependency for every cell family,
     # independently of the current Value's presence or semantic Model.
-    status := lmx_gc_mark_value(arena, (cast: (@: void) pool\profile), gen, depth + 1)
+    status := lmx_gc_mark_value(arena, (cast: (@) pool\profile), gen, depth + 1)
     if: status != c.LMX_GC_OK
         return: status
     return: lmx_gc_cells(arena, pool, chunk, gen, depth)
@@ -219,22 +219,22 @@ end: lmx_gc_mark_value
 
 # Every chunk of one array: the mailbox's own node pool is storage of THIS arena, so a
 # collection that ignored it would free the nodes of a live mailbox.
-fn: lmx_gc_mark_pool (@: arena c.LmxArena; @: pool c.LmxPool; unsigned: gen) int
-    @: chunk c.LmxChunk 0
+fn: lmx_gc_mark_pool (c.LmxArena@: arena; c.LmxPool@: pool; unsigned: gen) int
+    c.LmxChunk@: chunk 0
     int: status 0
     status := c.LMX_GC_OK
     if: c.lmx_pool_is_sealed(pool) != 0
         return: c.LMX_GC_OK
-    status := lmx_gc_mark_value(arena, (cast: (@: void) pool\profile), gen, 0)
+    status := lmx_gc_mark_value(arena, (cast: (@) pool\profile), gen, 0)
     if: status != c.LMX_GC_OK
         return: status
-    chunk := (cast: (@: LmxChunk) c.lmx_pool_chunk_head(pool))
+    chunk := (cast: (LmxChunk@) c.lmx_pool_chunk_head(pool))
     while: chunk != 0
         if: chunk\mark != gen
             chunk\mark := gen
             status := lmx_gc_note(status, lmx_gc_cells(arena, pool, chunk, gen, 0))
         ---
-        chunk := (cast: (@: LmxChunk) chunk\next)
+        chunk := (cast: (LmxChunk@) chunk\next)
     ---
     return: status
 end: lmx_gc_mark_pool
@@ -242,33 +242,33 @@ end: lmx_gc_mark_pool
 # Is this block one the pass reached?  Three ways to be live: the array's own descriptor block
 # (the arena's inventory -- an array lives as long as the arena), the STORAGE of a chunk the
 # pass stamped, or the RECORD of such a chunk.
-fn: lmx_gc_block_live (@: arena c.LmxArena; @: block c.LmxArenaBlock; unsigned: gen) int
-    @: pool c.LmxPool 0
-    @: chunk c.LmxChunk 0
+fn: lmx_gc_block_live (c.LmxArena@: arena; c.LmxArenaBlock@: block; unsigned: gen) int
+    c.LmxPool@: pool 0
+    c.LmxChunk@: chunk 0
     if: block = 0
         return: 0
     if: block\base = 0
         # A block that owns nothing has nothing to free.
         return: 1
-    pool := (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (LmxPool@) arena\arrays)
     while: pool != 0
-        if: (cast: (@: void) pool) = block\base
+        if: (cast: (@) pool) = block\base
             return: 1
-        chunk := (cast: (@: LmxChunk) pool\head)
+        chunk := (cast: (LmxChunk@) pool\head)
         while: chunk != 0
-            if: (cast: (@: void) c.lmx_chunk_data(chunk)) = block\base || (cast: (@: void) chunk) = block\base
+            if: (cast: (@) c.lmx_chunk_data(chunk)) = block\base || (cast: (@) chunk) = block\base
                 if: c.lmx_pool_is_sealed(pool) != 0 || chunk\mark = gen
                     return: 1
                 ---
             ---
-            chunk := (cast: (@: LmxChunk) chunk\next)
+            chunk := (cast: (LmxChunk@) chunk\next)
         ---
-        pool := (cast: (@: LmxPool) pool\next)
+        pool := (cast: (LmxPool@) pool\next)
     ---
     return: 0
 end: lmx_gc_block_live
 
-sub: lmx_gc_block_dispose (@: block c.LmxArenaBlock)
+sub: lmx_gc_block_dispose (c.LmxArenaBlock@: block)
     if: block != 0
         # A function-pointer local takes its value where it is declared: a later `disposer: v` would call it.
         c.LmxArenaBlockDisposer: disposer block\dispose
@@ -287,17 +287,17 @@ end: lmx_gc_block_dispose
 # a field is replaced. An admitting frame is different: its departure retires
 # the frame-backed record. Mark to a fixed point because marking one model can
 # make another recorded value reachable through its ordinary graph edges.
-fn: lmx_gc_impl_live (@: arena c.LmxArena; @: value c.Lmx; unsigned: gen) int
-    @: pool c.LmxPool 0
-    @: chunk c.LmxChunk 0
+fn: lmx_gc_impl_live (c.LmxArena@: arena; c.Lmx@: value; unsigned: gen) int
+    c.LmxPool@: pool 0
+    c.LmxChunk@: chunk 0
     if: arena = 0 || value = 0
         return: 0
-    pool := (cast: (@: LmxPool) c.lmx_range_pool(arena, (cast: (@: void) value)))
+    pool := (cast: (LmxPool@) c.lmx_range_pool(arena, (cast: (@) value)))
     if: pool = 0
         return: 0
     if: c.lmx_pool_is_sealed(pool) != 0
         return: 1
-    chunk := (cast: (@: LmxChunk) c.lmx_range_cell_chunk(arena, (cast: (@: void) value)))
+    chunk := (cast: (LmxChunk@) c.lmx_range_cell_chunk(arena, (cast: (@) value)))
     return: (cast: (int) (chunk != 0 && chunk\mark = gen))
 end: lmx_gc_impl_live
 
@@ -305,44 +305,44 @@ end: lmx_gc_impl_live
 # of its slot, as a recorded admission's model is of its value: once the callable first put there is replaced, later writes
 # there are still admitted against it.  A slot is live when the chunk that holds it is -- the source names' own test of a weak
 # key (lmx_source_names_mark); the row itself is kept by that pass.  changed is set when this marks something new.
-fn: lmx_gc_mark_place_callables (@: arena c.LmxArena; unsigned: gen; @: changed int) int
-    @: pool c.LmxPool 0
-    @: owner c.LmxPool 0
-    @: chunk c.LmxChunk 0
-    @: held c.LmxChunk 0
-    @: rows c.LmxSourceName 0
-    @: row c.LmxSourceName 0
+fn: lmx_gc_mark_place_callables (c.LmxArena@: arena; unsigned: gen; int@: changed) int
+    c.LmxPool@: pool 0
+    c.LmxPool@: owner 0
+    c.LmxChunk@: chunk 0
+    c.LmxChunk@: held 0
+    c.LmxSourceName@: rows 0
+    c.LmxSourceName@: row 0
     size_t: i 0U
     size_t: n 0U
     int: live 0
-    pool := (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (LmxPool@) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-            chunk := (cast: (@: LmxChunk) pool\head)
+            chunk := (cast: (LmxChunk@) pool\head)
             while: chunk != 0
-                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                    rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                if: (cast: (LmxPool@) c.lmx_range_interval_pool(arena, (cast: (@) c.lmx_chunk_data(chunk)))) = pool
+                    rows := (cast: (LmxSourceName@) c.lmx_chunk_data(chunk))
                     n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
                     i := 0U
                     while: i < n
                         row := rows + i
-                        if: row\key != 0 && row\place_callable != 0 && lmx_gc_impl_live(arena, (cast: (@: Lmx) row\place_callable), gen) = 0
+                        if: row\key != 0 && row\place_callable != 0 && lmx_gc_impl_live(arena, (cast: (Lmx@) row\place_callable), gen) = 0
                             live := 0
-                            owner := (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
+                            owner := (cast: (LmxPool@) c.lmx_range_pool(arena, row\key))
                             if: owner != 0
                                 if: c.lmx_pool_is_sealed(owner) != 0
                                     live := 1
                                 else:
-                                    held := (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
+                                    held := (cast: (LmxChunk@) c.lmx_pool_chunk_at(owner, row\key))
                                     if: held != 0 && held\mark = gen
                                         live := 1
                                     ---
                                 ---
                             ---
                             if: live != 0
-                                if: lmx_gc_mark_value(arena, (cast: (@: void) row\place_callable), gen, 0) != c.LMX_GC_OK
+                                if: lmx_gc_mark_value(arena, (cast: (@) row\place_callable), gen, 0) != c.LMX_GC_OK
                                     return: c.LMX_GC_PARTIAL
-                                if: lmx_gc_impl_live(arena, (cast: (@: Lmx) row\place_callable), gen) != 0
+                                if: lmx_gc_impl_live(arena, (cast: (Lmx@) row\place_callable), gen) != 0
                                     changed[0] := 1
                                 ---
                             ---
@@ -350,30 +350,30 @@ fn: lmx_gc_mark_place_callables (@: arena c.LmxArena; unsigned: gen; @: changed 
                         i := i + 1U
                     ---
                 ---
-                chunk := (cast: (@: LmxChunk) chunk\next)
+                chunk := (cast: (LmxChunk@) chunk\next)
             ---
         ---
-        pool := (cast: (@: LmxPool) pool\next)
+        pool := (cast: (LmxPool@) pool\next)
     ---
     return: c.LMX_GC_OK
 end: lmx_gc_mark_place_callables
 
-fn: lmx_gc_mark_impl (@: arena c.LmxArena; unsigned: gen) int
+fn: lmx_gc_mark_impl (c.LmxArena@: arena; unsigned: gen) int
     size_t: i 0U
     int: changed 1
-    @: entries c.LmxImplEntry 0
-    @: entry c.LmxImplEntry 0
+    c.LmxImplEntry@: entries 0
+    c.LmxImplEntry@: entry 0
     while: changed != 0
         changed := 0
         i := 0U
         while: i < (cast: (size_t) arena\impl_len)
-            entries := (cast: (@: LmxImplEntry) arena\impl)
+            entries := (cast: (LmxImplEntry@) arena\impl)
             entry := entries + i
-            if: lmx_gc_impl_live(arena, (cast: (@: Lmx) entry\value), gen) != 0 && ((cast: (@: Lmx) entry\frame) = 0 || lmx_gc_impl_live(arena, (cast: (@: Lmx) entry\frame), gen) != 0)
-                if: (cast: (@: Lmx) entry\req) != 0 && lmx_gc_impl_live(arena, (cast: (@: Lmx) entry\req), gen) = 0
-                    if: lmx_gc_mark_value(arena, (cast: (@: void) entry\req), gen, 0) != c.LMX_GC_OK
+            if: lmx_gc_impl_live(arena, (cast: (Lmx@) entry\value), gen) != 0 && ((cast: (Lmx@) entry\frame) = 0 || lmx_gc_impl_live(arena, (cast: (Lmx@) entry\frame), gen) != 0)
+                if: (cast: (Lmx@) entry\req) != 0 && lmx_gc_impl_live(arena, (cast: (Lmx@) entry\req), gen) = 0
+                    if: lmx_gc_mark_value(arena, (cast: (@) entry\req), gen, 0) != c.LMX_GC_OK
                         return: c.LMX_GC_PARTIAL
-                    if: lmx_gc_impl_live(arena, (cast: (@: Lmx) entry\req), gen) != 0
+                    if: lmx_gc_impl_live(arena, (cast: (Lmx@) entry\req), gen) != 0
                         changed := 1
                     ---
                 ---
@@ -389,7 +389,7 @@ end: lmx_gc_mark_impl
 
 # Explicit execution storage is borrowed, never treated as an array of words.
 # Reading a Value here must not create the snapshot that value_load would take.
-fn: lmx_gc_values (@: arena c.LmxArena; @: values c.LmxWalkValue; size_t: count; unsigned: gen) int
+fn: lmx_gc_values (c.LmxArena@: arena; c.LmxWalkValue@: values; size_t: count; unsigned: gen) int
     size_t: i 0U
     int: status c.LMX_GC_OK
     if: values = 0
@@ -399,7 +399,7 @@ fn: lmx_gc_values (@: arena c.LmxArena; @: values c.LmxWalkValue; size_t: count;
         i := i + 1U
     return: status
 
-fn: lmx_gc_refs (@: arena c.LmxArena; @@: refs void; size_t: count; unsigned: gen) int
+fn: lmx_gc_refs (c.LmxArena@: arena; @@: refs; size_t: count; unsigned: gen) int
     size_t: i 0U
     int: status c.LMX_GC_OK
     if: refs = 0
@@ -409,76 +409,76 @@ fn: lmx_gc_refs (@: arena c.LmxArena; @@: refs void; size_t: count; unsigned: ge
         i := i + 1U
     return: status
 
-fn: lmx_gc_walk_frame (@: arena c.LmxArena; @: frame c.LmxWalkFrame; unsigned: gen) int
-    @: work c.LmxWalkWork 0
-    @: context c.LmxWalkContext 0
-    @: scratch c.LmxScratch 0
+fn: lmx_gc_walk_frame (c.LmxArena@: arena; c.LmxWalkFrame@: frame; unsigned: gen) int
+    c.LmxWalkWork@: work 0
+    c.LmxWalkContext@: context 0
+    c.LmxScratch@: scratch 0
     size_t: i 0U
     int: status c.LMX_GC_OK
     if: frame = 0
         return: status
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\code), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\source), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\node), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (@: c.LmxWalkValue) frame\argown), frame\nargs, gen))
-    status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) frame\args), frame\nargs, gen))
-    status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ frame\result)), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) frame\guarded), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\landing), gen, 0))
-    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\payload), gen, 0))
-    context := (cast: (@: c.LmxWalkContext) frame\context)
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\code), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\source), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\node), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (c.LmxWalkValue@) frame\argown), frame\nargs, gen))
+    status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@) frame\args), frame\nargs, gen))
+    status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) (@ frame\result)), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) frame\guarded), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\landing), gen, 0))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\payload), gen, 0))
+    context := (cast: (c.LmxWalkContext@) frame\context)
     if: context != 0
-        scratch := (cast: (@: c.LmxScratch) context\scratch)
+        scratch := (cast: (c.LmxScratch@) context\scratch)
         if: scratch != 0
-            status := lmx_gc_note(status, lmx_gc_mark_pool(arena, (cast: (@: c.LmxPool) scratch\cells), gen))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\immutable_profile), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) context\immutable_roots), context\immutable_root_count, gen))
-    work := (cast: (@: c.LmxWalkWork) frame\work)
+            status := lmx_gc_note(status, lmx_gc_mark_pool(arena, (cast: (c.LmxPool@) scratch\cells), gen))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) context\immutable_profile), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@) context\immutable_roots), context\immutable_root_count, gen))
+    work := (cast: (c.LmxWalkWork@) frame\work)
     while: i < frame\nwork && work != 0 && status = c.LMX_GC_OK
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) work\holder), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) work\slot), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ work\value)), gen, 0))
-        work := (cast: (@: c.LmxWalkWork) work\next)
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) work\holder), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) work\slot), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) (@ work\value)), gen, 0))
+        work := (cast: (c.LmxWalkWork@) work\next)
         i := i + 1U
     return: status
 
-fn: lmx_gc_graph_frames (@: arena c.LmxArena; @: frame c.LmxGraphFrame; unsigned: gen) int
-    @: rows c.LmxGraphWork 0
-    @: row c.LmxGraphWork 0
+fn: lmx_gc_graph_frames (c.LmxArena@: arena; c.LmxGraphFrame@: frame; unsigned: gen) int
+    c.LmxGraphWork@: rows 0
+    c.LmxGraphWork@: row 0
     size_t: i 0U
     int: status c.LMX_GC_OK
     while: frame != 0 && status = c.LMX_GC_OK
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\code), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\data), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\body), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) frame\lexical_scope), gen, 0))
-        rows := (cast: (@: c.LmxGraphWork) frame\rows)
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\code), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\data), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\body), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\lexical_scope), gen, 0))
+        rows := (cast: (c.LmxGraphWork@) frame\rows)
         if: frame\count > frame\capacity || (frame\count != 0U && rows = 0)
             return: c.LMX_GC_INVALID
         i := 0U
         while: i < frame\count && status = c.LMX_GC_OK
             row := rows + i
-            status := lmx_gc_mark_value(arena, (cast: (@: void) row\cell), gen, 0)
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) row\scope), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) row\declared), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ row\value)), gen, 0))
+            status := lmx_gc_mark_value(arena, (cast: (@) row\cell), gen, 0)
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) row\scope), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) row\declared), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) (@ row\value)), gen, 0))
             i := i + 1U
-        frame := (cast: (@: c.LmxGraphFrame) frame\prior)
+        frame := (cast: (c.LmxGraphFrame@) frame\prior)
     return: status
 
 # Every collector, including direct mark+sweep clients, observes the same
 # activation chain, selected call coordinates and temporary operation spans.
-fn: lmx_gc_mark_execution (@: arena c.LmxArena; unsigned: gen) int
-    @: active c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
-    @: binding c.LmxActivationBinding 0
-    @: bindings c.LmxActivationBinding 0
-    @: selected c.LmxCallPlaces (cast: (@: c.LmxCallPlaces) arena\call_places)
-    @: roots c.LmxExecutionRoots (cast: (@: c.LmxExecutionRoots) arena\execution_roots)
-    @: place c.LmxWalkPlace 0
-    @: scratch c.LmxScratch 0
-    @: space c.LmxGraphSpace c.lmx_graph_space()
-    @: space_rows c.LmxGraphSpaceRow 0
-    @: space_row c.LmxGraphSpaceRow 0
+fn: lmx_gc_mark_execution (c.LmxArena@: arena; unsigned: gen) int
+    c.LmxActivation@: active (cast: (c.LmxActivation@) arena\activation)
+    c.LmxActivationBinding@: binding 0
+    c.LmxActivationBinding@: bindings 0
+    c.LmxCallPlaces@: selected (cast: (c.LmxCallPlaces@) arena\call_places)
+    c.LmxExecutionRoots@: roots (cast: (c.LmxExecutionRoots@) arena\execution_roots)
+    c.LmxWalkPlace@: place 0
+    c.LmxScratch@: scratch 0
+    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpaceRow@: space_rows 0
+    c.LmxGraphSpaceRow@: space_row 0
     size_t: i 0U
     int: status c.LMX_GC_OK
     # A live traversal owns its constructed callable values and receiver
@@ -488,64 +488,64 @@ fn: lmx_gc_mark_execution (@: arena c.LmxArena; unsigned: gen) int
         space_rows := space\rows
         if: space\count > space\cap || (space\count != 0U && space_rows = 0)
             return: c.LMX_GC_INVALID
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space\root), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) space\root), gen, 0))
         i := 0U
         while: i < space\count && status = c.LMX_GC_OK
             space_row := space_rows + i
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space_row\scope), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space_row\value), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) space_row\scope), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) space_row\value), gen, 0))
             i := i + 1U
         space := space\prior
     ---
     while: active != 0 && status = c.LMX_GC_OK
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) active\code), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (@: c.LmxWalkValue) active\values), active\width, gen))
-        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) active\refs), active\width, gen))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) active\code), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (c.LmxWalkValue@) active\values), active\width, gen))
+        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@) active\refs), active\width, gen))
         if: active\origin_count != 0U && (active\input_origins = 0 || active\input_private = 0)
             return: c.LMX_GC_INVALID
-        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) active\input_origins), (cast: (size_t) active\origin_count), gen))
-        bindings := (cast: (@: c.LmxActivationBinding) active\bindings)
+        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@) active\input_origins), (cast: (size_t) active\origin_count), gen))
+        bindings := (cast: (c.LmxActivationBinding@) active\bindings)
         if: active\nbind > active\cap || (active\nbind != 0U && bindings = 0)
             return: c.LMX_GC_INVALID
         i := 0U
         while: i < active\nbind && status = c.LMX_GC_OK
             binding := bindings + i
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) binding\origin), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) binding\storage), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) binding\value), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) binding\origin), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) binding\storage), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) binding\value), gen, 0))
             i := i + 1U
         if: active\kind = 1
-            status := lmx_gc_note(status, lmx_gc_walk_frame(arena, (cast: (@: c.LmxWalkFrame) active\frame), gen))
+            status := lmx_gc_note(status, lmx_gc_walk_frame(arena, (cast: (c.LmxWalkFrame@) active\frame), gen))
         else:
             if: active\kind = 2
                 # Only Graph work_open attaches a frame to a native record.
-                status := lmx_gc_note(status, lmx_gc_graph_frames(arena, (cast: (@: c.LmxGraphFrame) active\frame), gen))
+                status := lmx_gc_note(status, lmx_gc_graph_frames(arena, (cast: (c.LmxGraphFrame@) active\frame), gen))
         ---
-        active := (cast: (@: c.LmxActivation) active\parent)
+        active := (cast: (c.LmxActivation@) active\parent)
     while: selected != 0 && status = c.LMX_GC_OK
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) selected\code), gen, 0))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) selected\data), gen, 0))
-        selected := (cast: (@: c.LmxCallPlaces) selected\parent)
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) selected\code), gen, 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) selected\data), gen, 0))
+        selected := (cast: (c.LmxCallPlaces@) selected\parent)
     while: roots != 0 && status = c.LMX_GC_OK
         if: (roots\value_count != 0U && roots\values = 0) || (roots\ref_count != 0U && roots\refs = 0)
             return: c.LMX_GC_INVALID
-        scratch := (cast: (@: c.LmxScratch) roots\scratch)
+        scratch := (cast: (c.LmxScratch@) roots\scratch)
         if: scratch != 0
-            status := lmx_gc_note(status, lmx_gc_mark_pool(arena, (cast: (@: c.LmxPool) scratch\cells), gen))
-        status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (@: c.LmxWalkValue) roots\values), roots\value_count, gen))
-        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@: void) roots\refs), roots\ref_count, gen))
-        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) roots\held), gen, 0))
-        place := (cast: (@: c.LmxWalkPlace) roots\place)
+            status := lmx_gc_note(status, lmx_gc_mark_pool(arena, (cast: (c.LmxPool@) scratch\cells), gen))
+        status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (c.LmxWalkValue@) roots\values), roots\value_count, gen))
+        status := lmx_gc_note(status, lmx_gc_refs(arena, (cast: (@@) roots\refs), roots\ref_count, gen))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) roots\held), gen, 0))
+        place := (cast: (c.LmxWalkPlace@) roots\place)
         if: place != 0
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) place\address), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) place\storage), gen, 0))
-            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) place\context), gen, 0))
-        roots := (cast: (@: c.LmxExecutionRoots) roots\prior)
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) place\address), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) place\storage), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (c.LmxWalkValue@) place\context), gen, 0))
+        roots := (cast: (c.LmxExecutionRoots@) roots\prior)
     return: status
 
 # The models of the arena's type rows are roots (Р155: model rows are strong): marked like any value reached, so no
 # pass retires the block of a model whose code a row holds. One comparison in an arena without models.
-fn: lmx_gc_mark_types (@: arena c.LmxArena; unsigned: gen) int
+fn: lmx_gc_mark_types (c.LmxArena@: arena; unsigned: gen) int
     @: model void 0
     size_t: at 0U
     if: arena\type_rows_count = 0U
@@ -559,9 +559,9 @@ fn: lmx_gc_mark_types (@: arena c.LmxArena; unsigned: gen) int
     return: c.LMX_GC_OK
 end: lmx_gc_mark_types
 
-fn: lmx_gc_sweep (@: arena c.LmxArena; unsigned: gen) int
-    @: block c.LmxArenaBlock 0
-    @: next c.LmxArenaBlock 0
+fn: lmx_gc_sweep (c.LmxArena@: arena; unsigned: gen) int
+    c.LmxArenaBlock@: block 0
+    c.LmxArenaBlock@: next 0
     if: arena = 0 || gen = 0U
         return: c.LMX_GC_INVALID
     if: lmx_gc_mark_execution(arena, gen) != c.LMX_GC_OK
@@ -573,9 +573,9 @@ fn: lmx_gc_sweep (@: arena c.LmxArena; unsigned: gen) int
         return: c.LMX_GC_PARTIAL
     if: c.lmx_source_names_mark(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_INVALID
-    block := (cast: (@: LmxArenaBlock) arena\blocks)
+    block := (cast: (LmxArenaBlock@) arena\blocks)
     while: block != 0
-        next := (cast: (@: LmxArenaBlock) block\next)
+        next := (cast: (LmxArenaBlock@) block\next)
         if: lmx_gc_block_live(arena, block, gen) = 0
             # The same arena detach used by rollback unlinks chunks and
             # embedded pools (including Post.nodes) before storage leaves.

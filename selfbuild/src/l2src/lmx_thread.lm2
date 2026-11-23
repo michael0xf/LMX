@@ -44,12 +44,12 @@ predef: "l2src/lmx_primitive.h.lm1"
 # does NOT promise is that a lane exists: a runtime may step its objects on one OS thread,
 # and then the cell is one cell for that thread -- which is the same thing, one level down.
 
-fn: lmx_thread_current () @: c.LmxThread
-    return: (cast: (@: c.LmxThread) c.lmx_thread_current_slot)
+fn: lmx_thread_current () c.LmxThread@
+    return: (cast: (c.LmxThread@) c.lmx_thread_current_slot)
 end: lmx_thread_current
 
-fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: mail c.LmxPost; @: slot c.LmxSchedule) int
-    @: message c.LmxMsg
+fn: lmx_thread_init (c.LmxArena@: arena; c.LmxThread@: t; c.Lmx@: graph; c.LmxPost@: mail; c.LmxSchedule@: slot) int
+    c.LmxMsg@: message
     if: arena = 0 || t = 0
         return: c.LMX_THREAD_INVALID
     # Construction accepts only an exact Thread range. The range deliberately carries the common
@@ -57,7 +57,7 @@ fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: m
     # is what refuses a standalone LmxMsg cast to LmxThread. The constructor supplies the owner
     # arena explicitly, so validation precedes every Message-tail write and does not impose a
     # schedule-initialization order.
-    if: c.lmx_range_classify(arena, (cast: (@: void) t)) != c.LMX_DOMAIN_KIND_MSG_RECORD || c.lmx_range_type_of(arena, (cast: (@: void) t)) != c.LMX_DOMAIN_THREAD || c.lmx_range_stride(arena, (cast: (@: void) t)) != c.sizeof(c.LmxThread) || c.lmx_range_home(arena, (cast: (@: void) t)) != arena
+    if: c.lmx_range_classify(arena, (cast: (@) t)) != c.LMX_DOMAIN_KIND_MSG_RECORD || c.lmx_range_type_of(arena, (cast: (@) t)) != c.LMX_DOMAIN_THREAD || c.lmx_range_stride(arena, (cast: (@) t)) != c.sizeof(c.LmxThread) || c.lmx_range_home(arena, (cast: (@) t)) != arena
         return: c.LMX_THREAD_INVALID
     ---
     if: graph = 0 || mail = 0 || slot = 0
@@ -67,13 +67,13 @@ fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: m
     # construction tuple before touching either the Message prefix or the Thread tail: a forged
     # common-kind range, a foreign graph/mail/schedule, or a wrong-stride exact type cannot turn
     # an address into an executable object.
-    if: c.lmx_range_classify(arena, (cast: (@: void) graph)) != c.LMX_KIND_STRUCT || c.lmx_range_type_of(arena, (cast: (@: void) graph)) != c.LMX_TYPE_STRUCT || c.lmx_range_stride(arena, (cast: (@: void) graph)) != c.sizeof(c.Lmx) || c.lmx_range_home(arena, (cast: (@: void) graph)) != arena
+    if: c.lmx_range_classify(arena, (cast: (@) graph)) != c.LMX_KIND_STRUCT || c.lmx_range_type_of(arena, (cast: (@) graph)) != c.LMX_TYPE_STRUCT || c.lmx_range_stride(arena, (cast: (@) graph)) != c.sizeof(c.Lmx) || c.lmx_range_home(arena, (cast: (@) graph)) != arena
         return: c.LMX_THREAD_INVALID
     ---
-    if: c.lmx_range_classify(arena, (cast: (@: void) mail)) != c.LMX_DOMAIN_KIND_POST || c.lmx_range_type_of(arena, (cast: (@: void) mail)) != c.LMX_DOMAIN_POST || c.lmx_range_stride(arena, (cast: (@: void) mail)) != c.sizeof(c.LmxPost) || c.lmx_range_home(arena, (cast: (@: void) mail)) != arena
+    if: c.lmx_range_classify(arena, (cast: (@) mail)) != c.LMX_DOMAIN_KIND_POST || c.lmx_range_type_of(arena, (cast: (@) mail)) != c.LMX_DOMAIN_POST || c.lmx_range_stride(arena, (cast: (@) mail)) != c.sizeof(c.LmxPost) || c.lmx_range_home(arena, (cast: (@) mail)) != arena
         return: c.LMX_THREAD_INVALID
     ---
-    if: c.lmx_range_classify(arena, (cast: (@: void) slot)) != c.LMX_DOMAIN_KIND_SCHEDULE || c.lmx_range_type_of(arena, (cast: (@: void) slot)) != c.LMX_DOMAIN_SCHEDULE || c.lmx_range_stride(arena, (cast: (@: void) slot)) != c.sizeof(c.LmxSchedule) || c.lmx_range_home(arena, (cast: (@: void) slot)) != arena
+    if: c.lmx_range_classify(arena, (cast: (@) slot)) != c.LMX_DOMAIN_KIND_SCHEDULE || c.lmx_range_type_of(arena, (cast: (@) slot)) != c.LMX_DOMAIN_SCHEDULE || c.lmx_range_stride(arena, (cast: (@) slot)) != c.sizeof(c.LmxSchedule) || c.lmx_range_home(arena, (cast: (@) slot)) != arena
         return: c.LMX_THREAD_INVALID
     ---
     # Construction is historically usable in two orders: most callers initialise the schedule
@@ -83,11 +83,11 @@ fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: m
     # and this exact arena; accepting another owner/band here would make the manager execute a
     # different Thread and make this Thread's end-turn collect the wrong arena.
     if: slot\owner != 0 || slot\arena != 0 || slot\started != 0U || slot\limit != 0U || slot\state != 0 || slot\lane != 0
-        if: slot\owner != (cast: (@: void) t) || slot\arena != arena || slot\started != 0U || slot\limit = 0U || slot\state != c.LMX_SCHEDULE_IDLE || slot\lane != 0
+        if: slot\owner != (cast: (@) t) || slot\arena != arena || slot\started != 0U || slot\limit = 0U || slot\state != c.LMX_SCHEDULE_IDLE || slot\lane != 0
             return: c.LMX_THREAD_INVALID
         ---
     ---
-    message := (cast: (@: c.LmxMsg) t)
+    message := (cast: (c.LmxMsg@) t)
     # lmx_child_create has already installed the copied graph in the embedded prefix.  It may be
     # confirmed, never rebound.  A fresh allocation has a zero prefix.  Nonzero tail mechanisms
     # are the durable initialized marker and make a second init fail before any mutation.
@@ -121,8 +121,8 @@ fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: m
     t\orphan_limit := 0U
     t\result := 0
     t\manager := 0
-    @: thread_api c.LmxThreadApi @ t\api
-    @: mail_api c.LmxThreadMailApi @ t\mail_api
+    c.LmxThreadApi@: thread_api @ t\api
+    c.LmxThreadMailApi@: mail_api @ t\mail_api
     # The object's interfaces are composed at initialization, each table separate: the
     # thread's own, and its mail.  A caller gets one or the other, never a merge.
     thread_api\enter := c.lmx_thread_enter
@@ -136,50 +136,50 @@ fn: lmx_thread_init (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx; @: m
     return: c.LMX_THREAD_OK
 end: lmx_thread_init
 
-fn: lmx_thread_api (@: t c.LmxThread) @: c.LmxThreadApi
+fn: lmx_thread_api (c.LmxThread@: t) c.LmxThreadApi@
     if: t = 0
         return: 0
-    return: (cast: (@: c.LmxThreadApi) (@ t\api))
+    return: (cast: (c.LmxThreadApi@) (@ t\api))
 end: lmx_thread_api
 
-fn: lmx_thread_mail_api (@: t c.LmxThread) @: c.LmxThreadMailApi
+fn: lmx_thread_mail_api (c.LmxThread@: t) c.LmxThreadMailApi@
     if: t = 0
         return: 0
-    return: (cast: (@: c.LmxThreadMailApi) (@ t\mail_api))
+    return: (cast: (c.LmxThreadMailApi@) (@ t\mail_api))
 end: lmx_thread_mail_api
 
-fn: lmx_thread_message (@: t c.LmxThread) @: c.LmxMsg
+fn: lmx_thread_message (c.LmxThread@: t) c.LmxMsg@
     if: t = 0
         return: 0
-    return: (cast: (@: c.LmxMsg) t)
+    return: (cast: (c.LmxMsg@) t)
 end: lmx_thread_message
 
-fn: lmx_thread_parent (@: t c.LmxThread) @: c.LmxThread
+fn: lmx_thread_parent (c.LmxThread@: t) c.LmxThread@
     if: t = 0
         return: 0
-    return: (cast: (@: c.LmxThread) t\parent)
+    return: (cast: (c.LmxThread@) t\parent)
 end: lmx_thread_parent
 
 # The record's own service, read from the STABLE reference registration stores (never from a
 # position inside the service's compacted entries vector).
-fn: lmx_thread_service (@: t c.LmxThread) @: void
+fn: lmx_thread_service (c.LmxThread@: t) @
     if: t = 0
         return: 0
-    return: (cast: (@: void) t\service)
+    return: (cast: (@) t\service)
 end: lmx_thread_service
 
 # Live direct children are the physical Thread references in the one List owned
 # by Thread.children. It is runtime state, not an implicit field of source code.
 # Its descriptor is stable while backing grows; there is no second membership set.
 
-fn: lmx_thread_children_bind (@: t c.LmxThread; @: children void; @: arena c.LmxArena) int
-    @: list c.VoidArray
+fn: lmx_thread_children_bind (c.LmxThread@: t; @: children; c.LmxArena@: arena) int
+    c.VoidArray@: list
     int: type
     if: t = 0 || children = 0 || arena = 0 || t\children != 0
         return: c.LMX_THREAD_INVALID
-    if: c.lmx_range_home(arena, (cast: (@: void) t)) != arena
+    if: c.lmx_range_home(arena, (cast: (@) t)) != arena
         return: c.LMX_THREAD_INVALID
-    list := (cast: (@: c.VoidArray) children)
+    list := (cast: (c.VoidArray@) children)
     type := c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
     if: c.lmx_range_classify(arena, children) != c.LMX_KIND_LIST
         return: c.LMX_THREAD_INVALID
@@ -189,9 +189,9 @@ fn: lmx_thread_children_bind (@: t c.LmxThread; @: children void; @: arena c.Lmx
         return: c.LMX_THREAD_INVALID
     if: list\size != 0U
         return: c.LMX_THREAD_INVALID
-    if: list\size > c.lmx_list_cap((cast: (@: void) list))
+    if: list\size > c.lmx_list_cap((cast: (@) list))
         return: c.LMX_THREAD_INVALID
-    if: c.lmx_list_cap((cast: (@: void) list)) != 0U
+    if: c.lmx_list_cap((cast: (@) list)) != 0U
         if: list\data = 0
             return: c.LMX_THREAD_INVALID
         if: c.lmx_range_classify(arena, list\data) != c.LMX_KIND_PRIMITIVE
@@ -206,60 +206,60 @@ fn: lmx_thread_children_bind (@: t c.LmxThread; @: children void; @: arena c.Lmx
     return: c.LMX_THREAD_OK
 end: lmx_thread_children_bind
 
-fn: lmx_thread_children_open (@: t c.LmxThread; @: arena c.LmxArena) int
-    @: children c.VoidArray
+fn: lmx_thread_children_open (c.LmxThread@: t; c.LmxArena@: arena) int
+    c.VoidArray@: children
     if: t = 0 || arena = 0 || t\children != 0
         return: c.LMX_THREAD_INVALID
-    if: c.lmx_range_home(arena, (cast: (@: void) t)) != arena
+    if: c.lmx_range_home(arena, (cast: (@) t)) != arena
         return: c.LMX_THREAD_INVALID
     children := c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
     if: children = 0
         return: c.LMX_THREAD_INVALID
-    return: lmx_thread_children_bind(t, (cast: (@: void) children), arena)
+    return: lmx_thread_children_bind(t, (cast: (@) children), arena)
 end: lmx_thread_children_open
 
-fn: lmx_thread_children_field_new (@: arena c.LmxArena; @: graph c.Lmx; size_t: field) @: void
-    @: children c.VoidArray
+fn: lmx_thread_children_field_new (c.LmxArena@: arena; c.Lmx@: graph; size_t: field) @
+    c.VoidArray@: children
     if: arena = 0 || graph = 0
         return: 0
-    @: array c.VoidArray @ graph\array
+    c.VoidArray@: array @ graph\array
     if: field >= array\size
         return: 0
     ---
-    children := (cast: (@: c.VoidArray) c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena))
+    children := (cast: (c.VoidArray@) c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena))
     if: children = 0
         return: 0
     ---
-    if: c.lmx_arena_ref_store(arena, graph, field, (cast: (@: void) children)) != 0
+    if: c.lmx_arena_ref_store(arena, graph, field, (cast: (@) children)) != 0
         return: 0
     ---
-    return: (cast: (@: void) children)
+    return: (cast: (@) children)
 end: lmx_thread_children_field_new
 
-fn: lmx_thread_children (@: t c.LmxThread) @: void
+fn: lmx_thread_children (c.LmxThread@: t) @
     if: t = 0
         return: 0
-    return: (cast: (@: void) t\children)
+    return: (cast: (@) t\children)
 end: lmx_thread_children
 
-fn: lmx_thread_child_count (@: parent c.LmxThread) size_t
+fn: lmx_thread_child_count (c.LmxThread@: parent) size_t
     if: parent = 0 || parent\children = 0
         return: 0U
     return: c.lmx_list_len(parent\children)
 end: lmx_thread_child_count
 
-fn: lmx_thread_child_at (@: parent c.LmxThread; size_t: index) @: c.LmxThread
+fn: lmx_thread_child_at (c.LmxThread@: parent; size_t: index) c.LmxThread@
     if: parent = 0 || parent\children = 0
         return: 0
-    return: (cast: (@: c.LmxThread) c.lmx_list_value(parent\children, index))
+    return: (cast: (c.LmxThread@) c.lmx_list_value(parent\children, index))
 end: lmx_thread_child_at
 
 # The address of this Thread's own handshake word (19.29.7.1): the child stamps it with
 # milliseconds and its parent reaches it through the physical child reference in parent.children.
-fn: lmx_thread_manager (@: t c.LmxThread) @: void
+fn: lmx_thread_manager (c.LmxThread@: t) @
     if: t = 0
         return: 0
-    return: (cast: (@: void) t\manager)
+    return: (cast: (@) t\manager)
 end: lmx_thread_manager
 
 # THE OBJECT'S OWN SCHEDULER.  The arena is NAMED BY THE CALLER -- the kernel's own rule ("the
@@ -267,14 +267,14 @@ end: lmx_thread_manager
 # correct source: Thread initialization receives its owner arena explicitly and does not infer it
 # from schedule state. Refused while one is already open: a second scheduler for one object would
 # be a second answer to "which queue steps my children".
-fn: lmx_thread_scheduler_open (@: t c.LmxThread; @: arena c.LmxArena) int
-    @: m c.LmxManager
+fn: lmx_thread_scheduler_open (c.LmxThread@: t; c.LmxArena@: arena) int
+    c.LmxManager@: m
     if: t = 0 || arena = 0
         return: c.LMX_THREAD_INVALID
     if: t\manager != 0
         return: c.LMX_THREAD_INVALID
     ---
-    m := (cast: (@: c.LmxManager) c.lmx_arena_take(arena, c.sizeof(c.LmxManager), c.LMX_DOMAIN_KIND_MANAGER, c.LMX_DOMAIN_MANAGER))
+    m := (cast: (c.LmxManager@) c.lmx_arena_take(arena, c.sizeof(c.LmxManager), c.LMX_DOMAIN_KIND_MANAGER, c.LMX_DOMAIN_MANAGER))
     if: m = 0
         return: c.LMX_THREAD_INVALID
     ---
@@ -284,17 +284,17 @@ fn: lmx_thread_scheduler_open (@: t c.LmxThread; @: arena c.LmxArena) int
     if: c.lmx_manager_bind(m, t) != c.LMX_MANAGER_OK
         return: c.LMX_THREAD_INVALID
     ---
-    t\manager := (cast: (@: void) m)
+    t\manager := (cast: (@) m)
     return: c.LMX_THREAD_OK
 end: lmx_thread_scheduler_open
 
-fn: lmx_thread_alive_cell (@: t c.LmxThread) @: size_t
+fn: lmx_thread_alive_cell (c.LmxThread@: t) size_t@
     if: t = 0
         return: 0
-    return: (cast: (@: size_t) (@ t\alive))
+    return: (cast: (size_t@) (@ t\alive))
 end: lmx_thread_alive_cell
 
-fn: lmx_thread_child_is (@: parent c.LmxThread; @: child c.LmxThread) int
+fn: lmx_thread_child_is (c.LmxThread@: parent; c.LmxThread@: child) int
     size_t: index
     if: parent = 0 || child = 0
         return: 0
@@ -311,9 +311,9 @@ end: lmx_thread_child_is
 
 # The physical value is appended to the List held by parent.children.  Growth belongs to that
 # DynamicArray (minimum 2, then approximately 1.5x); it never relocates a live referent.
-fn: lmx_thread_child_add (@: parent c.LmxThread; @: child c.LmxThread; @: into c.LmxArena) int
-    @: arena c.LmxArena
-    @: child_message c.LmxMsg
+fn: lmx_thread_child_add (c.LmxThread@: parent; c.LmxThread@: child; c.LmxArena@: into) int
+    c.LmxArena@: arena
+    c.LmxMsg@: child_message
     if: parent = 0 || child = 0 || parent = child || child\parent != 0
         return: c.LMX_THREAD_INVALID
     ---
@@ -344,16 +344,16 @@ fn: lmx_thread_child_add (@: parent c.LmxThread; @: child c.LmxThread; @: into c
         return: c.LMX_THREAD_INVALID
     ---
     ---
-    if: c.lmx_list_append_owned(parent\children, (cast: (@: void) child), arena) != c.LMX_LIST_OK
+    if: c.lmx_list_append_owned(parent\children, (cast: (@) child), arena) != c.LMX_LIST_OK
         return: c.LMX_THREAD_INVALID
     ---
-    child\parent := (cast: (@: void) parent)
+    child\parent := (cast: (@) parent)
     return: c.LMX_THREAD_OK
 end: lmx_thread_child_add
 
-fn: lmx_thread_child_remove (@: parent c.LmxThread; @: child c.LmxThread) int
+fn: lmx_thread_child_remove (c.LmxThread@: parent; c.LmxThread@: child) int
     size_t: index
-    if: parent = 0 || child = 0 || child\parent != (cast: (@: void) parent)
+    if: parent = 0 || child = 0 || child\parent != (cast: (@) parent)
         return: c.LMX_THREAD_INVALID
     ---
     if: parent\children = 0
@@ -377,9 +377,9 @@ end: lmx_thread_child_remove
 # imported range.  Preflight checks the proposed chain while the old one is
 # intact.  Append first so allocation failure cannot detach the old child;
 # the temporary second list entry is removed if the old removal fails.
-fn: lmx_thread_adopt (@: child c.LmxThread; @: new_parent c.LmxThread) int
-    @: old_parent c.LmxThread
-    @: arena c.LmxArena
+fn: lmx_thread_adopt (c.LmxThread@: child; c.LmxThread@: new_parent) int
+    c.LmxThread@: old_parent
+    c.LmxArena@: arena
     int: preflight
     size_t: appended
     if: child = 0 || new_parent = 0 || child = new_parent
@@ -406,7 +406,7 @@ fn: lmx_thread_adopt (@: child c.LmxThread; @: new_parent c.LmxThread) int
         return: c.LMX_THREAD_INVALID
     ---
     appended := c.lmx_list_len(new_parent\children)
-    if: c.lmx_list_append_owned(new_parent\children, (cast: (@: void) child), arena) != c.LMX_LIST_OK
+    if: c.lmx_list_append_owned(new_parent\children, (cast: (@) child), arena) != c.LMX_LIST_OK
         return: c.LMX_THREAD_INVALID
     ---
     if: lmx_thread_child_remove(old_parent, child) != c.LMX_THREAD_OK
@@ -415,28 +415,28 @@ fn: lmx_thread_adopt (@: child c.LmxThread; @: new_parent c.LmxThread) int
         ---
         return: c.LMX_THREAD_INVALID
     ---
-    child\parent := (cast: (@: void) new_parent)
+    child\parent := (cast: (@) new_parent)
     return: c.LMX_THREAD_OK
 end: lmx_thread_adopt
 
 # A PRIM call receives two typed Thread reference *storage* cells. This is
 # ordinary value transport: the graph has no runtime name lookup or special
 # Message identifier. The exact Thread type excludes a standalone letter.
-fn: lmx_thread_reparent_operand (@: arena c.LmxArena; @: storage void) @: c.LmxThread
-    @: thread c.LmxThread
+fn: lmx_thread_reparent_operand (c.LmxArena@: arena; @: storage) c.LmxThread@
+    c.LmxThread@: thread
     if: arena = 0 || storage = 0 || c.lmx_range_type_of(arena, storage) != c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD
         return: 0
     ---
-    thread := (cast: (@: c.LmxThread) c.lmx_pointer_value_known(storage))
-    if: thread = 0 || thread\slot = 0 || thread\slot\arena = 0 || c.lmx_range_type_of(thread\slot\arena, (cast: (@: void) thread)) != c.LMX_DOMAIN_THREAD
+    thread := (cast: (c.LmxThread@) c.lmx_pointer_value_known(storage))
+    if: thread = 0 || thread\slot = 0 || thread\slot\arena = 0 || c.lmx_range_type_of(thread\slot\arena, (cast: (@) thread)) != c.LMX_DOMAIN_THREAD
         return: 0
     ---
     return: thread
 end: lmx_thread_reparent_operand
 
-fn: lmx_walk_adopt (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: child c.LmxThread
-    @: new_parent c.LmxThread
+fn: lmx_walk_adopt (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxThread@: child
+    c.LmxThread@: new_parent
     if: out = 0 || refs = 0 || nargs != 2U
         return: c.LMX_PRIMITIVE_FAIL
     ---
@@ -452,9 +452,9 @@ fn: lmx_walk_adopt (@: owner void; @@: refs void; size_t: nargs; @: dest void; @
     return: c.LMX_PRIMITIVE_OK
 end: lmx_walk_adopt
 
-fn: lmx_walk_independent (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: child c.LmxThread
-    @: new_parent c.LmxThread
+fn: lmx_walk_independent (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxThread@: child
+    c.LmxThread@: new_parent
     if: out = 0 || refs = 0 || nargs != 2U
         return: c.LMX_PRIMITIVE_FAIL
     ---
@@ -470,12 +470,12 @@ fn: lmx_walk_independent (@: owner void; @@: refs void; size_t: nargs; @: dest v
     return: c.LMX_PRIMITIVE_OK
 end: lmx_walk_independent
 
-fn: lmx_thread_child_first (@: parent c.LmxThread) @: c.LmxThread
+fn: lmx_thread_child_first (c.LmxThread@: parent) c.LmxThread@
     return: lmx_thread_child_at(parent, 0U)
 end: lmx_thread_child_first
 
-fn: lmx_thread_child_next (@: child c.LmxThread) @: c.LmxThread
-    @: parent c.LmxThread
+fn: lmx_thread_child_next (c.LmxThread@: child) c.LmxThread@
+    c.LmxThread@: parent
     size_t: index
     if: child = 0
         return: 0
@@ -495,13 +495,13 @@ end: lmx_thread_child_next
 # The mail API's methods.  Each one delegates: today to the mailbox module, later to
 # the mail service -- the caller's interface stays what it is.  The arena the delegate
 # needs is the caller's to name: this state holds the mailbox, not the arena.
-fn: lmx_thread_mail_accept (@: arena c.LmxArena; @: t c.LmxThread; @: target void; int: lane) int
+fn: lmx_thread_mail_accept (c.LmxArena@: arena; c.LmxThread@: t; @: target; int: lane) int
     if: t = 0 || t\mail = 0
         return: c.LMX_POST_INVALID
     return: c.lmx_post_accept(arena, t\mail, target, lane)
 end: lmx_thread_mail_accept
 
-fn: lmx_thread_mail_take (@: t c.LmxThread; int: lane) @: void
+fn: lmx_thread_mail_take (c.LmxThread@: t; int: lane) @
     if: t = 0 || t\mail = 0
         return: 0
     if: t\slot = 0
@@ -510,14 +510,14 @@ fn: lmx_thread_mail_take (@: t c.LmxThread; int: lane) @: void
     return: c.lmx_post_take_owned(t\slot\arena, t\mail, lane)
 end: lmx_thread_mail_take
 
-fn: lmx_thread_mail_count (@: t c.LmxThread; int: lane) size_t
+fn: lmx_thread_mail_count (c.LmxThread@: t; int: lane) size_t
     if: t = 0 || t\mail = 0
         return: 0U
     return: c.lmx_post_count(t\mail, lane)
 end: lmx_thread_mail_count
 
-fn: lmx_thread_mail_close (@: arena c.LmxArena; @: t c.LmxThread) int
-    @: box c.LmxPost
+fn: lmx_thread_mail_close (c.LmxArena@: arena; c.LmxThread@: t) int
+    c.LmxPost@: box
     if: t = 0 || t\mail = 0
         return: c.LMX_POST_INVALID
     ---
@@ -532,8 +532,8 @@ fn: lmx_thread_mail_close (@: arena c.LmxArena; @: t c.LmxThread) int
     return: c.LMX_POST_OK
 end: lmx_thread_mail_close
 
-fn: lmx_thread_running (@: t c.LmxThread) int
-    @: message c.LmxMsg
+fn: lmx_thread_running (c.LmxThread@: t) int
+    c.LmxMsg@: message
     message := lmx_thread_message(t)
     if: message = 0
         return: 0
@@ -549,8 +549,8 @@ end: lmx_thread_running
 # resurrects it) and refused when the boundary says stop: not running, or already
 # successful.  Otherwise the turn cursor advances and this object becomes the
 # current one.
-fn: lmx_thread_enter (@: t c.LmxThread) int
-    @: message c.LmxMsg
+fn: lmx_thread_enter (c.LmxThread@: t) int
+    c.LmxMsg@: message
     message := lmx_thread_message(t)
     if: message = 0
         return: c.LMX_THREAD_INVALID
@@ -563,19 +563,19 @@ fn: lmx_thread_enter (@: t c.LmxThread) int
         return: c.LMX_THREAD_STOPPED
     t\turn := t\turn + 1U
     t\state := c.LMX_THREAD_TURN
-    @@: current_cell c.LmxThread (cast: (@@: c.LmxThread) (@ c.lmx_thread_current_slot))
+    c.LmxThread@@: current_cell (cast: (c.LmxThread@@) (@ c.lmx_thread_current_slot))
     \current_cell := t
     return: c.LMX_THREAD_OK
 end: lmx_thread_enter
 
-fn: lmx_thread_leave (@: t c.LmxThread) int
-    @: message c.LmxMsg
+fn: lmx_thread_leave (c.LmxThread@: t) int
+    c.LmxMsg@: message
     if: t = 0
         return: c.LMX_THREAD_INVALID
     message := lmx_thread_message(t)
     if: t\state = c.LMX_THREAD_TURN
         t\state := c.LMX_THREAD_IDLE
-    @@: current_cell c.LmxThread (cast: (@@: c.LmxThread) (@ c.lmx_thread_current_slot))
+    c.LmxThread@@: current_cell (cast: (c.LmxThread@@) (@ c.lmx_thread_current_slot))
     \current_cell := 0
     # The Message marks ITSELF handoff-safe when it has left its last turn and nothing
     # native uses its arena (model 32 / spec 19.29.7.1): the work is over -- stopped or
@@ -631,10 +631,10 @@ end: lmx_thread_leave
 # The body's answer is not a stop and is not stored: what ends an object's work is the Message's
 # flags, and a handler that reports a status is reporting its own business (model 31).  A turn the
 # boundary refuses is not a turn, so nothing of it is written.
-fn: lmx_thread_dispatch_native (@: t c.LmxThread; c.LmxCallEntry: entry) int
-    @: message c.LmxMsg
-    @: graph c.Lmx
-    @: arena c.LmxArena
+fn: lmx_thread_dispatch_native (c.LmxThread@: t; c.LmxCallEntry: entry) int
+    c.LmxMsg@: message
+    c.Lmx@: graph
+    c.LmxArena@: arena
     int: st
     int: value 0
     int: route c.LMX_CALL_ROUTE_NATIVE
@@ -676,8 +676,8 @@ fn: lmx_thread_dispatch_native (@: t c.LmxThread; c.LmxCallEntry: entry) int
     return: c.LMX_TURN_BODY_OK
 end: lmx_thread_dispatch_native
 
-fn: lmx_thread_turn (@: t c.LmxThread; c.LmxCallEntry: entry; ulong: now) int
-    @: message c.LmxMsg
+fn: lmx_thread_turn (c.LmxThread@: t; c.LmxCallEntry: entry; ulong: now) int
+    c.LmxMsg@: message
     int: code
     int: body c.LMX_TURN_BODY_OK
     size_t: ctx_deadline 0U
@@ -784,9 +784,9 @@ fn: lmx_thread_cycle_reading (ulong: v) ulong
     return: v
 end: lmx_thread_cycle_reading
 
-fn: lmx_poll_answer_children (@: t c.LmxThread; ulong: now) int
-    @: child c.LmxThread
-    @: slot c.LmxSchedule
+fn: lmx_poll_answer_children (c.LmxThread@: t; ulong: now) int
+    c.LmxThread@: child
+    c.LmxSchedule@: slot
     size_t: index
     size_t: mark
     ulong: reading
@@ -867,8 +867,8 @@ end: lmx_poll_answer_children
 # ONE CHILD, ASKED TO CLOSE: `running=0`, and the moment of the FIRST ask goes into the PARENT'S
 # node, where the window below is counted from.  A repeated ask changes nothing -- a parent asking
 # at every boundary of its own must not keep postponing the close it asked for.
-fn: lmx_stop_request (@: child c.LmxThread; ulong: now; size_t: deadline) int
-    @: message c.LmxMsg
+fn: lmx_stop_request (c.LmxThread@: child; ulong: now; size_t: deadline) int
+    c.LmxMsg@: message
     if: child = 0
         return: c.LMX_THREAD_INVALID
     message := lmx_thread_message(child)
@@ -892,22 +892,22 @@ end: lmx_stop_request
 # THE CLOSURE DEADLINE AS THE NODE HOLDS IT: one relaxed atomic load of ONE self-contained word.
 # A single value needs no ordering against a second field, and the deadline test itself is modular
 # (lmx_deadline_passed), so nothing here depends on store ordering.
-fn: lmx_thread_close_deadline (@: child c.LmxThread) size_t
+fn: lmx_thread_close_deadline (c.LmxThread@: child) size_t
     if: child = 0
         return: 0U
-    return: (cast: (size_t) c.__atomic_load_n((cast: (@: size_t) (@ child\close_deadline)), c.__ATOMIC_RELAXED))
+    return: (cast: (size_t) c.__atomic_load_n((cast: (size_t@) (@ child\close_deadline)), c.__ATOMIC_RELAXED))
 end: lmx_thread_close_deadline
 
 # THE FIRST CLOSURE WINS: a nonzero value already stored is never overwritten, which is what keeps
 # every level reading the value the upper close computed.  Returns 1 when this call stored it.
-fn: lmx_thread_close_deadline_publish (@: child c.LmxThread; size_t: deadline) int
+fn: lmx_thread_close_deadline_publish (c.LmxThread@: child; size_t: deadline) int
     if: child = 0 || deadline = 0U
         return: 0
     ---
     if: lmx_thread_close_deadline(child) != 0U
         return: 0
     ---
-    c.__atomic_store_n((cast: (@: size_t) (@ child\close_deadline)), deadline, c.__ATOMIC_RELAXED)
+    c.__atomic_store_n((cast: (size_t@) (@ child\close_deadline)), deadline, c.__ATOMIC_RELAXED)
     return: 1
 end: lmx_thread_close_deadline_publish
 
@@ -925,9 +925,9 @@ end: lmx_thread_close_deadline_publish
 # boundary that can end its wait).  The walk calls THIS one only: asking a RUNNING child to stop is
 # the cascade's business, never a settle's -- a settle would otherwise stop every live child it
 # passed by.
-fn: lmx_stop_close (@: child c.LmxThread; ulong: now) int
-    @: message c.LmxMsg
-    @: slot c.LmxSchedule
+fn: lmx_stop_close (c.LmxThread@: child; ulong: now) int
+    c.LmxMsg@: message
+    c.LmxSchedule@: slot
     if: child = 0
         return: c.LMX_THREAD_INVALID
     if: child\stopped = 0U
@@ -976,8 +976,8 @@ end: lmx_stop_close
 # (lmx_manager_running_lane_ended).  A lane that has ended but not yet been reaped
 # answers yes: the thread is gone either way, and the reap itself stays with the
 # queue that owns the lane.
-fn: lmx_thread_lane_ended (@: t c.LmxThread) int
-    @: slot c.LmxSchedule
+fn: lmx_thread_lane_ended (c.LmxThread@: t) int
+    c.LmxSchedule@: slot
     if: t = 0
         return: 0
     slot := t\slot
@@ -986,9 +986,9 @@ fn: lmx_thread_lane_ended (@: t c.LmxThread) int
     return: c.lmx_manager_running_lane_ended(slot)
 end: lmx_thread_lane_ended
 
-fn: lmx_stop_children (@: t c.LmxThread; ulong: now; size_t: deadline) int
-    @: child c.LmxThread
-    @: next c.LmxThread
+fn: lmx_stop_children (c.LmxThread@: t; ulong: now; size_t: deadline) int
+    c.LmxThread@: child
+    c.LmxThread@: next
     if: t = 0
         return: c.LMX_THREAD_INVALID
     child := lmx_thread_child_first(t)
@@ -1006,16 +1006,16 @@ end: lmx_stop_children
 # Thread address is still a live element of the parent's sole membership Array.  The serialized
 # parent removes that exact element first and only then releases or attaches the arena in settle.
 # This is intentionally a no-op for storage; it remains the driver's uniform terminal hook.
-fn: lmx_thread_finish (@: t c.LmxThread) int
+fn: lmx_thread_finish (c.LmxThread@: t) int
     if: t = 0
         return: c.LMX_THREAD_INVALID
     return: c.LMX_THREAD_OK
 end: lmx_thread_finish
 
 fn: lmx_msg_poll_escape () int
-    @: t c.LmxThread
-    @: message c.LmxMsg
-    t := (cast: (@: c.LmxThread) c.lmx_thread_current_slot)
+    c.LmxThread@: t
+    c.LmxMsg@: message
+    t := (cast: (c.LmxThread@) c.lmx_thread_current_slot)
     message := lmx_thread_message(t)
     if: message = 0
         return: 0
@@ -1027,9 +1027,9 @@ end: lmx_msg_poll_escape
 # The work abort: the letter reports completion, so the remaining work is
 # abandoned rather than continued.
 fn: lmx_msg_poll_abort () int
-    @: t c.LmxThread
-    @: message c.LmxMsg
-    t := (cast: (@: c.LmxThread) c.lmx_thread_current_slot)
+    c.LmxThread@: t
+    c.LmxMsg@: message
+    t := (cast: (c.LmxThread@) c.lmx_thread_current_slot)
     message := lmx_thread_message(t)
     if: message = 0
         return: 0
@@ -1042,19 +1042,19 @@ end: lmx_msg_poll_abort
 # Lives here (not walk.lm1) so walk selftests that omit thread still link. Declared in lmx_walk.h.lm1.
 # Opus: LmxPrimitive.fn = lmx_walk_mail_take; PRIM [prim, record] (nargs 0). Graph through \out.
 # Mutant: refuse empty / leave status FAIL -> empty take RED.
-fn: lmx_walk_mail_take (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: letter c.LmxMsg 0
+fn: lmx_walk_mail_take (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxMsg@: letter 0
     if: out = 0
         return: 1
     \out := 0
     if: nargs != 0U
         return: 1
     ---
-    letter := (cast: (@: c.LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))
+    letter := (cast: (c.LmxMsg@) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))
     if: letter = 0
         return: 0
     ---
-    \out := (cast: (@: void) letter\graph)
+    \out := (cast: (@) letter\graph)
     return: 0
 end: lmx_walk_mail_take
 
@@ -1062,17 +1062,17 @@ end: lmx_walk_mail_take
 # payload (graph field 1) is LMX_IMPLEMENTS_YES against the model (native admit shape:
 # implements(arena, payload, model, model)). Others stay. Empty / no match -> \out 0 OK.
 # Mutant: take head always / skip implements -> RED.
-fn: lmx_walk_receive_if (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    @: arena c.LmxArena 0
-    @: model c.Lmx 0
-    @: thread c.LmxThread 0
-    @: box c.LmxPost 0
+fn: lmx_walk_receive_if (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
+    c.LmxArena@: arena 0
+    c.Lmx@: model 0
+    c.LmxThread@: thread 0
+    c.LmxPost@: box 0
     c.LmxPostCursor: cur
-    @: cursor c.LmxPostCursor @ cur
+    c.LmxPostCursor@: cursor @ cur
     @: target void 0
-    @: letter c.LmxMsg 0
-    @: graph c.Lmx 0
-    @: payload c.Lmx 0
+    c.LmxMsg@: letter 0
+    c.Lmx@: graph 0
+    c.Lmx@: payload 0
     int: admit 0
     int: admit_status
     if: out = 0
@@ -1081,8 +1081,8 @@ fn: lmx_walk_receive_if (@: owner void; @@: refs void; size_t: nargs; @: dest vo
     if: refs = 0 || nargs != 1U
         return: 1
     ---
-    arena := (cast: (@: c.LmxArena) owner)
-    model := (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[0]))
+    arena := (cast: (c.LmxArena@) owner)
+    model := (cast: (c.Lmx@) c.lmx_pointer_value_known(refs[0]))
     if: arena = 0 || model = 0
         return: 1
     ---
@@ -1104,10 +1104,10 @@ fn: lmx_walk_receive_if (@: owner void; @@: refs void; size_t: nargs; @: dest vo
             c.lmx_post_cursor_close(@ cur)
             return: 0
         ---
-        letter := (cast: (@: c.LmxMsg) target)
+        letter := (cast: (c.LmxMsg@) target)
         graph := letter\graph
-        if: graph != 0 && c.lmx_range_classify(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT
-            payload := (cast: (@: c.Lmx) c.lmx_arena_ref_value(graph, 1U))
+        if: graph != 0 && c.lmx_range_classify(arena, (cast: (@) graph)) = c.LMX_KIND_STRUCT
+            payload := (cast: (c.Lmx@) c.lmx_arena_ref_value(graph, 1U))
             if: payload != 0
                 # Select only by this explicit receiving interface. Known NO
                 # skips this letter; unavailable facts alone are no refusal.
@@ -1122,8 +1122,8 @@ fn: lmx_walk_receive_if (@: owner void; @@: refs void; size_t: nargs; @: dest vo
                     if: target = 0
                         return: 1
                     ---
-                    letter := (cast: (@: c.LmxMsg) target)
-                    \out := (cast: (@: void) letter\graph)
+                    letter := (cast: (c.LmxMsg@) target)
+                    \out := (cast: (@) letter\graph)
                     return: 0
                 ---
             ---

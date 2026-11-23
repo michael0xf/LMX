@@ -4,18 +4,18 @@ predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_reparent.h.lm1"
 
 # Retention is policy over the owner's sole children Array, not a second list.
-fn: lmx_orphan_init (@: ledger c.LmxOrphanLedger; @: owner c.LmxThread) int
+fn: lmx_orphan_init (c.LmxOrphanLedger@: ledger; c.LmxThread@: owner) int
     if: ledger = 0 || owner = 0 || c.lmx_thread_children(owner) = 0
         return: c.LMX_ORPHAN_INVALID
     ledger\owner := owner
     ledger\reclaimed := 0U
     return: c.LMX_ORPHAN_OK
 
-fn: lmx_orphan_count (@: ledger c.LmxOrphanLedger) size_t
+fn: lmx_orphan_count (c.LmxOrphanLedger@: ledger) size_t
     size_t: index 0U
     size_t: count 0U
-    @: child c.LmxThread
-    @: owner c.LmxThread
+    c.LmxThread@: child
+    c.LmxThread@: owner
     if: ledger = 0 || ledger\owner = 0
         return: 0U
     owner := ledger\owner
@@ -28,19 +28,19 @@ fn: lmx_orphan_count (@: ledger c.LmxOrphanLedger) size_t
     ---
     return: count
 
-fn: lmx_orphan_reclaimed (@: ledger c.LmxOrphanLedger) size_t
+fn: lmx_orphan_reclaimed (c.LmxOrphanLedger@: ledger) size_t
     if: ledger = 0
         return: 0U
     return: (cast: (size_t) ledger\reclaimed)
 
-fn: lmx_orphan_adopt (@: ledger c.LmxOrphanLedger; @: orphan c.LmxMsg; @: orphan_arena c.LmxArena; @: thread c.LmxThread; @: service c.LmxService; @: manager c.LmxManager; ulong: now; ulong: limit) int
-    @: old_parent c.LmxThread
-    @: owner c.LmxThread
-    @: old_parent_arena c.LmxArena
-    @: owner_slot c.LmxSchedule
-    @: old_slot c.LmxSchedule
-    @: slot c.LmxSchedule
-    @: owner_arena c.LmxArena
+fn: lmx_orphan_adopt (c.LmxOrphanLedger@: ledger; c.LmxMsg@: orphan; c.LmxArena@: orphan_arena; c.LmxThread@: thread; c.LmxService@: service; c.LmxManager@: manager; ulong: now; ulong: limit) int
+    c.LmxThread@: old_parent
+    c.LmxThread@: owner
+    c.LmxArena@: old_parent_arena
+    c.LmxSchedule@: owner_slot
+    c.LmxSchedule@: old_slot
+    c.LmxSchedule@: slot
+    c.LmxArena@: owner_arena
     int: registered 0
     int: owner_status
     if: ledger = 0 || ledger\owner = 0 || orphan = 0 || orphan_arena = 0 || thread = 0 || limit = 0U
@@ -97,10 +97,10 @@ fn: lmx_orphan_adopt (@: ledger c.LmxOrphanLedger; @: orphan c.LmxMsg; @: orphan
     return: c.LMX_ORPHAN_OK
 
 # Mailbox close MUST precede unregister/remove/release, and each refusal is kept.
-fn: lmx_orphan_reclaim (@: ledger c.LmxOrphanLedger; @: service c.LmxService; @: child c.LmxThread) int
-    @: arena c.LmxArena
-    @: owner c.LmxThread
-    @: slot c.LmxSchedule
+fn: lmx_orphan_reclaim (c.LmxOrphanLedger@: ledger; c.LmxService@: service; c.LmxThread@: child) int
+    c.LmxArena@: arena
+    c.LmxThread@: owner
+    c.LmxSchedule@: slot
     if: ledger = 0 || ledger\owner = 0 || child = 0 || child\orphaned = 0 || child\slot = 0
         return: c.LMX_ORPHAN_INVALID
     slot := child\slot
@@ -124,11 +124,11 @@ fn: lmx_orphan_reclaim (@: ledger c.LmxOrphanLedger; @: service c.LmxService; @:
     ledger\reclaimed := ledger\reclaimed + 1U
     return: c.LMX_ORPHAN_OK
 
-fn: lmx_orphan_maintain (@: ledger c.LmxOrphanLedger; @: service c.LmxService; @: manager c.LmxManager; ulong: now) int
+fn: lmx_orphan_maintain (c.LmxOrphanLedger@: ledger; c.LmxService@: service; c.LmxManager@: manager; ulong: now) int
     size_t: index 0U
-    @: child c.LmxThread
-    @: owner c.LmxThread
-    @: message c.LmxMsg
+    c.LmxThread@: child
+    c.LmxThread@: owner
+    c.LmxMsg@: message
     int: reclaim
     if: ledger = 0 || ledger\owner = 0
         return: c.LMX_ORPHAN_INVALID
@@ -166,10 +166,10 @@ fn: lmx_orphan_maintain (@: ledger c.LmxOrphanLedger; @: service c.LmxService; @
     ---
     return: c.LMX_ORPHAN_OK
 
-fn: lmx_orphan_release (@: ledger c.LmxOrphanLedger; @: service c.LmxService; @: manager c.LmxManager) int
+fn: lmx_orphan_release (c.LmxOrphanLedger@: ledger; c.LmxService@: service; c.LmxManager@: manager) int
     size_t: index 0U
-    @: child c.LmxThread
-    @: owner c.LmxThread
+    c.LmxThread@: child
+    c.LmxThread@: owner
     if: ledger = 0 || ledger\owner = 0
         return: c.LMX_ORPHAN_INVALID
     owner := ledger\owner

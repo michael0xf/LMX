@@ -4,7 +4,7 @@
 # more before a written quote). Plain text work, valid on every platform; the win branch of the process
 # adapter uses it. A program part: methods only (the program includes <stdlib.h> and <string.h>).
 
-fn: win_arg_plain (@: arg char) int
+fn: win_arg_plain (char@: arg) int
     size_t: n c.strlen(arg)
     size_t: i 0U
     if: n = 0U
@@ -17,7 +17,7 @@ fn: win_arg_plain (@: arg char) int
 end: win_arg_plain
 
 # k backslashes at out[o ..]; the offset after them.
-fn: win_backslashes (@: out char; size_t: o; size_t: k) size_t
+fn: win_backslashes (char@: out; size_t: o; size_t: k) size_t
     size_t: i 0U
     while: i < k
         out[o + i] := (cast: (char) 92)
@@ -26,7 +26,7 @@ fn: win_backslashes (@: out char; size_t: o; size_t: k) size_t
 end: win_backslashes
 
 # arg quoted at out[o ..]; the offset after it.
-fn: win_quote_into (@: out char; size_t: o; @: arg char) size_t
+fn: win_quote_into (char@: out; size_t: o; char@: arg) size_t
     size_t: n c.strlen(arg)
     size_t: i 0U
     size_t: bs 0U
@@ -58,11 +58,11 @@ fn: win_quote_into (@: out char; size_t: o; @: arg char) size_t
 end: win_quote_into
 
 # argv[0 .. argc - 1] as one Windows command line on the heap, or 0.
-fn: win_cmdline (@@: argv char; int: argc) @: char
+fn: win_cmdline (char@@: argv; int: argc) char@
     size_t: need 1U
     size_t: o 0U
     int: i 0
-    @: out char 0
+    char@: out 0
     while: i < argc
         need := need + 2U * (cast: (size_t) c.strlen(argv[i])) + 3U
         i := i + 1

@@ -4,7 +4,7 @@
 # while render mode supplies an encoded preferred source pathname.
 # No Python process, copied inventory, alternate diff or hardcoded diff count.
 
-fn: di_source (@: out c.FILE; @: path_json char; size_t: path_count; @: digest char; size_t: lines; @: snapshot char) int
+fn: di_source (c.FILE@: out; char@: path_json; size_t: path_count; char@: digest; size_t: lines; char@: snapshot) int
     if: dg_literal(out, "{\n    \"path\": ") != 0 || dg_bytes(out, path_json, path_count) != 0 || dg_literal(out, ",\n    \"sha256\": ") != 0 || dj_write_string(out, digest, 64U) != 0
         return: 1
     if: c.fprintf(out, ",\n    \"lines\": %zu,\n    \"snapshot\": ", lines) < 0 || dj_write_string(out, snapshot, c.strlen(snapshot)) != 0 || dg_literal(out, "\n  }") != 0
@@ -12,9 +12,9 @@ fn: di_source (@: out c.FILE; @: path_json char; size_t: path_count; @: digest c
     return: 0
 end: di_source
 
-fn: di_chapters (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) int
+fn: di_chapters (c.FILE@: out; char@: book; size_t@: rows; size_t: chapters) int
     size_t: at 0U
-    @: row size_t 0
+    size_t@: row 0
     if: dg_literal(out, "[") != 0
         return: 1
     while: at < chapters
@@ -31,7 +31,7 @@ fn: di_chapters (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) 
 end: di_chapters
 
 # Only original RU body matches enter source_examples, in chapter/match order.
-fn: di_examples (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) int
+fn: di_examples (c.FILE@: out; char@: book; size_t@: rows; size_t: chapters) int
     size_t: chapter 0U
     size_t: scan 0U
     size_t: first 0U
@@ -39,8 +39,8 @@ fn: di_examples (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) 
     size_t: a 0U
     size_t: b 0U
     size_t: written 0U
-    @: row size_t 0
-    @: key char "l1"
+    size_t@: row 0
+    char@: key "l1"
     int: source_key 0
     int: overflow 0
     int: found 0
@@ -73,9 +73,9 @@ fn: di_examples (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) 
 end: di_examples
 
 # JSON string for '\n'.join(source[first:after]); zero-based half-open.
-fn: di_lines_string (@: out c.FILE; @: raw char; @: starts size_t; @: lengths size_t; size_t: first; size_t: after) int
-    @: stream c.FILE 0
-    @: joined char 0
+fn: di_lines_string (c.FILE@: out; char@: raw; size_t@: starts; size_t@: lengths; size_t: first; size_t: after) int
+    c.FILE@: stream 0
+    char@: joined 0
     size_t: joined_count 0U
     int: failed 0
     if: first = after
@@ -98,13 +98,13 @@ end: di_lines_string
 
 # Borrowed views, not another decoded or normalized source. dt_lines already
 # implements utf-8-sig splitlines; original raw bytes remain the hash source.
-fn: di_line_views (@: raw char; @: starts size_t; size_t: lines) @@: char
-    @@: views char 0
+fn: di_line_views (char@: raw; size_t@: starts; size_t: lines) char@@
+    char@@: views 0
     size_t: at 0U
     size_t: limit (cast: (size_t) -1)
-    if: lines >= limit / sizeof(@: char)
+    if: lines >= limit / sizeof(char@)
         return: 0
-    views := c.calloc(lines + 1U, sizeof(@: char))
+    views := c.calloc(lines + 1U, sizeof(char@))
     if: views = 0
         return: 0
     while: at < lines
@@ -114,12 +114,12 @@ fn: di_line_views (@: raw char; @: starts size_t; size_t: lines) @@: char
     return: views
 end: di_line_views
 
-fn: di_differences (@: out c.FILE; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines) int
-    @@: left char 0
-    @@: right char 0
-    @: opcodes size_t 0
-    @: row size_t 0
-    @: tag char "replace"
+fn: di_differences (c.FILE@: out; char@: l1; size_t@: l1_starts; size_t@: l1_lengths; size_t: l1_lines; char@: older; size_t@: older_starts; size_t@: older_lengths; size_t: older_lines) int
+    char@@: left 0
+    char@@: right 0
+    size_t@: opcodes 0
+    size_t@: row 0
+    char@: tag "replace"
     size_t: op_count 0U
     size_t: at 0U
     size_t: written 0U
@@ -171,8 +171,8 @@ end: di_differences
 
 # Write only after both semantic docs succeeded, as in the original controller.
 # Returns owned UTF-8 bytes including the old json.dumps(...,indent=2)+'\n'.
-fn: docs_semantics_inventory (@: book char; @: rows size_t; size_t: chapters; @: l1_path_json char; size_t: l1_path_count; @: older_path_json char; size_t: older_path_count; @: l1_digest char; @: older_digest char; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines; @@: result char; @: result_count size_t) int
-    @: out c.FILE 0
+fn: docs_semantics_inventory (char@: book; size_t@: rows; size_t: chapters; char@: l1_path_json; size_t: l1_path_count; char@: older_path_json; size_t: older_path_count; char@: l1_digest; char@: older_digest; char@: l1; size_t@: l1_starts; size_t@: l1_lengths; size_t: l1_lines; char@: older; size_t@: older_starts; size_t@: older_lengths; size_t: older_lines; char@@: result; size_t@: result_count) int
+    c.FILE@: out 0
     int: failed 0
     if: result = 0 || result_count = 0
         return: 1

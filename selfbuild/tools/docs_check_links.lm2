@@ -4,13 +4,13 @@
 # contiguous text, including captures crossing a removed fence boundary.
 # Native path join/dirname/non-strict resolution are shared OS adapter inputs.
 
-fn: dl_target (@: path char; @: target char; size_t: count) int
-    @: parent char 0
-    @: file char 0
-    @: joined char 0
-    @: dest char 0
-    @: text char 0
-    @: needle char 0
+fn: dl_target (char@: path; char@: target; size_t: count) int
+    char@: parent 0
+    char@: file 0
+    char@: joined 0
+    char@: dest 0
+    char@: text 0
+    char@: needle 0
     size_t: split 0U
     size_t: anchor 0U
     size_t: dest_count 0U
@@ -87,7 +87,7 @@ end: dl_target
 
 # A `](` after an odd number of backticks in its paragraph stands in inline code and is not a link: an inline code span may
 # cross a line break but not a blank line (twin: doc_link_targets in tools/check_docs.py). The text is taken after fence removal.
-fn: dl_in_code (@: text char; size_t: first) int
+fn: dl_in_code (char@: text; size_t: first) int
     size_t: at 0U
     int: in_code 0
     at := first
@@ -98,9 +98,9 @@ fn: dl_in_code (@: text char; size_t: first) int
         ---
     return: in_code
 
-fn: dl_document (@: path char) int
-    @: original char 0
-    @: stripped char 0
+fn: dl_document (char@: path) int
+    char@: original 0
+    char@: stripped 0
     size_t: original_count 0U
     size_t: count 0U
     size_t: scan 0U
@@ -141,13 +141,13 @@ os:
     win:
         # The fixed ASCII README*.md/*.md patterns have no special Unicode
         # case expansions. Do not fold the filename or alter native spelling.
-        fn: dl_name_matches (@: name char; int: readme) int
+        fn: dl_name_matches (char@: name; int: readme) int
             size_t: count c.strlen(name)
             size_t: at 0U
             size_t: first 0U
             unsigned: byte 0U
-            @: prefix char "readme"
-            @: suffix char ".md"
+            char@: prefix "readme"
+            char@: suffix ".md"
             if: count < 3U || (readme != 0 && count < 9U)
                 return: 0
             if: readme != 0
@@ -173,7 +173,7 @@ os:
             return: 1
         end: dl_name_matches
     default:
-        fn: dl_name_matches (@: name char; int: readme) int
+        fn: dl_name_matches (char@: name; int: readme) int
             if: txt_ends(name, ".md") = 0
                 return: 0
             if: readme != 0 && txt_starts(name, "README") = 0
@@ -184,10 +184,10 @@ end: os
 
 # A matching directory is not silently removed: the ordinary text read fails,
 # as it did for a Path.glob result. Names keep native enumeration order.
-fn: dl_group (@: directory char; int: readme; @@@: paths char; @@: path_kinds unsigned; @: path_count size_t; @: path_capacity size_t) int
-    @@: names char 0
-    @: kinds unsigned 0
-    @: path char 0
+fn: dl_group (char@: directory; int: readme; char@@@: paths; unsigned@@: path_kinds; size_t@: path_count; size_t@: path_capacity) int
+    char@@: names 0
+    unsigned@: kinds 0
+    char@: path 0
     size_t: count 0U
     size_t: at 0U
     int: failed 0
@@ -216,10 +216,10 @@ fn: dl_group (@: directory char; int: readme; @@@: paths char; @@: path_kinds un
     return: failed
 end: dl_group
 
-fn: docs_authored_links_check (@: repo char) int
-    @: path char 0
-    @@: paths char 0
-    @: kinds unsigned 0
+fn: docs_authored_links_check (char@: repo) int
+    char@: path 0
+    char@@: paths 0
+    unsigned@: kinds 0
     size_t: count 0U
     size_t: capacity 0U
     size_t: at 0U

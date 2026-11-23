@@ -6,16 +6,16 @@ fn: sha_rotr (unsigned: x; int: n) unsigned
     return: (x >> n) | (x << (32 - n))
 end: sha_rotr
 
-fn: sha_byte (@: p char; size_t: i) unsigned
+fn: sha_byte (char@: p; size_t: i) unsigned
     return: (cast: (unsigned) p[i]) & 255U
 end: sha_byte
 
 # The big-endian word at p[off .. off + 3].
-fn: sha_word (@: p char; size_t: off) unsigned
+fn: sha_word (char@: p; size_t: off) unsigned
     return: (sha_byte(p, off) << 24) | (sha_byte(p, off + 1U) << 16) | (sha_byte(p, off + 2U) << 8) | sha_byte(p, off + 3U)
 end: sha_word
 
-fn: sha_put32 (@: p char; size_t: off; unsigned: v) int
+fn: sha_put32 (char@: p; size_t: off; unsigned: v) int
     p[off] := (cast: (char) ((v >> 24) & 255U))
     p[off + 1U] := (cast: (char) ((v >> 16) & 255U))
     p[off + 2U] := (cast: (char) ((v >> 8) & 255U))
@@ -23,7 +23,7 @@ fn: sha_put32 (@: p char; size_t: off; unsigned: v) int
     return: 0
 end: sha_put32
 
-fn: sha_init (@: h unsigned) int
+fn: sha_init (unsigned@: h) int
     h[0] := 0x6a09e667U
     h[1] := 0xbb67ae85U
     h[2] := 0x3c6ef372U
@@ -35,7 +35,7 @@ fn: sha_init (@: h unsigned) int
     return: 0
 end: sha_init
 
-fn: sha_k (@: k unsigned) int
+fn: sha_k (unsigned@: k) int
     k[0] := 0x428a2f98U
     k[1] := 0x71374491U
     k[2] := 0xb5c0fbcfU
@@ -104,7 +104,7 @@ fn: sha_k (@: k unsigned) int
 end: sha_k
 
 # One 64-byte block p[off .. off + 63] into the state h; w is the 64-word schedule.
-fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: off) int
+fn: sha_block (unsigned@: h; unsigned@: k; unsigned@: w; char@: p; size_t: off) int
     size_t: i 0U
     unsigned: a h[0]
     unsigned: b h[1]
@@ -155,9 +155,9 @@ end: sha_block
 # The padding of the last r bytes rest[0 .. r - 1] (r < 64) of a message of n bytes into the state h, then the
 # digest as 64 lowercase hex digits and a NUL in out[0 .. 64]: 0, or 1 (no memory; out untouched). The bit length
 # n * 8 is 64-bit (n >> 29 and n << 3), so a message of 2^32 bytes and more keeps its high bits.
-fn: sha_finish (@: h unsigned; @: k unsigned; @: w unsigned; @: rest char; size_t: r; size_t: n; @: out char) int
-    @: tail char c.calloc(128U, 1U)
-    @: hex char "0123456789abcdef"
+fn: sha_finish (unsigned@: h; unsigned@: k; unsigned@: w; char@: rest; size_t: r; size_t: n; char@: out) int
+    char@: tail c.calloc(128U, 1U)
+    char@: hex "0123456789abcdef"
     size_t: tn 64U
     size_t: i 0U
     size_t: at 0U
@@ -188,10 +188,10 @@ end: sha_finish
 
 # The digest of data[0 .. n - 1] as 64 lowercase hex digits and a NUL in out[0 .. 64].
 # 0 = written; 1 = no memory (out untouched).
-fn: sha256_bytes (@: data char; size_t: n; @: out char) int
-    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
-    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
-    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+fn: sha256_bytes (char@: data; size_t: n; char@: out) int
+    unsigned@: h c.calloc(8U, c.sizeof(c.unsigned))
+    unsigned@: k c.calloc(64U, c.sizeof(c.unsigned))
+    unsigned@: w c.calloc(64U, c.sizeof(c.unsigned))
     size_t: off 0U
     int: r 1
     if: h != 0 && k != 0 && w != 0
@@ -211,11 +211,11 @@ end: sha256_bytes
 # The digest of the bytes of the open file f, from where it stands to its end, read chunk bytes at a time (the
 # memory is the chunk's, whatever the file's size; the byte count is a size_t, 64-bit here), as 64 lowercase hex
 # digits and a NUL in out[0 .. 64]: 0, or 1 (no memory, a read error, or chunk 0; out untouched).
-fn: sha256_stream (@: f c.FILE; size_t: chunk; @: out char) int
-    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
-    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
-    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
-    @: buf char 0
+fn: sha256_stream (c.FILE@: f; size_t: chunk; char@: out) int
+    unsigned@: h c.calloc(8U, c.sizeof(c.unsigned))
+    unsigned@: k c.calloc(64U, c.sizeof(c.unsigned))
+    unsigned@: w c.calloc(64U, c.sizeof(c.unsigned))
+    char@: buf 0
     size_t: carry 0U
     size_t: got 0U
     size_t: avail 0U

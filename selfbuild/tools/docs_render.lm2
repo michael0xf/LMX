@@ -2,9 +2,9 @@
 # The old Python algorithm's chapter/language order, aliases and text joins
 # are retained. Source inventory/controller/check_docs integration still pending.
 
-fn: dr_body (@: book char; @: row size_t; int: lang; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines; @@: out char; @: out_count size_t) int
-    @: expanded char 0
-    @: rewritten char 0
+fn: dr_body (char@: book; size_t@: row; int: lang; char@: l1; size_t@: l1_starts; size_t@: l1_lengths; size_t: l1_lines; char@: older; size_t@: older_starts; size_t@: older_lengths; size_t: older_lines; char@@: out; size_t@: out_count) int
+    char@: expanded 0
+    char@: rewritten 0
     size_t: expanded_count 0U
     size_t: rewritten_count 0U
     size_t: column 8U + 2U * (cast: (size_t) lang)
@@ -28,7 +28,7 @@ fn: dr_body (@: book char; @: row size_t; int: lang; @: l1 char; @: l1_starts si
     return: 0
 end: dr_body
 
-fn: docs_semantics_bodies_free (@@: bodies char; @: lengths size_t; size_t: chapters) int
+fn: docs_semantics_bodies_free (char@@: bodies; size_t@: lengths; size_t: chapters) int
     size_t: at 0U
     if: bodies != 0
         while: at < 2U * chapters
@@ -43,10 +43,10 @@ end: docs_semantics_bodies_free
 
 # RU then EN then original pair assertions, chapter by chapter, before any doc
 # publication. Buffers are cached immutable results of the same pure body_text.
-fn: docs_semantics_prepare (@: book char; @: rows size_t; size_t: chapters; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines; @@@: out_bodies char; @@: out_lengths size_t; @: failed_chapter size_t; @: failed_kind int) int
-    @@: bodies char 0
-    @: lengths size_t 0
-    @: row size_t 0
+fn: docs_semantics_prepare (char@: book; size_t@: rows; size_t: chapters; char@: l1; size_t@: l1_starts; size_t@: l1_lengths; size_t: l1_lines; char@: older; size_t@: older_starts; size_t@: older_lengths; size_t: older_lines; char@@@: out_bodies; size_t@@: out_lengths; size_t@: failed_chapter; int@: failed_kind) int
+    char@@: bodies 0
+    size_t@: lengths 0
+    size_t@: row 0
     size_t: at 0U
     size_t: limit (cast: (size_t) -1)
     int: failed 0
@@ -56,9 +56,9 @@ fn: docs_semantics_prepare (@: book char; @: rows size_t; size_t: chapters; @: l
     out_lengths[0] := 0
     failed_chapter[0] := chapters
     failed_kind[0] := 0
-    if: chapters > limit / 2U / sizeof(@: char) || chapters > limit / 2U / c.sizeof(c.size_t)
+    if: chapters > limit / 2U / sizeof(char@) || chapters > limit / 2U / c.sizeof(c.size_t)
         return: 1
-    bodies := c.calloc(2U * chapters, sizeof(@: char))
+    bodies := c.calloc(2U * chapters, sizeof(char@))
     lengths := c.calloc(2U * chapters, c.sizeof(c.size_t))
     if: bodies = 0 || lengths = 0
         docs_semantics_bodies_free(bodies, lengths, chapters)
@@ -86,8 +86,8 @@ fn: docs_semantics_prepare (@: book char; @: rows size_t; size_t: chapters; @: l
     return: 0
 end: docs_semantics_prepare
 
-fn: dr_alias (@: stream c.FILE; @: book char; @: row size_t) int
-    @: id char book + row[0]
+fn: dr_alias (c.FILE@: stream; char@: book; size_t@: row) int
+    char@: id book + row[0]
     if: row[1] = 6U && c.memcmp(id, "fields", 6U) = 0
         return: dg_literal(stream, "<a id=\"references\"></a>\n")
     if: row[1] = 9U && c.memcmp(id, "callables", 9U) = 0
@@ -100,7 +100,7 @@ fn: dr_alias (@: stream c.FILE; @: book char; @: row size_t) int
 end: dr_alias
 
 # Original whole-result anchor uniqueness, including any opening/body anchors.
-fn: dr_unique_anchors (@: data char; size_t: count) int
+fn: dr_unique_anchors (char@: data; size_t: count) int
     size_t: scan 0U
     size_t: first 0U
     size_t: last 0U
@@ -134,14 +134,14 @@ end: dr_unique_anchors
 # duplicate-anchor assertion, then check or publication. Caller invokes RU then
 # EN after docs_semantics_prepare succeeded. Check never publishes user files.
 # failed_phase:1read/decode,2render/I/O,3duplicate-anchor,4out-of-sync,5write.
-fn: docs_semantics_language (@: path char; @: book char; @: rows size_t; size_t: chapters; @@: bodies char; @: body_lengths size_t; int: lang; int: check_mode; @: failed_phase int) int
-    @: raw char 0
-    @: text char 0
-    @: result char 0
-    @: check_raw char 0
-    @: check_text char 0
-    @: row size_t 0
-    @: stream c.FILE 0
+fn: docs_semantics_language (char@: path; char@: book; size_t@: rows; size_t: chapters; char@@: bodies; size_t@: body_lengths; int: lang; int: check_mode; int@: failed_phase) int
+    char@: raw 0
+    char@: text 0
+    char@: result 0
+    char@: check_raw 0
+    char@: check_text 0
+    size_t@: row 0
+    c.FILE@: stream 0
     size_t: raw_count 0U
     size_t: text_count 0U
     size_t: result_count 0U

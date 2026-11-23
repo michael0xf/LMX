@@ -4,7 +4,7 @@
 # Paths, including the two preferred source paths, are explicit inputs.
 # Selection, native Windows paths and actual equivalence runs remain pending.
 
-fn: docs_check_all (@: repo char; @: preferred_l1 char; @: preferred_older char; @: git char; @: private_out char) int
+fn: docs_check_all (char@: repo; char@: preferred_l1; char@: preferred_older; char@: git; char@: private_out) int
     size_t: chapters 0U
     size_t: sections 0U
     size_t: examples 0U
@@ -12,7 +12,7 @@ fn: docs_check_all (@: repo char; @: preferred_l1 char; @: preferred_older char;
     size_t: tracked 0U
     int: phase 0
     int: failed 0
-    @: stage char "semantics"
+    char@: stage "semantics"
     if: repo = 0 || preferred_l1 = 0 || preferred_older = 0 || git = 0 || private_out = 0
         return: 1
     failed := docs_semantics_build(repo, preferred_l1, preferred_older, 1, @ chapters, @ phase)
@@ -44,12 +44,12 @@ end: docs_check_all
 # Existing tool subcommand dispatch, not a second build/test runner. Keep the
 # three former entrypoints distinct: grammar render, semantics render/verify,
 # and the complete checker. Only the full checker prints its own summary.
-fn: docs_cli (@@: args char; int: count) int
+fn: docs_cli (char@@: args; int: count) int
     size_t: chapters 0U
     int: phase 0
     int: failed 0
     int: check_mode 0
-    @: action char "Rendered"
+    char@: action "Rendered"
     if: count >= 8 && c.strcmp(args[2], "check") = 0
         failed := docs_check_all(args[3], args[4], args[5], args[6], args[7])
         return: (cast: (int) (failed != 0))

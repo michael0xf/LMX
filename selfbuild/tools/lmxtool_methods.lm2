@@ -14,10 +14,10 @@ os:
         include: "<bcrypt.h>"
         # os_native is provided by the shared os_native_path.lm2 part.
         # The platform's API text as UTF-8 on the heap, or 0.
-        fn: os_from_native (@: p c.void) @: char
-            @: w c.WCHAR (cast: (@: c.WCHAR) p)
+        fn: os_from_native (c.void@: p) char@
+            c.WCHAR@: w (cast: (c.WCHAR@) p)
             int: n c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, 0, 0, 0, 0)
-            @: s char 0
+            char@: s 0
             if: n <= 0
                 return: 0
             s := c.malloc((cast: (size_t) n))
@@ -35,23 +35,23 @@ os:
         # 2 stopped at the timeout with its whole process tree (detail[0] the timeout), 3 lost while waiting
         # (detail[0] the OS error; the tree is stopped), 4 not prepared (detail[0] the OS error or 0). The
         # child's handles and its job are this call's own and closed before it returns.
-        fn: os_run (@: exe char; @@: argv char; int: argc; @: cwd char; @: out_path char; @: err_path char; unsigned: timeout_ms; @: detail int) int
-            @: sa c.SECURITY_ATTRIBUTES c.calloc(1U, c.sizeof(c.SECURITY_ATTRIBUTES))
-            @: si c.STARTUPINFOW c.calloc(1U, c.sizeof(c.STARTUPINFOW))
-            @: pi c.PROCESS_INFORMATION c.calloc(1U, c.sizeof(c.PROCESS_INFORMATION))
-            @: code unsigned c.calloc(1U, c.sizeof(c.unsigned))
-            @: cmd char win_cmdline(argv, argc)
-            @: wexe c.void os_native(exe)
-            @: wnul c.void os_native("NUL")
-            @: wcmd c.void 0
-            @: wcwd c.void 0
-            @: wout c.void 0
-            @: werr c.void 0
-            @: hin c.void c.INVALID_HANDLE_VALUE
-            @: hout c.void c.INVALID_HANDLE_VALUE
-            @: herr c.void c.INVALID_HANDLE_VALUE
-            @: job c.void 0
-            @: acct c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION c.calloc(1U, c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION))
+        fn: os_run (char@: exe; char@@: argv; int: argc; char@: cwd; char@: out_path; char@: err_path; unsigned: timeout_ms; int@: detail) int
+            c.SECURITY_ATTRIBUTES@: sa c.calloc(1U, c.sizeof(c.SECURITY_ATTRIBUTES))
+            c.STARTUPINFOW@: si c.calloc(1U, c.sizeof(c.STARTUPINFOW))
+            c.PROCESS_INFORMATION@: pi c.calloc(1U, c.sizeof(c.PROCESS_INFORMATION))
+            unsigned@: code c.calloc(1U, c.sizeof(c.unsigned))
+            char@: cmd win_cmdline(argv, argc)
+            c.void@: wexe os_native(exe)
+            c.void@: wnul os_native("NUL")
+            c.void@: wcmd 0
+            c.void@: wcwd 0
+            c.void@: wout 0
+            c.void@: werr 0
+            c.void@: hin c.INVALID_HANDLE_VALUE
+            c.void@: hout c.INVALID_HANDLE_VALUE
+            c.void@: herr c.INVALID_HANDLE_VALUE
+            c.void@: job 0
+            c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION@: acct c.calloc(1U, c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION))
             int: kind -1
             int: shared 0
             int: started 0
@@ -129,7 +129,7 @@ os:
                 w := c.WaitForSingleObject(pi\hProcess, limit)
                 if: w = c.WAIT_OBJECT_0
                     kind := 0
-                    if: c.GetExitCodeProcess(pi\hProcess, (cast: (@: void) code) ) = 0
+                    if: c.GetExitCodeProcess(pi\hProcess, (cast: (@) code) ) = 0
                         detail[0] := (cast: (int) c.GetLastError())
                         kind := 3
                     ---
@@ -153,7 +153,7 @@ os:
             if: started != 0 && job != 0
                 c.TerminateJobObject(job, 1U)
                 while: empty = 0 && drain < 2000
-                    if: c.QueryInformationJobObject(job, c.JobObjectBasicAccountingInformation, (cast: (@: void) acct), (cast: (unsigned) c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), 0) != 0 && acct\ActiveProcesses = 0U
+                    if: c.QueryInformationJobObject(job, c.JobObjectBasicAccountingInformation, (cast: (@) acct), (cast: (unsigned) c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), 0) != 0 && acct\ActiveProcesses = 0U
                         empty := 1
                     if: empty = 0
                         c.Sleep(5U)
@@ -182,8 +182,8 @@ os:
             return: kind
         end: os_run
         # The directory at path made: 0 made or already a directory, else the OS error.
-        fn: os_mkdir (@: path char) int
-            @: w c.void os_native(path)
+        fn: os_mkdir (char@: path) int
+            c.void@: w os_native(path)
             int: r 0
             unsigned: e 0U
             if: w = 0
@@ -206,10 +206,10 @@ os:
             return: 0
         end: os_sleep_ms
         # This process's working directory as UTF-8 on the heap, or 0.
-        fn: os_cwd () @: char
+        fn: os_cwd () char@
             unsigned: n c.GetCurrentDirectoryW(0U, 0)
-            @: w c.WCHAR 0
-            @: s char 0
+            c.WCHAR@: w 0
+            char@: s 0
             if: n = 0U
                 return: 0
             w := c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
@@ -218,23 +218,23 @@ os:
             if: c.GetCurrentDirectoryW(n, w) = 0U
                 c.free(w)
                 return: 0
-            s := os_from_native((cast: (@: void) w))
+            s := os_from_native((cast: (@) w))
             c.free(w)
             return: s
         end: os_cwd
         # This program's executable path as UTF-8 on the heap, or 0.
-        fn: os_self () @: char
+        fn: os_self () char@
             unsigned: cap 260U
             unsigned: n 0U
-            @: w c.WCHAR 0
-            @: s char 0
+            c.WCHAR@: w 0
+            char@: s 0
             while: cap < 65536U
                 w := c.calloc((cast: (size_t) cap), c.sizeof(c.WCHAR))
                 if: w = 0
                     return: 0
                 n := c.GetModuleFileNameW(0, w, cap)
                 if: n > 0U && n < cap
-                    s := os_from_native((cast: (@: void) w))
+                    s := os_from_native((cast: (@) w))
                     c.free(w)
                     return: s
                 ---
@@ -247,10 +247,10 @@ os:
         # The arguments this process was given after `--`, as the platform parses its command line: a line
         # `ARGC n` and a line `ARG i <hex of its UTF-8 bytes>` for each. 0 printed, 1 not.
         fn: os_args_print () int
-            @: count int c.calloc(1U, c.sizeof(c.int))
-            @@: list c.WCHAR 0
-            @: s char 0
-            @: hex char 0
+            int@: count c.calloc(1U, c.sizeof(c.int))
+            c.WCHAR@@: list 0
+            char@: s 0
+            char@: hex 0
             int: i 0
             int: at -1
             if: count = 0
@@ -260,7 +260,7 @@ os:
                 c.free(count)
                 return: 1
             while: i < count[0] && at < 0
-                s := os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@) list[i]))
                 if: s != 0 && c.strcmp(s, "--") = 0
                     at := i + 1
                 c.free(s)
@@ -271,7 +271,7 @@ os:
             c.printf("ARGC %d\n", count[0] - at)
             i := at
             while: i < count[0]
-                s := os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@) list[i]))
                 if: s = 0
                     c.LocalFree(list)
                     c.free(count)
@@ -288,13 +288,13 @@ os:
         end: os_args_print
         # The names of the files (not directories) in the directory dir, one per line in the file out_path, in
         # the platform's order. 0 listed, else the OS error.
-        fn: os_list_dir (@: dir char; @: out_path char) int
-            @: pattern char txt_cat(dir, "/*")
-            @: wpat c.void 0
-            @: fd c.WIN32_FIND_DATAW c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
-            @: h c.void c.INVALID_HANDLE_VALUE
-            @: out c.FILE 0
-            @: name char 0
+        fn: os_list_dir (char@: dir; char@: out_path) int
+            char@: pattern txt_cat(dir, "/*")
+            c.void@: wpat 0
+            c.WIN32_FIND_DATAW@: fd c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
+            c.void@: h c.INVALID_HANDLE_VALUE
+            c.FILE@: out 0
+            char@: name 0
             unsigned: attrs 0U
             unsigned: e 0U
             int: r 0
@@ -312,7 +312,7 @@ os:
             while: r = 0 && h != c.INVALID_HANDLE_VALUE
                 attrs := (cast: (unsigned) fd\dwFileAttributes)
                 if: (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_DIRECTORY)) = 0U
-                    name := os_from_native((cast: (@: void) fd\cFileName))
+                    name := os_from_native((cast: (@) fd\cFileName))
                     if: name = 0
                         r := -1
                     if: name != 0 && c.fprintf(out, "%s\n", name) < 0
@@ -337,8 +337,8 @@ os:
         end: os_list_dir
         # A new file at path of off + 1 bytes, all zero: the last one written after a seek, so a length past
         # 32 bits needs no write of it all. 0, or 1.
-        fn: os_file_at (@: path char; size_t: off) int
-            @: f c.FILE os_file_open(path, "wb")
+        fn: os_file_at (char@: path; size_t: off) int
+            c.FILE@: f os_file_open(path, "wb")
             int: r 1
             if: f = 0
                 return: 1
@@ -352,13 +352,13 @@ os:
         # hash: CNG), the file read hash_chunk() bytes at a time into one buffer (the memory is the chunk's,
         # whatever the file's size; each BCryptHashData takes one chunk, so its 32-bit length never truncates).
         # 0 written, 1 not.
-        fn: os_sha256_file (@: path char; @: out char) int
-            @: f c.FILE os_file_open(path, "rb")
-            @@: alg c.void c.calloc(1U, sizeof(@: void))
-            @@: hh c.void c.calloc(1U, sizeof(@: void))
-            @: digest char c.calloc(32U, 1U)
-            @: buf char c.malloc(hash_chunk())
-            @: hex char 0
+        fn: os_sha256_file (char@: path; char@: out) int
+            c.FILE@: f os_file_open(path, "rb")
+            c.void@@: alg c.calloc(1U, sizeof(@))
+            c.void@@: hh c.calloc(1U, sizeof(@))
+            char@: digest c.calloc(32U, 1U)
+            char@: buf c.malloc(hash_chunk())
+            char@: hex 0
             size_t: got 0U
             int: ok 0
             int: more 1
@@ -368,12 +368,12 @@ os:
                     ok := 1
                     while: more != 0 && ok != 0
                         got := c.fread(buf, 1U, hash_chunk(), f)
-                        if: got > 0U && c.BCryptHashData(hh[0], (cast: (@: void) buf), (cast: (unsigned) got), 0U) != 0
+                        if: got > 0U && c.BCryptHashData(hh[0], (cast: (@) buf), (cast: (unsigned) got), 0U) != 0
                             ok := 0
                         if: got = 0U
                             more := 0
                     ---
-                    if: ok != 0 && c.ferror(f) = 0 && c.BCryptFinishHash(hh[0], (cast: (@: void) digest), 32U, 0U) = 0
+                    if: ok != 0 && c.ferror(f) = 0 && c.BCryptFinishHash(hh[0], (cast: (@) digest), 32U, 0U) = 0
                         hex := txt_hex(digest, 32U)
                         if: hex != 0
                             c.memcpy(out, hex, 65U)
@@ -410,17 +410,17 @@ os:
         define: LmxToolStat struct stat
         define: LmxToolTimespec struct timespec
         # os_native is provided by the shared os_native_path.lm2 part.
-        fn: os_from_native (@: p c.void) @: char
-            return: txt_dup((cast: (@: char) p))
+        fn: os_from_native (c.void@: p) char@
+            return: txt_dup((cast: (char@) p))
         end: os_from_native
         # The process contract of the win branch, by fork and execv: the child joins a process group of its
         # own (the whole tree is stopped at the timeout) and reports a failed start through a close-on-exec
         # pipe, so a start that failed is kind 1, not an exit code.
-        fn: os_run (@: exe char; @@: argv char; int: argc; @: cwd char; @: out_path char; @: err_path char; unsigned: timeout_ms; @: detail int) int
-            @@: list char c.calloc((cast: (size_t) (argc + 1)), sizeof(@: char))
-            @: fds int c.calloc(2U, c.sizeof(c.int))
-            @: status int c.calloc(1U, c.sizeof(c.int))
-            @: err int c.calloc(1U, c.sizeof(c.int))
+        fn: os_run (char@: exe; char@@: argv; int: argc; char@: cwd; char@: out_path; char@: err_path; unsigned: timeout_ms; int@: detail) int
+            char@@: list c.calloc((cast: (size_t) (argc + 1)), sizeof(char@))
+            int@: fds c.calloc(2U, c.sizeof(c.int))
+            int@: status c.calloc(1U, c.sizeof(c.int))
+            int@: err c.calloc(1U, c.sizeof(c.int))
             int: pid 0
             int: fd 0
             int: i 0
@@ -517,14 +517,14 @@ os:
             c.free(err)
             return: kind
         end: os_run
-        fn: os_mkdir (@: path char) int
+        fn: os_mkdir (char@: path) int
             if: c.mkdir(path, 511) = 0 || c.errno = c.EEXIST
                 return: 0
             return: c.errno
         end: os_mkdir
         # Milliseconds of the monotonic clock (clock_gettime, CLOCK_MONOTONIC), or 0 when it cannot be read.
         fn: os_now_ms () size_t
-            @: ts c.LmxToolTimespec c.calloc(1U, c.sizeof(c.LmxToolTimespec))
+            c.LmxToolTimespec@: ts c.calloc(1U, c.sizeof(c.LmxToolTimespec))
             size_t: ms 0U
             if: ts != 0 && c.clock_gettime(c.CLOCK_MONOTONIC, ts) = 0
                 ms := (cast: (size_t) ts\tv_sec) * 1000U + (cast: (size_t) ts\tv_nsec) / 1000000U
@@ -543,9 +543,9 @@ os:
             ---
             return: 0
         end: os_sleep_ms
-        fn: os_cwd () @: char
+        fn: os_cwd () char@
             size_t: cap 256U
-            @: s char 0
+            char@: s 0
             while: cap < 1048576U
                 s := c.malloc(cap)
                 if: s = 0
@@ -557,9 +557,9 @@ os:
             return: 0
         end: os_cwd
         # This program's executable path (Linux: /proc/self/exe; other systems OPEN), or 0.
-        fn: os_self () @: char
+        fn: os_self () char@
             size_t: cap 256U
-            @: s char 0
+            char@: s 0
             int: n 0
             while: cap < 1048576U
                 s := c.malloc(cap)
@@ -583,14 +583,14 @@ os:
         end: os_args_print
         # The names of the files (not directories) in the directory dir, one per line in the file out_path, in
         # readdir's order (each name's stat decides). 0 listed, else errno (-1 when it says nothing).
-        fn: os_list_dir (@: dir char; @: out_path char) int
-            @: d c.DIR c.opendir(dir)
-            @: e c.LmxToolDirent 0
-            @: st c.LmxToolStat c.calloc(1U, c.sizeof(c.LmxToolStat))
-            @: out c.FILE 0
-            @: full char 0
-            @: name char 0
-            @: err int (cast: (@: int) (@ c.errno))
+        fn: os_list_dir (char@: dir; char@: out_path) int
+            c.DIR@: d c.opendir(dir)
+            c.LmxToolDirent@: e 0
+            c.LmxToolStat@: st c.calloc(1U, c.sizeof(c.LmxToolStat))
+            c.FILE@: out 0
+            char@: full 0
+            char@: name 0
+            int@: err (cast: (int@) (@ c.errno))
             int: r 0
             if: d = 0 || st = 0
                 r := c.errno
@@ -639,8 +639,8 @@ os:
             c.free(st)
             return: r
         end: os_list_dir
-        fn: os_file_at (@: path char; size_t: off) int
-            @: f c.FILE os_file_open(path, "wb")
+        fn: os_file_at (char@: path; size_t: off) int
+            c.FILE@: f os_file_open(path, "wb")
             int: r 1
             if: f = 0
                 return: 1
@@ -651,8 +651,8 @@ os:
             return: r
         end: os_file_at
         # The L2 SHA-256 of the file at path, read hash_chunk() bytes at a time (sha256_stream): 0 written, 1 not.
-        fn: os_sha256_file (@: path char; @: out char) int
-            @: f c.FILE os_file_open(path, "rb")
+        fn: os_sha256_file (char@: path; char@: out) int
+            c.FILE@: f os_file_open(path, "rb")
             int: r 1
             if: f = 0
                 return: 1
@@ -669,7 +669,7 @@ end: hash_chunk
 
 # The self-test's report: one line per check; a check answers 1 when it failed, and every test answers the
 # sum of its checks (a unit field written by a callee is not reloaded by its caller: book sections 12, 14).
-fn: tool_check (int: ok; @: name char; @: why char) int
+fn: tool_check (int: ok; char@: name; char@: why) int
     if: ok != 0
         c.printf("PASS %s\n", name)
         return: 0
@@ -679,9 +679,9 @@ end: tool_check
 
 # Whether the file at path holds the line `line`: at its start or after a newline, and ending the file or
 # followed by LF or CRLF (a child's text-mode stdout ends its lines with CRLF on Windows).
-fn: file_has_line (@: path char; @: line char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
+fn: file_has_line (char@: path; char@: line) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
     size_t: n c.strlen(line)
     size_t: total 0U
     size_t: i 0U
@@ -710,14 +710,14 @@ fn: file_has_line (@: path char; @: line char) int
 end: file_has_line
 
 # Whether the file at path holds the text want anywhere.
-fn: file_has (@: path char; @: want char) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: data char 0
+fn: file_has (char@: path; char@: want) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    char@: data 0
     int: r 0
     if: len = 0
         return: 0
     data := file_read(path, len)
-    if: data != 0 && (cast: (@: char) (c.strstr(data, want))) != 0
+    if: data != 0 && (cast: (char@) (c.strstr(data, want))) != 0
         r := 1
     c.free(data)
     c.free(len)
@@ -725,8 +725,8 @@ fn: file_has (@: path char; @: want char) int
 end: file_has
 
 # This program run as a child through the driver: `self 0 entry 0 -- command args...`.
-fn: run_self (@: self char; @@: words char; int: nwords; @: cwd char; @: out char; @: err char; unsigned: timeout_ms; @: detail int) int
-    @@: argv char c.calloc((cast: (size_t) (nwords + 5)), sizeof(@: char))
+fn: run_self (char@: self; char@@: words; int: nwords; char@: cwd; char@: out; char@: err; unsigned: timeout_ms; int@: detail) int
+    char@@: argv c.calloc((cast: (size_t) (nwords + 5)), sizeof(char@))
     int: i 0
     int: kind 0
     if: argv = 0
@@ -747,13 +747,13 @@ end: run_self
 # The child's view of its arguments, through the platform's own parser of the command line the adapter
 # wrote: spaces, an empty argument, shell metacharacters, quotes, non-ASCII text and backslashes before a
 # quote and at the end.
-fn: test_args (@: self char; @: dir char) int
-    @@: words char c.calloc(8U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: out char txt_path(dir, "args.out")
-    @: err char txt_path(dir, "args.err")
-    @: line char 0
-    @: hex char 0
+fn: test_args (char@: self; char@: dir) int
+    char@@: words c.calloc(8U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: out txt_path(dir, "args.out")
+    char@: err txt_path(dir, "args.err")
+    char@: line 0
+    char@: hex 0
     size_t: hn 0U
     int: kind 0
     int: i 0
@@ -788,11 +788,11 @@ fn: test_args (@: self char; @: dir char) int
     return: f
 end: test_args
 
-fn: test_exits (@: self char; @: dir char) int
-    @@: words char c.calloc(2U, sizeof(@: char))
-    @@: bare char c.calloc(1U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: out char txt_path(dir, "exit.out")
+fn: test_exits (char@: self; char@: dir) int
+    char@@: words c.calloc(2U, sizeof(char@))
+    char@@: bare c.calloc(1U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: out txt_path(dir, "exit.out")
     int: kind 0
     int: f 0
     if: words = 0 || bare = 0 || detail = 0 || out = 0
@@ -812,12 +812,12 @@ fn: test_exits (@: self char; @: dir char) int
     return: f
 end: test_exits
 
-fn: test_streams (@: self char; @: dir char) int
-    @@: words char c.calloc(1U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: out char txt_path(dir, "streams.out")
-    @: err char txt_path(dir, "streams.err")
-    @: both char txt_path(dir, "streams.both")
+fn: test_streams (char@: self; char@: dir) int
+    char@@: words c.calloc(1U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: out txt_path(dir, "streams.out")
+    char@: err txt_path(dir, "streams.err")
+    char@: both txt_path(dir, "streams.both")
     int: kind 0
     int: f 0
     if: words = 0 || detail = 0 || out = 0 || err = 0 || both = 0
@@ -837,13 +837,13 @@ fn: test_streams (@: self char; @: dir char) int
     return: f
 end: test_streams
 
-fn: test_cwd (@: self char; @: dir char) int
-    @@: words char c.calloc(1U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: place char txt_path(dir, "cwd dir")
-    @: out char txt_path(dir, "cwd.out")
-    @: here char 0
-    @: want char 0
+fn: test_cwd (char@: self; char@: dir) int
+    char@@: words c.calloc(1U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: place txt_path(dir, "cwd dir")
+    char@: out txt_path(dir, "cwd.out")
+    char@: here 0
+    char@: want 0
     int: kind 0
     int: f 0
     if: words = 0 || detail = 0 || place = 0 || out = 0
@@ -865,10 +865,10 @@ fn: test_cwd (@: self char; @: dir char) int
     return: f
 end: test_cwd
 
-fn: test_timeout (@: self char; @: dir char) int
-    @@: words char c.calloc(3U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: mark char txt_path(dir, "late.mark")
+fn: test_timeout (char@: self; char@: dir) int
+    char@@: words c.calloc(3U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: mark txt_path(dir, "late.mark")
     size_t: t0 0U
     size_t: t1 0U
     int: kind 0
@@ -892,10 +892,10 @@ fn: test_timeout (@: self char; @: dir char) int
     return: f
 end: test_timeout
 
-fn: test_spawn_failure (@: dir char) int
-    @@: argv char c.calloc(1U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: missing char txt_path(dir, "no such program.exe")
+fn: test_spawn_failure (char@: dir) int
+    char@@: argv c.calloc(1U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: missing txt_path(dir, "no such program.exe")
     int: kind 0
     int: f 0
     if: argv = 0 || detail = 0 || missing = 0
@@ -911,8 +911,8 @@ end: test_spawn_failure
 
 # The L2 stream (sha256_stream) of the file at path in chunks of chunk bytes against sha256_bytes of its n bytes
 # at data: a check.
-fn: test_hash_stream (@: path char; @: data char; size_t: n; size_t: chunk; @: got char; @: mine char) int
-    @: f c.FILE os_file_open(path, "rb")
+fn: test_hash_stream (char@: path; char@: data; size_t: n; size_t: chunk; char@: got; char@: mine) int
+    c.FILE@: f os_file_open(path, "rb")
     int: r 1
     if: f != 0
         r := sha256_stream(f, chunk, got)
@@ -927,15 +927,15 @@ end: test_hash_stream
 # chunk of 0 refused; the platform's stream around its chunk (1 MiB - 1, 1 MiB, 1 MiB + 1 bytes of i mod 251)
 # and a file of 2^32 + 1 zero bytes, against digests measured by two independent implementations (Python's
 # hashlib and GNU sha256sum, 2026-10-23: build2/opus_fix171/runs/refdigests-01).
-fn: test_hash (@: dir char) int
-    @: path char txt_path(dir, "hash.bin")
-    @: got char c.calloc(65U, 1U)
-    @: mine char c.calloc(65U, 1U)
-    @: data char c.malloc(1048577U)
-    @: sizes size_t c.calloc(8U, c.sizeof(c.size_t))
-    @: chunks size_t c.calloc(3U, c.sizeof(c.size_t))
-    @: want char 0
-    @: big c.FILE 0
+fn: test_hash (char@: dir) int
+    char@: path txt_path(dir, "hash.bin")
+    char@: got c.calloc(65U, 1U)
+    char@: mine c.calloc(65U, 1U)
+    char@: data c.malloc(1048577U)
+    size_t@: sizes c.calloc(8U, c.sizeof(c.size_t))
+    size_t@: chunks c.calloc(3U, c.sizeof(c.size_t))
+    char@: want 0
+    c.FILE@: big 0
     size_t: n 0U
     size_t: at 251U
     size_t: far 65536U
@@ -1022,15 +1022,15 @@ end: test_hash
 # The evidence commands: a manifest and its verification (all equal, a changed file, a missing one), the
 # executables a run record started (none a script host, a script host and a script), and byte and image
 # identity (the image itself, another link time and checksum, another byte, no image).
-fn: test_evidence (@: self char; @: dir char) int
-    @: ev char txt_path(dir, "evidence")
-    @: list char 0
-    @: man char 0
-    @: rec char 0
-    @: copy char 0
-    @: text char 0
-    @: img char 0
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+fn: test_evidence (char@: self; char@: dir) int
+    char@: ev txt_path(dir, "evidence")
+    char@: list 0
+    char@: man 0
+    char@: rec 0
+    char@: copy 0
+    char@: text 0
+    char@: img 0
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
     size_t: pe 0U
     int: f 0
     if: ev = 0 || len = 0
@@ -1082,14 +1082,14 @@ end: test_evidence
 
 # A run record closed on its files (verify_record): the hashes of the executable, an input and the log hold; a
 # changed input fails; only the last line about a path counts; an `exe-changed` line fails.
-fn: test_record (@: self char; @: ev char) int
-    @: rec char txt_path(ev, "closed.txt")
-    @: a char txt_path(ev, "in.txt")
-    @: b char txt_path(ev, "run.log")
-    @: hs char c.calloc(65U, 1U)
-    @: ha char c.calloc(65U, 1U)
-    @: hb char c.calloc(65U, 1U)
-    @: out c.FILE 0
+fn: test_record (char@: self; char@: ev) int
+    char@: rec txt_path(ev, "closed.txt")
+    char@: a txt_path(ev, "in.txt")
+    char@: b txt_path(ev, "run.log")
+    char@: hs c.calloc(65U, 1U)
+    char@: ha c.calloc(65U, 1U)
+    char@: hb c.calloc(65U, 1U)
+    c.FILE@: out 0
     int: f 0
     if: rec = 0 || a = 0 || b = 0 || hs = 0 || ha = 0 || hb = 0
         return: tool_check(0, "record", "no memory")
@@ -1123,13 +1123,13 @@ end: test_record
 # The suite's schema (R170-2) and its controls' evaluation (R170-3), without a build: each malformed row is a
 # SCHEMA failure (fifteen rows, fifteen failures, nothing else); a list without rows fails; a missing source is an INFRA
 # failure; ENTRY is a decimal C int over the whole range and nothing else; control_eval_r on failure lines.
-fn: test_suite_schema (@: dir char) int
-    @: sd char txt_path(dir, "schema")
-    @: list char 0
-    @: text char 0
-    @: fail char 0
-    @: e int c.calloc(1U, c.sizeof(c.int))
-    @@: why char c.calloc(1U, sizeof(@: char))
+fn: test_suite_schema (char@: dir) int
+    char@: sd txt_path(dir, "schema")
+    char@: list 0
+    char@: text 0
+    char@: fail 0
+    int@: e c.calloc(1U, c.sizeof(c.int))
+    char@@: why c.calloc(1U, sizeof(char@))
     int: f 0
     int: x 0
     if: sd = 0 || e = 0 || why = 0
@@ -1176,12 +1176,12 @@ end: test_suite_schema
 # The replay's own verdicts, without a frontend: a row not of eight fields and a row whose name is no .lm2 are DIFFs
 # said as MALFORMED; a row whose frontends cannot be started is a DIFF said as INFRA -- three rows, three DIFFs, none
 # skipped and none SAME.
-fn: test_replay_rows (@: dir char) int
-    @: rd char txt_path(dir, "replay")
-    @: sb char 0
-    @: rows char 0
-    @: text char 0
-    @: res char 0
+fn: test_replay_rows (char@: dir) int
+    char@: rd txt_path(dir, "replay")
+    char@: sb 0
+    char@: rows 0
+    char@: text 0
+    char@: res 0
     int: f 0
     int: x 0
     if: rd = 0
@@ -1208,15 +1208,15 @@ end: test_replay_rows
 # failed (the line after the failure makes its file); `steps` ends at the first failure (that file is never made) and answers
 # 0 when every line answered 0; a list that runs a list is refused; a list that cannot be read is a failure.  Slice 291: a
 # line's every word reaches its command, past the ninth too.
-fn: test_check_lists (@: self char; @: dir char) int
-    @: ld char txt_path(dir, "lists")
-    @: list char 0
-    @: mark char 0
-    @: text char 0
-    @@: run char c.calloc(2U, sizeof(@: char))
-    @: detail int c.calloc(1U, c.sizeof(c.int))
-    @: out char txt_path(dir, "lists.out")
-    @: err char txt_path(dir, "lists.err")
+fn: test_check_lists (char@: self; char@: dir) int
+    char@: ld txt_path(dir, "lists")
+    char@: list 0
+    char@: mark 0
+    char@: text 0
+    char@@: run c.calloc(2U, sizeof(char@))
+    int@: detail c.calloc(1U, c.sizeof(c.int))
+    char@: out txt_path(dir, "lists.out")
+    char@: err txt_path(dir, "lists.err")
     int: f 0
     int: x 0
     if: ld = 0 || run = 0 || detail = 0 || out = 0 || err = 0
@@ -1261,9 +1261,9 @@ end: test_check_lists
 
 # The self-test in dir: the process contract with child (tools/l2/lmxchild.lm2 built, `build-child`; 0: this
 # program, which waits for its own start -- tens of seconds at -O0), hashing and the evidence commands.
-fn: selftest (@: dir char; @: child char) int
-    @: self char os_self()
-    @: run char child
+fn: selftest (char@: dir; char@: child) int
+    char@: self os_self()
+    char@: run child
     int: f 0
     if: self = 0
         return: tool_check(0, "selftest", "no executable path")
@@ -1288,9 +1288,9 @@ fn: selftest (@: dir char; @: child char) int
 end: selftest
 
 # The commands a self-test runs this program as.
-fn: child (@@: args char; int: n) int
-    @: here char 0
-    @: f c.FILE 0
+fn: child (char@@: args; int: n) int
+    char@: here 0
+    c.FILE@: f 0
     int: k 1
     if: n >= 2 && c.strcmp(args[1], "echo-args") = 0
         return: os_args_print()
@@ -1334,14 +1334,14 @@ end: child
 # refused (exit 2): no list runs another.  `checks` (stop 0) runs every line; `steps` (stop 1) ends at the first command that
 # answers other than 0, so no later step acts on a failed one.  The last line is `CHECKS <lines> lines, <failed> failed`; 0
 # when every command run answered 0, else 1.
-fn: checks_run (@: self char; @: list char; int: stop) int
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char 0
-    @@: words char 0
-    @: data char 0
-    @: line char 0
-    @: tab char 0
+fn: checks_run (char@: self; char@: list; int: stop) int
+    size_t@: len c.calloc(1U, c.sizeof(c.size_t))
+    size_t@: at c.calloc(1U, c.sizeof(c.size_t))
+    char@@: fld 0
+    char@@: words 0
+    char@: data 0
+    char@: line 0
+    char@: tab 0
     int: n 0
     int: k 0
     int: r 0
@@ -1365,8 +1365,8 @@ fn: checks_run (@: self char; @: list char; int: stop) int
                 n := n + 1
                 tab := c.strchr(tab + 1, 9)
             ---
-            fld := c.calloc((cast: (size_t) n), sizeof(@: char))
-            words := c.calloc((cast: (size_t) n) + 1U, sizeof(@: char))
+            fld := c.calloc((cast: (size_t) n), sizeof(char@))
+            words := c.calloc((cast: (size_t) n) + 1U, sizeof(char@))
             if: fld = 0 || words = 0
                 c.printf("CHECKS no memory for a line of %s\n", list)
                 return: 1
@@ -1393,8 +1393,8 @@ fn: checks_run (@: self char; @: list char; int: stop) int
             ---
             c.printf("\n")
             c.fflush(c.stdout)
-            c.free((cast: (@: void) fld))
-            c.free((cast: (@: void) words))
+            c.free((cast: (@) fld))
+            c.free((cast: (@) words))
             if: r != 0
                 failed := failed + 1
                 if: stop != 0
@@ -1411,8 +1411,8 @@ fn: checks_run (@: self char; @: list char; int: stop) int
     return: 0
 end: checks_run
 
-fn: tool_main (@@: args char; int: n) int
-    @: hex char c.calloc(65U, 1U)
+fn: tool_main (char@@: args; int: n) int
+    char@: hex c.calloc(65U, 1U)
     int: r 0
     if: hex = 0
         return: 2
@@ -1502,7 +1502,7 @@ fn: tool_main (@@: args char; int: n) int
     if: n >= 2 && c.strcmp(args[1], "build-frontend-part") = 0
         if: n != 10 && n != 11
             return: 2
-        @: reuse_bundle char 0
+        char@: reuse_bundle 0
         if: n = 11
             reuse_bundle := args[10]
         if: bld_frontend_selected(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], reuse_bundle) != 0
@@ -1574,9 +1574,9 @@ fn: tool_main (@@: args char; int: n) int
         return: 0
     if: n >= 11 && c.strcmp(args[1], "graph-check") = 0
         int: expected_exit 0
-        @: runs char "1"
-        @: interp_exit char "0"
-        @: entry char 0
+        char@: runs "1"
+        char@: interp_exit "0"
+        char@: entry 0
         if: n >= 12
             if: c.strcmp(args[11], "1") = 0
                 expected_exit := 1

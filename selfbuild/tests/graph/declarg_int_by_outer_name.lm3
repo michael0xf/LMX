@@ -1,0 +1,18 @@
+# An int input admits no declaration Structure, on a position or by name (the book #declaration-arguments):
+# `b := int(b producer())` is refused by the admission of b, answer 4, and producer does not run. seen 0,
+# calls 0.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+fn: g (int: a 1; int: b 2) int
+    return: a * 10 + b
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := g(b := int(b producer()))
+main()

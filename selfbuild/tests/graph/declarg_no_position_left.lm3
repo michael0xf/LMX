@@ -1,0 +1,18 @@
+# A declaration that finds no position left is an excess actual (the book #declaration-selection): h has one
+# input, so the call refuses before any argument runs, answer 5. seen 0, calls 0.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+@: Any ()
+fn: h (@: a Any) int
+    return: 9
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(int: a 1; int: b 2)
+main()

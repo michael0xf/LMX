@@ -1,0 +1,19 @@
+# A declaration among the arguments takes its position (the book #declaration-arguments): `int: b producer()`
+# goes to the first input a, a universal reference that admits the Structure, although an input named b
+# exists; b keeps its default 6, and producer does not run. seen 6, calls 0.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+@: Any ()
+fn: h (@: a Any; int: b 6) int
+    return: b
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(int: b producer())
+main()

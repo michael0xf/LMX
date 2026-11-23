@@ -1,0 +1,20 @@
+# A literal form and a computed form are one kind of Structure, the named int with two fields (the book
+# #declaration-arguments): `it := int(it 5)` gives it the whole declaration, so length(it) is 2 and y is 4.
+# seen 6. Red until the builder keeps a declaration written among the arguments as a record whatever its
+# head (step 21.9 (b)): on the right of an outer name the literal form comes as a Structure of one field.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+@: Any ()
+fn: h (@: it Any; int: y 0) int
+    return: y + length(it)
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(it := int(it 5); y := 4)
+main()

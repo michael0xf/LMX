@@ -1,0 +1,19 @@
+# A declaration among the arguments takes its position (the book #declaration-arguments): `int: b producer()`
+# goes to the first input a, and the following 4 to the next position, b; producer does not run. seen 4,
+# calls 0.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+@: Any ()
+fn: h (@: a Any; int: b 0) int
+    return: b
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(int: b producer(); 4)
+main()

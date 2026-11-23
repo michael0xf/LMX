@@ -1,0 +1,19 @@
+# An outer name selects the input (the book #declaration-arguments): `it := int(it producer())` gives the
+# whole declaration to it, and the name inside the form, equal to the name of the input, stays inside it:
+# length(it) is 2, y is 4, and producer does not run. seen 6, calls 0.
+(
+    Observed:
+        int: seen 0
+        int: calls 0
+)
+fn: producer () int
+    @: shared node[0]
+    shared\Observed\calls := shared\Observed\calls + 1
+    return: 7
+@: Any ()
+fn: h (@: it Any; int: y 0) int
+    return: y + length(it)
+sub: main ()
+    @: shared node[0]
+    shared\Observed\seen := h(it := int(it producer()); y := 4)
+main()

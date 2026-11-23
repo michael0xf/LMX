@@ -1,0 +1,26 @@
+Cycles:
+    @: iteration
+    @: body
+    iterate:
+        while: 1
+            iteration()
+            catch: Stop ()
+                break
+            body()
+
+Numbers:
+    int: position 0
+    return: int
+    next:
+        throws: Stop
+        if: node\position >= 3
+            throw: Stop()
+        node\position += 1
+        return: node\position
+    demo:
+        node\position := 0
+        int: total 0
+        Cycles\iterate: int: item Numbers\next()
+            item *= 2
+            total += item
+        return: total

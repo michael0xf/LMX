@@ -1,0 +1,86 @@
+FxSeqAny:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: int
+    any:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: value FxApply\apply(accepts; FxOne\make(item))
+            if: FxSeqPredicate\truth(value) != 0
+                return: 1
+            i += 1
+        return: 0
+
+FxSeqAll:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: int
+    all:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: value FxApply\apply(accepts; FxOne\make(item))
+            if: FxSeqPredicate\truth(value) = 0
+                return: 0
+            i += 1
+        return: 1
+
+FxSeqIndex:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: @
+    index:
+        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: value FxApply\apply(accepts; FxOne\make(item))
+            if: FxSeqPredicate\truth(value) != 0
+                return: FxSome\some(value := (i FxRecordOperands\record))
+            i += 1
+        return: FxNone\none()
+
+FxRecordOperands:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: @
+    record:
+        throws: FxRecordArity
+        if: length(right) != 0
+            throw: FxRecordArity()
+        return: left
+
+FxMaybe:
+    int: present 0
+    @: value 0
+
+FxSome:
+    private: @: value
+    required: value
+    return: FxMaybe@
+    some:
+        private: @: result (copy(FxMaybe))
+        result\present := 1
+        result\value := value
+        return: result
+
+FxNone:
+    return: FxMaybe@
+    none:
+        return: (copy(FxMaybe))

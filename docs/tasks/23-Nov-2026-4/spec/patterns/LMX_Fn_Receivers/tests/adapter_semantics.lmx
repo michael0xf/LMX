@@ -1,0 +1,249 @@
+# PREPARED ADAPTER REGRESSIONS, NOT EXECUTED BY AN LMX KERNEL.
+# Load with current LMX_Receivers.lmx after provider integration; invoke
+# FxAdapterExamples\run(). Negative selection cases are separate in the matrix.
+
+FxAdapterJournal:
+    int: defaults 0
+    int: bodies 0
+    int: events 0
+    int: stages 0
+    int: terminal 0
+    int: actuals 0
+
+FxAdapterEffects:
+    return: int
+    defaultValue:
+        FxAdapterJournal\defaults += 1
+        return: 19
+    actualValue:
+        FxAdapterJournal\actuals += 1
+        return: 0
+
+FxAdapterOwnDefault:
+    int: x 7
+    return: int
+    value:
+        FxAdapterJournal\bodies += 1
+        return: x
+
+FxAdapterUnused:
+    int: x FxAdapterEffects\defaultValue()
+    int: unused
+    return: int
+    skip:
+        FxAdapterJournal\bodies += 1
+        return: 9
+    use:
+        FxAdapterJournal\bodies += 1
+        return: x
+
+FxAdapterDependent:
+    int: x
+    int: y x + 1
+    return: int
+    value:
+        return: y
+
+FxAdapterAutofill:
+    int: x
+    return: int
+    value:
+        FxAdapterJournal\bodies += 1
+        return: x
+
+FxAdapterPrivate:
+    private: int: x 7
+    return: int
+    value:
+        return: x
+
+FxAdapterShared:
+    @: operation 0
+
+FxAdapterCallerA:
+    return: int
+    run:
+        int: x 11
+        return: FxAdapterShared\operation()
+
+FxAdapterCallerB:
+    return: int
+    run:
+        int: x 22
+        return: FxAdapterShared\operation()
+
+FxAdapterGuarded:
+    int: first 1
+    int: untouched FxAdapterEffects\defaultValue()
+    return: int
+    value:
+        FxAdapterJournal\bodies += 1
+        return: first
+
+FxAdapterPrecondition:
+    private:
+        int: first
+        int: untouched
+    return: int
+    accepts:
+        return: first > 0
+
+FxAdapterPassiveSink:
+    private: @: event
+    receive:
+        FxAdapterJournal\events += 1
+        private: @: observation event\args[1]
+        sys\assert(observation\supplied = 0)
+        sys\assert(observation\ready = 0)
+
+FxAdapterEqualKeys:
+    private:
+        @: first
+        @: second
+    return: int
+    same:
+        return: \first[0] = \second[0]
+
+FxAdapterNextSignature :: (char[]: text; return: double)
+
+FxAdapterNextA:
+    char[]: text "default"
+    return: double
+    value:
+        FxAdapterJournal\stages += 1
+        return: 2.5
+
+FxAdapterNextB:
+    char[]: otherText
+    return: double
+    value:
+        FxAdapterJournal\stages += 1
+        return: 3.5
+
+FxAdapterExactChain:
+    int: select 0
+    return: FxAdapterNextSignature@
+    next:
+        FxAdapterJournal\stages += 1
+        if: select = 0
+            return: FxAdapterNextA\value
+        return: FxAdapterNextB\value
+
+FxAdapterFlatSignature :: (int: select; char[]: text; return: double)
+
+FxAdapterFinalSignature :: (return: int)
+
+FxAdapterFinal:
+    return: int
+    value:
+        FxAdapterJournal\terminal += 1
+        return: 42
+
+FxAdapterCallableResult:
+    int: ignored
+    return: FxAdapterFinalSignature@
+    value:
+        FxAdapterJournal\stages += 1
+        return: FxAdapterFinal\value
+
+FxAdapterCallableFlat :: (int: ignored; return: FxAdapterFinalSignature@)
+
+FxAdapterExamples:
+    return: int
+    run:
+        throws:
+            FxArity
+            FxCallFailure
+            FxIndex
+            FxKernelFailure
+            FxLazyCycle
+            FxPredicate
+            FxRecordArity
+            FxTypeToken
+            ReceiverIndex
+            ReceiverPermutation
+            SequenceSize
+        FxAdapterJournal\defaults := 0
+        FxAdapterJournal\bodies := 0
+        FxAdapterJournal\events := 0
+        FxAdapterJournal\stages := 0
+        FxAdapterJournal\terminal := 0
+        FxAdapterJournal\actuals := 0
+        # A01/A02: source default, explicit zero, independent later call.
+        int: x 50
+        @: same FxPartial\partial(FxAdapterOwnDefault\value; ())
+        sys\assert(FxAdapterOwnDefault\value() = 7)
+        sys\assert(same() = 7)
+        sys\assert(same(p0 := 0) = 0)
+        sys\assert(same() = 7)
+        # A05/A06/A07: no entry-wide initialization; no factory/signature effect.
+        @: unused FxPartial\partial(FxAdapterUnused\skip; ())
+        @: description RxSignature\signature(unused)
+        sys\assert(FxAdapterJournal\defaults = 0)
+        sys\assert(unused() = 9)
+        sys\assert(FxAdapterJournal\defaults = 0)
+        @: demanded FxPartial\partial(FxAdapterUnused\use; ())
+        sys\assert(demanded() = 19)
+        sys\assert(FxAdapterJournal\defaults = 1)
+        sys\assert(demanded(p0 := 0) = 0)
+        sys\assert(FxAdapterJournal\defaults = 1)
+        sys\assert(demanded() = 19)
+        sys\assert(FxAdapterJournal\defaults = 2)
+        # A08: one adapter, two current caller contexts.
+        FxAdapterShared\operation := FxPartial\partial(FxAdapterAutofill\value; ())
+        sys\assert(FxAdapterCallerA\run() = 11)
+        sys\assert(FxAdapterCallerB\run() = 22)
+        # A09 explicit supply remains permitted on a private receiver input.
+        @: privateInput FxPartial\partial(FxAdapterPrivate\value; ())
+        sys\assert(privateInput(p0 := 0) = 0)
+        # A11: dependent default reads captured source x, not caller x=50.
+        @: dependent FxPartial\partial(FxAdapterDependent\value; (5))
+        sys\assert(dependent() = 6)
+        sys\assert(dependent(p0 := 10) = 10)
+        # A16: cache hit prepares written actual effects but not omitted default.
+        FxAdapterJournal\defaults := 0
+        int: before FxAdapterJournal\bodies
+        @: onceValue FxOnce\once(FxAdapterUnused\skip)
+        sys\assert(onceValue() = 9)
+        sys\assert(onceValue(p0 := FxAdapterEffects\actualValue()) = 9)
+        sys\assert(onceValue() = 9)
+        sys\assert(FxAdapterJournal\bodies = before + 1)
+        sys\assert(FxAdapterJournal\actuals = 1)
+        sys\assert(FxAdapterJournal\defaults = 0)
+        # A17: precondition reads first; untouched target default remains asleep.
+        @: guarded FxGuard\guard(FxAdapterGuarded\value; FxAdapterPrecondition\accepts)
+        sys\assert(guarded() = 1)
+        sys\assert(FxAdapterJournal\defaults = 0)
+        # A18: passive enter/return events distinguish deferred second input.
+        @: traced FxTrace\trace(FxAdapterGuarded\value; FxAdapterPassiveSink\receive)
+        sys\assert(traced() = 1)
+        sys\assert(FxAdapterJournal\events = 2)
+        sys\assert(FxAdapterJournal\defaults = 0)
+        # A19: absent actuals with different autofill values are different keys.
+        FxAdapterShared\operation := FxMemo\memo(FxAdapterAutofill\value; FxAdapterEqualKeys\same)
+        before := FxAdapterJournal\bodies
+        sys\assert(FxAdapterCallerA\run() = 11)
+        sys\assert(FxAdapterCallerB\run() = 22)
+        sys\assert(FxAdapterCallerA\run() = 11)
+        sys\assert(FxAdapterJournal\bodies = before + 2)
+        # B01/B02/B04/B09: real exact signature, two possible actual next stages.
+        @: flattened FxUncurry\uncurry(FxAdapterExactChain\next; FxAdapterFlatSignature; ())
+        sys\assert(FxAdapterJournal\stages = 0)
+        sys\assert(flattened(0; "a") = 2.5)
+        sys\assert(FxAdapterJournal\stages = 2)
+        sys\assert(flattened(1; "b") = 3.5)
+        sys\assert(FxAdapterJournal\stages = 4)
+        # Omitted positions stay omitted for each reached candidate.
+        sys\assert(flattened() = 2.5)
+        sys\assert(FxAdapterJournal\stages = 6)
+        # B05 N=0, then B06 N=1 with a final callable that is not auto-called.
+        @: nullary FxUncurry\uncurry(FxAdapterFinal\value; FxAdapterFinalSignature; ())
+        sys\assert(FxAdapterJournal\terminal = 0)
+        sys\assert(nullary() = 42)
+        sys\assert(FxAdapterJournal\terminal = 1)
+        @: stopAtCallable FxUncurry\uncurry(FxAdapterCallableResult\value; FxAdapterCallableFlat; ())
+        @: finalValue stopAtCallable(0)
+        sys\assert(FxAdapterJournal\terminal = 1)
+        sys\assert(finalValue() = 42)
+        sys\assert(FxAdapterJournal\terminal = 2)
+        return: 1

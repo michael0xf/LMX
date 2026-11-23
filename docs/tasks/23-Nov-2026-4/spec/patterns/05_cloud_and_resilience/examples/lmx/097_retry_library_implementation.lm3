@@ -1,0 +1,31 @@
+FxRetryValue:
+    private:
+        @: operation
+        @: retryOn
+        int: limit
+        @: delay 0
+        @: arguments ()
+    required: operation retryOn limit
+    return: @
+    retry:
+        throws: copy(FxThrows\call) FxArity FxPredicate FxRecordArity ReceiverIndex
+        if: limit < 1
+            throw: FxArity()
+        private: int: attempt 1
+        while: 1
+            private: @: result FxApply\apply(operation; arguments)
+            if: attempt = limit
+                return: result
+            private: @: retryArgs FxTwo\make(result; (attempt FxRecordOperands\record))
+            if: FxSeqPredicate\truth(FxApply\apply(retryOn; retryArgs)) = 0
+                return: result
+            if: delay != 0
+                FxApply\apply(delay; FxOne\make((attempt FxRecordOperands\record)))
+            attempt += 1
+
+Http503:
+    int: status
+    int: attempt
+    return: int
+    retryOn:
+        return: status = 503

@@ -1,0 +1,6 @@
+# Source acceptance fixture, NOT an executed test report.
+# Expected: (1,1); ordinary explicit copy maps; no Pattern execution during copy
+@: source [literal("cat") literal("dog")]
+Pattern[]: copied [copy(source)]
+@: other choice(patterns := (Pattern[]: [copy(source)]))
+(matches(utf8Text("cat"); choice(patterns := copied)); matches(utf8Text("dog"); other))

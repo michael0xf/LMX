@@ -1,0 +1,1447 @@
+{
+  "date": "2026-11-23",
+  "source": "../src/coreStandardFunctional.lmx",
+  "status": "NOT_RUN",
+  "cases": [
+    {
+      "id": "SF_take_normal",
+      "function": "take",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "count": 2
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_take_negative",
+      "function": "take",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": -2
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_take_large",
+      "function": "take",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": 9
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "fresh_outer": true
+    },
+    {
+      "id": "SF_drop_negative",
+      "function": "drop",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": -2
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "fresh_outer": true
+    },
+    {
+      "id": "SF_drop_large",
+      "function": "drop",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": 9
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_splitAt_middle",
+      "function": "splitAt",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "count": 2
+      },
+      "expected": {
+        "first": [
+          1,
+          2
+        ],
+        "second": [
+          3
+        ]
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_takeWhile_stop",
+      "function": "takeWhile",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          0,
+          4
+        ],
+        "accepts": "x > 0"
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        2,
+        0
+      ]
+    },
+    {
+      "id": "SF_dropWhile_stop",
+      "function": "dropWhile",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          0,
+          4
+        ],
+        "accepts": "x > 0"
+      },
+      "expected": [
+        0,
+        4
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        2,
+        0
+      ]
+    },
+    {
+      "id": "SF_span_stop",
+      "function": "span",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          0,
+          4
+        ],
+        "accepts": "x > 0"
+      },
+      "expected": {
+        "first": [
+          1,
+          2
+        ],
+        "second": [
+          0,
+          4
+        ]
+      },
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        2,
+        0
+      ]
+    },
+    {
+      "id": "SF_partition_stable",
+      "function": "partition",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "accepts": "x % 2 != 0"
+      },
+      "expected": {
+        "first": [
+          1,
+          3
+        ],
+        "second": [
+          2,
+          4
+        ]
+      },
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "SF_partition_typedEmpty",
+      "function": "partition",
+      "inputs": {
+        "items": [],
+        "source_profile": "char[]",
+        "accepts": "unused"
+      },
+      "expected": {
+        "first": [],
+        "second": []
+      },
+      "runtime_status": "NOT_RUN",
+      "result_part_profiles": [
+        "char[]",
+        "char[]"
+      ],
+      "callback_values": []
+    },
+    {
+      "id": "SF_enumerate_offset",
+      "function": "enumerate",
+      "inputs": {
+        "items": [
+          "a",
+          "b"
+        ],
+        "start": -2
+      },
+      "expected": [
+        {
+          "first": -2,
+          "second": "a"
+        },
+        {
+          "first": -1,
+          "second": "b"
+        }
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_enumerate_overflow",
+      "function": "enumerate",
+      "inputs": {
+        "items": [
+          "a",
+          "b"
+        ],
+        "start": "maximum representable int"
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "ordinary checked int admission; never a wrapped index"
+    },
+    {
+      "id": "SF_windows_pairwise",
+      "function": "windows",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ]
+      },
+      "expected": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_windows_full",
+      "function": "windows",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "width": 3
+      },
+      "expected": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          2,
+          3,
+          4
+        ],
+        [
+          3,
+          4,
+          5
+        ]
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_windows_partial",
+      "function": "windows",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "width": 3,
+        "step": 2,
+        "partial": 1
+      },
+      "expected": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_windows_noRedundantSuffix",
+      "function": "windows",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "width": 2,
+        "partial": 1
+      },
+      "expected": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_windows_zeroWidth",
+      "function": "windows",
+      "inputs": {
+        "items": [],
+        "width": 0
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "SequenceStep"
+    },
+    {
+      "id": "SF_chunks_tail",
+      "function": "chunks",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "size": 2
+      },
+      "expected": [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          5
+        ]
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_chunks_strict",
+      "function": "chunks",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "size": 2,
+        "strict": 1
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "FxShape"
+    },
+    {
+      "id": "SF_chunks_zeroSize",
+      "function": "chunks",
+      "inputs": {
+        "items": [],
+        "size": 0
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "SequenceStep"
+    },
+    {
+      "id": "SF_intersperse_normal",
+      "function": "intersperse",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "separatorRecord": 0
+      },
+      "expected": [
+        1,
+        0,
+        2,
+        0,
+        3
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_intersperse_empty",
+      "function": "intersperse",
+      "inputs": {
+        "items": [],
+        "source_profile": "int[]",
+        "separatorRecord": "not an int"
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "separator_admitted": false,
+      "result_profile": "int[]"
+    },
+    {
+      "id": "SF_intersperse_singleton",
+      "function": "intersperse",
+      "inputs": {
+        "items": [
+          1
+        ],
+        "separatorRecord": "not an int"
+      },
+      "expected": [
+        1
+      ],
+      "runtime_status": "NOT_RUN",
+      "separator_admitted": false
+    },
+    {
+      "id": "SF_intercalate_normal",
+      "function": "join",
+      "inputs": {
+        "parts": [
+          [
+            1,
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "separator": [
+          0
+        ]
+      },
+      "expected": [
+        1,
+        2,
+        0,
+        3
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_intercalate_empty",
+      "function": "join",
+      "inputs": {
+        "parts": [],
+        "separator": [],
+        "separator_profile": "char[]"
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "result_profile": "char[]"
+    },
+    {
+      "id": "SF_unzip_zipRoundTrip",
+      "function": "unzip",
+      "inputs": {
+        "pairs": [
+          {
+            "first": 1,
+            "second": "a"
+          },
+          {
+            "first": 2,
+            "second": "b"
+          }
+        ]
+      },
+      "expected": {
+        "first": [
+          1,
+          2
+        ],
+        "second": [
+          "a",
+          "b"
+        ]
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_unzip_empty",
+      "function": "unzip",
+      "inputs": {
+        "pairs": []
+      },
+      "expected": {
+        "first": [],
+        "second": []
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_foldr_nonCommutative",
+      "function": "foldr",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "seedRecord": 0,
+        "step": "item - accumulator"
+      },
+      "expected": 2,
+      "runtime_status": "NOT_RUN",
+      "callback_item_order": [
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "SF_foldr_empty",
+      "function": "foldr",
+      "inputs": {
+        "items": [],
+        "seedRecord": "seed",
+        "step": "unused"
+      },
+      "expected": "seed",
+      "runtime_status": "NOT_RUN",
+      "callback_item_order": []
+    },
+    {
+      "id": "SF_scanr_nonCommutative",
+      "function": "scanr",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "seedRecord": 0,
+        "step": "item - accumulator"
+      },
+      "expected": [
+        2,
+        -1,
+        3,
+        0
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_item_order": [
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "SF_scanr_empty",
+      "function": "scanr",
+      "inputs": {
+        "items": [],
+        "seedRecord": 0,
+        "step": "unused"
+      },
+      "expected": [
+        0
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_filterMap_selection",
+      "function": "filterMap",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "transform": "some(x*10) for even x; none otherwise"
+      },
+      "expected": [
+        20,
+        40
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "SF_filterMap_zeroPresent",
+      "function": "filterMap",
+      "inputs": {
+        "items": [
+          0
+        ],
+        "transform": "some(x)"
+      },
+      "expected": [
+        0
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_mapWhile_shortCircuit",
+      "function": "mapWhile",
+      "inputs": {
+        "items": [
+          2,
+          4,
+          1,
+          6
+        ],
+        "transform": "some(x*10) for even x; none otherwise"
+      },
+      "expected": [
+        20,
+        40
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "id": "SF_findMap_first",
+      "function": "findMap",
+      "inputs": {
+        "items": [
+          1,
+          3,
+          4,
+          6
+        ],
+        "transform": "some(x*10) for even x; none otherwise"
+      },
+      "expected": {
+        "present": 1,
+        "value": 40
+      },
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "SF_findMap_absent",
+      "function": "findMap",
+      "inputs": {
+        "items": [
+          1,
+          3
+        ],
+        "transform": "none"
+      },
+      "expected": {
+        "present": 0
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_mapAccumL_stateAndOutput",
+      "function": "mapAccumL",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "seedRecord": 0,
+        "step": "FxPair(state+item,state)"
+      },
+      "expected": {
+        "first": 6,
+        "second": [
+          0,
+          1,
+          3
+        ]
+      },
+      "runtime_status": "NOT_RUN",
+      "callback_item_order": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "SF_mapAccumR_stateAndOutput",
+      "function": "mapAccumR",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "seedRecord": 0,
+        "step": "FxPair(state+item,state)"
+      },
+      "expected": {
+        "first": 6,
+        "second": [
+          5,
+          3,
+          0
+        ]
+      },
+      "runtime_status": "NOT_RUN",
+      "callback_item_order": [
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "SF_groupAdjacent_separateRuns",
+      "function": "groupAdjacent",
+      "inputs": {
+        "items": [
+          "a",
+          "a",
+          "b",
+          "a"
+        ],
+        "keyOf": "identity",
+        "sameKey": "equality"
+      },
+      "expected": [
+        {
+          "key": "a",
+          "items": [
+            "a",
+            "a"
+          ]
+        },
+        {
+          "key": "b",
+          "items": [
+            "b"
+          ]
+        },
+        {
+          "key": "a",
+          "items": [
+            "a"
+          ]
+        }
+      ],
+      "runtime_status": "NOT_RUN",
+      "key_calls": 4,
+      "equality_calls": 3
+    },
+    {
+      "id": "SF_groupAdjacent_empty",
+      "function": "groupAdjacent",
+      "inputs": {
+        "items": [],
+        "keyOf": "unused",
+        "sameKey": "unused"
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "key_calls": 0,
+      "equality_calls": 0
+    },
+    {
+      "id": "SF_replicate_finite",
+      "function": "replicate",
+      "inputs": {
+        "valueRecord": 3,
+        "count": 3
+      },
+      "expected": [
+        3,
+        3,
+        3
+      ],
+      "runtime_status": "NOT_RUN",
+      "result_profile": "@[]"
+    },
+    {
+      "id": "SF_replicate_negative",
+      "function": "replicate",
+      "inputs": {
+        "valueRecord": 3,
+        "count": -1
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_replicate_referenceIdentity",
+      "function": "replicate",
+      "inputs": {
+        "valueRecord": "reference to mutable R",
+        "count": 2
+      },
+      "expected": [
+        "same R",
+        "same R"
+      ],
+      "runtime_status": "NOT_RUN",
+      "deep_copy": false
+    },
+    {
+      "id": "SF_cycle_finite",
+      "function": "cycle",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": 3
+      },
+      "expected": [
+        1,
+        2,
+        1,
+        2,
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "result_profile": "same as input"
+    },
+    {
+      "id": "SF_cycle_typedEmpty",
+      "function": "cycle",
+      "inputs": {
+        "items": [],
+        "source_profile": "char[]",
+        "count": 100
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "result_profile": "char[]"
+    },
+    {
+      "id": "SF_cycle_negative",
+      "function": "cycle",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": -1
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_cycle_overflow",
+      "function": "cycle",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "count": 2,
+        "source_profile_maxLength": 3
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "SequenceSize"
+    },
+    {
+      "id": "SF_starmap_rows",
+      "function": "starmap",
+      "inputs": {
+        "rows": [
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "operation": "a * b"
+      },
+      "expected": [
+        6,
+        20
+      ],
+      "runtime_status": "NOT_RUN",
+      "callback_rows": [
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "id": "SF_starmap_oneWholeArrayActual",
+      "function": "starmap",
+      "inputs": {
+        "rows": [
+          [
+            [
+              1,
+              2,
+              3
+            ]
+          ]
+        ],
+        "operation": "length(one array)"
+      },
+      "expected": [
+        3
+      ],
+      "runtime_status": "NOT_RUN",
+      "argument_vector_lengths": [
+        1
+      ]
+    },
+    {
+      "id": "SF_zipLongest_fill",
+      "function": "zipLongest",
+      "inputs": {
+        "first": [
+          1,
+          2
+        ],
+        "second": [
+          10
+        ],
+        "fillRecord": 0
+      },
+      "expected": [
+        {
+          "first": 1,
+          "second": 10
+        },
+        {
+          "first": 2,
+          "second": 0
+        }
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_zipLongest_empty",
+      "function": "zipLongest",
+      "inputs": {
+        "first": [],
+        "second": [],
+        "fillRecord": 0
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_collect_stop",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          1,
+          0,
+          "Stop()"
+        ]
+      },
+      "expected": [
+        1,
+        0
+      ],
+      "runtime_status": "NOT_RUN",
+      "producer_calls": 3
+    },
+    {
+      "id": "SF_collect_bounded",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "limit": 2
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "producer_calls": 2
+    },
+    {
+      "id": "SF_collect_zeroLimit",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          "must not run"
+        ],
+        "limit": 0
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "producer_calls": 0
+    },
+    {
+      "id": "SF_collect_wrappedFailure",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          1,
+          "throw CustomFailure(payload)"
+        ]
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "FxCallFailure(outcome)",
+      "original_failure": "CustomFailure",
+      "original_payload": "payload",
+      "failure_envelope": true
+    },
+    {
+      "id": "SF_collect_typedPayloads",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          "int 0",
+          "char[] empty",
+          "null @ record",
+          "FxPair reference",
+          "Stop()"
+        ]
+      },
+      "expected": [
+        "int 0",
+        "char[] empty",
+        "null @ record",
+        "same FxPair reference"
+      ],
+      "runtime_status": "NOT_RUN",
+      "producer_calls": 5,
+      "extra_reference_wrapper": false
+    },
+    {
+      "id": "SF_collect_kernelFailure",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [
+          "call bridge raises FxKernelFailure"
+        ]
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "FxKernelFailure",
+      "failure_envelope": false
+    },
+    {
+      "id": "SF_collect_badLimit",
+      "function": "collect",
+      "inputs": {
+        "next_outcomes": [],
+        "limit": -2
+      },
+      "expected": null,
+      "runtime_status": "NOT_RUN",
+      "expected_failure": "SequenceSize",
+      "producer_calls": 0
+    },
+    {
+      "id": "SF_includes_shortCircuit",
+      "function": "includes",
+      "inputs": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "valueRecord": 2,
+        "same": "equality"
+      },
+      "expected": 1,
+      "runtime_status": "NOT_RUN",
+      "compared_items": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "SF_includes_empty",
+      "function": "includes",
+      "inputs": {
+        "items": [],
+        "valueRecord": 0,
+        "same": "unused"
+      },
+      "expected": 0,
+      "runtime_status": "NOT_RUN",
+      "compared_items": []
+    },
+    {
+      "id": "SF_adjoin_prepend",
+      "function": "adjoin",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "valueRecord": 3,
+        "same": "equality"
+      },
+      "expected": [
+        3,
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "fresh_outer": true
+    },
+    {
+      "id": "SF_adjoin_identityWhenPresent",
+      "function": "adjoin",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "valueRecord": 2,
+        "same": "equality"
+      },
+      "expected": [
+        1,
+        2
+      ],
+      "runtime_status": "NOT_RUN",
+      "same_outer_as_input": true
+    },
+    {
+      "id": "SF_union_stable",
+      "function": "union",
+      "inputs": {
+        "first": [
+          1,
+          2,
+          2
+        ],
+        "second": [
+          2,
+          3
+        ],
+        "same": "equality"
+      },
+      "expected": [
+        1,
+        2,
+        3
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_intersection_stable",
+      "function": "intersection",
+      "inputs": {
+        "first": [
+          2,
+          1,
+          2,
+          3
+        ],
+        "second": [
+          2,
+          3
+        ],
+        "same": "equality"
+      },
+      "expected": [
+        2,
+        3
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_difference_setNotMultiset",
+      "function": "difference",
+      "inputs": {
+        "first": [
+          1,
+          1,
+          2
+        ],
+        "second": [
+          2
+        ],
+        "same": "equality"
+      },
+      "expected": [
+        1
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_symmetricDifference_stable",
+      "function": "symmetricDifference",
+      "inputs": {
+        "first": [
+          1,
+          2,
+          2
+        ],
+        "second": [
+          2,
+          3,
+          3
+        ],
+        "same": "equality"
+      },
+      "expected": [
+        1,
+        3
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_isSubset_duplicates",
+      "function": "isSubset",
+      "inputs": {
+        "first": [
+          1,
+          1
+        ],
+        "second": [
+          2,
+          1
+        ],
+        "same": "equality"
+      },
+      "expected": 1,
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_isSubset_missing",
+      "function": "isSubset",
+      "inputs": {
+        "first": [
+          1,
+          3
+        ],
+        "second": [
+          1,
+          2
+        ],
+        "same": "equality"
+      },
+      "expected": 0,
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_isSubset_empty",
+      "function": "isSubset",
+      "inputs": {
+        "first": [],
+        "second": [],
+        "same": "unused"
+      },
+      "expected": 1,
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_filterMap_directNullReference",
+      "function": "filterMap",
+      "inputs": {
+        "items": [
+          1
+        ],
+        "transform": "direct FxSome with a complete typed null-reference payload",
+        "callback_result_protocol": "direct FxMaybe; no extra @ wrapper"
+      },
+      "expected": [
+        {
+          "type": "reference",
+          "target": null
+        }
+      ],
+      "runtime_status": "NOT_RUN",
+      "preserve_present": true
+    },
+    {
+      "id": "SF_filterMap_directReferenceIdentity",
+      "function": "filterMap",
+      "inputs": {
+        "items": [
+          1
+        ],
+        "transform": "direct FxSome with a reference to mutable object R",
+        "callback_result_protocol": "direct FxMaybe; no extra @ wrapper"
+      },
+      "expected": [
+        "same R"
+      ],
+      "runtime_status": "NOT_RUN",
+      "deep_copy": false
+    },
+    {
+      "id": "SF_mapWhile_directNone",
+      "function": "mapWhile",
+      "inputs": {
+        "items": [
+          1,
+          2
+        ],
+        "transform": "direct FxNone",
+        "callback_result_protocol": "direct FxMaybe; no extra @ wrapper"
+      },
+      "expected": [],
+      "runtime_status": "NOT_RUN",
+      "callback_values": [
+        1
+      ]
+    },
+    {
+      "id": "SF_mapAccumL_directPairMixedTypes",
+      "function": "mapAccumL",
+      "inputs": {
+        "items": [
+          1
+        ],
+        "seedRecord": 0,
+        "step": "direct FxPair(reference to R, int record 7)",
+        "callback_result_protocol": "direct FxPair; no extra @ wrapper"
+      },
+      "expected": {
+        "first": "same R",
+        "second": [
+          7
+        ]
+      },
+      "runtime_status": "NOT_RUN",
+      "state_type_may_change": true,
+      "deep_copy": false
+    }
+  ],
+  "cross_cutting": [
+    {
+      "id": "SF_TYPED_PROFILES",
+      "contract": "Run selection/partition/windows/set first-profile paths over int8[], char[], float[], bigint[], and heterogeneous Structure. No void** reinterpretation or int-only conversion.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_REFERENCE_LIFETIME",
+      "contract": "Keep returned records after the helper activation ends; primitive values remain valid, reference targets preserve identity, no stack address is retained. Applies to enumerate/collect/mapAccum and record-based APIs.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_MAYBE_DIRECT",
+      "contract": "Callbacks returning some/none/FxPair supply the direct compound typed result reference, matching the existing call bridge and FxBind. Admit it directly with no invented @ layer; test primitive, null-reference and compound payloads, and reject primitive impostors.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_CALLBACK_FAILURE",
+      "contract": "Callback APIs keep original failure name/payload inside the existing FxCallFailure envelope. collect consumes only producer Stop and reuses FxEqualFields for that check; bridge/kernel failures and append failures retain their own declarations.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_INPUT_IMMUTABILITY",
+      "contract": "All functions leave source slots and lengths unchanged; callback side effects already performed are not rolled back. Callbacks must not mutate active source slots/length.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_EMPTY_CALLBACKS",
+      "contract": "Empty traversals make zero callback calls, except ordinary validation of the supplied callable contract where performed by a reused adapter. No default or body is forced merely by array reading.",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SF_SET_EQUIVALENCE",
+      "contract": "Set APIs require a pure equivalence predicate; test duplicates, mixed profiles admitted by the predicate, reference identity relations, and source empties. No claim of hash complexity or arbitrary nontransitive predicate equivalence.",
+      "runtime_status": "NOT_RUN"
+    }
+  ],
+  "note": "Expected contracts for Fable/native+walker integration; these are not LMX runtime receipts."
+}

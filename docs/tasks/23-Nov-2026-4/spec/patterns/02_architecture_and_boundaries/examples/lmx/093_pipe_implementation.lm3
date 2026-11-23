@@ -1,0 +1,19 @@
+FxPipe:
+    private:
+        @: value
+        @: stages
+    required: value stages
+    return: @
+    pipe:
+        throws: copy(FxThrows\call) FxArity ReceiverIndex
+        FxSeqInfo\get(stages)
+        private: @: current value
+        private: int: i 0
+        while: i < length(stages)
+            private: @: stage \FxSeqRead\read(stages; i)
+            private: @: shape FxKernel\signature(stage)
+            if: length(shape\inputTypes) != 1 || shape\hasResult = 0
+                throw: FxArity()
+            current := FxApply\apply(stage; FxOne\make(current))
+            i += 1
+        return: current

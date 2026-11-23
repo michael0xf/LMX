@@ -1,0 +1,22 @@
+CatalogOperation:
+    @: http
+    return: int
+    read:
+        return: http\post("https://catalog.example"; "/catalog/read")
+
+AmbassadorPolicy:
+    @: outcome
+    return: int
+    unavailable:
+        if: outcome\ok = 0
+            return: 0
+        return: \outcome\value = 503
+
+AmbassadorMessage:
+    @: catalogWorker
+    @: clock
+    @: sink
+    return: @
+    catalog:
+        throws: FxIndex
+        return: retryPost(catalogWorker\run; AmbassadorPolicy\unavailable; 2; clock\elapsed; 0; 0; 1000; sink\complete)

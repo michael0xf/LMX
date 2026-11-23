@@ -1,0 +1,14 @@
+Publisher:
+    @: audit
+    @: stock
+    @: sendEvent
+    int: quantity
+    publish:
+        sendEvent(destination := audit; quantity := quantity)
+        sendEvent(destination := stock; quantity := quantity)
+
+Consumer:
+    int: total 0
+    int: quantity
+    receiveEvent:
+        node\total += quantity

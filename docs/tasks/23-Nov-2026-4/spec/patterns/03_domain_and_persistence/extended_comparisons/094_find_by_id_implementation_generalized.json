@@ -1,0 +1,64 @@
+{
+  "id": 94,
+  "name": "FindFirst — generic implementation",
+  "slug": "find_by_id_implementation",
+  "kind": "implementation",
+  "paired_with": 16,
+  "usage_ids": [
+    16
+  ],
+  "summary_ru": "Реализовать общий поиск первого совпадения с явным признаком присутствия.",
+  "summary_en": "Implement generic first-match search with explicit presence and arbitrary predicates.",
+  "scenario_ru": "Просмотреть значения до первого accepts(value); вернуть присутствующее значение или отсутствие, сохранив identity Account.",
+  "scenario_en": "Scan ordered values until accepts(value) is true; return a tagged present value or absence. Preserve the original Account identity for the Repository fixture.",
+  "expected_ru": "Пустой ввод/нет совпадений дают отсутствие; дубликаты — первый; найденный null/default остаётся присутствующим; отказ predicate передаётся дальше.",
+  "expected_en": "Empty and no-match inputs are absent; duplicates return the first; a matching null/default value remains present; predicate failures propagate.",
+  "lmx_notes_ru": "Точные общие определения FxFindFirst из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.",
+  "lmx_notes_en": "Exact common definitions FxFindFirst from the current core. This publication mirror preserves the stated type, context and failure contract; revised LMX runtime execution is NOT_RUN.",
+  "comparison_ru": "Циклы полностью выписаны во всех языках; здесь не вызываются next/FirstOrDefault. Нет привязки к Account/id/int или фиксированной длине.",
+  "comparison_en": "The loops are fully written in all languages. The controls do not call next/FirstOrDefault here. No implementation hardcodes Account, id, int, or a fixed sequence length.",
+  "limits_ru": "Конечные последовательности без изменения во время обхода. Ошибки predicate обычные; ссылки сохраняют владельца/lifetime. Неявного копирования/асинхронного scheduler нет.",
+  "limits_en": "Finite ordered sequences; no mutation during traversal. Predicate exceptions retain the language’s ordinary failure mechanism. Returned references retain the original owner/lifetime; no implicit copy or asynchronous scheduler is needed.",
+  "scope": "core",
+  "listings": [
+    {
+      "language": "LMX",
+      "code": "FxFindFirst:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    findFirst:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(items; i)\n            private: @: accepted FxApply\\apply(accepts; FxOne\\make(value))\n            if: FxSeqPredicate\\truth(accepted) != 0\n                return: FxSome\\some(value := value)\n            i += 1\n        return: FxNone\\none()\n",
+      "notes_ru": "Полный поиск произвольного элемента по callable predicate; typed access поддерживает dense arrays и Structure/@[].",
+      "notes_en": "Complete arbitrary-element predicate search; typed access supports dense arrays and Structure/@[]."
+    },
+    {
+      "language": "Python",
+      "code": "def find_first(items, accepts):\n    if not callable(accepts): raise TypeError(\"accepts must be callable\")\n    for item in items:\n        if accepts(item): return True, item\n    return False, None\n",
+      "notes_ru": "Отдельная generic реализация; пара found/value различает найденный None и отсутствие. Predicate не вызывается после первого совпадения.",
+      "notes_en": "Separate generic implementation; found/value distinguishes a found None from absence. No predicate call follows the first match."
+    },
+    {
+      "language": "C#",
+      "code": "#nullable enable\nusing System;\nusing System.Collections.Generic;\npublic static class FirstMatch {\n    public static (bool Found, T? Value) FindFirst<T>(IEnumerable<T> items, Func<T,bool> accepts) {\n        ArgumentNullException.ThrowIfNull(items);\n        ArgumentNullException.ThrowIfNull(accepts);\n        foreach (T item in items) if (accepts(item)) return (true, item);\n        return (false, default);\n    }\n}\n",
+      "notes_ru": "Общий цикл по T, ранний выход и явное отсутствие; foreach корректно освобождает enumerator.",
+      "notes_en": "Generic T loop, early exit, and explicit absence; foreach disposes its enumerator."
+    }
+  ],
+  "sources": [
+    {
+      "title": "LINQ FirstOrDefault contract",
+      "url": "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.firstordefault",
+      "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+      "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+    }
+  ],
+  "revision_date": "2026-11-23",
+  "library_revision": {
+    "foreign_usage_imports_own_implementation": false,
+    "implementation_pair_retained": true,
+    "runtime_lmx": "NOT_RUN"
+  },
+  "lmx_runtime_execution": "NOT_RUN",
+  "implementation_sources": [
+    {
+      "definition": "FxFindFirst",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    }
+  ]
+}

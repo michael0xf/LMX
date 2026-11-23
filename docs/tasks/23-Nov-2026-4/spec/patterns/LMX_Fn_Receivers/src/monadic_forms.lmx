@@ -1,0 +1,66 @@
+# Shared typed constructor and binding representations.
+# Public role/family selection is specified in ../../../MONADIC_OPERATIONS.md.
+
+FxMaybeActive:
+    private: FxMaybe@: input
+    required: input
+    return: int
+    active:
+        return: input\present
+
+FxResultActive:
+    private: FxResult@: input
+    required: input
+    return: int
+    active:
+        return: input\ok
+
+FxBindChain:
+    private:
+        @: current
+        @[]: steps
+        @: step
+        @: active
+    required: current steps step active
+    return: @
+    run:
+        throws: copy(FxThrows\call) FxArity
+        if: length(steps) = 0
+            throw: FxArity()
+        private: int: i 0
+        while: i < length(steps)
+            if: active(input := current) = 0
+                return: current
+            current := step(input := current; next := \steps[i])
+            i += 1
+        return: current
+
+FxBindOperandTail:
+    private: @[]: right
+    required: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+
+FxMaybeBindOperand:
+    private: FxMaybe@@: left
+    copy: FxBindOperandTail
+    required: left
+    return: FxMaybe@
+    bind:
+        throws: copy(FxThrows\call) FxArity
+        return: FxBindChain\run(\left; right; FxBind\bind; FxMaybeActive\active)
+
+FxResultBindOperand:
+    private: FxResult@@: left
+    copy: FxBindOperandTail
+    required: left
+    return: FxResult@
+    bind:
+        throws: copy(FxThrows\call) FxArity
+        return: FxBindChain\run(\left; right; FxBindResult\bind; FxResultActive\active)
+
+MonadBindings:
+    import: FxBind FxBindResult FxMaybeBindOperand FxResultBindOperand
+
+ArrayBinding:
+    const: @: bind FxAsOperand\asOperand(FxListBind\bind; sys\priority("+"))

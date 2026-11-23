@@ -1,0 +1,2012 @@
+{
+  "scope": "Permanent normative acceptance inventory linked to current integrated chapters; no execution",
+  "runtime_executed": false,
+  "specifications": {
+    "types": {
+      "source": "../../../CORE_SEQUENCES_REGEX.en.md#types",
+      "cases": [
+        {
+          "id": "P01",
+          "case": "`[]: variable`",
+          "expected": "Валидная uninit-переменная «любой массив», не конкретное @[]-требование и не пустой Array.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P02",
+          "case": "`[](variable)` и `[]: variable`",
+          "expected": "Один обычный декларационный договор; нет построения кода variable[].",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P03",
+          "case": "`@(name)` и `@: name`",
+          "expected": "Один договор void-указательного объявления; обычная диагностика недопустимого/занятого имени.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P04",
+          "case": "`Struct[]: [copy(S)]` и `(Struct)[]: [copy(S)]`",
+          "expected": "Каждый тип построен из своего полного левого требования; одноэлементная группа не снимается и не объявляется равной модели без проверки.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P05",
+          "case": "`Struct@: p` и `(Struct)@: p`",
+          "expected": "Оба объявления typed uninit; группированная модель сохраняется, равенство требований не предполагается.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P06",
+          "case": "`@Struct`, `int@` и `@x`, где int-переменная x хранит допустимый type-id",
+          "expected": "Адрес Struct, код указательного типа и адрес x соответственно; нет эвристики по числовому payload.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P07",
+          "case": "Вычисляемое типовое описание в голове и значения с эффектами",
+          "expected": "Каждая достигнутая операция исполняется один раз в общем установленном порядке.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P08",
+          "case": "Исходные группы с 0/1/несколькими элементами",
+          "expected": "Группы сохранены в графе и roundtrip; нет автоматического снятия одиночного контейнера.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P09",
+          "case": "Составная голова другого допустимого ресивера",
+          "expected": "Тот же parser/resolver path; []/@ не имеют отдельного мини-парсера.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P10",
+          "case": "`@D\\field` и `(@D\\field)`",
+          "expected": "Адресный смысл сохранён; старое bare `@(D\\field)` не используется как адресный alias.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P11",
+          "case": "Безскобочное `T[]: copy(S)`",
+          "expected": "Не принимается как безымянная array-форма через специальный fallback, угадывающий пропущенную группу.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P12",
+          "case": "Source inspection формы с copy и типовой головой",
+          "expected": "Ничего не исполняется только из-за чтения/сериализации графа.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P13",
+          "case": "`[]: Name`, `[]: [data]`, `[]: Name [data]`",
+          "expected": "Неинициализированное место, безымянное значение и инициализированное место различаются по исходной форме.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P14",
+          "case": "`[]: Name` против `[]: [Name]`; имя уже существует",
+          "expected": "Первая форма потребляет имя объявления, вторая сохраняет группу с элементом. Lookup не переключает ветвь.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P15",
+          "case": "Имя и группа в объявлении; индексирование в позиции значения",
+          "expected": "Нет преждевременной склейки имени с initializer; общий index-профиль в позиции значения сохранён.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P16",
+          "case": "`T[]` против `a[i]`",
+          "expected": "Написанный пустой суффикс получает тип, непустой использует индексирование; решение принято до вычисления содержимого.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P17",
+          "case": "`a[()]` и `a[copy(empty)]`",
+          "expected": "Пустой результат не превращает написанную индексную форму в типовой конструктор.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P18",
+          "case": "`@[]`",
+          "expected": "Символический type atom принят общим нормализатором; получен код Structure/void-массива, без адресной операции и без нового Array.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P19",
+          "case": "`int@[]`, `int[]@`, `int[][]`",
+          "expected": "Постфиксы применены слева направо; разные композиции требований не смешаны.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P20",
+          "case": "`int@: p @value`",
+          "expected": "Типовая голова, сырое имя и адресный initializer имеют свои обычные границы; @ перед value не поглощён как продолжение имени.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P21",
+          "case": "Старые `[](T): …` и `@(T): …`",
+          "expected": "Нет прежнего специального типового чтения; возможный иной смысл и допустимость определяет общий resolver.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "P22",
+          "case": "`F(T@; @x)`",
+          "expected": "Два actual сохранены; первый получает type-id, второй адрес, без выбора разбора по сигнатуре или успеху пробного вычисления.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T01",
+          "case": "Дважды вычислить int[] в арене",
+          "expected": "Один код одного типа; экземпляр массива не создаётся.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T02",
+          "case": "Дважды получить int@, int@@ и глубину 17",
+          "expected": "Для каждого полного типа код повторяется; разные глубины различны.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T03",
+          "case": "int[], char[], int@[], int[]@, int[][]",
+          "expected": "Композиции не смешиваются по размеру или строковому сходству.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T04",
+          "case": "sys\\typeof(numbers) для созданного int[]-массива; sys\\typeof(@numbersType) для int-места с кодом int[]",
+          "expected": "В первом случае код Array-типа, во втором код int.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T05",
+          "case": "Нормализация готового int type-id и uninit:T",
+          "expected": "Используется payload первого или код второго; отсутствующие байты не читаются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T06",
+          "case": "Неверный/недоступный type-id",
+          "expected": "Обычный отказ типа, не трактовка числа как произвольного адреса metadata.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T07",
+          "case": "Различные полные требования Struct с общим physical tag",
+          "expected": "Требования не стираются; производные типы и satisfies различают нужные условия.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T08",
+          "case": "Resize/reserve массива",
+          "expected": "Код типа не меняется из-за length/capacity.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T09",
+          "case": "Attach арен с разными производными типами",
+          "expected": "Коды не сталкиваются, адреса/коды записей сохраняются; metadata остаётся доступной после освобождения donor.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T10",
+          "case": "Ошибка/откат построения, затем повторное получение типа",
+          "expected": "Нет intern-entry на освобождённую память; корректное повторное получение.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "T11",
+          "case": "`typeCode` из §2.4: `typeCode@`, `typeCode[]`, `@typeCode`; затем использование типов в головах",
+          "expected": "Коды производных типов и адрес int-места различены; добавление двоеточия использует уже определённый тип, а не переключает назначение оператора.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A01",
+          "case": "`int[]: [1 2 3 4]`",
+          "expected": "Один Array<int>, length=4, значения 1/2/3/4; имени нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A02",
+          "case": "`int[]: values [2 3 7]`",
+          "expected": "Обычное именованное место с созданным Array.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A03",
+          "case": "`int[]: values` против `int[]: values []`",
+          "expected": "Uninit с нулём payload против готового пустого массива.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A04",
+          "case": "`type[]: [copy(S)]`",
+          "expected": "Один сбор потока обычной copy, её карта/владельцы сохранены.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A05",
+          "case": "`@[]: [S]` против `@[]: [copy(S)]`",
+          "expected": "Один вложенный элемент против выданных полей; пустой поток не становится одним пустым элементом.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A06",
+          "case": "`2 * (int[]: [1 2 3 4])`",
+          "expected": "[2,4,6,8], без внутренней переменной и повторения initializer.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A07",
+          "case": "Плотный массив и @[] на одном универсальном входе",
+          "expected": "Доступ по фактическому типу без mandatory boxing всей последовательности.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A08",
+          "case": "Явная графовая замена uninit новым Array и отдельно local assignment",
+          "expected": "Графовый фрагмент заменён обычным образом; local не публикуется в граф.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A09",
+          "case": "`[]: array [data]` и `@: array [data]` в независимых примерах",
+          "expected": "Обе переменные могут указывать на обычную Structure / void-массив; не требуется category-конверсия или дополнительная обёртка.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A10",
+          "case": "DATA-формы `array(...)` и `array: ...`",
+          "expected": "Объявленная Structure одновременно является массивом; её обычное имя не превращается в ссылочную переменную.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A11",
+          "case": "Одна Structure S получена через []-место и @-место",
+          "expected": "Цель, её identity и parent сохранены; общие операции и typeof/descriptor не различают два искусственных вида объекта.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R01",
+          "case": "`@: p`, `Struct@: p` и `Struct@: p 0`",
+          "expected": "Universal uninit, typed uninit и initialized null различаются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R02",
+          "case": "Адрес reference-place p",
+          "expected": "Адресована сама ячейка p, а не её сохранённая цель.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R03",
+          "case": "Глубины 1, 2, 3, 4, 17, 64",
+          "expected": "Один механизм; нет ветки «поддерживается только до @@@».",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R04",
+          "case": "`Struct@@: p` и `(Struct)@@: p`",
+          "expected": "Глубина 2 применена к полному левому требованию каждой формы; группа не снимается. Повторить с n > 3.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R05",
+          "case": "`@@(name)` без внешнего двоеточия",
+          "expected": "Компактный универсальный ресивер глубины 2; не получение типа из name.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R06",
+          "case": "Явная цепочка p1/p2/p3 из §5.3",
+          "expected": "Правильные уровни адресации и lifetime; нет сокращения уровней.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "R07",
+          "case": "Нулевой указатель большой глубины",
+          "expected": "Не создаётся скрытая цепочка промежуточных объектов.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S01",
+          "case": "A satisfies B, обратное неверно",
+          "expected": "Для A[]/B[] сохранено то же направление; таблица не симметрична.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S02",
+          "case": "Пустые массивы несовместимых типов",
+          "expected": "Пустота не меняет ответ отношения типов.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S03",
+          "case": "Повтор устойчивой пары типов",
+          "expected": "Используется завершённая запись таблицы; промежуточная рекурсивная пара не считается доказанной.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S04",
+          "case": "Совместимость при разном физическом размере элемента",
+          "expected": "Чтение с фактическим stride; типовая проверка не исполняет converter.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S05",
+          "case": "Запись через более широкое принятое требование",
+          "expected": "Сохранён фактический контракт элемента исходного массива.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S06",
+          "case": "Различные контексты допустимых преобразований",
+          "expected": "Нет переноса кешированного ответа из неподходящего контекста.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S07",
+          "case": "Изменённый кандидат, новый приём, value-dependent test",
+          "expected": "Проверяется актуальное значение; type-pair cache не заменяет field map или test.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        }
+      ]
+    },
+    "sequences": {
+      "source": "../../../CORE_SEQUENCES_REGEX.en.md#sequences",
+      "cases": [
+        {
+          "id": "E01",
+          "case": "Для `x = [-2, 0, 3, 5]` выполнить новую scalar expansion с `int`-скалярами: `x + 2`, `x * 3`; отдельно `x * x`.",
+          "expected": "`[0, 2, 5, 7]`, `[-6, 0, 9, 15]`, `[4, 0, 9, 25]`. Исходный x не изменён; `*` остаётся поэлементным, а не matrix multiplication или повторением последовательности.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E02",
+          "case": "Выполнить `10 - x` и `x - 10`; скаляр и элементы имеют один тип.",
+          "expected": "`[12, 10, 7, 5]` и `[-12, -10, -7, -5]`. Scalar expansion не меняет порядок левого и правого операндов.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E03",
+          "case": "Выполнить парную dense-операцию над длинами 4 и 3; в элементах второго массива разместить значения, которые вызвали бы отдельную арифметическую ошибку, например нулевые делители.",
+          "expected": "Отказ по несовместимой форме/длине **до первой поэлементной операции**. Ошибка деления не подменяет эту диагностику; усечение до меньшей длины не происходит.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E04",
+          "case": "Выполнить арифметику двух Arrays @, смешанной пары dense/@ и пары разных плотных типов.",
+          "expected": "Элементы получают свою обычную скалярную операцию и admission. Одно лишь различие представлений не вызывает отказа; преобразования точно те же, что у соответствующей скалярной операции. Непригодная пара отказывает. Вид результата определяется §4.3, без пробного первого вызова.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E05",
+          "case": "Левый и правый операнды арифметики создаются функциями, записывающими разные метки в журнал.",
+          "expected": "Каждая написанная функция выполняется ровно один раз в штатном порядке подготовки аргументов. Scalar expansion, проверка длины и цикл обработки не повторяют исходные выражения.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E06",
+          "case": "Передать плотный x непосредственно map с тождественным callback, затем изменить x.",
+          "expected": "Результат — обычный @[] на исходные int-значения. Он не хранит raw-адреса внутрь плотного storage. Последующая запись в x не меняет уже полученные примитивные результаты; обязательного публичного адаптера нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E07",
+          "case": "Построить `int[]: values [0 -2 5]` и безымянный `int[]: [0 -2 5]`; отдельно `int[]: []`.",
+          "expected": "Значения и тип элементов совпадают. Безымянный конструктор не объявляет переменную; пустой результат сохраняет int. Создаются обычные массивы по договору [], без отдельного toArray или незаказанного глубокого копирования.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E08",
+          "case": "Список значений для конструкции int[]: [...] содержит uninit:int, void либо непригодное значение; отдельно проверяется разрешённое обычным договором преобразование.",
+          "expected": "Применяются существующие приём, преобразования и отказы []. Нет несуществующего payload, неявного нуля или новой системы проверок, перенесённой из снятого toArray.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E09",
+          "case": "Материализовать `range(1; 6)` и `range(1; 7; 2)`.",
+          "expected": "Dense int-последовательности `[1, 2, 3, 4, 5]` и `[1, 3, 5]`. По умолчанию step равен 1; stop не включён. Это готовые массивы, не скрытые ленивые генераторы.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E10",
+          "case": "Материализовать `range(5; 0; -2)`, `range(2; 2)` и диапазон, чей шаг направлен от stop.",
+          "expected": "Соответственно `[5, 3, 1]`, пустой массив и пустой массив. Знак шага не меняется автоматически; конечный stop не добавляется для выравнивания.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E11",
+          "case": "Передать нулевой шаг range; отдельно границы/шаг, для которых число элементов или требуемый индекс не представим выбранным целочисленным контрактом.",
+          "expected": "Отказ без зацикливания и wraparound. Нельзя переполнением получить допустимый индекс, меньший размер результата или иной диапазон.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "E12",
+          "case": "Передать dense int-массив и Structure/Array<@> через один универсальный source-вход `@` в map/filter/foldl; проверить чтение элементов и подготовку callbacks.",
+          "expected": "Оба представления принимаются непосредственно. Описание существующего значения определяет typed load; dense storage не читается как `void**`. Подготовленные записи отдельного вызова допустимы по обычному транспортному контракту, но обязательного публичного records, полной скрытой копии/упаковки входа и нового List/AST нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S01",
+          "case": "Выполнить `slice` для dense `[10, 20, 30, 40, 50]` и границ begin=1, end=4; повторить для последовательность @ `[a, b, c, d, e]`.",
+          "expected": "Новый dense `[20, 30, 40]` либо новый внешний контейнер `[b, c, d]`. Конец исключён; ссылка на view и скрытая глубокая copy не создаются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S02",
+          "case": "Проверить slice `[0, 0)`, `[length, length)` и `[0, length)`; затем отрицательную границу, begin>end и end>length.",
+          "expected": "Допустимы два пустых результата и полная поверхностная/поэлементная копия. Недопустимые границы вызывают отказ; нет clipping, индексов «с конца» или изменения source.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S03",
+          "case": "concat получает одинаковые плотные int-части; затем смешанные плотные и ссылочные части; затем пустой parts.",
+          "expected": "Первый результат плотный int; второй — обычный @[] со значениями всех частей; третий — пустая Structure. Порядок сохранён, пустые части не добавляют элементов, вложенный Array остаётся элементом. Нет неявной числовой конверсии.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S04",
+          "case": "Применить reverse к dense `[1, 2, 3]`, reference `[a, b, c]` и пустому входу.",
+          "expected": "Новые контейнеры `[3, 2, 1]`, `[c, b, a]` и пустой. Исходники неизменны; reference targets и их parent сохраняются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S05",
+          "case": "Выполнить select для `[a, b, c]` и индексов `[2, 0, 2]`, поданных сначала dense `Array<int>`, затем обычная последовательность @ int; повторить с dense source.",
+          "expected": "Обе формы indices дают один результат `[c, a, c]`; повторы допустимы. Для dense source получаются соответствующие значения того же element type. Никакой reinterpretation представлений indices.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S06",
+          "case": "Для omit передать повторяющиеся индексы; для reorder — полную перестановку, затем повтор/пропуск; для select/omit — один недопустимый индекс среди допустимых.",
+          "expected": "Omit сохраняет порядок оставшихся элементов; повтор исключаемого индекса не удаляет дополнительный элемент. Reorder принимает только полную перестановку. Ошибка индекса обнаруживается до выдачи результата; source неизменён.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S07",
+          "case": "`compress` получает source `[a, b, c, d]` и integer mask `[0, -2, 3, 0]`; затем маску иной длины или с неподходящим типом элемента.",
+          "expected": "`[b, c]`: 0 означает исключить, всякое ненулевое int — включить. Несовместимая длина/тип вызывает отказ до отбора; нет усечения, повторения маски или reference-truthiness.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S08",
+          "case": "После shallow select/slice заменить один слот результата; отдельно изменить изменяемый target, на который ссылаются и source, и результат.",
+          "expected": "Замена внешнего слота не меняет слот source. Изменение общей цели видно через ссылки на эту цель. Разные слоты не объявляются одним writable place только из-за прежней общей ссылки.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S09",
+          "case": "Сравнить select и project для повторяющихся ссылок на изменяемый объект и графа с циклом; использовать одну операцию project.",
+          "expected": "Select сохраняет исходные targets. Project применяет одну штатную карту copy: повторные ссылки ведут к одной скопированной цели, цикл сохранён внутри копии; mutable-цель не остаётся общей с источником. Действуют обычные исключения independent immutable.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S10",
+          "case": "`replaceRange` заменяет `[1, 3)` в target `[1, 2, 3, 4]` значениями `[9, 8, 7]`.",
+          "expected": "Содержимое `[1, 9, 8, 7, 4]`, длина 5. Возвращена **та же** ссылка на target; его descriptor сохранён, storage вправе переместиться.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S11",
+          "case": "Сопоставить append, insert и deleteAt с replaceRange: добавление в конец, вставка при begin=end, удаление с пустыми values.",
+          "expected": "Обёртки дают точно ту же перестановку и ту же идентичность target, что соответствующие вызовы replaceRange. Нет второго mutator engine или копии всего графа.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S12",
+          "case": "Mutator получает неверные границы или элемент, непригодный плотному T; отдельно источник имеет другой вид хранения, но все значения допустимы T.",
+          "expected": "В первых случаях отказ до изменения length/содержимого target. Во втором операция допустима: иное хранение входа не является причиной отказа. Для @[] не навязывается тип или имя прежнего содержимого слота.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S13",
+          "case": "Выполнить append(target; target) для `[1, 2]`.",
+          "expected": "`[1, 2, 1, 2]` и прежний descriptor. Источник трактуется по значениям до записи; рост target не увеличивает бесконечно число читаемых элементов.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S14",
+          "case": "В target `[1, 2, 3, 4]` заменить `[1, 3)` значениями того же target.",
+          "expected": "`[1, 1, 2, 3, 4, 4]`. Нужные исходные элементы/ссылки захвачены до сдвигов; промежуточные записи не меняют оставшийся вход. Во время записи callback не вызывается.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S15",
+          "case": "Выполнить reserve, обычную запись существующего элемента и resize; наблюдать length, descriptor и aliases.",
+          "expected": "Reserve не меняет length; запись существующего элемента не меняет length; resize меняет её явно. Descriptor остаётся прежним, другие ссылки на него наблюдают новое содержимое. Capacity не появляется в Lmx header или новом семействе контейнеров.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S16",
+          "case": "Slice/concat/reverse получают char Array с внутренним NUL и многобайтной UTF-8 последовательностью.",
+          "expected": "Обрабатываются физические char-элементы и точная длина; NUL не завершает строку. Нет скрытой перекодировки, Unicode scalar slicing или добавленного C terminator; текстовые единицы выбираются отдельным TextView-профилем.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S17",
+          "case": "`splice` заменяет `[1,3)` плотного int-target `[10,20,30,40]` значениями `[99]`.",
+          "expected": "Target становится `[10,99,40]` и сохраняет descriptor. Результат — новый плотный int-массив `[20,30]`, а не target и не @[] вместо int[].",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S18",
+          "case": "`splice` удаляет участок Structure/@[] с повторяющимися ссылками, структурным элементом и своим lexical parent.",
+          "expected": "Новый внешний @[] содержит исходные записи в прежнем порядке. Повторные ссылки, типы, identity и настоящие parent сохранены; выбранные узлы не исполняются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S19",
+          "case": "`splice` вставляет при begin=end для dense T[] и @[]; отдельно source и target пусты.",
+          "expected": "Удалённый результат — инициализированный пустой контейнер соответствующего фактического профиля. Это не null, void, uninit или ссылка на target.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S20",
+          "case": "`splice` заменяет весь `[0,length(target))` пустыми values.",
+          "expected": "Target становится пустым с прежним descriptor и типом; результат содержит все исходные элементы в новом контейнере того же профиля.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S21",
+          "case": "`splice(target;1;3;target)` для `[1,2,3,4]`; повторить с перекрывающимся хранением входа.",
+          "expected": "Target `[1,1,2,3,4,4]`, removed `[2,3]`. И вставка, и удалённый результат определены исходными значениями до сдвига/resize.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S22",
+          "case": "Новый `splice` получает неверные границы, переполняющийся размер или непригодный для плотного T вставляемый элемент.",
+          "expected": "Отказ до изменения target, без частичного успешного removed-результата. Правила системных отказов и уже выполненных actual-эффектов не превращаются в общую транзакцию.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "S23",
+          "case": "После успешного `splice` заменить внешний слот removed; отдельно изменить объект, общий по ссылкам у removed и других контейнеров. Сравнить с таким же `replaceRange`.",
+          "expected": "Внешние слоты независимы; изменения общей цели остаются общими. Одинаковые входы `splice` и `replaceRange` дают одинаковую мутацию, но разные результаты: removed и target.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C01",
+          "case": "Универсальный последовательный `fun\\const\\map` проходит dense `[1, 2, 3]` и эквивалентную обычная последовательность @; callback журналирует вход и возвращает его квадрат.",
+          "expected": "В обоих случаях журнал `[1, 2, 3]`, по одному вызову на элемент; результат — обычная последовательность @ `[1, 4, 9]`. Публичного предварительного records не требуется. Нельзя заменить этот профиль неупорядоченным pure numeric map или вызвать callback при предварительном анализе.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C02",
+          "case": "Filter проходит ссылки `[a, b, c]` и отдельно dense `[1, 2, 3]`; predicate выбирает первый и третий элементы и журналирует входы.",
+          "expected": "Каждый predicate вызван один раз в исходном порядке. Reference-результат `[a, c]` сохраняет исходные идентичности значений; dense-результат `[1, 3]` сохраняет element type и dense-профиль source. Нет скрытой смены представления dense→records.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C03",
+          "case": "Foldl и scanl используют seed=10 и последовательное вычитание элементов `[1, 2, 3]`; вход подать и dense, и последовательность @.",
+          "expected": "Оба входа принимаются прямо. Foldl даёт 4, scanl — значения `[10, 9, 7, 4]`; порядок левый и последовательный. Mutable accumulator, возвращённый той же ссылкой, не получает скрытые snapshots на каждом шаге.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C04",
+          "case": "Для any и all выбрать predicate с ранним решающим результатом и журналом; после решающего элемента поставить callback, который завершился бы ошибкой.",
+          "expected": "Any прекращает обход после первого истинного, all — после первого ложного. Следующие элементы не вызываются, скрытого второго прохода нет. Для пустого входа any ложен, all истинен; predicate не вызывается.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C05",
+          "case": "Index находит совпадение в позиции 0, затем в более поздней позиции; отдельно совпадений нет и вход пуст.",
+          "expected": "Возвращаются непосредственно Maybe-ссылки `some(value := (0 record))`, some с первой найденной позицией либо `none()`. Успешный 0 не смешивается с отсутствием. Обход прекращается при первом совпадении; лишней оболочки результата FxApply нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C06",
+          "case": "Count проходит `[0, 1, 2, 3]` с predicate «положительный» и журналом; отдельно пустой вход.",
+          "expected": "Счётчик 3 и ровно четыре вызова в исходном порядке; для пустого входа 0 и ноль вызовов. В отличие от any/index положительный результат не завершает обход.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C07",
+          "case": "Callback имеет дополнительный optional/default input: в одном варианте не читает его, в другом читает дважды; отдельно отсутствует дополнительный обязательный input.",
+          "expected": "Неиспользованный default не вычисляется; востребованный вычисляется по обычному demand-контракту данного вызова, не дважды из-за двух чтений. Required input не заменяется нулём/пустой записью. Предварительное построение адаптера ничего не исполняет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C08",
+          "case": "Callback использует permitted autofill; служебный helper имеет одноимённый local; отдельно принимающий input private.",
+          "expected": "Источник связывания определяется обычной цепочкой вызовов, а не контекстом создания фабрики или случайными service locals. Private действует в обе стороны неявного связывания. Никакого обещания пропустить промежуточный ordinary caller и сохранить alias к внешнему кадру нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C09",
+          "case": "Элемент — целая Structure, Array либо узел с вложенной декларацией; кандидат принимает его одним actual.",
+          "expected": "Элемент передаётся целиком. К внутреннему уже выбранному actual повторный W/E не применяется; вложенная декларация не превращается во внешний named actual и не запускается выбором элемента.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C10",
+          "case": "На третьем элементе callback бросает объявленный отказ; первые два сделали наблюдаемые действия.",
+          "expected": "Обход прекращён; следующий callback не вызван, частичный результат не возвращён. Эффекты сохранены. Общий receiver передаёт FxCallFailure с исходным именем/payload; exact adapter сохраняет собственный declared-exit путь. Implicit failure не маскируется как отсутствие.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C11",
+          "case": "Проверить корректный обход с callback, не меняющим состав input; отдельно документационный/негативный fixture пытается resize/insert/erase самого обходящегося input.",
+          "expected": "Первый сценарий имеет обычный последовательный оракул. Второй нарушает установленный контракт коллекций и не используется как положительный runtime-тест snapshot или динамического обхода. Обязательное обнаружение такого нарушения рантаймом не выдумывается.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "C12",
+          "case": "Predicate возвращает неподходящий reference/record payload вместо предусмотренного целочисленного результата; callback map возвращает неподходящий результат для выбранного typed consumer.",
+          "expected": "Срабатывает обычное принятие результата; нет неявного «любая ссылка истинна», обнуления, пропуска элемента или ложного успеха. Сигнатурная пригодность не заменяет проверку конкретного возвращённого значения.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G01",
+          "case": "Select/slice/reverse/concat и mutator обрабатывают граф, где элементы — `if`, `for`, `merge`, `copy`, `import`, вычисляемые декларации и вызываемые методы с журналом.",
+          "expected": "Перенос/выбор сам по себе не исполняет эти элементы и не вычисляет их initializers. Receivers остаются обычными записями полного графа, включая их написанные аргументы.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G02",
+          "case": "Получить граф через sys\\fromLmx(text) без компиляции исследуемого графа; прочитать, изменить и сериализовать его.",
+          "expected": "Это обычные операции языка. Написанные конструкции и текущие заменённые фрагменты доступны без compile/endturn; построение из текста не запускает произвольные initializers или test.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G03",
+          "case": "Метод присваивает своему локальному `int` в кадре; затем тест явно заменяет соответствующий graph fragment через структурный путь/слот.",
+          "expected": "Первое действие меняет только рабочее значение активации. Второе заменяет выбранный фрагмент полного графа; uninit:T не требует заранее зарезервированного payload. Слоты, лишь разделявшие старую цель, не перенаправляются автоматически.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G04",
+          "case": "Выбранный исполняемый фрагмент не имеет подходящего native entry. Изменить его, заново выбрать из текущего графа и интерпретировать без compile/endturn. Отдельно нарушить требование достигнутого приёма.",
+          "expected": "Используется текущий фрагмент; интерпретатор выполняет обычные проверки и сообщает нарушение обычным каналом. Предварительная компиляция и глобальное подтверждение графа не нужны. Уже удерживаемые ссылки и места активации не переназначаются задним числом.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G05",
+          "case": "Отдельный native-сценарий: после изменения кода явно скомпилировать нужную единицу с прямыми вызывающими методами, выполнить endturn и войти заново.",
+          "expected": "Следующий native-вход использует подготовленное обновление. Эта процедура не является обязательным продолжением обычной графовой записи или интерпретации. Компиляция B отдельно не переписывает старый прямой вызов A→B.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G06",
+          "case": "Copy/project копирует метод с неизменённым телом и совместимым native; затем копию явно редактируют.",
+          "expected": "Для неизменённой копии обязательного обнуления native нет. Последующая графовая запись не обещает автоматической актуализации или очистки entry. Новое native-поведение проверяется после успешной явной компиляции нужной единицы и endturn.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G07",
+          "case": "Сохранить L3 element reference, вызвать рост с перемещением storage, затем insert до его индекса и shrink ниже него. Отдельно сохранить raw L2 address, не разыменовывая его после relocation.",
+          "expected": "L3-ссылка использует прежний descriptor и тот же числовой индекс: после insert видит новое содержимое этой позиции, после shrink получает обычную ошибку bounds. Она не следует за прежним логическим элементом. Raw L2 address не получает обещания автоматического ремонта.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G08",
+          "case": "Владелец метода хранит saved=3; метод читает явно `node\\saved`. Получить метод shallow select и project; затем изменить saved только исходного владельца на 9 и отдельно вызвать сохранённые методы.",
+          "expected": "Shallow-результат сохраняет прежнюю лексическую цель и читает 9; project использует штатно скопированную нужную цепочку и читает сохранённые 3. Сама операция выбора ничего не вызывает; новый внешний контейнер не становится DATA методов.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G09",
+          "case": "Проверить представление после fromLmx, при интерпретируемой работе и отдельно после запрошенной native-компиляции.",
+          "expected": "Нет persistent working graph, второй DATA-структуры, отдельного callable-графа или графа privacy. Бинарный интерпретатор работает с обычным полным графом; результат операции и буфер перекрывающейся записи не становятся второй программой.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "G10",
+          "case": "Выполнить интерпретируемые сценарии без предварительной компиляции исследуемого графа. Отдельно подготовить native для предусмотренных mixed/native-проверок.",
+          "expected": "Совпадают обещанные наблюдаемые результаты; различие предусмотренных runtime-проверок сохраняется. Никакой проверке не присваивается PASS без фактического запуска; compile/endturn не объявляются допуском к интерпретируемому пути.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A01",
+          "case": "Map получает метод с обязательным первым входом и вторым со своим default 3; caller имеет одноимённое значение 100.",
+          "expected": "Передан элемент, второй вход получает собственные 3; ложной проверки «ровно один formal» нет. Отдельно неиспользуемый computed default не запускается.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A02",
+          "case": "Элемент и результат callback — вложенный Array, затем callable.",
+          "expected": "Каждый остаётся одним значением; нет spread, flatten, дополнительного вызова или автоматического превращения ссылки в результат вызова.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A03",
+          "case": "Zip/zipWith получают [1,2,3] и [10,20].",
+          "expected": "Две пары с first/second либо два результата combine. Усечение до min-length сохраняется именно для этих операций и не переносится в арифметику Arrays.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A04",
+          "case": "Flatmap выдаёт части разного вида хранения и часть с вложенным Array.",
+          "expected": "Значения непосредственных частей объединены в порядке вызовов; результат — обычный @[]. Вложенный Array остаётся одним элементом.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A05",
+          "case": "Traverse получает some на первых двух элементах, none на третьем, ошибка была бы на четвёртом.",
+          "expected": "Возвращается none; четвёртый callback не вызывается. Пустой вход даёт успешный Maybe пустого результата по действующему контракту.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A06",
+          "case": "Groupby с ключами [A,B,A,C,B] и явным sameKey.",
+          "expected": "Порядок групп A,B,C; внутри исходный порядок. KeyOf вызван ровно по разу; нет скрытого deep equality либо повторной генерации ключей.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A07",
+          "case": "Transpose получает строки [1,2] и [3,4], одна плотная, другая @[]; затем разные длины.",
+          "expected": "Колонки [1,3] и [2,4] в обычных последовательностях @. Разные длины дают FxShape; форма не угадывается из общего length плоского массива.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A08",
+          "case": "Пустые map/filter/foldl/scanl; отдельно scanl с одним изменяемым аккумулятором.",
+          "expected": "Map/filter пусты; foldl возвращает seed; scanl содержит seed. В истории общей mutable-цели не возникают незаказанные глубокие снимки.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A09",
+          "case": "Range(MAX_INT−1; MAX_INT; step=2); отдельно step=0 при равных границах.",
+          "expected": "Первый содержит ровно MAX_INT−1 без вычисления лишнего переполняющего шага. Второй отклоняется как SequenceStep.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A10",
+          "case": "Сложить Array длины 3 и Array длины 1; затем тот же длинный Array со скаляром; отдельно пустой Array со скаляром.",
+          "expected": "Одноэлементный Array не становится скаляром: несовпадение длины. Скаляры расширяются по §4. Пустой результат имеет R выбранной скалярной операции, без вызова на фиктивном элементе.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A11",
+          "case": "В одном @[] находятся указатели непосредственно на int, char Array, Structure и uninit:T; затем grow/shrink @[] и плотного Array.",
+          "expected": "Вид каждого значения определяется по его собственной записи, без добавочной @-коробки. Оба вида массива уже изменяемой длины; capacity отдельно. Выбор uninit-ссылки не читает payload.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "A12",
+          "case": "Apply/partial получают готовые actuals/prefix сначала плотным Array, затем @[]; callback имеет дополнительные defaults и точный R.",
+          "expected": "Обычные принятые значения и вызываемая сигнатура совпадают. Missing входы сохраняются missing, промежуточные Ti/R не стираются в @; нет предварительного исполнения ненужных defaults.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D01",
+          "case": "int: answer 1 + (int: temporary 5)",
+          "expected": "Внутренний ресивер получает 5; внешнее значение 6. Применяются обычные место, admission и scope; нет публикации local в граф.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D02",
+          "case": "int: answer 2 * (int: temporary 3 + 4)",
+          "expected": "Внутреннее значение 7, внешнее 14. Границы RHS и порядок обычного Expression сохраняются.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D03",
+          "case": "Выполнить `2 * (int[]: [1 2 3 4])`.",
+          "expected": "Результат [2,4,6,8]; конструктор даёт значение Expression и не объявляет внутреннюю переменную. Каждое выражение элемента вычислено один раз.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D04",
+          "case": "Сравнить исполненное объявление в Expression и декларационный actual g(int: item producer()) с неиспользуемым item",
+          "expected": "В первом случае исполняется нужный producer и возвращается значение. Во втором передача формы сама по себе не исполняет producer; потребление определяется обычным договором callee.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D05",
+          "case": "Выполнить `int[]: [1 2 3 4]` в позиции значения.",
+          "expected": "Один Array<int>, length=4, элементы 1/2/3/4. Конструктор не создаёт именованное место и не требует toArray.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D06",
+          "case": "Выполнить `int[]: []`; отдельно передать непригодный int-элемент.",
+          "expected": "Пустой массив сохраняет int; неподходящий элемент получает обычный отказ конструктора. Нулевой payload uninit не читается и не заменяется нулём.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D07",
+          "case": "При squares с int-значениями 9 и 25 выполнить `int[]: [copy(squares)]`.",
+          "expected": "Элементы 9 и 25; одна операция copy и одна сборка её потока. Нет второй глубокой копии, повторного исполнения полей или переопределения владельцев.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D08",
+          "case": "Сравнить `@[]: [S]` и `@[]: [copy(S)]` для S с двумя полями; повторить с пустой S.",
+          "expected": "Первая форма содержит одну ссылку на S. Вторая принимает два поля потока, а для пустой S — ноль. Это явный поток copy, не автоматический spread всякой ссылки.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D09",
+          "case": "Объявить `[]: pending` и `@[]: refs`; через any-array принять отдельно плотный int[] и обычную Structure. Проверить достигнутое использование до и после инициализации.",
+          "expected": "Any-array принимает оба значения и использует фактический тип; конкретное требование @[] сохраняется отдельно. Uninit не становится пустой последовательностью; полученный плотный Array не превращается в @[].",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D10",
+          "case": "Передать int-код int[] в роли отдельного элемента и отдельно ошибочно вместо последовательности. Для int-места t с этим кодом получить t@ и отдельно @t.",
+          "expected": "Как элемент код остаётся int; вместо последовательности возникает обычный отказ, тип не инстанцируется сам. t@ совпадает по обозначаемому типу с int[]@; @t адресует само int-место и не запускает конструктор типа.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D11",
+          "case": "Выбор/копирование последовательности с указателями глубин 4 и 17 и полными вложенными требованиями; отдельно различить int@[], int[]@ и int[][].",
+          "expected": "Глубина и цели сохранены по договору операции, нет предела трёх уровней или потери type metadata. Массив указателей, указатель на массив и массив массивов сохраняют разные композиции требований; postfix применяется слева направо.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D12",
+          "case": "`[]: Name`, `[]: [data]`, `[]: Name [data]` и `[]: [Name]`; отдельно bare `[](Name)` / `@(Name)` и группированные типовые операнды `(Struct)[]` / `(Struct)@`.",
+          "expected": "Имя, группа и initializer различаются до lookup; содержимое Name не переключает ветвь. Bare compact-формы равны `[]: Name` / `@: Name`, не конструкторам типов. Группы сохраняют обычный смысл: singleton не исчезает и равенство типу негруппированного Struct не предполагается. Глобального whitespace-переключателя нет.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "D13",
+          "case": "DATA-структура объявлена как name(...) / name:; одна S получена через []-место и @-место и передана в map/select. Отдельно разрешить тип @[] общим TYPE-role normalizer.",
+          "expected": "Structure уже является void-массивом @[]; category-отказа, преобразования или новой обёртки нет. При принятии той же S identity/parent сохранены; её постоянное имя не становится ссылочной переменной. Символический атом @ принят как описание элемента; prefix-адресация не исполняется и старый []@ не используется как alias.",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        }
+      ]
+    },
+    "patterns": {
+      "source": "../../../CORE_SEQUENCES_REGEX.en.md#patterns",
+      "cases": [
+        {
+          "id": "01",
+          "case": "`literal(\"a*b\")`",
+          "expected": "Совпадает с буквальным `a*b`, без regex-разбора",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "02",
+          "case": "`(then (literal(\"a\") \\| \"ab\") \"c\")` на `abc`",
+          "expected": "Успех после возврата от `a` к `ab`",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "03",
+          "case": "`literal(\"a\") \\| \"ab\"` на `ab`",
+          "expected": "`matchAt` выбирает `a`; `wholeMatch` выбирает `ab`",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "04",
+          "case": "`(then (literal(\"a\") \\| \"ab\") (literal(\"c\") \\| \"d\"))`",
+          "expected": "Два групповых аргумента; исходные контейнеры сохраняются",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "05",
+          "case": "Специальное RHS-открытие и двойная группа",
+          "expected": "Открывается только один разрешённый правый уровень; слева ничего не открывается",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "06",
+          "case": "Пустые и одноэлементные S",
+          "expected": "`then`/`choice` дают описанные identity/failure; Array не разворачивается сам",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "07",
+          "case": "`within(\"z\"; \"a\")`; отрицательное число повторений",
+          "expected": "`PatternArgument`, не ложное совпадение и не перестановка аргументов",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "08",
+          "case": "`makeP() times 0`; `P atMost 0`",
+          "expected": "Пустой успех без сопоставления P; написанный построитель выполнен один раз",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "09",
+          "case": "Поиск `<...>` с `extendFirst` и `stopFirst` на `<b><c>`",
+          "expected": "Первый вариант получает `<b><c>`, второй — `<b>`",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "10",
+          "case": "`atomic(pattern := literal(\"a\") \\| \"ab\")` затем `\"c\"` на `abc`",
+          "expected": "Отказ без возврата внутрь atomic; внешняя альтернатива всё ещё допустима",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "11",
+          "case": "`emptyPattern times 3`; `emptyPattern atLeast 0`",
+          "expected": "Конечное выполнение; минимум выполнен, лишний нулевой прогресс остановлен",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "12",
+          "case": "`eachMatch` после пустого кандидата, за которым есть непустой на том же старте",
+          "expected": "Непустой кандидат не пропущен",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "13",
+          "case": "`eachMatch` с `emptyPattern` на `ab`",
+          "expected": "Ровно три пустых результата в позициях 0, 1, 2",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "14",
+          "case": "`replace` с `emptyPattern`, `ab`, `-`",
+          "expected": "Ровно `-a-b-`",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "15",
+          "case": "`split` с `emptyPattern` на `ab`",
+          "expected": "Ровно четыре поля: пустое, `a`, `b`, пустое",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "16",
+          "case": "Повторение `capture(\"x\"; oneOf(\"ab\"))` на `ab`",
+          "expected": "История x содержит отдельно `a` и `b`",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "17",
+          "case": "Неудачная ветвь создала x; успешная ветвь создала x вновь",
+          "expected": "В результате только capture успешной ветви",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "18",
+          "case": "Отсутствующий capture, пустой capture и `sameAs`",
+          "expected": "Три состояния различаются; пустой capture может успешно повториться",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "19",
+          "case": "Успешный lookaround с внутренним capture",
+          "expected": "Внешняя позиция и внешний журнал captures не меняются",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "20",
+          "case": "`behind(pattern := \"a\")` перед `\"b\"` с позиции 1 на `ab`",
+          "expected": "Успех `[1,2)`; источник слева не включён в результат",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "21",
+          "case": "Emoji вне BMP в UTF‑8 и byte-профиле",
+          "expected": "Одна scalar unit против четырёх байтов; позиции не смешиваются",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "22",
+          "case": "Невалидный UTF‑8 внутри отрицательного lookaround",
+          "expected": "Ошибка кодировки, а не успех отрицания",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "23",
+          "case": "Caller имеет locals `left`, `right`, `name`, `captures`",
+          "expected": "У новых слов private исключает случайный autofill; captures не становятся caller-locals",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "24",
+          "case": "Замена callable при отвергнутых пробных путях",
+          "expected": "Callback вызван по одному разу на выбранное совпадение; вставленный текст не сканируется",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "25",
+          "case": "Приостановленный iterator и результаты с source view",
+          "expected": "Используются descriptor+indices и обычный lifetime; выданные Match не переписываются дальнейшим перебором",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "26",
+          "case": "`asciiLetter \\| asciiDigit`, та же альтернатива после обёртки в `then`",
+          "expected": "Единый порядок Pattern-кандидатов и ошибок; особой Class-union ветви нет",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "27",
+          "case": "Числовой `\\|`, Array-выражения без Pattern, `p \\|= q` для Pattern",
+          "expected": "Прежние применения сохранены; составное присваивание использует обычный приём результата",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "28",
+          "case": "Готовые части переданы через универсальный @; проверены разные допустимые виды Arrays и неподходящий числовой элемент",
+          "expected": "Доступ по действительному типу без дополнительной упаковки; Pattern/текст сохраняют смысл и parent. Число получает обычный отказ приёма, а не становится символом. Изменяемая длина и capacity используют существующее ядро",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "29",
+          "case": "Именованный и безымянный `Pattern[]` из примеров §3 переданы в choice",
+          "expected": "Оба варианта сохраняют порядок cat, dog; wholeMatch принимает cat и dog, отвергает cow. Написанные literal вызываются по одному разу при конструировании, без предварительного сопоставления; именованный actual передаёт один массив",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "30",
+          "case": "В sequence/choice передано отсутствующее значение после `[]: parts` либо `Pattern[]: parts`; отдельно передан готовый пустой массив",
+          "expected": "Отсутствующее значение не читается как пустой массив и не даёт identity/failure шаблонов: действует обычный отказ использования. Для действительно пустого массива остаются emptyPattern/neverPattern из §5.2",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "31",
+          "case": "Получить `Pattern[]` несколько раз и отдельно передать этот код типа вместо массива частей; получить `@[]` в TYPE-роли",
+          "expected": "Получение типа использует общий интернированный int-код, не создаёт массив и не запускает Pattern. В `@[]` тот же нормализатор принимает символьный атом типа `@` и возвращает общий код Structure / void-array без выполнения адресного префикса. Код типа как значение не принимается за последовательность parts; подробные constructor/typecode проверки находятся в [core-приёмке](LMX_Array_Reference_Types_Core.ru.md#acceptance)",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "32",
+          "case": "Повторно использовать закэшированное отношение типов, применяя один `literal(\"cat\")` к текстам cat и dog одинакового типа",
+          "expected": "`wholeMatch` успешен только на cat. Type-only satisfies и его кэш не подменяют содержимое текста, значение Pattern или результат сопоставления",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "33",
+          "case": "`Pattern[]: [copy(S)]` и именованный `Pattern[]: parts [copy(S)]` получают S из двух готовых шаблонов; отдельно проверить heads `(Struct)[]: tail` и `(Struct)@: ptr` из §3",
+          "expected": "Используются обычные массивы и одна карта каждой явно вызванной copy; ни тела Pattern, ни будущий вход не исполняются при переносе. Компоновка не вводит wrapper, особый layout или новый смысл `::`. В составном head обычная группа `(Struct)` сохраняется; её автоматическое удаление и равенство типу без группы не предполагаются. Общие fixtures и результат нормализации проверяются по [core-приёмке](LMX_Array_Reference_Types_Core.ru.md#acceptance)",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "34",
+          "case": "Для готовых P=literal(\"cat\") и Q=literal(\"dog\") получить части через безымянное `[]: [P Q]`, `[]: parts [P Q]`, `@: parts [P Q]` и DATA-декларации `Parts(P Q)` / `Parts: P Q` в отдельных fixtures; сопоставить с `[]: parts` без initializer",
+          "expected": "Группа создаёт готовую Structure / массив ссылок; имя без initializer объявляет отсутствующее значение. Различие определяется исходной формой первого аргумента до вычисления и не меняется из-за значения resolvedName. Готовые формы непосредственно пригодны для sequence/choice: sequence сопоставляет catdog, choice сохраняет порядок cat, dog. DATA-декларация не вызывает тела P/Q; её имя постоянно, а ссылочная переменная допускает обычное присваивание",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "35",
+          "case": "Передать одну готовую Structure S непосредственно, затем через `[]: arrayParts S` и `@: referenceParts S`; сравнить identities и результаты sequence/choice",
+          "expected": "Во всех случаях используется тот же контейнер S и те же части с прежними parent. Нет отказа по категории «Structure вместо Array», нового wrapper, copy или отдельного Pattern/TextView kind; неподходящий элемент по-прежнему вызывает обычный отказ приёма",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "36",
+          "case": "hasPrefix на prefix-tail с literal prefix; тот же pattern внутри xprefix",
+          "expected": "1 и 0; проверяется только старт 0, хвост разрешён",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "37",
+          "case": "hasSuffix на head-suffix с literal suffix; тот же pattern только в начале",
+          "expected": "1 и 0; требуется конец ровно на длине текста",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "38",
+          "case": "hasSuffix на ababa с aba; на ab с упорядоченной альтернативой a или ab",
+          "expected": "Оба 1; перекрытие и поздняя доходящая до конца альтернатива не теряются",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "39",
+          "case": "Оба предиката с emptyPattern на пустом/непустом тексте и с neverPattern",
+          "expected": "Для emptyPattern 1, для neverPattern 0; пустой успех не является отсутствием",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "40",
+          "case": "UTF-8 scalar и byte-профиль, anchors и lookaround у границ",
+          "expected": "Общие единицы и полный контекст сохранены; source не режется ради проверки суффикса",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        },
+        {
+          "id": "41",
+          "case": "Невалидный UTF-8 и объявленный отказ callback в hasPrefix/hasSuffix",
+          "expected": "Ошибка сохраняется, не превращается в 0; применяется общий declared-exit путь",
+          "modes": {
+            "interpreter_interpreter": "NOT_RUN",
+            "interpreter_native": "NOT_RUN",
+            "native_interpreter": "NOT_RUN",
+            "native_native": "NOT_RUN"
+          }
+        }
+      ]
+    }
+  }
+}

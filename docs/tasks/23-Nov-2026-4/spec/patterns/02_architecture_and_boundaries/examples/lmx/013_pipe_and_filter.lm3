@@ -1,0 +1,17 @@
+Filters:
+    int: value
+    return: int
+    normalize:
+        if: value < 0
+            return: -value
+        return: value
+    double:
+        return: value * 2
+    offset:
+        return: value + 1
+    pipeline:
+        throws: copy(FxThrows\call) FxArity FxRecordArity ReceiverIndex
+        return: value pipe normalize double offset
+    demo:
+        throws: copy(FxThrows\call) FxArity FxRecordArity ReceiverIndex
+        return: pipeline(-3)

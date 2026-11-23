@@ -1,0 +1,326 @@
+{
+  "scope": "H01-H09 and Haskell Analogies.hs",
+  "status": "completed and independently reviewed; static/document consistency checks passed; no LMX or GHC execution claimed",
+  "entries": [
+    {
+      "id": "H01",
+      "old_non_whitespace_characters": 314,
+      "new_non_whitespace_characters": 237,
+      "changed": true,
+      "decision": "library_without_operand",
+      "reason_ru": "Повторяемый apply отделён от прикладных действий; обычный вызов уже выражает весь механизм, операнд добавил бы заголовок без пользы.",
+      "reason_en": "Extract reusable apply, keep application actions and rebinding in the client; an operand adds machinery to one direct call.",
+      "lmx_dependencies": [
+        "examples/libraries/lmx/Application.lm3"
+      ],
+      "haskell_dependencies": [
+        "examples/libraries/haskell/IntApply.hs"
+      ],
+      "implementation_comparison": "examples/library_comparisons/h01_apply_comparision.md",
+      "preserved_expected_values": [
+        1408
+      ],
+      "preserved_controls": [
+        "Changing chosen replaces its reference without invoking it."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 77,
+      "library_size_excluded_from_client_only": true
+    },
+    {
+      "id": "H02",
+      "old_non_whitespace_characters": 272,
+      "new_non_whitespace_characters": 272,
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Позиционный контракт fn и собственные имена кандидата должны остаться видимыми; библиотека спрятала бы предмет сравнения.",
+      "reason_en": "Keep signature positions and candidate names visible; a helper would hide the mechanism under test.",
+      "lmx_dependencies": [],
+      "haskell_dependencies": [],
+      "implementation_comparison": null,
+      "preserved_expected_values": [
+        2772
+      ],
+      "preserved_controls": [
+        "Swapped unequal parameter types reject the signature.",
+        "Renaming parameters preserves positional correspondence.",
+        "Changing a fn default does not change candidate defaults."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 0,
+      "library_size_excluded_from_client_only": false
+    },
+    {
+      "id": "H03",
+      "old_non_whitespace_characters": 424,
+      "new_non_whitespace_characters": 264,
+      "changed": true,
+      "decision": "reuse_existing_capture_099",
+      "reason_ru": "Использована готовая capture из 099; сложение, две фабричные активации, внешнее saved и наблюдения остаются в клиенте. Полная реализация повторно связана рядом.",
+      "reason_en": "Reuse capture from 099 while keeping arithmetic, two closures, caller saved and observations in the client; link the complete implementation.",
+      "lmx_dependencies": [
+        "09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3"
+      ],
+      "haskell_dependencies": [
+        "examples/libraries/haskell/CurryInt.hs"
+      ],
+      "implementation_comparison": "examples/library_comparisons/h03_capture_comparision.md",
+      "preserved_expected_values": [
+        6101006
+      ],
+      "preserved_controls": [
+        "add5(1; saved := 25) rejects an unknown explicit formal.",
+        "Caller saved=1000 does not override node saved.",
+        "CapturePrototype saved remains zero."
+      ],
+      "expected_path_changes": [
+        {
+          "old": "AdderPrototype\\saved",
+          "new": "CapturePrototype\\saved",
+          "value": 0
+        },
+        {
+          "old": "returned inputs\\add with formal x",
+          "new": "returned inputs\\apply with formal second",
+          "positional_calls_unchanged": true
+        }
+      ],
+      "benefit_non_whitespace_characters": 160,
+      "library_size_excluded_from_client_only": true
+    },
+    {
+      "id": "H04",
+      "old_non_whitespace_characters": 265,
+      "new_non_whitespace_characters": 265,
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Готовый default, явные 25/0, динамический 100 и повторный вызов проверяют именно связывание DATA; capture имеет другой контракт.",
+      "reason_en": "Defaults, explicit 25/0, caller 100 and a repeated call test DATA binding, not lexical capture.",
+      "lmx_dependencies": [],
+      "haskell_dependencies": [],
+      "implementation_comparison": null,
+      "preserved_expected_values": [
+        6260106
+      ],
+      "preserved_controls": [
+        "Explicit zero is a supplied value.",
+        "Calls do not mutate the stored default 5."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 0,
+      "library_size_excluded_from_client_only": false
+    },
+    {
+      "id": "H05",
+      "old_non_whitespace_characters": 218,
+      "new_non_whitespace_characters": 218,
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "copy, изменение оригинала и dynamic/node чтения нельзя скрыть в новом caller без изменения проверяемой связи.",
+      "reason_en": "Keep copying, original mutation and dynamic/node reads explicit; another caller could change the binding under test.",
+      "lmx_dependencies": [],
+      "haskell_dependencies": [],
+      "implementation_comparison": null,
+      "preserved_expected_values": [
+        2606
+      ],
+      "preserved_controls": [
+        "dynamic(1; y := 25) does not create a formal for free y.",
+        "Original y is 8 while copied lexical y remains 5."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 0,
+      "library_size_excluded_from_client_only": false
+    },
+    {
+      "id": "H06",
+      "old_non_whitespace_characters": 290,
+      "new_non_whitespace_characters": 201,
+      "changed": true,
+      "decision": "reuse_prepared_operand_pipe_093",
+      "reason_ru": "Повторяемая цепочка стадий выражена готовым pipe; DATA начинается с copy шаблона. Полный цикл 093 и обе Haskell-версии pure/IO показаны рядом; стадии остаются прикладными.",
+      "reason_en": "Reuse a prepared-value pipe with template-first DATA; show the entire 093 loop and both pure/IO Haskell variants, leaving stages in the client.",
+      "lmx_dependencies": [
+        "02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3"
+      ],
+      "haskell_dependencies": [
+        "examples/libraries/haskell/IntPipe.hs"
+      ],
+      "implementation_comparison": "examples/library_comparisons/h06_pipe_comparision.md",
+      "preserved_expected_values": [
+        910
+      ],
+      "preserved_controls": [
+        "Each chosen stage runs once per pipeline, in order.",
+        "Bare callable references are prepared without invoking them.",
+        "Pipe does not mean graph merge or a returned closure factory."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 89,
+      "library_size_excluded_from_client_only": true
+    },
+    {
+      "id": "H07",
+      "old_non_whitespace_characters": 475,
+      "new_non_whitespace_characters": 180,
+      "changed": true,
+      "decision": "library_with_explicit_specialized_headers",
+      "reason_ru": "Два helper вынесены, но исходные typed-prepared и raw-mode1 заголовки сохранены: общий mode0 шаблон им не эквивалентен. Повторное const поверх copy не используется.",
+      "reason_en": "Extract both helpers while retaining the typed prepared and raw-mode1 headers; the generic mode0 template is not equivalent and repeated const declarations are not overrides.",
+      "lmx_dependencies": [
+        "examples/libraries/lmx/EvaluationModes.lm3"
+      ],
+      "haskell_dependencies": [
+        "examples/libraries/haskell/EvaluationModes.hs"
+      ],
+      "implementation_comparison": "examples/library_comparisons/h07_evaluation_modes_comparision.md",
+      "preserved_expected_values": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          7
+        ]
+      ],
+      "preserved_controls": [
+        "Prepared series invokes next twice; raw series invokes it four times.",
+        "Dereference is not eval; raw effects cannot be coalesced.",
+        "Source occurrences are not replaced with computed values.",
+        "No raw occurrence escapes its live context."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 295,
+      "library_size_excluded_from_client_only": true
+    },
+    {
+      "id": "H08",
+      "old_non_whitespace_characters": 122,
+      "new_non_whitespace_characters": 122,
+      "changed": false,
+      "decision": "keep_explicit_language_mechanism",
+      "reason_ru": "Короткие действия проверяют собственное место и прозрачное место caller; обёртка изменяет сам контекст, поэтому прямой код сохранён.",
+      "reason_en": "The two short actions test own versus transparent caller places; wrapping them changes the context under test.",
+      "lmx_dependencies": [],
+      "haskell_dependencies": [],
+      "implementation_comparison": null,
+      "preserved_expected_values": [
+        0,
+        3
+      ],
+      "preserved_controls": [
+        "Inline uninitialized y shadows the outer y without creating a new caller.",
+        "required detects uninit:int and the outer value is unchanged."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 0,
+      "library_size_excluded_from_client_only": false
+    },
+    {
+      "id": "H09",
+      "old_non_whitespace_characters": 285,
+      "new_non_whitespace_characters": 212,
+      "changed": true,
+      "decision": "library_without_new_operand",
+      "reason_ru": "Существующий цикл до Stop вынесен целиком; источник, декларация item и тело остаются у клиента. Prepared/raw operand добавил бы контракт либо изменил момент исполнения, поэтому не вводится.",
+      "reason_en": "Extract the existing Stop loop intact; keep source, item declaration and body in the client. No operand is added because it would alter evaluation or add an unnecessary contract.",
+      "lmx_dependencies": [
+        "examples/libraries/lmx/Cycles.lm3"
+      ],
+      "haskell_dependencies": [
+        "examples/libraries/haskell/StepIterator.hs"
+      ],
+      "implementation_comparison": "examples/library_comparisons/h09_iterator_comparision.md",
+      "preserved_expected_values": [
+        12,
+        22
+      ],
+      "preserved_controls": [
+        "Four step calls and three body executions in both series.",
+        "Zero is data rather than Stop.",
+        "Two reads of item do not invoke the producer again.",
+        "Declaration form and namespace semantics remain visible."
+      ],
+      "expected_path_changes": [],
+      "benefit_non_whitespace_characters": 73,
+      "library_size_excluded_from_client_only": true
+    }
+  ],
+  "norms_modified": false,
+  "catalog_patterns_modified": false,
+  "root_examples_separate_corpus": true,
+  "lmx_loading": "For each H case, prepare its listed dependency source(s) and client in a fresh source context using the existing Fable loader. Import opens already available names; no new file-loader syntax.",
+  "haskell_run_command": "runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs",
+  "haskell_execution": {
+    "runghc_available": false,
+    "executed": false
+  },
+  "reused_sources": [
+    {
+      "path": "09_functional_computation/examples/lmx/099_integer_partial_application_implementation.lm3",
+      "used_by": [
+        "H03"
+      ],
+      "modified": false
+    },
+    {
+      "path": "02_architecture_and_boundaries/examples/lmx/093_pipe_implementation.lm3",
+      "used_by": [
+        "H06"
+      ],
+      "modified": false
+    },
+    {
+      "path": "09_functional_computation/examples/haskell/099_integer_partial_application_implementation.hs",
+      "copy": "examples/libraries/haskell/CurryInt.hs",
+      "sha256": "b39f1ed9eb6f7b226e7f6711ec12009e38544e626f609ba0ac3b8bed740f674b",
+      "byte_identical": true
+    }
+  ],
+  "guide_modified_sections": [
+    "H01",
+    "H02",
+    "H03",
+    "H04",
+    "H05",
+    "H06",
+    "H07",
+    "H08",
+    "H09"
+  ],
+  "expected_results_updates": {
+    "H03": {
+      "original_saved_path": "CapturePrototype\\saved",
+      "original_saved_after": 0
+    },
+    "other_entry_paths_unchanged": true,
+    "numbers_unchanged": true
+  },
+  "haskell_added_checks": [
+    "H01 mutable operation replacement -> 1408",
+    "H06 library pipeline -> (9,10)",
+    "H06 IO trace -> twice,next,next,twice",
+    "H07 two-call series -> ((2,4,2),(3,7,4))",
+    "H09 iterator -> (12,4,3)",
+    "H09 zero/repeated read -> (22,4,3)",
+    "V02 uses CharacterRange; original cases retained and expanded to 11 inputs"
+  ],
+  "shared_haskell_coordination": {
+    "R01_R07_R08_A_M_tests": "retained",
+    "V02_import": "CharacterRange (between)",
+    "V02_module_owned_by": "patterns_cloud_messages"
+  },
+  "validation": {
+    "guide_lmx_blocks_match_clients": 9,
+    "full_companion_pairs_match_sources": 5,
+    "local_links_resolve": true,
+    "custom_haskell_imports_match_module_files": 6,
+    "curry_099_copy_byte_identical": true,
+    "independent_review": "patterns_ui_architecture: no API or semantic mismatches in H01/H03/H06/H07/H09; clarified ordinary right=[] versus operator single-Array argument",
+    "lmx_executed": false,
+    "haskell_executed": false
+  },
+  "publication_status": "historical report from the prior revision; superseded for current sources",
+  "superseded_by": "receiver_revision.json"
+}

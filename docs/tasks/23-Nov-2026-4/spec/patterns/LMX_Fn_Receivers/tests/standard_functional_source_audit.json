@@ -1,0 +1,101 @@
+{
+  "date": "2026-11-23",
+  "status": "PASS",
+  "scope": "Current source hashes, root references and publication counts; semantics remain required observations, no LMX parsing or execution",
+  "source_file": "../src/coreStandardFunctional.lmx",
+  "source_sha256": "17ab2dc5ca122ce1ce4eb3719958e581d53a2c0ed6ec7c0ce4a1a1ed77d19e7b",
+  "public_entries": 33,
+  "acceptance_cases": 74,
+  "cross_cutting_contracts": 7,
+  "source_lines": 561,
+  "source_nonwhitespace_characters": 11921,
+  "new_root_count": 28,
+  "referenced_roots": [
+    "FxApply",
+    "FxEqualFields",
+    "FxFlip",
+    "FxFold",
+    "FxKernel",
+    "FxKeyIndex",
+    "FxMaybe",
+    "FxNone",
+    "FxOne",
+    "FxPair",
+    "FxProjectValue",
+    "FxRecordOperands",
+    "FxScan",
+    "FxSeqAdmit",
+    "FxSeqAllocate",
+    "FxSeqConcat",
+    "FxSeqEmpty",
+    "FxSeqInfo",
+    "FxSeqInsert",
+    "FxSeqPredicate",
+    "FxSeqPush",
+    "FxSeqRead",
+    "FxSeqRecords",
+    "FxSeqReverse",
+    "FxSeqSize",
+    "FxSeqSlice",
+    "FxStdCut",
+    "FxStdCutIndex",
+    "FxStdIntersperse",
+    "FxStdMapAccumEngine",
+    "FxStdMaybeMapEngine",
+    "FxStdMembership",
+    "FxStdPair",
+    "FxStdPrefixIndex",
+    "FxStdReplicate",
+    "FxStdSetSelect",
+    "FxStdSets",
+    "FxStdWindows",
+    "FxThrows",
+    "FxTry",
+    "FxTwo",
+    "FxUnique",
+    "FxValueSame"
+  ],
+  "existing_external_providers": [
+    "FxKernel"
+  ],
+  "new_kernel_providers": [],
+  "direct_existing_kernel_calls": [
+    "arrayWrite"
+  ],
+  "baseline_name_collisions": [],
+  "missing_reference_roots": [],
+  "errors": [],
+  "runtime_status": "NOT_RUN",
+  "semantic_review": [
+    "All source elements use FxSeqRead; no dense storage reinterpretation.",
+    "Selection, slicing, chunks, windows and finite cycle preserve source profile; arbitrary mapper outputs use ready-record Arrays.",
+    "Prefix scan, Maybe map and mapAccum directions reuse common engines; callbacks retain documented order and Stop policies.",
+    "Compound Maybe/Pair callback results are admitted directly, under the existing typed-result record protocol; no extra @ level is assumed.",
+    "Enumerate exact bigint index is admitted to ordinary int according to LMX_semantics.en.md descriptions/admission; conversion range failure remains ordinary.",
+    "collect uses the existing FxTry bridge; only producer Stop means exhaustion; other declared failures retain their full outcome inside FxCallFailure. Successful true-type records are appended directly; bridge/append failures keep their finite names.",
+    "Set predicates must be pure equivalence relations; order and uniqueness are explicit and Haskell list multiset subtraction is not claimed.",
+    "References preserve their original lifetime; no user object graph or activation is copied or extended."
+  ],
+  "remaining_runtime_acceptance": [
+    "Typed primitive/reference/null/compound payloads and post-activation record lifetime.",
+    "Native and walker callback admission/failure channels.",
+    "Profile boundary size failures, numeric narrowing, and allocator limits."
+  ],
+  "collect_effect_review": {
+    "declared_names": [
+      "FxCallFailure",
+      "FxKernelFailure",
+      "FxTypeToken",
+      "ReceiverIndex",
+      "SequenceElement",
+      "SequenceSize"
+    ],
+    "removed": "FxRecordArity (the extra record capture is no longer used)",
+    "acceptance": [
+      "SF_collect_wrappedFailure",
+      "SF_collect_typedPayloads",
+      "SF_collect_kernelFailure"
+    ],
+    "runtime_status": "NOT_RUN"
+  }
+}

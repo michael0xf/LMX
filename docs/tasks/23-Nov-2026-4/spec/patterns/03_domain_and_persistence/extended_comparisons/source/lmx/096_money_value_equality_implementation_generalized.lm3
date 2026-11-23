@@ -1,0 +1,19 @@
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: length(first) != length(second)
+            return: 0
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0

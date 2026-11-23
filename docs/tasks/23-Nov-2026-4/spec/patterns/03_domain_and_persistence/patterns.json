@@ -1,0 +1,1563 @@
+{
+  "group_title_ru": "Доменная модель и хранение данных",
+  "group_title_en": "Domain model and persistence",
+  "languages": [
+    "Python",
+    "C#"
+  ],
+  "rationale_ru": "Python показывает компактные функции, dataclass и явные адаптеры; C# — records, интерфейсы и привычную организацию прикладного доступа к данным. LMX сопоставляется с обоими без обязательной иерархии классов.",
+  "rationale_en": "Python contributes compact functions, dataclasses and explicit adapters; C# contributes records, interfaces and conventional application persistence boundaries. LMX is compared without forcing class hierarchies.",
+  "overview_ru": "19 исходных паттернов 16–34 сохранены отдельно. Листинги показывают одинаковую ограниченную задачу. Внешние БД и коллекции с методами, не заданными языком, перечислены как порты: их цена не считается нулевой. Транзакция БД отличается от последовательного turn Message. HTTP-профиль LMX существует; он доставляет запрос к прикладной границе и не создаёт автоматических гарантий хранения. Все листинги авторские; источники использованы для определения паттерна. LMX-фикстура заранее помещает зависимости и начальное состояние в фактический DATA владельца; входы с потенциальной неоднозначностью позиции передаются явно по имени. Например, account\\debit(amount := 30). Листинги контролей рассчитаны на Python 3.10+, C# 12, Java 17 и Go 1.18+ там, где соответствующий язык присутствует.",
+  "overview_en": "All original patterns 16–34 remain separate. Each triplet shows the same bounded task. External database and collection contracts are explicit ports, not zero-cost builtins. Database transactions differ from serial Message turns. LMX has an HTTP profile; transport does not create storage guarantees. All listings are newly written; sources establish pattern definitions. The LMX fixture installs dependencies and initial state in the actual owner DATA before calls; potentially ambiguous actual positions are named explicitly, for example account\\debit(amount := 30). Applicable control baselines are Python 3.10+, C# 12, Java 17 and Go 1.18+.",
+  "patterns": [
+    {
+      "id": 16,
+      "name": "Repository",
+      "slug": "repository",
+      "summary_ru": "Доменный интерфейс коллекции скрывает способ получения объектов.",
+      "summary_en": "Domain collection access hides retrieval details.",
+      "scenario_ru": "Репозиторий получает две уже материализованные записи: id=7, cents=100 и id=9, cents=250. Найти id=9 и затем отсутствующий id=10.",
+      "scenario_en": "Use two materialized accounts (7,100) and (9,250); find 9 and then missing 10.",
+      "expected_ru": "Первое обращение возвращает исходный объект id=9; второе — отсутствие. Сам поиск не создаёт новый экземпляр.",
+      "expected_en": "Return the existing account 9, then absence; do not create a second instance.",
+      "lmx_notes_ru": "findFirst выполняет единственный общий поиск; локальный Match задаёт только доменное равенство id. Свободный id берётся из действующего вызова Repository через обычную динамическую связь. Общий поиск не ограничен типом ключа. Maybe явно преобразуется в прежний договор клиента: исходная ссылка при успехе и нулевая ссылка при отсутствии. Тело обхода в клиенте не повторяется.",
+      "lmx_notes_en": "findFirst performs the shared search; local Match supplies only the domain id predicate. Its free id keeps the current Repository dynamic binding. The generic search does not restrict the key type. The client explicitly converts Maybe to its established result: the original reference or a null reference, with no copied traversal.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
+      "limits_ru": "In-memory последовательность, совпадение по одному целочисленному id и первая запись при дубликатах. Возвращается исходный объект, не snapshot. Это не общий LINQ engine, не ORM и не индекс БД. Dataclass/record в клиенте описывает поля Account; алгоритм поиска реализован отдельно и полностью.",
+      "limits_en": "This is an in-memory sequence matched by one integer id, returning the first duplicate. The original object is returned, not a snapshot. It is not a LINQ engine, ORM, or database index. Client dataclass/record declarations describe Account fields; the complete search algorithm is separately implemented.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Repository:\n    @[]: rows\n    int: id\n    return: @\n    Match:\n        @: row\n        return: int\n        accepts:\n            return: row\\id = id\n    find:\n        throws: copy(FxThrows\\predicate)\n        @: found findFirst(rows; Match\\accepts)\n        if: found\\present != 0\n            return: \\found\\value\n        @: missing 0\n        return: missing\n",
+          "notes_ru": "findFirst выполняет единственный общий поиск; локальный Match задаёт только доменное равенство id. Свободный id берётся из действующего вызова Repository через обычную динамическую связь. Общий поиск не ограничен типом ключа. Maybe явно преобразуется в прежний договор клиента: исходная ссылка при успехе и нулевая ссылка при отсутствии. Тело обхода в клиенте не повторяется.",
+          "notes_en": "findFirst performs the shared search; local Match supplies only the domain id predicate. Its free id keeps the current Repository dynamic binding. The generic search does not restrict the key type. The client explicitly converts Maybe to its established result: the original reference or a null reference, with no copied traversal.",
+          "metrics": {
+            "characters": 212,
+            "nonblank_lines": 16,
+            "utf8_bytes": 355,
+            "sha256": "6d88e5dced8915af713094a8d695913cfd4ca27e06070762b1f005fbd713101a"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "from dataclasses import dataclass\n\n@dataclass\nclass Account:\n    id: int\n    cents: int\n\nclass Repository:\n    def __init__(self, rows): self.rows = rows\n    def find(self, id): return next((row for row in self.rows if row.id == id), None)\n",
+          "notes_ru": "Используются настоящие dataclass и next(generator, default). Реализация094 не импортируется.",
+          "notes_en": "Uses real dataclass and next(generator, default); implementation094 is not imported.",
+          "metrics": {
+            "characters": 189,
+            "nonblank_lines": 8,
+            "utf8_bytes": 240,
+            "sha256": "fa7e6263827f40d6f8dc509440bfcbe510439a588b053b6631cc58f54954ec53"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "#nullable enable\nusing System.Collections.Generic;\nusing System.Linq;\npublic sealed record Account(int Id, int Cents);\npublic sealed class Repository(IReadOnlyList<Account> rows) {\n    public Account? Find(int id) => rows.FirstOrDefault(row => row.Id == id);\n}\n",
+          "notes_ru": "Настоящий LINQ FirstOrDefault; Account сохраняет поля Id и Cents.",
+          "notes_en": "Real LINQ FirstOrDefault; Account retains both Id and Cents.",
+          "metrics": {
+            "characters": 227,
+            "nonblank_lines": 7,
+            "utf8_bytes": 261,
+            "sha256": "5f91b61fd055ce350c9aacf2b9fb6ea93354be6bdfed8af07543de9602cc199a"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Python next",
+          "url": "https://docs.python.org/3/library/functions.html#next",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        },
+        {
+          "title": "LINQ FirstOrDefault",
+          "url": "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.firstordefault",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        94
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
+    },
+    {
+      "id": 94,
+      "name": "FindById — implementation",
+      "slug": "find_by_id_implementation",
+      "kind": "implementation",
+      "paired_with": 16,
+      "usage_ids": [
+        16
+      ],
+      "summary_ru": "Общий findFirst возвращает Maybe первого элемента по переданному предикату.",
+      "summary_en": "Generic findFirst returns Maybe of the first element accepted by the supplied predicate.",
+      "scenario_ru": "Просмотреть упорядоченную последовательность записей, вернуть первую с нужным id или отсутствие.",
+      "scenario_en": "Scan an ordered record sequence and return the first matching id or absence.",
+      "expected_ru": "Для id 7 возвращается исходная запись 7; при повторном id возвращается первая; неизвестный id и пустой список дают отсутствие.",
+      "expected_en": "Id 7 returns its original record; duplicate ids return the first; unknown ids and empty sequences return absence.",
+      "lmx_notes_ru": "Точное текущее определение FxFindFirst извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxFindFirst definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+      "comparison_ru": "Во всех трёх языках написаны собственный цикл, сравнение id, ранний return и ветвь отсутствия. Python next/filter и C# FirstOrDefault не используются для реализации helper. LMX и Python требуют поле id структурно, C# выражает тот же нужный доступ через IIdentified. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/094_find_by_id_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
+      "comparison_en": "All implementations explicitly show their own loop, id comparison, early return, and absence branch. Python next/filter and C# FirstOrDefault are not used to implement the helper. LMX/Python require id structurally; C# exposes that required access through IIdentified. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "FxFindFirst:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    findFirst:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(items; i)\n            private: @: accepted FxApply\\apply(accepts; FxOne\\make(value))\n            if: FxSeqPredicate\\truth(accepted) != 0\n                return: FxSome\\some(value := value)\n            i += 1\n        return: FxNone\\none()\n",
+          "notes_ru": "Точное текущее определение FxFindFirst извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxFindFirst definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+          "metrics": {
+            "characters": 371,
+            "nonblank_lines": 18,
+            "utf8_bytes": 565,
+            "sha256": "741ee730c1940f0fd1e17d74de1312f39ec2c5aee70105582b30eeab577eb129"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def find_by_id(rows, id):\n    for row in rows:\n        if row.id == id:\n            return row\n    return None\n",
+          "notes_ru": "Полный lookup.py; используются только for, чтение поля, сравнение и return.",
+          "notes_en": "Complete lookup.py, using only for, field access, comparison, and return.",
+          "metrics": {
+            "characters": 68,
+            "nonblank_lines": 5,
+            "utf8_bytes": 111,
+            "sha256": "ae1f3c2f13c6cb1ae42315eb39638064b08e7d1489a381e949a8247da40a8c5a"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "#nullable enable\nusing System.Collections.Generic;\nnamespace ExampleLib {\n    public interface IIdentified { int Id { get; } }\n    public static class Records {\n        public static T? FindById<T>(IEnumerable<T> rows, int id) where T : class, IIdentified {\n            foreach (T row in rows) {\n                if (row.Id == id) return row;\n            }\n            return null;\n        }\n    }\n}\n",
+          "notes_ru": "Полный ExampleLib.Records с минимальным Id-контрактом; IEnumerable даёт только базовый обход, поиск написан здесь.",
+          "notes_en": "Complete ExampleLib.Records with the minimal Id contract; IEnumerable supplies basic traversal only, and search is implemented here.",
+          "metrics": {
+            "characters": 266,
+            "nonblank_lines": 13,
+            "utf8_bytes": 399,
+            "sha256": "da6cd58108baf0f2c6833e3c22a5639cde2f832c7cd49f9f797d506d39213448"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Repository",
+          "url": "https://martinfowler.com/eaaCatalog/repository.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "extended_comparison": "extended_comparisons/094_find_by_id_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxFindFirst"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Unit of Work",
+      "slug": "unit_of_work",
+      "summary_ru": "Накопить изменения и записать их одной транзакцией.",
+      "summary_en": "Accumulate changes and flush them in one transaction.",
+      "scenario_ru": "Пометить id=7 значениями 120, затем 130, и id=9 значением 200; выполнить flush. Повторная пометка одного id заменяет предыдущее изменение.",
+      "scenario_en": "Mark account 7 as 120 then 130, mark account 9 as 200, then flush. Repeated IDs replace their pending value.",
+      "expected_ru": "До flush записей в БД нет. Успешный flush записывает (7,130),(9,200) в одной транзакции и очищает dirty. При исключении dirty сохраняется, БД откатывается.",
+      "expected_en": "No writes before flush. A successful transaction writes (7,130),(9,200) and clears dirty; failure rolls back and retains dirty.",
+      "lmx_notes_ru": "dirty — явно переданная обычная карта с set/entries/clear, db — порт с upsert/atomic. atomic вызывает callback один раз в транзакции; commit/rollback реализует адаптер. node выбирает состояние этого Unit of Work. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+      "lmx_notes_en": "dirty is an explicitly supplied map with set/entries/clear; db supplies upsert/atomic. atomic invokes the callback once and owns commit/rollback. node selects this unit of work state. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+      "comparison_ru": "Python использует dict, C# Dictionary, LMX — переданную карту. Атомарность во всех трёх версиях принадлежит одному и тому же db.atomic контракту.",
+      "comparison_en": "Python dict, C# Dictionary and an LMX map serve the same job. All three depend on the same transaction contract.",
+      "limits_ru": "Карта сохраняет порядок первой вставки. Порт atomic гарантирует commit при нормальном возврате и rollback при исключении; nested transactions и обнаружение изменений по перехвату setters не показаны.",
+      "limits_en": "Insertion order is preserved. atomic commits normal completion and rolls back exceptions. Nested transactions and automatic setter tracking are outside scope.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Work:\n    @: dirty\n    @: db\n    int: id\n    int: cents\n    mark:\n        node\\dirty\\set(id; cents)\n    writeAll:\n        @: rows node\\dirty\\entries()\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            node\\db\\upsert(row\\id; row\\cents)\n            i += 1\n    ---\n    flush:\n        node\\db\\atomic(body := writeAll)\n        node\\dirty\\clear()\n",
+          "notes_ru": "dirty — явно переданная обычная карта с set/entries/clear, db — порт с upsert/atomic. atomic вызывает callback один раз в транзакции; commit/rollback реализует адаптер. node выбирает состояние этого Unit of Work. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+          "notes_en": "dirty is an explicitly supplied map with set/entries/clear; db supplies upsert/atomic. atomic invokes the callback once and owns commit/rollback. node selects this unit of work state. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+          "metrics": {
+            "characters": 226,
+            "nonblank_lines": 18,
+            "utf8_bytes": 379,
+            "sha256": "2617072d1926f46feac8bd69ab0973c4d6d11e31bbb8c41089bf1c1df6bae7e9"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class UnitOfWork:\n    def __init__(self, db):\n        self.db, self.dirty = db, {}\n    def mark(self, id, cents):\n        self.dirty[id] = cents\n    def flush(self):\n        def write_all():\n            for id, cents in self.dirty.items():\n                self.db.upsert(id, cents)\n        self.db.atomic(write_all)\n        self.dirty.clear()\n",
+          "notes_ru": "Карта сохраняет порядок первой вставки. Порт atomic гарантирует commit при нормальном возврате и rollback при исключении; nested transactions и обнаружение изменений по перехвату setters не показаны.",
+          "notes_en": "Insertion order is preserved. atomic commits normal completion and rolls back exceptions. Nested transactions and automatic setter tracking are outside scope.",
+          "metrics": {
+            "characters": 233,
+            "nonblank_lines": 11,
+            "utf8_bytes": 343,
+            "sha256": "4fee5a72ce8c79d0e3c1e1a96a0e8298c73a4c5a96c88a3b69c170fe1b54035e"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\nusing System.Collections.Generic;\npublic interface IDb {\n    void Upsert(int id, int cents);\n    void Atomic(Action body);\n}\npublic sealed class UnitOfWork(IDb db) {\n    readonly Dictionary<int,int> dirty = new();\n    public void Mark(int id, int cents) => dirty[id] = cents;\n    public void Flush() {\n        db.Atomic(() => { foreach (var row in dirty) db.Upsert(row.Key,row.Value); });\n        dirty.Clear();\n    }\n}\n",
+          "notes_ru": "Карта сохраняет порядок первой вставки. Порт atomic гарантирует commit при нормальном возврате и rollback при исключении; nested transactions и обнаружение изменений по перехвату setters не показаны.",
+          "notes_en": "Insertion order is preserved. atomic commits normal completion and rolls back exceptions. Nested transactions and automatic setter tracking are outside scope.",
+          "metrics": {
+            "characters": 339,
+            "nonblank_lines": 14,
+            "utf8_bytes": 434,
+            "sha256": "60dcd5cf4da8e206c1ce6245abb979d3c287b08900b2adb48f31f14af0665913"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Unit of Work",
+          "url": "https://martinfowler.com/eaaCatalog/unitOfWork.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Data Mapper",
+      "slug": "data_mapper",
+      "summary_ru": "Перевод между схемой строки и независимым доменным представлением.",
+      "summary_en": "Map stored rows to a persistence-independent domain representation.",
+      "scenario_ru": "В БД строка [7,1250]; доменный объект имеет именованные поля id и cents. Загрузить его, затем сохранить cents=1300.",
+      "scenario_en": "Load row [7,1250], then save a domain account with cents=1300.",
+      "expected_ru": "После load: id=7,cents=1250. После save в rowStore записана строка [7,1300]. Доменный объект не содержит ссылку на БД.",
+      "expected_en": "load yields id=7,cents=1250; save writes [7,1300]. The domain object holds no database reference.",
+      "lmx_notes_ru": "rowStore.read(id) возвращает массив из двух int; write(id,cents) сохраняет такую строку. AccountData — independent-шаблон готовых примитивных полей. load копирует его и явно записывает id/cents в слоты результата; доменный объект не содержит rowStore.",
+      "lmx_notes_en": "rowStore.read(id) returns two ints; write(id,cents) persists the row. AccountData is an independent template of ready primitive fields. load copies it and explicitly replaces result slots with id/cents; the domain object has no rowStore reference.",
+      "comparison_ru": "Маппинг находится в отдельном компоненте во всех языках. Создание record/dataclass в контролях соответствует созданию обычной Structure LMX.",
+      "comparison_en": "Every version separates mapping from the domain object. Records/dataclasses correspond to the ordinary LMX Structure.",
+      "limits_ru": "Пример одной таблицы и двух целых колонок. Nullability, миграции схемы, отношения и SQL-драйвер требуют отдельного адаптера.",
+      "limits_en": "One table and two integer columns only. Nulls, schema changes, relationships and the SQL driver need an adapter.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "independent: AccountData:\n    int: id 0\n    int: cents 0\n\nMapper:\n    @: rowStore\n    int: id\n    @: account\n    return: @\n    load:\n        @: row rowStore\\read(id)\n        @: result (copy(AccountData))\n        result\\id := row[0]\n        result\\cents := row[1]\n        return: result\n    save:\n        rowStore\\write(account\\id; account\\cents)\n        return: account\n",
+          "notes_ru": "rowStore.read(id) возвращает массив из двух int; write(id,cents) сохраняет такую строку. AccountData — independent-шаблон готовых примитивных полей. load копирует его и явно записывает id/cents в слоты результата; доменный объект не содержит rowStore.",
+          "notes_en": "rowStore.read(id) returns two ints; write(id,cents) persists the row. AccountData is an independent template of ready primitive fields. load copies it and explicitly replaces result slots with id/cents; the domain object has no rowStore reference.",
+          "metrics": {
+            "characters": 244,
+            "nonblank_lines": 17,
+            "utf8_bytes": 370,
+            "sha256": "5b2a03261fc32a681ac15e777218accfb0d6e912bc045ce865da8b6e862a4d61"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "from dataclasses import dataclass\n@dataclass\nclass Account:\n    id: int\n    cents: int\nclass Mapper:\n    def __init__(self, rows): self.rows = rows\n    def load(self, id):\n        row = self.rows.read(id)\n        return Account(row[0], row[1])\n    def save(self, account):\n        self.rows.write(account.id, account.cents)\n        return account\n",
+          "notes_ru": "Пример одной таблицы и двух целых колонок. Nullability, миграции схемы, отношения и SQL-драйвер требуют отдельного адаптера.",
+          "notes_en": "One table and two integer columns only. Nulls, schema changes, relationships and the SQL driver need an adapter.",
+          "metrics": {
+            "characters": 260,
+            "nonblank_lines": 13,
+            "utf8_bytes": 347,
+            "sha256": "a4ee03ca349f5d37a2e7f551f631c2662df9c1ac3a68c25b6e4119fa3cc39b11"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public sealed record Account(int Id, int Cents);\npublic interface IRows {\n    int[] Read(int id);\n    void Write(int id, int cents);\n}\npublic sealed class Mapper(IRows rows) {\n    public Account Load(int id) {\n        int[] row = rows.Read(id);\n        return new Account(row[0],row[1]);\n    }\n    public Account Save(Account value) {\n        rows.Write(value.Id,value.Cents);\n        return value;\n    }\n}\n",
+          "notes_ru": "Пример одной таблицы и двух целых колонок. Nullability, миграции схемы, отношения и SQL-драйвер требуют отдельного адаптера.",
+          "notes_en": "One table and two integer columns only. Nulls, schema changes, relationships and the SQL driver need an adapter.",
+          "metrics": {
+            "characters": 302,
+            "nonblank_lines": 15,
+            "utf8_bytes": 407,
+            "sha256": "1686b6e6109bef9345e25cdfe1b95d3e89abce796ec620032be60398b81a72f1"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Data Mapper",
+          "url": "https://martinfowler.com/eaaCatalog/dataMapper.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Active Record",
+      "slug": "active_record",
+      "summary_ru": "Объект строки содержит её данные, доменную операцию и сохранение.",
+      "summary_en": "A row object owns data, domain behavior and persistence.",
+      "scenario_ru": "Счёт id=7,cents=100 выполняет debit(30), затем save. Попытка debit(80) после этого отвергается.",
+      "scenario_en": "Account 7 starts with 100 cents: debit 30, save, then try to debit 80.",
+      "expected_ru": "После первого debit значение 70, save пишет (7,70). Неверное списание не меняет 70 и не пишет БД.",
+      "expected_en": "70 is persisted; the invalid second debit leaves 70 unchanged and performs no write.",
+      "lmx_notes_ru": "Состояние обновляется через node\\cents. db — явно заданный порт upsert(id,cents). Debit и Save принадлежат одному фактическому DATA.",
+      "lmx_notes_en": "Persistent object state is updated through node. db explicitly supplies upsert. Debit and Save belong to the same actual DATA.",
+      "comparison_ru": "Active Record соединяет правила списания и сохранение в одном объекте. В отличие от Data Mapper, объект знает свой порт хранения.",
+      "comparison_en": "Unlike Data Mapper, the domain object knows its storage port.",
+      "limits_ru": "Списание и save — отдельные вызовы. Пример не обещает автоматическую транзакцию, rollback локального объекта или конкурентную защиту.",
+      "limits_en": "Debit and save are separate operations; no implicit transaction, in-memory rollback or concurrency protection is promised.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Account:\n    int: id 7\n    int: cents 100\n    @: db\n    int: amount\n    debit:\n        throws: Funds\n        if: amount < 0 || amount > node\\cents\n            throw: Funds()\n        node\\cents -= amount\n    save:\n        node\\db\\upsert(node\\id; node\\cents)\n",
+          "notes_ru": "Состояние обновляется через node\\cents. db — явно заданный порт upsert(id,cents). Debit и Save принадлежат одному фактическому DATA.",
+          "notes_en": "Persistent object state is updated through node. db explicitly supplies upsert. Debit and Save belong to the same actual DATA.",
+          "metrics": {
+            "characters": 159,
+            "nonblank_lines": 12,
+            "utf8_bytes": 257,
+            "sha256": "7199c300dca6ed89e6985f697c54917401dd41313ba1c0094d98d01da2f81e54"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Account:\n    def __init__(self, db, id=7, cents=100):\n        self.db, self.id, self.cents = db, id, cents\n    def debit(self, amount):\n        if amount < 0 or amount > self.cents: raise ValueError('funds')\n        self.cents -= amount\n    def save(self):\n        self.db.upsert(self.id, self.cents)\n",
+          "notes_ru": "Списание и save — отдельные вызовы. Пример не обещает автоматическую транзакцию, rollback локального объекта или конкурентную защиту.",
+          "notes_en": "Debit and save are separate operations; no implicit transaction, in-memory rollback or concurrency protection is promised.",
+          "metrics": {
+            "characters": 229,
+            "nonblank_lines": 8,
+            "utf8_bytes": 307,
+            "sha256": "79101a808b1043ec1ae61d31e0e6813550b07716ea27b29be2cb927d46171606"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic interface IDb { void Upsert(int id,int cents); }\npublic sealed class Account(IDb db,int id=7,int cents=100) {\n    public int Cents { get; private set; } = cents;\n    public void Debit(int amount) {\n        if (amount < 0 || amount > Cents) throw new InvalidOperationException(\"funds\");\n        Cents -= amount;\n    }\n    public void Save() => db.Upsert(id,Cents);\n}\n",
+          "notes_ru": "Списание и save — отдельные вызовы. Пример не обещает автоматическую транзакцию, rollback локального объекта или конкурентную защиту.",
+          "notes_en": "Debit and save are separate operations; no implicit transaction, in-memory rollback or concurrency protection is promised.",
+          "metrics": {
+            "characters": 300,
+            "nonblank_lines": 10,
+            "utf8_bytes": 387,
+            "sha256": "2bbc5dd43275ed5fbce3218d4e046f289164eb610f4ca626fc4c75349f9d14d5"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Active Record",
+          "url": "https://martinfowler.com/eaaCatalog/activeRecord.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Table Data Gateway",
+      "slug": "table_data_gateway",
+      "summary_ru": "Один шлюз обслуживает все строки таблицы.",
+      "summary_en": "One gateway serves every row in a table.",
+      "scenario_ru": "Прочитать balance строки 7, затем обновить balance строки 9 на 200. SQL и параметры сосредоточены в шлюзе.",
+      "scenario_en": "Read account 7; update account 9 to 200 cents. Keep SQL and parameters in the gateway.",
+      "expected_ru": "Вызваны SELECT с id=7 и UPDATE с cents=200,id=9; данные не вставлены в текст SQL.",
+      "expected_en": "Run a parameterized SELECT for 7 and UPDATE for (200,9); do not concatenate values into SQL.",
+      "lmx_notes_ru": "db.scalar(sql,id) и db.execute(sql,cents,id) — явно переданный драйвер параметризованных запросов. Текст SQL одинаков для всех трёх вариантов.",
+      "lmx_notes_en": "db.scalar and db.execute are explicit parameterized-driver methods, with identical SQL in all listings.",
+      "comparison_ru": "LMX объединяет операции структурой, Python и C# классом. Это шлюз таблицы, а не объект одной строки.",
+      "comparison_en": "An LMX Structure or a Python/C# class groups table-wide operations; this is not one object per row.",
+      "limits_ru": "Синтаксис ? в учебном драйвере — позиционный placeholder; адаптер переводит его в синтаксис конкретной БД. Транзакция определяется вызывающим.",
+      "limits_en": "The teaching driver uses positional ? placeholders and adapts them for its database. Transactions belong to the caller.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Accounts:\n    @: db\n    int: id\n    int: cents\n    return: int\n    balance:\n        return: db\\scalar(\"SELECT cents FROM account WHERE id = ?\"; id)\n    update:\n        return: db\\execute(\"UPDATE account SET cents = ? WHERE id = ?\"; cents; id)\n",
+          "notes_ru": "db.scalar(sql,id) и db.execute(sql,cents,id) — явно переданный драйвер параметризованных запросов. Текст SQL одинаков для всех трёх вариантов.",
+          "notes_en": "db.scalar and db.execute are explicit parameterized-driver methods, with identical SQL in all listings.",
+          "metrics": {
+            "characters": 169,
+            "nonblank_lines": 9,
+            "utf8_bytes": 243,
+            "sha256": "a5c5fc7aed4a3047ab10ffcd607bda706421b945f7c6abe5b0ce866b9e6e720d"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Accounts:\n    def __init__(self, db): self.db = db\n    def balance(self, id):\n        return self.db.scalar('SELECT cents FROM account WHERE id = ?', id)\n    def update(self, id, cents):\n        return self.db.execute('UPDATE account SET cents = ? WHERE id = ?', cents, id)\n",
+          "notes_ru": "Синтаксис ? в учебном драйвере — позиционный placeholder; адаптер переводит его в синтаксис конкретной БД. Транзакция определяется вызывающим.",
+          "notes_en": "The teaching driver uses positional ? placeholders and adapts them for its database. Transactions belong to the caller.",
+          "metrics": {
+            "characters": 214,
+            "nonblank_lines": 6,
+            "utf8_bytes": 280,
+            "sha256": "7d637aff84c31cb55ce1a2962ca417e11c0355e348d0e580392d9021150b9053"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public interface IDb {\n    int Scalar(string sql,int id);\n    int Execute(string sql,int cents,int id);\n}\npublic sealed class Accounts(IDb db) {\n    public int Balance(int id) => db.Scalar(\"SELECT cents FROM account WHERE id = ?\",id);\n    public int Update(int id,int cents) => db.Execute(\"UPDATE account SET cents = ? WHERE id = ?\",cents,id);\n}\n",
+          "notes_ru": "Синтаксис ? в учебном драйвере — позиционный placeholder; адаптер переводит его в синтаксис конкретной БД. Транзакция определяется вызывающим.",
+          "notes_en": "The teaching driver uses positional ? placeholders and adapts them for its database. Transactions belong to the caller.",
+          "metrics": {
+            "characters": 280,
+            "nonblank_lines": 8,
+            "utf8_bytes": 346,
+            "sha256": "cb71e9347c348d1d61cfa205c52a49059d89051aca172a27ba0689d56905cd9e"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Table Data Gateway",
+          "url": "https://martinfowler.com/eaaCatalog/tableDataGateway.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "Row Data Gateway",
+      "slug": "row_data_gateway",
+      "summary_ru": "Шлюз одной строки хранит её ключ и значения, но не доменные правила.",
+      "summary_en": "A gateway for one row stores its key and values, without domain rules.",
+      "scenario_ru": "Шлюз строки id=7 получает новое значение cents=150 и вызывает update.",
+      "scenario_en": "For row 7, set cents to 150 and call update.",
+      "expected_ru": "UPDATE получает параметры (150,7). В шлюзе нет правила доступного баланса или списания.",
+      "expected_en": "UPDATE receives (150,7); there is no balance validation or debit rule.",
+      "lmx_notes_ru": "node выбирает хранимые id/cents шлюза. Внешний код может явным присваиванием изменить поле перед update.",
+      "lmx_notes_en": "node selects the stored row fields. Client code explicitly edits cents before update.",
+      "comparison_ru": "Один экземпляр на строку отличает этот вариант от Table Data Gateway; отсутствие доменного debit отличает его от Active Record.",
+      "comparison_en": "One gateway per row distinguishes this from Table Data Gateway; the absence of business operations distinguishes it from Active Record.",
+      "limits_ru": "Отдельный finder и получение результата SQL не показаны. Конкурентное обновление без версии может перезаписать чужое изменение.",
+      "limits_en": "Finder construction and query results are omitted. Without a version check, concurrent updates can overwrite each other.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Row:\n    @: db\n    int: id 7\n    int: cents 150\n    return: int\n    update:\n        return: node\\db\\execute(\"UPDATE account SET cents = ? WHERE id = ?\"; node\\cents; node\\id)\n",
+          "notes_ru": "node выбирает хранимые id/cents шлюза. Внешний код может явным присваиванием изменить поле перед update.",
+          "notes_en": "node selects the stored row fields. Client code explicitly edits cents before update.",
+          "metrics": {
+            "characters": 121,
+            "nonblank_lines": 7,
+            "utf8_bytes": 174,
+            "sha256": "00ded1dd56e712611ed6b8cb26777e19b26843c4e9316aa5c76adf2aece79a36"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class RowGateway:\n    def __init__(self, db, id, cents):\n        self.db, self.id, self.cents = db, id, cents\n    def update(self):\n        return self.db.execute('UPDATE account SET cents = ? WHERE id = ?', self.cents, self.id)\n",
+          "notes_ru": "Отдельный finder и получение результата SQL не показаны. Конкурентное обновление без версии может перезаписать чужое изменение.",
+          "notes_en": "Finder construction and query results are omitted. Without a version check, concurrent updates can overwrite each other.",
+          "metrics": {
+            "characters": 176,
+            "nonblank_lines": 5,
+            "utf8_bytes": 229,
+            "sha256": "31929ab09f67ebe559b4f01203feea96e6bc3eba7115524c548cf1870f99a991"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public interface IDb { int Execute(string sql,int cents,int id); }\npublic sealed class RowGateway(IDb db,int id,int cents) {\n    public int Cents { get; set; } = cents;\n    public int Update() => db.Execute(\"UPDATE account SET cents = ? WHERE id = ?\",Cents,id);\n}\n",
+          "notes_ru": "Отдельный finder и получение результата SQL не показаны. Конкурентное обновление без версии может перезаписать чужое изменение.",
+          "notes_en": "Finder construction and query results are omitted. Without a version check, concurrent updates can overwrite each other.",
+          "metrics": {
+            "characters": 214,
+            "nonblank_lines": 5,
+            "utf8_bytes": 264,
+            "sha256": "e52f8fb81e9e2978834c4762393c3c28803748afef064dec7ddcab385381c587"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Row Data Gateway",
+          "url": "https://martinfowler.com/eaaCatalog/rowDataGateway.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "DAO — Data Access Object",
+      "slug": "dao",
+      "summary_ru": "Прикладной код зависит от операций доступа, а не от устройства хранилища.",
+      "summary_en": "Application code depends on access operations rather than storage details.",
+      "scenario_ru": "Один сервис читает баланс id=7 через DAO. Подставить адаптер БД с результатом 100, затем тестовый DAO с результатом 25.",
+      "scenario_en": "Call the same service with a database DAO returning 100 and a test DAO returning 25.",
+      "expected_ru": "Сервис возвращает 100 и 25 без изменения своей реализации.",
+      "expected_en": "The service returns 100 and 25 without modification.",
+      "lmx_notes_ru": "Балансовый DAO — обычная переданная структура с методом readBalance. Реализация DbDao хранит явно заданный db; FixedDao предназначен для теста.",
+      "lmx_notes_en": "The DAO is an explicitly passed Structure with readBalance. DbDao has an explicit database dependency; FixedDao is a test adapter.",
+      "comparison_ru": "Структурная совместимость LMX, duck typing Python и интерфейс C# выражают одинаковую границу. DAO здесь возвращает scalar, а Repository обычно предоставляет доменную коллекцию.",
+      "comparison_en": "LMX structural compatibility, Python duck typing and a C# interface express the boundary. This scalar DAO differs from a domain collection Repository.",
+      "limits_ru": "Проверка интерфейса не гарантирует корректность SQL или транзакций. Структуры адаптеров создаются и снабжаются зависимостями явно.",
+      "limits_en": "Interface admission does not establish SQL correctness or transaction guarantees; adapters and dependencies are supplied explicitly.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "DbDao:\n    @: db\n    int: id\n    return: int\n    readBalance:\n        return: db\\scalar(\"SELECT cents FROM account WHERE id = ?\"; id)\n\nFixedDao:\n    int: id\n    return: int\n    readBalance:\n        return: 25\n\nService:\n    @: dao\n    int: id\n    return: int\n    read:\n        return: dao\\readBalance(id)\n",
+          "notes_ru": "Балансовый DAO — обычная переданная структура с методом readBalance. Реализация DbDao хранит явно заданный db; FixedDao предназначен для теста.",
+          "notes_en": "The DAO is an explicitly passed Structure with readBalance. DbDao has an explicit database dependency; FixedDao is a test adapter.",
+          "metrics": {
+            "characters": 198,
+            "nonblank_lines": 17,
+            "utf8_bytes": 304,
+            "sha256": "00e195e51d60beea20b15171d00fd4f3414cb24b6eaf9e337bd94008cc5926b7"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class DbDao:\n    def __init__(self, db): self.db = db\n    def read_balance(self, id):\n        return self.db.scalar('SELECT cents FROM account WHERE id = ?', id)\nclass FixedDao:\n    def read_balance(self, id): return 25\ndef read(dao, id):\n    return dao.read_balance(id)\n",
+          "notes_ru": "Проверка интерфейса не гарантирует корректность SQL или транзакций. Структуры адаптеров создаются и снабжаются зависимостями явно.",
+          "notes_en": "Interface admission does not establish SQL correctness or transaction guarantees; adapters and dependencies are supplied explicitly.",
+          "metrics": {
+            "characters": 214,
+            "nonblank_lines": 8,
+            "utf8_bytes": 271,
+            "sha256": "da633ee8c2dbe8b6523e1b48e5b4b4aed38bdd5339cba3f8f171010f114c7331"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public interface IDao { int ReadBalance(int id); }\npublic interface IDb { int Scalar(string sql,int id); }\npublic sealed class DbDao(IDb db) : IDao {\n    public int ReadBalance(int id) => db.Scalar(\"SELECT cents FROM account WHERE id = ?\",id);\n}\npublic sealed class FixedDao : IDao {\n    public int ReadBalance(int id) => 25;\n}\npublic static class Service {\n    public static int Read(IDao dao,int id) => dao.ReadBalance(id);\n}\n",
+          "notes_ru": "Проверка интерфейса не гарантирует корректность SQL или транзакций. Структуры адаптеров создаются и снабжаются зависимостями явно.",
+          "notes_en": "Interface admission does not establish SQL correctness or transaction guarantees; adapters and dependencies are supplied explicitly.",
+          "metrics": {
+            "characters": 349,
+            "nonblank_lines": 11,
+            "utf8_bytes": 428,
+            "sha256": "75d85a7267c27b220edb44282a1bb7a41e29767c94e627c5847755bdfa79c841"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Oracle — Core J2EE Patterns: Data Access Object",
+          "url": "https://www.oracle.com/java/technologies/dataaccessobject.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "name": "DTO — Data Transfer Object",
+      "slug": "dto",
+      "summary_ru": "Собрать разрешённые поля в одно передаваемое значение.",
+      "summary_en": "Project allowed fields into one transport value.",
+      "scenario_ru": "Доменная запись имеет id=7, cents=1250 и секретное поле token. Проекция export выбирает только id и cents.",
+      "scenario_en": "Account 7 has 1250 cents and a secret token. Export only id and cents.",
+      "expected_ru": "Результат содержит ровно id=7 и cents=1250; token и методы доменного объекта не попадают в DTO.",
+      "expected_en": "The result contains exactly id=7 and cents=1250; neither token nor domain methods is included.",
+      "lmx_notes_ru": "AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake. Сокращение 23-Nov: One merge initializes both independent DTO fields; the source account is not returned.",
+      "lmx_notes_en": "AccountDto is an independent template of two ready primitive fields. dto copies it, explicitly writes computed values to the result slots and returns the formed DTO. LMX HTTP already supports application/lmx; projection precedes serialization and Message intake.",
+      "comparison_ru": "Во всех трёх вариантах проекция явная. Само наличие сериализатора не делает автоматическую выгрузку всего доменного графа подходящим DTO.",
+      "comparison_en": "All three projections are explicit. A serializer does not make whole-domain-graph export an appropriate DTO.",
+      "limits_ru": "Сетевой round trip не исполняется листингом. Транспортный профиль задаёт кодировку, versioning и допуск; DTO не является Value Object только из-за отсутствия методов.",
+      "limits_en": "The listing performs no network round trip. The transport profile defines encoding, versioning and admission; DTO and Value Object are distinct roles.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "independent: AccountDto:\n    int: id 0\n    int: cents 0\n\nExport:\n    @: account\n    return: @\n    dto:\n        return: (merge(AccountDto; (int: id account\\id; int: cents account\\cents)))\n",
+          "notes_ru": "AccountDto — independent-шаблон двух готовых примитивных полей. dto копирует его, явно записывает вычисленные значения в слоты и возвращает готовый DTO. HTTP-профиль LMX уже передаёт application/lmx; проекция предшествует сериализации и Message intake. Сокращение 23-Nov: One merge initializes both independent DTO fields; the source account is not returned.",
+          "notes_en": "AccountDto is an independent template of two ready primitive fields. dto copies it, explicitly writes computed values to the result slots and returns the formed DTO. LMX HTTP already supports application/lmx; projection precedes serialization and Message intake.",
+          "metrics": {
+            "characters": 136,
+            "nonblank_lines": 8,
+            "utf8_bytes": 187,
+            "sha256": "7e16425b871af37557f75ce43d51cc586e067eb7c33615ef8a602a6e16724a25"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "from dataclasses import dataclass\n@dataclass(frozen=True)\nclass AccountDto:\n    id: int\n    cents: int\ndef export(account):\n    return AccountDto(account.id, account.cents)\n",
+          "notes_ru": "Сетевой round trip не исполняется листингом. Транспортный профиль задаёт кодировку, versioning и допуск; DTO не является Value Object только из-за отсутствия методов.",
+          "notes_en": "The listing performs no network round trip. The transport profile defines encoding, versioning and admission; DTO and Value Object are distinct roles.",
+          "metrics": {
+            "characters": 145,
+            "nonblank_lines": 7,
+            "utf8_bytes": 173,
+            "sha256": "6f6626dc10f8c059516d39695da0da3d68828a83fe01ffda6c033abfd81485ad"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public sealed record AccountDto(int Id,int Cents);\npublic sealed record Account(int Id,int Cents,string Token);\npublic static class Export {\n    public static AccountDto Dto(Account account) => new(account.Id,account.Cents);\n}\n",
+          "notes_ru": "Сетевой round trip не исполняется листингом. Транспортный профиль задаёт кодировку, versioning и допуск; DTO не является Value Object только из-за отсутствия методов.",
+          "notes_en": "The listing performs no network round trip. The transport profile defines encoding, versioning and admission; DTO and Value Object are distinct roles.",
+          "metrics": {
+            "characters": 197,
+            "nonblank_lines": 5,
+            "utf8_bytes": 227,
+            "sha256": "ac40dcff1c074603ef6a8f85c4260a74628dde6e5c10e9bf1b69387a1d96e2f3"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Data Transfer Object",
+          "url": "https://martinfowler.com/eaaCatalog/dataTransferObject.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "name": "Domain Model",
+      "slug": "domain_model",
+      "summary_ru": "Разместить бизнес-инвариант рядом с доменным состоянием.",
+      "summary_en": "Keep a business invariant with domain state.",
+      "scenario_ru": "Счёт с 100 единицами принимает debit(30), затем debit(80). Только неотрицательная сумма в пределах остатка разрешена.",
+      "scenario_en": "An account starts at 100; debit 30, then attempt 80. Only nonnegative amounts within the balance are valid.",
+      "expected_ru": "Первая операция оставляет 70; вторая завершается Funds/исключением и оставляет 70.",
+      "expected_en": "The first debit returns 70; the second raises Funds/an exception and leaves 70 unchanged.",
+      "lmx_notes_ru": "node\\balance — явное доменное состояние выбранного экземпляра. Обычное balance := ... изменяло бы локальное место вызова.",
+      "lmx_notes_en": "node\\balance selects instance state. An unqualified assignment would update the invocation local.",
+      "comparison_ru": "Данные и правило принадлежат одному доменному компоненту во всех языках; зависимости от БД нет.",
+      "comparison_en": "Every version combines data and the invariant without a persistence dependency.",
+      "limits_ru": "Целые единицы исключают округление. Одновременный доступ требует владельца Message либо выбранного механизма синхронизации; пример однопоточный.",
+      "limits_en": "Integer units avoid rounding. Concurrent access needs an owner Message or another explicit synchronization policy; this is a serial core.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Account:\n    int: balance 100\n    int: amount\n    return: int\n    debit:\n        throws: Funds\n        if: amount < 0 || amount > node\\balance\n            throw: Funds()\n        node\\balance -= amount\n        return: node\\balance\n",
+          "notes_ru": "node\balance — явное доменное состояние выбранного экземпляра. Обычное balance := ... изменяло бы локальное место вызова.",
+          "notes_en": "node\\balance selects instance state. An unqualified assignment would update the invocation local.",
+          "metrics": {
+            "characters": 144,
+            "nonblank_lines": 10,
+            "utf8_bytes": 230,
+            "sha256": "978cf1e89025b53e9d5d4142def62bb10c8afd918ef5cf33db6a2365ad5dfebb"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Account:\n    def __init__(self, balance=100): self.balance = balance\n    def debit(self, amount):\n        if amount < 0 or amount > self.balance: raise ValueError('funds')\n        self.balance -= amount\n        return self.balance\n",
+          "notes_ru": "Целые единицы исключают округление. Одновременный доступ требует владельца Message либо выбранного механизма синхронизации; пример однопоточный.",
+          "notes_en": "Integer units avoid rounding. Concurrent access needs an owner Message or another explicit synchronization policy; this is a serial core.",
+          "metrics": {
+            "characters": 179,
+            "nonblank_lines": 6,
+            "utf8_bytes": 237,
+            "sha256": "811b9800cdc513a5bef7b76578c675b3491b771ca928f9530973fdd413bb3ad4"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic sealed class Account(int balance=100) {\n    public int Balance { get; private set; } = balance;\n    public int Debit(int amount) {\n        if (amount < 0 || amount > Balance) throw new InvalidOperationException(\"funds\");\n        Balance -= amount;\n        return Balance;\n    }\n}\n",
+          "notes_ru": "Целые единицы исключают округление. Одновременный доступ требует владельца Message либо выбранного механизма синхронизации; пример однопоточный.",
+          "notes_en": "Integer units avoid rounding. Concurrent access needs an owner Message or another explicit synchronization policy; this is a serial core.",
+          "metrics": {
+            "characters": 224,
+            "nonblank_lines": 9,
+            "utf8_bytes": 301,
+            "sha256": "0ef8869a1c6183f0d1a9a6df3ad85097f294ecbb1f118bc115a5ce74501f8ae1"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Domain Model",
+          "url": "https://martinfowler.com/eaaCatalog/domainModel.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Transaction Script",
+      "slug": "transaction_script",
+      "summary_ru": "Одна процедура организует один прикладной запрос.",
+      "summary_en": "One procedure handles one application request.",
+      "scenario_ru": "Перевести 30 из счёта 1 со 100 единицами на счёт 2 с 20 единицами; повторить в отдельной транзакции недопустимый перевод 200.",
+      "scenario_en": "Transfer 30 from account 1 (100) to account 2 (20), then attempt 200 in a separate transaction.",
+      "expected_ru": "Первый запрос атомарно даёт 70 и 50. Второй не меняет остатки и сообщает Funds.",
+      "expected_en": "The first request atomically produces 70 and 50; the second raises Funds and changes neither balance.",
+      "lmx_notes_ru": "db.atomic вызывает body синхронно; readLocked блокирует нужную строку до конца транзакции. В сценарии fromId < toId; для общего случая нужен единый порядок захвата. Все db-методы — порт адаптера. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+      "lmx_notes_en": "db.atomic runs body synchronously; readLocked holds each row lock to transaction end. This scenario uses fromId < toId; a general API needs consistent lock ordering. These are adapter methods. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+      "comparison_ru": "Правило и последовательность работы с БД находятся в одной процедуре каждого языка. Объекты доменной модели не обязательны для этого паттерна.",
+      "comparison_en": "Each language places the request rule and database sequence in one procedure; a rich domain object hierarchy is unnecessary.",
+      "limits_ru": "Одинаковый контракт атомарности и блокировок задан для всех вариантов. Исключения откатывают БД, но не произвольные внешние эффекты.",
+      "limits_en": "All versions use the same atomicity and locking contract. Rollback covers database changes, not arbitrary external effects.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Transfer:\n    @: db\n    int: fromId\n    int: toId\n    int: amount\n    body:\n        throws: Funds\n        int: a db\\readLocked(fromId)\n        int: b db\\readLocked(toId)\n        if: amount < 0 || fromId = toId || a < amount\n            throw: Funds()\n        db\\write(fromId; a - amount)\n        db\\write(toId; b + amount)\n    execute:\n        db\\atomic(body := body)\n",
+          "notes_ru": "db.atomic вызывает body синхронно; readLocked блокирует нужную строку до конца транзакции. В сценарии fromId < toId; для общего случая нужен единый порядок захвата. Все db-методы — порт адаптера. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+          "notes_en": "db.atomic runs body synchronously; readLocked holds each row lock to transaction end. This scenario uses fromId < toId; a general API needs consistent lock ordering. These are adapter methods. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+          "metrics": {
+            "characters": 232,
+            "nonblank_lines": 15,
+            "utf8_bytes": 368,
+            "sha256": "cfda4ba228aa3c6ccabde42fd4c8fbe8069bc676a78c64168ec87cbfeffdb512"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def transfer(db, from_id, to_id, amount):\n    def body():\n        a, b = db.read_locked(from_id), db.read_locked(to_id)\n        if amount < 0 or from_id == to_id or a < amount:\n            raise ValueError('funds')\n        db.write(from_id, a - amount)\n        db.write(to_id, b + amount)\n    db.atomic(body)\n",
+          "notes_ru": "Одинаковый контракт атомарности и блокировок задан для всех вариантов. Исключения откатывают БД, но не произвольные внешние эффекты.",
+          "notes_en": "All versions use the same atomicity and locking contract. Rollback covers database changes, not arbitrary external effects.",
+          "metrics": {
+            "characters": 222,
+            "nonblank_lines": 8,
+            "utf8_bytes": 309,
+            "sha256": "33172af63ad0b1702f01322aa50ed32cb59b67498a94c8dcca834095dc9ffee2"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic interface IDb {\n    int ReadLocked(int id);\n    void Write(int id,int value);\n    void Atomic(Action body);\n}\npublic static class Transfers {\n    public static void Transfer(IDb db,int fromId,int toId,int amount) {\n        db.Atomic(() => {\n            int a=db.ReadLocked(fromId), b=db.ReadLocked(toId);\n            if (amount<0 || fromId==toId || a<amount) throw new InvalidOperationException(\"funds\");\n            db.Write(fromId,a-amount);\n            db.Write(toId,b+amount);\n        });\n    }\n}\n",
+          "notes_ru": "Одинаковый контракт атомарности и блокировок задан для всех вариантов. Исключения откатывают БД, но не произвольные внешние эффекты.",
+          "notes_en": "All versions use the same atomicity and locking contract. Rollback covers database changes, not arbitrary external effects.",
+          "metrics": {
+            "characters": 387,
+            "nonblank_lines": 16,
+            "utf8_bytes": 522,
+            "sha256": "cff322f2994b13041d99e94a482e1d4195da2005cea21937dcab98b789ae0805"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Transaction Script",
+          "url": "https://martinfowler.com/eaaCatalog/transactionScript.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "name": "Table Module",
+      "slug": "table_module",
+      "summary_ru": "Один модуль вычисляет бизнес-логику над всеми строками набора.",
+      "summary_en": "One module applies business logic to a complete row set.",
+      "scenario_ru": "Таблица содержит строки quantity=2,price=10 и quantity=3,price=7. Модуль вычисляет сумму заказа.",
+      "scenario_en": "Rows (quantity=2,price=10) and (quantity=3,price=7) form an order.",
+      "expected_ru": "Итог 41; строки остаются неизменными.",
+      "expected_en": "Total is 41; input rows remain unchanged.",
+      "lmx_notes_ru": "rows — массив структур quantity/price. Один метод обслуживает весь набор, не создавая доменный объект на каждую строку.",
+      "lmx_notes_en": "rows is an Array of quantity/price Structures. One module owns the operation over the table.",
+      "comparison_ru": "LMX и Python обходят строки, C# использует цикл с тем же умножением и сложением. Здесь важна единица организации логики, а не тип коллекции.",
+      "comparison_en": "All versions perform the same multiply-and-sum loop; organization, not collection syntax, defines the pattern.",
+      "limits_ru": "Налог, округление и переполнение исключены согласованным диапазоном целых входов. SQL и DataTable не обязательны для демонстрации Table Module.",
+      "limits_en": "Inputs are bounded integers without overflow. Tax and rounding are excluded. SQL and DataTable are not required to demonstrate a Table Module.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "OrderTable:\n    @[]: rows\n    return: int\n    total:\n        int: result 0\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            result += row\\quantity * row\\price\n            i += 1\n        return: result\n",
+          "notes_ru": "rows — массив структур quantity/price. Один метод обслуживает весь набор, не создавая доменный объект на каждую строку.",
+          "notes_en": "rows is an Array of quantity/price Structures. One module owns the operation over the table.",
+          "metrics": {
+            "characters": 131,
+            "nonblank_lines": 11,
+            "utf8_bytes": 240,
+            "sha256": "3c69481976530d82bbd2520b71e2cb395e053eac4ab84ee9c822e12eb861908b"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class OrderTable:\n    def __init__(self, rows): self.rows = rows\n    def total(self):\n        result = 0\n        for row in self.rows:\n            result += row['quantity'] * row['price']\n        return result\n",
+          "notes_ru": "Налог, округление и переполнение исключены согласованным диапазоном целых входов. SQL и DataTable не обязательны для демонстрации Table Module.",
+          "notes_en": "Inputs are bounded integers without overflow. Tax and rounding are excluded. SQL and DataTable are not required to demonstrate a Table Module.",
+          "metrics": {
+            "characters": 142,
+            "nonblank_lines": 7,
+            "utf8_bytes": 210,
+            "sha256": "886ef16f864e2e7f59d81fa3a79247eba81e828305a647e8d8c37bb5ea6a3458"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System.Collections.Generic;\npublic sealed record Row(int Quantity,int Price);\npublic sealed class OrderTable(IReadOnlyList<Row> rows) {\n    public int Total() {\n        int result=0;\n        foreach (var row in rows) result += row.Quantity*row.Price;\n        return result;\n    }\n}\n",
+          "notes_ru": "Налог, округление и переполнение исключены согласованным диапазоном целых входов. SQL и DataTable не обязательны для демонстрации Table Module.",
+          "notes_en": "Inputs are bounded integers without overflow. Tax and rounding are excluded. SQL and DataTable are not required to demonstrate a Table Module.",
+          "metrics": {
+            "characters": 224,
+            "nonblank_lines": 9,
+            "utf8_bytes": 288,
+            "sha256": "42a16dc3b1e6d77c59861bc625093d8eaf3898df6ed70201de136b0bd750b811"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Table Module",
+          "url": "https://martinfowler.com/eaaCatalog/tableModule.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "name": "Service Layer",
+      "slug": "service_layer",
+      "summary_ru": "Одинаковая прикладная операция доступна разным интерфейсам через одну границу.",
+      "summary_en": "Expose the same application operation to multiple interfaces.",
+      "scenario_ru": "CLI и HTTP-обработчик вызывают checkout(accountId=7,amount=30). Сервис загружает свежую доменную копию, выполняет debit и сохраняет её в транзакции.",
+      "scenario_en": "CLI and HTTP both invoke checkout(7,30). Load a fresh domain copy, debit it, then save in one transaction.",
+      "expected_ru": "Оба входа выполняют одинаковую цепочку load → debit → save. При недостатке средств save не вызывается и транзакция откатывается.",
+      "expected_en": "Both entrances use load → debit → save. Insufficient funds skip save and roll back the database.",
+      "lmx_notes_ru": "db.atomic, repository.load/save и доменный account.debit заданы портами. load даёт свежую копию; поэтому неуспешный запрос не портит общий identity map. Для HTTP используются существующий профиль и Message intake перед сервисом. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+      "lmx_notes_en": "db.atomic, repository and account.debit are explicit ports. load returns a fresh copy. LMX HTTP uses its documented profile and Message intake before the service. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+      "comparison_ru": "Транспортные интерфейсы тонкие; сервис координирует домен и инфраструктуру. В отличие от Transaction Script, бизнес-правило debit вынесено в доменный объект.",
+      "comparison_en": "Transport adapters stay thin. The service coordinates the domain and infrastructure; unlike Transaction Script, debit rules live in the domain object.",
+      "limits_ru": "Листинг показывает сервис, а не маршрутизатор и SQL backend. Транзакция не откатывает внешние уведомления; для них нужен outbox.",
+      "limits_en": "The listing excludes HTTP routing and the SQL backend. External notifications require an outbox rather than assuming transaction rollback covers them.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Checkout:\n    @: db\n    @: repository\n    int: accountId\n    int: amount\n    body:\n        @: account repository\\load(accountId)\n        account\\debit(amount := amount)\n        repository\\save(account := account)\n    execute:\n        db\\atomic(body := body)\n",
+          "notes_ru": "db.atomic, repository.load/save и доменный account.debit заданы портами. load даёт свежую копию; поэтому неуспешный запрос не портит общий identity map. Для HTTP используются существующий профиль и Message intake перед сервисом. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E.",
+          "notes_en": "db.atomic, repository and account.debit are explicit ports. load returns a fresh copy. LMX HTTP uses its documented profile and Message intake before the service. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity.",
+          "metrics": {
+            "characters": 179,
+            "nonblank_lines": 11,
+            "utf8_bytes": 258,
+            "sha256": "73eb117cdca509f4913e24fe5fa773e6681f8c3107879f4258510d060eefbb2a"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def checkout(db, repository, account_id, amount):\n    def body():\n        account = repository.load(account_id)\n        account.debit(amount)\n        repository.save(account)\n    db.atomic(body)\n",
+          "notes_ru": "Листинг показывает сервис, а не маршрутизатор и SQL backend. Транзакция не откатывает внешние уведомления; для них нужен outbox.",
+          "notes_en": "The listing excludes HTTP routing and the SQL backend. External notifications require an outbox rather than assuming transaction rollback covers them.",
+          "metrics": {
+            "characters": 150,
+            "nonblank_lines": 6,
+            "utf8_bytes": 195,
+            "sha256": "17534e3e1f82f82466d4cbfa2bb6a6c7337750ffdee645d8ef493f9ba014cda3"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic interface IAccount { void Debit(int amount); }\npublic interface IRepository {\n    IAccount Load(int id);\n    void Save(IAccount account);\n}\npublic interface IDb { void Atomic(Action body); }\npublic static class Checkout {\n    public static void Execute(IDb db,IRepository repository,int accountId,int amount) {\n        db.Atomic(() => {\n            IAccount account=repository.Load(accountId);\n            account.Debit(amount);\n            repository.Save(account);\n        });\n    }\n}\n",
+          "notes_ru": "Листинг показывает сервис, а не маршрутизатор и SQL backend. Транзакция не откатывает внешние уведомления; для них нужен outbox.",
+          "notes_en": "The listing excludes HTTP routing and the SQL backend. External notifications require an outbox rather than assuming transaction rollback covers them.",
+          "metrics": {
+            "characters": 387,
+            "nonblank_lines": 16,
+            "utf8_bytes": 508,
+            "sha256": "1fb3c6904864ab26f8b27e22dc1638f6f58c62ed4dcd18790f13621d0627e9c8"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Service Layer",
+          "url": "https://martinfowler.com/eaaCatalog/serviceLayer.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "name": "Identity Map",
+      "slug": "identity_map",
+      "summary_ru": "Одна сессия возвращает один объект для одного ключа.",
+      "summary_en": "One session returns one object identity per key.",
+      "scenario_ru": "Вызвать get(7) дважды, затем get(9); loader создаёт новый объект при каждом реальном чтении.",
+      "scenario_en": "Call get(7), get(7), get(9). The loader creates a fresh object on each real read.",
+      "expected_ru": "Loader вызывается дважды. Два результата для id=7 имеют одну идентичность; объект id=9 другой.",
+      "expected_en": "The loader runs twice. Both results for 7 are the same object; the result for 9 differs.",
+      "lmx_notes_ru": "cache — явная карта с has/get/set; load — переданный callable. Identity Map принадлежит одной сессии или одному Message, не скрытому глобальному registry.",
+      "lmx_notes_en": "cache supplies has/get/set; load is explicit. The identity map belongs to a session or one Message, never a hidden process registry.",
+      "comparison_ru": "Словарь Python, Dictionary C# и карта LMX хранят именно ссылки. Копирование объекта при каждом get уничтожило бы смысл паттерна.",
+      "comparison_en": "Each implementation stores references. Copying on every get would violate the identity requirement.",
+      "limits_ru": "Один последовательный владелец; конкурентный miss требует координации. Инвалидация между транзакциями и составные ключи задаются приложением.",
+      "limits_en": "The owner is serial; concurrent misses need coordination. Cross-transaction invalidation and composite keys are application policy.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Session:\n    @: cache\n    @: load\n    int: id\n    return: @\n    get:\n        if: !cache\\has(id)\n            cache\\set(id; load(id))\n        return: cache\\get(id)\n",
+          "notes_ru": "cache — явная карта с has/get/set; load — переданный callable. Identity Map принадлежит одной сессии или одному Message, не скрытому глобальному registry.",
+          "notes_en": "cache supplies has/get/set; load is explicit. The identity map belongs to a session or one Message, never a hidden process registry.",
+          "metrics": {
+            "characters": 98,
+            "nonblank_lines": 9,
+            "utf8_bytes": 162,
+            "sha256": "1e76895134732b990a03cec2d49af2ecb1d3458018edca94f96a8438f0f57f18"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Session:\n    def __init__(self, load): self.load, self.cache = load, {}\n    def get(self, id):\n        if id not in self.cache:\n            self.cache[id] = self.load(id)\n        return self.cache[id]\n",
+          "notes_ru": "Один последовательный владелец; конкурентный miss требует координации. Инвалидация между транзакциями и составные ключи задаются приложением.",
+          "notes_en": "The owner is serial; concurrent misses need coordination. Cross-transaction invalidation and composite keys are application policy.",
+          "metrics": {
+            "characters": 148,
+            "nonblank_lines": 6,
+            "utf8_bytes": 207,
+            "sha256": "babe0a34cd4557dd71c5ea432f7a1c6d72db9df735a78ec92c14ed789922f33c"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\nusing System.Collections.Generic;\npublic sealed class Session(Func<int,object> load) {\n    readonly Dictionary<int,object> cache = new();\n    public object Get(int id) {\n        if (!cache.TryGetValue(id,out var value)) {\n            value=load(id);\n            cache.Add(id,value);\n        }\n        return value;\n    }\n}\n",
+          "notes_ru": "Один последовательный владелец; конкурентный miss требует координации. Инвалидация между транзакциями и составные ключи задаются приложением.",
+          "notes_en": "The owner is serial; concurrent misses need coordination. Cross-transaction invalidation and composite keys are application policy.",
+          "metrics": {
+            "characters": 245,
+            "nonblank_lines": 12,
+            "utf8_bytes": 337,
+            "sha256": "be4ef42c7918173c10ac96942ab8bb97d58f44b7d9d3480741fcb9e329d0ebae"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Identity Map",
+          "url": "https://martinfowler.com/eaaCatalog/identityMap.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "name": "Lazy Load",
+      "slug": "lazy_load",
+      "summary_ru": "Загрузить значение при первом обращении и сохранить успешный результат.",
+      "summary_en": "Load on first use and retain a successful value.",
+      "scenario_ru": "Дважды прочитать holder.get; loader возвращает 0. В отдельном сценарии первая загрузка бросает исключение, вторая возвращает 0.",
+      "scenario_en": "Read twice when load returns zero. Separately test a failing first load followed by a successful zero.",
+      "expected_ru": "В первом сценарии loader вызван один раз. Во втором ошибка не устанавливает loaded, поэтому второе обращение повторяет загрузку.",
+      "expected_en": "The successful scenario loads once. A failed attempt leaves loaded false and can be retried.",
+      "lmx_notes_ru": "loaded отделён от value: ноль является корректным значением, а не отсутствием. Изменения хранимого holder проходят через node.",
+      "lmx_notes_en": "loaded is separate from value because zero is valid. node updates the persistent holder fields.",
+      "comparison_ru": "Во всех версиях одинаковый marker и одинаковый порядок: вычислить, сохранить, затем отметить loaded.",
+      "comparison_en": "All versions compute first, store the result, then publish the loaded flag.",
+      "limits_ru": "Сериализованный доступ; потокобезопасность не выводится из двух проверок флага. В LMX общий holder размещается у владельца Message.",
+      "limits_en": "Access is serial. Two flag checks do not establish thread safety; a shared LMX holder is owned by a Message.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Holder:\n    int: loaded 0\n    int: value 0\n    @: load\n    return: int\n    get:\n        if: !node\\loaded\n            int: result node\\load()\n            node\\value := result\n            node\\loaded := 1\n        return: node\\value\n",
+          "notes_ru": "loaded отделён от value: ноль является корректным значением, а не отсутствием. Изменения хранимого holder проходят через node.",
+          "notes_en": "loaded is separate from value because zero is valid. node updates the persistent holder fields.",
+          "metrics": {
+            "characters": 133,
+            "nonblank_lines": 11,
+            "utf8_bytes": 230,
+            "sha256": "4764422ba9e23e78090461984d1000897a65706531f8182f46c5a57af1d9931b"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Holder:\n    def __init__(self, load):\n        self.load, self.loaded, self.value = load, False, 0\n    def get(self):\n        if not self.loaded:\n            value = self.load()\n            self.value, self.loaded = value, True\n        return self.value\n",
+          "notes_ru": "Сериализованный доступ; потокобезопасность не выводится из двух проверок флага. В LMX общий holder размещается у владельца Message.",
+          "notes_en": "Access is serial. Two flag checks do not establish thread safety; a shared LMX holder is owned by a Message.",
+          "metrics": {
+            "characters": 176,
+            "nonblank_lines": 8,
+            "utf8_bytes": 259,
+            "sha256": "7cffc69f89a1c82b28c38e1fde13e297537d6006f9688b0e7f6d5d39a69a4555"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic sealed class Holder(Func<int> load) {\n    bool loaded;\n    int value;\n    public int Get() {\n        if (!loaded) {\n            int result=load();\n            value=result;\n            loaded=true;\n        }\n        return value;\n    }\n}\n",
+          "notes_ru": "Сериализованный доступ; потокобезопасность не выводится из двух проверок флага. В LMX общий holder размещается у владельца Message.",
+          "notes_en": "Access is serial. Two flag checks do not establish thread safety; a shared LMX holder is owned by a Message.",
+          "metrics": {
+            "characters": 155,
+            "nonblank_lines": 13,
+            "utf8_bytes": 259,
+            "sha256": "e9791e4ce1992f7e567de0a803b129b67b824ce57950b1525cc39e351786df1c"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Lazy Load",
+          "url": "https://martinfowler.com/eaaCatalog/lazyLoad.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "name": "Query Object",
+      "slug": "query_object",
+      "summary_ru": "Представить запрос данными и централизованно перевести его в параметризованный SQL.",
+      "summary_en": "Represent a query as data and translate it to parameterized SQL.",
+      "scenario_ru": "Объект диапазона min=100,max=200 выбирает строки с cents внутри включительных границ.",
+      "scenario_en": "A range query [100,200] filters balances inclusively.",
+      "expected_ru": "Драйвер получает SQL с двумя placeholders и параметры (100,200); данные 99,100,200,201 дают две подходящие строки.",
+      "expected_en": "The driver receives two placeholders and parameters (100,200); values 99,100,200,201 yield two rows.",
+      "lmx_notes_ru": "Поля query обычные данные; execute выполняет их интерпретацию. db.query(sql,min,max) — явный адаптер, результат — массив строк.",
+      "lmx_notes_en": "Query fields are data; execute interprets them. db.query is an explicitly supplied adapter returning rows.",
+      "comparison_ru": "Объект запроса не обязан строить строку конкатенацией. Все реализации сохраняют значения отдельно от SQL.",
+      "comparison_en": "Every implementation keeps parameters separate from SQL text.",
+      "limits_ru": "Задана только грамматика диапазона одной колонки; это не универсальный SQL AST. Проверка min<=max выполняется во всех трёх вариантах.",
+      "limits_en": "Only a one-column range grammar is provided, not a universal SQL AST. Every version rejects minimum>maximum.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "RangeQuery:\n    int: minimum\n    int: maximum\n    @: db\n    return: @\n    execute:\n        throws: Range\n        if: minimum > maximum\n            throw: Range()\n        return: db\\query(\"SELECT id,cents FROM account WHERE cents BETWEEN ? AND ?\"; minimum; maximum)\n",
+          "notes_ru": "Поля query обычные данные; execute выполняет их интерпретацию. db.query(sql,min,max) — явный адаптер, результат — массив строк.",
+          "notes_en": "Query fields are data; execute interprets them. db.query is an explicitly supplied adapter returning rows.",
+          "metrics": {
+            "characters": 178,
+            "nonblank_lines": 10,
+            "utf8_bytes": 265,
+            "sha256": "3217e15262c7b530245b6d5613a9c676bc60ed71f77f58e02346fd5dbc33c3bf"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "from dataclasses import dataclass\n@dataclass(frozen=True)\nclass RangeQuery:\n    minimum: int\n    maximum: int\n    def execute(self, db):\n        if self.minimum > self.maximum: raise ValueError('range')\n        return db.query('SELECT id,cents FROM account WHERE cents BETWEEN ? AND ?', self.minimum, self.maximum)\n",
+          "notes_ru": "Задана только грамматика диапазона одной колонки; это не универсальный SQL AST. Проверка min<=max выполняется во всех трёх вариантах.",
+          "notes_en": "Only a one-column range grammar is provided, not a universal SQL AST. Every version rejects minimum>maximum.",
+          "metrics": {
+            "characters": 254,
+            "nonblank_lines": 8,
+            "utf8_bytes": 315,
+            "sha256": "242687e1e006d93976a7f975d2d8d581b21ae79d23d6983efef189d3f9e6feda"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic interface IDb { object Query(string sql,int minimum,int maximum); }\npublic sealed record RangeQuery(int Minimum,int Maximum) {\n    public object Execute(IDb db) {\n        if (Minimum>Maximum) throw new ArgumentException(\"range\");\n        return db.Query(\"SELECT id,cents FROM account WHERE cents BETWEEN ? AND ?\",Minimum,Maximum);\n    }\n}\n",
+          "notes_ru": "Задана только грамматика диапазона одной колонки; это не универсальный SQL AST. Проверка min<=max выполняется во всех трёх вариантах.",
+          "notes_en": "Only a one-column range grammar is provided, not a universal SQL AST. Every version rejects minimum>maximum.",
+          "metrics": {
+            "characters": 294,
+            "nonblank_lines": 8,
+            "utf8_bytes": 360,
+            "sha256": "9cae790a94787c4a69e08ea065ce4b16bf12f80526993b4d30dd2bddee8fe30a"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Query Object",
+          "url": "https://martinfowler.com/eaaCatalog/queryObject.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "name": "Specification",
+      "slug": "specification",
+      "summary_ru": "Комбинировать предикаты, отделённые от проверяемого значения.",
+      "summary_en": "Compose predicates independently of their candidate values.",
+      "scenario_ru": "Соединить nonnegative и below100 через AND; проверить -1,50,100.",
+      "scenario_en": "Combine nonnegative and below100 with AND; test -1,50,100.",
+      "expected_ru": "Результаты false,true,false. Правый предикат не вызывается, если левый дал false.",
+      "expected_en": "Results are false,true,false; the right predicate is skipped when the left is false.",
+      "lmx_notes_ru": "allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.",
+      "lmx_notes_en": "allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
+      "limits_ru": "Показаны только int-предикаты без объявленных failure при проверке значения. build не выполняет проверки заранее. Генерация SQL, сериализация и subsumption не включены. Это исполняемая Specification, не satisfies. Короткий клиент и полный код combinator измеряются отдельно.",
+      "limits_en": "Only int predicates without declared evaluation failures are included. build does not evaluate them early. SQL generation, serialization, and subsumption are excluded. Executable Specification is distinct from satisfies. Client and complete combinator implementation are measured separately.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Predicates:\n    int: value\n    return: int\n    nonnegative:\n        return: value >= 0\n    below100:\n        return: value < 100\n\nSpecificationExample:\n    return: @\n    build:\n        throws: copy(FxThrows\\adapter)\n        return: allOf(predicates := (Predicates\\nonnegative; Predicates\\below100))\n",
+          "notes_ru": "allOf строит общий callable с фактической сигнатурой предикатов и коротким замыканием. Обход, проверка сигнатур и построение узла находятся в ядре; локального both нет. В примере используются два int-предиката, но построитель допускает произвольное конечное число совместимых предикатов. Пустому набору требуется явно переданный контракт. build не исполняет тела предикатов.",
+          "notes_en": "allOf builds a callable with the predicates' actual signature and short-circuit evaluation. Traversal, signature admission and node construction belong to the core. This client uses two integer predicates, while the builder accepts any finite compatible collection; an empty collection requires an explicit contract. build does not execute predicate bodies.",
+          "metrics": {
+            "characters": 216,
+            "nonblank_lines": 12,
+            "utf8_bytes": 299,
+            "sha256": "79e54f011d49d512690b733ff25cfe05b5d9c349ab25dcffbb8bfb766a81e359"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def nonnegative(value): return value >= 0\ndef below100(value): return value < 100\n\ndef build():\n    return lambda value: all(p(value) for p in (nonnegative, below100))\n",
+          "notes_ru": "Настоящий builtin all с ленивым generator; specification.py не подключается.",
+          "notes_en": "Real builtin all with a lazy generator; no specification.py import.",
+          "metrics": {
+            "characters": 140,
+            "nonblank_lines": 4,
+            "utf8_bytes": 168,
+            "sha256": "8be367e5aa00a15bff6de11dcbff14d3288418416629ad16b94d929cf7f51469"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\nusing System.Linq;\npublic static class Specifications {\n    public static bool Nonnegative(int value) => value >= 0;\n    public static bool Below100(int value) => value < 100;\n    public static Func<int,bool> Build() {\n        Func<int,bool>[] checks = [Nonnegative, Below100];\n        return value => checks.All(p => p(value));\n    }\n}\n",
+          "notes_ru": "Настоящий Enumerable.All сохраняет short-circuit.",
+          "notes_en": "Real Enumerable.All preserves short-circuit evaluation.",
+          "metrics": {
+            "characters": 274,
+            "nonblank_lines": 10,
+            "utf8_bytes": 351,
+            "sha256": "6063370efdbf06f21703e8dc7393ceb0624de1000ff01fc37fbf7de8d8d1cb71"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Python all",
+          "url": "https://docs.python.org/3/library/functions.html#all",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        },
+        {
+          "title": "LINQ All",
+          "url": "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.all",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        95
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
+    },
+    {
+      "id": 95,
+      "name": "Specification combinator — implementation",
+      "slug": "specification_combinator_implementation",
+      "kind": "implementation",
+      "paired_with": 31,
+      "usage_ids": [
+        31
+      ],
+      "summary_ru": "Общий allOf строит callable произвольной совместимой сигнатуры с коротким замыканием.",
+      "summary_en": "Generic allOf builds a short-circuit callable with the actual compatible signature.",
+      "scenario_ru": "Сохранить две callable-ссылки и вернуть новый int-предикат. При каждом вызове проверить левую часть; правую вызывать только после true.",
+      "scenario_en": "Retain two callable references and return a new int predicate. At each invocation evaluate the left side, then the right side only after true.",
+      "expected_ru": "nonnegative both below100 даёт false,true,false для -1,50,100. При false слева счётчик правых вызовов не растёт. Повторный вызов использует сохранённые ссылки.",
+      "expected_en": "nonnegative both below100 yields false,true,false for -1,50,100. A false left result does not increment a right-call counter. Repeated calls reuse the retained references.",
+      "lmx_notes_ru": "Точное текущее определение FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+      "comparison_ru": "LMX явно строит сохраняемый граф и выбирает владельца; Python closure и C# lambda сохраняют ссылки средствами языка. Все три тела показывают собственный AND через &&/and и не вызывают готовый both. Ни SQL-expression builder, ни скрытый AST evaluator не используется. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/095_specification_combinator_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
+      "comparison_en": "LMX explicitly constructs the retained graph and selects its owner; Python closures and C# lambdas retain references through language facilities. All three implement their own AND using &&/and, without calling a ready both. No SQL expression builder or hidden AST evaluator is used. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "FxAllOfTypeToken:\n    integer:\n        int: value\n\nFxAllOfState:\n    @: predicates 0\n\nFxAllOfEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        private: int: i 0\n        while: i < length(state\\predicates)\n            private: @: predicate \\state\\predicates[i]\n            private: @: flag FxApplyPlaces\\apply(predicate; frame)\n            if: FxSeqPredicate\\truth(flag) = 0\n                return: (0 FxRecordOperands\\record)\n            i += 1\n        return: (1 FxRecordOperands\\record)\n\nFxAllOf:\n    private:\n        @: predicates\n        @: contract 0\n    required: predicates\n    return: @\n    allOf:\n        throws: copy(FxThrows\\adapter)\n        private: @: values FxSeqRecords\\make(source := predicates)\n        private: @: selected contract\n        private: @: integerType FxKernel\\normalizeType(FxAllOfTypeToken\\integer[0])\n        private: @: policy 0\n        if: selected = 0\n            if: length(values) = 0\n                throw: FxArity()\n            private: @: first \\values[0]\n            private: @: info FxKernel\\signature(first)\n            selected := FxSignatures\\make(info\\inputTypes; integerType)\n            policy := FxFullPolicy\\make(first)\n        else:\n            policy := FxOwnPolicy\\make(selected)\n        private: @: shape FxKernel\\signature(selected)\n        if: shape\\hasResult = 0\n            throw: FxTypeToken()\n        if: \\shape\\resultType != \\integerType\n            throw: FxTypeToken()\n        private: @: failures (copy(()))\n        private: int: i 0\n        while: i < length(values)\n            private: @: operation \\values[i]\n            private: @: info FxKernel\\signature(operation)\n            if: info\\hasResult = 0 || length(info\\inputTypes) != length(shape\\inputTypes)\n                throw: FxTypeToken()\n            if: \\info\\resultType != \\integerType\n                throw: FxTypeToken()\n            private: int: position 0\n            while: position < length(shape\\inputTypes)\n                if: \\info\\inputTypes[position] != \\shape\\inputTypes[position]\n                    throw: FxTypeToken()\n                position += 1\n            failures := FxFailures\\union(failures; info\\throws)\n            i += 1\n        private: @: state (copy(FxAllOfState))\n        state\\predicates := values\n        return: FxWrap\\make(selected; FxAllOfEngine\\run; state; failures; policy)\n",
+          "notes_ru": "Точное текущее определение FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+          "metrics": {
+            "characters": 1673,
+            "nonblank_lines": 65,
+            "utf8_bytes": 2472,
+            "sha256": "08e554b84ccf16464e44a58e725a36fcd1876d0f1b0cc328f2287a5693e41e13"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def both(left, right):\n    def accepts(value):\n        return left(value) and right(value)\n    return accepts\n",
+          "notes_ru": "Полный specification.py; обычная closure сохраняет две ссылки, and реализует короткое замыкание.",
+          "notes_en": "Complete specification.py; an ordinary closure retains two references, and implements short-circuiting.",
+          "metrics": {
+            "characters": 83,
+            "nonblank_lines": 4,
+            "utf8_bytes": 110,
+            "sha256": "adbe0e402580298f911a52fef38e400f4a91730039248c6b444c05952a800484"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\nnamespace ExampleLib {\n    public static class Specification {\n        public static Func<int,bool> Both(Func<int,bool> left, Func<int,bool> right) {\n            return value => left(value) && right(value);\n        }\n    }\n}\n",
+          "notes_ru": "Полный компонент ExampleLib.Specification; Func — только тип callable, Both реализован здесь.",
+          "notes_en": "Complete ExampleLib.Specification; Func is only the callable type, and Both is implemented here.",
+          "metrics": {
+            "characters": 176,
+            "nonblank_lines": 8,
+            "utf8_bytes": 239,
+            "sha256": "b3e4ba7012b0dd2715e60d5ad19ed9d2aed4e5dcd61e8c94bacd203ad946fdb4"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Eric Evans and Martin Fowler — Specifications",
+          "url": "https://martinfowler.com/apsupp/spec.pdf",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        },
+        {
+          "title": "Python — Boolean operations",
+          "url": "https://docs.python.org/3/library/stdtypes.html#boolean-operations-and-or-not",
+          "why_ru": "Правый операнд and вызывается по необходимости.",
+          "why_en": "and evaluates its right operand only when needed."
+        },
+        {
+          "title": "Microsoft — conditional logical operators",
+          "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/boolean-logical-operators",
+          "why_ru": "Короткое замыкание встроенного &&.",
+          "why_en": "Short-circuit behavior of built-in &&."
+        }
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "extended_comparison": "extended_comparisons/095_specification_combinator_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfTypeToken"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfState"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOfEngine"
+        },
+        {
+          "source": "../LMX_Fn_Receivers/src/coreComparisonGroups.lmx",
+          "definition": "FxAllOf"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "name": "Value Object",
+      "slug": "value_object",
+      "summary_ru": "Равенство определяется значением, а не адресом экземпляра.",
+      "summary_en": "Equality follows component values rather than object identity.",
+      "scenario_ru": "Сравнить отдельно созданные Money(100,840) и Money(100,840), затем Money(100,978). Currency — числовой код валюты.",
+      "scenario_en": "Compare distinct Money(100,840) values, then compare with Money(100,978). Currency is an integer code.",
+      "expected_ru": "Первые два значения равны, третье отличается. demo кодирует эти две проверки как 10; идентичность объектов для равенства не требуется.",
+      "expected_en": "The first pair is equal and the third value differs. demo encodes the two checks as 10; equality does not require object identity.",
+      "lmx_notes_ru": "equals использует единственный общий выбор равенства и явно переданную проекцию MoneyFields. Проекция выбирает только cents/currency, вычисляется один раз для каждого достигнутого значения и возвращает целые поля. Общее equalFields не применяется ко всей Money-структуре вместо предметного отношения. run возвращает 10, как раньше; copy/merge создают новые значения и не меняют существующие. Профиль Money является частью клиента, алгоритм равенства — частью ядра.",
+      "lmx_notes_en": "equals reuses the common equality dispatch with an explicit MoneyFields projection, evaluated once per reached value. The projection selects only cents and currency; equality over every physical Money field is not substituted for this domain relation. run still yields 10. copy/merge construct new values without changing the originals; Money is the client profile and the equality algorithm belongs to the core.",
+      "comparison_ru": "Восстановлен исходный конечный договор 22-Nov и короткий LMX-клиент. Контрольные языки сохраняют естественные стандартные средства из 23-Nov. Узкая реализация LMX показана отдельно; более общий алгоритм 23-Nov имеет отдельный договор. Реализация LMX общая и обобщённая; контрольный клиент сохраняет оговорённый прикладной профиль. Это не утверждение равного полного охвата стандартных библиотек.",
+      "comparison_en": "The finite 22-Nov contract and short LMX client are restored. Controls retain the natural standard facilities from 23-Nov. The narrow LMX implementation is shown separately; the wider 23-Nov algorithm has its own contract. The LMX implementation is shared and generic; the foreign client retains its stated application profile. The source comparison does not equate the complete general-purpose library coverage.",
+      "limits_ru": "Сравниваются только cents и currency двух уже допустимых Money-значений. Компоненты неизменяемы; низкоуровневая замена графовых фрагментов не является API компонента. Арифметика валют, хеширование и округление не включены. Клиент и полная реализация учитываются раздельно; типы и правила хранения языков не приравниваются.",
+      "limits_en": "Only cents and currency of already admissible Money values are compared. Components are read-only; low-level graph-fragment replacement is not part of the component API. Currency arithmetic, hashing, and rounding are excluded. Client and full implementation are counted separately; language type and storage guarantees are not equated.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "MoneyLibrary:\n    immutable: Money:\n        int: cents 100\n        int: currency 840\n\nMoneyFields:\n    @: value\n    return: @\n    select:\n        return: (value\\cents; value\\currency)\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxThrows\\predicate) FxRecordArity\n        @: money MoneyLibrary\\immutable\\Money\n        @: first (copy(money))\n        @: second (copy(money))\n        @: third (merge(money; immutable: (int: currency 978)))\n        return: equals(first; second; MoneyFields\\select) * 10 + equals(first; third; MoneyFields\\select)\n",
+          "notes_ru": "equals использует единственный общий выбор равенства и явно переданную проекцию MoneyFields. Проекция выбирает только cents/currency, вычисляется один раз для каждого достигнутого значения и возвращает целые поля. Общее equalFields не применяется ко всей Money-структуре вместо предметного отношения. run возвращает 10, как раньше; copy/merge создают новые значения и не меняют существующие. Профиль Money является частью клиента, алгоритм равенства — частью ядра.",
+          "notes_en": "equals reuses the common equality dispatch with an explicit MoneyFields projection, evaluated once per reached value. The projection selects only cents and currency; equality over every physical Money field is not substituted for this domain relation. run still yields 10. copy/merge construct new values without changing the originals; Money is the client profile and the equality algorithm belongs to the core.",
+          "metrics": {
+            "characters": 401,
+            "nonblank_lines": 18,
+            "utf8_bytes": 550,
+            "sha256": "3a4a5a0fbf469854e659a6b7781cf7db017d539ce2e7aa5971ea854cb41a8ecd"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "from dataclasses import dataclass\n\n@dataclass(frozen=True, slots=True)\nclass Money:\n    cents: int = 100\n    currency: int = 840\n\ndef demo():\n    first, second, third = Money(), Money(), Money(currency=978)\n    return int(first == second) * 10 + int(first == third)\n",
+          "notes_ru": "Реальный frozen dataclass и сгенерированное value equality; money.py не импортируется.",
+          "notes_en": "Real frozen dataclass and generated value equality; no money.py import.",
+          "metrics": {
+            "characters": 213,
+            "nonblank_lines": 8,
+            "utf8_bytes": 266,
+            "sha256": "041569b150cbb992e4a0874f7774f6a07cf090f830434c2aa04b3e2054d2a904"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public sealed record Money(int Cents = 100, int Currency = 840);\npublic static class Example {\n    public static int Demo() {\n        Money first = new(), second = new(), third = new(Currency: 978);\n        return (first == second ? 10 : 0) + (first == third ? 1 : 0);\n    }\n}\n",
+          "notes_ru": "Настоящий record class; оба поля и компонентное равенство сохранены.",
+          "notes_en": "Real record class; both fields and component equality are preserved.",
+          "metrics": {
+            "characters": 203,
+            "nonblank_lines": 7,
+            "utf8_bytes": 277,
+            "sha256": "483db0147ec5f29c2f4e8376d11a378fb5702eecf4734ca6cab519377820d0e3"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Python dataclasses",
+          "url": "https://docs.python.org/3/library/dataclasses.html",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        },
+        {
+          "title": "C# records",
+          "url": "https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/types/records",
+          "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+          "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+        }
+      ],
+      "kind": "pattern",
+      "implementation_ids": [
+        96
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "integration_status": "LMX source updated; runtime NOT_RUN"
+    },
+    {
+      "id": 96,
+      "name": "Money value equality — implementation",
+      "slug": "money_value_equality_implementation",
+      "kind": "implementation",
+      "paired_with": 32,
+      "usage_ids": [
+        32
+      ],
+      "summary_ru": "Общий equals сравнивает значения через явную проекцию и единое равенство.",
+      "summary_en": "Generic equals applies an explicit projection and the shared equality dispatch.",
+      "scenario_ru": "Хранить read-only cents/currency и сравнить обе компоненты в указанном порядке. Defaults 100/840, альтернативная currency 978.",
+      "scenario_en": "Store read-only cents/currency and compare both components in order. Defaults are 100/840, with alternative currency 978.",
+      "expected_ru": "Два независимо созданных Money(100,840) дают true; Money(100,978) даёт false. Прямая запись в компоненты не входит в разрешённый API.",
+      "expected_en": "Two independently constructed Money(100,840) values compare true; Money(100,978) compares false. Direct component mutation is not an admitted operation.",
+      "lmx_notes_ru": "Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+      "lmx_notes_en": "The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+      "comparison_ru": "Python использует базовый immutable tuple, запрещает instance dictionary через __slots__ и предоставляет read-only properties; same написан вручную. C# использует readonly struct/get-only properties и ручной Same. LMX использует готовые immutable primitive records и ручной оператор. Вспомогательная библиотека равенства не импортируется собственной реализацией; dataclass/record equality не подменяют показанный алгоритм. Обобщённая версия 23-Nov сохранена [отдельно](extended_comparisons/096_money_value_equality_implementation_generalized_comparision.md); она не подменяет эту узкую задачу.",
+      "comparison_en": "Python uses a basic immutable tuple, removes the instance dictionary with __slots__, and exposes read-only properties; same is explicit. C# uses a readonly struct/get-only properties and explicit Same. LMX uses ready immutable primitive records and an explicit operand. No ready equality helper is imported by its own implementation; dataclass/record equality does not replace the shown algorithm. The wider 23-Nov contract remains in a separate comparison and does not replace this finite task.",
+      "limits_ru": "LMX показывает общий алгоритм с фактическими типами и исходным контекстом. Контрольные реализации сохраняют явно указанный прикладной профиль. Сравнение одного профиля не означает одинакового охвата библиотек или скорости; для полной стоимости прибавляются общие зависимости и runtime каждого языка.",
+      "limits_en": "LMX shows the common algorithm with actual types and original context. Foreign implementations retain the stated application profile. A comparison for one profile does not establish equal library coverage or speed; complete cost includes shared dependencies and each runtime.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "FxEquals:\n    private:\n        @: first\n        @: second\n        @: projection 0\n        @: same 0\n    required: first second\n    return: int\n    equals:\n        throws: copy(FxThrows\\predicate)\n        private: @: a FxProjectValue\\get(first; projection)\n        private: @: b FxProjectValue\\get(second; projection)\n        return: FxValueSame\\test(a; b; same)\n",
+          "notes_ru": "Точное текущее определение FxEquals извлечено из общего ядра. Клиенты используют его каноническое имя и явные доменные аргументы; второго алгоритма в локальном модуле нет. Общие зависимости перечислены и считаются один раз в [реестре](../COMMON_OPERATION_DEPENDENCIES.md). Изменённый исходник LMX не исполнялся.",
+          "notes_en": "The exact current FxEquals definitions are extracted from the common core. Clients use canonical names and explicit domain arguments. The dependency ledger accounts for shared definitions once; no local duplicate algorithm is introduced. The revised LMX source has not been executed.",
+          "metrics": {
+            "characters": 248,
+            "nonblank_lines": 13,
+            "utf8_bytes": 362,
+            "sha256": "ad3cce9383d79bcf2ba56ed6efd8ff80b2b0c5e317cd3a076c7cef34d04a959a"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Money(tuple):\n    __slots__ = ()\n    def __new__(cls, cents=100, currency=840):\n        return tuple.__new__(cls, (cents, currency))\n    @property\n    def cents(self): return self[0]\n    @property\n    def currency(self): return self[1]\n\ndef same(left, right):\n    return left.cents == right.cents and left.currency == right.currency\n",
+          "notes_ru": "Полный money.py; только базовый tuple и собственное сравнение двух полей.",
+          "notes_en": "Complete money.py, using only a basic tuple and its own two-field comparison.",
+          "metrics": {
+            "characters": 268,
+            "nonblank_lines": 10,
+            "utf8_bytes": 339,
+            "sha256": "5409e4b75862c3988c97d1ec6260e81cebd14f06a76ca8cf1ac42b10665691a9"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "namespace ExampleLib {\n    public readonly struct Money {\n        public int Cents { get; }\n        public int Currency { get; }\n        public Money(int cents, int currency) { Cents = cents; Currency = currency; }\n        public static Money Create(int cents = 100, int currency = 840) => new Money(cents, currency);\n        public static bool Same(Money left, Money right) =>\n            left.Cents == right.Cents && left.Currency == right.Currency;\n    }\n}\n",
+          "notes_ru": "Полный ExampleLib.Money; readonly-компоненты и собственный Same, без record-generated equality.",
+          "notes_en": "Complete ExampleLib.Money, with readonly components and explicit Same, without record-generated equality.",
+          "metrics": {
+            "characters": 335,
+            "nonblank_lines": 10,
+            "utf8_bytes": 460,
+            "sha256": "3ac92ed32e879567634546141dc5a0c809ff8323008274457e088d68888a4958"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Value Object",
+          "url": "https://martinfowler.com/eaaCatalog/valueObject.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        },
+        {
+          "title": "Python — immutable tuples",
+          "url": "https://docs.python.org/3/library/stdtypes.html#tuples",
+          "why_ru": "Базовое immutable-представление двух компонент.",
+          "why_en": "Basic immutable representation of two components."
+        },
+        {
+          "title": "Python — data model and slots",
+          "url": "https://docs.python.org/3/reference/datamodel.html#slots",
+          "why_ru": "Конструирование tuple subclass и отсутствие instance dictionary.",
+          "why_en": "Tuple-subclass construction and suppression of an instance dictionary."
+        },
+        {
+          "title": "Microsoft — readonly struct",
+          "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct#readonly-struct",
+          "why_ru": "Read-only поля и свойства структуры.",
+          "why_en": "Read-only struct fields and properties."
+        }
+      ],
+      "revision_date": "2026-11-23",
+      "restoration": {
+        "source": "22-Nov-2026-3",
+        "reason": "Restore the original finite contract before choosing a shorter implementation."
+      },
+      "extended_comparison": "extended_comparisons/096_money_value_equality_implementation_generalized_comparision.md",
+      "implementation_sources": [
+        {
+          "source": "../LMX_Fn_Receivers/src/coreGenericOperations.lmx",
+          "definition": "FxEquals"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "name": "Optimistic Offline Lock",
+      "slug": "optimistic_offline_lock",
+      "summary_ru": "При сохранении проверить прочитанную версию и атомарно увеличить её.",
+      "summary_en": "Atomically check the observed version and increment it when saving.",
+      "scenario_ru": "Две сессии прочитали id=7,version=4. Первая сохраняет 120, вторая пробует сохранить 150 со старой version=4.",
+      "scenario_en": "Two sessions read account 7 at version 4. Save 120, then try 150 with the stale version.",
+      "expected_ru": "Первый UPDATE меняет одну строку и версию на 5. Второй меняет ноль строк и сообщает Conflict; 120 сохраняется.",
+      "expected_en": "The first update affects one row and sets version 5; the second affects zero rows and raises Conflict. 120 remains.",
+      "lmx_notes_ru": "db.compareAndSet(id,expected,cents) — один атомарный UPDATE с WHERE id/version и version=version+1; возвращает число строк. Не раздельные read/check/write.",
+      "lmx_notes_en": "compareAndSet is one atomic UPDATE with id/version predicate and version increment, returning affected rows; it is not read/check/write.",
+      "comparison_ru": "Во всех языках корректность обеспечивается одинаковой DB-операцией; локальная проверка версии перед обычным UPDATE была бы гонкой.",
+      "comparison_en": "The same database primitive provides correctness in every language. A local check before an unguarded UPDATE would race.",
+      "limits_ru": "Долгая пользовательская сессия не держит DB-lock. Повтор, merge конфликтов и атомарность нескольких агрегатов задаются отдельно.",
+      "limits_en": "No database lock spans user think time. Retry, conflict merging and multi-aggregate atomicity need separate policy.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Save:\n    @: db\n    int: id\n    int: version\n    int: cents\n    execute:\n        throws: Conflict\n        if: db\\compareAndSet(id; version; cents) != 1\n            throw: Conflict()\n",
+          "notes_ru": "db.compareAndSet(id,expected,cents) — один атомарный UPDATE с WHERE id/version и version=version+1; возвращает число строк. Не раздельные read/check/write.",
+          "notes_en": "compareAndSet is one atomic UPDATE with id/version predicate and version increment, returning affected rows; it is not read/check/write.",
+          "metrics": {
+            "characters": 114,
+            "nonblank_lines": 9,
+            "utf8_bytes": 182,
+            "sha256": "75a24463eb702522d1ba6c934aa88a8c24a1215d8b004c849c08e75caf15ea39"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "def save(db, id, version, cents):\n    if db.compare_and_set(id, version, cents) != 1:\n        raise RuntimeError('conflict')\n",
+          "notes_ru": "Долгая пользовательская сессия не держит DB-lock. Повтор, merge конфликтов и атомарность нескольких агрегатов задаются отдельно.",
+          "notes_en": "No database lock spans user think time. Retry, conflict merging and multi-aggregate atomicity need separate policy.",
+          "metrics": {
+            "characters": 100,
+            "nonblank_lines": 3,
+            "utf8_bytes": 125,
+            "sha256": "59c30355606517491c2e3269e49522f9e680535ac66eb46a3fa78b6020b3ef79"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "using System;\npublic interface IDb { int CompareAndSet(int id,int version,int cents); }\npublic static class Saves {\n    public static void Save(IDb db,int id,int version,int cents) {\n        if (db.CompareAndSet(id,version,cents)!=1) throw new InvalidOperationException(\"conflict\");\n    }\n}\n",
+          "notes_ru": "Долгая пользовательская сессия не держит DB-lock. Повтор, merge конфликтов и атомарность нескольких агрегатов задаются отдельно.",
+          "notes_en": "No database lock spans user think time. Retry, conflict merging and multi-aggregate atomicity need separate policy.",
+          "metrics": {
+            "characters": 242,
+            "nonblank_lines": 7,
+            "utf8_bytes": 291,
+            "sha256": "ce73a9ec3532d120aea584500accb4d01b2726182debb37d27ad89bd1605dcb0"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Optimistic Offline Lock",
+          "url": "https://martinfowler.com/eaaCatalog/optimisticOfflineLock.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "name": "Pessimistic Offline Lock",
+      "slug": "pessimistic_offline_lock",
+      "summary_ru": "Зарезервировать запись на время бизнес-сессии, не удерживая открытую SQL-транзакцию.",
+      "summary_en": "Reserve a row for a business session without holding one SQL transaction open.",
+      "scenario_ru": "Сессия A получает для id=7 lease-токен 41. B получает отказ. После окончания A новая сессия получает токен 42; запоздалый save с 41 отвергается.",
+      "scenario_en": "A acquires token 41 for row 7; B is refused. After A ends, a new session gets 42; a delayed write with 41 is rejected.",
+      "expected_ru": "В каждый момент только действующий владелец может сохранить запись. Старый токен не оживает после истечения lease.",
+      "expected_en": "Only the current owner can save. Expired tokens never regain authority.",
+      "lmx_notes_ru": "locks.reserve/renew/release и db.writeWithLease — явные инфраструктурные порты. writeWithLease атомарно проверяет действующий lease и fencing token при записи; one Message serial lane этого не заменяет.",
+      "lmx_notes_en": "locks.reserve/renew/release and db.writeWithLease are explicit infrastructure ports. writeWithLease atomically validates the live lease and fencing token; one serial Message does not replace that contract.",
+      "comparison_ru": "Все варианты передают токен до места записи. Объект guard или процессный mutex без серверной проверки не защищает редактирование между HTTP-запросами.",
+      "comparison_en": "All variants carry the token to the protected write. A process-local guard does not protect editing across HTTP requests.",
+      "limits_ru": "Показаны acquire/save/release; renewal выполняет менеджер сессии по тому же контракту. TTL, отказ сети, fencing и авторизация токена обязательны для адаптера.",
+      "limits_en": "Acquire/save/release are shown; the session manager renews via the same contract. TTL, network failure, fencing and token authorization belong to the adapter.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Edit:\n    @: locks\n    @: db\n    int: id\n    int: session\n    int: token\n    int: cents\n    return: int\n    acquire:\n        return: locks\\reserve(id; session)\n    save:\n        return: db\\writeWithLease(id; session; token; cents)\n    release:\n        return: locks\\release(id; session; token)\n",
+          "notes_ru": "locks.reserve/renew/release и db.writeWithLease — явные инфраструктурные порты. writeWithLease атомарно проверяет действующий lease и fencing token при записи; one Message serial lane этого не заменяет.",
+          "notes_en": "locks.reserve/renew/release and db.writeWithLease are explicit infrastructure ports. writeWithLease atomically validates the live lease and fencing token; one serial Message does not replace that contract.",
+          "metrics": {
+            "characters": 200,
+            "nonblank_lines": 14,
+            "utf8_bytes": 294,
+            "sha256": "70450368b9bdd61f916d2f4e7bb3f823984ed74f95e6337c035efcaa9e568ca0"
+          }
+        },
+        {
+          "language": "Python",
+          "code": "class Edit:\n    def __init__(self, locks, db): self.locks, self.db = locks, db\n    def acquire(self, id, session):\n        return self.locks.reserve(id, session)\n    def save(self, id, session, token, cents):\n        return self.db.write_with_lease(id, session, token, cents)\n    def release(self, id, session, token):\n        return self.locks.release(id, session, token)\n",
+          "notes_ru": "Показаны acquire/save/release; renewal выполняет менеджер сессии по тому же контракту. TTL, отказ сети, fencing и авторизация токена обязательны для адаптера.",
+          "notes_en": "Acquire/save/release are shown; the session manager renews via the same contract. TTL, network failure, fencing and token authorization belong to the adapter.",
+          "metrics": {
+            "characters": 295,
+            "nonblank_lines": 8,
+            "utf8_bytes": 373,
+            "sha256": "b5e01f379d6276c35c94034d2769336ee532fec3e8d7a3ecd3ed557ff3aaa221"
+          }
+        },
+        {
+          "language": "C#",
+          "code": "public interface ILocks {\n    int Reserve(int id,int session);\n    int Release(int id,int session,int token);\n}\npublic interface IDb { int WriteWithLease(int id,int session,int token,int cents); }\npublic sealed class Edit(ILocks locks,IDb db) {\n    public int Acquire(int id,int session) => locks.Reserve(id,session);\n    public int Save(int id,int session,int token,int cents) => db.WriteWithLease(id,session,token,cents);\n    public int Release(int id,int session,int token) => locks.Release(id,session,token);\n}\n",
+          "notes_ru": "Показаны acquire/save/release; renewal выполняет менеджер сессии по тому же контракту. TTL, отказ сети, fencing и авторизация токена обязательны для адаптера.",
+          "notes_en": "Acquire/save/release are shown; the session manager renews via the same contract. TTL, network failure, fencing and token authorization belong to the adapter.",
+          "metrics": {
+            "characters": 438,
+            "nonblank_lines": 10,
+            "utf8_bytes": 515,
+            "sha256": "4a018a52676f661d7421abf186795a86363979110a3d3eb0599d41b1256da86d"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Pessimistic Offline Lock",
+          "url": "https://martinfowler.com/eaaCatalog/pessimisticOfflineLock.html",
+          "why_ru": "Определение и границы паттерна.",
+          "why_en": "Pattern definition and boundaries."
+        }
+      ]
+    }
+  ]
+}

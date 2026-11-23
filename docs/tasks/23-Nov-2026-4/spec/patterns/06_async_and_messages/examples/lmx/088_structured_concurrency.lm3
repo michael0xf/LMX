@@ -1,0 +1,22 @@
+ScopeMessage:
+    int: childId
+    int: ok
+    int: value
+    int[]: seen [0 0]
+    int: remaining 2
+    int: failed 0
+    int: total 0
+    @: lifecycle
+    @: result
+    stopped:
+        if: node\seen[childId] = 1
+            return
+        node\seen[childId] := 1
+        if: ok = 0
+            node\failed := 1
+            lifecycle\requestStopChildren()
+        if: ok = 1
+            node\total += value
+        node\remaining -= 1
+        if: node\remaining = 0
+            result\finish(1 - node\failed; node\total)

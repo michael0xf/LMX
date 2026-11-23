@@ -1,0 +1,186 @@
+{
+  "format": "example-library-revision-v1",
+  "date": "2026-11-23",
+  "base_archive": "spec.tar.gz",
+  "base_sha256": "4b142bab169cf7cc3fd89766da35b90561f913b68dca3ab1f0725793e4ecb932",
+  "scope": {
+    "root_lmx_examples": 24,
+    "gof_patterns": 23,
+    "gof_primary_language_blocks": 184,
+    "gof_primary_sources_unchanged": true,
+    "standalone_library_comparisons": 7
+  },
+  "core_functions": [
+    {
+      "name": "apply",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_runtime.lmx",
+      "foreign_client": "native function application",
+      "comparison": "examples/library_comparisons/h01_apply_comparision.md"
+    },
+    {
+      "name": "partial",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_functions.lmx",
+      "foreign_client": "native curried application",
+      "comparison": "examples/library_comparisons/h03_capture_comparision.md"
+    },
+    {
+      "name": "pipe",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_combinators.lmx",
+      "foreign_client": "native (.), Data.List.foldl', Control.Monad.foldM",
+      "comparison": "examples/library_comparisons/h06_pipe_comparision.md"
+    },
+    {
+      "name": "compose",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_combinators.lmx",
+      "foreign_client": "native (.)",
+      "comparison": "examples/library_comparisons/h06_pipe_comparision.md"
+    },
+    {
+      "name": "lazy",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_wrappers.lmx",
+      "foreign_client": "native do and shared prepared value in H07; standalone cache implementation not imported",
+      "comparison": "examples/library_comparisons/h07_evaluation_modes_comparision.md"
+    },
+    {
+      "name": "once",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/generic_wrappers.lmx",
+      "foreign_client": "native do / prepared value; full source comparison separate",
+      "comparison": "examples/library_comparisons/h07_evaluation_modes_comparision.md"
+    },
+    {
+      "name": "derive",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/structures.lmx",
+      "foreign_client": "native record update; dynamic field extension explicitly distinct",
+      "comparison": "examples/library_comparisons/r01_derive_comparision.md"
+    },
+    {
+      "name": "bindFields",
+      "status": "existing",
+      "implementation": "LMX_Fn_Receivers/src/structures.lmx",
+      "foreign_client": "native defaults/Maybe and ordinary copied records",
+      "comparison": "16_prototype_comparison.md"
+    },
+    {
+      "name": "between",
+      "status": "new_core_entry",
+      "entry": "FxBetween\\between",
+      "implementation": "LMX_Fn_Receivers/src/coreComparisonExamples.lmx",
+      "form": "prepared Expression operand; left + two right bounds; priority sys\\priority(\"<=\")",
+      "failure_contract": [
+        "RangeArity"
+      ],
+      "foreign_client": "Data.Ix.inRange",
+      "comparison": "examples/library_comparisons/v02_character_range_comparision.md"
+    },
+    {
+      "name": "iterateUntilStop",
+      "status": "new_core_entry_pending_provider_AE01",
+      "entry": "FxIterateUntilStop\\iterateUntilStop",
+      "implementation": "LMX_Fn_Receivers/src/coreComparisonExamples.lmx",
+      "form": "ordinary receiver accepting live declaration DATA and body",
+      "failure_contract": [
+        "FxCallFailure",
+        "FxKernelFailure",
+        "FxTypeToken"
+      ],
+      "foreign_client": "Control.Monad.Loops.whileJust_ (monad-loops 0.4.3)",
+      "comparison": "examples/library_comparisons/h09_iterator_comparision.md"
+    }
+  ],
+  "new_provider": {
+    "name": "FxKernel\\attemptAccepted",
+    "api": "FxKernelAttemptAcceptedAPI",
+    "arguments": [
+      "form"
+    ],
+    "result": "existing FxOutcome",
+    "gate": "AE01",
+    "contract": "LMX_Fn_Receivers/CORE_EXAMPLE_HELPERS.md",
+    "status": "NOT_RUN; required native/interpreter integration, no generated source claims that provider already exists",
+    "purpose": "Preserve the accepted declaration/body receiving activation and live binding places while collecting finite admitted named failures; generic callable apply would not establish this contract."
+  },
+  "foreign_clients": {
+    "file": "examples/haskell/Analogies.hs",
+    "component": "examples/haskell/lmx-examples.cabal",
+    "real_dependencies": [
+      "base >=4.18 && <5",
+      "array",
+      "monad-loops ==0.4.3"
+    ],
+    "custom_modules_imported": [],
+    "standalone_V02": "examples/library_comparisons/V02TicketCode.hs"
+  },
+  "foreign_implementation_modules_retained": [
+    "CharacterRange.hs",
+    "CurryInt.hs",
+    "EvaluationModes.hs",
+    "IntApply.hs",
+    "IntPipe.hs",
+    "Lazy.hs",
+    "Partial.hs",
+    "StepIterator.hs"
+  ],
+  "completeness_changes": [
+    "Partial.hs synchronized to099 heterogeneous arbitrary-length prefix; empty/full prefix represented without an Int/binary cap.",
+    "CharacterRange generalized to Ord a; inclusive/reversed/unordered boundary contract explicit.",
+    "EvaluationModes generalized to Num a / Monad m and classified as semantic fixtures, not extra universal core operators.",
+    "StepIterator generalized to Monad m and arbitrary value/body-result types; terminal and body-failure behavior explicit; real whileJust_ used only in client.",
+    "Lazy checks owner ThreadId, rejects cross-owner access, detects recursive forcing, caches success, masks state transitions and resets on synchronous/asynchronous failure.",
+    "Shared LMX source dependencies linked once from their canonical full definitions instead of repeating large identical bodies in each comparison.",
+    "Lazy.hs also implements general onceIO; reviewed LMX busy guard/finally reset and prepared12 behavioral cases. Cleanup-registration hardening supplied to root separately."
+  ],
+  "async_scope": "No new scheduler: reusable synchronous helpers execute in their owning Message; existing post transports asynchronous requests/replies, including the existing HTTP layer. No shared cross-Message cache, forceful interruption or extra cancellation guarantee is asserted.",
+  "dedup_report": "examples/validation/dedup_decisions_20261123.json",
+  "removed_small_full_variants": [
+    "H04/original",
+    "R01/original",
+    "V03/original",
+    "GoF12 merge spelling",
+    "GoF20 merge spelling",
+    "GoF21 old incorrect indentation"
+  ],
+  "distinct_alternatives_retained": [
+    "H01",
+    "H02",
+    "H03",
+    "H06",
+    "H07",
+    "V02",
+    "GoF16 copy/place writes vs bindFields"
+  ],
+  "statistics": {
+    "before": {
+      "characters": 5674,
+      "nonblank_lines": 400,
+      "utf8_bytes": 8966
+    },
+    "after": {
+      "characters": 5429,
+      "nonblank_lines": 381,
+      "utf8_bytes": 8543
+    }
+  },
+  "checks": {
+    "source_consistency": "PASS,24 clients",
+    "primary_gof_preservation": "PASS,184 primary blocks",
+    "foreign_import_audit": "PASS,no comparison imports",
+    "all_public_names_lower_camel": true,
+    "lmx_executed": false,
+    "haskell_executed": false,
+    "ghc_available": false
+  },
+  "sources": [
+    "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html",
+    "https://downloads.haskell.org/ghc/9.6.7.20250131/docs/libraries/base-4.18.3.0/Control-Monad.html",
+    "https://hackage-content.haskell.org/package/base-4.20.2.0/docs/Data-Ix.html",
+    "https://hackage-content.haskell.org/package/monad-loops-0.4.3/docs/Control-Monad-Loops.html"
+  ],
+  "lazy_completeness_review": "examples/validation/lazy_completeness_20261123.json"
+}

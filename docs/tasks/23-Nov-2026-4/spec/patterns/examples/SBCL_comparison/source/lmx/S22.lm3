@@ -1,0 +1,47 @@
+Resource:
+    int: value 42
+    int: width 8
+
+Event:
+    int: phase
+    int: failed
+    int: events 0
+    int: failure 0
+    run:
+        throws: ResourceFailure
+        node\events := node\events * 10 + phase
+        if: failed
+            node\failure := phase
+            throw: ResourceFailure(phase)
+
+Acquire:
+    return: @
+    open:
+        throws: copy(Event\run\throws)
+        Event\run(1; mode = 2)
+        return: Resource
+
+Action:
+    @: resource
+    return: int
+    use:
+        throws: copy(Event\run\throws)
+        Event\run(2; mode = 1 || mode = 4)
+        return: resource\value + resource\width
+
+Release:
+    @: resource
+    close:
+        throws: copy(Event\run\throws)
+        Event\run(3; mode = 3 || mode = 4)
+
+Example:
+    int: mode
+    return: @
+    run:
+        throws: copy(bracket\throws)
+        Event\events := 0
+        int: result \(bracket Acquire\open Release\close Action\use)
+        return: (result; Event\events)
+        catch: FxCallFailure (@: outcome)
+            return: (-Event\failure; Event\events)

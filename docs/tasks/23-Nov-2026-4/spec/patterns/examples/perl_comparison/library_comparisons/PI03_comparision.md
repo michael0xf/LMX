@@ -1,0 +1,187 @@
+# PI03. Стабильная сортировка и unique
+
+Любые элементы и явные callbacks: compare возвращает отрицательный/нулевой/положительный int, same — ноль или ненулевой int. sort стабилен, unique сохраняет первое вхождение. Пустой и единичный массив не вызывают callback; оба результата имеют новый внешний контейнер и сохраняют идентичность ссылочных элементов.
+
+Это отдельное сравнение реализации. Клиенты Perl **не импортируют** этот модуль: они используют настоящий CORE/List::Util. LMX вызывает предлагаемое ядро.
+
+## Граница реализации
+
+Сравниваются собственные общие алгоритмы: итеративное слияние и последовательная проверка представителей. Штатные sort и List::Util::uniq используются только клиентами. Нет специализации элементов на int или ограничения числа аргументов функции данных.
+
+## Размер
+
+| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
+| --- | ---: | ---: | ---: |
+| LMX | 1799 | 3327 | 89 |
+| Perl | 1174 | 1745 | 55 |
+
+## LMX
+
+[Исходник](source/lmx/PI03.lmx). Корни извлекаются из канонических модулей; SHA-256 фиксируется в examples.json.
+
+```lmx
+FxSort:
+    private:
+        @: items
+        @: compare
+    required: items compare
+    return: @
+    sort:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: current FxSeqSlice\slice(items; 0; count)
+        if: count < 2
+            return: current
+        private: @: scratch FxSeqAllocate\make(info\arrayType; count)
+        private: int: width 1
+        while: width < count
+            private: int: start 0
+            while: start < count
+                private: int: middle count
+                if: width < count - start
+                    middle := start + width
+                private: int: end count
+                if: width < count - middle
+                    end := middle + width
+                private: int: left start
+                private: int: right middle
+                private: int: at start
+                while: at < end
+                    private: int: takeLeft 0
+                    if: right = end
+                        takeLeft := 1
+                    else:
+                        if: left < middle
+                            private: @: a FxSeqRead\read(current; left)
+                            private: @: b FxSeqRead\read(current; right)
+                            private: @: answer FxApply\apply(compare; FxTwo\make(a; b))
+                            private: int: order FxSeqInteger\read(answer)
+                            takeLeft := order <= 0
+                    ---
+                    private: @: selected 0
+                    if: takeLeft != 0
+                        selected := FxSeqRead\read(current; left)
+                        left += 1
+                    else:
+                        selected := FxSeqRead\read(current; right)
+                        right += 1
+                    ---
+                    FxSeqStore\write(scratch; at; selected)
+                    at += 1
+                start := end
+            private: @: previous current
+            current := scratch
+            scratch := previous
+            # Guard before doubling: count bounds the array length and bytes.
+            if: width > count - width
+                width := count
+            else:
+                width += width
+        ---
+        return: current
+
+FxUnique:
+    private:
+        @: items
+        @: same 0
+    required: items
+    return: @
+    unique:
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(info\arrayType; count)
+        private: int: used 0
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: int: duplicate 0
+            private: int: j 0
+            while: j < used
+                private: @: previous FxSeqRead\read(result; j)
+                if: FxValueSame\test(previous; item; same) != 0
+                    duplicate := 1
+                    break
+                j += 1
+            if: duplicate = 0
+                FxSeqStore\write(result; used; item)
+                used += 1
+            i += 1
+        sys\resize(result; used)
+        return: result
+```
+
+## Perl
+
+[Исходник](source/perl/PI03.pm).
+
+```perl
+package PerlComparison::Ordering;
+use strict;
+use warnings;
+sub arguments {
+    my ($items, $operation) = @_;
+    ref($items) eq 'ARRAY' or die "SequenceType\n";
+    ref($operation) eq 'CODE' or die "CallableType\n";
+}
+sub integer {
+    my ($value) = @_;
+    defined($value) && !ref($value) && $value =~ /\A-?[0-9]+\z/
+        or die "ComparisonType\n";
+    return 0 + $value;
+}
+sub stable_sort {
+    my ($items, $compare) = @_;
+    arguments($items, $compare);
+    my $current = [@$items];
+    my $count = @$current;
+    my $scratch = [];
+    my $width = 1;
+    while ($width < $count) {
+        my $start = 0;
+        while ($start < $count) {
+            my $middle = $width < $count - $start ? $start + $width : $count;
+            my $end = $width < $count - $middle ? $middle + $width : $count;
+            my ($left, $right, $at) = ($start, $middle, $start);
+            while ($at < $end) {
+                my $take_left = $right == $end;
+                if (!$take_left && $left < $middle) {
+                    my $order = integer($compare->($current->[$left], $current->[$right]));
+                    $take_left = $order <= 0;
+                }
+                $scratch->[$at++] = $take_left ? $current->[$left++] : $current->[$right++];
+            }
+            $start = $end;
+        }
+        ($current, $scratch) = ($scratch, $current);
+        $width = $width > $count - $width ? $count : $width + $width;
+    }
+    return $current;
+}
+sub stable_unique {
+    my ($items, $same) = @_;
+    arguments($items, $same);
+    my @out;
+    ITEM: for my $item (@$items) {
+        for my $previous (@out) {
+            next ITEM if integer($same->($previous, $item)) != 0;
+        }
+        push @out, $item;
+    }
+    return \@out;
+}
+1;
+```
+
+## Проверка и ограничения
+
+sort: O(n log n) сравнений, O(n) памяти. unique с произвольным same: O(n²) сравнений, O(n) памяти; это не универсальная хеш-таблица. Ошибка callback не меняет вход при соблюдении запрета менять source/ключи самим callback. List::Util::uniq имеет иной общий договор строкового равенства; P09 использует совпадающий целочисленный поддомен.
+
+Запуск Perl: [отчёт](../validation/implementation_tests.json). LMX: **NOT_RUN**; проверка текста не подменяет запуск.
+
+## Первичные источники
+
+- <https://perldoc.perl.org/5.40.1/functions/sort>
+- <https://perldoc.perl.org/5.40.1/sort>
+- <https://perldoc.perl.org/5.40.1/List::Util#uniq>

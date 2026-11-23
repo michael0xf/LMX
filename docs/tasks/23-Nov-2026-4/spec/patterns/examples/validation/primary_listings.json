@@ -1,0 +1,155 @@
+{
+  "format": "lmx-style-listings-v1",
+  "status": "source_text_not_runtime_receipt",
+  "legacy_role": "functional compatibility mirror, not an extra comparison",
+  "selected": {
+    "H01": "functional",
+    "H02": "functional",
+    "H03": "functional",
+    "H04": "functional",
+    "H05": "functional",
+    "H06": "functional",
+    "H07": "functional",
+    "H08": "functional",
+    "H09": "functional",
+    "R01": "functional",
+    "R02": "functional",
+    "R03": "functional",
+    "R04": "functional",
+    "R06a": "functional",
+    "R06b": "functional",
+    "R07": "functional",
+    "R09": "functional",
+    "A01": "functional",
+    "V02": "functional",
+    "V03": "functional",
+    "V04": "functional",
+    "V05": "functional",
+    "M01": "functional",
+    "M05": "functional"
+  },
+  "listings": {
+    "H01": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+    "H02": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+    "H03": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+    "H04": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)\n",
+    "H05": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        return: copied\\methods\\dynamic(1) * 100 + copied\\methods\\lexical(1)\n",
+    "H06": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        return: Functions\\next(Functions\\twice(4)) * 100 + Functions\\twice(Functions\\next(4))\n",
+    "H07": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+    "H08": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+    "H09": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+    "R01": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+    "R02": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+    "R03": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+    "R04": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+    "R06a": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+    "R06b": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+    "R07": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+    "R09": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+    "A01": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+    "V02": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(RxMatches\\matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+    "V03": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+    "V04": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+    "V05": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+    "M01": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+    "M05": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n"
+  },
+  "style_listings": {
+    "H01": {
+      "procedural": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+      "functional": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n"
+    },
+    "H02": {
+      "procedural": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+      "functional": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n"
+    },
+    "H03": {
+      "procedural": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\add; 5)\n        @: add100 Curry\\capture(Addition\\add; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+      "functional": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n"
+    },
+    "H04": {
+      "procedural": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: second add5(1; y := 25)\n        int: third add5(1; y := 0)\n        int: fourth add5(1)\n        return: first * 1000000 + second * 10000 + third * 100 + fourth\n",
+      "functional": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)\n"
+    },
+    "H05": {
+      "procedural": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        int: a copied\\methods\\dynamic(1)\n        int: b copied\\methods\\lexical(1)\n        return: a * 100 + b\n",
+      "functional": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        return: copied\\methods\\dynamic(1) * 100 + copied\\methods\\lexical(1)\n"
+    },
+    "H06": {
+      "procedural": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: first Functions\\twice(4)\n        first := Functions\\next(first)\n        int: second Functions\\next(4)\n        second := Functions\\twice(second)\n        return: first * 100 + second\n",
+      "functional": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        return: Functions\\next(Functions\\twice(4)) * 100 + Functions\\twice(Functions\\next(4))\n"
+    },
+    "H07": {
+      "procedural": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+      "functional": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n"
+    },
+    "H08": {
+      "procedural": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+      "functional": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n"
+    },
+    "H09": {
+      "procedural": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+      "functional": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n"
+    },
+    "R01": {
+      "procedural": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+      "functional": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n"
+    },
+    "R02": {
+      "procedural": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+      "functional": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n"
+    },
+    "R03": {
+      "procedural": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+      "functional": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n"
+    },
+    "R04": {
+      "procedural": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+      "functional": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n"
+    },
+    "R06a": {
+      "procedural": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+      "functional": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n"
+    },
+    "R06b": {
+      "procedural": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+      "functional": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n"
+    },
+    "R07": {
+      "procedural": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+      "functional": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n"
+    },
+    "R09": {
+      "procedural": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+      "functional": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n"
+    },
+    "A01": {
+      "procedural": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+      "functional": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n"
+    },
+    "V02": {
+      "procedural": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n            i += 1\n        return: candidate[2] = '-'\n",
+      "functional": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(RxMatches\\matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n"
+    },
+    "V03": {
+      "procedural": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        if: result != 28\n            return: 0\n        return: node\\calls = 1\n",
+      "functional": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n"
+    },
+    "V04": {
+      "procedural": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+      "functional": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n"
+    },
+    "V05": {
+      "procedural": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+      "functional": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n"
+    },
+    "M01": {
+      "procedural": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+      "functional": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n"
+    },
+    "M05": {
+      "procedural": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+      "functional": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n"
+    }
+  }
+}

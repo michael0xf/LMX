@@ -1,0 +1,76 @@
+{
+  "id": 95,
+  "name": "AllOf — predicate conjunction implementation",
+  "slug": "specification_combinator_implementation",
+  "kind": "implementation",
+  "paired_with": 31,
+  "usage_ids": [
+    31
+  ],
+  "summary_ru": "Построить упорядоченную short-circuit conjunction произвольного конечного набора predicates.",
+  "summary_en": "Build an ordered short-circuit conjunction over a finite predicate sequence.",
+  "scenario_ru": "Сохранить снимок ссылок callable и построить predicate, который вызывает их по порядку до false; пустой набор истинен.",
+  "scenario_en": "Retain a snapshot of callable references and construct a new predicate. Each invocation evaluates in order until false; an empty set is true.",
+  "expected_ru": "Для исходных проверок: -1→false,50→true,100→false. После false/отказа последующие predicate не вызываются. Пустой набор истинен при известной сигнатуре.",
+  "expected_en": "For the two int checks: -1→false,50→true,100→false. Later predicates do not run after false or failure. Empty sets are true under an explicitly known signature.",
+  "lmx_notes_ru": "Точные общие определения FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf из текущего ядра. Общий договор сохраняет явно указанные типы, контекст вызова и отказы. Копия обновляется из единственного исходника; runtime LMX — NOT_RUN.",
+  "lmx_notes_en": "Exact common definitions FxAllOfTypeToken, FxAllOfState, FxAllOfEngine, FxAllOf from the current core. This publication mirror preserves the stated type, context and failure contract; revised LMX runtime execution is NOT_RUN.",
+  "comparison_ru": "LMX сохраняет точную многопозиционную сигнатуру; Python передаёт args/kwargs; C# выражает вход как generic T, при необходимости tuple. Все снимают коллекцию callable один раз и сохраняют short-circuit.",
+  "comparison_en": "LMX supports exact multi-position callable signatures; Python forwards args/kwargs; C# carries the input shape as generic T (a tuple when needed). Every implementation copies the callable collection once and preserves short circuit.",
+  "limits_ru": "При построении predicate не исполняются; ссылки должны оставаться живыми. Это conjunction, не purity/SQL/новый overload resolver. LMX использует input policy первого predicate либо явного contract.",
+  "limits_en": "No predicate is executed by construction. Callable references must remain valid. This is conjunction, not static purity analysis, SQL translation, or a new overload resolver. LMX uses the first source input policy unless the caller supplies an explicit contract.",
+  "scope": "core",
+  "listings": [
+    {
+      "language": "LMX",
+      "code": "FxAllOfTypeToken:\n    integer:\n        int: value\n\nFxAllOfState:\n    @: predicates 0\n\nFxAllOfEngine:\n    private:\n        @: state\n        @: frame\n    return: @\n    run:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        private: int: i 0\n        while: i < length(state\\predicates)\n            private: @: predicate \\state\\predicates[i]\n            private: @: flag FxApplyPlaces\\apply(predicate; frame)\n            if: FxSeqPredicate\\truth(flag) = 0\n                return: (0 FxRecordOperands\\record)\n            i += 1\n        return: (1 FxRecordOperands\\record)\n\nFxAllOf:\n    private:\n        @: predicates\n        @: contract 0\n    required: predicates\n    return: @\n    allOf:\n        throws: copy(FxThrows\\adapter)\n        private: @: values FxSeqRecords\\make(source := predicates)\n        private: @: selected contract\n        private: @: integerType FxKernel\\normalizeType(FxAllOfTypeToken\\integer[0])\n        private: @: policy 0\n        if: selected = 0\n            if: length(values) = 0\n                throw: FxArity()\n            private: @: first \\values[0]\n            private: @: info FxKernel\\signature(first)\n            selected := FxSignatures\\make(info\\inputTypes; integerType)\n            policy := FxFullPolicy\\make(first)\n        else:\n            policy := FxOwnPolicy\\make(selected)\n        private: @: shape FxKernel\\signature(selected)\n        if: shape\\hasResult = 0\n            throw: FxTypeToken()\n        if: \\shape\\resultType != \\integerType\n            throw: FxTypeToken()\n        private: @: failures (copy(()))\n        private: int: i 0\n        while: i < length(values)\n            private: @: operation \\values[i]\n            private: @: info FxKernel\\signature(operation)\n            if: info\\hasResult = 0 || length(info\\inputTypes) != length(shape\\inputTypes)\n                throw: FxTypeToken()\n            if: \\info\\resultType != \\integerType\n                throw: FxTypeToken()\n            private: int: position 0\n            while: position < length(shape\\inputTypes)\n                if: \\info\\inputTypes[position] != \\shape\\inputTypes[position]\n                    throw: FxTypeToken()\n                position += 1\n            failures := FxFailures\\union(failures; info\\throws)\n            i += 1\n        private: @: state (copy(FxAllOfState))\n        state\\predicates := values\n        return: FxWrap\\make(selected; FxAllOfEngine\\run; state; failures; policy)\n",
+      "notes_ru": "Полный factory и engine ядра; оригинальные places передаются лениво, без снимка всех аргументов.",
+      "notes_en": "Complete core factory and engine; original places are forwarded lazily without snapshotting all arguments."
+    },
+    {
+      "language": "Python",
+      "code": "def all_of(predicates):\n    checks = tuple(predicates)\n    for predicate in checks:\n        if not callable(predicate): raise TypeError(\"predicate must be callable\")\n    def accepts(*args, **kwargs):\n        for predicate in checks:\n            if not predicate(*args, **kwargs): return False\n        return True\n    return accepts\n",
+      "notes_ru": "Произвольное число predicates и аргументов; пустой набор возвращает True. Исходная коллекция снимается один раз.",
+      "notes_en": "Arbitrary predicate and argument counts; an empty collection returns True. The input collection is snapshotted once."
+    },
+    {
+      "language": "C#",
+      "code": "using System;\nusing System.Collections.Generic;\npublic static class PredicateSet {\n    public static Func<T,bool> AllOf<T>(IEnumerable<Func<T,bool>> predicates) {\n        ArgumentNullException.ThrowIfNull(predicates);\n        var checks = new List<Func<T,bool>>();\n        foreach (var predicate in predicates) {\n            ArgumentNullException.ThrowIfNull(predicate);\n            checks.Add(predicate);\n        }\n        return value => {\n            foreach (var predicate in checks) if (!predicate(value)) return false;\n            return true;\n        };\n    }\n}\n",
+      "notes_ru": "Любой T, в том числе tuple/product аргументов; пустой список корректен, поскольку T задан статически. Никакого LINQ All внутри реализации.",
+      "notes_en": "Any T, including an argument tuple/product; empty input is valid because T is statically known. The implementation does not call LINQ All."
+    }
+  ],
+  "sources": [
+    {
+      "title": "Python all contract",
+      "url": "https://docs.python.org/3/library/functions.html#all",
+      "note_ru": "Официальный контракт; самостоятельные реализации написаны для указанной границы сравнения.",
+      "note_en": "Official contract; standalone implementations are written for the stated comparison boundary."
+    }
+  ],
+  "revision_date": "2026-11-23",
+  "library_revision": {
+    "foreign_usage_imports_own_implementation": false,
+    "implementation_pair_retained": true,
+    "runtime_lmx": "NOT_RUN"
+  },
+  "lmx_runtime_execution": "NOT_RUN",
+  "implementation_sources": [
+    {
+      "definition": "FxAllOfTypeToken",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    },
+    {
+      "definition": "FxAllOfState",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    },
+    {
+      "definition": "FxAllOfEngine",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    },
+    {
+      "definition": "FxAllOf",
+      "source": "../../LMX_Fn_Receivers/src/coreComparisonGroups.lmx"
+    }
+  ]
+}

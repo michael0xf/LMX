@@ -1,0 +1,12 @@
+CandidateMessage:
+    @: coordinator
+    @: resource
+    int: id
+    return: int
+    attempt:
+        int: token coordinator\acquire(id)
+        if: token = 0
+            return: 0
+        int: result resource\writeIfCurrent(token; id)
+        coordinator\release(id; token)
+        return: result

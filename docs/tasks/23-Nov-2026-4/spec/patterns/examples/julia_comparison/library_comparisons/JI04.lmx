@@ -1,0 +1,128 @@
+FxSort:
+    private:
+        @: items
+        @: compare
+    required: items compare
+    return: @
+    sort:
+        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: current FxSeqSlice\slice(items; 0; count)
+        if: count < 2
+            return: current
+        private: @: scratch FxSeqAllocate\make(info\arrayType; count)
+        private: int: width 1
+        while: width < count
+            private: int: start 0
+            while: start < count
+                private: int: middle count
+                if: width < count - start
+                    middle := start + width
+                private: int: end count
+                if: width < count - middle
+                    end := middle + width
+                private: int: left start
+                private: int: right middle
+                private: int: at start
+                while: at < end
+                    private: int: takeLeft 0
+                    if: right = end
+                        takeLeft := 1
+                    else:
+                        if: left < middle
+                            private: @: a FxSeqRead\read(current; left)
+                            private: @: b FxSeqRead\read(current; right)
+                            private: @: answer FxApply\apply(compare; FxTwo\make(a; b))
+                            private: int: order FxSeqInteger\read(answer)
+                            takeLeft := order <= 0
+                    ---
+                    private: @: selected 0
+                    if: takeLeft != 0
+                        selected := FxSeqRead\read(current; left)
+                        left += 1
+                    else:
+                        selected := FxSeqRead\read(current; right)
+                        right += 1
+                    ---
+                    FxSeqStore\write(scratch; at; selected)
+                    at += 1
+                start := end
+            private: @: previous current
+            current := scratch
+            scratch := previous
+            # Guard before doubling: count bounds the array length and bytes.
+            if: width > count - width
+                width := count
+            else:
+                width += width
+        ---
+        return: current
+
+FxUnique:
+    private:
+        @: items
+        @: same 0
+    required: items
+    return: @
+    unique:
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
+        private: @: info FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(info\arrayType; count)
+        private: int: used 0
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: int: duplicate 0
+            private: int: j 0
+            while: j < used
+                private: @: previous FxSeqRead\read(result; j)
+                if: FxValueSame\test(previous; item; same) != 0
+                    duplicate := 1
+                    break
+                j += 1
+            if: duplicate = 0
+                FxSeqStore\write(result; used; item)
+                used += 1
+            i += 1
+        sys\resize(result; used)
+        return: result
+
+FxGroup:
+    @: key 0
+    @: items 0
+
+FxGroupBy:
+    private:
+        @: items
+        @: keyOf 0
+        @: sameKey 0
+    required: items
+    return: @
+    groupBy:
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: key FxProjectValue\get(item; keyOf)
+            private: @: group 0
+            private: int: j 0
+            while: j < length(result)
+                private: FxGroup@: candidate result[j]
+                private: int: flag FxValueSame\test(candidate\key; key; sameKey)
+                if: flag != 0
+                    group := candidate
+                    break
+                j += 1
+            if: group = 0
+                group := (copy(FxGroup))
+                group\key := key
+                group\items := FxSeqAllocate\make(@[]; 0)
+                FxSeqPush\append(result; group)
+            FxSeqPush\append(group\items; item)
+            i += 1
+        return: result

@@ -1,0 +1,25 @@
+Board:
+    int: raw 4
+    int: normalized 0
+    int: result 0
+
+Experts:
+    @: board Board
+    return: int
+    normalize:
+        if: board\normalized = 0
+            board\normalized := board\raw + 1
+            return: 1
+        return: 0
+    derive:
+        if: board\normalized != 0 && board\result = 0
+            board\result := board\normalized * 2
+            return: 1
+        return: 0
+    demo:
+        board\normalized := 0
+        board\result := 0
+        int: changed 1
+        while: changed != 0
+            changed := derive() + normalize()
+        return: board\result

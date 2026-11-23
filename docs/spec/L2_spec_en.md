@@ -22,7 +22,7 @@ source graph includes both all written receivers and direct primitive leaves. Re
 <a id="scope"></a>
 ## 1. Scope
 
-The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored graph: L2 code with the same checks as L3 code, and an address operation that L3 does not have at all with checks of its own. Native L2 code is compiled without these checks ([semantics, §1](LMX_semantics.en.md#scope)).
+The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored graph: L2 code with the same checks as L3 code, through the same wrappers of the low-level operations — L3 lacks only `c.*`. Native L3 code calls the wrappers; native L2 code is compiled without these checks ([semantics, §1](LMX_semantics.en.md#scope)).
 
 The program representation is the complete LMX graph plus the binary of compiled methods.
 The binary contains methods, including R0 and the interpreter implementation; it does not contain

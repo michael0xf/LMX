@@ -2228,10 +2228,17 @@ fn: lm_graph_p0_open (const: (@: path char); @@: out_document c.LmP0Document) in
     out_document[0] := doc
 return: 0
 
-fn: lm_graph_p0_file (const: (@: path char)) int
+fn: lm_graph_p0_file (const: (@: path char); int: lowered) int
     @: doc c.LmP0Document 0
     @: dump char 0
+    @: diag c.LmP0Diagnostic 0
     if: lm_graph_p0_open(path, @ doc) != 0
+        return: 2
+    if: lowered != 0 && c.lm_p0_lower_types(doc) != 0
+        diag := (cast: (@: c.LmP0Diagnostic) c.lm_p0_document_diagnostic(doc))
+        if: diag != 0
+            c.fprintf(c.stderr, "P0 parse error %d at %zu:%zu: %s\n", (cast: (int) (diag\code)), (cast: (size_t) (diag\line)), (cast: (size_t) (diag\column)), (cast: (@: char) (diag\message)))
+        c.lm_p0_document_destroy(doc)
         return: 2
     dump := c.lm_p0_dump_alloc(doc)
     if: dump != 0
@@ -2797,7 +2804,7 @@ fn: lm_graph_main (@@: args char; int: n) int
             return: 2
         return: lm_graph_run_file(args[2], runs, entry)
     if: n >= 3 && c.strcmp(args[1], "p0") = 0
-        return: lm_graph_p0_file(args[2])
+        return: lm_graph_p0_file(args[2], (cast: (int) (n >= 4 && c.strcmp(args[3], "lower-types") = 0)))
     if: n = 5 && c.strcmp(args[1], "groups") = 0
         return: lm_graph_groups_list(args[2], args[3], args[4])
     if: n >= 5 && (c.strcmp(args[1], "emit") = 0 || c.strcmp(args[1], "emit-check") = 0)
@@ -2822,7 +2829,7 @@ fn: lm_graph_main (@@: args char; int: n) int
         if: runs < 1
             return: 2
         return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs, entry)
-    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
+    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE [lower-types] | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
 

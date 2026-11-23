@@ -1752,10 +1752,11 @@ fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_
     @: actual char 0
     @: expected_diag char 0
     @: diagnostic char c.calloc(96U, 1U)
-    @@: words char c.calloc(2U, sizeof(@: char))
+    @@: words char c.calloc(3U, sizeof(@: char))
     @: detail int c.calloc(1U, sizeof(c.int))
     size_t: actual_count 0U
     size_t: diag_count 0U
+    int: word_count 2
     size_t: first 0U
     size_t: after 0U
     int: expected_exit -1
@@ -1781,7 +1782,10 @@ fn: parser_case (@: repo char; @: graph char; @: json char; size_t: count; size_
     if: ok != 0
         words[0] := "p0"
         words[1] := source
-        ok := (cast: (int) (run_self(graph, words, 2, dir, stdout_path, stderr_path, 15000U, detail) = 0))
+        if: dj_property(json, count, row, "lower_types", @ first, @ after) = 1
+            words[2] := "lower-types"
+            word_count := 3
+        ok := (cast: (int) (run_self(graph, words, word_count, dir, stdout_path, stderr_path, 15000U, detail) = 0))
         if: detail[0] != expected_exit
             ok := 0
     ---

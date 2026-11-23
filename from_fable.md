@@ -101,14 +101,18 @@
 
 | Компонент | Путь | SHA-256, начало |
 |---|---|---|
-| tool | `S/fable-kw-tool02/lmxtool-tool.exe` | a133ce51 |
-| hosted frontend | `S/fable-kw-feh01/l2trans.exe` | e4826536 |
-| runtime | `S/fable-kw-rt02` | driver.o a081a985, driver-observe.o 0db8716a |
-| Graph | `S/fable-kw-graph02/graph_trans-prod.exe` | a04cc2ec |
-| манифест исходников | `selfbuild/inputs.sha256` | 1638 файлов, 2eeec13f |
-| tool для проверки документов | тот же `S/fable-kw-tool02/lmxtool-tool.exe` | a133ce51 |
+| tool | `S/fable-s36-tool02/lmxtool-tool.exe` | dfd1191c |
+| hosted frontend | `S/fable-s36-feh01/l2trans.exe` | 467bde09 |
+| runtime | `S/fable-s36-rt02` | driver.o a081a985, driver-observe.o 0db8716a |
+| Graph | `S/fable-s36-graph02/graph_trans-prod.exe` | b3588d0a |
+| манифест исходников | `selfbuild/inputs.sha256` | 1638 файлов, 99e918f3 |
+| tool для проверки документов | тот же `S/fable-s36-tool02/lmxtool-tool.exe` | dfd1191c |
 
-Сейчас действует набор ядерного окна 2026-11-23 (`fable-kw-*`): контекст типов, починка автозаполнения и 26
+Сейчас действует набор шага 23.6 (`fable-s36-*`): транслятор L2 читает новую запись типа. Все четыре
+компонента собраны мной из итоговых исходников набором ядерного окна, по одному шагу под сторожем фиксируемой
+памяти; runtime побайтно равен прежнему — ядро в срез не входит. Набор `fable-kw-*` остаётся в стадии как база.
+
+Прежде действовал набор ядерного окна 2026-11-23 (`fable-kw-*`): контекст типов, починка автозаполнения и 26
 переписанных программ. Все четыре компонента собраны мной из итоговых исходников набором шага 23.3, по одному
 шагу под сторожем фиксируемой памяти; runtime новый — меняются модули ядра. Набор `fable-s33-*` остаётся в стадии
 как база.

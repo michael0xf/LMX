@@ -200,6 +200,27 @@ fn: lm_p0_scan_c_surface_atom (const: (@: text char); size_t: end_index; size_t:
     return: i
 end: lm_p0_scan_c_surface_atom
 
+# The piece of a C surface atom (`c.name`, `c.buf[i]`) in a run of compact pieces: the atom ends before a series of `@` outside the brackets -- the series is the postfix of the operand (`c.FILE@`) and a
+# piece of its own. The extent of a field (lm_p0_scan_c_surface_atom, used where a field starts) stays the whole of it, so a head `c.FILE@: p` is read whole.
+fn: lm_p0_scan_c_surface_piece (const: (@: text char); size_t: end_index; size_t: start) size_t
+    size_t: i 0U
+    size_t: piece_stop 0U
+    size_t: bracket_depth 0U
+    piece_stop := lm_p0_scan_c_surface_atom(text, end_index, start)
+    i := start + 2U
+    while: i < piece_stop
+        if: text[i] = '['
+            bracket_depth := bracket_depth + 1U
+        else:
+            if: text[i] = ']' && bracket_depth > 0U
+                bracket_depth := bracket_depth - 1U
+            ---
+        if: bracket_depth = 0U && text[i] = '@' && i > start + 2U
+            return: i
+        i := i + 1U
+    return: piece_stop
+end: lm_p0_scan_c_surface_piece
+
 fn: lm_p0_scan_compact_atom_piece (const: (@: text char); size_t: end_index; size_t: start; int: allow_signed_number) size_t
     size_t: i 0U
     size_t: number_end 0U
@@ -211,7 +232,7 @@ fn: lm_p0_scan_compact_atom_piece (const: (@: text char); size_t: end_index; siz
     if: lm_p0_starts_c_prefixed_quote(text, end_index, start)
         return: lm_p0_scan_c_prefixed_quote_token(text, end_index, start)
     if: lm_p0_starts_c_surface_atom(text, end_index, start)
-        return: lm_p0_scan_c_surface_atom(text, end_index, start)
+        return: lm_p0_scan_c_surface_piece(text, end_index, start)
     if: lm_p0_is_bare_identifier_start(text[start])
         i := start + 1U
         while: i < end_index && lm_p0_is_bare_identifier_rest(text[i])

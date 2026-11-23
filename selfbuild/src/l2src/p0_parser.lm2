@@ -2627,7 +2627,7 @@ fn: lm_p0_scan_head (@: document c.LmP0Document; const: (@: text char); size_t: 
     if: text[i] = 96
         if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
             return: 0
-        if: i >= byte_count || (text[i] != 92 && text[i] != '[')
+        if: i >= byte_count || (text[i] != 92 && text[i] != '[' && text[i] != '@')
             index[0] := i
             quoted_head[0] := 1
             return: 1
@@ -5384,6 +5384,309 @@ fn: lm_p0_document_mutable_root (@: document c.LmP0Document) @: c.LmP0Node
         return: (cast: (@: c.LmP0Node) document\root)
     return: 0
 end: lm_p0_document_mutable_root
+
+# ---- the lowering of the typed notation of a type (step 23.6) ------------------------------------------------------------------------------------------------------------------
+# The translator of L2 reads a place through the internal form of the declaring receiver: `@: name T value` -- the head is the run of `@`, the requirement `T` stands second. The typed notation
+# writes the type where it belongs: `T@: name value` for a place, `T@` for a result, `(cast: (T@) x)` and `sizeof(T@)` for a type operand. One pass over a parsed document of the translator
+# rewrites every written typed form into the tree that P0 builds for the internal form; nothing else reads the notation. The new nodes take their text from the written head and their
+# position from the written form. A form that the internal form cannot express is left as written (a base that is a path or a group, a postfix after a path) or refused with a diagnostic
+# (a written empty square: the array type waits for the answer of the author).
+
+# 1 for a node that takes part in the language: not disabled, not inactive, not a mix mark.
+fn: lm_p0_lower_types_live (const: (@: p0_node c.LmP0Node)) int
+    if: p0_node = 0 || p0_node\kind = c.LM_P0_NODE_DISABLED
+        return: 0
+    return: (cast: (int) ((p0_node\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX)) = 0U))
+
+# 1 for a field whose value takes part in the language.
+fn: lm_p0_lower_types_field_live (const: (@: field c.LmP0Field)) int
+    @: item c.LmP0Node 0
+    if: field = 0
+        return: 0
+    item := field\value
+    return: lm_p0_lower_types_live(item)
+
+# The first field from `field` on whose value takes part in the language, or 0.
+fn: lm_p0_lower_types_first_live (@: field c.LmP0Field) @: c.LmP0Field
+    while: field != 0 && lm_p0_lower_types_field_live(field) = 0
+        field := field\next
+    ---
+    return: field
+
+# The class of a Frame head: 1 a word or an exact name followed by a run of `@` -- the typed place --; 2 the same with a written empty square in the run -- an array type --; 0 anything
+# else. `base_end` is the size of the base.
+fn: lm_p0_lower_types_head (const: (@: text char); size_t: head_size; @: base_end size_t) int
+    size_t: run_count 0U
+    size_t: i 0U
+    int: kind 0
+    if: lm_p0_head_split(text, head_size, base_end, @ run_count, @ kind) = 0 || run_count = 0U
+        return: 0
+    if: kind != 1 && kind != 3
+        return: 0
+    i := base_end[0]
+    while: i < head_size
+        if: text[i] != '@'
+            return: 2
+        i := i + 1U
+    return: 1
+
+# 1 when `p0_node` is an operand that a postfix `@` run types: an atom that starts like a word or an exact name, is no postfix itself and does not end a path (`before` is the live field
+# before it).
+fn: lm_p0_lower_types_operand (const: (@: p0_node c.LmP0Node); const: (@: before c.LmP0Field)) int
+    char: lead 0
+    if: p0_node = 0 || p0_node\kind != c.LM_P0_NODE_ATOM || (p0_node\flags & c.LM_P0_NODE_POSTFIX) != 0U || p0_node\as\atom\length = 0U
+        return: 0
+    lead := p0_node\as\atom\data[0]
+    if: lm_p0_is_word_byte(lead) = 0 && lead != 96
+        return: 0
+    if: before != 0 && before\value != 0 && before\value\kind = c.LM_P0_NODE_ATOM && before\value\as\atom\length = 1U && before\value\as\atom\data[0] = 92
+        return: 0
+    return: 1
+
+# A new atom whose text is `count` bytes from `source`; the position is that of `at`.
+fn: lm_p0_lower_types_atom (@: document c.LmP0Document; const: (@: source char); size_t: count; const: (@: at c.LmP0Node)) @: c.LmP0Node
+    @: made c.LmP0Node
+    size_t: line 0U
+    size_t: column 0U
+    size_t: offset 0U
+    line := at\span\line
+    column := at\span\column
+    offset := at\span\offset
+    made := lm_p0_new_node(document, c.LM_P0_NODE_ATOM)
+    if: made = 0
+        return: 0
+    made\as\atom := lm_p0_new_text(document, source, count, line, column)
+    if: made\as\atom = 0
+        return: 0
+    made\span\line := line
+    made\span\column := column
+    made\span\offset := offset
+    made\span\length := count
+    return: made
+
+# A new colon Frame with an inline body, whose head is `run_size` bytes of `@` from `run` and whose only field is `operand`; the position is that of `at`, the length `span_length`.
+fn: lm_p0_lower_types_reference (@: document c.LmP0Document; const: (@: run char); size_t: run_size; @: operand c.LmP0Node; const: (@: at c.LmP0Node); size_t: span_length) @: c.LmP0Node
+    @: made c.LmP0Node
+    @: body c.LmP0Structure
+    size_t: line 0U
+    size_t: column 0U
+    size_t: offset 0U
+    line := at\span\line
+    column := at\span\column
+    offset := at\span\offset
+    made := lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
+    if: made = 0
+        return: 0
+    made\as\frame\head := lm_p0_new_text(document, run, run_size, line, column)
+    if: made\as\frame\head = 0
+        return: 0
+    made\as\frame\flags := c.LM_P0_FRAME_COLON | c.LM_P0_FRAME_INLINE_BODY
+    made\span\line := line
+    made\span\column := column
+    made\span\offset := offset
+    made\span\length := span_length
+    body := made\as\frame\body
+    if: lm_p0_append_field(document, body, operand) = 0
+        return: 0
+    return: made
+
+# Puts `made` into `structure` as the field right after `after`.
+fn: lm_p0_lower_types_insert (@: document c.LmP0Document; @: structure c.LmP0Structure; @: after c.LmP0Field; @: made c.LmP0Node) int
+    @: field c.LmP0Field
+    size_t: line 0U
+    size_t: column 0U
+    field := (cast: (@: c.LmP0Field) c.lm_own_arena_new_zero(document\tree_arena, c.sizeof(field[0])))
+    if: field = 0
+        line := made\span\line
+        column := made\span\column
+        lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser field")
+        return: 0
+    field\value := made
+    field\next := after\next
+    after\next := field
+    if: structure\last_field = after
+        structure\last_field := field
+    structure\field_count := structure\field_count + 1U
+    return: 1
+
+# `(cast: (@) x)`: a run of `@` alone in the type group of a cast is the reference to `void`, as `(cast: (@: void) x)` writes it. 1 done or nothing to do, 0 failed.
+fn: lm_p0_lower_types_cast (@: document c.LmP0Document; @: p0_node c.LmP0Node) int
+    @: field c.LmP0Field
+    @: start c.LmP0Field
+    @: group c.LmP0Structure
+    @: only c.LmP0Node
+    @: operand c.LmP0Node
+    @: made c.LmP0Node
+    @: run char
+    size_t: run_size 0U
+    size_t: i 0U
+    if: lm_p0_node_head_is(p0_node, "cast") = 0
+        return: 1
+    start := p0_node\as\frame\body\first_field
+    field := lm_p0_lower_types_first_live(start)
+    if: field = 0 || field\value\kind != c.LM_P0_NODE_STRUCTURE || field\value\as\structure\field_count != 1U
+        return: 1
+    group := field\value\as\structure
+    only := group\first_field\value
+    if: only = 0 || only\kind != c.LM_P0_NODE_ATOM || only\as\atom\length = 0U || (only\flags & c.LM_P0_NODE_POSTFIX) != 0U
+        return: 1
+    while: i < only\as\atom\length
+        if: only\as\atom\data[i] != '@'
+            return: 1
+        i := i + 1U
+    ---
+    run := (cast: (@: char) only\as\atom\data)
+    run_size := only\as\atom\length
+    operand := lm_p0_lower_types_atom(document, "void", 4U, only)
+    if: operand = 0
+        return: 0
+    made := lm_p0_lower_types_reference(document, run, run_size, operand, only, run_size)
+    if: made = 0
+        return: 0
+    made\flags := made\flags | (only\flags & c.LM_P0_NODE_SEPARATOR_AFTER)
+    group\first_field\value := made
+    return: 1
+
+# The typed place `T@..: name tail` becomes `@..: name T tail`: the head is the run of `@`, the type is an atom right after the name. 1 done or nothing to do, 0 refused or failed, a
+# diagnostic set.
+fn: lm_p0_lower_types_frame (@: document c.LmP0Document; @: p0_node c.LmP0Node) int
+    @: frame c.LmP0Frame
+    @: body c.LmP0Structure
+    @: first c.LmP0Field
+    @: start c.LmP0Field 0
+    @: made c.LmP0Node
+    @: run c.LmP0Text
+    @: head_text char
+    size_t: head_size 0U
+    size_t: base_end 0U
+    size_t: line 0U
+    size_t: column 0U
+    int: class 0
+    unsigned: mark 0U
+    frame := p0_node\as\frame
+    if: frame = 0 || frame\head = 0 || frame\body = 0
+        return: 1
+    # A typed head is the head of a colon Frame: the head of an assignment or of a call is a place or a callee.
+    if: (frame\flags & c.LM_P0_FRAME_COLON) = 0U || (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: 1
+    head_text := (cast: (@: char) frame\head\data)
+    head_size := frame\head\length
+    line := p0_node\span\line
+    column := p0_node\span\column
+    class := lm_p0_lower_types_head(head_text, head_size, @ base_end)
+    if: class = 0
+        return: 1
+    if: class = 2
+        lm_p0_set_diagnostic(document, 34, line, column, "the array type in a head waits for the answer of the author")
+        return: 0
+    body := frame\body
+    start := body\first_field
+    first := lm_p0_lower_types_first_live(start)
+    if: first = 0
+        lm_p0_set_diagnostic(document, 34, line, column, "the typed head has no name")
+        return: 0
+    made := lm_p0_lower_types_atom(document, head_text, base_end, p0_node)
+    if: made = 0
+        return: 0
+    # The separator the name carries (`int@: q, v`) stands after the type atom, as `@: q int, v` has it.
+    mark := first\value\flags & c.LM_P0_NODE_SEPARATOR_AFTER
+    made\flags := made\flags | mark
+    first\value\flags := first\value\flags - mark
+    run := lm_p0_new_text(document, head_text + base_end, head_size - base_end, line, column)
+    if: run = 0
+        return: 0
+    if: lm_p0_lower_types_insert(document, body, first, made) = 0
+        return: 0
+    frame\head := run
+    return: 1
+
+# The fields of a structure: the nested nodes first, then each pair of an operand and the postfix run after it becomes the Frame `@..: operand`. 1 done, 0 failed.
+fn: lm_p0_lower_types_structure (@: document c.LmP0Document; @: structure c.LmP0Structure) int
+    @: field c.LmP0Field 0
+    @: prior c.LmP0Field 0
+    @: last_live c.LmP0Field 0
+    @: before_live c.LmP0Field 0
+    @: item c.LmP0Node 0
+    @: made c.LmP0Node 0
+    @: operand c.LmP0Node 0
+    @: run char
+    size_t: run_size 0U
+    size_t: span_length 0U
+    int: typed 0
+    if: structure = 0
+        return: 1
+    field := structure\first_field
+    while: field != 0
+        item := field\value
+        if: lm_p0_lower_types_node(document, item) = 0
+            return: 0
+        typed := 0
+        if: lm_p0_lower_types_field_live(field) != 0 && item\kind = c.LM_P0_NODE_ATOM && (item\flags & c.LM_P0_NODE_POSTFIX) != 0U && last_live != 0
+            operand := last_live\value
+            typed := lm_p0_lower_types_operand(operand, before_live)
+        if: typed != 0
+            run := (cast: (@: char) item\as\atom\data)
+            run_size := item\as\atom\length
+            span_length := operand\as\atom\length + run_size
+            made := lm_p0_lower_types_reference(document, run, run_size, operand, operand, span_length)
+            if: made = 0
+                return: 0
+            made\flags := made\flags | (item\flags & c.LM_P0_NODE_SEPARATOR_AFTER)
+            last_live\value := made
+            prior\next := field\next
+            if: structure\last_field = field
+                structure\last_field := prior
+            structure\field_count := structure\field_count - 1U
+            field := prior\next
+            continue
+        if: lm_p0_lower_types_field_live(field) != 0
+            before_live := last_live
+            last_live := field
+        prior := field
+        field := field\next
+    return: 1
+
+# One node: a structure or a Frame is walked, an atom is left. 1 done, 0 failed.
+fn: lm_p0_lower_types_node (@: document c.LmP0Document; @: p0_node c.LmP0Node) int
+    @: group c.LmP0Structure 0
+    @: frame c.LmP0Frame 0
+    @: body c.LmP0Structure 0
+    if: p0_node = 0 || p0_node\as = 0 || lm_p0_lower_types_live(p0_node) = 0
+        return: 1
+    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE
+        group := p0_node\as\structure
+        if: lm_p0_lower_types_structure(document, group) = 0
+            return: 0
+        if: group != 0 && group\trailer != 0
+            body := group\trailer\body
+            return: lm_p0_lower_types_structure(document, body)
+        return: 1
+    if: p0_node\kind != c.LM_P0_NODE_FRAME || p0_node\as\frame = 0
+        return: 1
+    frame := p0_node\as\frame
+    body := frame\body
+    if: lm_p0_lower_types_structure(document, body) = 0
+        return: 0
+    if: frame\trailer != 0
+        body := frame\trailer\body
+        if: lm_p0_lower_types_structure(document, body) = 0
+            return: 0
+        ---
+    if: lm_p0_lower_types_cast(document, p0_node) = 0
+        return: 0
+    return: lm_p0_lower_types_frame(document, p0_node)
+
+# The pass over a parsed document: 0 done, 1 refused or failed with a diagnostic of the document. The tree is open to allocation for the length of the pass and frozen again after it.
+fn: lm_p0_lower_types (@: document c.LmP0Document) int
+    @: root c.LmP0Node 0
+    int: failed 0
+    if: document = 0 || document\root = 0 || document\owners_initialized = 0
+        return: 0
+    root := document\root
+    document\tree_arena\frozen := 0
+    failed := (cast: (int) (lm_p0_lower_types_node(document, root) = 0))
+    lm_p0_document_freeze_tree(document)
+    return: failed
 
 # Original: parser.lm1:4508 lm_p0_document_diagnostic
 fn: lm_p0_document_diagnostic (const: (@: document c.LmP0Document)) const: @: c.LmP0Diagnostic

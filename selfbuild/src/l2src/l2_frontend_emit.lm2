@@ -17275,7 +17275,11 @@ fn: lm_compiler_snap_parse (const: (@: path char); @@: document c.LmP0Document) 
     data := c.lm_compiler_snap_bytes(path, @ n)
     if: data = 0
         return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_p0_parse_bytes((cast: (const: @: char) (data)), (cast: (size_t) (n)), (cast: (@@: c.LmP0Document) (document)))))
+    if: c.lm_p0_parse_bytes((cast: (const: @: char) (data)), (cast: (size_t) (n)), (cast: (@@: c.LmP0Document) (document))) != 0
+        return: (cast: (int) (1))
+    if: document[0] = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.lm_p0_lower_types((cast: (@: c.LmP0Document) (document[0])))))
 end: lm_compiler_snap_parse
 
 # Original: l2src/l2trans.lm1:37248

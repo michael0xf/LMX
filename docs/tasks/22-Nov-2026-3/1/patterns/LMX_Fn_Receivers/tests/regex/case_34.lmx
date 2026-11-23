@@ -1,0 +1,11 @@
+# Pending source fixture; all actual Patterns are already ready values.
+# Expected: all four predicates are 1; prepared groups are normal Structures.
+Parts:
+    asciiLetter
+    asciiDigit
+
+@: first literal("cat")
+@: second literal("dog")
+[]: assigned [first second]
+@: referred [first second]
+(matches(utf8Text("catdog"); sequence(patterns := ([]: [first second]))); matches(utf8Text("dog"); choice(patterns := assigned)); matches(utf8Text("catdog"); sequence(patterns := referred)); matches(utf8Text("a5"); sequence(patterns := Parts)))

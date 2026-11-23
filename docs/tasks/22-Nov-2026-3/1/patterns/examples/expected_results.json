@@ -1,0 +1,1579 @@
+{
+  "format": "LMX example expectations, operand/library edition 2026-11-21",
+  "status": "expected outcomes; LMX and GHC were not executed in this documentation review",
+  "runner_contract": "Prepare each source with its load_before dependencies in the same fresh context using the existing Fable loader; then invoke the named entry. import exposes existing names and is not a new file loader. Required supplied kernel profiles are stated separately.",
+  "source_examples": [
+    {
+      "id": "H01",
+      "file": "lmx/H01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h01",
+      "cases": [
+        {
+          "invoke": "ApplyProbe\\run()",
+          "expected": 1408
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "ApplyProbe\\run()",
+          "expected": 1408
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм."
+    },
+    {
+      "id": "H02",
+      "file": "lmx/H02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h02",
+      "cases": [
+        {
+          "invoke": "SignatureProbe\\run()",
+          "expected": 2772
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "SignatureProbe\\run()",
+          "expected": 2772
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Контроль использует встроенную функциональную сигнатуру и позиционное применение. Name::DATA и signatureTypes описывают такое же семантическое требование; создание типового описания не скрывает вычисление значения или предметный алгоритм."
+    },
+    {
+      "id": "H03",
+      "file": "lmx/H03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h03",
+      "cases": [
+        {
+          "invoke": "ClosureProbe\\run()",
+          "expected": 6101006,
+          "components": [
+            6,
+            101,
+            6
+          ],
+          "original_callable_unchanged": true,
+          "independent_prefixes": [
+            5,
+            100
+          ]
+        },
+        {
+          "variant": "Explicit saved actual through returned method",
+          "invoke": "add5(1; saved := 25)",
+          "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+          "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core: direct generic receivers are present, no import or alternate library version.",
+        "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+      ],
+      "selected_variant": "receivers",
+      "alternative_variant": "original",
+      "alternative_cases": [
+        {
+          "invoke": "ClosureProbe\\run()",
+          "expected": 6101006,
+          "components": [
+            6,
+            101,
+            6
+          ],
+          "original_saved_after": 0,
+          "original_saved_path": "CapturePrototype\\saved"
+        },
+        {
+          "variant": "Explicit saved actual through returned method",
+          "invoke": "add5(1; saved := 25)",
+          "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+          "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_saved_after": 0,
+            "original_saved_path": "CapturePrototype\\saved"
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+            "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_callable_unchanged": true,
+            "independent_prefixes": [
+              5,
+              100
+            ]
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+            "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса."
+    },
+    {
+      "id": "H04",
+      "file": "lmx/H04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h04",
+      "cases": [
+        {
+          "invoke": "DefaultProbe\\run()",
+          "expected": 6260106,
+          "components": [
+            6,
+            26,
+            1,
+            6
+          ],
+          "copied_default_after": 5
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "DefaultProbe\\run()",
+          "expected": 6260106,
+          "components": [
+            6,
+            26,
+            1,
+            6
+          ],
+          "copied_default_after": 5
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан."
+    },
+    {
+      "id": "H05",
+      "file": "lmx/H05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h05",
+      "cases": [
+        {
+          "invoke": "BindingProbe\\run()",
+          "expected": 2606,
+          "original_y_after": 8,
+          "copied_y_after": 5
+        }
+      ]
+    },
+    {
+      "id": "H06",
+      "file": "lmx/H06.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h06",
+      "cases": [
+        {
+          "invoke": "CompositionProbe\\run()",
+          "expected": 910,
+          "components": [
+            9,
+            10
+          ]
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "invoke": "CompositionProbe\\run()",
+          "expected": 910,
+          "components": [
+            9,
+            10
+          ]
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP."
+    },
+    {
+      "id": "H07",
+      "file": "lmx/H07.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h07",
+      "cases": [
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\prepared()",
+            "Evaluation\\prepared()"
+          ],
+          "expected": [
+            2,
+            4
+          ],
+          "calls_after": 2
+        },
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\raw()",
+            "Evaluation\\raw()"
+          ],
+          "expected": [
+            3,
+            7
+          ],
+          "calls_after": 4
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "semantic_scope": "Both same-core algorithms are retained: original tests prepared/raw occurrences, receivers tests lazy caching plus two ordinary calls. They share output/count fixtures; the stronger raw-graph test belongs to original only.",
+      "selected_variant": "original",
+      "alternative_variant": "receivers",
+      "alternative_cases": [
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\prepared()",
+            "Evaluation\\prepared()"
+          ],
+          "expected": [
+            2,
+            4
+          ],
+          "calls_after": 2
+        },
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\raw()",
+            "Evaluation\\raw()"
+          ],
+          "expected": [
+            3,
+            7
+          ],
+          "calls_after": 4
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ],
+        "receivers": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Полный смысл H07 включает реальные raw-occurrences и их исполнение через sys\\eval, а не только итоговые числа. Lazy и два обычных вызова — полезный дополнительный приём того же ядра, но он не сохраняет raw-контракт; поэтому не участвует в выборе основного для этого сценария. Haskell IO-аналог сравнивает эффекты и не выдаётся за доступ к LMX AST."
+    },
+    {
+      "id": "H08",
+      "file": "lmx/H08.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h08",
+      "cases": [
+        {
+          "invoke": "StateProbe\\ownCopy()",
+          "expected": 0
+        },
+        {
+          "invoke": "StateProbe\\callerPlace()",
+          "expected": 3
+        }
+      ]
+    },
+    {
+      "id": "H09",
+      "file": "lmx/H09.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h09",
+      "cases": [
+        {
+          "invoke": "Numbers\\demo()",
+          "expected": 12,
+          "next_invocations": 4,
+          "body_invocations": 3
+        }
+      ],
+      "load_before": [],
+      "embedded_helpers": [
+        {
+          "source": "libraries/lmx/Cycles.lm3",
+          "metrics": {
+            "characters": 73,
+            "nonblank_lines": 9,
+            "utf8_bytes": 159,
+            "sha256": "f9a00041d9c3232a13261b7b71a56302fd8f2cd1e7c73d418e8e2a165b21adf4"
+          }
+        }
+      ],
+      "historical_client": {
+        "code": "Numbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+        "metrics": {
+          "characters": 212,
+          "nonblank_lines": 16,
+          "utf8_bytes": 367,
+          "sha256": "04f43a9aaf742b905ec62cd55698ca1ef394d56269b596af359465f43f257f57"
+        },
+        "preserved_as": "Exact suffix after the full, counted Cycles helper."
+      },
+      "source_boundary": "The complete source includes Cycles and Numbers; no application helper is loaded separately."
+    },
+    {
+      "id": "R01",
+      "file": "lmx/R01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r01",
+      "cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current kernel; derive delegates to ordinary merge with one copy map."
+      ],
+      "selected_variant": "receivers",
+      "alternative_variant": "original",
+      "alternative_cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена."
+    },
+    {
+      "id": "R02",
+      "file": "lmx/R02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r02",
+      "cases": [
+        {
+          "invoke": "StreamProbe\\run()",
+          "expected": 27,
+          "components": [
+            2,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R03",
+      "file": "lmx/R03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r03",
+      "cases": [
+        {
+          "invoke": "ImportProbe\\run()",
+          "expected": 712,
+          "provider_value_after": 7,
+          "copied_owner_value_after": 12,
+          "grouping_container_value_after": 7
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "file": "lmx/R04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r04",
+      "cases": [
+        {
+          "invoke": "LocalProbe\\run()",
+          "expected": 4142,
+          "producer_calls": 2
+        },
+        {
+          "invoke": "LocalProbe\\explicitInitialization()",
+          "expected": 44,
+          "producer_calls": 1
+        }
+      ]
+    },
+    {
+      "id": "R06a",
+      "file": "lmx/R06a.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r06",
+      "cases": [
+        {
+          "invoke": "SharingProbe\\run()",
+          "expected": 2107,
+          "identity": "copied left and right share one copied target; original is distinct"
+        }
+      ]
+    },
+    {
+      "id": "R06b",
+      "file": "lmx/R06b.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r06",
+      "cases": [
+        {
+          "invoke": "CycleProbe\\run()",
+          "expected": 83,
+          "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+          "copied_ring_value_after": 8,
+          "grouping_container_value_after": 3
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "file": "lmx/R07.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r07",
+      "cases": [
+        {
+          "invoke": "Operands\\Example\\demo()",
+          "expected": 20,
+          "components": [
+            7,
+            13
+          ]
+        }
+      ],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+      ]
+    },
+    {
+      "id": "R09",
+      "file": "lmx/R09.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r09",
+      "cases": [
+        {
+          "invoke": "UninitializedGraph\\localWrite()",
+          "expected": 5,
+          "source_record_after": "uninit:int",
+          "source_value_size_after": 0
+        },
+        {
+          "invoke": "UninitializedGraph\\graphWrite()",
+          "expected": 5,
+          "source_record_after": "int",
+          "source_value_after": 5,
+          "require_old_new_raw_address_equality": false
+        },
+        {
+          "inspection": "Fresh source before either entry",
+          "uninitialized_value_size": 0,
+          "ready_controls": [
+            "numeric 0",
+            "null reference 0"
+          ],
+          "nil_means": "typed absence"
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "file": "lmx/A01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#a01",
+      "cases": [
+        {
+          "invoke": "SlotProbe\\run()",
+          "expected": 209,
+          "length_after": 2,
+          "new_field_name": "z"
+        }
+      ]
+    },
+    {
+      "id": "V02",
+      "file": "lmx/V02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v02",
+      "cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+      ],
+      "declared_exits": [
+        "RangeArity"
+      ],
+      "exit_contract": "The client propagates the helper exit; every written application supplies exactly two bounds.",
+      "selected_variant": "original",
+      "alternative_variant": "regex",
+      "alternative_cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ],
+        "regex": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "regex": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро."
+    },
+    {
+      "id": "V03",
+      "file": "lmx/V03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v03",
+      "cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; ordinary calls autofill gain and read from the active candidate."
+      ],
+      "selected_variant": "reuse",
+      "alternative_variant": "original",
+      "alternative_cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "alternative_load_before": [],
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ],
+        "reuse": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "reuse": []
+      },
+      "source_regions": {
+        "primary": "Before # BEGIN ALTERNATIVE LMX (excluded from character counts)",
+        "alternative": {
+          "begin": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+          "end": "# END ALTERNATIVE LMX",
+          "comment_prefix": "# ",
+          "skip_label_line": true,
+          "execute_separately": true
+        }
+      },
+      "core_versions": 1,
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта."
+    },
+    {
+      "id": "V04",
+      "file": "lmx/V04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v04",
+      "cases": [
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+          "expected": 1
+        },
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "V05",
+      "file": "lmx/V05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v05",
+      "cases": [
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 1,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 1,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        }
+      ],
+      "observation_owner": "parent(device\\set), equal to parent(device\\observe)",
+      "observed_owner_fields": [
+        "writes",
+        "reads",
+        "trace",
+        "commanded",
+        "sensed"
+      ]
+    },
+    {
+      "id": "M01",
+      "file": "lmx/M01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#m01",
+      "cases": [
+        {
+          "kind": "transport fixture",
+          "setup": "One owner; fresh Counter; value=0",
+          "calls": [
+            "Counter\\add(delta := 4)",
+            "Counter\\add(delta := 9)"
+          ],
+          "observe": "Counter\\read()",
+          "expected": 13,
+          "constraint": "one serial turn per admitted input; either arrival order"
+        }
+      ],
+      "completion_barrier": "Read after both add executions complete; an HTTP admission acknowledgement alone is insufficient."
+    },
+    {
+      "id": "M05",
+      "file": "lmx/M05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#m05",
+      "cases": [
+        {
+          "kind": "transport fixture",
+          "invoke": "Lamp\\set(command := 1)",
+          "expected_stored_state": 1,
+          "expected_application_replies": 0,
+          "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+        }
+      ],
+      "http_boundary": "A transport/admission response is not an application reply from resultless Lamp\\set."
+    }
+  ],
+  "additional_fixtures": [
+    {
+      "id": "H10",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h10"
+    },
+    {
+      "id": "H11",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h11"
+    },
+    {
+      "id": "H12",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h12"
+    },
+    {
+      "id": "R05",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r05"
+    },
+    {
+      "id": "R08",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r08"
+    },
+    {
+      "id": "R10",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r10"
+    },
+    {
+      "id": "A02",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a02"
+    },
+    {
+      "id": "A03",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a03"
+    },
+    {
+      "id": "A04",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a04"
+    },
+    {
+      "id": "A05",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a05"
+    },
+    {
+      "id": "A06",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a06"
+    },
+    {
+      "id": "V01",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#v01"
+    },
+    {
+      "id": "M02",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m02"
+    },
+    {
+      "id": "M03",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m03"
+    },
+    {
+      "id": "M04",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m04"
+    },
+    {
+      "id": "M06",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m06"
+    },
+    {
+      "id": "M07",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m07"
+    },
+    {
+      "id": "M08",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m08"
+    }
+  ],
+  "comparison_programs": [
+    {
+      "id": "DP01",
+      "source_markdown": "../01_iterator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "numbers\\demo()",
+      "expected": 12,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP02",
+      "source_markdown": "../02_strategy_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "strategy\\demo()",
+      "expected": 25,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP03",
+      "source_markdown": "../03_factory_method_node_prototype_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "add1\\demo()",
+      "expected": 32,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP04",
+      "source_markdown": "../04_adapter_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "adapter\\demo()",
+      "expected": 5,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP05",
+      "source_markdown": "../05_observer_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "observer\\demo()",
+      "expected": 11,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP06",
+      "source_markdown": "../06_decorator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "transform\\demo()",
+      "expected": 63,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP07",
+      "source_markdown": "../07_command_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "commands\\demo()",
+      "expected": 4,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP08",
+      "source_markdown": "../08_template_method_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "pipeline\\demo()",
+      "expected": 35,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP09",
+      "source_markdown": "../09_visitor_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Actions\\demo()",
+      "expected": 12,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP10",
+      "source_markdown": "../10_state_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "machine\\demo()",
+      "expected": 1,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP11",
+      "source_markdown": "../11_chain_of_responsibility_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "chain\\demo()",
+      "expected": 5,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP12",
+      "source_markdown": "../12_composite_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Pair\\demo()",
+      "expected": 10,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP13",
+      "source_markdown": "../13_proxy_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "requests\\demo()",
+      "expected": 8,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP14",
+      "source_markdown": "../14_facade_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "checkout\\demo()",
+      "expected": 39,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP15",
+      "source_markdown": "../15_builder_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Rectangle\\demo()",
+      "expected": 22,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP16",
+      "source_markdown": "../16_prototype_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Point\\demo()",
+      "expected": 153,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP17",
+      "source_markdown": "../17_memento_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Editor\\demo()",
+      "expected": 59,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP18",
+      "source_markdown": "../18_bridge_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "bridge\\demo()",
+      "expected": 45,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP19",
+      "source_markdown": "../19_singleton_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Demo\\run()",
+      "expected": 7,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP20",
+      "source_markdown": "../20_abstract_factory_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Client\\demo()",
+      "expected": 33,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP21",
+      "source_markdown": "../21_flyweight_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "glyphs\\drawing\\demo()",
+      "expected": 81,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP22",
+      "source_markdown": "../22_mediator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Demo\\run()",
+      "expected": 10,
+      "fresh_source_context": true
+    },
+    {
+      "id": "DP23",
+      "source_markdown": "../23_interpreter_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "operands\\example\\demo()",
+      "expected": 20,
+      "fresh_source_context": true
+    }
+  ],
+  "author_clarification": {
+    "source": "../../LMX_semantics.en.md#uninit-zero-payload",
+    "uninit_value_size": 0,
+    "frame_assignment": "changes runtime place; source graph remains unchanged",
+    "graph_assignment": "replaces the fragment referenced by the selected Lmx cell",
+    "source_graph": "complete written program including typed primitive leaves and all receivers",
+    "binary": "native methods only; binary R0 has a local pointer to the R0 graph, also under interpretation",
+    "native_update": "existing explicit compilation and endturn mechanism"
+  },
+  "haskell_run_command": "runghc -iexamples/libraries/haskell examples/haskell/Analogies.hs",
+  "receiver_revision": {
+    "date": "2026-11-22",
+    "variant_ids": [
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H06",
+      "H07",
+      "R01",
+      "V02",
+      "V03"
+    ],
+    "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
+    "metric_boundary": "# BEGIN ALTERNATIVE LMX (excluded from character counts)",
+    "selected": {
+      "H01": "original",
+      "H02": "original",
+      "H03": "receivers",
+      "H04": "original",
+      "H06": "original",
+      "H07": "original",
+      "R01": "receivers",
+      "V02": "original",
+      "V03": "reuse"
+    },
+    "original_and_receivers_cases_preserved": true,
+    "runtime_executed": false
+  }
+}

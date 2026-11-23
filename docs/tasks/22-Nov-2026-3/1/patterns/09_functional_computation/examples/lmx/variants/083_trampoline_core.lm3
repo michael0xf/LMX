@@ -1,0 +1,29 @@
+Steps:
+    int: n
+    return: @
+    throws:
+        FxIndex
+        FxArity
+        FxRecordArity
+        FxTypeToken
+        FxKernelFailure
+        FxCallFailure
+        ReceiverIndex
+        SequenceSize
+    even_step:
+        throws: copy(Steps\throws)
+        if: n = 0
+            return: done(value := (1 record))
+        return: more(thunk := partial(odd_step; (n - 1)))
+    odd_step:
+        throws: copy(Steps\throws)
+        if: n = 0
+            return: done(value := (0 record))
+        return: more(thunk := partial(even_step; (n - 1)))
+
+Example:
+    int: n
+    return: int
+    run:
+        throws: copy(Steps\throws)
+        return: \trampoline(Steps\even_step(n))

@@ -1,0 +1,416 @@
+# Elementary recognizers: a probe returns its new position or internal -1.
+# The integer -1 is never a public Match/Maybe/Span representation.
+# A probe is an ordinary selected method, not an opcode or a regex instruction.
+
+RxPrimitiveConfig:
+    @: probe 0
+    @: payload 0
+
+RxPrimitiveState:
+    @: source 0
+    int: position 0
+    @: captures 0
+    @: probe 0
+    @: payload 0
+    int: finished 0
+
+RxPrimitiveMake:
+    private:
+        @: probe
+        @: payload 0
+    return: @
+    make:
+        private: @: config (copy(RxPrimitiveConfig))
+        config\probe := probe
+        config\payload := payload
+        return: RxPatternFactory\make(RxPrimitiveOpen\open; config)
+
+RxPrimitiveOpen:
+    private:
+        @: config
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: @
+    open:
+        private: @: state (copy(RxPrimitiveState))
+        state\source := source
+        state\position := position
+        state\captures := captures
+        state\probe := config\probe
+        state\payload := config\payload
+        return: RxCursorFactory\make(RxPrimitiveStep\step; state)
+
+RxPrimitiveStep:
+    private: @: state
+    return: @
+    step:
+        if: state\finished != 0
+            return: FxNone\none()
+        state\finished := 1
+        private: @: probe state\probe
+        private: int: end probe(payload := state\payload; source := state\source; position := state\position; captures := state\captures)
+        if: end < 0
+            return: FxNone\none()
+        return: FxSome\some(value := RxCandidateMake\make(end; state\captures))
+
+RxTextConfig:
+    char[]: text ""
+
+RxLiteral:
+    private: char[]: text
+    required: text
+    return: @
+    literal:
+        private: @: payload (copy(RxTextConfig))
+        payload\text := text
+        return: RxPrimitiveMake\make(RxLiteralProbe\probe; payload)
+
+RxLiteralProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        private: @: text RxTextBuild\make(payload\text; source\profile)
+        if: length(text\units) > length(source\units) - position
+            return: -1
+        private: int: i 0
+        while: i < length(text\units)
+            if: source\units[position + i] != text\units[i]
+                return: -1
+            i += 1
+        return: position + length(text\units)
+
+RxClassConfig:
+    char[]: text ""
+    int: inverted 0
+
+RxChars:
+    private: char[]: text
+    required: text
+    return: @
+    oneOf:
+        private: @: payload (copy(RxClassConfig))
+        payload\text := text
+        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+    noneOf:
+        private: @: payload (copy(RxClassConfig))
+        payload\text := text
+        payload\inverted := 1
+        return: RxPrimitiveMake\make(RxClassProbe\probe; payload)
+
+RxClassProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        # Decode before the end test: invalid pattern text is an error even
+        # when this attempted match has no remaining source character.
+        private: @: text RxTextBuild\make(payload\text; source\profile)
+        if: position = length(source\units)
+            return: -1
+        private: int: found 0
+        private: int: i 0
+        while: i < length(text\units)
+            if: source\units[position] = text\units[i]
+                found := 1
+                break
+            i += 1
+        if: found = payload\inverted
+            return: -1
+        return: position + 1
+
+RxRangeConfig:
+    char[]: first ""
+    char[]: last ""
+
+RxRange:
+    private:
+        char[]: first
+        char[]: last
+    required: first last
+    return: @
+    charRange:
+        private: @: payload (copy(RxRangeConfig))
+        payload\first := first
+        payload\last := last
+        return: RxPrimitiveMake\make(RxRangeProbe\probe; payload)
+
+RxRangeProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        throws: PatternArgument
+        private: @: first RxTextBuild\make(payload\first; source\profile)
+        private: @: last RxTextBuild\make(payload\last; source\profile)
+        if: length(first\units) != 1 || length(last\units) != 1
+            throw: PatternArgument()
+        if: first\units[0] > last\units[0]
+            throw: PatternArgument()
+        if: position = length(source\units)
+            return: -1
+        private: int: code source\units[position]
+        if: code < first\units[0] || code > last\units[0]
+            return: -1
+        return: position + 1
+
+RxPredicateConfig:
+    @: predicate 0
+
+RxSatisfy:
+    private: RxPredicate@: predicate
+    required: predicate
+    return: @
+    satisfy:
+        private: @: payload (copy(RxPredicateConfig))
+        payload\predicate := predicate
+        return: RxPrimitiveMake\make(RxPredicateProbe\probe; payload)
+
+RxPredicateProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = length(source\units)
+            return: -1
+        private: RxPredicate@: predicate payload\predicate
+        if: predicate(source\units[position]) = 0
+            return: -1
+        return: position + 1
+
+RxBoundaryOf:
+    private: RxPredicate@: predicate
+    required: predicate
+    return: @
+    boundaryOf:
+        private: @: payload (copy(RxPredicateConfig))
+        payload\predicate := predicate
+        return: RxPrimitiveMake\make(RxBoundaryProbe\probe; payload)
+
+RxBoundaryProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        private: RxPredicate@: predicate payload\predicate
+        private: int: before 0
+        private: int: after 0
+        if: position > 0
+            before := predicate(source\units[position - 1]) != 0
+        if: position < length(source\units)
+            after := predicate(source\units[position]) != 0
+        if: before != after
+            return: position
+        return: -1
+
+RxNameConfig:
+    char[]: name ""
+
+RxSameAs:
+    private: char[]: name
+    required: name
+    return: @
+    sameAs:
+        private: @: payload (copy(RxNameConfig))
+        payload\name := name
+        return: RxPrimitiveMake\make(RxSameAsProbe\probe; payload)
+
+RxSameAsProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        private: @: found RxCaptureLatest\find(captures; payload\name)
+        if: found\present = 0
+            return: -1
+        private: @: capture found\value
+        private: int: count capture\end - capture\begin
+        if: count > length(source\units) - position
+            return: -1
+        private: int: i 0
+        while: i < count
+            if: source\units[position + i] != source\units[capture\begin + i]
+                return: -1
+            i += 1
+        return: position + count
+
+RxEmptyProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        return: position
+
+RxNeverProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        return: -1
+
+RxAnyProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position < length(source\units)
+            return: position + 1
+        return: -1
+
+RxLineCharProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = length(source\units)
+            return: -1
+        private: int: unit source\units[position]
+        if: unit = 13 || unit = 10
+            return: -1
+        return: position + 1
+
+RxLineBreakProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = length(source\units)
+            return: -1
+        private: int: unit source\units[position]
+        if: unit = 13
+            if: position + 1 < length(source\units)
+                if: source\units[position + 1] = 10
+                    return: position + 2
+            ---
+            return: position + 1
+        if: unit = 10
+            if: position > 0
+                if: source\units[position - 1] = 13
+                    return: -1
+            ---
+            return: position + 1
+        return: -1
+
+RxTextStartProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = 0
+            return: position
+        return: -1
+
+RxTextEndProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = length(source\units)
+            return: position
+        return: -1
+
+RxLineStartProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = 0
+            return: position
+        private: int: before source\units[position - 1]
+        if: before = 10
+            return: position
+        if: before = 13
+            if: position = length(source\units)
+                return: position
+            if: source\units[position] != 10
+                return: position
+        ---
+        return: -1
+
+RxLineEndProbe:
+    private:
+        @: payload
+        RxPreparedText@: source
+        int: position
+        @: captures
+    return: int
+    probe:
+        if: position = length(source\units)
+            return: position
+        private: int: after source\units[position]
+        if: after = 13
+            return: position
+        if: after = 10
+            if: position = 0
+                return: position
+            if: source\units[position - 1] != 13
+                return: position
+        ---
+        return: -1
+
+RxAsciiDigit:
+    private: int: unit
+    return: int
+    test:
+        return: unit >= 48 && unit <= 57
+
+RxAsciiLetter:
+    private: int: unit
+    return: int
+    test:
+        return: (unit >= 65 && unit <= 90) || (unit >= 97 && unit <= 122)
+
+RxAsciiWord:
+    private: int: unit
+    return: int
+    test:
+        return: RxAsciiLetter\test(unit) || RxAsciiDigit\test(unit) || unit = 95
+
+RxAsciiSpace:
+    private: int: unit
+    return: int
+    test:
+        return: unit = 32 || (unit >= 9 && unit <= 13)

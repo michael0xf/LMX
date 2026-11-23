@@ -1,0 +1,171 @@
+# ОБЩИЙ ТИПИЗИРОВАННЫЙ ПРОТОКОЛ ЗНАЧЕНИЙ.
+# Ссылка указывает на запись {type,payload}, а не на сам payload.
+# Structure / Array<@> хранит такие ссылки. Вектор (5; "x") содержит
+# int- и string-записи, а не дополнительные @-обёртки над этими записями.
+# Плотный Array<T> остаётся отдельным значением; не reinterpret_cast массива.
+# attempt/raise — тонкие границы обычного call/catch, см. KERNEL_REQUIREMENTS.md.
+# Они не реализуют map, partial, memo, контейнеры или другие алгоритмы.
+
+FxRecords:
+    private: @: value
+    return: @
+    reference:
+        throws: FxRecordArity
+        return: (value FxRecordOperands\record)
+
+FxOne:
+    private: @: value
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 1)
+        out[0] := value
+        return: out
+
+FxTwo:
+    private:
+        @: first
+        @: second
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 2)
+        out[0] := first
+        out[1] := second
+        return: out
+
+# Fresh reference concatenation is retained, even if a caller supplies dense
+# parts. The explicit empty @[] part selects concat's mixed/reference profile;
+# this adds no user data element and introduces no second copying algorithm.
+FxAppend:
+    private:
+        @: first
+        @: second
+    return: @
+    append:
+        throws: copy(FxThrows\sequence)
+        private: @: empty (copy(()))
+        return: FxSeqConcat\concat(parts := (empty; first; second))
+
+# Snapshot применяет штатное принятие Ti, не глубокую copy целевых графов.
+# Semantic types match the supplied formal positions. Only written ready
+# actuals are captured; missing positions remain absent on each ordinary call.
+FxArguments:
+    private:
+        @: operation
+        @: args
+    return: @
+    capture:
+        throws: copy(FxThrows\capture)
+        private: @: info FxKernel\signature(subject := operation)
+        if: length(args) > length(info\inputTypes)
+            throw: FxArity()
+        return: FxCapturePrefix\capture(info\inputTypes; args)
+
+FxApply:
+    private:
+        @: operation
+        @: args
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        private: @: outcome FxTry\attempt(operation := operation; args := args)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
+# FxWrap's engine receives the already selected ordinary call frame. Obtaining
+# this handle reads neither optional inputs nor computed defaults. The public
+# function still has exact T0...Tn -> R; its result is not changed to @.
+FxEngineState:
+    @: engine 0
+    @: payload 0
+
+FxWrap:
+    private:
+        @: contract
+        @: engine
+        @: payload
+        @: failures
+        @: policy 0
+    return: @
+    make:
+        throws: copy(FxThrows\selection)
+        private: @: info FxKernel\signature(subject := contract)
+        private: @: state (copy(FxEngineState))
+        state\engine := engine
+        state\payload := payload
+        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
+        if: info\hasResult != 0
+            text := FxConcat\concat(text; "return: \\fx_answer\n")
+        else:
+            text := FxConcat\concat(text; "return\n")
+        text := FxConcat\concat(text; "catch: FxCallFailure (@: outcome)\n    FxKernel\\raise(name := outcome\\failure; payload := outcome\\payload)\n")
+        private: @: engineInfo FxKernel\signature(subject := engine)
+        private: @: escapingEngine FxFailureFilter\without(engineInfo\throws; "FxCallFailure")
+        private: @: allFailures FxFailures\union(failures; FxStageFailures\names())
+        allFailures := FxFailures\union(allFailures; escapingEngine)
+        return: FxBuild\make(contract; text; state; allFailures; policy)
+
+FxOutcome:
+    int: ok 0
+    @: value 0
+    char[]: failure ""
+    @: payload 0
+
+FxTry:
+    private:
+        @: operation
+        @: args
+    return: @
+    attempt:
+        throws: FxKernelFailure FxTypeToken
+        private: @: info FxKernel\signature(subject := operation)
+        return: FxKernel\attempt(operation; args; info\throws)
+
+FxFailures:
+    private:
+        @: first
+        @: second
+    return: @
+    union:
+        throws: copy(FxThrows\sequence)
+        # Builder интернирует и устраняет повторные имена. Список не фиксирован.
+        return: FxAppend\append(first; second)
+
+# Сравнение строк и фильтр имён служат только finite throws bookkeeping.
+# Отфильтрована внутренняя ПОЙМАННАЯ оболочка engine; исходные target failures
+# добавляются отдельно, поэтому target по-прежнему может сам бросать FxCallFailure.
+FxSameText:
+    private:
+        char[]: first
+        char[]: second
+    return: int
+    same:
+        if: length(first) != length(second)
+            return: 0
+        private: int: i 0
+        while: i < length(first)
+            if: first[i] != second[i]
+                return: 0
+            i += 1
+        return: 1
+
+FxFailureFilter:
+    private:
+        @: names
+        char[]: excluded
+    return: @
+    without:
+        private: @: out (copy(()))
+        sys\resize(out; length(names))
+        private: int: used 0
+        private: int: i 0
+        while: i < length(names)
+            private: char[]: name \names[i]
+            if: FxSameText\same(name; excluded) = 0
+                out[used] := names[i]
+                used += 1
+            i += 1
+        sys\resize(out; used)
+        return: out

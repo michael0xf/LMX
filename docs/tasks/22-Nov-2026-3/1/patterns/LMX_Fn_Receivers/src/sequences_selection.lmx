@@ -1,0 +1,165 @@
+# Selection and list construction share the universal array access layer.
+# The private index vector is only a checked snapshot of explicit indices.
+# It is not a second graph, an environment copy, or a user-visible container.
+
+FxSeqIndices:
+    private:
+        @: source
+        @: indices
+    required: source indices
+    return: @
+    check:
+        throws: copy(FxThrows\sequence)
+        FxSeqInfo\get(source)
+        FxSeqInfo\get(indices)
+        private: int: total length(source)
+        private: int: count length(indices)
+        private: @: checked FxSeqAllocate\make(int[]; count)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(indices; i)
+            private: int: at \value
+            if: at < 0 || at >= total
+                throw: ReceiverIndex()
+            checked[i] := at
+            i += 1
+        return: checked
+
+# positions has already been checked in full. All new slots use the source's
+# actual profile; a chosen dense primitive is copied, not exposed as a view.
+FxSeqSelection:
+    private:
+        @: source
+        int[]: positions
+    required: source positions
+    return: @
+    copySelected:
+        throws: copy(FxThrows\sequence)
+        private: @: info FxSeqInfo\get(source)
+        private: int: count length(positions)
+        private: @: out FxSeqAllocate\make(info\arrayType; count)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(source; positions[i])
+            FxKernel\arrayWrite(target := out; index := i; value := value)
+            i += 1
+        return: out
+
+FxSeqSelect:
+    private:
+        @: source
+        @: indices
+    required: source indices
+    return: @
+    select:
+        throws: copy(FxThrows\sequence)
+        private: @: positions FxSeqIndices\check(source; indices)
+        return: FxSeqSelection\copySelected(source; positions)
+
+FxSeqOmit:
+    private:
+        @: source
+        @: indices
+    required: source indices
+    return: @
+    omit:
+        throws: copy(FxThrows\sequence)
+        private: @: positions FxSeqIndices\check(source; indices)
+        private: @: info FxSeqInfo\get(source)
+        private: int: count length(source)
+        private: @: excluded FxSeqAllocate\make(int[]; count)
+        private: int: i 0
+        while: i < count
+            excluded[i] := 0
+            i += 1
+        i := 0
+        while: i < length(positions)
+            excluded[positions[i]] := 1
+            i += 1
+        private: @: out FxSeqAllocate\make(info\arrayType; count)
+        private: int: used 0
+        i := 0
+        while: i < count
+            if: excluded[i] = 0
+                private: @: value FxSeqRead\read(source; i)
+                FxKernel\arrayWrite(target := out; index := used; value := value)
+                used += 1
+            i += 1
+        sys\resize(out; used)
+        return: out
+
+FxSeqReorder:
+    private:
+        @: source
+        @: permutation
+    required: source permutation
+    return: @
+    reorder:
+        throws: copy(FxThrows\reorder)
+        FxSeqInfo\get(source)
+        FxSeqInfo\get(permutation)
+        private: int: count length(source)
+        if: length(permutation) != count
+            throw: ReceiverPermutation()
+        private: @: positions FxSeqIndices\check(source; permutation)
+        private: @: seen FxSeqAllocate\make(int[]; count)
+        private: int: i 0
+        while: i < count
+            seen[i] := 0
+            i += 1
+        i := 0
+        while: i < count
+            private: int: at positions[i]
+            if: seen[at] != 0
+                throw: ReceiverPermutation()
+            seen[at] := 1
+            i += 1
+        return: FxSeqSelection\copySelected(source; positions)
+
+FxSeqProject:
+    private:
+        @: source
+        @: indices
+    required: source indices
+    return: @
+    project:
+        throws: copy(FxThrows\sequence)
+        private: @: selected FxSeqSelect\select(source; indices)
+        # One ordinary copy map, including repeated targets, cycles and owners.
+        return: (copy(selected))
+
+FxSeqList:
+    private: @: values
+    required: values
+    return: @
+    list:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqRecords\make(values)
+
+FxSeqFlatMap:
+    private:
+        @: items
+        @: next
+    required: items next
+    return: @
+    flatMap:
+        throws: copy(FxThrows\traversal)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: info FxSeqInfo\get(out)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: part FxApply\apply(next; FxOne\make(item))
+            FxSeqInfo\get(part)
+            private: int: before length(out)
+            private: int: added length(part)
+            private: int: after FxSeqSize\sum(before; added; info\maxLength)
+            sys\resize(out; after)
+            private: int: j 0
+            while: j < added
+                out[before + j] := FxSeqRead\read(part; j)
+                j += 1
+            i += 1
+        return: out

@@ -1,0 +1,21 @@
+Services:
+    return: int
+    answer:
+        return: 42
+    fallback:
+        return: 0
+
+Locator:
+    int: key
+    return: @
+    resolve:
+        if: key = 1
+            return: Services\answer
+        return: Services\fallback
+
+Client:
+    @: locator Locator
+    return: int
+    demo:
+        @: service locator\resolve(key := 1)
+        return: service()

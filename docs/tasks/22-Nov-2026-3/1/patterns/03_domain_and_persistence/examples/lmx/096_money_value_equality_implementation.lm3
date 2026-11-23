@@ -1,0 +1,14 @@
+MoneyLibrary:
+    immutable: Money:
+        int: cents 100
+        int: currency 840
+    Equality:
+        copy: sys\OPERANDS_TEMPLATE
+        return: int
+        equals:
+            throws: OperandArity
+            if: length(right) != 1
+                throw: OperandArity()
+            @: a \left
+            @: b \right[0]
+            return: a\cents = b\cents && a\currency = b\currency

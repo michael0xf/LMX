@@ -1,0 +1,19 @@
+CapturePrototype:
+    int: saved 0
+    @: binary 0
+    inputs:
+        int: second
+        return: int
+        apply:
+            return: node\binary(node\saved; second)
+
+Curry:
+    @: binary
+    int: first
+    return: @
+    capture:
+        @: instance (copy(CapturePrototype))
+        @: owner parent(instance\inputs)
+        owner\saved := first
+        owner\binary := binary
+        return: instance\inputs\apply

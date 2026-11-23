@@ -1,0 +1,330 @@
+# CALLABLE ADAPTERS: ordinary call preparation, without eager p0... capture.
+# Integration source, not a replacement interpreter. The narrow FxKernel calls
+# are specified in KERNEL_REQUIREMENTS.md and ADAPTER_IMPLEMENTATION.md.
+# Policy is ordinary graph data. A frame is borrowed service state of one call;
+# it cannot be kept by an adapter after that call, copied or serialized.
+
+FxInputPolicy:
+    @: source 0
+    @: positions 0
+    @: boundPositions 0
+    @: boundValues 0
+    @: pendingPositions 0
+    int: sourcePolicy 0
+
+FxIndices:
+    private:
+        int: start
+        int: count
+    return: @
+    make:
+        throws: FxIndex
+        if: start < 0 || count < 0
+            throw: FxIndex()
+        private: @: out (copy(()))
+        sys\resize(out; count)
+        private: int: i 0
+        while: i < count
+            out[i] := start + i
+            i += 1
+        return: out
+
+# Own policy is used only for a genuinely new interface with no source F.
+# Its ordinary declarations keep their own explicitly written policy. Merely
+# creating a types-only contract adds neither required nor private nor defaults.
+FxOwnPolicy:
+    private: @: contract
+    return: @
+    make:
+        throws: FxIndex FxKernelFailure FxTypeToken
+        private: @: info FxKernel\signature(contract)
+        private: @: out (copy(FxInputPolicy))
+        out\source := contract
+        out\positions := FxIndices\make(0; length(info\inputTypes))
+        out\boundPositions := (copy(()))
+        out\boundValues := (copy(()))
+        out\pendingPositions := (copy(()))
+        return: out
+
+# Each external position maps to one actual source declaration. Captured inputs
+# stay in the FULL source namespace, so a residual default can still read them.
+# Future curry positions are not missing actuals of an attempted full call:
+# the current unary contract selects only its current declaration. Their first
+# value demand, if any, still uses the ordinary source declaration/uninit rule.
+FxSourcePolicy:
+    private:
+        @: operation
+        @: positions
+        @: boundPositions
+        @: boundValues
+        @: pendingPositions
+    return: @
+    make:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(operation)
+        private: int: n length(info\inputTypes)
+        if: length(boundPositions) != length(boundValues)
+            throw: FxArity()
+        private: @: covered (copy(()))
+        sys\resize(covered; n)
+        private: int: i 0
+        while: i < n
+            covered[i] := 0
+            i += 1
+        private: @: groups (positions; boundPositions; pendingPositions)
+        private: int: group 0
+        while: group < length(groups)
+            private: @: values groups[group]
+            private: int: j 0
+            while: j < length(values)
+                private: int: at \values[j]
+                if: at < 0 || at >= n
+                    throw: FxIndex()
+                if: \covered[at] != 0
+                    throw: FxArity()
+                covered[at] := 1
+                j += 1
+            ---
+            group += 1
+        i := 0
+        while: i < n
+            if: \covered[i] = 0
+                throw: FxArity()
+            i += 1
+        private: @: out (copy(FxInputPolicy))
+        out\source := operation
+        out\positions := FxSlice\slice(positions; 0; length(positions))
+        out\boundPositions := FxSlice\slice(boundPositions; 0; length(boundPositions))
+        out\boundValues := FxSlice\slice(boundValues; 0; length(boundValues))
+        out\pendingPositions := FxSlice\slice(pendingPositions; 0; length(pendingPositions))
+        out\sourcePolicy := 1
+        return: out
+
+FxFullPolicy:
+    private: @: operation
+    return: @
+    make:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(operation)
+        private: @: empty (copy(()))
+        return: FxSourcePolicy\make(operation; FxIndices\make(0; length(info\inputTypes)); empty; empty; empty)
+
+FxPrefixPolicy:
+    private:
+        @: operation
+        @: captured
+    return: @
+    make:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(operation)
+        private: int: n length(info\inputTypes)
+        private: int: k length(captured)
+        if: k > n
+            throw: FxArity()
+        return: FxSourcePolicy\make(operation; FxIndices\make(k; n - k); FxIndices\make(0; k); captured; (copy(())))
+
+# These entries describe existing call transport. They are not user values,
+# not a lazy Array type, and never undergo the ordinary single-Structure W/E.
+# A place entry is internal transport of an already selected source place,
+# identified by destination position and (frame, sourcePosition). It is NOT a
+# source declaration actual or an eagerly evaluated `pN`. The kernel provider
+# must support its demanded read without internal-name matching/substitution;
+# this separate integration requirement is still NOT_RUN (acceptance PA01).
+FxTransportKinds:
+    const:
+        int: ready 0
+        int: place 1
+        int: actual 2
+
+FxTransportEntry:
+    int: position 0
+    int: kind 0
+    @: value
+    @: frame
+    int: sourcePosition 0
+
+FxReadyEntry:
+    private:
+        int: position
+        @: value
+    return: @
+    make:
+        private: @: out (copy(FxTransportEntry))
+        out\position := position
+        out\kind := FxTransportKinds\const\ready
+        out\value := value
+        return: out
+
+FxPlaceEntry:
+    private:
+        int: position
+        @: frame
+        int: sourcePosition
+    return: @
+    make:
+        private: @: out (copy(FxTransportEntry))
+        out\position := position
+        out\kind := FxTransportKinds\const\place
+        out\frame := frame
+        out\sourcePosition := sourcePosition
+        return: out
+
+# Retain a selected explicit occurrence: ready values are not reevaluated, and
+# declaration forms remain ordinary DATA Structures with their source identity
+# and selected positional/outer-label mapping. Their internal names never select
+# another input and passing them executes no initializer. Unlike place, this
+# mode never manufactures an explicit argument from an omitted position.
+FxActualEntry:
+    private:
+        int: position
+        @: frame
+        int: sourcePosition
+    return: @
+    make:
+        private: @: out FxPlaceEntry\make(position; frame; sourcePosition)
+        out\kind := FxTransportKinds\const\actual
+        return: out
+
+FxFrameEntries:
+    private: @: frame
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; length(frame\inputTypes))
+        private: int: i 0
+        while: i < length(out)
+            out[i] := FxPlaceEntry\make(i; frame; i)
+            i += 1
+        return: out
+
+FxFrameRead:
+    private:
+        @: frame
+        int: index
+    return: @
+    read:
+        throws: FxCallFailure FxIndex FxKernelFailure FxTypeToken
+        private: @: slot FxKernel\frameSlot(frame; index; demand := 1)
+        return: slot\value
+
+FxFrameAttempt:
+    private: @: frame
+    return: @
+    attempt:
+        throws: FxKernelFailure FxTypeToken
+        return: FxKernel\enter(frame; frame\failures)
+
+FxFrameApply:
+    private: @: frame
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        private: @: outcome FxFrameAttempt\attempt(frame)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
+# No factory/global context parameter. This is an ordinary invocation at the
+# reached call site. The source-frame link belongs only to an explicit actual;
+# additional optional inputs of the callback follow its own normal call chain.
+FxInvokeEntries:
+    private:
+        @: operation
+        @: entries
+        @: failures
+    return: @
+    attempt:
+        throws: FxKernelFailure FxTypeToken
+        private: @: prepared FxKernel\prepare(operation; entries)
+        finally:
+            FxKernel\releaseCall(prepared)
+        ---
+        return: FxKernel\enter(prepared; failures)
+
+FxApplyEntries:
+    private:
+        @: operation
+        @: entries
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        private: @: info FxKernel\signature(operation)
+        private: @: outcome FxInvokeEntries\attempt(operation; entries; info\throws)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
+FxApplyPlaces:
+    private:
+        @: operation
+        @: frame
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        return: FxApplyEntries\apply(operation; FxFrameEntries\make(frame))
+
+# Memoization explicitly observes all exposed accepted values, in position order,
+# BEFORE comparison/body. This is its documented key policy, never FxWrap policy.
+# Primitive capture is by value; reference targets retain identity and lifetime.
+FxFrameSnapshot:
+    private: @: frame
+    return: @
+    snapshot:
+        throws: copy(FxThrows\snapshot)
+        private: @: out (copy(()))
+        sys\resize(out; length(frame\inputTypes))
+        private: int: i 0
+        while: i < length(out)
+            private: @: value FxFrameRead\read(frame; i)
+            out[i] := FxCaptureOne\capture(frame\inputTypes[i]; value)
+            i += 1
+        return: out
+
+FxArgumentObservation:
+    int: position 0
+    int: supplied 0
+    int: ready 0
+    int: declaration 0
+    int: ownPlace 0
+    int: transparentPlace 0
+    char[]: state ""
+    @: requirement 0
+    @: value
+
+# Observation contains NO live frame/cell/context capability. A ready value is
+# available; a non-ready value is absent, not represented by an explicit @0.
+# This prevents a retained trace event from reading an expired activation.
+FxFrameObserve:
+    private: @: frame
+    return: @
+    observe:
+        throws: FxIndex FxKernelFailure FxTypeToken
+        private: @: out (copy(()))
+        sys\resize(out; length(frame\inputTypes))
+        private: int: i 0
+        while: i < length(out)
+            private: @: slot FxKernel\frameSlot(frame; i; demand := 0)
+            private: @: observation (copy(FxArgumentObservation))
+            observation\position := i
+            observation\supplied := slot\supplied
+            observation\ready := slot\ready
+            observation\declaration := slot\declaration
+            observation\ownPlace := slot\ownPlace
+            observation\transparentPlace := slot\transparentPlace
+            observation\state := slot\state
+            observation\requirement := slot\requirement
+            if: slot\ready != 0
+                observation\value := slot\value
+            out[i] := observation
+            i += 1
+        return: out
+
+FxForwardEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: copy(FxThrows\call)
+        return: FxFrameApply\apply(frame)
+

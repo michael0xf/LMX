@@ -1,0 +1,5 @@
+# Historical source before callable adapter correction
+
+Saved on 2026-11-22. The historical algorithms and their known required/private, eager argument-capture and Ti → @ restrictions are preserved. The `.lmx` files now use the current postfix type spelling: `T[]`, `Model@: name candidate`, and explicit `[]` initializers for empty typed arrays. The generated LMX snippets use the same type spelling; ordinary `@: name value` reference initializers retain their original meaning. This syntax migration does not repair or replace the historical algorithms. The exact earlier bytes remain in the original uploaded archive.
+
+Markdown support links to files absent from this snapshot are rebased to their current package counterparts and marked in each affected document; links to saved files remain local. These files document the earlier implementation and are excluded from the current assembly, executable examples and comparisons. Supporting documents and test receipts are historical records, not an alternative current specification. The current sources and ADAPTER_IMPLEMENTATION.md supersede them.

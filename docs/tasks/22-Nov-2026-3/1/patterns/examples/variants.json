@@ -1,0 +1,840 @@
+{
+  "format": "lmx-comparable-variants-v1",
+  "date": "2026-11-22",
+  "rule": "One current core. Among correct FAIR variants preserving the full scenario meaning, select the shortest complete client. Natural dynamic LMX copying/binding/composition need not emulate other-language architecture. Keep alternatives inline. Core mechanisms are excluded only with comparable built-in/library/operator boundary in controls.",
+  "records": [
+    {
+      "id": "H01",
+      "title_ru": "H01. `apply`: передать действие и вызвать его",
+      "expected_ru": "ApplyProbe\\run() → 1408 (14 и8).",
+      "implementation_comparison": "library_comparisons/h01_apply_comparision.md",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        int: second chosen(7)\n        return: first * 100 + second\n",
+          "cases": [
+            {
+              "invoke": "ApplyProbe\\run()",
+              "expected": 1408
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Прямое применение динамической ссылки chosen вызывает тот же выбранный метод без промежуточной библиотеки. Смена chosen не исполняет цель. Поля и методы Arithmetic, последовательность вызовов и результат1408 сохранены; искусственный аналог класса/статического делегата не вводится.",
+          "metrics": {
+            "characters": 207,
+            "nonblank_lines": 15,
+            "utf8_bytes": 325,
+            "sha256": "9bdbc4b25ca403a6c82f216b14e8e845ae19b7dbb25f793fd08f7baf1129b67d"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Вариант с общими ресиверами LMX",
+          "correct_for_scenario": true,
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        throws:\n            FxCallFailure\n            FxKernelFailure\n            FxTypeToken\n        @: chosen Arithmetic\\twice\n        @: firstRecord apply(chosen; (7))\n        int: first \\firstRecord\n        chosen := Arithmetic\\plusOne\n        @: secondRecord apply(chosen; (7))\n        int: second \\secondRecord\n        return: first * 100 + second\n",
+          "cases": [
+            {
+              "invoke": "ApplyProbe\\run()",
+              "expected": 1408
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+          ],
+          "notes_ru": "Общий apply принимает Structure/Array<@> записей аргументов. args := (7) передаёт контейнер целиком, без дополнительного items. Результат — запись с реальным типом; клиент явно читает её через разыменование. Число и типы аргументов не зашиты в библиотеку. Произвольный объявленный отказ целевой функции передаётся как FxCallFailure с исходным именем и payload внутри.",
+          "metrics": {
+            "characters": 321,
+            "nonblank_lines": 21,
+            "utf8_bytes": 511,
+            "sha256": "fa599c61ddb1f70eb51913a2f28aa3ca639ba8bd906240b72e726a09544e79dc"
+          }
+        }
+      ],
+      "original_source_sha256_at_import": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "original",
+      "alternative": "receivers",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "Haskell уже использует first-class application/apply; прямой динамический вызов LMX chosen(value) и общий apply имеют сопоставимый уровень работы. У цели сохраняются реальные DATA и оба арифметических метода. Расширение общего apply на вектор произвольных типов не подменяет предметный алгоритм.",
+      "core_versions": 1
+    },
+    {
+      "id": "H02",
+      "title_ru": "H02. Сигнатура, позиции и собственные имена кандидата",
+      "expected_ru": "SignatureProbe\\run() → 2772 (27 и72).",
+      "implementation_comparison": null,
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: throughSignature selected(a := 2; b := 7)\n        int: directly Candidate\\encode(a := 2; b := 7)\n        return: throughSignature * 100 + directly\n",
+          "cases": [
+            {
+              "invoke": "SignatureProbe\\run()",
+              "expected": 2772
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Именованное требование объявлено через PairOperation :: DATA. Публичное a обозначает первую позицию, которая у кандидата называется b; второй вызов использует собственные имена кандидата. Поэтому получаются27 и72. Старого объявления fn больше нет.",
+          "metrics": {
+            "characters": 271,
+            "nonblank_lines": 14,
+            "utf8_bytes": 388,
+            "sha256": "ebd0d6f5f4777530da04533b5b0d75f85e2959690c2ec917c11e2f077de5658e"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Вариант с общими ресиверами LMX",
+          "correct_for_scenario": true,
+          "code": "TypeSample:\n    int: value 0\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        throws:\n            FxIndex\n            FxTypeToken\n            FxKernelFailure\n            SequenceSize\n            ReceiverIndex\n        int: typeCode sys\\typeof(TypeSample[0])\n        @: PairOperation (typeCode signatureTypes typeCode typeCode)\n        PairOperation@: selected Candidate\\encode\n        int: throughSignature selected(p0 := 2; p1 := 7)\n        int: directly Candidate\\encode(a := 2; b := 7)\n        return: throughSignature * 100 + directly\n",
+          "cases": [
+            {
+              "invoke": "SignatureProbe\\run()",
+              "expected": 2772
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used.",
+            "Direct signatureTypes uses OPERANDS_TEMPLATE; named declarations use Name :: DATA."
+          ],
+          "notes_ru": "signatureTypes использует OPERANDS_TEMPLATE: токен результата слева, все входные токены справа. typeCode получен через sys\\typeof, числовой код типа не зашит. Построенные метки p0/p1 отображаются на реальные позиции кандидата и тоже дают27 и72. Готовая int-запись токена содержит код нужного типа; её собственный тип не превращает каждый вход в int. Явная форма конструктора — signatureTypes(left := R; right := inputs). Отражение существующего callable делает отдельный signature(operation := F). Здесь R signatureTypes T0 T1 содержит два правых аргумента, а R signatureTypes (T0 T1) — один целый контейнер: слева написан атом-токен R, не безымянная Structure. Общее правило операндов открывает только правый внешний контейнер ровно один раз, когда слева написана безымянная Structure и единственный правый аргумент тоже написанная безымянная Structure. Левую часть оно не меняет; результат функции не открывает; P0 ничего не снимает. Именованный signatureTypes(left := R; right := inputs) — обычная передача целого вектора, отдельная от этого правила. PairOperation :: (int: a; int: b; return: int) имеет справа один DATA-контейнер; :: является обычным операндом выражения, не отдельным псевдосинтаксисом.",
+          "metrics": {
+            "characters": 412,
+            "nonblank_lines": 23,
+            "utf8_bytes": 628,
+            "sha256": "dbb6e8836cc38663f72b112bad395893c20c74c26078597b5484d6394fa4e152"
+          }
+        }
+      ],
+      "original_source_sha256_at_import": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "original",
+      "alternative": "receivers",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "Контроль использует встроенную функциональную сигнатуру и позиционное применение. Name::DATA и signatureTypes описывают такое же семантическое требование; создание типового описания не скрывает вычисление значения или предметный алгоритм.",
+      "core_versions": 1
+    },
+    {
+      "id": "H03",
+      "title_ru": "H03. Связать префикс и вернуть callable",
+      "expected_ru": "ClosureProbe\\run() → 6101006 (6,101,6).",
+      "implementation_comparison": "library_comparisons/h03_capture_comparision.md",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\add; 5)\n        @: add100 Curry\\capture(Addition\\add; 100)\n        int: saved 1000\n        int: first add5(1)\n        int: second add100(1)\n        int: again add5(1)\n        return: first * 1000000 + second * 1000 + again\n",
+          "cases": [
+            {
+              "invoke": "ClosureProbe\\run()",
+              "expected": 6101006,
+              "components": [
+                6,
+                101,
+                6
+              ],
+              "original_saved_after": 0,
+              "original_saved_path": "CapturePrototype\\saved"
+            },
+            {
+              "variant": "Explicit saved actual through returned method",
+              "invoke": "add5(1; saved := 25)",
+              "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+              "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Прежний механизм явно включён в этот же исходник: CapturePrototype и Curry — обычные пользовательские структуры текущего языка. Фабрика копирует owner, сохраняет binary и first, возвращает вложенный метод. Состояние и идентичности не удалены ради размера. Здесь нет загрузки старого ядра или альтернативной библиотечной версии.",
+          "metrics": {
+            "characters": 539,
+            "nonblank_lines": 34,
+            "utf8_bytes": 818,
+            "sha256": "d5e91dcaebb2703bc0eaa22a972cb00da19aad7feed16385e66f714d6c187e8f"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Вариант с общими ресиверами LMX",
+          "correct_for_scenario": true,
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws:\n            FxArity\n            FxIndex\n            FxRecordArity\n            FxTypeToken\n            FxKernelFailure\n            SequenceSize\n            ReceiverIndex\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        int: first add5(1)\n        int: second add100(1)\n        int: again add5(1)\n        return: first * 1000000 + second * 1000 + again\n",
+          "cases": [
+            {
+              "invoke": "ClosureProbe\\run()",
+              "expected": 6101006,
+              "components": [
+                6,
+                101,
+                6
+              ],
+              "original_callable_unchanged": true,
+              "independent_prefixes": [
+                5,
+                100
+              ]
+            },
+            {
+              "variant": "Explicit saved actual through returned method",
+              "invoke": "add5(1; saved := 25)",
+              "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+              "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+          ],
+          "notes_ru": "Общий partial связывает K записей у callable с N входами и возвращает обычный callable с N-K обязательными входами и точным исходным результатом. K=0 и K=N допустимы; полный префикс даёт отложенный nullary-callable, не запускающий цель при создании. Примитив захватывается по значению, ссылка сохраняет идентичность цели. У полученного add5 публичный вход p0, а saved по-прежнему неизвестен. Исходный Addition не изменяется.",
+          "metrics": {
+            "characters": 341,
+            "nonblank_lines": 24,
+            "utf8_bytes": 576,
+            "sha256": "85b02642c61b488833252cc0d5b38cfed0cc111f0a4b619f2f1c27d1fad2862c"
+          }
+        }
+      ],
+      "original_source_sha256_at_import": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "receivers",
+      "alternative": "original",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "В Haskell связывание аргумента реализуется нативными аппликацией/лексическим замыканием и показанным partial. Общий core partial соответствует этой возможности. В процедурном аналоге явно сохранён прежний граф owner/DATA/CODE, сохранённый first и ссылка binary; не добавляется искусственная имитация класса.",
+      "core_versions": 1
+    },
+    {
+      "id": "H04",
+      "title_ru": "H04. Переопределяемый default",
+      "expected_ru": "DefaultProbe\\run() → 6260106 (6,26,1,6).",
+      "implementation_comparison": null,
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: explicit add5(1; y := 25)\n        int: zero add5(1; y := 0)\n        int: again add5(1)\n        return: first * 1000000 + explicit * 10000 + zero * 100 + again\n",
+          "cases": [
+            {
+              "invoke": "DefaultProbe\\run()",
+              "expected": 6260106,
+              "components": [
+                6,
+                26,
+                1,
+                6
+              ],
+              "copied_default_after": 5
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Прямой merge меняет готовый default y в копии DATA, сохраняя его входную позицию. Поэтому1 даёт6, явный y=25 даёт26, y=0 даёт1, следующий вызов снова6. Это переопределяемый default, а не необратимо связанный префикс.",
+          "metrics": {
+            "characters": 265,
+            "nonblank_lines": 17,
+            "utf8_bytes": 422,
+            "sha256": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Вариант с общими ресиверами LMX",
+          "correct_for_scenario": true,
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        throws:\n            ReceiverParent\n        int: y 100\n        @: add5 bindFields(Addition\\add; (int: y 5))\n        int: first add5(1)\n        int: explicit add5(1; y := 25)\n        int: zero add5(1; y := 0)\n        int: again add5(1)\n        return: first * 1000000 + explicit * 10000 + zero * 100 + again\n",
+          "cases": [
+            {
+              "invoke": "DefaultProbe\\run()",
+              "expected": 6260106,
+              "components": [
+                6,
+                26,
+                1,
+                6
+              ],
+              "copied_default_after": 5
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+          ],
+          "notes_ru": "bindFields обобщает тот же приём: выбирает фактический parent метода, делает композицию DATA с bindings и возвращает соответствующий метод. Число полей и их типы произвольны. Позиции входов сохраняются; явные аргументы могут переопределить defaults. Это другой контракт, чем partial.",
+          "metrics": {
+            "characters": 265,
+            "nonblank_lines": 18,
+            "utf8_bytes": 433,
+            "sha256": "1cb759a945cbb4873bc797e1284166fb189ca013b1a9c58d261c913ac8089418"
+          }
+        }
+      ],
+      "original_source_sha256_at_import": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "original",
+      "alternative": "receivers",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "Проверяются готовый default, явное переопределение и ноль. Для LMX композиция DATA и связывание являются естественным механизмом языка; другой архитектурный вид Haskell Maybe/default сам по себе не делает его нечестным. Оба LMX-кандидата сохраняют y, его позицию и повторные вызовы; дополнительный предметный алгоритм не спрятан.",
+      "core_versions": 1
+    },
+    {
+      "id": "H06",
+      "title_ru": "H06. Последовательность стадий и сохраняемая композиция",
+      "expected_ru": "CompositionProbe\\run() → 910 (9 и10). Журнал эффектов: twice,next,next,twice.",
+      "implementation_comparison": "library_comparisons/h06_pipe_comparision.md",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: a Functions\\next(Functions\\twice(4))\n        int: b Functions\\twice(Functions\\next(4))\n        return: a * 100 + b\n",
+          "cases": [
+            {
+              "invoke": "CompositionProbe\\run()",
+              "expected": 910,
+              "components": [
+                9,
+                10
+              ]
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Два вложенных динамических вызова выражают прежний порядок стадий напрямую. Сохраняются Functions.x, оба метода, их тела, число исполнений и порядок эффектов. Отдельный цикл по уже известным двум стадиям и скрытая библиотечная версия не нужны; общий вариант pipe ниже по-прежнему доступен в том же ядре.",
+          "metrics": {
+            "characters": 179,
+            "nonblank_lines": 13,
+            "utf8_bytes": 275,
+            "sha256": "215f69e58b65e7ef5d45d5fb67bc0ece16f7415691b6e72369dd0dc0bf244599"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Вариант с общими ресиверами LMX",
+          "correct_for_scenario": true,
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        throws:\n            FxArity\n            FxIndex\n            FxTypeToken\n            FxKernelFailure\n            SequenceSize\n            ReceiverIndex\n        @: forward pipe(Functions\\twice; Functions\\next)\n        @: backward pipe(Functions\\next; Functions\\twice)\n        int: a forward(4)\n        int: b backward(4)\n        return: a * 100 + b\n",
+          "cases": [
+            {
+              "invoke": "CompositionProbe\\run()",
+              "expected": 910,
+              "components": [
+                9,
+                10
+              ]
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+          ],
+          "notes_ru": "pipe(first;second) создаёт callable, сохраняя все входы first и точный результат second. Построение не исполняет стадии. Их промежуточные типы могут различаться; second принимает результат first своим единственным входом. compose(outer;inner) записывает ту же связь с противоположным порядком. Общая фабрика длиннее данного короткого специализированного операнда, но поддерживает более широкий интерфейс.",
+          "metrics": {
+            "characters": 295,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "531efcaeccb5c2c861d062101866df8ddec6a02c0c0acb0a2d543df04305cb6a"
+          }
+        }
+      ],
+      "original_source_sha256_at_import": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "original",
+      "alternative": "receivers",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "Haskell использует нативную композицию(.) и готовую pipe/pipeIO. LMX вправе выразить ту же последовательность непосредственными вложенными динамическими вызовами либо core pipe; сохраняются оба метода, x, порядок и число эффектов. Шаблон алгоритма не обязан копировать устройство Haskell/OOP.",
+      "core_versions": 1
+    },
+    {
+      "id": "H07",
+      "title_ru": "H07. Одно значение и повтор исполнения",
+      "expected_ru": "После сброса Meter\\calls две prepared-активации дают2,4 при2 вызовах next; две raw-активации дают3,7 при4 вызовах next.",
+      "implementation_comparison": "library_comparisons/h07_evaluation_modes_comparision.md",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "PreparedOps:\n    int@: left\n    int@[]: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"+\")\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    @: left\n    @[]: right\n    const: int: PASS_ARGS_AS_IS 1\n    const: int: PRIORITY sys\\priority(\"+\")\n    return: int\n    twice:\n        int: first sys\\eval(left)\n        int: second sys\\eval(left)\n        return: first + second\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "cases": [
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\prepared()",
+                "Evaluation\\prepared()"
+              ],
+              "expected": [
+                2,
+                4
+              ],
+              "calls_after": 2
+            },
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\raw()",
+                "Evaluation\\raw()"
+              ],
+              "expected": [
+                3,
+                7
+              ],
+              "calls_after": 4
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; any procedural helper is explicitly present in this source."
+          ],
+          "notes_ru": "Оба прежних операнда полностью показаны в этом же исходнике. PreparedOps дважды читает одно готовое значение; RawOps дважды исполняет occurrence через sys\\eval. Все поля протокола left/right и режимы сохранены. Это локальные определения в том же текущем ядре, а не его старая версия.",
+          "metrics": {
+            "characters": 461,
+            "nonblank_lines": 30,
+            "utf8_bytes": 671,
+            "sha256": "09c012a50d47c96a618dd82e54865e1dd8b2c69b468389c1bc79cf48ba9b49aa"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "Дополнительный приём lazy (не заменяет raw-occurrences)",
+          "correct_for_scenario": true,
+          "code": "Meter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        throws:\n            FxArity\n            FxIndex\n            FxTypeToken\n            FxKernelFailure\n            SequenceSize\n            ReceiverIndex\n            FxLazyCycle\n        @: delayed lazy(Meter\\next)\n        int: first delayed()\n        int: second delayed()\n        return: first + second\n    raw:\n        int: first Meter\\next()\n        int: second Meter\\next()\n        return: first + second\n",
+          "cases": [
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\prepared()",
+                "Evaluation\\prepared()"
+              ],
+              "expected": [
+                2,
+                4
+              ],
+              "calls_after": 2
+            },
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\raw()",
+                "Evaluation\\raw()"
+              ],
+              "expected": [
+                3,
+                7
+              ],
+              "calls_after": 4
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core: direct generic receivers are present, no import or alternate library version.",
+            "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+          ],
+          "notes_ru": "lazy создаёт типизированный nullary-callable и кеширует первый успешный результат. В каждом prepared создаётся новый delayed; первый delayed() исполняет next, второй читает сохранённое. В raw явно исполняются два обычных вызова. Числа и счётчики совпадают с основным вариантом, но сама обработка raw-occurrences этим вариантом не проверяется. LazyCycle — объявленный отказ повторного входа. Состояние принадлежит одному Message.",
+          "metrics": {
+            "characters": 321,
+            "nonblank_lines": 25,
+            "utf8_bytes": 558,
+            "sha256": "522672caf5778ebdab8b33c153c5bb5867c1a7ac0f26109c4ff3e6e43d6e9268"
+          },
+          "preserves_full_scenario": false
+        }
+      ],
+      "original_source_sha256_at_import": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb",
+      "preservation": "Both semantic alternatives use the same current core. Existing state, owner/copy identity, dynamic calls and effects are preserved; obsolete imports adapted, required local algorithms shown explicitly.",
+      "selected": "original",
+      "alternative": "receivers",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source",
+      "eligible_variants": [
+        "original"
+      ],
+      "fairness_note": "Полный смысл H07 включает реальные raw-occurrences и их исполнение через sys\\eval, а не только итоговые числа. Lazy и два обычных вызова — полезный дополнительный приём того же ядра, но он не сохраняет raw-контракт; поэтому не участвует в выборе основного для этого сценария. Haskell IO-аналог сравнивает эффекты и не выдаётся за доступ к LMX AST.",
+      "core_versions": 1
+    },
+    {
+      "id": "R01",
+      "title_ru": "R01. Композиция данных: merge и общий derive",
+      "expected_ru": "MergeProbe\\run() → 257; width=2, height=5, depth=7. Оба исходных значения сохранены.",
+      "implementation_comparison": "library_comparisons/r01_derive_comparision.md",
+      "original_source_sha256_at_import": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc",
+      "eligible_variants": [
+        "original",
+        "receivers"
+      ],
+      "fairness_note": "derive — показанный рядом тонкий вызов обычного merge, а не скрытый алгоритм специально для RecordModel. Сохранены все три поля, соответствующие позиции модели, добавленное поле, самостоятельный результат и одна карта композиции. Контроль Haskell использует встроенное обновление записи. Разница в динамической структуре LMX и заранее известном типе Haskell сохранена и объяснена; ширина не удалена.",
+      "retained_explanation_ru": "Результат **257**. `height` занимает соответствующий слот модели с новым значением `5`; `depth` добавляется. Поля обоих источников не изменены. Вариант с подходящими методами использует тот же контракт копирования и связывания, а не особую операцию над классами.\n\nHaskell может выразить обновление заранее известной записи:\n\n```haskell\ndata Size = Size { width :: Int, height :: Int, depth :: Int }\n\nrecordExample :: Size\nrecordExample = (Size 2 3 0) { height = 5, depth = 7 }\n```\n\nЗдесь поле `depth` заранее входит в `Size`. Чтобы добавлять произвольные именованные узлы вместе с исполняемым содержимым, потребуется выбранное представление данных: словарь, AST, граф или другая явная модель и её операции. Обычное значение типа `Int -> Int` само по себе не даёт API перечисления и замены внутренних узлов функции. Это граница рассматриваемого аналога, а не запрет решить задачу на Haskell. [Haskell: записи и объявления](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html); [LMX: композиция](../LMX_semantics.en.md#composition).\n\nЕсли затем приложение явно переназначит ссылку на `result`, оно будет использовать новую ветвь. Независимо сохранённая другая копия автоматически не обновится. «Изменение структуры» и «глобальная синхронизация всех когда-либо созданных копий» — разные обязательства.",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой / процедурный LMX",
+          "correct_for_scenario": true,
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "cases": [
+            {
+              "invoke": "MergeProbe\\run()",
+              "expected": 257,
+              "components": [
+                2,
+                5,
+                7
+              ],
+              "source_values_unchanged": true
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current kernel; derive delegates to ordinary merge with one copy map."
+          ],
+          "notes_ru": "Обычный merge отдаёт поток; внешняя написанная группа собирает его в одно значение. Полный исходный клиент сохранён.",
+          "metrics": {
+            "characters": 184,
+            "nonblank_lines": 11,
+            "utf8_bytes": 258,
+            "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+          }
+        },
+        {
+          "id": "receivers",
+          "label_ru": "LMX с общим derive",
+          "correct_for_scenario": true,
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "cases": [
+            {
+              "invoke": "MergeProbe\\run()",
+              "expected": 257,
+              "components": [
+                2,
+                5,
+                7
+              ],
+              "source_values_unchanged": true
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current kernel; derive delegates to ordinary merge with one copy map."
+          ],
+          "notes_ru": "derive уже возвращает одно собранное значение обычного merge. Это экономит один непробельный символ без изменения алгоритма, полей или состава copy-map; весь тонкий helper показан рядом.",
+          "metrics": {
+            "characters": 183,
+            "nonblank_lines": 11,
+            "utf8_bytes": 257,
+            "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
+          }
+        }
+      ],
+      "selected": "receivers",
+      "alternative": "original",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+    },
+    {
+      "id": "V02",
+      "title_ru": "V02. Проверка ASCII-кода: пользовательский операнд и Pattern",
+      "expected_ru": "AB-09 и QZ-70 принимаются; неверная длина, разделитель, NUL и символы вне ASCII-диапазонов отклоняются. Все 11 исходных случаев сохранены.",
+      "implementation_comparison": "library_comparisons/v02_character_range_comparision.md",
+      "original_source_sha256_at_import": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7",
+      "allowed_user_helpers": [],
+      "eligible_variants": [
+        "original"
+      ],
+      "fairness_note": "Основной исходный пример показывает собственный CharacterRange/between и сопоставляет его с тем же маленьким Haskell helper. Pattern-версия сохраняет все допустимые результаты TicketCode на объявленном 8-битном byteText-профиле, но использует существенно более широкий встроенный matcher и другие объявленные ошибки; текущий Haskell-контроль не использует regex. Поэтому эта новая архитектурная альтернатива показана отдельно и не подменяет конкурентный пример и проверки between. CharacterRange является прикладным кодом: он включён в основной блок и его 199 символов входят в общий размер 462, а не исключаются как ядро.",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прямой LMX с пользовательским between",
+          "correct_for_scenario": true,
+          "code": "CharacterRange:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    between:\n        throws: RangeArity\n        if: length(right) != 2\n            throw: RangeArity()\n        char: value \\left\n        char: lower \\right[0]\n        char: upper \\right[1]\n        return: lower <= value && value <= upper\n\nTicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
+          "cases": [
+            {
+              "invoke": "TicketCode\\accepts(\"AB-09\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"QZ-70\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-9\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-090\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ab-09\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-0X\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(candidate := fixture)",
+              "fixture_codepoints": [
+                65,
+                66,
+                0,
+                48,
+                57
+              ],
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+          ],
+          "notes_ru": "Полный листинг включает собственный CharacterRange/between и весь прежний TicketCode. Клиент сохранён без изменений после определения helper; отдельная загрузка не требуется. В основной размер входят обе части и объявления RangeArity. Проверяются длина, разделитель, две буквы и две цифры ASCII.",
+          "metrics": {
+            "characters": 462,
+            "nonblank_lines": 22,
+            "utf8_bytes": 684,
+            "sha256": "f553983856a42a5a029ad684eb21e9f6b89d9fb33a59d9a48e3eb8a73e1a2fa8"
+          },
+          "historical_client": {
+            "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: RangeArity\n        import: CharacterRange\n        if: length(candidate) != 5\n            return: 0\n        if: candidate[2] != '-'\n            return: 0\n        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')\n",
+            "metrics": {
+              "characters": 263,
+              "nonblank_lines": 11,
+              "utf8_bytes": 381,
+              "sha256": "0198877ec068eaba9bc75434badcc88f2c2178795605c1b81ca0e8a15684eabd"
+            },
+            "preserved_as": "Exact suffix of the complete primary; the local helper is prefixed and counted."
+          },
+          "embedded_helpers": [
+            {
+              "source": "libraries/lmx/CharacterRange.lm3",
+              "metrics": {
+                "characters": 199,
+                "nonblank_lines": 11,
+                "utf8_bytes": 302,
+                "sha256": "8c08f5c6a8e461ddd72fe784c3157233c5fe610f3046a81126e3d54456e9e612"
+              }
+            }
+          ]
+        },
+        {
+          "id": "regex",
+          "label_ru": "Дополнительный LMX с Pattern",
+          "correct_for_scenario": true,
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws:\n            PatternArgument\n            PatternEncoding\n            PatternPosition\n            SequenceSize\n            ReceiverIndex\n            FxKernelFailure\n            FxTypeToken\n        return: wholeMatch(byteText(source := candidate); (then (charRange(\"A\"; \"Z\") times 2) \"-\" (asciiDigit times 2)))\n",
+          "cases": [
+            {
+              "invoke": "TicketCode\\accepts(\"AB-09\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"QZ-70\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-9\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-090\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ab-09\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-0X\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(candidate := fixture)",
+              "fixture_codepoints": [
+                65,
+                66,
+                0,
+                48,
+                57
+              ],
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "Current unified core with Pattern operands and ordinary matches/byteText receivers.",
+            "byteText requires actual char storage of eight bits; no encoding guessing or Unicode normalization."
+          ],
+          "notes_ru": "Новая префиксная форма then сохраняет группы повторений и не попадает под условное открытие right. Сопоставление охватывает весь byteText; charRange получает строковые границы \"A\"/\"Z\", а asciiDigit — именно ASCII. Это пример применения новой семантики, а не замена контрольного пользовательского операнда between. Ядро и его дополнительные объявления отказов показаны явно; код не запускался.",
+          "metrics": {
+            "characters": 248,
+            "nonblank_lines": 13,
+            "utf8_bytes": 387,
+            "sha256": "3b6c7c3b6fcdcc7ed633a1b55bab30e131c2db594a135a0bdc77b4754836f53c"
+          }
+        }
+      ],
+      "retained_explanation_ru": "Задана точная ASCII-проверка двух заглавных букв, дефиса и двух цифр. Профиль текста в этом сценарии — ASCII. Операнд `between` определён в полном листинге выше; [отдельный CharacterRange](examples/libraries/lmx/CharacterRange.lm3) сохраняется для чтения реализации. Клиент сохраняет длину, дефис и конкретные диапазоны. [Полная пара реализаций LMX/Haskell](examples/library_comparisons/v02_character_range_comparision.md) показывает helper, арность и разбивку стоимости; основной V02 уже включает его целиком. `throws: RangeArity` распространяет объявленный выход helper даже при заведомо корректных двух границах в каждом вызове. Режим 0 получает готовые символы; каждое применение явно сгруппировано перед `&&`.\n\n| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport CharacterRange (between)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (\\x -> x `between` ('A','Z')) [a,b] &&\n  all (\\x -> x `between` ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nБиблиотека проверяет только включительные границы. Перевёрнутый диапазон даёт false/0. Haskell фиксирует две границы типом пары; общий LMX-операнд проверяет длину `right` явно. Клиентская часть занимает 263 непробельных символа, а CharacterRange — 199. Основной полный листинг V02 поэтому занимает 462: обе части считаются вместе. Ранее показанные 263 относились только к клиенту.",
+      "selected": "original",
+      "alternative": "regex",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+    },
+    {
+      "id": "V03",
+      "title_ru": "V03. Куда вставляется mock",
+      "expected_ru": "sample даёт вердикт 1 при одном чтении; biased — 0 при одном чтении; readsTwice — 0 при двух чтениях. Повторная проверка сбрасывает счётчик.",
+      "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
+      "eligible_variants": [
+        "original",
+        "reuse"
+      ],
+      "fairness_note": "Оба варианта содержат весь прикладной код и используют один текущий механизм динамического вызова. biased и readsTwice повторно используют локальный sample; gain и read остаются входами прежнего DATA Measurement, а число и порядок вызовов read сохраняются. Никакая проверка или самописный helper не вынесены из подсчёта.",
+      "retained_explanation_ru": "| Вызов | Вердикт | Число чтений |\n| --- | ---: | ---: |\n| `SamplingCheck\\check(candidate := Measurement\\sample)` | 1 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\biased)` | 0 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\readsTwice)` | 0 | 2 |\n\nВыполняется настоящий кандидат. Подменена его зависимость `read`, а не весь проверяемый алгоритм. Собственное незаполненное `read` кандидата получает обычную локальную ссылку checker через autofill; `gain` передан явно. Счётчик mock расположен в явно доступном лексическом состоянии.\n\nПоследний кандидат специально возвращает правильное число `28`, но делает два чтения. Проверка только результата пропустила бы дефект. Haskell-аналог — параметр `readSample :: IO Int` у `sample`, с тестовым действием, которое возвращает `7` и увеличивает `IORef`. Подмена зависимости не требует отдельного языка тестов ни в одном варианте.\n\nКонтрольный повтор первого вызова опять даёт `1` и ровно одно чтение: checker явно сбрасывает свой счётчик. [Основание](../LMX_semantics.en.md#binding-autofill); V02 английского корпуса.",
+      "variants": [
+        {
+          "id": "original",
+          "label_ru": "Прежний полный LMX с повторённым вычислением",
+          "correct_for_scenario": true,
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: read() * gain + 1\n    readsTwice:\n        int: discarded read()\n        return: read() * gain\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; all application methods are present in the listing."
+          ],
+          "notes_ru": "Прежний основной листинг сохранён целиком. Каждый кандидат явно содержит вычисление read() * gain; отдельная зависимость не загружается.",
+          "metrics": {
+            "characters": 304,
+            "nonblank_lines": 23,
+            "utf8_bytes": 490,
+            "sha256": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972"
+          }
+        },
+        {
+          "id": "reuse",
+          "label_ru": "LMX с повторным использованием sample",
+          "correct_for_scenario": true,
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "required_profile": [
+            "One current core; ordinary calls autofill gain and read from the active candidate."
+          ],
+          "notes_ru": "sample уже реализует чтение и умножение. biased вызывает его один раз и добавляет 1. readsTwice сохраняет первый read(), затем вызывает sample() для второго чтения. При sample() собственные незаполненные gain и read получают значения из исполняемого кандидата; новых DATA-полей, сохранённого состояния и интерфейсных входов нет.",
+          "metrics": {
+            "characters": 298,
+            "nonblank_lines": 23,
+            "utf8_bytes": 480,
+            "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+          }
+        }
+      ],
+      "selected": "reuse",
+      "alternative": "original",
+      "selection_metric": "nonwhitespace_characters_of_complete_current_source"
+    }
+  ]
+}

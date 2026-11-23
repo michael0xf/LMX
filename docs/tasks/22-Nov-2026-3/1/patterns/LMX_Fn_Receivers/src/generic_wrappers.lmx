@@ -1,0 +1,247 @@
+# ОБЩИЕ ОБЁРТКИ. ЦЕЛЕВОЙ R, ВКЛЮЧАЯ void, НЕ ЗАМЕНЯЕТСЯ НА int/@.
+# Состояние принадлежит экземпляру в его Message. Между Thread его не делят.
+# Ошибки пользователя сохраняют исходное имя и типизированный payload.
+# FxKernel attempt/raise — доступ к обычному catch/throw, не новая VM.
+
+FxLazyState:
+    @: operation 0
+    int: status 0
+    @: value 0
+
+FxLazyEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: FxCallFailure FxKernelFailure FxLazyCycle FxTypeToken
+        if: state\status = 2
+            return: state\value
+        if: state\status = 1
+            throw: FxLazyCycle()
+        state\status := 1
+        private: int: completed 0
+        finally:
+            if: completed = 0
+                state\status := 0
+        ---
+        private: @: result FxFrameApply\apply(frame)
+        state\value := result
+        state\status := 2
+        completed := 1
+        return: result
+
+# once сохраняет первый УСПЕШНЫЙ результат F с произвольным числом входов.
+# Повторные actuals проходят обычную подготовку вызова, но F не выполняется.
+# Неуспех разрешает следующую попытку; не обещана exactly-once внешняя доставка.
+FxOnce:
+    private: @: operation
+    return: @
+    once:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
+        private: @: state (copy(FxLazyState))
+        state\operation := operation
+        private: @: failures FxFailures\union(info\throws; ("FxLazyCycle"))
+        return: FxWrap\make(contract; FxLazyEngine\run; state; failures; FxFullPolicy\make(operation))
+
+# lazy получает thunk; partial(F;allArgs) превращает любой F в thunk.
+FxLazy:
+    private: @: operation
+    return: @
+    lazy:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(subject := operation)
+        if: length(info\inputTypes) != 0
+            throw: FxArity()
+        return: FxOnce\once(operation := operation)
+
+FxForce:
+    private: @: thunk
+    return: @
+    force:
+        throws: copy(FxThrows\call)
+        return: FxApply\apply(thunk; (copy(())))
+
+FxRepeat:
+    private:
+        @: operation
+        int: count
+        @: args ()
+    return: @
+    repeat:
+        throws: copy(FxThrows\retry)
+        if: count < 0
+            throw: FxIndex()
+        private: @: captured FxArguments\capture(operation; args)
+        private: @: result (copy(()))
+        sys\resize(result; count)
+        private: int: i 0
+        while: i < count
+            result[i] := FxApply\apply(operation; captured)
+            i += 1
+        return: result
+
+FxUntil:
+    private:
+        @: step
+        @: finished
+        @: initial
+    return: @
+    runUntil:
+        throws: copy(FxThrows\call)
+        private: @: current initial
+        while: 1
+            current := FxApply\apply(step; FxOne\make(current))
+            private: @: flagRecord FxApply\apply(finished; FxOne\make(current))
+            private: int: flag \flagRecord
+            if: flag != 0
+                return: current
+
+# attempts — общее число попыток, не число повторов после первой.
+# Перехватываются только объявленные recoverable throws вызываемого F.
+# Системные ошибки/abort не превращаются автоматически в Result.
+FxRetry:
+    private:
+        @: operation
+        int: attempts
+        @: args ()
+    return: @
+    retryCall:
+        throws: copy(FxThrows\retry)
+        if: attempts < 1
+            throw: FxIndex()
+        private: @: captured FxArguments\capture(operation; args)
+        private: @: last 0
+        private: int: i 0
+        while: i < attempts
+            last := FxTry\attempt(operation; captured)
+            if: last\ok != 0
+                return: last\value
+            i += 1
+        throw: FxCallFailure(last)
+
+# acquire() -> Resource; release(Resource) -> void;
+# action(Resource,T0,...,Tn) -> R; arguments содержит только T0,...,Tn.
+# Resource и R могут быть любыми типами. Вокруг не создаётся IntBox.
+# acquire с параметрами заранее превращают в thunk через partial.
+FxAround:
+    private:
+        @: acquire
+        @: release
+        @: action
+        @: arguments ()
+    return: @
+    around:
+        throws: copy(FxThrows\traversal)
+        private: @: empty (copy(()))
+        private: @: resource FxApply\apply(acquire; empty)
+        private: @: resourceArgs FxOne\make(resource)
+        finally:
+            FxApply\apply(release; resourceArgs)
+        ---
+        private: @: actionArgs FxAppend\append(resourceArgs; arguments)
+        return: FxApply\apply(action; actionArgs)
+
+FxRecoverState:
+    @: operation 0
+    @: handler 0
+
+FxRecoverEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: copy(FxThrows\snapshot)
+        private: @: outcome FxFrameAttempt\attempt(frame)
+        if: outcome\ok != 0
+            return: outcome\value
+        private: @: failureRecord (outcome\failure FxRecordOperands\record)
+        private: @: actuals FxTwo\make(failureRecord; outcome\payload)
+        actuals := FxAppend\append(actuals; FxOne\make(FxRecords\reference(FxFrameObserve\observe(frame))))
+        return: FxApply\apply(state\handler; actuals)
+
+# handler(name:string; payload; originalArgs:@) -> the same R.
+# originalArgs is a non-forcing state snapshot, in the same shape as trace.args;
+# ready records remain available, omitted/deferred inputs remain distinguished.
+# Payload принимается его действительным типом; можно ограничить набор ошибок
+# контрактом operation, а несоответствие handler отвергает обычное принятие.
+FxRecover:
+    private:
+        @: operation
+        @: handler
+    return: @
+    recover:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: handlerInfo FxKernel\signature(subject := handler)
+        private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
+        private: @: state (copy(FxRecoverState))
+        state\operation := operation
+        state\handler := handler
+        return: FxWrap\make(contract; FxRecoverEngine\run; state; handlerInfo\throws; FxFullPolicy\make(operation))
+
+FxTraceState:
+    @: operation 0
+    @: sink 0
+
+FxTraceEvent:
+    char[]: phase ""
+    @: args 0
+    @: value 0
+    int: hasValue 0
+
+FxTraceEmit:
+    private:
+        @: sink
+        char[]: phase
+        @: args
+        @: value
+        int: hasValue
+    emit:
+        throws: copy(FxThrows\recordcall)
+        private: @: event (copy(FxTraceEvent))
+        event\phase := phase
+        event\args := args
+        event\value := value
+        event\hasValue := hasValue
+        FxApply\apply(sink; FxOne\make(FxRecords\reference(event)))
+
+FxTraceEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: FxCallFailure FxIndex FxKernelFailure FxRecordArity FxTypeToken
+        FxTraceEmit\emit(state\sink; "enter"; FxFrameObserve\observe(frame); 0; 0)
+        private: int: succeeded 0
+        finally:
+            if: succeeded = 0
+                FxTraceEmit\emit(state\sink; "leave-without-result"; FxFrameObserve\observe(frame); 0; 0)
+        ---
+        private: @: value FxFrameApply\apply(frame)
+        private: @: info FxKernel\signature(subject := state\operation)
+        FxTraceEmit\emit(state\sink; "return"; FxFrameObserve\observe(frame); value; info\hasResult)
+        succeeded := 1
+        return: value
+
+# sink(event) — обычная функция; её эффекты и возможные ошибки не скрываются.
+# Для гарантии неперекрытия исходной ошибки sink должен быть nonthrowing.
+FxTrace:
+    private:
+        @: operation
+        @: sink
+    return: @
+    trace:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: sinkInfo FxKernel\signature(subject := sink)
+        private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
+        private: @: failures FxFailures\union(info\throws; sinkInfo\throws)
+        private: @: state (copy(FxTraceState))
+        state\operation := operation
+        state\sink := sink
+        return: FxWrap\make(contract; FxTraceEngine\run; state; failures; FxFullPolicy\make(operation))

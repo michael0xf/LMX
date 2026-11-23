@@ -1,0 +1,167 @@
+# UNIVERSAL ARRAY ACCESS. These are common value/layout helpers, not a new
+# Sequence object. A Structure already is @[]; dense T[] keeps its real stride.
+# Only arrayInfo/arrayRead/arrayAdmit/arrayWrite are narrow kernel boundaries.
+# All sequence algorithms are ordinary LMX in this package.
+# No helper executes a selected graph field or applies callable W/E to it.
+# arrayInfo returns ordinary metadata: arrayType, elementType, elementBits,
+# dense, maxLength. Type codes are int; maxLength bounds length AND byte size.
+
+FxSeqInfo:
+    private: @: source
+    required: source
+    return: @
+    get:
+        throws: FxKernelFailure FxTypeToken
+        return: FxKernel\arrayInfo(source := source)
+
+FxSeqRead:
+    private:
+        @: source
+        int: index
+    required: source index
+    return: @
+    read:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        return: FxKernel\arrayRead(source := source; index := index)
+
+# The declaration head is an existing full int type code, resolved by the
+# common TYPE-role path. It is not a private sequence type constructor.
+FxSeqAllocate:
+    private:
+        int: arrayType
+        int: count
+    required: arrayType count
+    return: @
+    make:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        if: count < 0
+            throw: SequenceSize()
+        private: @: out (arrayType: [])
+        private: @: info FxSeqInfo\get(out)
+        if: count > info\maxLength
+            throw: SequenceSize()
+        sys\resize(out; count)
+        return: out
+
+FxSeqEmpty:
+    private: @: source
+    required: source
+    return: @
+    make:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        private: @: info FxSeqInfo\get(source)
+        return: FxSeqAllocate\make(info\arrayType; 0)
+
+# Check before adding. The limit is supplied by actual element layout; no
+# fixed native word size or fixed upper bound occurs in the algorithms.
+FxSeqSize:
+    private:
+        int: base
+        int: extra
+        int: limit
+    required: base extra limit
+    return: int
+    sum:
+        throws: SequenceSize
+        if: base < 0 || extra < 0 || base > limit
+            throw: SequenceSize()
+        if: extra > limit - base
+            throw: SequenceSize()
+        return: base + extra
+
+FxSeqBounds:
+    private:
+        @: source
+        int: begin
+        int: end
+    required: source begin end
+    return: int
+    count:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        FxSeqInfo\get(source)
+        if: begin < 0 || end < begin || end > length(source)
+            throw: ReceiverIndex()
+        return: end - begin
+
+# Ordinary admission of one value to the actual target's full requirement.
+# No hidden user converter or initializer is introduced. Required value checks
+# stay in this preparation phase; the later prepared write cannot repeat them.
+# @[] accepts the direct value reference, independently of former slot content.
+FxSeqAdmit:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    admit:
+        throws: FxKernelFailure FxTypeToken SequenceElement
+        return: FxKernel\arrayAdmit(target := target; value := value)
+
+FxSeqStore:
+    private:
+        @: target
+        int: index
+        @: value
+    required: target index value
+    write:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement
+        private: @: ready FxSeqAdmit\admit(target; value)
+        FxKernel\arrayWrite(target := target; index := index; value := ready)
+
+FxSeqPush:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    append:
+        throws: copy(FxThrows\mutation)
+        private: @: info FxSeqInfo\get(target)
+        private: @: ready FxSeqAdmit\admit(target; value)
+        private: int: oldSize length(target)
+        private: int: newSize FxSeqSize\sum(oldSize; 1; info\maxLength)
+        sys\resize(target; newSize)
+        FxKernel\arrayWrite(target := target; index := oldSize; value := ready)
+        return: target
+
+# Explicitly requested record vector / call transport. Collections themselves
+# read one element at a time and do not prebox the complete dense source.
+FxSeqRecords:
+    private: @: source
+    required: source
+    return: @
+    make:
+        throws: copy(FxThrows\sequence)
+        FxSeqInfo\get(source)
+        private: int: count length(source)
+        private: @: out FxSeqAllocate\make(@[]; count)
+        private: int: i 0
+        while: i < count
+            out[i] := FxSeqRead\read(source; i)
+            i += 1
+        return: out
+
+# Integer admission for masks/indices is exact: a nonzero machine address is
+# not a truth value. uninit:int is a different record and has no payload.
+FxSeqInteger:
+    private: @: value
+    required: value
+    return: int
+    read:
+        throws: SequenceElement
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: SequenceElement()
+        return: \value
+
+FxSeqPredicate:
+    private: @: value
+    required: value
+    return: int
+    truth:
+        throws: FxPredicate
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: FxPredicate()
+        private: int: flag \value
+        return: flag != 0

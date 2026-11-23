@@ -1,0 +1,695 @@
+{
+  "group_title_ru": "Облако, HTTP и отказоустойчивость",
+  "group_title_en": "Cloud, HTTP and resilience",
+  "languages": [
+    "Go",
+    "C#"
+  ],
+  "rationale_ru": "Go и C# дают два привычных стиля сетевых сервисов: функции/каналы и .NET delegates/Channel. Сравнивается прикладной алгоритм поверх одинаково описанных transport/provider контрактов; развёртывание учитывается отдельно.",
+  "rationale_en": "Go and C# represent functions/channels and .NET delegates/Channel. Application cores are compared over equivalent transport/provider contracts; deployment is accounted for separately.",
+  "overview_ru": "Сохранены все 12 исходных паттернов группы и добавленный Backpressure. Retry и Ambassador используют общую прикладную RetryLibrary; её полный алгоритм показан отдельным примером реализации. LMX использует Message и уже определённый HTTP-профиль. HTTP admission, исполнение операции и семантический успех различаются. Общая обвязка перечислена отдельно и не считается бесплатной.",
+  "overview_en": "All 12 original patterns in this group and the added Backpressure pattern are retained. Retry and Ambassador share an application RetryLibrary; its complete algorithm is shown in a separate implementation example. LMX uses Message and its existing HTTP profile. HTTP admission, operation execution and semantic success remain distinct. Shared integration is listed separately and is not treated as free.",
+  "patterns": [
+    {
+      "id": 38,
+      "name": "Circuit Breaker",
+      "slug": "circuit_breaker",
+      "summary_ru": "После двух последовательных отказов владелец временно запрещает новые обращения и затем допускает пробу.",
+      "summary_en": "After two consecutive failures the owner temporarily rejects calls, then admits a recovery probe.",
+      "scenario_ru": "Вызовы в моменты 0 и 1 завершаются отказом; вызов в 2 должен быть отклонён; проба в 6 успешна.",
+      "scenario_en": "Calls at times 0 and 1 fail; the call at 2 must be rejected; the probe at 6 succeeds.",
+      "expected_ru": "Результаты 0, 0, −1, 1; провайдер вызывается три раза; после пробы счётчик отказов равен нулю.",
+      "expected_en": "Results are 0, 0, -1, 1; three provider calls; the successful probe resets the failure count.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int возвращает 1 только при семантическом успехе, 0 при отказе; now — монотонное время из хоста. Провайдер завершает одну попытку до возврата; тест подаёт последовательность 0,0,1. Все три реализации вызываются последовательно одним владельцем.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int returns 1 only for semantic success and 0 for failure; now is host monotonic time. One attempt completes before return; the fixture supplies 0,0,1. All three implementations are called serially by one owner.",
+      "comparison_ru": "LMX выражает автомат состоянием Message; Go и C# используют состояние экземпляра. Единственная проба обеспечивается выбранным последовательным контрактом, а не атомарной проверкой общего флага.",
+      "comparison_en": "LMX stores the machine in a Message; Go and C# use an instance. The serial contract, rather than a shared atomic flag, permits only one recovery probe at a time.",
+      "limits_ru": "Это минимальный breaker по последовательным отказам. Оконная статистика, конкурентные in-flight запросы, классификация ошибок и длительность самой попытки требуют отдельного профиля.",
+      "limits_en": "This is a consecutive-failure breaker. Windowed statistics, concurrent in-flight calls, error classification and per-attempt deadlines require an extended profile.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "BreakerMessage:\n    int: now\n    @: request\n    int: failures 0\n    int: until 0\n    return: int\n    invoke:\n        if: now < node\\until\n            return: -1\n        int: ok request()\n        if: ok = 1\n            node\\failures := 0\n            node\\until := 0\n            return: 1\n        node\\failures += 1\n        if: node\\failures >= 2\n            node\\until := now + 5\n        return: 0\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int возвращает 1 только при семантическом успехе, 0 при отказе; now — монотонное время из хоста. Провайдер завершает одну попытку до возврата; тест подаёт последовательность 0,0,1. Все три реализации вызываются последовательно одним владельцем.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int returns 1 only for semantic success and 0 for failure; now is host monotonic time. One attempt completes before return; the fixture supplies 0,0,1. All three implementations are called serially by one owner."
+        },
+        {
+          "language": "Go",
+          "code": "type Breaker struct { failures, until int }\nfunc (b *Breaker) Invoke(now int, request func() int) int {\n    if now < b.until { return -1 }\n    if request() == 1 { b.failures = 0; b.until = 0; return 1 }\n    b.failures++\n    if b.failures >= 2 { b.until = now + 5 }\n    return 0\n}\n",
+          "notes_ru": "request(): int возвращает 1 только при семантическом успехе, 0 при отказе; now — монотонное время из хоста. Провайдер завершает одну попытку до возврата; тест подаёт последовательность 0,0,1. Все три реализации вызываются последовательно одним владельцем. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "request(): int returns 1 only for semantic success and 0 for failure; now is host monotonic time. One attempt completes before return; the fixture supplies 0,0,1. All three implementations are called serially by one owner. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "sealed class Breaker {\n    int failures, until;\n    public int Invoke(int now, System.Func<int> request) {\n        if (now < until) return -1;\n        if (request() == 1) { failures = 0; until = 0; return 1; }\n        failures++;\n        if (failures >= 2) until = now + 5;\n        return 0;\n    }\n}\n",
+          "notes_ru": "request(): int возвращает 1 только при семантическом успехе, 0 при отказе; now — монотонное время из хоста. Провайдер завершает одну попытку до возврата; тест подаёт последовательность 0,0,1. Все три реализации вызываются последовательно одним владельцем. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "request(): int returns 1 only for semantic success and 0 for failure; now is host monotonic time. One attempt completes before return; the fixture supplies 0,0,1. All three implementations are called serially by one owner. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Circuit Breaker",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker",
+          "why_ru": "После двух последовательных отказов владелец временно запрещает новые обращения и затем допускает пробу.",
+          "why_en": "After two consecutive failures the owner temporarily rejects calls, then admits a recovery probe."
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "name": "Retry",
+      "slug": "retry",
+      "summary_ru": "Ограниченный повтор временного отказа с задержкой между попытками.",
+      "summary_en": "Bounded retry of a transient failure with delay between attempts.",
+      "scenario_ru": "Идемпотентное чтение возвращает 503,503,200. Разрешены три попытки и задержки 1,2 единицы.",
+      "scenario_en": "An idempotent read returns 503,503,200. Allow three attempts and delays of 1 and 2 units.",
+      "expected_ru": "Итог 200; три обращения и две задержки. Статус 400 прекращает повторы сразу.",
+      "expected_en": "Final status 200; three calls and two delays. Status 400 stops retries immediately.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit.",
+      "comparison_ru": "Во всех трёх языках это клиент одного и того же готового helper: приложение задаёт операцию, три попытки и таймер. LMX выражает применение обычным пользовательским операндом с подготовленными ссылками, Go/C# — вызовом функции. Полный цикл и backoff вынесены в отдельный сравниваемый пример реализации общей библиотеки; собственная почта LMX не добавляет автоматический retry.",
+      "comparison_en": "All three languages show clients of the same ready helper: the application selects the operation, three attempts and timer. LMX uses an ordinary user operand with prepared references; Go/C# use a function call. The complete loop and backoff appear in a separately compared shared-library implementation; LMX mail does not add automatic retry.",
+      "limits_ru": "Дедлайн, jitter, Retry-After и защита неидемпотентных операций не реализованы. Повтор после timeout может дублировать уже выполненный эффект.",
+      "limits_en": "Deadline, jitter, Retry-After and non-idempotent-operation protection are outside this core. Retrying after timeout may duplicate an already completed effect.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "RetryMessage:\n    @: request\n    @: delay\n    return: int\n    run:\n        throws: Attempts\n        import: RetryLibrary\n        return: request retry 3 delay\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit."
+        },
+        {
+          "language": "Go",
+          "code": "import \"example/retryhelper\"\nfunc Retry(request func() int, delay func(int)) int {\n    return retryhelper.Run(request, 3, delay)\n}\n",
+          "notes_ru": "request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Module path example/retryhelper — заданное в сборке имя показанного package retryhelper; это не внешняя скрытая зависимость. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2.",
+          "notes_en": "request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Module path example/retryhelper is the build-assigned path of the shown retryhelper package, not a hidden external dependency. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2."
+        },
+        {
+          "language": "C#",
+          "code": "using PatternHelpers;\nstatic int Retry(System.Func<int> request, System.Action<int> delay) {\n    return RetryLibrary.Run(request, 3, delay);\n}\n",
+          "notes_ru": "request(): int — одна завершённая синхронная HTTP попытка идемпотентного чтения, возвращающая статус; delay(int): void — хостовый таймер. В тесте delay записывает интервалы. В LMX работа выполняется отдельным Message, ожидание не запускает параллельный turn того же владельца. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой. Для post request/reply применяется событийный автомат с отдельным answer turn, как в P54; данный sync provider не ждёт собственного mailbox. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Namespace PatternHelpers содержит показанный рядом статический RetryLibrary; клиентское приложение включает эту реализацию. Приложение выбирает три попытки и supplied delay; общая политика повторяет только 503 и вызывает delay с 1, затем 2.",
+          "notes_en": "request(): int is one completed synchronous HTTP attempt of an idempotent read; delay(int): void is a host timer. The test records delays. In LMX this runs in a separate Message; waiting never starts an overlapping owner turn. This C# fragment uses supplied delegates; namespace and test entry are shared harness. post request/reply requires an event machine with a later answer turn, as in P54; this synchronous provider does not await its own mailbox. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Namespace PatternHelpers contains the adjacent static RetryLibrary implementation, included by the client application. The application chooses three attempts and supplies delay; the shared policy retries only 503 and calls delay with 1, then 2."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Retry",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/retry",
+          "why_ru": "Ограниченный повтор временного отказа с задержкой между попытками.",
+          "why_en": "Bounded retry of a transient failure with delay between attempts."
+        }
+      ],
+      "implementation_ids": [
+        97
+      ]
+    },
+    {
+      "id": 97,
+      "name": "Retry Library — Implementation",
+      "slug": "retry_library_implementation",
+      "kind": "implementation",
+      "paired_with": 39,
+      "usage_ids": [
+        39,
+        45
+      ],
+      "summary_ru": "Собственная общая реализация ограниченного повтора HTTP 503 для клиентов Retry и Ambassador.",
+      "summary_en": "A shared application implementation of bounded HTTP-503 retry for the Retry and Ambassador clients.",
+      "scenario_ru": "Первый клиент задаёт 3 попытки и записывающий delay: request возвращает 503,503,200. Второй клиент задаёт 2 попытки без delay: request возвращает 503,200. Также проверить немедленное завершение при 400 и отсутствие повторов при лимите 1.",
+      "scenario_en": "The first client chooses 3 attempts and a recording delay: request returns 503,503,200. The second chooses 2 attempts without delay: request returns 503,200. Also check immediate completion on 400 and no retry when the limit is 1.",
+      "expected_ru": "Первый клиент получает 200 после 3 вызовов и задержек [1,2]. Второй получает 200 после 2 вызовов без задержек. 400 возвращается после первого вызова; при лимите 1 ответ 503 возвращается без delay. Недопустимое число попыток отвергается до request.",
+      "expected_en": "The first client receives 200 after 3 calls and delays [1,2]. The second receives 200 after 2 calls without delays. A 400 returns after one call; limit 1 returns 503 without delay. An invalid attempt limit is rejected before request.",
+      "lmx_notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков. В LMX библиотека копирует предоставленный заголовок sys\\OPERANDS_TEMPLATE без повторного объявления его const-полей. Режим 0 передаёт готовые значения: left ссылается на callable-ссылку request; right содержит ссылку на int limit и необязательную callable-ссылку delay. Проверка длины right явная. \\left и \\right[i] читают готовые значения; последующие request()/wait(pause) выполняют вызовы. sys\\eval и режим 1 не нужны. Операнд использует приоритет + из шаблона, конкретный return:int объявлен один раз.",
+      "lmx_notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers. LMX copies the supplied sys\\OPERANDS_TEMPLATE header without redeclaring its const properties. Mode 0 supplies prepared values: left refers to the request callable reference; right contains a reference to int limit and optionally a delay callable reference. The right-length check is explicit. \\left and \\right[i] read prepared values; subsequent request()/wait(pause) perform calls. sys\\eval and mode 1 are unnecessary. The operand retains the template addition precedence and declares its concrete return:int once.",
+      "comparison_ru": "Сравниваются полные собственные реализации одного API, а не импортированный retry с одной стороны и ручной цикл с другой. LMX использует обычный операнд, Go — экспортированную функцию пакета, C# — статический метод. Для двух клиентов библиотека поставляется один раз. Размер клиентов и размер реализации показываются отдельно; их сумма не объявляется меньше исходных автономных листингов.",
+      "comparison_en": "These are complete application implementations of the same API, not an imported retry on one side versus a handwritten loop on another. LMX uses an ordinary operand, Go an exported package function, and C# a static method. The two clients share one library implementation. Client and implementation sizes are reported separately; their sum is not claimed to be smaller than the original standalone listings.",
+      "limits_ru": "Это последовательная retry-политика над завершёнными sync callbacks. Нет async post/answer автомата, jitter, общего дедлайна, Retry-After, автоматической идемпотентности, исключений как статусов или устойчивого журнала попыток. Повтор эффекта после неопределённого сетевого исхода остаётся ответственностью приложения.",
+      "limits_en": "This is a sequential retry policy over completed synchronous callbacks. It provides no asynchronous post/answer state machine, jitter, total deadline, Retry-After, automatic idempotency, exception-to-status conversion or durable attempt log. Retrying an effect after an uncertain network outcome remains application policy.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "RetryLibrary:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    retry:\n        throws: Attempts\n        if: length(right) < 1 || length(right) > 2\n            throw: Attempts()\n        int: limit \\right[0]\n        if: limit < 1 || limit > 31\n            throw: Attempts()\n        @: request \\left\n        int: attempt 0\n        int: pause 1\n        while: attempt < limit\n            int: status request()\n            if: status != 503\n                return: status\n            attempt += 1\n            if: attempt < limit && length(right) = 2\n                @: wait \\right[1]\n                wait(pause)\n                pause *= 2\n        ---\n        return: 503\n",
+          "notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков. В LMX библиотека копирует предоставленный заголовок sys\\OPERANDS_TEMPLATE без повторного объявления его const-полей. Режим 0 передаёт готовые значения: left ссылается на callable-ссылку request; right содержит ссылку на int limit и необязательную callable-ссылку delay. Проверка длины right явная. \\left и \\right[i] читают готовые значения; последующие request()/wait(pause) выполняют вызовы. sys\\eval и режим 1 не нужны. Операнд использует приоритет + из шаблона, конкретный return:int объявлен один раз.",
+          "notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers. LMX copies the supplied sys\\OPERANDS_TEMPLATE header without redeclaring its const properties. Mode 0 supplies prepared values: left refers to the request callable reference; right contains a reference to int limit and optionally a delay callable reference. The right-length check is explicit. \\left and \\right[i] read prepared values; subsequent request()/wait(pause) perform calls. sys\\eval and mode 1 are unnecessary. The operand retains the template addition precedence and declares its concrete return:int once."
+        },
+        {
+          "language": "Go",
+          "code": "package retryhelper\nfunc Run(request func() int, attempts int, delay func(int)) int {\n    if attempts < 1 || attempts > 31 { panic(\"attempts\") }\n    pause := 1\n    for attempt := 0; attempt < attempts; attempt++ {\n        status := request()\n        if status != 503 { return status }\n        if attempt + 1 < attempts && delay != nil {\n            delay(pause)\n            pause *= 2\n        }\n    }\n    return 503\n}\n",
+          "notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков.",
+          "notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers."
+        },
+        {
+          "language": "C#",
+          "code": "#nullable enable\nnamespace PatternHelpers {\n    public static class RetryLibrary {\n        public static int Run(System.Func<int> request, int attempts,\n                              System.Action<int>? delay = null) {\n            if (attempts < 1 || attempts > 31)\n                throw new System.ArgumentOutOfRangeException(nameof(attempts));\n            int pause = 1;\n            for (int attempt = 0; attempt < attempts; attempt++) {\n                int status = request();\n                if (status != 503) return status;\n                if (attempt + 1 < attempts && delay != null) {\n                    delay(pause);\n                    pause *= 2;\n                }\n            }\n            return 503;\n        }\n    }\n}\n",
+          "notes_ru": "Полностью реализована собственная библиотечная политика: допускается 1..31 попытка; повторяется только статус 503; остальные статусы возвращаются сразу; delay необязателен и вызывается только между повторяемыми попытками с интервалами 1,2,4. Ограничение 31 сохраняет промежуточный pause в int32. request():int и delay(int):void — поставленные синхронные callbacks; сеть и таймер библиотека не реализует. Ни один callback не должен ждать ответа, для обработки которого нужен следующий turn занятого Message. Все attempt/pause/status являются локалами вызова, не общим mutable состоянием библиотеки. Код не исполнялся LMX runtime/компиляторами контрольных языков.",
+          "notes_en": "The application-library policy is fully implemented: 1..31 attempts are admitted; only 503 is retried; other statuses return immediately; delay is optional and runs only between retried attempts with intervals 1,2,4. The limit of 31 keeps intermediate pause within int32. request():int and delay(int):void are supplied synchronous callbacks; the library implements neither networking nor a timer. Neither callback may wait for a reply that requires the busy Message to run another turn. All attempt/pause/status values are invocation locals, not shared mutable library state. The code has not been executed by an LMX runtime or control-language compilers."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Retry",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/retry",
+          "why_ru": "Ограниченный повтор временного отказа с задержкой между попытками.",
+          "why_en": "Bounded retry of a transient failure with delay between attempts."
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "name": "Bulkhead",
+      "slug": "bulkhead",
+      "summary_ru": "Разделение лимитов одновременно выполняемой работы между независимыми направлениями.",
+      "summary_en": "Partitioning concurrent work limits between independent destinations.",
+      "scenario_ru": "У направлений A и B по одному разрешению. A занято; второй запрос A отвергается, первый B принимается.",
+      "scenario_en": "Destinations A and B each have one permit. A is occupied; a second A request is rejected, while the first B request is admitted.",
+      "expected_ru": "Для A результаты acquire: 1,0; для B: 1. Освобождение A снова разрешает работу.",
+      "expected_en": "A acquire results: 1,0; B result: 1. Releasing A admits subsequent work.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. Хост создаёт два разных BulkheadMessage, по одному на направление. acquire/release адресуются их почте. Длительная работа идёт в отдельных рабочих Message; только получивший разрешение освобождает его ровно один раз.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. The host creates two distinct BulkheadMessages, one per destination. acquire/release are addressed mail calls. Long work runs in separate worker Messages; only a successful acquirer releases exactly once.",
+      "comparison_ru": "LMX переносит владение разрешением к двум владельцам; Go и C# используют два независимых семафора. Один общий Message, исполняющий обе долгие операции, не обеспечил бы изоляции задержек.",
+      "comparison_en": "LMX assigns permits to two owners; Go and C# use independent semaphores. A single Message executing both long operations would not isolate their delays.",
+      "limits_ru": "Показана изоляция admission, не процессов и памяти. Для crash recovery нужны leases или reconciliation; повтор release не допускается договором примера.",
+      "limits_en": "This isolates admission, not processes or memory. Crash recovery needs leases or reconciliation; duplicate release is excluded by the example contract.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "BulkheadMessage:\n    int: used 0\n    return: int\n    acquire:\n        if: node\\used = 1\n            return: 0\n        node\\used := 1\n        return: 1\n    release:\n        node\\used := 0\n        return: 1\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. Хост создаёт два разных BulkheadMessage, по одному на направление. acquire/release адресуются их почте. Длительная работа идёт в отдельных рабочих Message; только получивший разрешение освобождает его ровно один раз.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. The host creates two distinct BulkheadMessages, one per destination. acquire/release are addressed mail calls. Long work runs in separate worker Messages; only a successful acquirer releases exactly once."
+        },
+        {
+          "language": "Go",
+          "code": "type Bulkhead chan struct{}\nfunc NewBulkhead() Bulkhead { return make(chan struct{}, 1) }\nfunc (b Bulkhead) Acquire() bool {\n    select { case b <- struct{}{}: return true; default: return false }\n}\nfunc (b Bulkhead) Release() int { <-b; return 1 }\n// a := NewBulkhead(); b := NewBulkhead()\n",
+          "notes_ru": "Хост создаёт два разных BulkheadMessage, по одному на направление. acquire/release адресуются их почте. Длительная работа идёт в отдельных рабочих Message; только получивший разрешение освобождает его ровно один раз. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "The host creates two distinct BulkheadMessages, one per destination. acquire/release are addressed mail calls. Long work runs in separate worker Messages; only a successful acquirer releases exactly once. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "sealed class Bulkhead {\n    readonly System.Threading.SemaphoreSlim permit = new(1, 1);\n    public bool Acquire() => permit.Wait(0);\n    public int Release() { permit.Release(); return 1; }\n}\n// var a = new Bulkhead(); var b = new Bulkhead();\n",
+          "notes_ru": "Хост создаёт два разных BulkheadMessage, по одному на направление. acquire/release адресуются их почте. Длительная работа идёт в отдельных рабочих Message; только получивший разрешение освобождает его ровно один раз. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "The host creates two distinct BulkheadMessages, one per destination. acquire/release are addressed mail calls. Long work runs in separate worker Messages; only a successful acquirer releases exactly once. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Bulkhead",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead",
+          "why_ru": "Разделение лимитов одновременно выполняемой работы между независимыми направлениями.",
+          "why_en": "Partitioning concurrent work limits between independent destinations."
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "name": "API Gateway",
+      "slug": "api_gateway",
+      "summary_ru": "Один HTTP endpoint выбирает явный маршрут к одному из внутренних сервисов.",
+      "summary_en": "One HTTP endpoint selects an explicit route to an internal service.",
+      "scenario_ru": "Декодер входа преобразует /orders в route=1, /stock в route=2. Неизвестный путь получает 404.",
+      "scenario_en": "Ingress maps /orders to route=1 and /stock to route=2. An unknown path receives 404.",
+      "expected_ru": "Маршруты 1 и 2 вызывают соответственно /orders/get и /stock/get; неизвестный маршрут не вызывает провайдера.",
+      "expected_en": "Routes 1 and 2 invoke /orders/get and /stock/get respectively; an unknown route never invokes the provider.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint: string, route: string): int — поставленный HTTP-провайдер: кодирует фиксированное тело LMX как application/lmx и возвращает статус синхронного семантического ответа. Декодирование URI и explicit route Table находятся в общем профиле, а не в магическом поиске методов.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint: string, route: string): int is a supplied provider that encodes the fixed LMX body as application/lmx and returns the synchronous semantic-response status. URI decoding and the explicit route Table belong to the shared profile, not magical method lookup.",
+      "comparison_ru": "У LMX уже есть HTTP-профиль и admission; прикладная таблица маршрутов всё равно нужна. Контрольные листинги используют тот же контракт транспорта.",
+      "comparison_en": "LMX already supplies the HTTP profile and admission model; an application route table is still needed. Control listings use the same transport contract.",
+      "limits_ru": "Не показаны TLS, авторизация, копирование тела и потоковая передача. Они остаются обязательствами HTTP-провайдера и admission во всех трёх реализациях.",
+      "limits_en": "TLS, authorization, body forwarding and streaming are not shown. They remain HTTP-provider and admission obligations in all three implementations.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "GatewayMessage:\n    int: route\n    @: http\n    return: int\n    dispatch:\n        if: route = 1\n            return: http\\post(\"https://orders.example\"; \"/orders/get\")\n        if: route = 2\n            return: http\\post(\"https://stock.example\"; \"/stock/get\")\n        return: 404\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint: string, route: string): int — поставленный HTTP-провайдер: кодирует фиксированное тело LMX как application/lmx и возвращает статус синхронного семантического ответа. Декодирование URI и explicit route Table находятся в общем профиле, а не в магическом поиске методов.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint: string, route: string): int is a supplied provider that encodes the fixed LMX body as application/lmx and returns the synchronous semantic-response status. URI decoding and the explicit route Table belong to the shared profile, not magical method lookup."
+        },
+        {
+          "language": "Go",
+          "code": "func Route(id int, post func(string, string) int) int {\n    routes := map[int][2]string{\n        1: {\"https://orders.example\", \"/orders/get\"},\n        2: {\"https://stock.example\", \"/stock/get\"},\n    }\n    target, ok := routes[id]\n    if !ok { return 404 }\n    return post(target[0], target[1])\n}\n",
+          "notes_ru": "http.post(endpoint: string, route: string): int — поставленный HTTP-провайдер: кодирует фиксированное тело LMX как application/lmx и возвращает статус синхронного семантического ответа. Декодирование URI и explicit route Table находятся в общем профиле, а не в магическом поиске методов. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "http.post(endpoint: string, route: string): int is a supplied provider that encodes the fixed LMX body as application/lmx and returns the synchronous semantic-response status. URI decoding and the explicit route Table belong to the shared profile, not magical method lookup. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "static int Route(int id, System.Func<string,string,int> post) {\n    return id switch {\n        1 => post(\"https://orders.example\", \"/orders/get\"),\n        2 => post(\"https://stock.example\", \"/stock/get\"),\n        _ => 404\n    };\n}\n",
+          "notes_ru": "http.post(endpoint: string, route: string): int — поставленный HTTP-провайдер: кодирует фиксированное тело LMX как application/lmx и возвращает статус синхронного семантического ответа. Декодирование URI и explicit route Table находятся в общем профиле, а не в магическом поиске методов. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "http.post(endpoint: string, route: string): int is a supplied provider that encodes the fixed LMX body as application/lmx and returns the synchronous semantic-response status. URI decoding and the explicit route Table belong to the shared profile, not magical method lookup. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Gateway Routing",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/gateway-routing",
+          "why_ru": "Один HTTP endpoint выбирает явный маршрут к одному из внутренних сервисов.",
+          "why_en": "One HTTP endpoint selects an explicit route to an internal service."
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "name": "Backends for Frontends",
+      "slug": "backends_for_frontends",
+      "summary_ru": "Разные фронтенды получают отдельные операции агрегации поверх общего backend.",
+      "summary_en": "Different frontends receive separate aggregation operations over a shared backend.",
+      "scenario_ru": "Backend даёт цену 12 и доставку 3. Мобильный экран показывает цену; web checkout — итог с доставкой.",
+      "scenario_en": "The backend returns price 12 and shipping 3. Mobile shows the price; web checkout shows the delivered total.",
+      "expected_ru": "Mobile возвращает 12 с одним обращением; Web возвращает 15 с двумя.",
+      "expected_en": "Mobile returns 12 after one backend call; Web returns 15 after two.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. backend.price(): int и backend.shipping(): int — поставленный клиент общего сервиса; HTTP-профиль завершает семантический ответ перед возвратом. Хост публикует разные frontend routes и развёртывает два BFF Message; схема ответа здесь скалярная.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. backend.price(): int and backend.shipping(): int are supplied clients of the shared service; the HTTP profile completes the semantic reply before return. The host publishes separate frontend routes and deploys two BFF Messages; this example uses scalar responses.",
+      "comparison_ru": "Различие находится в frontend-specific агрегировании и независимых границах развёртывания. Ни Message, ни короткая функция сами по себе не создают полноценный BFF.",
+      "comparison_en": "The difference is frontend-specific aggregation and independent deployment boundaries. Neither a Message nor a short function alone creates a complete BFF.",
+      "limits_ru": "Денежные единицы в примере — целые условные единицы. Кэш, независимые версии контрактов и частичные сбои двух backend-вызовов не показаны.",
+      "limits_en": "Amounts are integer fixture units. Caching, independently versioned contracts and partial failure across the two backend calls are outside this core.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "MobileBffMessage:\n    @: backend\n    return: int\n    show:\n        return: backend\\price()\n\nWebBffMessage:\n    @: backend\n    return: int\n    checkout:\n        return: backend\\price() + backend\\shipping()\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. backend.price(): int и backend.shipping(): int — поставленный клиент общего сервиса; HTTP-профиль завершает семантический ответ перед возвратом. Хост публикует разные frontend routes и развёртывает два BFF Message; схема ответа здесь скалярная.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. backend.price(): int and backend.shipping(): int are supplied clients of the shared service; the HTTP profile completes the semantic reply before return. The host publishes separate frontend routes and deploys two BFF Messages; this example uses scalar responses."
+        },
+        {
+          "language": "Go",
+          "code": "type Catalog interface { Price() int; Shipping() int }\nfunc Mobile(c Catalog) int { return c.Price() }\nfunc Web(c Catalog) int { return c.Price() + c.Shipping() }\n",
+          "notes_ru": "backend.price(): int и backend.shipping(): int — поставленный клиент общего сервиса; HTTP-профиль завершает семантический ответ перед возвратом. Хост публикует разные frontend routes и развёртывает два BFF Message; схема ответа здесь скалярная. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "backend.price(): int and backend.shipping(): int are supplied clients of the shared service; the HTTP profile completes the semantic reply before return. The host publishes separate frontend routes and deploys two BFF Messages; this example uses scalar responses. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "interface ICatalog { int Price(); int Shipping(); }\nstatic int Mobile(ICatalog c) => c.Price();\nstatic int Web(ICatalog c) => c.Price() + c.Shipping();\n",
+          "notes_ru": "backend.price(): int и backend.shipping(): int — поставленный клиент общего сервиса; HTTP-профиль завершает семантический ответ перед возвратом. Хост публикует разные frontend routes и развёртывает два BFF Message; схема ответа здесь скалярная. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "backend.price(): int and backend.shipping(): int are supplied clients of the shared service; the HTTP profile completes the semantic reply before return. The host publishes separate frontend routes and deploys two BFF Messages; this example uses scalar responses. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Backends for Frontends",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/backends-for-frontends",
+          "why_ru": "Разные фронтенды получают отдельные операции агрегации поверх общего backend.",
+          "why_en": "Different frontends receive separate aggregation operations over a shared backend."
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "name": "Sidecar",
+      "slug": "sidecar",
+      "summary_ru": "Служебная обработка выполняется рядом с приложением в отдельном процессе с общим жизненным циклом.",
+      "summary_en": "Auxiliary processing runs beside the application in a separate process with a shared deployment lifecycle.",
+      "scenario_ru": "Приложение посылает запись 7 локальному журналирующему sidecar, который записывает её в sink.",
+      "scenario_en": "The application sends record 7 to a local logging sidecar, which writes it to a sink.",
+      "expected_ru": "Sink содержит одну запись 7. Завершение deployment закрывает и приложение, и sidecar.",
+      "expected_en": "The sink contains one record 7. Deployment shutdown closes both app and sidecar.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. sink.write(int): void — поставленный append-only sink. sendLocal/post создаёт письмо, декодируемое sidecar. В LMX sidecar является Message другого процесса и адресуется локальным HTTP endpoint. В Go channel и C# enumerable здесь адаптеры декодированного IPC-входа, а не доказательство отдельного процесса.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. sink.write(int): void is a supplied append-only sink. sendLocal/post creates a letter decoded by the sidecar. In LMX the sidecar is a Message in a separate process reached through a local HTTP endpoint. Go channel and C# enumerable represent decoded IPC input, not proof of process isolation.",
+      "comparison_ru": "Основной код мал во всех языках; определяющая часть Sidecar — deployment: два процесса/контейнера, общий lifecycle и endpoint. Локальный дочерний Message в одном процессе имеет более слабую изоляцию.",
+      "comparison_en": "The core is small in every language; Sidecar is primarily deployment: two processes/containers, one lifecycle and an endpoint. A child Message in the same process provides weaker isolation.",
+      "limits_ru": "Развёртывание и IPC-кодек заданы контрактом профиля и не реализованы листингом. Без отдельного процесса этот листинг описывает вспомогательный actor, а не полный Sidecar.",
+      "limits_en": "Deployment and the IPC codec are specified by the profile contract and are not implemented by the listing. Without a separate process the listing describes an auxiliary actor, not a full Sidecar.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "AppMessage:\n    int: record\n    @: sidecar\n    run:\n        post:\n            ask:\n                sidecar\\append(record := record)\n\nLogSidecarMessage:\n    int: record\n    @: sink\n    append:\n        sink\\write(record)\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. sink.write(int): void — поставленный append-only sink. sendLocal/post создаёт письмо, декодируемое sidecar. В LMX sidecar является Message другого процесса и адресуется локальным HTTP endpoint. В Go channel и C# enumerable здесь адаптеры декодированного IPC-входа, а не доказательство отдельного процесса.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. sink.write(int): void is a supplied append-only sink. sendLocal/post creates a letter decoded by the sidecar. In LMX the sidecar is a Message in a separate process reached through a local HTTP endpoint. Go channel and C# enumerable represent decoded IPC input, not proof of process isolation."
+        },
+        {
+          "language": "Go",
+          "code": "func App(record int, sendLocal func(int)) { sendLocal(record) }\nfunc Sidecar(in <-chan int, write func(int)) {\n    for record := range in { write(record) }\n}\n",
+          "notes_ru": "sink.write(int): void — поставленный append-only sink. sendLocal/post создаёт письмо, декодируемое sidecar. В LMX sidecar является Message другого процесса и адресуется локальным HTTP endpoint. В Go channel и C# enumerable здесь адаптеры декодированного IPC-входа, а не доказательство отдельного процесса. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "sink.write(int): void is a supplied append-only sink. sendLocal/post creates a letter decoded by the sidecar. In LMX the sidecar is a Message in a separate process reached through a local HTTP endpoint. Go channel and C# enumerable represent decoded IPC input, not proof of process isolation. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "static void App(int record, System.Action<int> sendLocal) => sendLocal(record);\nstatic void Sidecar(System.Collections.Generic.IEnumerable<int> input,\n                    System.Action<int> write) {\n    foreach (int record in input) write(record);\n}\n",
+          "notes_ru": "sink.write(int): void — поставленный append-only sink. sendLocal/post создаёт письмо, декодируемое sidecar. В LMX sidecar является Message другого процесса и адресуется локальным HTTP endpoint. В Go channel и C# enumerable здесь адаптеры декодированного IPC-входа, а не доказательство отдельного процесса. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "sink.write(int): void is a supplied append-only sink. sendLocal/post creates a letter decoded by the sidecar. In LMX the sidecar is a Message in a separate process reached through a local HTTP endpoint. Go channel and C# enumerable represent decoded IPC input, not proof of process isolation. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Sidecar",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar",
+          "why_ru": "Служебная обработка выполняется рядом с приложением в отдельном процессе с общим жизненным циклом.",
+          "why_en": "Auxiliary processing runs beside the application in a separate process with a shared deployment lifecycle."
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "name": "Ambassador",
+      "slug": "ambassador",
+      "summary_ru": "Локальный сетевой посредник скрывает внешний endpoint и политику повторов от клиента.",
+      "summary_en": "A local network proxy hides the remote endpoint and retry policy from its client.",
+      "scenario_ru": "Клиент просит получить каталог. Ambassador обращается к заданному endpoint: первый результат 503, второй 200.",
+      "scenario_en": "The client requests a catalog. The ambassador calls its configured endpoint: first status 503, then 200.",
+      "expected_ru": "Клиент получает 200; внешний провайдер вызван дважды, с одним и тем же endpoint/route.",
+      "expected_en": "The client receives 200; the remote provider is called twice with the same endpoint and route.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход. Хост заранее устанавливает готовый provider в AmbassadorMessage\\http. read обращается к нему через node\\http, поэтому вызов callback из RetryLibrary не зависит от временного http в активации catalog.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit. The host installs the prepared provider in AmbassadorMessage\\http beforehand. read uses node\\http, so calling the callback from RetryLibrary does not depend on a temporary http in the catalog activation.",
+      "comparison_ru": "Все клиенты используют ту же RetryLibrary, что и пример Retry, с двумя попытками и без таймера. Сетевой endpoint/route и роль отдельного Ambassador остаются приложением. LMX не превращает post в синхронный операнд: retry вызывает предоставленный sync HTTP-клиент, а доставка Message и deployment сохраняют прежние границы.",
+      "comparison_en": "All clients use the same RetryLibrary as the Retry example, with two attempts and no timer. The endpoint/route and separately deployed Ambassador remain application choices. LMX does not turn post into a synchronous operand: retry calls the supplied synchronous HTTP client, while Message delivery and deployment keep their original boundaries.",
+      "limits_ru": "Пример повторяет только безопасное чтение. TLS не реализуется вручную; auth, backoff и метрики — обязательства выбранного провайдера/политики.",
+      "limits_en": "Only a safe read is retried. TLS is not hand-implemented; authentication, backoff and metrics belong to the selected provider and policy.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "AmbassadorMessage:\n    @: http\n    return: int\n    read:\n        return: node\\http\\post(\"https://catalog.example\"; \"/catalog/read\")\n    catalog:\n        throws: Attempts\n        import: RetryLibrary\n        return: read retry 2\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Сборка включает определение RetryLibrary в доступный граф, после чего обычный import делает retry видимым в методе клиента. Операнд использует готовый sys\\OPERANDS_TEMPLATE, режим 0: left ссылается на готовую callable-ссылку, right — на число попыток и необязательную callable-ссылку таймера. Передача request/read/delay не вызывает их; библиотека явно вызывает callbacks. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox. Клиент распространяет объявленный выход Attempts через собственный throws: даже при константном допустимом лимите 3/2 обычный контракт вызова требует catch либо throws; входной harness обрабатывает этот выход. Хост заранее устанавливает готовый provider в AmbassadorMessage\\http. read обращается к нему через node\\http, поэтому вызов callback из RetryLibrary не зависит от временного http в активации catalog.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. The build includes RetryLibrary in the accessible graph, then ordinary import makes retry visible in the client method. The operand uses the supplied sys\\OPERANDS_TEMPLATE in mode 0: left refers to a prepared callable reference; right holds the attempt count and an optional prepared timer callable reference. Passing request/read/delay does not invoke them; the library explicitly calls the callbacks. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox. The client propagates the declared Attempts exit through its own throws: even for the valid constant limit 3/2, the ordinary call contract requires catch or throws; the entry harness handles this exit. The host installs the prepared provider in AmbassadorMessage\\http beforehand. read uses node\\http, so calling the callback from RetryLibrary does not depend on a temporary http in the catalog activation."
+        },
+        {
+          "language": "Go",
+          "code": "import \"example/retryhelper\"\nfunc Ambassador(post func(string, string) int) int {\n    read := func() int { return post(\"https://catalog.example\", \"/catalog/read\") }\n    return retryhelper.Run(read, 2, nil)\n}\n",
+          "notes_ru": "http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Module path example/retryhelper — заданное в сборке имя показанного package retryhelper; это не внешняя скрытая зависимость. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox.",
+          "notes_en": "http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Module path example/retryhelper is the build-assigned path of the shown retryhelper package, not a hidden external dependency. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox."
+        },
+        {
+          "language": "C#",
+          "code": "using PatternHelpers;\nstatic int Ambassador(System.Func<string,string,int> post) {\n    int Read() => post(\"https://catalog.example\", \"/catalog/read\");\n    return RetryLibrary.Run(Read, 2);\n}\n",
+          "notes_ru": "http.post(endpoint,route): int — поставленный провайдер HTTPS с фиксированным идемпотентным read-телом application/lmx. Возврат — статус семантического ответа. Ambassador развёрнут отдельно от клиента на том же хосте; это указано в общем deployment profile. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой. RetryLibrary — собственная прикладная библиотека из сопутствующего примера реализации, не native builtin и не новая гарантия Message. В клиентский подсчёт входит import и использование, а полный код общей библиотеки учитывается отдельно и один раз для двух пользователей. Namespace PatternHelpers содержит показанный рядом статический RetryLibrary; клиентское приложение включает эту реализацию. Приложение сохраняет endpoint/route в read, выбирает две попытки и отсутствие delay. read вызывается библиотекой; удалённая операция остаётся синхронным семантическим HTTP-ответом, не ожиданием собственного mailbox.",
+          "notes_en": "http.post(endpoint,route): int is a supplied HTTPS provider carrying a fixed idempotent application/lmx read body. It returns semantic-response status. The ambassador is deployed separately from its client on the same host, as specified by the shared deployment profile. This C# fragment uses supplied delegates; namespace and test entry are shared harness. RetryLibrary is an application library implemented in the companion example, not a native builtin or a new Message guarantee. Client counts include import and use; the complete shared library is counted separately and once for its two consumers. Namespace PatternHelpers contains the adjacent static RetryLibrary implementation, included by the client application. The application keeps endpoint/route in read and chooses two attempts with no delay. The library invokes read; the remote operation remains a synchronous semantic HTTP reply, not a wait on the owner mailbox."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Ambassador",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/ambassador",
+          "why_ru": "Локальный сетевой посредник скрывает внешний endpoint и политику повторов от клиента.",
+          "why_en": "A local network proxy hides the remote endpoint and retry policy from its client."
+        }
+      ],
+      "implementation_ids": [
+        97
+      ]
+    },
+    {
+      "id": 49,
+      "name": "Cache-Aside",
+      "slug": "cache_aside",
+      "summary_ru": "Приложение загружает отсутствующее значение и явно инвалидирует кэш после записи в хранилище.",
+      "summary_en": "The application loads a missing value and explicitly invalidates the cache after a store update.",
+      "scenario_ru": "Для одного фиксированного ключа store содержит 7. Выполнить get,get,put(9),get.",
+      "scenario_en": "For one fixed key the store contains 7. Execute get,get,put(9),get.",
+      "expected_ru": "Чтения возвращают 7,7,9; store.read вызван дважды. put сначала меняет store, затем сбрасывает ready.",
+      "expected_en": "Reads return 7,7,9; store.read is called twice. put updates the store before clearing ready.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. store.read(): int / write(int): void — предоставленное хранилище одного ключа с завершёнными операциями. Все get/put данного кэша идут последовательно; отдельный ready отличает отсутствие от числового нуля.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. store.read(): int / write(int): void is a supplied single-key store with completed operations. All cache get/put calls are serial; ready distinguishes absence from zero.",
+      "comparison_ru": "LMX хранит кэш у Message-владельца, контролирующего get и put. Контрольные версии имеют то же confinement; это не многоклиентский распределённый согласованный кэш.",
+      "comparison_en": "LMX places the cache in its owner Message, controlling get and put. Control versions have the same confinement; this is not a globally coherent distributed cache.",
+      "limits_ru": "TTL, внешние писатели, cache stampede между разными владельцами и сбой между записью и invalidation требуют дополнительного протокола.",
+      "limits_en": "TTL, external writers, cross-owner cache stampedes and failure between write and invalidation require additional protocol.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "CacheMessage:\n    @: store\n    int: value\n    int: ready 0\n    int: cached 0\n    return: int\n    get:\n        if: node\\ready = 0\n            node\\cached := store\\read()\n            node\\ready := 1\n        return: node\\cached\n    put:\n        store\\write(value)\n        node\\ready := 0\n        return: value\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. store.read(): int / write(int): void — предоставленное хранилище одного ключа с завершёнными операциями. Все get/put данного кэша идут последовательно; отдельный ready отличает отсутствие от числового нуля.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. store.read(): int / write(int): void is a supplied single-key store with completed operations. All cache get/put calls are serial; ready distinguishes absence from zero."
+        },
+        {
+          "language": "Go",
+          "code": "type Store interface { Read() int; Write(int) }\ntype Cache struct { store Store; ready bool; value int }\nfunc (c *Cache) Get() int {\n    if !c.ready { c.value = c.store.Read(); c.ready = true }\n    return c.value\n}\nfunc (c *Cache) Put(v int) int { c.store.Write(v); c.ready = false; return v }\n",
+          "notes_ru": "store.read(): int / write(int): void — предоставленное хранилище одного ключа с завершёнными операциями. Все get/put данного кэша идут последовательно; отдельный ready отличает отсутствие от числового нуля. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "store.read(): int / write(int): void is a supplied single-key store with completed operations. All cache get/put calls are serial; ready distinguishes absence from zero. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "interface IStore { int Read(); void Write(int value); }\nsealed class Cache(IStore store) {\n    bool ready; int value;\n    public int Get() {\n        if (!ready) { value = store.Read(); ready = true; }\n        return value;\n    }\n    public int Put(int v) { store.Write(v); ready = false; return v; }\n}\n",
+          "notes_ru": "store.read(): int / write(int): void — предоставленное хранилище одного ключа с завершёнными операциями. Все get/put данного кэша идут последовательно; отдельный ready отличает отсутствие от числового нуля. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "store.read(): int / write(int): void is a supplied single-key store with completed operations. All cache get/put calls are serial; ready distinguishes absence from zero. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Cache-Aside",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside",
+          "why_ru": "Приложение загружает отсутствующее значение и явно инвалидирует кэш после записи в хранилище.",
+          "why_en": "The application loads a missing value and explicitly invalidates the cache after a store update."
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "name": "Throttling",
+      "slug": "throttling",
+      "summary_ru": "Admission ограничивает число запросов в фиксированном временном окне.",
+      "summary_en": "Admission limits requests within a fixed time window.",
+      "scenario_ru": "Лимит два запроса на окно длиной 10. Запросы приходят в моменты 0,1,2,10.",
+      "scenario_en": "Limit two requests per window of length 10. Requests arrive at times 0,1,2,10.",
+      "expected_ru": "Результаты allow: 1,1,0,1.",
+      "expected_en": "allow results: 1,1,0,1.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. now:int — неубывающее целое время; целочисленное деление. Вызовы последовательны в одном владельце. HTTP-профиль отображает allow=0 в выбранный admission отказ, например 429, и не исполняет бизнес-операцию.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. now:int is nondecreasing integer time; division is integer division. Calls are serial in one owner. The HTTP profile maps allow=0 to an admission refusal such as 429 and does not execute the business operation.",
+      "comparison_ru": "Алгоритм и состояние совпадают; Message устраняет конкурентную модификацию счётчика внутри данного владельца. Разные владельцы не делят один глобальный лимит автоматически.",
+      "comparison_en": "Algorithm and state are the same; a Message removes concurrent mutation within that owner. Different owners do not automatically share a global quota.",
+      "limits_ru": "Fixed window допускает всплеск на границе соседних окон. Это не token bucket, скользящее окно или распределённая квота.",
+      "limits_en": "A fixed window permits a burst across adjacent window boundaries. This is not a token bucket, sliding window or distributed quota.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ThrottleMessage:\n    int: now\n    int: window -1\n    int: count 0\n    return: int\n    allow:\n        int: current now / 10\n        if: current != node\\window\n            node\\window := current\n            node\\count := 0\n        if: node\\count >= 2\n            return: 0\n        node\\count += 1\n        return: 1\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. now:int — неубывающее целое время; целочисленное деление. Вызовы последовательны в одном владельце. HTTP-профиль отображает allow=0 в выбранный admission отказ, например 429, и не исполняет бизнес-операцию.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. now:int is nondecreasing integer time; division is integer division. Calls are serial in one owner. The HTTP profile maps allow=0 to an admission refusal such as 429 and does not execute the business operation."
+        },
+        {
+          "language": "Go",
+          "code": "type Throttle struct { window, count int }\nfunc (t *Throttle) Allow(now int) bool {\n    current := now / 10\n    if current != t.window { t.window = current; t.count = 0 }\n    if t.count >= 2 { return false }\n    t.count++; return true\n}\n",
+          "notes_ru": "now:int — неубывающее целое время; целочисленное деление. Вызовы последовательны в одном владельце. HTTP-профиль отображает allow=0 в выбранный admission отказ, например 429, и не исполняет бизнес-операцию. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "now:int is nondecreasing integer time; division is integer division. Calls are serial in one owner. The HTTP profile maps allow=0 to an admission refusal such as 429 and does not execute the business operation. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "sealed class Throttle {\n    int window = -1, count;\n    public bool Allow(int now) {\n        int current = now / 10;\n        if (current != window) { window = current; count = 0; }\n        if (count >= 2) return false;\n        count++; return true;\n    }\n}\n",
+          "notes_ru": "now:int — неубывающее целое время; целочисленное деление. Вызовы последовательны в одном владельце. HTTP-профиль отображает allow=0 в выбранный admission отказ, например 429, и не исполняет бизнес-операцию. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "now:int is nondecreasing integer time; division is integer division. Calls are serial in one owner. The HTTP profile maps allow=0 to an admission refusal such as 429 and does not execute the business operation. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Throttling",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/throttling",
+          "why_ru": "Admission ограничивает число запросов в фиксированном временном окне.",
+          "why_en": "Admission limits requests within a fixed time window."
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "name": "Queue-Based Load Leveling",
+      "slug": "queue_based_load_leveling",
+      "summary_ru": "Буферная очередь отделяет быстрый приём запросов от ограниченной скорости обработки.",
+      "summary_en": "A queue decouples burst admission from a limited processing rate.",
+      "scenario_ru": "В очередь сразу поступают 1,2,3. Каждый tick обрабатывает не более одного элемента.",
+      "scenario_en": "A burst enqueues 1,2,3. Each tick processes at most one item.",
+      "expected_ru": "После первого tick обработан только 1; после трёх — 1,2,3, очередь пуста.",
+      "expected_en": "After one tick only 1 is processed; after three, 1,2,3 are processed and the queue is empty.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. queue.push(int), size():int, pop():int — поставленная owner-local FIFO, pop требует непустую очередь; process(int):void — завершённая обработка. Хост посылает accept и tick владельцу; tick не запускается автоматически почтой. В Go/C# вызовы экземпляра также serial.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. queue.push(int), size():int, pop():int is a supplied owner-local FIFO; pop requires nonempty input. process(int):void completes processing. The host sends accept and tick to the owner; mail does not generate ticks. Go/C# instances are likewise serial.",
+      "comparison_ru": "LMX inbox служит доставке, а прикладной буфер и темп обслуживания здесь заданы явно. Ни один листинг не маскирует unbounded очередь как backpressure.",
+      "comparison_en": "The LMX inbox provides delivery; the application buffer and processing rate are explicit. No listing misrepresents an unbounded queue as backpressure.",
+      "limits_ru": "Очередь в памяти не переживает crash. Capacity, persistence, retry и dead-letter policy являются расширениями, одинаково необходимыми во всех языках.",
+      "limits_en": "The in-memory queue does not survive a crash. Capacity, persistence, retry and dead-letter policy are extensions required in every language.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "BufferMessage:\n    int: job\n    @: queue\n    @: process\n    accept:\n        queue\\push(job)\n    tick:\n        if: queue\\size() > 0\n            int: next queue\\pop()\n            process(next)\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. queue.push(int), size():int, pop():int — поставленная owner-local FIFO, pop требует непустую очередь; process(int):void — завершённая обработка. Хост посылает accept и tick владельцу; tick не запускается автоматически почтой. В Go/C# вызовы экземпляра также serial.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. queue.push(int), size():int, pop():int is a supplied owner-local FIFO; pop requires nonempty input. process(int):void completes processing. The host sends accept and tick to the owner; mail does not generate ticks. Go/C# instances are likewise serial."
+        },
+        {
+          "language": "Go",
+          "code": "type Buffer struct { jobs []int }\nfunc (b *Buffer) Accept(job int) { b.jobs = append(b.jobs, job) }\nfunc (b *Buffer) Tick(process func(int)) {\n    if len(b.jobs) == 0 { return }\n    job := b.jobs[0]; b.jobs = b.jobs[1:]; process(job)\n}\n",
+          "notes_ru": "queue.push(int), size():int, pop():int — поставленная owner-local FIFO, pop требует непустую очередь; process(int):void — завершённая обработка. Хост посылает accept и tick владельцу; tick не запускается автоматически почтой. В Go/C# вызовы экземпляра также serial. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "queue.push(int), size():int, pop():int is a supplied owner-local FIFO; pop requires nonempty input. process(int):void completes processing. The host sends accept and tick to the owner; mail does not generate ticks. Go/C# instances are likewise serial. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "sealed class Buffer {\n    readonly System.Collections.Generic.Queue<int> jobs = new();\n    public void Accept(int job) => jobs.Enqueue(job);\n    public void Tick(System.Action<int> process) {\n        if (jobs.Count > 0) process(jobs.Dequeue());\n    }\n}\n",
+          "notes_ru": "queue.push(int), size():int, pop():int — поставленная owner-local FIFO, pop требует непустую очередь; process(int):void — завершённая обработка. Хост посылает accept и tick владельцу; tick не запускается автоматически почтой. В Go/C# вызовы экземпляра также serial. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "queue.push(int), size():int, pop():int is a supplied owner-local FIFO; pop requires nonempty input. process(int):void completes processing. The host sends accept and tick to the owner; mail does not generate ticks. Go/C# instances are likewise serial. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Queue-Based Load Leveling",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling",
+          "why_ru": "Буферная очередь отделяет быстрый приём запросов от ограниченной скорости обработки.",
+          "why_en": "A queue decouples burst admission from a limited processing rate."
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "name": "Competing Consumers",
+      "slug": "competing_consumers",
+      "summary_ru": "Несколько рабочих участников запрашивают работу у единственного владельца очереди.",
+      "summary_en": "Several workers request work from a single queue owner.",
+      "scenario_ru": "Очередь содержит 1,2,3. Два worker Message по очереди выполняют take до исчерпания.",
+      "scenario_en": "A queue contains 1,2,3. Two worker Messages repeatedly take jobs until exhausted.",
+      "expected_ru": "Каждое значение 1,2,3 выдаётся ровно одному worker в этом безаварийном прогоне; пустая очередь даёт −1.",
+      "expected_en": "Each of 1,2,3 is issued to one worker in this failure-free run; an empty queue yields -1.",
+      "lmx_notes_ru": "queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.",
+      "lmx_notes_en": "queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run.",
+      "comparison_ru": "Worker не конкурируют за выполнение одного LMX Thread: конкурируют запросы к QueueMessage, затем работа идёт в разных Message. Go channel и .NET Channel предоставляют собственную атомарную выдачу.",
+      "comparison_en": "Workers never concurrently execute one LMX Thread: take requests compete at QueueMessage, then work runs in distinct Messages. Go and .NET channels provide atomic dequeue.",
+      "limits_ru": "Изъятие не равно durable acknowledgement. Сбой после take может потерять работу; для redelivery нужны leases/ack и идемпотентность. Глобальный порядок завершения не обещан.",
+      "limits_en": "Dequeue is not durable acknowledgement. Failure after take may lose work; redelivery requires leases/acks and idempotency. Global completion order is not promised.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        start()\n",
+          "notes_ru": "queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.",
+          "notes_en": "queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run."
+        },
+        {
+          "language": "Go",
+          "code": "func Worker(jobs <-chan int, process func(int), done chan<- bool) {\n    for job := range jobs { process(job) }\n    done <- true\n}\nfunc Start(jobs <-chan int, process func(int)) {\n    done := make(chan bool, 2)\n    go Worker(jobs, process, done); go Worker(jobs, process, done)\n    <-done; <-done\n}\n",
+          "notes_ru": "queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.",
+          "notes_en": "queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run."
+        },
+        {
+          "language": "C#",
+          "code": "static async System.Threading.Tasks.Task Worker(\n    System.Threading.Channels.ChannelReader<int> jobs,\n    System.Action<int> process) {\n    await foreach (int job in jobs.ReadAllAsync()) process(job);\n}\nstatic System.Threading.Tasks.Task Start(\n    System.Threading.Channels.ChannelReader<int> jobs,\n    System.Action<int> process) =>\n    System.Threading.Tasks.Task.WhenAll(\n        System.Threading.Tasks.Task.Run(() => Worker(jobs, process)),\n        System.Threading.Tasks.Task.Run(() => Worker(jobs, process)));\n",
+          "notes_ru": "queue.size/pop — FIFO одного JobQueueMessage. Хост создаёт два WorkerMessage, каждому явно передаёт queueOwner и selfAddress. Worker start и received посылают post и завершают turn; received вызывается следующим входом после результата take. Никакого блокирующего ожидания собственного answer внутри turn нет. process(int):void завершает работу и пишет в потокобезопасный sink. Go закрывает jobs channel; C# завершает ChannelWriter и запускает два Worker через Task.Run.",
+          "notes_en": "queue.size/pop is a FIFO of one JobQueueMessage. The host creates two WorkerMessages and explicitly supplies queueOwner and selfAddress. Worker start and received send post and end their turn; received is entered on a later input when take completes. No turn blocks awaiting its own answer handler. process(int):void completes work and writes to a thread-safe sink. Go closes jobs; C# completes ChannelWriter and starts both workers with Task.Run."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Competing Consumers",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/competing-consumers",
+          "why_ru": "Несколько рабочих участников запрашивают работу у единственного владельца очереди.",
+          "why_en": "Several workers request work from a single queue owner."
+        }
+      ],
+      "reuse_review": {
+        "previous_primary": "procedural",
+        "previous_fairness_note": "",
+        "mechanism": "reuse_existing_definition_or_place",
+        "review_plan": "validation/reuse_plan_01_05_20261122.json"
+      },
+      "variants": {
+        "LMX": {
+          "procedural": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n",
+          "reuse": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        start()\n"
+        }
+      },
+      "procedural_lmx": "JobQueueMessage:\n    @: queue\n    return: int\n    take:\n        if: queue\\size() = 0\n            return: -1\n        return: queue\\pop()\n\nWorkerMessage:\n    int: job\n    @: queueOwner\n    @: selfAddress\n    @: process\n    start:\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n    ---\n    received:\n        if: job = -1\n            return\n        process(job)\n        post:\n            ask:\n                queueOwner\\take()\n            answer:\n                selfAddress\\received\n",
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "reuse"
+        ]
+      },
+      "primary_variant": {
+        "LMX": "reuse"
+      },
+      "fairness_notes": {
+        "LMX": "Reuse WorkerMessage.start() after each successful process(job) instead of repeating its complete post/ask/answer block. The empty sentinel returns before processing or posting; queueOwner and explicit selfAddress continuation remain identical. All custom helper definitions remain in the counted listing; no new unmeasured library is introduced. Previous complete variants are retained."
+      }
+    },
+    {
+      "id": 56,
+      "name": "Health Endpoint Monitoring",
+      "slug": "health_endpoint_monitoring",
+      "summary_ru": "Раздельные проверки показывают живость процесса и готовность обслуживать запросы.",
+      "summary_en": "Separate checks report process liveness and readiness to serve requests.",
+      "scenario_ru": "Процесс отвечает, но обязательная БД недоступна. Затем БД восстанавливается.",
+      "scenario_en": "The process responds but its required database is unavailable; the database then recovers.",
+      "expected_ru": "liveness=200 всегда при достижении handler; readiness меняется с 503 на 200.",
+      "expected_en": "Liveness is 200 when the handler is reached; readiness changes from 503 to 200.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. database.probe():int возвращает 1/0 и имеет ограниченный deadline у провайдера. HTTP route Table связывает /live и /ready с этими методами, а scalar result отображает в HTTP status. Проверяющий монитор — внешний потребитель.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. database.probe():int returns 1/0 under a provider deadline. The HTTP route Table binds /live and /ready to these methods and maps the scalar result to HTTP status. The monitor is an external consumer.",
+      "comparison_ru": "LMX HTTP-профиль уже отделяет admission и семантический ответ, поэтому readiness берётся из результата handler. Один факт принятия письма не делает сервис готовым.",
+      "comparison_en": "The existing LMX HTTP profile separates admission from semantic response, so readiness comes from the handler result. Mail acceptance alone does not make the service ready.",
+      "limits_ru": "Если owner заблокирован и handler недостижим, liveness не возвращает 200: внешний deadline обнаружит отказ. Необязательные зависимости не следует включать в readiness без причины.",
+      "limits_en": "If the owner is blocked and the handler cannot run, liveness does not return 200: the external deadline detects failure. Optional dependencies should not automatically determine readiness.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "HealthMessage:\n    @: database\n    return: int\n    live:\n        return: 200\n    ready:\n        if: database\\probe() = 1\n            return: 200\n        return: 503\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. database.probe():int возвращает 1/0 и имеет ограниченный deadline у провайдера. HTTP route Table связывает /live и /ready с этими методами, а scalar result отображает в HTTP status. Проверяющий монитор — внешний потребитель.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. database.probe():int returns 1/0 under a provider deadline. The HTTP route Table binds /live and /ready to these methods and maps the scalar result to HTTP status. The monitor is an external consumer."
+        },
+        {
+          "language": "Go",
+          "code": "func Live() int { return 200 }\nfunc Ready(probe func() bool) int {\n    if probe() { return 200 }\n    return 503\n}\n",
+          "notes_ru": "database.probe():int возвращает 1/0 и имеет ограниченный deadline у провайдера. HTTP route Table связывает /live и /ready с этими методами, а scalar result отображает в HTTP status. Проверяющий монитор — внешний потребитель. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "database.probe():int returns 1/0 under a provider deadline. The HTTP route Table binds /live and /ready to these methods and maps the scalar result to HTTP status. The monitor is an external consumer. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "static int Live() => 200;\nstatic int Ready(System.Func<bool> probe) => probe() ? 200 : 503;\n",
+          "notes_ru": "database.probe():int возвращает 1/0 и имеет ограниченный deadline у провайдера. HTTP route Table связывает /live и /ready с этими методами, а scalar result отображает в HTTP status. Проверяющий монитор — внешний потребитель. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "database.probe():int returns 1/0 under a provider deadline. The HTTP route Table binds /live and /ready to these methods and maps the scalar result to HTTP status. The monitor is an external consumer. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Microsoft Azure — Health Endpoint Monitoring",
+          "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/health-endpoint-monitoring",
+          "why_ru": "Раздельные проверки показывают живость процесса и готовность обслуживать запросы.",
+          "why_en": "Separate checks report process liveness and readiness to serve requests."
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "name": "Backpressure",
+      "slug": "backpressure",
+      "summary_ru": "Производитель передаёт элементы только в пределах явно выданного потребителем кредита.",
+      "summary_en": "A producer sends items only within explicit consumer-issued credit.",
+      "scenario_ru": "Выдан один credit. Производитель пробует отправить 7 и 8, затем получает новый credit и повторяет 8.",
+      "scenario_en": "One credit is granted. The producer attempts 7 and 8, receives another credit, and retries 8.",
+      "expected_ru": "Первый 7 отправлен, первая попытка 8 возвращает 0 без отправки, повтор 8 отправлен. In-flight не превышает 1.",
+      "expected_en": "7 is sent; the first attempt at 8 returns 0 without sending; retrying 8 sends it. In-flight stays at most 1.",
+      "lmx_notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. grant — запрос потребителя после освобождения одного места, offer — запрос upstream; оба проходят serial owner. consumer.accept(int)/send(int):void принимает ровно один элемент. Grant не дублируется в выбранном надёжном локальном сценарии; после завершения обработки потребитель выдаёт следующий credit.",
+      "lmx_notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. grant is sent by the consumer after freeing one slot; offer comes from upstream; both run on the serial owner. consumer.accept(int)/send(int):void admits one item. Credits are not duplicated in this reliable local scenario; completing processing grants the next credit.",
+      "comparison_ru": "Кредит ограничивает передачу до заполнения downstream, а не только отказывает после перегрузки. Mailbox LMX сам по себе такого контракта не даёт; он реализован приложением.",
+      "comparison_en": "Credit limits sending before downstream fills, rather than rejecting only after overload. The LMX mailbox does not supply this policy automatically; the application implements it.",
+      "limits_ru": "Это минимальный credit protocol, не полная реализация Reactive Streams. Для remote reconnect нужны epoch/sequence и восстановление кредита; иные очереди пути тоже должны иметь предел.",
+      "limits_en": "This is a minimal credit protocol, not a complete Reactive Streams implementation. Remote reconnect requires epochs/sequences and credit recovery; other queues along the path must also be bounded.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ProducerMessage:\n    int: value\n    int: credit 0\n    @: consumer\n    return: int\n    grant:\n        node\\credit += 1\n        return: node\\credit\n    offer:\n        if: node\\credit = 0\n            return: 0\n        node\\credit -= 1\n        post:\n            ask:\n                consumer\\accept(value := value)\n        ---\n        return: 1\n",
+          "notes_ru": "LMX: структура с суффиксом Message — шаблон отдельного исполняемого Message. Хост явно создаёт его Thread с собственной ареной; удалённые вызовы допускаются через post/HTTP-профиль. Каждый обработчик выполняется на последовательной полосе владельца. Это ядро обработчика, а не полный запускаемый сервер. Общая обвязка и её стоимость описаны в MESSAGE_HTTP_PROFILE.md. grant — запрос потребителя после освобождения одного места, offer — запрос upstream; оба проходят serial owner. consumer.accept(int)/send(int):void принимает ровно один элемент. Grant не дублируется в выбранном надёжном локальном сценарии; после завершения обработки потребитель выдаёт следующий credit.",
+          "notes_en": "LMX: a structure suffixed Message is a template for a separately created executable Message. The host explicitly creates its Thread and arena; addressed calls use post or the HTTP profile. Handlers run on the owner serial lane. This is a handler core, not a complete runnable server. Shared integration and its cost are documented in MESSAGE_HTTP_PROFILE.md. grant is sent by the consumer after freeing one slot; offer comes from upstream; both run on the serial owner. consumer.accept(int)/send(int):void admits one item. Credits are not duplicated in this reliable local scenario; completing processing grants the next credit."
+        },
+        {
+          "language": "Go",
+          "code": "type Producer struct { credit int; send func(int) }\nfunc (p *Producer) Grant() int { p.credit++; return p.credit }\nfunc (p *Producer) Offer(value int) bool {\n    if p.credit == 0 { return false }\n    p.credit--; p.send(value); return true\n}\n",
+          "notes_ru": "grant — запрос потребителя после освобождения одного места, offer — запрос upstream; оба проходят serial owner. consumer.accept(int)/send(int):void принимает ровно один элемент. Grant не дублируется в выбранном надёжном локальном сценарии; после завершения обработки потребитель выдаёт следующий credit. Фрагмент Go использует переданные функции/интерфейсы; package и запускающий тест остаются общей обвязкой.",
+          "notes_en": "grant is sent by the consumer after freeing one slot; offer comes from upstream; both run on the serial owner. consumer.accept(int)/send(int):void admits one item. Credits are not duplicated in this reliable local scenario; completing processing grants the next credit. This Go fragment uses supplied functions/interfaces; package and test entry are shared harness."
+        },
+        {
+          "language": "C#",
+          "code": "sealed class Producer(System.Action<int> send) {\n    int credit;\n    public int Grant() => ++credit;\n    public bool Offer(int value) {\n        if (credit == 0) return false;\n        credit--; send(value); return true;\n    }\n}\n",
+          "notes_ru": "grant — запрос потребителя после освобождения одного места, offer — запрос upstream; оба проходят serial owner. consumer.accept(int)/send(int):void принимает ровно один элемент. Grant не дублируется в выбранном надёжном локальном сценарии; после завершения обработки потребитель выдаёт следующий credit. Фрагмент C# использует переданные делегаты; namespace и запускающий тест остаются общей обвязкой.",
+          "notes_en": "grant is sent by the consumer after freeing one slot; offer comes from upstream; both run on the serial owner. consumer.accept(int)/send(int):void admits one item. Credits are not duplicated in this reliable local scenario; completing processing grants the next credit. This C# fragment uses supplied delegates; namespace and test entry are shared harness."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Reactive Streams — asynchronous backpressure",
+          "url": "https://www.reactive-streams.org/",
+          "why_ru": "Производитель передаёт элементы только в пределах явно выданного потребителем кредита.",
+          "why_en": "A producer sends items only within explicit consumer-issued credit."
+        }
+      ]
+    }
+  ]
+}

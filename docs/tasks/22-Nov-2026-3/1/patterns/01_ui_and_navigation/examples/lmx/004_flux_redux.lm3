@@ -1,0 +1,45 @@
+Reducer:
+    int: state
+    int: delta
+    return: int
+    reduce:
+        return: state + delta
+
+Store:
+    int: state 0
+    int: delta
+    dispatch:
+        node\state := Reducer\reduce(node\state; delta)
+
+Demo:
+    return: int
+    run:
+        Store\state := 0
+        Store\dispatch(delta := 2)
+        int: previous Store\state
+        Store\dispatch(delta := 3)
+        return: previous * 10 + Store\state
+
+# BEGIN PROCEDURAL LMX (excluded from character counts)
+# Reducer:
+#     int: state
+#     int: delta
+#     return: int
+#     reduce:
+#         return: state + delta
+# 
+# Store:
+#     int: state 0
+#     int: delta
+#     dispatch:
+#         node\state := Reducer\reduce(state := node\state; delta := delta)
+# 
+# Demo:
+#     return: int
+#     run:
+#         Store\state := 0
+#         Store\dispatch(delta := 2)
+#         int: previous Store\state
+#         Store\dispatch(delta := 3)
+#         return: previous * 10 + Store\state
+# END PROCEDURAL LMX

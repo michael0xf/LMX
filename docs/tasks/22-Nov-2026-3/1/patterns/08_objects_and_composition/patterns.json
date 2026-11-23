@@ -1,0 +1,512 @@
+{
+  "group_title_ru": "Объекты, зависимости и композиция",
+  "group_title_en": "Objects, dependencies, and composition",
+  "languages": [
+    "Java",
+    "Python"
+  ],
+  "rationale_ru": "Java показывает номинальные интерфейсы, классы и явные объектные контракты; Python — динамическую композицию и функции. Такое сравнение не вынуждает все языки копировать Java-иерархии и выявляет реальные различия nominal/structural.",
+  "rationale_en": "Java shows nominal interfaces, classes, and explicit object contracts; Python shows dynamic composition and functions. The comparison avoids forcing Java hierarchies on every language and reveals actual nominal/structural differences.",
+  "overview_ru": "Все десять исходных паттернов сохранены и проверены на пользу операндов и отдельной библиотеки. Fluent Interface теперь показывает реальную цепочку через OPERANDS_TEMPLATE; остальные примеры сохраняют прямые именованные операции там, где новая оболочка лишь увеличила бы механизм. Примеры работают у одного последовательного владельца; shared mutable состояние в LMX принадлежит Message.",
+  "overview_en": "All ten original patterns are retained and reviewed for useful operands and separate libraries. Fluent Interface now shows an actual chain through OPERANDS_TEMPLATE; the other cases keep direct named operations where an extra wrapper would only add machinery. Examples use one serial owner; LMX shared mutable state belongs to a Message.",
+  "patterns": [
+    {
+      "id": 72,
+      "name": "Dependency Injection",
+      "slug": "dependency_injection",
+      "summary_ru": "Клиент получает готовую зависимость от места сборки приложения.",
+      "summary_en": "The composition root supplies a ready dependency to the client.",
+      "scenario_ru": "Один клиент читает число из двух переданных источников и удваивает его. Источники возвращают 5 и 7.",
+      "scenario_en": "One client reads and doubles values from two supplied sources returning 5 and 7.",
+      "expected_ru": "10 + 14 = 24.",
+      "expected_en": "10 + 14 = 24.",
+      "lmx_notes_ru": "Вызов Client\\demo(). Именованный actual read явно задаёт зависимость; это не неявное автодозаполнение и не скрытый registry.",
+      "lmx_notes_en": "Call Client\\demo(). The named actual read explicitly supplies a dependency; this is neither implicit autofill nor a hidden registry.",
+      "comparison_ru": "LMX показывает injection при вызове, Java/Python — через конструктор объекта. Контракт источника одинаков: ()→int без дополнительных эффектов.",
+      "comparison_en": "LMX uses call injection; Java/Python use constructor injection. The source contract is the same: ()→int with no additional effects.",
+      "limits_ru": "Scope dependency — один client/call. Контейнер DI, автоматическое сканирование, lifetime scopes и циклы зависимостей в задачу не входят.",
+      "limits_en": "A dependency belongs to one client/call. DI containers, scanning, lifetime scopes, and dependency cycles are excluded.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Sources:\n    return: int\n    first:\n        return: 5\n    second:\n        return: 7\n\nClient:\n    @: read\n    return: int\n    execute:\n        return: read() * 2\n    demo:\n        return: execute(read := Sources\\first) + execute(read := Sources\\second)\n",
+          "notes_ru": "Вызов Client\\demo(). Именованный actual read явно задаёт зависимость; это не неявное автодозаполнение и не скрытый registry.",
+          "notes_en": "Call Client\\demo(). The named actual read explicitly supplies a dependency; this is neither implicit autofill nor a hidden registry."
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.IntSupplier;\nclass Example {\n    static class Client {\n        final IntSupplier read;\n        Client(IntSupplier read) { this.read = read; }\n        int execute() { return read.getAsInt() * 2; }\n    }\n    static int demo() { return new Client(() -> 5).execute() + new Client(() -> 7).execute(); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Client:\n    def __init__(self, read):\n        self.read = read\n    def execute(self):\n        return self.read() * 2\n\ndef demo():\n    return Client(lambda: 5).execute() + Client(lambda: 7).execute()\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Inversion of Control Containers and Dependency Injection",
+          "url": "https://martinfowler.com/articles/injection.html",
+          "why_ru": "Разделение конфигурации и использования зависимости.",
+          "why_en": "Separation of dependency configuration and use."
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "name": "Service Locator",
+      "slug": "service_locator",
+      "summary_ru": "Клиент получает сервис через явно выбранный реестр.",
+      "summary_en": "The client retrieves a service from an explicitly chosen registry.",
+      "scenario_ru": "По ключу 1 получить источник 42; неизвестный ключ направляется к fallback 0.",
+      "scenario_en": "Resolve key 1 to a source returning 42; unknown keys use a fallback returning 0.",
+      "expected_ru": "42.",
+      "expected_en": "42.",
+      "lmx_notes_ru": "Вызов Client\\demo(). Locator — пользовательская Structure, явно доступная через DATA. Он не создаёт встроенного process-global namespace.",
+      "lmx_notes_en": "Call Client\\demo(). Locator is a user Structure explicitly available through DATA, not a built-in process-global namespace.",
+      "comparison_ru": "В отличие от DI конкретный сервис клиент запрашивает внутри своей логики. Все реализации используют один фиксированный ключ и определённый fallback.",
+      "comparison_en": "Unlike DI, the client requests the concrete service within its own logic. Every version uses one fixed key and a defined fallback.",
+      "limits_ru": "Замены реализаций и динамического dictionary нет в этом минимуме. Добавление locator не делает зависимости клиента явными в его сигнатуре.",
+      "limits_en": "Dynamic dictionaries and service replacement are outside this minimum. A locator does not make each service dependency explicit in the client signature.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Services:\n    return: int\n    answer:\n        return: 42\n    fallback:\n        return: 0\n\nLocator:\n    int: key\n    return: @\n    resolve:\n        if: key = 1\n            return: Services\\answer\n        return: Services\\fallback\n\nClient:\n    @: locator Locator\n    return: int\n    demo:\n        @: service locator\\resolve(key := 1)\n        return: service()\n",
+          "notes_ru": "Вызов Client\\demo(). Locator — пользовательская Structure, явно доступная через DATA. Он не создаёт встроенного process-global namespace.",
+          "notes_en": "Call Client\\demo(). Locator is a user Structure explicitly available through DATA, not a built-in process-global namespace."
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.IntSupplier;\nclass Example {\n    static class Locator {\n        IntSupplier resolve(int key) { return key == 1 ? () -> 42 : () -> 0; }\n    }\n    static int client(Locator locator) { return locator.resolve(1).getAsInt(); }\n    static int demo() { return client(new Locator()); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Locator:\n    def resolve(self, key):\n        return (lambda: 42) if key == 1 else (lambda: 0)\n\ndef client(locator):\n    return locator.resolve(1)()\n\ndef demo():\n    return client(Locator())\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Service Locator versus Dependency Injection",
+          "url": "https://martinfowler.com/articles/injection.html",
+          "why_ru": "Авторское сравнение locator и injection.",
+          "why_en": "The author’s comparison of locator and injection."
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "name": "Null Object",
+      "slug": "null_object",
+      "summary_ru": "Нейтральная реализация выполняет тот же контракт, позволяя не проверять null у клиента.",
+      "summary_en": "A neutral implementation satisfies the same contract so the client needs no null check.",
+      "scenario_ru": "Выполнить работу с value=10 и отключённым журналированием через объект с пустым поведением.",
+      "scenario_en": "Run work with value=10 and logging disabled by a neutral implementation.",
+      "expected_ru": "10; logger вызван один раз и не изменяет состояние.",
+      "expected_en": "10; the logger is called once and changes no state.",
+      "lmx_notes_ru": "Вызов Client\\demo(). Silent\\write — существующий метод-процедура; initialized null-reference 0 или uninit вместо него не подставляются.",
+      "lmx_notes_en": "Call Client\\demo(). Silent\\write is an existing procedure; neither initialized null 0 nor uninit substitutes for it.",
+      "comparison_ru": "Нейтральный callable достаточен, если контракт состоит из одной операции. Это функциональная реализация Null Object, без принудительного отдельного класса.",
+      "comparison_en": "A neutral callable is sufficient for a one-operation contract. This is a functional Null Object without a mandatory wrapper class.",
+      "limits_ru": "Пустое поведение допустимо только для необязательного журнала. Такой объект не следует использовать для сокрытия обязательного отказа платежа или записи.",
+      "limits_en": "Neutral behavior is suitable for an optional log. It should not hide a required payment or persistence failure.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Silent:\n    int: value\n    write:\n        return\n\nClient:\n    int: value\n    @: log Silent\\write\n    return: int\n    execute:\n        log(value := value)\n        return: value\n    demo:\n        return: execute(value := 10)\n",
+          "notes_ru": "Вызов Client\\demo(). Silent\\write — существующий метод-процедура; initialized null-reference 0 или uninit вместо него не подставляются.",
+          "notes_en": "Call Client\\demo(). Silent\\write is an existing procedure; neither initialized null 0 nor uninit substitutes for it."
+        },
+        {
+          "language": "Java",
+          "code": "import java.util.function.IntConsumer;\nclass Example {\n    static final IntConsumer SILENT = value -> {};\n    static int execute(int value, IntConsumer log) {\n        log.accept(value);\n        return value;\n    }\n    static int demo() { return execute(10, SILENT); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "def silent(value):\n    pass\n\ndef execute(value, log=silent):\n    log(value)\n    return value\n\ndef demo():\n    return execute(10)\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Special Case",
+          "url": "https://martinfowler.com/eaaCatalog/specialCase.html",
+          "why_ru": "Нейтральный объект с ожидаемым интерфейсом вместо null.",
+          "why_en": "A neutral object with the expected interface instead of null."
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "name": "Object Pool",
+      "slug": "object_pool",
+      "summary_ru": "Пул выдаёт ресурс во временное пользование и принимает его обратно для повторного использования.",
+      "summary_en": "A pool lends a resource and accepts it back for reuse.",
+      "scenario_ru": "Пул ёмкости 1: взять ресурс, получить отказ на второй take, вернуть первый и получить ту же ссылку.",
+      "scenario_en": "A capacity-one pool: acquire, refuse a second acquisition, return the first, and acquire the same reference.",
+      "expected_ru": "1 означает first=again и busy=null.",
+      "expected_en": "1 means first=again and busy=null.",
+      "lmx_notes_ru": "Вызов Demo\\run(). Pool принадлежит одному Message и обслуживает последовательные запросы. Для конкурентных клиентов take/give вызываются почтовым протоколом владельца, а не чужими прямыми записями в free.",
+      "lmx_notes_en": "Call Demo\\run(). Pool belongs to one Message and handles requests serially. Concurrent clients use the owner’s Message protocol for take/give rather than writing free directly.",
+      "comparison_ru": "Все варианты показывают reuse identity, состояние занятости и возврат. Автоматическая очистка арены LMX не заменяет release внешнего ресурса.",
+      "comparison_en": "All versions show identity reuse, occupancy, and return. LMX arena collection does not replace release of a foreign resource.",
+      "limits_ru": "Один доверенный клиент, один корректный return. Валидация чужого/двойного return, reset ресурса, таймаут и гарантированное освобождение при исключении здесь не реализованы.",
+      "limits_en": "One trusted client and one valid return. Foreign/double-return validation, resource reset, timeouts, and exception-safe release are not implemented.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n",
+          "notes_ru": "Вызов Demo\\run(). Pool принадлежит одному Message и обслуживает последовательные запросы. Для конкурентных клиентов take/give вызываются почтовым протоколом владельца, а не чужими прямыми записями в free.",
+          "notes_en": "Call Demo\\run(). Pool belongs to one Message and handles requests serially. Concurrent clients use the owner’s Message protocol for take/give rather than writing free directly."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    static class Resource { final int id = 7; }\n    static class Pool {\n        Resource free = new Resource();\n        Resource take() { Resource result = free; free = null; return result; }\n        void give(Resource item) { free = item; }\n    }\n    static int demo() {\n        Pool pool = new Pool(); Resource first = pool.take();\n        Resource busy = pool.take(); pool.give(first);\n        Resource again = pool.take();\n        return first == again && busy == null ? 1 : 0;\n    }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Resource:\n    id = 7\n\nclass Pool:\n    def __init__(self):\n        self.free = Resource()\n    def take(self):\n        result, self.free = self.free, None\n        return result\n    def give(self, item):\n        self.free = item\n\ndef demo():\n    pool = Pool()\n    first, busy = pool.take(), pool.take()\n    pool.give(first)\n    again = pool.take()\n    return int(first is again and busy is None)\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Apache Commons Pool — lifecycle and pooling interfaces",
+          "url": "https://commons.apache.org/proper/commons-pool/",
+          "why_ru": "Жизненный цикл acquire/reuse/return ресурса.",
+          "why_en": "The acquire/reuse/return resource lifecycle."
+        }
+      ],
+      "procedural_lmx": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
+      "variants": {
+        "LMX": {
+          "procedural": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        if: first = again && busy = 0\n            return: 1\n        return: 0\n",
+          "direct_expression": "Resource:\n    int: id 7\n\nPool:\n    @: free Resource\n    @: item\n    return: @\n    take:\n        @: result node\\free\n        node\\free := 0\n        return: result\n    give:\n        node\\free := item\n        return: item\n\nDemo:\n    return: int\n    run:\n        Pool\\free := Resource\n        @: first Pool\\take()\n        @: busy Pool\\take()\n        Pool\\give(item := first)\n        @: again Pool\\take()\n        return: first = again && busy = 0\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Return the same identity/null observation as canonical Boolean int. Pool operations, resource identity, second-acquisition refusal and all fields are preserved. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
+    },
+    {
+      "id": 76,
+      "name": "Simple Factory",
+      "slug": "simple_factory",
+      "summary_ru": "Одна функция выбирает и создаёт конкретный продукт по входному признаку.",
+      "summary_en": "One function selects and creates a concrete product from an input discriminator.",
+      "scenario_ru": "Создать два продукта kind=0 и kind=1 со стоимостью 5 и 9.",
+      "scenario_en": "Create products of kinds 0 and 1 with costs 5 and 9.",
+      "expected_ru": "Сумма 14; каждый вызов создаёт отдельный продукт.",
+      "expected_en": "Sum 14; each call creates a separate product.",
+      "lmx_notes_ru": "Вызов Demo\\run(). Явная группа собирает поля copy в один новый продукт. У продукта нет метода, поэтому отдельные слоты группирующего контейнера не создают неоднозначности владельца состояния.",
+      "lmx_notes_en": "Call Demo\\run(). The explicit group collects copy’s fields into one new product. The product has no method, so grouping slots introduce no method-owner ambiguity.",
+      "comparison_ru": "Выбор типа продукта инкапсулирован в функции. Это Simple Factory, без виртуального factory method и без семейства Abstract Factory.",
+      "comparison_en": "Product selection is encapsulated in a function. This is Simple Factory, without a virtual factory method or Abstract Factory family.",
+      "limits_ru": "kind ограничен 0 и 1; иной kind в этом fixture использует второй вариант. Память/конструкторы отличаются, измеряется только показанная задача.",
+      "limits_en": "The fixture uses kinds 0 and 1; other kinds take the second branch. Allocation/construction differs; only the shown task is measured.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Small:\n    int: cost 5\n\nLarge:\n    int: cost 9\n\nFactory:\n    int: kind\n    return: @\n    create:\n        if: kind = 0\n            return: (copy(Small))\n        return: (copy(Large))\n\nDemo:\n    return: int\n    run:\n        @: a Factory\\create(kind := 0)\n        @: b Factory\\create(kind := 1)\n        return: a\\cost + b\\cost\n",
+          "notes_ru": "Вызов Demo\\run(). Явная группа собирает поля copy в один новый продукт. У продукта нет метода, поэтому отдельные слоты группирующего контейнера не создают неоднозначности владельца состояния.",
+          "notes_en": "Call Demo\\run(). The explicit group collects copy’s fields into one new product. The product has no method, so grouping slots introduce no method-owner ambiguity."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    record Product(int cost) {}\n    static Product create(int kind) { return new Product(kind == 0 ? 5 : 9); }\n    static int demo() { return create(0).cost() + create(1).cost(); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Product:\n    def __init__(self, cost):\n        self.cost = cost\n\ndef create(kind):\n    return Product(5 if kind == 0 else 9)\n\ndef demo():\n    return create(0).cost + create(1).cost\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Design Patterns — Factory programmatic example",
+          "url": "https://java-design-patterns.com/patterns/factory/",
+          "why_ru": "Исходный каталог со статической функцией выбора продукта; используется именно simple-factory форма примера.",
+          "why_en": "Original catalog with a static product-selection function; the example’s simple-factory form is used."
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "name": "Multiton",
+      "slug": "multiton",
+      "summary_ru": "Один владелец предоставляет по одному устойчивому экземпляру на каждый ключ.",
+      "summary_en": "One owner provides one stable instance per key.",
+      "scenario_ru": "Закрытый набор ключей 0 и 1. Две выдачи ключа 0 разделяют запись value=7; ключ 1 сохраняет 0.",
+      "scenario_en": "For fixed keys 0 and 1, two reads of key 0 share a write of value=7; key 1 remains 0.",
+      "expected_ru": "70.",
+      "expected_en": "70.",
+      "lmx_notes_ru": "Вызов Demo\\run(). Область уникальности — конкретный Registry в одном Message; копия графа или другой Message может иметь свой набор.",
+      "lmx_notes_en": "Call Demo\\run(). Uniqueness is scoped to one Registry in one Message; copied graphs or other Messages can have another set.",
+      "comparison_ru": "В отличие от Flyweight объекты здесь изменяемы и идентифицируются ключом, а не автоматически интернированным содержимым.",
+      "comparison_en": "Unlike Flyweight, these objects are mutable and keyed, not automatically interned by content.",
+      "limits_ru": "Закрытый двухключевой eager registry. Не реализованы ленивый открытый dictionary, eviction и процессная/кластерная уникальность.",
+      "limits_en": "A fixed two-key eager registry. Lazy open dictionaries, eviction, and process/cluster-wide uniqueness are not implemented.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "First:\n    int: value 0\n\nSecond:\n    int: value 0\n\nRegistry:\n    int: key\n    return: @\n    get:\n        if: key = 0\n            return: First\n        return: Second\n\nDemo:\n    return: int\n    run:\n        First\\value := 0\n        Second\\value := 0\n        @: a Registry\\get(key := 0)\n        @: b Registry\\get(key := 0)\n        @: c Registry\\get(key := 1)\n        a\\value := 7\n        return: b\\value * 10 + c\\value\n",
+          "notes_ru": "Вызов Demo\\run(). Область уникальности — конкретный Registry в одном Message; копия графа или другой Message может иметь свой набор.",
+          "notes_en": "Call Demo\\run(). Uniqueness is scoped to one Registry in one Message; copied graphs or other Messages can have another set."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    static class Settings { int value; }\n    static class Registry {\n        final Settings first = new Settings(), second = new Settings();\n        Settings get(int key) { return key == 0 ? first : second; }\n    }\n    static int demo() {\n        Registry r = new Registry();\n        Settings a = r.get(0), b = r.get(0), c = r.get(1);\n        a.value = 7;\n        return b.value * 10 + c.value;\n    }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Settings:\n    def __init__(self):\n        self.value = 0\n\nclass Registry:\n    def __init__(self):\n        self.first, self.second = Settings(), Settings()\n    def get(self, key):\n        return self.first if key == 0 else self.second\n\ndef demo():\n    registry = Registry()\n    a, b, c = registry.get(0), registry.get(0), registry.get(1)\n    a.value = 7\n    return b.value * 10 + c.value\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Design Patterns — Multiton",
+          "url": "https://java-design-patterns.com/patterns/multiton/",
+          "why_ru": "По одному экземпляру на ключ, включая eager конечный набор.",
+          "why_en": "One instance per key, including a finite eager set."
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "name": "Marker Interface",
+      "slug": "marker_interface",
+      "summary_ru": "Отдельный признак допускает объект к операции без добавления поведенческих методов.",
+      "summary_en": "A separate marker admits an object without adding behavioral methods.",
+      "scenario_ru": "Проверить помеченный и непомеченный объект; результат кодируется как accepted*10 + rejected.",
+      "scenario_en": "Check a marked and an unmarked object; encode accepted*10 + rejected.",
+      "expected_ru": "10.",
+      "expected_en": "10.",
+      "lmx_notes_ru": "Вызов Check\\demo(). Используется непустой структурный шаблон с именованной ветвью auditable. Совершенно пустая Structure не различала бы наличие метки.",
+      "lmx_notes_en": "Call Check\\demo(). A nonempty structural requirement contains a named auditable branch. An entirely empty Structure would not distinguish the marker.",
+      "comparison_ru": "Java и Python проверяют номинальную принадлежность. LMX проверяет явно требуемую структуру; такую ветвь может построить другой автор. Положительный сценарий совпадает, сила номинальной гарантии различается.",
+      "comparison_en": "Java and Python check nominal membership. LMX checks an explicit structure that another author can reproduce. The positive scenario matches, but nominal guarantees differ.",
+      "limits_ru": "Метаданные не являются авторизацией. Структурную метку нельзя считать неподлежающей подделке capability или буквальным эквивалентом Java nominal marker.",
+      "limits_en": "Metadata is not authority. A structural marker is neither an unforgeable capability nor a literal Java nominal-marker equivalent.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+          "notes_ru": "Вызов Check\\demo(). Используется непустой структурный шаблон с именованной ветвью auditable. Совершенно пустая Structure не различала бы наличие метки.",
+          "notes_en": "Call Check\\demo(). A nonempty structural requirement contains a named auditable branch. An entirely empty Structure would not distinguish the marker."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    interface Auditable {}\n    static class Marked implements Auditable {}\n    static class Unmarked { int value = 7; }\n    static int accepts(Object item) { return item instanceof Auditable ? 1 : 0; }\n    static int demo() { return accepts(new Marked()) * 10 + accepts(new Unmarked()); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Auditable:\n    pass\n\nclass Marked(Auditable):\n    pass\n\nclass Unmarked:\n    value = 7\n\ndef accepts(item):\n    return int(isinstance(item, Auditable))\n\ndef demo():\n    return accepts(Marked()) * 10 + accepts(Unmarked())\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Oracle — java.io.Serializable",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/Serializable.html",
+          "why_ru": "Реальный Java marker без собственных методов и полей.",
+          "why_en": "A real Java marker with no methods or fields."
+        }
+      ],
+      "procedural_lmx": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+      "variants": {
+        "LMX": {
+          "procedural": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        if: satisfies(item; Marker)\n            return: 1\n        return: 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n",
+          "direct_expression": "Marker:\n    auditable:\n\nMarked:\n    auditable:\n\nUnmarked:\n    int: value 7\n\nCheck:\n    @: item\n    return: int\n    accepts:\n        return: satisfies(item; Marker) != 0\n    demo:\n        return: accepts(item := Marked) * 10 + accepts(item := Unmarked)\n"
+        }
+      },
+      "primary_variant": {
+        "LMX": "direct_expression"
+      },
+      "eligible_variants": {
+        "LMX": [
+          "procedural",
+          "direct_expression"
+        ]
+      },
+      "fairness_notes": {
+        "LMX": "Normalize the existing satisfies result through comparison rather than a branch. The auditable marker, unmarked value field and structural-versus-nominal limitation remain. No library implementation is moved outside the listing, and the controls already use the same Boolean/guard mechanism."
+      }
+    },
+    {
+      "id": 79,
+      "name": "Fluent Interface",
+      "slug": "fluent_interface",
+      "summary_ru": "Операции API возвращают контекст для продолжения читаемой последовательности.",
+      "summary_en": "API operations return a context so the interaction can continue fluently.",
+      "scenario_ru": "Одним выражением настроить count=3 и price=7 через операнды, возвращающие тот же контекст, затем получить произведение.",
+      "scenario_en": "Set count=3 and price=7 in one expression using operations that return the same context, then obtain the product.",
+      "expected_ru": "21; оба setter возвращают исходный объект.",
+      "expected_en": "21; both setters return the original object.",
+      "lmx_notes_ru": "withCount и withPrice — обычные методы с общим DATA-заголовком, полученным через copy: sys\\OPERANDS_TEMPLATE. \\left получает ссылку на Options, \\right[0] — значение настройки. Возврат target связывает два реальных применения операндов в цепочку; это не специальный синтаксис setter и не скрытая библиотека настроек.",
+      "lmx_notes_en": "withCount and withPrice are ordinary methods whose shared DATA header comes from copy: sys\\OPERANDS_TEMPLATE. \\left obtains the Options reference and \\right[0] the setting value. Returning target connects two actual operator applications; no special setter syntax or hidden settings library is introduced.",
+      "comparison_ru": "LMX теперь показывает саму fluent-цепочку в expression; Java и Python используют цепочку методов. Все три изменяют и возвращают тот же объект, а не создают независимые варианты конфигурации. Общий заголовок операндов учтён строкой copy.",
+      "comparison_en": "LMX now shows the fluent chain directly in an expression; Java and Python use method chaining. All three mutate and return the same object rather than create independent configuration values. The common operand header is accounted for by the copy line.",
+      "limits_ru": "Сравниваются ровно два бинарных setter и один последовательный владелец. Это разделяемая изменяемая конфигурация; persistent builder и произвольное число правых аргументов не обещаются. Пример становится выразительнее, даже если заголовок увеличивает число символов.",
+      "limits_en": "The comparison covers two binary setters and one serial owner. This is shared mutable configuration, not a persistent builder or an arbitrary variadic setter. The expression is more direct even if the header increases its character count.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Options:\n    copy: sys\\OPERANDS_TEMPLATE\n    int: count 0\n    int: price 0\n    return: @\n    withCount:\n        @: target \\left\n        target\\count := \\right[0]\n        return: target\n    withPrice:\n        @: target \\left\n        target\\price := \\right[0]\n        return: target\n\nDemo:\n    return: int\n    run:\n        import: Options\n        @: options (Options withCount 3) withPrice 7\n        return: options\\count * options\\price\n",
+          "notes_ru": "Вызов Demo\\run(). sys\\OPERANDS_TEMPLATE — предоставленный шаблон ядра из примера Interpreter; строка copy учитывается. Режим 0 передаёт подготовленные target и число. Каждый setter использует ровно один правый аргумент и возвращает ту же ссылку; скобки явно задают левую группировку.",
+          "notes_en": "Call Demo\\run(). sys\\OPERANDS_TEMPLATE is the supplied kernel header from Interpreter; its copy line is counted. Mode 0 supplies the prepared target and number. Each setter consumes exactly one right argument and returns the same reference; parentheses explicitly group the chain to the left."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    static class Options {\n        int count, price;\n        Options withCount(int value) { count = value; return this; }\n        Options withPrice(int value) { price = value; return this; }\n        int total() { return count * price; }\n    }\n    static int demo() { return new Options().withCount(3).withPrice(7).total(); }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Options:\n    def with_count(self, value):\n        self.count = value\n        return self\n    def with_price(self, value):\n        self.price = value\n        return self\n    def total(self):\n        return self.count * self.price\n\ndef demo():\n    return Options().with_count(3).with_price(7).total()\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Martin Fowler — Fluent Interface",
+          "url": "https://martinfowler.com/bliki/FluentInterface.html",
+          "why_ru": "Читаемый DSL-подобный API и возвращаемый контекст.",
+          "why_en": "Readable DSL-like APIs and returned context."
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "name": "Type Object",
+      "slug": "type_object",
+      "summary_ru": "Разновидность объекта описывается обычными данными, разделяемыми его экземплярами.",
+      "summary_en": "An object’s kind is described by ordinary data shared by instances.",
+      "scenario_ru": "Два объекта ссылаются на один TypeData с damage=2. Изменить damage на 3; второй объект увидит новое значение.",
+      "scenario_en": "Two objects reference one TypeData with damage=2. Change damage to 3; the second object sees the new value.",
+      "expected_ru": "23: первое чтение 2, второе 3.",
+      "expected_en": "23: the first read is 2 and the second is 3.",
+      "lmx_notes_ru": "Вызов Operations\\demo(). TypeData — пользовательский доменный объект, не физический type code записи и не замена typeof.",
+      "lmx_notes_en": "Call Operations\\demo(). TypeData is a domain object, not a physical record type code or replacement for typeof.",
+      "comparison_ru": "Общие свойства становятся данными во всех трёх языках. Возможность LMX читать/компоновать граф удобна для загрузки таких описаний, но в этом примере loader не требуется.",
+      "comparison_en": "Shared properties become data in all three languages. LMX graph inspection/composition can help load such descriptions, but this example needs no loader.",
+      "limits_ru": "Изменение общего TypeData влияет на все ссылки и требует одного владельца Message либо явного протокола обновления. Иерархия наследования типов и редактор данных не реализованы.",
+      "limits_en": "Changing shared TypeData affects all references and needs one owning Message or an explicit update protocol. Type inheritance and data editors are not implemented.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "TypeData:\n    int: damage 2\n\nFirst:\n    @: kind TypeData\n\nSecond:\n    @: kind TypeData\n\nOperations:\n    @: item\n    return: int\n    damage:\n        return: item\\kind\\damage\n    demo:\n        TypeData\\damage := 2\n        int: before damage(item := First)\n        TypeData\\damage := 3\n        return: before * 10 + damage(item := Second)\n",
+          "notes_ru": "Вызов Operations\\demo(). TypeData — пользовательский доменный объект, не физический type code записи и не замена typeof.",
+          "notes_en": "Call Operations\\demo(). TypeData is a domain object, not a physical record type code or replacement for typeof."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    static class TypeData { int damage = 2; }\n    record Item(TypeData kind) {}\n    static int damage(Item item) { return item.kind().damage; }\n    static int demo() {\n        TypeData kind = new TypeData();\n        Item first = new Item(kind), second = new Item(kind);\n        int before = damage(first); kind.damage = 3;\n        return before * 10 + damage(second);\n    }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class TypeData:\n    def __init__(self, damage):\n        self.damage = damage\n\nclass Item:\n    def __init__(self, kind):\n        self.kind = kind\n\ndef damage(item):\n    return item.kind.damage\n\ndef demo():\n    kind = TypeData(2)\n    first, second = Item(kind), Item(kind)\n    before = damage(first)\n    kind.damage = 3\n    return before * 10 + damage(second)\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Design Patterns — Type Object implementation",
+          "url": "https://java-design-patterns.com/patterns/type-object/",
+          "why_ru": "Исходная демонстрация вида как объекта данных и ссылок на него.",
+          "why_en": "An original implementation of kinds as data objects and references to them."
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "name": "Extension Object",
+      "slug": "extension_object",
+      "summary_ru": "Объект выдаёт отдельное расширение с дополнительным интерфейсом и доступом к его состоянию.",
+      "summary_en": "An object exposes a separate extension with additional behavior and access to its state.",
+      "scenario_ru": "К Host(value=7) прикрепить Report-расширение; запросить его и получить удвоенное значение 14.",
+      "scenario_en": "Attach a Report extension to Host(value=7), query it, and obtain twice the value, 14.",
+      "expected_ru": "14; идентичность Host сохраняется.",
+      "expected_en": "14; Host identity is preserved.",
+      "lmx_notes_ru": "Вызов Demo\\run(). Report хранит явную ссылку target; запись ссылки в Host не делает Host parent для Report\\render.",
+      "lmx_notes_en": "Call Demo\\run(). Report has an explicit target reference; storing it in Host does not make Host the parent of Report\\render.",
+      "comparison_ru": "Выдаётся дополнительный интерфейс отдельного объекта. Это отличается от замены самого Host или присваивания методу нового lexical owner.",
+      "comparison_en": "A separate object provides the additional interface. This differs from replacing Host or assigning a method a new lexical owner.",
+      "limits_ru": "Одна заранее предусмотренная extension point. Query до install возвращает null, и вызывающий обязан обработать отсутствие; open registry типов и ABI не показаны.",
+      "limits_en": "One pre-existing extension point. Query before install returns null and callers must handle absence; an open type registry and ABI are not shown.",
+      "scope": "core",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "Host:\n    int: value 7\n    @: extension 0\n    @: addon\n    return: @\n    install:\n        node\\extension := addon\n        return: addon\n    query:\n        return: node\\extension\n\nReport:\n    @: target Host\n    return: int\n    render:\n        return: target\\value * 2\n\nDemo:\n    return: int\n    run:\n        Host\\install(addon := Report)\n        @: report Host\\query()\n        return: report\\render()\n",
+          "notes_ru": "Вызов Demo\\run(). Report хранит явную ссылку target; запись ссылки в Host не делает Host parent для Report\\render.",
+          "notes_en": "Call Demo\\run(). Report has an explicit target reference; storing it in Host does not make Host the parent of Report\\render."
+        },
+        {
+          "language": "Java",
+          "code": "class Example {\n    static class Host {\n        int value = 7; Report extension;\n        void install(Report addon) { extension = addon; }\n        Report query() { return extension; }\n    }\n    record Report(Host target) { int render() { return target.value * 2; } }\n    static int demo() {\n        Host host = new Host(); host.install(new Report(host));\n        return host.query().render();\n    }\n}\n",
+          "notes_ru": "Внешний вызов Example.demo(); main и печать не считаются.",
+          "notes_en": "Call Example.demo(); main and printing are excluded."
+        },
+        {
+          "language": "Python",
+          "code": "class Host:\n    def __init__(self):\n        self.value, self.extension = 7, None\n    def install(self, addon):\n        self.extension = addon\n    def query(self):\n        return self.extension\n\nclass Report:\n    def __init__(self, target):\n        self.target = target\n    def render(self):\n        return self.target.value * 2\n\ndef demo():\n    host = Host()\n    host.install(Report(host))\n    return host.query().render()\n",
+          "notes_ru": "Внешний вызов demo(); все показанные классы и функции входят в измерение.",
+          "notes_en": "Call demo(); all shown classes and functions are counted."
+        }
+      ],
+      "sources": [
+        {
+          "title": "Java Design Patterns — Extension Objects",
+          "url": "https://java-design-patterns.com/patterns/extension-objects/",
+          "why_ru": "Реализация query дополнительного интерфейса и связи расширения с объектом.",
+          "why_en": "An implementation of extension queries and the extension-to-host relationship."
+        }
+      ]
+    }
+  ]
+}

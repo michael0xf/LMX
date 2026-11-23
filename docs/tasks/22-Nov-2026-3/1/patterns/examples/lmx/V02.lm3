@@ -1,0 +1,40 @@
+CharacterRange:
+    copy: sys\OPERANDS_TEMPLATE
+    return: int
+    between:
+        throws: RangeArity
+        if: length(right) != 2
+            throw: RangeArity()
+        char: value \left
+        char: lower \right[0]
+        char: upper \right[1]
+        return: lower <= value && value <= upper
+
+TicketCode:
+    char[]: candidate
+    return: int
+    accepts:
+        throws: RangeArity
+        import: CharacterRange
+        if: length(candidate) != 5
+            return: 0
+        if: candidate[2] != '-'
+            return: 0
+        return: (candidate[0] between 'A' 'Z') && (candidate[1] between 'A' 'Z') && (candidate[3] between '0' '9') && (candidate[4] between '0' '9')
+
+# BEGIN ALTERNATIVE LMX (excluded from character counts)
+# Дополнительный LMX с Pattern — не входит в подсчёт основной версии.
+# TicketCode:
+#     char[]: candidate
+#     return: int
+#     accepts:
+#         throws:
+#             PatternArgument
+#             PatternEncoding
+#             PatternPosition
+#             SequenceSize
+#             ReceiverIndex
+#             FxKernelFailure
+#             FxTypeToken
+#         return: wholeMatch(byteText(source := candidate); (then (charRange("A"; "Z") times 2) "-" (asciiDigit times 2)))
+# END ALTERNATIVE LMX

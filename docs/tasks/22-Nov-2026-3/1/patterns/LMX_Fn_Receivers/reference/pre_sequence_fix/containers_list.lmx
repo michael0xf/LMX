@@ -1,0 +1,35 @@
+# HISTORICAL PROCEDURAL IMPLEMENTATIONS FROM THE CURRENT UPLOADED ARCHIVE.
+# Syntax is the current migrated postfix spelling. These bodies are not built
+# and do not define the current universal sequence contract.
+
+FxList:
+    private: @: values
+    return: @
+    list:
+        throws:
+            FxIndex
+        return: FxSlice\slice(values; 0; length(values))
+
+
+FxListBind:
+    private:
+        @: items
+        @: next
+    return: @
+    flatMap:
+        throws:
+            FxCallFailure
+            FxKernelFailure
+            FxTypeToken
+        private: @: result (copy(()))
+        private: int: i 0
+        while: i < length(items)
+            private: @: record FxApply\apply(next; FxOne\make(items[i]))
+            private: @: part \record
+            result := FxAppend\append(result; part)
+            i += 1
+        return: result
+
+# Bounce хранит либо итоговую запись, либо обычную nullary-функцию.
+# Число аргументов continuation не ограничено: partial(F;allArgs) создаёт thunk.
+# trampoline останавливается по done, а не по вызываемости результата.

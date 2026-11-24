@@ -996,6 +996,7 @@ fn: lmx_root_host_take (c.LmxThread@: host; c.LmxRootLaunch@: launch) int
     c.LmxArena@: arena 0
     c.Lmx@: model 0
     c.LmxMsg@: letter 0
+    c.LmxMsg@: r0 0
     @: sender void 0
     if: host = 0 || launch = 0 || host\slot = 0 || launch\thread = 0
         return: 1
@@ -1014,6 +1015,19 @@ fn: lmx_root_host_take (c.LmxThread@: host; c.LmxRootLaunch@: launch) int
         if: model != 0 && letter\graph != 0 && lmx_root_exit_admit(arena, model, (cast: (c.Lmx@) letter\graph), exit_result) = c.LMX_ROOT_OK
             if: exit_result\sender = sender
                 launch\exited := 1
+            ---
+        ---
+    ---
+    # No letter: the parent owns the ordinary launch verdict in this same turn.
+    if: launch\exited = 0
+        r0 := c.lmx_thread_message(launch\thread)
+        if: r0\success != 0
+            lmx_root_exit_set(exit_result, 0, 0)
+        else:
+            if: r0\running = 0
+                lmx_root_exit_set(exit_result, 1, (cast: (char@) "lmx: R0 closed without an exit Message and with success = 0: R0 was stopped (an uncaught throw or a stop request)\n"))
+            else:
+                lmx_root_exit_set(exit_result, 1, (cast: (char@) "lmx: R0 closed without an exit Message and with success = 0: its turn ended without setting success\n"))
             ---
         ---
     ---
@@ -1042,13 +1056,17 @@ fn: lmx_root_host_entry (c.Lmx@: reserved_node) int
         return: 0
     ---
     if: launch\phase = 0
+        if: lmx_root_host_make(host, graph, launch) != 0
+            return: 1
+        ---
         launch\phase := 1
-        lmx_root_host_make(host, graph, launch)
         return: 0
     ---
     if: launch\phase = 1
+        if: lmx_root_host_take(host, launch) != 0
+            return: 1
+        ---
         launch\phase := 2
-        lmx_root_host_take(host, launch)
     ---
     return: 0
 end: lmx_root_host_entry
@@ -1190,25 +1208,24 @@ fn: lmx_root_launch_result (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRoot
     if: c.lmx_schedule_wait(at\slot, now) != c.LMX_SCHEDULE_OK || c.lmx_manager_add(lmx_root_manager(root), at\slot) != c.LMX_MANAGER_OK
         return: lmx_root_launch_refuse(root, 0, (cast: (char@) "lmx: the host could not schedule R0\n"), out, err)
     ---
-    c.lmx_manager_round(lmx_root_manager(root), 1U, now)
+    turn := c.lmx_manager_round(lmx_root_manager(root), 1U, now)
     if: body_status != 0
         \body_status := r0_thread\body_status
     ---
-    # THE HOST'S SECOND TURN: it takes its inbox, where R0's exit letter is.
-    lmx_root_turn(root, c.lmx_clock_ticks())
-    # THE EXIT: R0's letter, or else R0's success.
-    done := @ at\done
-    if: at\exited = 0
-        if: r0\success != 0
-            lmx_root_exit_set(done, 0, 0)
-        else:
-            if: r0\running = 0
-                lmx_root_exit_set(done, 1, (cast: (char@) "lmx: R0 closed without an exit Message and with success = 0: R0 was stopped (an uncaught throw or a stop request)\n"))
-            else:
-                lmx_root_exit_set(done, 1, (cast: (char@) "lmx: R0 closed without an exit Message and with success = 0: its turn ended without setting success\n"))
-            ---
-            report := err
+    if: turn != c.LMX_MANAGER_OK
+        if: r0\running = 0
+            return: lmx_root_launch_refuse(root, 0, (cast: (char@) "lmx: R0 was stopped: its turn failed\n"), out, err)
         ---
+        return: lmx_root_launch_refuse(root, 0, (cast: (char@) "lmx: R0's turn failed\n"), out, err)
+    ---
+    # THE HOST'S SECOND TURN: it takes its inbox, where R0's exit letter is.
+    if: lmx_root_turn(root, c.lmx_clock_ticks()) != c.LMX_ROOT_OK || at\phase != 2
+        return: lmx_root_launch_refuse(root, 0, (cast: (char@) "lmx: the host could not judge R0\n"), out, err)
+    ---
+    # THE EXIT was decided inside the parent's completed turn.
+    done := @ at\done
+    if: at\exited = 0 && done\exit_code != 0
+        report := err
     ---
     lmx_root_exit_write(done, out, err)
     code := done\exit_code

@@ -83,7 +83,8 @@ HEAD = origin/main на момент публикации; не принят в�
 ([27.16](next_core_tasks_v3.md#backends-20261123),
 [свидетельство](steps/witnesses/own-graph-reference-place-20261124/notes.md));
 Array, FOREIGN/C pointee, большие глубины и весь M14 не объявлены готовыми. W1-компонент принят
-([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); следующий код — W2.
+([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
+([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); следующий код — W3.
 Весь 27.17, M13, шаг 21.25, 32-битный ABI и остальные открытые шаги не закрыты.
 
 ## 3. Состояние для передачи (со слов передающего, не перепроверено при записи)

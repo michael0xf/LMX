@@ -96,6 +96,7 @@ fn: lmx_manager_count (c.LmxManager@: m) size_t
 fn: lmx_manager_step (c.LmxManager@: m; ulong: now) int
     c.LmxSchedule@: slot
     c.LmxThread@: t
+    int: status
     if: m = 0
         return: c.LMX_MANAGER_INVALID
     slot := lmx_manager_take(m)
@@ -104,10 +105,15 @@ fn: lmx_manager_step (c.LmxManager@: m; ulong: now) int
     t := (cast: (c.LmxThread@) slot\owner)
     if: t = 0
         return: c.LMX_MANAGER_INVALID
-    c.lmx_thread_turn(t, 0, now)
+    status := c.lmx_thread_turn(t, 0, now)
     c.lmx_schedule_tick(slot, now)
     if: c.lmx_thread_running(t) = 0
         c.lmx_thread_finish(t)
+    ---
+    # Keep the boundary's refusal after the existing scheduling and close work.
+    # A stopped child is ordinary manager work; a failed turn is not a successful round.
+    if: status = c.LMX_THREAD_INVALID
+        return: c.LMX_MANAGER_INVALID
     ---
     return: c.LMX_MANAGER_OK
 

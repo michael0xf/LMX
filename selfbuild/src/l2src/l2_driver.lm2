@@ -19,6 +19,7 @@ define: driver_program l2_driver_program
 define: driver_before_turn l2_driver_before_turn
 define: driver_service_post l2_driver_service_post
 define: driver_root_launch l2_driver_root_launch
+define: driver_root_launch_tapped l2_driver_root_launch_tapped
 define: driver_merge_owned l2_driver_merge_owned
 define: driver_merge_profiles_owned l2_driver_merge_profiles_owned
 define: driver_merge_used_owned l2_driver_merge_used_owned
@@ -3128,7 +3129,17 @@ fn: driver_service_post (c.LmxService@: service; @: address; c.LmxMsg@: letter; 
     return: st
 end: driver_service_post
 
-fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; @: out; @: err) int
+fn: driver_before_turn_composed (c.LmxRoot@: root; c.LmxMsg@: r0) int
+    c.LmxRootBeforeTurn: caller c.driver_caller_tap
+    int: code driver_before_turn(root, r0)
+    if: code != 0
+        return: code
+    return: (cast: (int) caller(root, r0))
+end: driver_before_turn_composed
+
+# Existing process-wide observation state holds a second synchronous hook only while both are needed.
+# The caller's Root address is passed through unchanged; no runtime or program context is created.
+fn: driver_launch_full (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; c.LmxRootBeforeTurn: caller; @: out; @: err) int
     int@: launches_cell (cast: (int@) (@ c.launches))
     int@: program_passed_cell (cast: (int@) (@ c.program_passed))
     int@: l2_ref_active_cell (cast: (int@) (@ c.l2_ref_active))
@@ -3137,6 +3148,10 @@ fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProg
     int@: host_state_cell (cast: (int@) (@ c.host_state))
     int@: r0_stopped_cell (cast: (int@) (@ c.r0_stopped))
     int: code
+    c.LmxRootBeforeTurn: before caller
+    c.LmxRootBeforeTurn@: before_cell (cast: (c.LmxRootBeforeTurn@) (@ before))
+    c.LmxRootBeforeTurn: saved c.driver_caller_tap
+    c.LmxRootBeforeTurn@: caller_cell (cast: (c.LmxRootBeforeTurn@) (@ c.driver_caller_tap))
     @: cap void 0
     char@: text 0
     size_t: n 0U
@@ -3152,10 +3167,14 @@ fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProg
         cap := err
     ---
     if: l2_ref_active_cell[0] != 0 || pointer_abi_mutation_requested_cell[0] != 0
-        code := c.lmx_root_launch_result(root, argc, argv, c.l2_driver_program, fields, settings, limit, c.l2_driver_before_turn, out, cap, @ walk_thrown_cell[0])
-    else:
-        code := c.lmx_root_launch_result(root, argc, argv, c.l2_driver_program, fields, settings, limit, 0, out, cap, @ walk_thrown_cell[0])
+        \before_cell := c.l2_driver_before_turn
+        if: caller != 0
+            \caller_cell := caller
+            \before_cell := c.driver_before_turn_composed
+        ---
     ---
+    code := c.lmx_root_launch_result(root, argc, argv, c.l2_driver_program, fields, settings, limit, before, out, cap, @ walk_thrown_cell[0])
+    \caller_cell := saved
     host_state_cell[0] := c.lmx_root_state(root)
     r0_stopped_cell[0] := 0
     if: cap != err
@@ -3177,7 +3196,15 @@ fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProg
         c.remove("l2_driver_launch.err")
     ---
     return: code
+end: driver_launch_full
+
+fn: driver_root_launch (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; @: out; @: err) int
+    return: driver_launch_full(root, argc, argv, program, fields, settings, limit, 0, out, err)
 end: driver_root_launch
+
+fn: driver_root_launch_tapped (c.LmxRoot@: root; int: argc; char@@: argv; c.LmxRootProgram: program; size_t: fields; c.LmxRootSettings: settings; ulong: limit; c.LmxRootBeforeTurn: before; @: out; @: err) int
+    return: driver_launch_full(root, argc, argv, program, fields, settings, limit, before, out, err)
+end: driver_root_launch_tapped
 
 fn: driver_merge_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@@: out) int
     int@: merge_calls_cell (cast: (int@) (@ c.merge_calls))

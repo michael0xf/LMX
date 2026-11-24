@@ -27,7 +27,8 @@
 ([свидетельство](witnesses/own-graph-reference-place-20261124/notes.md);
 [27.16](../next_core_tasks_v3.md#backends-20261123)).
 Array, FOREIGN/C pointee, большие глубины и весь M14 не объявлены готовыми. W1-компонент принят
-([свидетельство](witnesses/frame-selected-description-20261124/notes.md)); следующий код — W2. Весь 27.17, 21.25,
+([свидетельство](witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
+([свидетельство](witnesses/r0-check-parent-20261124/notes.md)); следующий код — W3. Весь 27.17, 21.25,
 M13 и прочие шаги открыты.
 Необходимая зависимость записи по пути и индекса — контекст конкретного native-варианта (M14, п. 4;
 [27.16](../next_core_tasks_v3.md#backends-20261123)): ОТКРЫТ.

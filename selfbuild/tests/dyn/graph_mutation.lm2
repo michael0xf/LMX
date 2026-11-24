@@ -320,7 +320,7 @@ fn: gm_method () int
     if: status = 0
         status := c.lmx_graph_invoke(g, walker, values, 2U, @ answer)
     fails := fails + gm_report("walker-reads-the-written-operator", (cast: (int) (status = 0 && answer = 59)))
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.free((cast: (@) values))
     c.lmx_graph_close(g)
     c.lmx_arena_release(arena)

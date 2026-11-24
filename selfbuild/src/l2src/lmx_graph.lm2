@@ -47,7 +47,7 @@ include: "<stdio.h>"
 include: "<limits.h>"
 include: "<float.h>"
 
-# ---- The process state: the interned spellings and the graph records ---------------------------------------------
+# ---- The process state: the interned spellings ---------------------------------------------
 
 # The canonical copy of a spelling held by the state, or 0: the one search of bytes, at the input boundary (§4).
 fn: lmx_graph_intern_find (c.LmxGraphState@: state; const: (char@: text); size_t: nb) char@
@@ -326,58 +326,35 @@ fn: lmx_graph_intern_owned (char@: address) int
     return: 1
 end: lmx_graph_intern_owned
 
-# The graph record of an arena, or 0 when it has none (lmx_graph_open makes it).
-fn: lmx_graph_find (c.LmxArena@: arena) c.LmxGraph@
-    c.LmxGraphState@: state lmx_graph_state()
-    c.LmxGraph@: g 0
-    if: state = 0 || arena = 0
-        return: 0
-    g := state\graphs
-    while: g != 0
-        if: g\arena = arena
-            return: g
-        ---
-        g := g\next
-    ---
-    return: 0
-end: lmx_graph_find
-
-# The graph record of an arena: the address -> name table of that arena. One per arena; opening an arena twice answers
-# the record it has. 0 without memory.
+# The arena owns its one address -> name service record. It never stores a program root.
+# Native entries already receive the arena and selected code explicitly; no process search is needed.
 fn: lmx_graph_open (c.LmxArena@: arena) c.LmxGraph@
-    c.LmxGraphState@: state lmx_graph_state()
-    c.LmxGraph@: g lmx_graph_find(arena)
-    if: state = 0 || arena = 0
+    c.LmxGraph@: g 0
+    if: arena = 0
         return: 0
+    g := arena\graph_metadata
     if: g != 0
         return: g
     g := (cast: (c.LmxGraph@) c.calloc(1U, c.sizeof(c.LmxGraph)))
     if: g = 0
         return: 0
     g\arena := arena
-    g\next := state\graphs
-    state\graphs := g
+    arena\graph_metadata := g
     return: g
 end: lmx_graph_open
 
-# The record leaves the process state and its name table is freed; the cells of the arena are the arena's.
+# Explicit parser/tool close and whole-arena release detach the same record before freeing it.
+# The cells of the program remain the arena's; a completed traversal leaves no retained namespace.
 fn: lmx_graph_close (c.LmxGraph@: g) int
-    c.LmxGraphState@: state lmx_graph_state()
-    c.LmxGraph@: at 0
-    c.LmxGraph@: before 0
-    if: state = 0 || g = 0
+    c.LmxArena@: arena 0
+    if: g = 0
         return: 1
-    at := state\graphs
-    while: at != 0 && at != g
-        before := at
-        at := at\next
-    ---
-    if: at = 0
+    arena := g\arena
+    if: arena = 0 || arena\graph_metadata != g
         return: 1
-    if: before = 0
-        state\graphs := g\next
-    else:
-        before\next := g\next
+    arena\graph_metadata := 0
+    while: g\space != 0
+        lmx_graph_space_pop(g, 1)
     ---
     c.free((cast: (@) g\names))
     c.free((cast: (@) g\names_index))
@@ -558,7 +535,7 @@ fn: lmx_graph_name_row (c.LmxGraph@: g; @: address) size_t
     return: g\names_len
 end: lmx_graph_name_row
 
-# Enter row number k into the index (its capacity is kept above twice the rows by lmx_graph_name_index_room).
+# Enter row number k into the index (its capacity is kept above twice the rows by lmx_graph_name_room).
 sub: lmx_graph_name_index_put (c.LmxGraph@: g; size_t: k)
     c.LmxName@: row 0
     size_t: at 0U
@@ -575,15 +552,32 @@ sub: lmx_graph_name_index_put (c.LmxGraph@: g; size_t: k)
     return
 end: lmx_graph_name_index_put
 
-# Room in the index for one more row: a new index of at least four times the rows when it would be over half full,
-# with every row entered again. 0, or 1 without memory.
-fn: lmx_graph_name_index_room (c.LmxGraph@: g) int
+# Reserve rows and their index before publishing a new name or committing an arena attachment.
+# Capacity may grow on a refusal; the logical rows and their index remain unchanged.
+fn: lmx_graph_name_room (c.LmxGraph@: g; size_t: need) int
+    c.LmxName@: rows 0
     size_t@: index 0
     size_t: cap 0U
     size_t: k 0U
-    if: (g\names_len + 1U) * 2U <= g\index_cap
+    if: need > (cast: (size_t) -1) / c.sizeof(c.LmxName) || need > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 4U
+        return: 1
+    if: need > g\names_cap
+        cap := need
+        if: g\names_cap <= ((cast: (size_t) -1) / c.sizeof(c.LmxName)) / 2U
+            cap := g\names_cap * 2U
+        if: cap < need
+            cap := need
+        if: cap < 32U
+            cap := 32U
+        rows := (cast: (c.LmxName@) c.realloc((cast: (@) g\names), cap * c.sizeof(c.LmxName)))
+        if: rows = 0
+            return: 1
+        g\names := rows
+        g\names_cap := cap
+    ---
+    if: need <= g\index_cap / 2U
         return: 0
-    cap := (g\names_len + 1U) * 4U
+    cap := need * 4U
     if: cap < 64U
         cap := 64U
     index := (cast: (size_t@) c.calloc(cap, c.sizeof(c.size_t)))
@@ -597,14 +591,12 @@ fn: lmx_graph_name_index_room (c.LmxGraph@: g) int
         k := k + 1U
     ---
     return: 0
-end: lmx_graph_name_index_room
+end: lmx_graph_name_room
 
 # Address names are weak metadata. Retire only this arena's freed interval;
 # names of external addresses remain valid. Never initialize process state
 # or allocate while an existing range is being retired.
 sub: lmx_graph_names_drop (c.LmxArena@: arena; @: lo; @: hi)
-    c.LmxGraphState@@: anchor (cast: (c.LmxGraphState@@) (@ c.lmx_graph_anchor))
-    c.LmxGraphState@: state 0
     c.LmxGraph@: g 0
     c.LmxName@: row 0
     c.LmxName@: kept 0
@@ -615,41 +607,101 @@ sub: lmx_graph_names_drop (c.LmxArena@: arena; @: lo; @: hi)
     size_t: used 0U
     if: arena = 0 || high <= low
         return
-    state := \anchor
-    if: state = 0
+    g := arena\graph_metadata
+    if: g = 0
         return
-    g := state\graphs
-    while: g != 0
-        if: g\arena = arena
+    while: i < g\names_len
+        row := g\names + i
+        address := (cast: (size_t) row\address)
+        if: address < low || address >= high
+            if: used != i
+                kept := g\names + used
+                kept\address := row\address
+                kept\name := row\name
+            used := used + 1U
+        ---
+        i := i + 1U
+    ---
+    if: used != g\names_len
+        g\names_len := used
+        if: g\index_cap != 0U
+            c.memset((cast: (@) g\names_index), 0, g\index_cap * c.sizeof(c.size_t))
             i := 0U
-            used := 0U
-            while: i < g\names_len
-                row := g\names + i
-                address := (cast: (size_t) row\address)
-                if: address < low || address >= high
-                    if: used != i
-                        kept := g\names + used
-                        kept\address := row\address
-                        kept\name := row\name
-                    used := used + 1U
-                ---
+            while: i < used
+                lmx_graph_name_index_put(g, i)
                 i := i + 1U
             ---
-            if: used != g\names_len
-                g\names_len := used
-                if: g\index_cap != 0U
-                    c.memset((cast: (@) g\names_index), 0, g\index_cap * c.sizeof(c.size_t))
-                    i := 0U
-                    while: i < used
-                        lmx_graph_name_index_put(g, i)
-                        i := i + 1U
-                    ---
+        ---
+    ---
+    return
+end: lmx_graph_names_drop
+
+# Move weak name metadata with arena ownership, without copying any program node.
+# Validate duplicate names and reserve the entire merge before publishing one row.
+fn: lmx_graph_names_attach (c.LmxArena@: arena; c.LmxArena@: other) int
+    c.LmxGraph@: target 0
+    c.LmxGraph@: donor 0
+    c.LmxName@: row 0
+    c.LmxName@: present 0
+    c.LmxName@: appended 0
+    size_t: at 0U
+    size_t: i 0U
+    if: arena = 0 || other = 0 || arena = other
+        return: 1
+    donor := other\graph_metadata
+    if: donor = 0 || donor\names_len = 0U
+        return: 0
+    target := lmx_graph_open(arena)
+    if: target = 0
+        return: 1
+    if: target\names_len = 0U
+        # The common empty recipient takes the buffers; both service-record identities remain stable.
+        c.free((cast: (@) target\names))
+        c.free((cast: (@) target\names_index))
+        target\names := donor\names
+        target\names_len := donor\names_len
+        target\names_cap := donor\names_cap
+        target\names_index := donor\names_index
+        target\index_cap := donor\index_cap
+    else:
+        while: i < donor\names_len
+            row := donor\names + i
+            at := lmx_graph_name_row(target, (cast: (@) row\address))
+            if: at < target\names_len
+                present := target\names + at
+                if: present\name != row\name
+                    return: 1
                 ---
             ---
+            i := i + 1U
         ---
-        g := g\next
+        if: donor\names_len > (cast: (size_t) -1) - target\names_len
+            return: 1
+        if: lmx_graph_name_room(target, target\names_len + donor\names_len) != 0
+            return: 1
+        i := 0U
+        while: i < donor\names_len
+            row := donor\names + i
+            at := lmx_graph_name_row(target, (cast: (@) row\address))
+            if: at = target\names_len
+                appended := target\names + at
+                appended\address := row\address
+                appended\name := row\name
+                lmx_graph_name_index_put(target, at)
+                target\names_len := target\names_len + 1U
+            ---
+            i := i + 1U
+        ---
+        c.free((cast: (@) donor\names))
+        c.free((cast: (@) donor\names_index))
     ---
-end: lmx_graph_names_drop
+    donor\names := 0
+    donor\names_len := 0U
+    donor\names_cap := 0U
+    donor\names_index := 0
+    donor\index_cap := 0U
+    return: 0
+end: lmx_graph_names_attach
 
 # ---- The address -> name table of the arena (§5.1) ----------------------------------------------------------------
 
@@ -663,9 +715,7 @@ end: lmx_graph_name
 # Renaming an existing address needs its own graph mutation contract; registration never silently renames one.
 fn: lmx_graph_name_address (c.LmxGraph@: g; @: address; char@: canon) int
     c.LmxGraphState@: state lmx_graph_state()
-    c.LmxName@: rows 0
     c.LmxName@: row 0
-    size_t: cap 0U
     size_t: i 0U
     if: g = 0 || address = 0 || canon = 0 || state = 0
         return: 1
@@ -677,18 +727,8 @@ fn: lmx_graph_name_address (c.LmxGraph@: g; @: address; char@: canon) int
     if: i < g\names_len
         row := g\names + i
         return: (cast: (int) (row\name != canon))
-    if: lmx_graph_name_index_room(g) != 0
+    if: g\names_len = (cast: (size_t) -1) || lmx_graph_name_room(g, g\names_len + 1U) != 0
         return: 1
-    if: g\names_len + 1U > g\names_cap
-        cap := 32U
-        if: g\names_cap != 0U
-            cap := g\names_cap * 2U
-        rows := (cast: (c.LmxName@) c.realloc((cast: (@) g\names), cap * c.sizeof(c.LmxName)))
-        if: rows = 0
-            return: 1
-        g\names := rows
-        g\names_cap := cap
-    ---
     row := g\names + g\names_len
     row\address := address
     row\name := canon
@@ -2241,7 +2281,7 @@ fn: lmx_graph_publish (c.LmxGraph@: g; c.Lmx@: root; size_t: index; @: value) in
         return: 1
     if: lmx_graph_receiving_place(g, root, index, @ inner, @ at) != 0 || lmx_graph_write_slot(g, inner, at, value) != 0
         return: 1
-    return: lmx_graph_space_put(root, name, value)
+    return: lmx_graph_space_put(g, root, name, value)
 end: lmx_graph_publish
 
 # ---- The namespace of a traversal (§5.2; the author 2026-11-09) ----------------------------------------------------
@@ -2250,24 +2290,24 @@ end: lmx_graph_publish
 # shares the live one. Nothing of a table is kept in the graph, beside it or for the next traversal.
 
 # The live table, or 0 outside every traversal.
-fn: lmx_graph_space () c.LmxGraphSpace@
-    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ c.lmx_graph_space_top))
+fn: lmx_graph_space (c.LmxGraph@: g) c.LmxGraphSpace@
+    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ g\space))
     return: top[0]
 end: lmx_graph_space
 
 # Begin the table of a traversal of root: 1 when a new empty table is live, 0 when a traversal is live already (then it
 # goes on with that one), -1 without memory.
-fn: lmx_graph_space_push (c.Lmx@: root) int
-    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ c.lmx_graph_space_top))
+fn: lmx_graph_space_push (c.LmxGraph@: g; c.Lmx@: root) int
+    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ g\space))
     if: top[0] != 0
         return: 0
-    return: lmx_graph_space_push_fresh(root)
+    return: lmx_graph_space_push_fresh(g, root)
 end: lmx_graph_space_push
 
 # An independent construction owns its table even inside another live walk.
 # The existing prior link restores that walk on every constructor exit.
-fn: lmx_graph_space_push_fresh (c.Lmx@: root) int
-    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ c.lmx_graph_space_top))
+fn: lmx_graph_space_push_fresh (c.LmxGraph@: g; c.Lmx@: root) int
+    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ g\space))
     c.LmxGraphSpace@: space 0
     space := (cast: (c.LmxGraphSpace@) c.calloc(1U, c.sizeof(c.LmxGraphSpace)))
     if: space = 0
@@ -2279,8 +2319,8 @@ fn: lmx_graph_space_push_fresh (c.Lmx@: root) int
 end: lmx_graph_space_push_fresh
 
 # End the live table (opened is the answer of its lmx_graph_space_push: only 1 ends it).
-sub: lmx_graph_space_pop (int: opened)
-    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ c.lmx_graph_space_top))
+sub: lmx_graph_space_pop (c.LmxGraph@: g; int: opened)
+    c.LmxGraphSpace@@: top (cast: (c.LmxGraphSpace@@) (@ g\space))
     c.LmxGraphSpace@: space 0
     space := top[0]
     if: opened != 1 || space = 0
@@ -2292,8 +2332,8 @@ sub: lmx_graph_space_pop (int: opened)
 end: lmx_graph_space_pop
 
 # What name answers in the lexical block scope of the live traversal: the latest row, or 0.
-fn: lmx_graph_space_find (c.Lmx@: scope; char@: name) @
-    c.LmxGraphSpace@: space lmx_graph_space()
+fn: lmx_graph_space_find (c.LmxGraph@: g; c.Lmx@: scope; char@: name) @
+    c.LmxGraphSpace@: space lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     size_t: i 0U
     if: space = 0 || scope = 0 || name = 0
@@ -2311,8 +2351,8 @@ end: lmx_graph_space_find
 # The rows of name in the lexical block scope of the live traversal, in the order they were put: how many, and the k-th.
 # Each declaration of fn or sub of one name in one block is a row (lmx_graph_space_declare), and every one of them is a
 # candidate of a call of that name (the book #declaration-selection); lmx_graph_space_find answers only the latest.
-fn: lmx_graph_space_count (c.Lmx@: scope; char@: name) size_t
-    c.LmxGraphSpace@: space lmx_graph_space()
+fn: lmx_graph_space_count (c.LmxGraph@: g; c.Lmx@: scope; char@: name) size_t
+    c.LmxGraphSpace@: space lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     size_t: i 0U
     size_t: n 0U
@@ -2325,8 +2365,8 @@ fn: lmx_graph_space_count (c.Lmx@: scope; char@: name) size_t
         i := i + 1U
     return: n
 
-fn: lmx_graph_space_nth (c.Lmx@: scope; char@: name; size_t: k) @
-    c.LmxGraphSpace@: space lmx_graph_space()
+fn: lmx_graph_space_nth (c.LmxGraph@: g; c.Lmx@: scope; char@: name; size_t: k) @
+    c.LmxGraphSpace@: space lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     size_t: i 0U
     size_t: n 0U
@@ -2343,8 +2383,8 @@ fn: lmx_graph_space_nth (c.Lmx@: scope; char@: name; size_t: k) @
 
 # A row of the live traversal: from now on name answers value in the block scope. 0 (also outside every traversal,
 # where nothing is recorded), 1 without memory.
-fn: lmx_graph_space_put (c.Lmx@: scope; char@: name; @: value) int
-    c.LmxGraphSpace@: space lmx_graph_space()
+fn: lmx_graph_space_put (c.LmxGraph@: g; c.Lmx@: scope; char@: name; @: value) int
+    c.LmxGraphSpace@: space lmx_graph_space(g)
     c.LmxGraphSpaceRow@: rows 0
     c.LmxGraphSpaceRow@: row 0
     size_t: cap 0U

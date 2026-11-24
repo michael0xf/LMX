@@ -27,7 +27,7 @@ fn: cf_expect (@: g c.LmxGraph; int: status; @: value c.LmxWalkValue; int: numbe
 # This entry implements the saved method body. Receiving its descriptor as
 # owner instead of the selected method DATA exposes a mismatched entry route.
 fn: cf_descriptor_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: decl c.Lmx 0
     @: root c.Lmx 0
     @: counter c.Lmx 0
@@ -211,7 +211,7 @@ fn: cf_frames_check () int
         c.fprintf(c.stderr, "descriptor invoke: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))
         return: 126
     c.free(actuals)
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     return: 7

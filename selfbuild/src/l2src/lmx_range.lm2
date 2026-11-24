@@ -264,7 +264,7 @@ end: lmx_range_add_view
 
 # One interval leaves the index.  The caller is the arena's manager, retiring an entry
 # with the block that carried it, or an array whose chunk is released.
-fn: lmx_range_drop (c.LmxArena@: arena; @: lo; @: hi) int
+fn: lmx_range_remove (c.LmxArena@: arena; @: lo; @: hi; int: retire) int
     c.LmxRange@: entry 0
     c.LmxRange@: next 0
     size_t: index 0U
@@ -276,7 +276,9 @@ fn: lmx_range_drop (c.LmxArena@: arena; @: lo; @: hi) int
         if: entry\lo = lo && entry\hi = hi
             # Spelling keys/text must retire while this storage is still
             # registered and readable, before its address can be reused.
-            c.lmx_source_names_drop(arena, lo, hi)
+            if: retire != 0
+                c.lmx_source_names_drop(arena, lo, hi)
+            ---
             while: index + 1U < c.lmx_arena_index_len(arena)
                 next := entry + 1
                 entry\lo := next\lo
@@ -299,7 +301,17 @@ fn: lmx_range_drop (c.LmxArena@: arena; @: lo; @: hi) int
         index := index + 1U
     ---
     return: 1
+end: lmx_range_remove
+
+# Retirement ends storage lifetime and drops its weak names.
+fn: lmx_range_drop (c.LmxArena@: arena; @: lo; @: hi) int
+    return: lmx_range_remove(arena, lo, hi, 1)
 end: lmx_range_drop
+
+# Roll back only an unpublished borrowed classification view; the source storage is still live.
+fn: lmx_range_forget_view (c.LmxArena@: arena; @: lo; @: hi) int
+    return: lmx_range_remove(arena, lo, hi, 0)
+end: lmx_range_forget_view
 
 # The whole mechanism: no value tag and no out-of-band store is read.  One sorted index
 # contains both local ranges and explicitly imported non-owning views.  The address selects

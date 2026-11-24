@@ -64,8 +64,8 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
     @: physical c.Lmx (cast: (@: c.Lmx) c.lmx_range_profile(arena, c.lmx_graph_get_in(g, original, 0U)))
     @: make c.Lmx (cast: (@: c.Lmx) fd_named(g, (cast: (@: c.Lmx) original\parent), "Make"))
-    @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
-    @: source_held c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) original\parent), c.lmx_graph_intern("Held", 4U)))
+    @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("F", 1U)))
+    @: source_held c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, (cast: (@: c.Lmx) original\parent), c.lmx_graph_intern("Held", 4U)))
     @: held c.Lmx (cast: (@: c.Lmx) c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, data, 9U)))
     @: empty void c.lmx_graph_get_in(g, data, 4U)
     @: context c.LmxWalkValue c.lmx_value_cell_context(arena, empty)
@@ -97,7 +97,7 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     if: held = 0 || held = source_held || c.lmx_graph_fn_result(g, (cast: (@: void) held)) != 0 || c.lmx_graph_method(g, held) != 0 || fd_count(g, held, 3) != 0 || fd_count(g, source_held, 3) != 0
         return: 107
     if: after != 0
-        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("Again", 5U)))
         if: again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
             return: 108
         ---
@@ -105,9 +105,9 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     return: 0
 
 fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: root c.Lmx (cast: (@: c.Lmx) code\parent)
-    @: original c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("D", 1U)))
+    @: original c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("D", 1U)))
     @: data c.Lmx (cast: (@: c.Lmx) owner)
     size_t: checked_slot c.lmx_graph_named(g, root, c.lmx_graph_intern("checked", 7U))
     int: after (cast: (int) (c.lmx_graph_name_of(g, (cast: (@: void) code)) = c.lmx_graph_intern("Verify", 6U)))
@@ -121,8 +121,8 @@ fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: 
         return: status
     if: after != 0
         @: make c.Lmx (cast: (@: c.Lmx) fd_named(g, root, "Make"))
-        @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
-        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("F", 1U)))
+        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("Again", 5U)))
         unsigned: gen c.lmx_arena_generation_next(arena)
         if: c.lmx_gc_mark_value(arena, original, gen, 0) != c.LMX_GC_OK || c.lmx_gc_mark_value(arena, f, gen, 0) != c.LMX_GC_OK || c.lmx_gc_mark_value(arena, again, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(arena, gen) != c.LMX_GC_OK || fd_verify_data(g, original, data, after) != 0
             return: 110
@@ -178,10 +178,10 @@ fn: fd_word_cross () int
     return: 0
 
 fn: fd_merge_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: root c.Lmx (cast: (@: c.Lmx) code\parent)
-    @: m c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("M", 1U)))
-    @: n c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("N", 1U)))
+    @: m c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("M", 1U)))
+    @: n c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("N", 1U)))
     @: merged c.Lmx (cast: (@: c.Lmx) owner)
     @: source void 0
     @: alias_source void 0
@@ -588,15 +588,15 @@ fn: fd_merge_check () int
         return: 135
     status := c.lm_graph_build_file(g, "graph_merge_typed_code.lm3", @ root)
     c.remove("graph_merge_typed_code.lm3")
-    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("M", 1U), m) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("N", 1U), n) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("Bad", 3U), bad) != 0
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0 || c.lmx_graph_space_put(g, root, c.lmx_graph_intern("M", 1U), m) != 0 || c.lmx_graph_space_put(g, root, c.lmx_graph_intern("N", 1U), n) != 0 || c.lmx_graph_space_put(g, root, c.lmx_graph_intern("Bad", 3U), bad) != 0
         return: 136
     m\parent := root
     n\parent := root
     bad\parent := root
     verify := (cast: (@: c.Lmx) fd_named(g, root, "VerifyMerge"))
     verify\native := (cast: (c.LmxEntry) c.fd_merge_callback)
-    work := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("MergeWork", 9U)))
-    bad_work := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("BadMergeWork", 12U)))
+    work := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("MergeWork", 9U)))
+    bad_work := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("BadMergeWork", 12U)))
     bad_data := c.lmx_graph_method_data(g, bad_work)
     bad_slot := c.lmx_graph_named(g, bad_data, c.lmx_graph_intern("merged", 6U))
     if: bad_data = 0 || bad_slot != c.lmx_graph_count(bad_data)
@@ -619,7 +619,7 @@ fn: fd_merge_check () int
     status := c.lmx_graph_invoke_value(g, bad_work, 0, 0U, @ invoked)
     if: status != 4 || c.lmx_graph_named(g, bad_data, c.lmx_graph_intern("merged", 6U)) != c.lmx_graph_count(bad_data) || arena\activation != 0 || arena\execution_roots != 0 || c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2 || fd_expect(@ arena, x, abi, source, m, 0, @ zero) != 0
         return: 139
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     return: 0
@@ -677,9 +677,9 @@ fn: fd_mapped_check () int
     if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 83
     data\parent := root
-    if: c.lmx_graph_name(g, (cast: (@: void) data), "OriginalD", 9U) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("D", 1U), data) != 0
+    if: c.lmx_graph_name(g, (cast: (@: void) data), "OriginalD", 9U) != 0 || c.lmx_graph_space_put(g, root, c.lmx_graph_intern("D", 1U), data) != 0
         return: 84
-    held := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("Held", 4U)))
+    held := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("Held", 4U)))
     while: warm < 3
         status := c.lmx_graph_invoke_value(g, held, 0, 0U, @ warm_result)
         if: status != 0 || c.lmx_graph_result_int(g, @ warm_result, @ warm_value) != 0 || warm_value != warm + 1
@@ -696,8 +696,8 @@ fn: fd_mapped_check () int
     verify\native := (cast: (c.LmxEntry) c.fd_callback)
     status := c.lmx_graph_call_data(g, data, make, 0)
     if: status != 0
-        @: built_f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
-        @: built_again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        @: built_f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("F", 1U)))
+        @: built_again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("Again", 5U)))
         c.lmx_graph_value_int(g, fd_named(g, root, "checked"), @ checked)
         c.fprintf(c.stderr, "fn_data Make status=%d checked=%d F=%p Again=%p\n", status, checked, (cast: (@: void) built_f), (cast: (@: void) built_again))
         if: built_f != 0
@@ -709,7 +709,7 @@ fn: fd_mapped_check () int
         return: 87
     if: c.lmx_graph_value_int(g, fd_named(g, root, "checked"), @ checked) != 0 || checked != 2 || fd_word_cross() != 0
         return: 88
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     status := fd_merge_check()

@@ -1,0 +1,157 @@
+# Arena metadata preserves names across attachment and isolates simultaneous traversals.
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_child.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l2src/lmx_ids.h.lm1"
+include: "<string.h>"
+
+# Both mailbox take forms and ended-child handoff discard the donor arena handle.
+fn: wcm_transport_check (int: mode) int
+    c.LmxArena: owner
+    c.LmxArena: source
+    c.LmxPost: box
+    c.LmxPostCursor: cursor
+    c.memset((cast: (@: void) (@ owner)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ source)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ box)), 0, c.sizeof(c.LmxPost))
+    c.memset((cast: (@: void) (@ cursor)), 0, c.sizeof(c.LmxPostCursor))
+    if: c.lmx_arena_open(@ owner) != 0 || c.lmx_arena_open(@ source) != 0
+        return: 111
+    @: go c.LmxGraph c.lmx_graph_open(@ owner)
+    @: gs c.LmxGraph c.lmx_graph_open(@ source)
+    @: graph c.Lmx c.lmx_graph_lmx(gs, 0, 1U)
+    @: value void c.lmx_graph_int(gs, 77)
+    @: name char c.lmx_graph_intern("delivered", 9U)
+    @: letter c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_arena_take(@ source, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    @: taken void 0
+    if: go = 0 || gs = 0 || graph = 0 || value = 0 || name = 0 || letter = 0 || c.lmx_graph_put_in(gs, graph, 0U, value) != 0 || c.lmx_graph_name_address(gs, value, name) != 0
+        return: 112
+    c.memset((cast: (@: void) letter), 0, c.sizeof(c.LmxMsg))
+    letter\graph := graph
+    letter\running := 1
+    if: mode = 2
+        letter\handoff_ready := 1
+        if: c.lmx_child_handoff(@ owner, @ source, letter) != c.LMX_CHILD_OK
+            return: 113
+        taken := (cast: (@: void) letter)
+    else:
+        if: c.lmx_post_init(@ owner, @ box) != c.LMX_POST_OK || c.lmx_post_accept_transfer(@ owner, @ box, (cast: (@: void) letter), @ source) != c.LMX_POST_OK
+            return: 114
+        if: mode = 0
+            taken := c.lmx_post_take_owned(@ owner, @ box, c.LMX_POST_INBOX)
+        else:
+            if: c.lmx_post_cursor_open(@ box, @ cursor) != c.LMX_POST_OK || c.lmx_post_cursor_next(@ cursor) != (cast: (@: void) letter)
+                return: 115
+            taken := c.lmx_post_cursor_take(@ owner, @ cursor)
+            c.lmx_post_cursor_close(@ cursor)
+        ---
+        if: letter\success != 1
+            return: 116
+        if: c.lmx_post_close(@ owner, @ box) != c.LMX_POST_OK
+            return: 117
+        ---
+    ---
+    if: taken != (cast: (@: void) letter) || source\graph_metadata != 0 || c.lmx_graph_name_of(go, value) != name || c.lmx_graph_get_in(go, graph, 0U) != value || c.lmx_int_value_known(value) != 77
+        return: 118
+    if: c.lmx_arena_release(@ source) != 0 || c.lmx_arena_release(@ owner) != 0
+        return: 119
+    return: 0
+
+fn: wc_graph_context_check () int
+    c.LmxArena: a
+    c.LmxArena: b
+    c.LmxArena: c_arena
+    c.LmxArena: d
+    c.LmxArena: e
+    c.memset((cast: (@: void) (@ a)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ b)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ c_arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ d)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ e)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ a) != 0 || c.lmx_arena_open(@ b) != 0 || c.lmx_arena_open(@ c_arena) != 0 || c.lmx_arena_open(@ d) != 0 || c.lmx_arena_open(@ e) != 0
+        return: 81
+    @: ga c.LmxGraph c.lmx_graph_open(@ a)
+    @: gb c.LmxGraph c.lmx_graph_open(@ b)
+    @: gc c.LmxGraph c.lmx_graph_open(@ c_arena)
+    @: gd c.LmxGraph c.lmx_graph_open(@ d)
+    @: ge c.LmxGraph c.lmx_graph_open(@ e)
+    if: ga = 0 || gb = 0 || gc = 0 || gd = 0 || ge = 0 || ga != a\graph_metadata || ga != c.lmx_graph_open(@ a)
+        return: 82
+    @: ra c.Lmx c.lmx_graph_lmx(ga, 0, 1U)
+    @: rb c.Lmx c.lmx_graph_lmx(gb, 0, 1U)
+    @: va void c.lmx_graph_int(ga, 11)
+    @: vb void c.lmx_graph_int(gb, 22)
+    @: nested void c.lmx_graph_int(ga, 33)
+    @: local char c.lmx_graph_intern("Local", 5U)
+    @: second char c.lmx_graph_intern("second", 6U)
+    if: ra = 0 || rb = 0 || va = 0 || vb = 0 || nested = 0 || local = 0 || second = 0
+        return: 83
+    if: c.lmx_graph_put_in(ga, ra, 0U, va) != 0 || c.lmx_graph_put_in(gb, rb, 0U, vb) != 0 || c.lmx_graph_name(ga, va, "first", 5U) != 0 || c.lmx_graph_name_address(gb, vb, second) != 0
+        return: 84
+    if: c.lmx_graph_space_push_fresh(ga, ra) != 1 || c.lmx_graph_space_put(ga, ra, local, va) != 0
+        return: 85
+    if: c.lmx_graph_space_push_fresh(gb, rb) != 1 || c.lmx_graph_space_put(gb, rb, local, vb) != 0
+        return: 86
+    if: c.lmx_graph_space_find(ga, ra, local) != va || c.lmx_graph_space_find(gb, rb, local) != vb || c.lmx_graph_space_find(ga, rb, local) != 0 || c.lmx_graph_space_find(gb, ra, local) != 0
+        return: 87
+    if: c.lmx_graph_space_push_fresh(ga, ra) != 1 || c.lmx_graph_space_put(ga, ra, local, nested) != 0 || c.lmx_graph_space_find(ga, ra, local) != nested
+        return: 88
+    c.lmx_graph_space_pop(ga, 1)
+    if: c.lmx_graph_space_find(ga, ra, local) != va || c.lmx_graph_space_find(gb, rb, local) != vb
+        return: 89
+    # GC of one arena reads its own live traversal, not the other arena's top.
+    if: c.lmx_gc_sweep(@ a, c.lmx_arena_generation_next(@ a)) != c.LMX_GC_OK || c.lmx_int_value_known(va) != 11
+        return: 90
+    c.lmx_graph_space_pop(gb, 1)
+    if: gb\space != 0 || c.lmx_graph_space_find(ga, ra, local) != va
+        return: 91
+    c.lmx_graph_space_pop(ga, 1)
+    if: ga\space != 0 || c.lmx_gc_sweep(@ a, c.lmx_arena_generation_next(@ a)) != c.LMX_GC_OK || ga\names_len != 0U
+        return: 92
+    # Empty-recipient attach takes the buffers, preserving the recipient and donor record identities.
+    if: c.lmx_arena_attach(@ a, @ b) != 0 || a\graph_metadata != ga || b\graph_metadata != gb || gb\names_len != 0U
+        return: 93
+    if: c.lmx_arena_release(@ b) != 0 || b\graph_metadata != 0 || c.lmx_graph_name_of(ga, vb) != second || c.lmx_graph_get_in(ga, rb, 0U) != vb || c.lmx_int_value_known(vb) != 22
+        return: 94
+    @: rc c.Lmx c.lmx_graph_lmx(gc, 0, 1U)
+    @: vc void c.lmx_graph_int(gc, 44)
+    @: third char c.lmx_graph_intern("third", 5U)
+    if: rc = 0 || vc = 0 || third = 0 || c.lmx_graph_put_in(gc, rc, 0U, vc) != 0 || c.lmx_graph_name_address(gc, vc, third) != 0
+        return: 95
+    # Nonempty-recipient merge keeps both tables' names after donor release.
+    if: c.lmx_arena_attach(@ a, @ c_arena) != 0 || c.lmx_arena_release(@ c_arena) != 0 || c_arena\graph_metadata != 0 || ga\names_len != 2U || c.lmx_graph_name_of(ga, vb) != second || c.lmx_graph_name_of(ga, vc) != third || c.lmx_graph_get_in(ga, rc, 0U) != vc || c.lmx_int_value_known(vc) != 44
+        return: 96
+    @: rd c.Lmx c.lmx_graph_lmx(gd, 0, 1U)
+    @: vd void c.lmx_graph_int(gd, 55)
+    if: rd = 0 || vd = 0 || c.lmx_graph_put_in(gd, rd, 0U, vd) != 0 || c.lmx_graph_name(gd, vd, "fourth", 6U) != 0 || c.lmx_graph_name(gd, vb, "conflict", 8U) != 0
+        return: 97
+    @: external_name char c.lmx_graph_intern("external", 8U)
+    if: c.lmx_graph_name_address(ga, vd, external_name) != 0
+        return: 97
+    # A duplicate external address with a different name refuses before publication.
+    # Its already inserted range views are rolled back; the donor keeps its own rows and values.
+    if: c.lmx_arena_attach(@ a, @ d) = 0 || ga\names_len != 3U || gd\names_len != 2U || c.lmx_range_cell_pool(@ a, vd) != 0 || c.lmx_range_cell_pool(@ d, vd) = 0 || c.lmx_graph_name_of(ga, vb) != second || c.lmx_graph_name_of(ga, vd) != external_name || c.lmx_int_value_known(vd) != 55
+        return: 98
+    @: ve void c.lmx_graph_int(ge, 66)
+    if: ve = 0 || c.lmx_graph_name(ge, ve, "temporary", 9U) != 0 || ge\names_len != 1U
+        return: 99
+    # Revert retires names without destroying the reusable arena-owned service record.
+    if: c.lmx_arena_revert(@ e, 0) != 0 || e\graph_metadata != ge || ge\names_len != 0U
+        return: 100
+    if: c.lmx_graph_close(ge) != 0 || e\graph_metadata != 0 || c.lmx_arena_release(@ e) != 0 || c.lmx_arena_release(@ e) != 0
+        return: 101
+    if: c.lmx_arena_release(@ d) != 0 || d\graph_metadata != 0 || c.lmx_graph_close(ga) != 0 || a\graph_metadata != 0 || c.lmx_arena_release(@ a) != 0
+        return: 102
+    int: status wcm_transport_check(0)
+    if: status != 0
+        return: status
+    status := wcm_transport_check(1)
+    if: status != 0
+        return: status
+    status := wcm_transport_check(2)
+    if: status != 0
+        return: status
+    return: 7

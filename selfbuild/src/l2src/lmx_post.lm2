@@ -1,3 +1,4 @@
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -500,6 +501,10 @@ fn: lmx_post_take_inbox (c.LmxArena@: arena; c.LmxPost@: box) @
             lmx_post_monitor_leave(box)
             return: 0
         ---
+        # Delivery forgets the emptied donor after its names have moved with ownership.
+        if: source_arena\graph_metadata != 0
+            c.lmx_graph_close(source_arena\graph_metadata)
+        ---
         slot\source_arena := 0U
     ---
     target := (cast: (@) slot\target)
@@ -765,6 +770,10 @@ fn: lmx_post_cursor_take (c.LmxArena@: arena; c.LmxPostCursor@: cur) @
         if: arena = 0 || c.lmx_arena_attach(arena, source_arena) != 0
             lmx_post_monitor_leave(box)
             return: 0
+        ---
+        # Delivery forgets the emptied donor after its names have moved with ownership.
+        if: source_arena\graph_metadata != 0
+            c.lmx_graph_close(source_arena\graph_metadata)
         ---
         slot\source_arena := 0U
     ---

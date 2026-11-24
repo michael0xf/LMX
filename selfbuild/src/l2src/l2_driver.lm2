@@ -1151,7 +1151,7 @@ fn: inspect (c.LmxArena@: arena; c.Lmx@: graph) int
     int: missing 0
     int: duplicate 0
     int: shared_profile 0
-    check((cast: (int) (graph != 0 && c.l2_program_graph() = graph)), "the builder built the program unit in R0's own graph")
+    # Check the actual supplied graph below; a program-global getter only repeated the builder's own claim.
     # R0's graph is independent: the host above it is Message supervision, not a lexical space.
     check((cast: (int) (graph != 0 && graph\parent = 0)), "program unit is a lexical root: its parent Message is supervision, not a lexical node")
     check((cast: (int) (c.lmx_domain_kind(arena, (cast: (@) graph)) = c.LMX_KIND_STRUCT && c.lmx_domain_type(arena, (cast: (@) graph)) = c.LMX_TYPE_STRUCT)), "program unit is a live Structure of R0's arena")

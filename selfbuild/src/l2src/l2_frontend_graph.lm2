@@ -659,7 +659,7 @@ fn: lm_compiler_graph_own_type (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: root; c.Lmx@
     if: head != 0
         if: lm_compiler_graph_callee(g, root, value) != 2
             return: 1
-        made := (cast: (c.Lmx@) c.lmx_graph_space_find(root, head))
+        made := (cast: (c.Lmx@) c.lmx_graph_space_find(g, root, head))
         lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made)))
         c.fputs(": ", f)
         return: 0
@@ -734,7 +734,7 @@ fn: lm_compiler_graph_keep (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: root; c.Lmx@: ar
         if: callee != 1 && callee != 2
             return: 0
         if: callee = 2
-            cargs := c.lmx_graph_method_data(g, (cast: (c.Lmx@) c.lmx_graph_space_find(root, head)))
+            cargs := c.lmx_graph_method_data(g, (cast: (c.Lmx@) c.lmx_graph_space_find(g, root, head)))
         while: i < count
             status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get_in(g, expression, i), level, cond, src, fname, at)
             if: status != 0
@@ -814,7 +814,7 @@ fn: lm_compiler_graph_callee (c.LmxGraph@: g; c.Lmx@: root; @: value) int
         return: 0
     if: lm_compiler_graph_door_word(head) != 0
         return: 1
-    made := (cast: (c.Lmx@) c.lmx_graph_space_find(root, head))
+    made := (cast: (c.Lmx@) c.lmx_graph_space_find(g, root, head))
     if: made = 0 || c.lmx_graph_method(g, made) = 0
         return: 0
     if: c.lmx_graph_count(c.lmx_graph_method_data(g, made)) != c.lmx_graph_count((cast: (c.Lmx@) value))
@@ -1262,7 +1262,7 @@ fn: lm_compiler_graph_module (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: root; const: (
             name := c.lmx_graph_fn_decl_name(g, decl)
             made := 0
             if: name != 0
-                made := (cast: (c.Lmx@) c.lmx_graph_space_find(root, name))
+                made := (cast: (c.Lmx@) c.lmx_graph_space_find(g, root, name))
             if: name = 0 || c.lmx_graph_fn_written(g, decl) = 0 || made = 0 || c.lmx_graph_method(g, made) = 0 || made\parent != decl || c.lmx_graph_has_result(g, made) = 0
                 return: lm_compiler_graph_refuse_root(src, i, "a function of a machine module is declared with written arguments, a result and a body")
             if: name[0] = 108 && name[1] = 50 && name[2] = 95
@@ -1386,13 +1386,13 @@ fn: lm_compiler_graph_translate (const: (char@: src); const: (char@: out); char@
         return: 1
     f := c.fopen(tmp, "wb")
     if: f = 0
-        c.lmx_graph_space_close(opened)
+        c.lmx_graph_space_close(g, opened)
         c.fprintf(c.stderr, "l2trans error: cannot open %s\n", tmp)
         return: 1
     status := lm_compiler_graph_module(g, f, root, src, names, count)
     if: c.fclose(f) != 0 && status = 0
         status := lm_compiler_graph_refuse(src, "the machine module is not written")
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(arena)
     c.free((cast: (@) arena))

@@ -610,6 +610,7 @@ end: lmx_arena_rehome_primitive_owners
 # moves, which is what attaching exists for.  A refusal part-way takes back exactly the
 # entries this call added and disturbs nothing else.
 fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
+    c.LmxGraph@: donor_names 0
     c.LmxRange@: entry 0
     c.LmxRange@: present 0
     c.LmxRange@: inserted 0
@@ -625,7 +626,8 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
         return: 1
     if: arena = other
         return: 1
-    if: lmx_arena_index_len(other) = 0U && other\arrays = 0 && other\blocks = 0
+    donor_names := other\graph_metadata
+    if: lmx_arena_index_len(other) = 0U && other\arrays = 0 && other\blocks = 0 && (donor_names = 0 || donor_names\names_len = 0U)
         return: 0
     # The final ownership-list splice is fallible on malformed/intersecting lists. Preflight it
     # before adding one range, relinking one Array or clearing one donor field; after this succeeds
@@ -696,7 +698,7 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
                 while: added != 0U
                     added := added - 1U
                     present := inserted + added
-                    c.lmx_range_drop(arena, present\lo, present\hi)
+                    c.lmx_range_forget_view(arena, present\lo, present\hi)
                 ---
                 c.free((cast: (@) inserted))
                 return: 1
@@ -707,6 +709,16 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
             added := added + 1U
         ---
         index := index + 1U
+    ---
+    # All fallible name merging precedes ownership-list changes. On refusal forget only range views inserted here.
+    if: c.lmx_graph_names_attach(arena, other) != 0
+        while: added != 0U
+            added := added - 1U
+            present := inserted + added
+            c.lmx_range_forget_view(arena, present\lo, present\hi)
+        ---
+        c.free((cast: (@) inserted))
+        return: 1
     ---
     c.free((cast: (@) inserted))
     # The arrays follow the entries, and the storage follows the arrays: after this the
@@ -760,6 +772,9 @@ fn: lmx_arena_release (c.LmxArena@: arena) int
     # The types whose models this arena holds leave with it (Р155); their numbers are never given again.
     if: arena\type_rows_count != 0U
         c.lmx_types_forget(arena, 0, 0, 1)
+    if: arena\graph_metadata != 0
+        c.lmx_graph_close(arena\graph_metadata)
+    ---
     status := c.lmx_arena_blocks_dispose_all(@ arena\blocks)
     arena\arrays := 0
     if: lmx_arena_index_data(arena) != 0

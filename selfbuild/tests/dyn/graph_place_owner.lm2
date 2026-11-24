@@ -46,7 +46,7 @@ sub: go_clear_companions (@: arena c.LmxArena)
 # Collect answers 9 when the record of Reader is on the chain the collector marks, 1 otherwise; then it strips the
 # companions and sweeps the next generation.
 fn: go_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: reader c.Lmx 0
     @: record c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
     c.LmxWalkValue: value
@@ -111,7 +111,7 @@ fn: go_owner_check () int
         return: 204
     if: arena\activation != 0 || arena\execution_roots != 0
         return: 205
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     c.free(codes)

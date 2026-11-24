@@ -139,7 +139,7 @@ sub: gv_clear_companions (@: arena c.LmxArena)
 end: gv_clear_companions
 
 fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: projected c.LmxWalkValue c.calloc(7U, c.sizeof(c.LmxWalkValue))
     @@: projected_refs void c.calloc(7U, sizeof(@: void))
     @: active c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
@@ -541,7 +541,7 @@ fn: gv_values_check () int
     if: c.memcmp((cast: (const: @: void) value\ref), @ precise, abi\size) != 0
         return: 147
     c.lmx_execution_roots_restore(@ arena, roots_before)
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     c.free(codes)

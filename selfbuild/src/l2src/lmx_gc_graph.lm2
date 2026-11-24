@@ -476,11 +476,15 @@ fn: lmx_gc_mark_execution (c.LmxArena@: arena; unsigned: gen) int
     c.LmxExecutionRoots@: roots (cast: (c.LmxExecutionRoots@) arena\execution_roots)
     c.LmxWalkPlace@: place 0
     c.LmxScratch@: scratch 0
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraph@: graph_metadata arena\graph_metadata
+    c.LmxGraphSpace@: space 0
     c.LmxGraphSpaceRow@: space_rows 0
     c.LmxGraphSpaceRow@: space_row 0
     size_t: i 0U
     int: status c.LMX_GC_OK
+    if: graph_metadata != 0
+        space := graph_metadata\space
+    ---
     # A live traversal owns its constructed callable values and receiver
     # catalogs in these existing rows. They are ordinary GC edges for the
     # lifetime of that table, including suspended outer construction scopes.

@@ -134,6 +134,7 @@ fn: gs_immutable_entry (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: raw vo
 
 # Both physical copies lose Model A; only the outer working Values retain it.
 fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph arena\graph_metadata
     @: data c.Lmx (cast: (@: c.Lmx) owner)
     @: replacement void c.lmx_graph_get(data, 2U)
     c.LmxWalkValue: value
@@ -176,11 +177,11 @@ fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out
         return: 95
     # Construction can suspend the calling traversal's namespace. Its
     # receiver catalogs must remain live through that existing prior link.
-    nested_space := c.lmx_graph_space_push_fresh(data)
+    nested_space := c.lmx_graph_space_push_fresh(g, data)
     if: nested_space != 1
         return: 99
     gc_status := c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena))
-    c.lmx_graph_space_pop(nested_space)
+    c.lmx_graph_space_pop(g, nested_space)
     if: gc_status != c.LMX_GC_OK
         return: 93
     if: out != 0
@@ -289,7 +290,7 @@ fn: gs_pending_actuals () int
         return: 126
     # The retained declaration namespace legitimately owns older reference
     # chunks. Close it before proving that only the explicit anchor survives.
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     opened := 0
     # Neither an execution span nor its transient pointers survive the call.
     gen := c.lmx_arena_generation_next(@ arena)
@@ -300,7 +301,7 @@ fn: gs_pending_actuals () int
         if: pool\type = c.LMX_TYPE_GRAPH_INT_REF && (pool\head != first_chunk || pool\tail != first_chunk)
             return: 128
         pool := pool\next
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     return: 0
@@ -593,7 +594,7 @@ fn: gs_working_check () int
     if: arena\execution_roots != roots_before
         return: 108
     c.free(held_codes)
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     return: 7

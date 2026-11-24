@@ -1,3 +1,4 @@
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_child.h.lm1"
 predef: "l2src/lmx_service.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
@@ -174,8 +175,14 @@ fn: lmx_child_drop_prepared (c.LmxThread@: t) int
     return: c.LMX_CHILD_OK
 
 fn: lmx_child_handoff (c.LmxArena@: parent_arena; c.LmxArena@: child_arena; c.LmxMsg@: message) int
+    int: status
     if: parent_arena = 0 || child_arena = 0 || message = 0
         return: c.LMX_CHILD_INVALID
     if: message\handoff_ready = 0
         return: c.LMX_CHILD_INVALID
-    return: c.lmx_arena_attach(parent_arena, child_arena)
+    status := c.lmx_arena_attach(parent_arena, child_arena)
+    if: status = 0 && child_arena\graph_metadata != 0
+        # The ended child gives up its empty arena; no later owner will close this record.
+        c.lmx_graph_close(child_arena\graph_metadata)
+    ---
+    return: status

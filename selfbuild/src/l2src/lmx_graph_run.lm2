@@ -636,7 +636,7 @@ end: lmx_graph_work_local_declared
 # Local callable bindings shadow only a free fallback, never mapped data or
 # formals. The physical holder and the constructed value's parent stay intact.
 fn: lmx_graph_space_binding (c.LmxGraph@: g; c.Lmx@: scope; char@: name; int: dynamic; @@: declared) @
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     size_t: i 0U
     size_t: at 0U
@@ -645,7 +645,7 @@ fn: lmx_graph_space_binding (c.LmxGraph@: g; c.Lmx@: scope; char@: name; int: dy
     int: status 0
     declared[0] := 0
     if: dynamic = 0
-        value := c.lmx_graph_space_find(scope, name)
+        value := c.lmx_graph_space_find(g, scope, name)
         declared[0] := lmx_graph_binding_declared(g, scope, value)
         return: value
     # Physical fields can share a referent while keeping distinct attributes.
@@ -2173,7 +2173,7 @@ end: lmx_graph_store_name
 # The existing construction row for this particular source declaration. Name
 # lookup alone cannot distinguish repeated declarations or a computed name.
 fn: lmx_graph_binding_method (c.LmxGraph@: g; c.Lmx@: owner; @: source) c.Lmx@
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     c.Lmx@: made 0
     char@: name 0
@@ -2233,7 +2233,7 @@ fn: lmx_graph_binding_name (c.LmxGraph@: g; c.Lmx@: owner; @: value; int: mode; 
         return: head
     if: lmx_graph_language_word(state, head) != 0 || c.lmx_graph_language_receiver(head) != 0
         return: 0
-    answer := c.lmx_graph_space_find(owner, head)
+    answer := c.lmx_graph_space_find(g, owner, head)
     if: answer != 0 && c.lmx_graph_method(g, (cast: (c.Lmx@) c.lmx_graph_target(g, answer))) != 0
         return: 0
 return: head
@@ -2389,7 +2389,7 @@ fn: lmx_graph_atom_target_context (c.LmxGraph@: g; c.Lmx@: holder; char@: word; 
             return: value
         if: found > 1U
             return: 0
-        value := c.lmx_graph_space_find(current, word)
+        value := c.lmx_graph_space_find(g, current, word)
         if: value != 0
             return: value
         if: c.lmx_graph_method(g, current) != 0
@@ -2782,12 +2782,12 @@ fn: lmx_graph_lexical_binding (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx
             # this description; only its later consumer may evaluate it.
             return: value
         ---
-        value := c.lmx_graph_space_find(current, name)
+        value := c.lmx_graph_space_find(g, current, name)
         if: value != 0
             declared[0] := lmx_graph_binding_declared(g, current, value)
             return: value
         if: c.lmx_graph_method(g, current) != 0
-            value := c.lmx_graph_space_find(c.lmx_graph_method_code(g, current), name)
+            value := c.lmx_graph_space_find(g, c.lmx_graph_method_code(g, current), name)
             if: value != 0
                 declared[0] := lmx_graph_binding_declared(g, c.lmx_graph_method_code(g, current), value)
                 return: value
@@ -3299,7 +3299,7 @@ fn: lmx_graph_preflight_written (c.LmxGraph@: g; c.Lmx@: owner; size_t: slot; ch
     if: slot = 1U && owner\parent != 0 && c.lmx_graph_get_in(g, (cast: (c.Lmx@) owner\parent), 0U) = (cast: (@) owner) && lmx_graph_code_argument(g, (cast: (c.Lmx@) owner\parent), 0U) = 2
         return: 0
     made := lmx_graph_binding_method(g, owner, raw)
-    if: made = 0 || c.lmx_graph_space_find(owner, name) != (cast: (@) made)
+    if: made = 0 || c.lmx_graph_space_find(g, owner, name) != (cast: (@) made)
         return: 0
     return: made
 end: lmx_graph_preflight_written
@@ -3361,7 +3361,7 @@ fn: lmx_graph_preflight_target (c.LmxGraph@: g; c.LmxGraphFrame@: frame; char@: 
             if: found != 1U
                 return: 0
             return: lmx_graph_preflight_written(g, scope, slot, name)
-        if: c.lmx_graph_space_find(scope, name) != 0 || scope = frame\body
+        if: c.lmx_graph_space_find(g, scope, name) != 0 || scope = frame\body
             return: 0
         scope := lmx_graph_code_parent(g, scope)
     return: 0
@@ -3597,7 +3597,7 @@ fn: lmx_graph_construct_has (c.Lmx@@: nodes; size_t: count; c.Lmx@: value) int
 
 fn: lmx_graph_construct_method (c.LmxGraph@: g; c.Lmx@: holder; c.Lmx@@: codes; size_t: count) c.Lmx@
     c.Lmx@: current holder
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     c.LmxGraphSpaceRow@: row 0
     c.Lmx@: made 0
     size_t: i 0U
@@ -3748,7 +3748,7 @@ fn: lmx_graph_construct_binding (c.LmxGraph@: g; c.Lmx@: holder; char@: name; c.
                     head := c.lmx_graph_name_of(g, raw)
                     if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
                         value := (cast: (@) lmx_graph_binding_method(g, current, raw))
-                        if: value != 0 && c.lmx_graph_space_find(current, name) = value
+                        if: value != 0 && c.lmx_graph_space_find(g, current, name) = value
                             return: value
                         return: (cast: (@) 0)
                     return: lmx_graph_construct_slot(g, current, slot, data, nd, codes, nc)
@@ -4039,11 +4039,11 @@ fn: lmx_graph_construct (c.LmxGraph@: g; c.Lmx@: root) int
     int: opened 0
     if: g = 0 || state = 0 || c.lmx_graph_kind(g, (cast: (@) root)) != 4
         return: 4
-    opened := c.lmx_graph_space_push_fresh(root)
+    opened := c.lmx_graph_space_push_fresh(g, root)
     if: opened < 0
         return: 4
     status := lmx_graph_receivers_open(g, root)
-    space := c.lmx_graph_space()
+    space := c.lmx_graph_space(g)
     if: status = 0
         status := c.lmx_graph_scan_add(@ data, @ nd, @ cd, root)
     while: status = 0 && (ad < nd || ac < nc || ae < ne || af < space\count)
@@ -4145,7 +4145,7 @@ fn: lmx_graph_construct (c.LmxGraph@: g; c.Lmx@: root) int
                 if: part != 0 && selected = raw
                     status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, selected)
                 else:
-                    if: lmx_graph_written_group(g, raw) != 0 || (role = 1 && head != 0 && head != state\w_at && head != state\w_int && c.lmx_graph_method(g, (cast: (c.Lmx@) c.lmx_graph_space_find(current, head))) = 0)
+                    if: lmx_graph_written_group(g, raw) != 0 || (role = 1 && head != 0 && head != state\w_at && head != state\w_int && c.lmx_graph_method(g, (cast: (c.Lmx@) c.lmx_graph_space_find(g, current, head))) = 0)
                         status := c.lmx_graph_scan_add(@ data, @ nd, @ cd, (cast: (c.Lmx@) raw))
                     else:
                         status := c.lmx_graph_scan_add(@ expressions, @ ne, @ ce, (cast: (c.Lmx@) raw))
@@ -4185,7 +4185,7 @@ fn: lmx_graph_construct (c.LmxGraph@: g; c.Lmx@: root) int
     c.free((cast: (@) data))
     c.free((cast: (@) codes))
     c.free((cast: (@) expressions))
-    lmx_graph_space_close(opened)
+    lmx_graph_space_close(g, opened)
     return: status
 end: lmx_graph_construct
 
@@ -4208,7 +4208,7 @@ fn: lmx_graph_preflight (c.LmxGraph@: g; c.Lmx@: root) int
     if: status != 0 || opened = 0
         return: status
     status := lmx_graph_preflight_scope(g, root, root, 0, 0)
-    space := c.lmx_graph_space()
+    space := c.lmx_graph_space(g)
     while: status = 0
         while: i < space\count && status = 0
             row := space\rows + i
@@ -4228,7 +4228,7 @@ fn: lmx_graph_preflight (c.LmxGraph@: g; c.Lmx@: root) int
         status := lmx_graph_preflight_scope(g, made, c.lmx_graph_method_code(g, made), c.lmx_graph_method_data(g, made), c.lmx_graph_method_data(g, made))
     ---
     c.free((cast: (@) functions))
-    lmx_graph_space_close(opened)
+    lmx_graph_space_close(g, opened)
     return: status
 end: lmx_graph_preflight
 
@@ -5836,7 +5836,7 @@ fn: lmx_graph_run (c.LmxGraph@: g; c.Lmx@: root) int
         status := 5
     if: owned != 0
         status := lmx_graph_work_finish(g, @ frame, status)
-    lmx_graph_space_close(opened)
+    lmx_graph_space_close(g, opened)
     return: status
 end: lmx_graph_run
 
@@ -5865,7 +5865,7 @@ fn: lmx_graph_call (c.LmxGraph@: g; c.Lmx@: file) int
             c.lmx_activation_pop(g\arena, @ activation)
         ---
     ---
-    lmx_graph_space_close(opened)
+    lmx_graph_space_close(g, opened)
     return: status
 end: lmx_graph_call
 
@@ -5879,7 +5879,7 @@ end: lmx_graph_call
 # what is written alone, so a translation binds the record as the interpreter does. formals[i] the name of the formal
 # actual i gives -- args, data, return, code --: the caller's array, one per actual. 0; 4 without memory; 5 for no form.
 fn: lmx_graph_launch_formals (c.LmxGraph@: g; char@: head; c.Lmx@: expression; char@@: formals) int
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     char@: key head
     c.Lmx@: list 0
     c.Lmx@: chosen 0
@@ -5891,7 +5891,7 @@ fn: lmx_graph_launch_formals (c.LmxGraph@: g; char@: head; c.Lmx@: expression; c
         return: 5
     if: key = 0
         key := c.lmx_graph_intern("()", 2U)
-    list := (cast: (c.Lmx@) c.lmx_graph_space_find((cast: (c.Lmx@) space\root), key))
+    list := (cast: (c.Lmx@) c.lmx_graph_space_find(g, (cast: (c.Lmx@) space\root), key))
     if: c.lmx_graph_kind(g, (cast: (@) list)) != 4
         return: 5
     n := c.lmx_graph_count(expression)
@@ -5964,14 +5964,14 @@ fn: lmx_graph_call_candidates (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx
     out[0] := 0
     count[0] := 0U
     while: level != 0 && n = 0U
-        n := c.lmx_graph_space_count(level, name)
+        n := c.lmx_graph_space_count(g, level, name)
         # A callable holds its blocks: the names its code and its data declare are rows of those blocks.
         if: n = 0U && c.lmx_graph_method(g, level) != 0
             found := c.lmx_graph_method_code(g, level)
-            n := c.lmx_graph_space_count(found, name)
+            n := c.lmx_graph_space_count(g, found, name)
             if: n = 0U
                 found := c.lmx_graph_method_data(g, level)
-                n := c.lmx_graph_space_count(found, name)
+                n := c.lmx_graph_space_count(g, found, name)
             if: n != 0U
                 level := found
             ---
@@ -5984,7 +5984,7 @@ fn: lmx_graph_call_candidates (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx
     if: list = 0
         return: 4
     while: k < n
-        list[k] := (cast: (c.Lmx@) c.lmx_graph_space_nth(level, name, k))
+        list[k] := (cast: (c.Lmx@) c.lmx_graph_space_nth(g, level, name, k))
         k := k + 1U
     out[0] := list
     count[0] := n
@@ -6470,7 +6470,7 @@ fn: lmx_graph_field_structure (c.LmxGraph@: g; c.Lmx@: scope; @: field) int
 # in lmx_graph_pair_opened). 1 and opened[0] the Structure whose fields resolve another form; 0: the attempt is refused.
 fn: lmx_graph_receiver_opened (c.LmxGraph@: g; c.Lmx@: scope; char@: head; @: value; c.Lmx@@: opened) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     @: target void c.lmx_graph_target(g, value)
     c.Lmx@: structure 0
     c.Lmx@: list 0
@@ -6486,7 +6486,7 @@ fn: lmx_graph_receiver_opened (c.LmxGraph@: g; c.Lmx@: scope; char@: head; @: va
         return: 0
     structure := (cast: (c.Lmx@) target)
     n := c.lmx_graph_count(structure)
-    list := (cast: (c.Lmx@) c.lmx_graph_space_find((cast: (c.Lmx@) space\root), head))
+    list := (cast: (c.Lmx@) c.lmx_graph_space_find(g, (cast: (c.Lmx@) space\root), head))
     if: n = 0U || c.lmx_graph_kind(g, (cast: (@) list)) != 4
         return: 0
     bindings := (cast: (size_t@) c.calloc(n + 1U, sizeof(size_t)))
@@ -8456,9 +8456,9 @@ fn: lmx_graph_receivers_open (c.LmxGraph@: g; c.Lmx@: root) int
         status := lmx_graph_receiver_form(g, launches, 0U, w_launch, 0U, 0, 0, 0, 0, 0, 0)
     if: status = 0
         status := lmx_graph_receiver_form(g, launches, 1U, w_launch, 1U, w_data, 0, 0, 0, 0, 0)
-    if: status = 0 && (c.lmx_graph_space_put(root, w_fn, (cast: (@) fns)) != 0 || c.lmx_graph_space_put(root, w_sub, (cast: (@) subs)) != 0)
+    if: status = 0 && (c.lmx_graph_space_put(g, root, w_fn, (cast: (@) fns)) != 0 || c.lmx_graph_space_put(g, root, w_sub, (cast: (@) subs)) != 0)
         status := 1
-    if: status = 0 && (c.lmx_graph_space_put(root, w_call, (cast: (@) calls)) != 0 || c.lmx_graph_space_put(root, w_fncall, (cast: (@) fncalls)) != 0 || c.lmx_graph_space_put(root, w_launch, (cast: (@) launches)) != 0)
+    if: status = 0 && (c.lmx_graph_space_put(g, root, w_call, (cast: (@) calls)) != 0 || c.lmx_graph_space_put(g, root, w_fncall, (cast: (@) fncalls)) != 0 || c.lmx_graph_space_put(g, root, w_launch, (cast: (@) launches)) != 0)
         status := 1
     return: status
 end: lmx_graph_receivers_open
@@ -8771,7 +8771,7 @@ end: lmx_graph_receiver_form_of
 # 4 without memory; 5 for no form or a value its formal does not receive; the answer of an evaluation.
 fn: lmx_graph_receiver_bind (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: decl; int: evaluate; @@: values; c.Lmx@@: form) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     char@: head 0
     c.Lmx@: list 0
     c.Lmx@: chosen 0
@@ -8793,7 +8793,7 @@ fn: lmx_graph_receiver_bind (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: decl; int: e
     head := c.lmx_graph_name_of(g, (cast: (@) decl))
     if: head != state\w_fn && head != state\w_sub
         return: 5
-    list := (cast: (c.Lmx@) c.lmx_graph_space_find((cast: (c.Lmx@) space\root), head))
+    list := (cast: (c.Lmx@) c.lmx_graph_space_find(g, (cast: (c.Lmx@) space\root), head))
     if: c.lmx_graph_kind(g, (cast: (@) list)) != 4
         return: 5
     n := c.lmx_graph_count(decl)
@@ -9075,7 +9075,7 @@ fn: lmx_graph_space_declare (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: decl) int
     c.free((cast: (@) values))
     if: status != 0
         return: status
-    if: c.lmx_graph_space_put(scope, name, (cast: (@) made)) != 0
+    if: c.lmx_graph_space_put(g, scope, name, (cast: (@) made)) != 0
         return: 1
     return: lmx_graph_space_callable(g, made)
 end: lmx_graph_space_declare
@@ -9142,7 +9142,7 @@ end: lmx_graph_fn_part
 # a method in this traversal, a later launch reads that same data value.
 fn: lmx_graph_fn_apply (c.LmxGraph@: g; c.Lmx@: scope; size_t: index) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
-    c.LmxGraphSpace@: space c.lmx_graph_space()
+    c.LmxGraphSpace@: space c.lmx_graph_space(g)
     @@: values void 0
     c.Lmx@: decl 0
     c.Lmx@: form 0
@@ -9176,7 +9176,7 @@ fn: lmx_graph_fn_apply (c.LmxGraph@: g; c.Lmx@: scope; size_t: index) int
         return: 0
     # A written name is checked before any argument is evaluated.
     name := lmx_graph_fn_decl_name(g, decl)
-    if: name != 0 && c.lmx_graph_space_find(scope, name) != 0
+    if: name != 0 && c.lmx_graph_space_find(g, scope, name) != 0
         return: 4
     values := (cast: (@@) c.calloc(6U, sizeof(@)))
     if: values = 0
@@ -9187,9 +9187,9 @@ fn: lmx_graph_fn_apply (c.LmxGraph@: g; c.Lmx@: scope; size_t: index) int
     c.free((cast: (@) values))
     if: status != 0
         return: status
-    if: c.lmx_graph_space_find(scope, name) != 0
+    if: c.lmx_graph_space_find(g, scope, name) != 0
         return: 4
-    if: c.lmx_graph_space_put(scope, name, (cast: (@) made)) != 0
+    if: c.lmx_graph_space_put(g, scope, name, (cast: (@) made)) != 0
         return: 1
     # A new local name wins over the entry fallback immediately, including in
     # the next data initializer. No external value is sampled a second time.
@@ -9251,7 +9251,7 @@ fn: lmx_graph_space_open (c.LmxGraph@: g; c.Lmx@: root; int@: opened) int
     int: status 0
     if: g = 0 || root = 0 || opened = 0
         return: 5
-    opened[0] := c.lmx_graph_space_push(root)
+    opened[0] := c.lmx_graph_space_push(g, root)
     if: opened[0] < 0
         opened[0] := 0
         return: 1
@@ -9260,7 +9260,7 @@ fn: lmx_graph_space_open (c.LmxGraph@: g; c.Lmx@: root; int@: opened) int
         if: status = 0
             status := lmx_graph_space_declarations(g, root)
         if: status != 0
-            c.lmx_graph_space_pop(opened[0])
+            c.lmx_graph_space_pop(g, opened[0])
             opened[0] := 0
         ---
     ---
@@ -9268,8 +9268,8 @@ fn: lmx_graph_space_open (c.LmxGraph@: g; c.Lmx@: root; int@: opened) int
 end: lmx_graph_space_open
 
 # End the namespace lmx_graph_space_open began (opened: its answer in opened[0]); its rows are freed.
-sub: lmx_graph_space_close (int: opened)
-    c.lmx_graph_space_pop(opened)
+sub: lmx_graph_space_close (c.LmxGraph@: g; int: opened)
+    c.lmx_graph_space_pop(g, opened)
     return
 end: lmx_graph_space_close
 

@@ -17,7 +17,7 @@ fn: wd_number (@: g c.LmxGraph; @: record c.Lmx; @: name char; int: expected) in
     return: (cast: (int) (c.lmx_graph_value_int(g, wd_named(g, record, name), @ actual) != 0 || actual != expected))
 
 fn: wd_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
-    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: g c.LmxGraph arena\graph_metadata
     @: counter void 0
     @: observed c.Lmx 0
     @: source c.Lmx 0
@@ -108,7 +108,7 @@ fn: wd_description_gc_check () int
     if: arena\activation != 0 || arena\execution_roots != @ roots
         return: 88
     c.lmx_execution_roots_restore(@ arena, before)
-    c.lmx_graph_space_close(opened)
+    c.lmx_graph_space_close(g, opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     return: 7

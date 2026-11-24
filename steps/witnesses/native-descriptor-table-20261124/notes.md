@@ -1,26 +1,29 @@
-# W4 candidate witness: arena-owned native descriptor table
+# W4 witness: arena-owned native descriptor table
 
-This records the completed RT07/unit07 handoff step on 2026-11-24. The physical component remains a candidate;
-G1/G2 and final acceptance are pending. This document changes neither the norm nor the author journal.
-T is the tz-20261121 run directory; A = T/w4-accept-20261124/root01.
+The physical component was accepted on 2026-11-24. Section 7 gives the final generation and test receipts.
+T is the tz-20261121 run directory. A is T/w4-accept-20261124/root01.
 
 ## 0. Status
 
-The physical component is a CANDIDATE: PENDING until the G1/G2 generations; it is not accepted.
-The finished step is RT07 plus unit07: RT07 built (exit 0) and the unit `native_descriptor_storage`, with its new
+ACCEPTED AS A COMPONENT by the lead's verdict of 2026-11-24. See section 7.
+The earlier status of this document said CANDIDATE/PENDING until the G1/G2 generations; that wording and the
+handoff facts stay below as history: RT07 built (exit 0) and the unit `native_descriptor_storage`, with its new
 `nd_changed_leaf` check and the single-pool leaf lookup, passed 2 builds and 4 executions on it.
 Earlier, 12 of the 14 other targeted rows
 passed on an older runtime of the same family and two rows fail with their old reasons (section 4).
-The candidate handoff commit saves the 32 code and control paths (section 4). The accepted ABI boundary
-stays W3: the W3 host link must not be run on the W4 headers of S.
-Not run: G1/G2 generations, the final targeted15 on the final sources. The author has resumed goal v3
-with Sol 6.2 coordinating and coder GLM 5.4 implementing.
-The whole of W4 is OPEN, because the source-level `sys/native` is still blocked (section 1), and W5, M13, M14 and
-the rest of step 27.10 are open. The words "component accepted" are for the lead alone.
+The candidate handoff commit saves the 32 code and control paths (section 4); the saved candidate is already in
+main (23b8a1f35). The ABI boundary stays as built: the W3 host
+link must not be run on the W4 headers of S.
+NOT claimed and still OPEN: the whole of W4 — the language-level `sys/native` (section 1), the step 21.7
+result-call (K3/K4 zero-actual in work, a separate K2 for actuals), the real kernel constant-namespace export and
+current DATA — and W5, M13, M14 and the whole of step 27.10. The full suite was NOT run in W4 and is not claimed
+green; the six failures of the final targeted15 are the two known baseline rows with unchanged expectations
+(section 7).
 
 ## 1. Physical component versus the whole of W4
 
-PHYSICAL COMPONENT (what the saved sources implement; pending): one arena-owned call/native table that maps a
+PHYSICAL COMPONENT (what the saved sources implement; accepted by the lead 2026-11-24): one arena-owned
+call/native table that maps a
 selected executable occurrence (a code `Lmx`) to an ORDINARY native descriptor, with the descriptor data held as
 ordinary graph data, the `native` word removed from the `Lmx` header, and producers and consumers moved to it
 (next_core_tasks_v3.md, W4 candidate entry).
@@ -34,7 +37,7 @@ NOT IN THE COMPONENT, STILL OPEN (relayed by the lead from Astra 247; her text i
 - the new C API query and a test through the C door do NOT replace the source receiver. The C functions below
   are the physical door only.
 
-## 2. Representation, as read in the canonical private sources (read, not accepted)
+## 2. Representation in the published sources
 
 Table. `LmxArena.native_calls` is a `LmxNativeTable {rows, len, cap}` of `LmxNativeBinding {code, descriptor}`
 rows keyed by the code address. There is no second registry, cache or reverse map. A pending table of the same
@@ -101,7 +104,7 @@ inputs matched the archived W3 hashes before mutation, the regenerated emit body
 from the reuse set, and the strict reuse manifest has 377 files (the first manifest of 378 also had
 `l2_frontend_lower.lm1`).
 
-## 4. Receipts so far (A; exit codes and logged lines only, no acceptance)
+## 4. Receipts so far (A; exit codes and logged lines only; pre-acceptance, final results in section 7)
 
 Seed chain (W3 ABI):
 - seedTool01: exit 0, 47 s (07:48:26 to 07:49:13); log ends `l2_eternal_driver: 42 checks, 0 roots`.
@@ -257,7 +260,14 @@ Tool tool01 (tool01.log): `lmxtool-tool.exe` `995854b6dca958fbaa187b11f94825f861
 `lmxtool.lm1` `ae5b99cd104c49e3c5625ac12f21e57b97bba48ec0f0043e832874f36512603f`;
 `lmxtool.c` `ea48a06e87058f3165c1bdac8a129b5ff1a21490676ed54cc5f00c2f71e88f9a`.
 
-## 6. What the final witness still needs (all pending)
+## 6. Pre-acceptance checklist
+
+Status 2026-11-24: items 2, 3, 5 and 6 are resolved by section 7 — the final targeted15 ran on the final sources
+with the old expectations, the G1/G2 generations ran with artifact comparisons, the sys/native sentence and the
+open steps are stated from the lead's verdict, and the saved candidate is identified in main (23b8a1f35).
+Item 4 is answered on built programs by the observed-walk receipt (section 7): the native touch installs and the
+walked body shows the expected presence/absence per mode; the scanner hunk and the emitted L1 text themselves
+remain source-level facts of the generation receipts. The list below is kept as written.
 
 1. Reconfirm the frozen sources and candidate commit before continuation; do not link W3 host objects to W4 headers.
 2. The final targeted15 on the final sources (the targeted run predates RT07 and the changed unit), with the old
@@ -270,3 +280,57 @@ Tool tool01 (tool01.log): `lmxtool-tool.exe` `995854b6dca958fbaa187b11f94825f861
    that this unit shows no raw `Array`, M14 or `sys` query claim; plus the other open steps (W5, M13, M14, 27.10,
    the 32-bit ABI) from the lead's wording at that time.
 6. Identify the saved candidate with git log -- to_sol.md; publication is not final ABI acceptance.
+
+## 7. Final generations and acceptance (2026-11-24)
+
+The physical W4 component was accepted from the sources in `23b8a1f3509c2e5beab08b69bb61c12db50adbb8`.
+The next dependency is ordinary result calls in 21.7. K3/K4 starts with calls without actual arguments,
+and K2 will pass actual arguments into the same mechanism. The language receiver `sys/native` still needs
+the kernel constant export and caller DATA. W4 as a whole, W5, M13, M14 and step 27.10 remain open.
+
+All 19 records were reverified after the final checks in `A/final-g2-verified-records.log`.
+
+| Stage | Exit | Hashes verified | Build or check |
+| --- | --- | --- | --- |
+| RT07 / G1 runtime | 0 | 154 | Production and observed objects |
+| G1 frontend | 0 | 135 | 10:18:28–10:30:43 |
+| G1 tool | 0 | 54 | 10:30:55–10:31:46 |
+| G2 runtime | 0 | 154 | 10:33:01–10:35:09 |
+| G2 frontend | 0 | 135 | 10:35:39–10:43:05 |
+| G2 tool | 0 | 54 | 10:43:13–10:44:04 |
+| G1 and G2 smoke | 0 each | 204 each | 11 rows and 63 PASS lines per generation |
+| G2 targeted15 | 1 | 370 | 28 builds and 52 executions pass, 6 baseline failures |
+| G2 Graph | 0 | 54 | 10:46:56–10:47:18 |
+| G2 graph-check, 8 cases | 0 each | 25 each | 24 PASS routes across interp, native and forced |
+| G2 observed walk | 0 | 37 | 16 PASS checks, including 2 builds and 8 executions |
+
+`A/final-g2-fixedpoint.log` contains five successful SAME checks (`lmxtool.lm1`, `lmxtool.c`, `l2_libc.o`,
+`driver.o`, `driver-observe.o`) and three EXE-SAME checks (tool, frontend and backend).
+`A/g2-stage-archive.log` verifies 1688 inputs in both R/selfbuild and S. The G1 and G2 generated manifests
+agree on all 383 files. The preserved copy is `A/g2-stage-generated`. Its manifest SHA-256 is
+`2f687a43fc88a85bd324f599b5257e6f9829ed1d3ee5158726af0d7898c0cfcd`.
+
+The six failures in `A/final-g2-targeted15.log` reproduce two known baseline rows with unchanged expectations.
+
+- `graph_call_frames`, native and forced on both roots. Case 122 returns status 0 and value 5, expected 9.
+  The child exits 122 instead of 7. Its logs are under `A/final-g2-targeted15/graph_call_frames-<mode>`.
+- `immutable_reached_write`, both L2 builds. Line 136:10 refuses the opaque C operand beside a runtime-typed
+  value. The child diagnostics and `A/baseline-w3-immutable01.log` give the same refusal.
+
+The eight Graph rows in `A/w4-final-graph-cases.tsv` use the prior expectations. In all three `r0_exit_text`
+routes, output and error text follow `GRAPH-AFTER-END`. The observed walk of `index_numeric_receive` confirms
+an emitted native installation and zero walked bodies for `touch` in native mode. Forced mode walks it once
+per root with no installation. See `A/final-g2-observed-walk.log` and its native/forced `p.lm1` files.
+
+The full suite was not run for W4.
+
+## 8. Paired useplan control (2026-11-24)
+
+The samples in `A/perf-useplan-abba-02/samples.jsonl` ran in the order A, B, B, A.
+Both sides used the same source paths and byte pins, each with an ABI-consistent working directory.
+Side A is the W3 frontend (exe `6db05100…`, cwd `baseline-w3-immutable-stage/src`), side B the W4 FEH01
+(exe `11d9e810…`, cwd `g1-stage-generated/src`). W3 took 4.617 and 4.968 s, with a median of 4.793 s.
+W4 took 4.716 and 4.945 s, with a median of 4.830 s. All four samples exited 0 and matched the recorded header
+and L1 outputs. The historical twofold difference for useplan did not recur in this sample. The earlier cause and
+total frontend time remain open. The first attempt used a different source path and produced a different type
+prefix. The paired run kept the recorded source path.

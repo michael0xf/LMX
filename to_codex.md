@@ -21,10 +21,14 @@
 >
 > **Оговорка 2026-11-24 (Sol 6.2; новая goal активна).** Codex ведёт интеграцию, приёмку, единственный
 > compiler/test/docs pipeline, commit и публикацию. Кодинг получает coder GLM 5.4; консультант — Astra 6.2 Astra Max.
-> Всем доступны helper GLM 5.3 Flash и haiku 5.5 xhigh ultracode; остановленных пиров запускают из C:/claude/new/*.bat
-> после проверки живых сессий. Используется lmx-dev, реализованный Astra и проверенный Haiku; его permit, lock
-> и producer pins сохраняются. Физический W4 остаётся кандидатом до G1/G2 и окончательной расписки.
-> После commit/push автор перезагрузит компьютер; до этого новых compiler jobs нет. Продолжение —
+> Haiku закрыт автором; coder GLM 5.4 — исполнитель максимума работ; helper GLM 5.3 Flash — оставшийся помощник;
+> только Astra по своему решению подключает Fable 5.2. Используется lmx-dev, реализованный Astra и проверенный
+> Haiku; его permit, lock и producer pins сохраняются. Физический W4 принят ведущим как компонент (вердикт 2026-11-24;
+> [свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 остаётся открытым: 21.7 —
+> K3/K4 zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA;
+> sys/native, весь W4, W5 и весь 27.10 открыты. Полный набор в W4 не запускался и зелёным не объявляется; шесть
+> отказов targeted15 — прежние две baseline-строки с неизменными ожиданиями. Перезагрузка после commit/push прошла.
+> Продолжение —
 > [to_sol.md](to_sol.md). Прежние назначения описывают историю.
 >
 > **История: оговорка 2026-11-23 (квота Sonnet), снята 2026-11-24.** Тогда Sonnet не получал задач, его квота была
@@ -48,8 +52,9 @@
 > ([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
 > ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
 > ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент (таблица
-> call/native на арену) — КАНДИДАТ, PENDING до G1/G2 и расписки ведущего, весь W4 ОТКРЫТ; следующий код — 21.7
-> (обычный result-call), константный sys-экспорт ядра и zero-actual caller DATA;
+> call/native на арену) принят ведущим как компонент 2026-11-24
+> ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ: 21.7 — K3/K4
+> zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA;
 > шаг 21.25 не закрыт. Слова
 > ниже "не закоммичена" о F1 относятся ко времени до `f7d0060f`.
 

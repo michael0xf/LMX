@@ -1349,8 +1349,11 @@ fn: lm_compiler_emit_primitive_profile (const: (char@: in_path); const: (char@: 
     return: 0
 end: lm_compiler_emit_primitive_profile
 
-# Both modes share parsing and source tables. A profile projection stops before translating program bodies.
-fn: lm_compiler_translate_mode (const: (char@: in_path); const: (char@: out_path); int: primitive_profile) int
+# Both modes share parsing and source tables. A profile projection stops before translating program bodies. With
+# check_only the translation stops where the common semantic analysis ends (the hosted CHECK of a source,
+# `--check-only`): that analysis runs as a translation begins with it, the rules of a machine module run by the same
+# predicate and routine its output begins with, and nothing is written: no COUNT, no emission.
+fn: lm_compiler_translate_mode (const: (char@: in_path); const: (char@: out_path); int: primitive_profile; int: check_only) int
     int@: alloc_err_cell (cast: (int@) (@ c.l2_alloc_err))
     int@: diag_n_cell (cast: (int@) (@ c.l2_diag_n))
     c.LmP0Node@@: here_node_cell (cast: (c.LmP0Node@@) (@ c.l2_here_node))
@@ -1517,6 +1520,25 @@ fn: lm_compiler_translate_mode (const: (char@: in_path); const: (char@: out_path
         lm_compiler_emit_doc_destroy((cast: (c.LmP0Document@) (document)))
         tok_cell[0] := 0
         return: (cast: (int) (1))
+    # The check alone: the common semantic analysis ran. A machine module's own rules are checked where its output
+    # begins (lm_compiler_emit_machine_module): the same predicate and the same routine, here before any publication;
+    # no file is opened, nothing of the backend runs.
+    if: check_only != 0
+        status := 0
+        if: c.lm_compiler_machine_module() != 0 && c.lm_compiler_machine_validate() != 0
+            status := 1
+        ---
+        if: alloc_err_cell[0] != 0 && diag_n_cell[0] = 0
+            c.lm_compiler_alloc_or(in_path, here_node_cell[0], "translation failed")
+        # Drop compiler-owned shells while their borrowed source is still live:
+        # the procedures' bodies, then the binding's projections.
+        c.lm_compiler_ns_procs_free()
+        c.lm_compiler_ns_def_free()
+        c.lm_compiler_bound_free()
+        lm_compiler_emit_doc_destroy((cast: (c.LmP0Document@) (document)))
+        tok_cell[0] := 0
+        return: (cast: (int) status)
+    ---
     # A conversion's receiver is a method of the program from the start (Q33; §8): one translation, where a
     # receiver an edge noted was once taken by translating the source again.
     # A failed allocation the emission has said where it stood is not said again here (ALLOC-FAILURE-SAID-TWICE):
@@ -1568,7 +1590,7 @@ end: lm_compiler_translate_mode
 
 # The established translation API keeps its normal program mode.
 fn: lm_compiler_translate (const: (char@: in_path); const: (char@: out_path)) int
-    return: lm_compiler_translate_mode(in_path, out_path, 0)
+    return: lm_compiler_translate_mode(in_path, out_path, 0, 0)
 end: lm_compiler_translate
 
 # Original: l2src/l2trans.lm1:4875
@@ -18779,20 +18801,20 @@ fn: lm_compiler_emit_unit (const: (char@: out_path)) int
 end: lm_compiler_emit_unit
 
 # Original: l2src/l2trans.lm1:38474
-fn: lm_compiler_translate_program_mode (const: (char@: in_path); const: (char@: out_path); int: primitive_profile) int
+fn: lm_compiler_translate_program_mode (const: (char@: in_path); const: (char@: out_path); int: primitive_profile; int: check_only) int
     int@: os_select_cell (cast: (int@) (@ c.l2_os_select))
     int@: os_mask_cell (cast: (int@) (@ c.l2_os_mask))
     int: r
     os_select_cell[0] := 0
     os_mask_cell[0] := 0
-    r := lm_compiler_translate_mode(in_path, out_path, primitive_profile)
+    r := lm_compiler_translate_mode(in_path, out_path, primitive_profile, check_only)
     os_select_cell[0] := 0
     lm_compiler_snap_free()
     return: (cast: (int) (r))
 end: lm_compiler_translate_program_mode
 
 fn: lm_compiler_translate_program (const: (char@: in_path); const: (char@: out_path)) int
-    return: lm_compiler_translate_program_mode(in_path, out_path, 0)
+    return: lm_compiler_translate_program_mode(in_path, out_path, 0, 0)
 end: lm_compiler_translate_program
 
 # Original: l2src/l2trans.lm1:38484
@@ -18821,6 +18843,8 @@ fn: lm_compiler_cli_main (int: argc; char@@: argv) int
     int: r
     int: a 1
     int: primitive_profile 0
+    int: check_only 0
+    int: snap_touch_given 0
     c.FILE@: af
     const: (char@: lg)
     const: (char@: rt)
@@ -18876,10 +18900,28 @@ fn: lm_compiler_cli_main (int: argc; char@@: argv) int
     # The snapshot's test flag (l2_snap_touch): `--snap-touch FILE`.
     if: argc >= a + 4 && c.strcmp(argv[a], "--snap-touch") = 0
         snap_touch_cell[0] := c.atoi(argv[a + 1])
+        snap_touch_given := 1
         a := a + 2
     ---
-    if: argc < a + 2
+    # The check alone (the hosted CHECK of a source): the last option word, right before the source, and no output.
+    # The context is taken as a translation takes it --library with --construct or --machine, --provider, the parts
+    # after the source--; what asks for an output, a projection, walking or test instrumentation is refused below.
+    if: argc >= a + 1 && c.strcmp(argv[a], "--check-only") = 0
+        check_only := 1
+        a := a + 1
+    ---
+    if: check_only != 0 && argc < a + 1
+        c.fputs("usage: l2trans.exe [--library (--construct NAME | --machine NAME ...)] [--provider NAME ...] --check-only <source.lm2> [<part.lm2> ...]\n", c.l1_stderr())
+        return: (cast: (int) (1))
+    if: argc < a + 2 - check_only
         c.fputs("usage: l2trans.exe [--primitive-profile | --walk-methods] [--library (--construct NAME | --machine NAME ... [--header FILE])] [--provider NAME ...] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.l1_stderr())
+        return: (cast: (int) (1))
+    if: check_only != 0 && (primitive_profile != 0 || walk_methods_cell[0] != 0 || header_path_cell[0] != 0 || snap_touch_given != 0)
+        c.fputs("l2trans error: --check-only checks a source and writes nothing: it takes neither --primitive-profile, --walk-methods, --header nor --snap-touch\n", c.l1_stderr())
+        return: (cast: (int) (1))
+    # Nor an environment that asks the translator for a file or for a fault: the check writes nothing and injects nothing.
+    if: check_only != 0 && (c.getenv("L2_ALLOC_TRACE") != 0 || c.getenv("L2_ALLOC_LOG") != 0 || c.getenv("L2_COLON_WRITES") != 0 || c.getenv("L2_EXPR_PLACES_OUT") != 0 || c.getenv("L2_PATH_FACTS") != 0 || c.getenv("L2_FAIL_MALLOC") != 0)
+        c.fputs("l2trans error: --check-only writes nothing and injects nothing: unset L2_ALLOC_TRACE, L2_ALLOC_LOG, L2_COLON_WRITES, L2_EXPR_PLACES_OUT, L2_PATH_FACTS and L2_FAIL_MALLOC\n", c.l1_stderr())
         return: (cast: (int) (1))
     if: primitive_profile != 0 && (library_flag_cell[0] != 0 || walk_methods_cell[0] != 0 || provider_n_cell[0] != 0 || machine_n_cell[0] != 0 || header_path_cell[0] != 0)
         c.fputs("l2trans error: --primitive-profile projects source data, without program/library options\n", c.l1_stderr())
@@ -18927,7 +18969,7 @@ fn: lm_compiler_cli_main (int: argc; char@@: argv) int
     # The program (steps/table-receiver.md §8, Q46): the source, the files named after it -- its parts --
     # and the output last.
     part_path_cell[0] := argv + a + 1
-    part_n_cell[0] := argc - a - 2
+    part_n_cell[0] := argc - a - 2 + check_only
     # The target another than the translator's own (lm_compiler_os_target): its word is `win` or `default`.
     const: (char@: os_asked c.getenv("L2_OS_TARGET"))
     if: os_asked != 0 && c.strcmp(os_asked, "win") != 0 && c.strcmp(os_asked, "default") != 0
@@ -18940,7 +18982,12 @@ fn: lm_compiler_cli_main (int: argc; char@@: argv) int
         fail_left_cell[0] := c.atoi(c.getenv("L2_FAIL_MALLOC"))
     if: c.getenv("L2_ALLOC_TRACE") != 0
         alloc_trace_cell[0] := c.fopen(c.getenv("L2_ALLOC_TRACE"), "wb")
-    r := lm_compiler_translate_program_mode(argv[a], argv[argc - 1], primitive_profile)
+    if: check_only != 0
+        # A check has no output: the last word is the source or one of its parts.
+        r := lm_compiler_translate_program_mode(argv[a], 0, primitive_profile, 1)
+    else:
+        r := lm_compiler_translate_program_mode(argv[a], argv[argc - 1], primitive_profile, 0)
+    ---
     # A failure that printed no located diagnostic is still a failure the
     # user must see; a silent exit 1 names nothing to fix.  It is an invariant break of the
     # translator (D-112): every refusal says where and why -- this line names the step that did
@@ -18954,7 +19001,9 @@ fn: lm_compiler_cli_main (int: argc; char@@: argv) int
     # No place does that today; this names the step that would, removes its output and exits 3.
     if: r = 0 && diag_n_cell[0] != 0
         c.fprintf(c.l1_stderr(), "l2trans error: %s: internal: a diagnostic was said and the translation went on\n", argv[a])
-        c.remove(argv[argc - 1])
+        # A check wrote nothing, and its last word is the source or a part: never removed.
+        if: check_only = 0
+            c.remove(argv[argc - 1])
         r := 3
     c.lm_compiler_release()
     if: alloc_trace_cell[0] != 0

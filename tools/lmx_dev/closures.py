@@ -23,12 +23,14 @@ DEFAULT_CLOSURE = "accepted"
 ROLES = ("accepted", "candidate")
 CHECK_PREFIX = "check:"
 # The variable of the accepted template that is the producer (argv[0]) of a check phase.
-PRODUCERS = {"check:syntax": "graph", "check:translate": "fe"}
+PRODUCERS = {"check:syntax": "graph", "check:translate": "fe", "check:static": "fe"}
+# The optional phase a bundle declares itself: its fe producer offers the --check-only word (hosted-check-v1).
+STATIC = "check:static"
 MANIFESTS = ("stageManifest", "pinsManifest")
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 MANIFEST_LINE = re.compile(r"^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$")
 HASHED = ("closureName", "closureRole", "acceptedRevision", "description", "variables", "pins", "stage",
-          "stageManifest", "pinsManifest", "environment", "operations")
+          "stageManifest", "pinsManifest", "environment", "operations", "static")
 LISTED = 5
 
 
@@ -56,6 +58,8 @@ def key(path) -> str:
 
 def validate(config: dict) -> None:
     """The shape of ``closures``; what a single closure needs is asked when it is selected."""
+    if "static" in config and not isinstance(config["static"], bool):
+        raise Malformed("static must be true or false: it declares that the accepted fe producer offers --check-only")
     registered = config.get("closures")
     if registered is None:
         return
@@ -68,6 +72,8 @@ def validate(config: dict) -> None:
             raise Malformed(f"closures: {DEFAULT_CLOSURE!r} names the flat accepted bundle and is not registered")
         if not isinstance(closure, dict):
             raise Malformed(f"closures.{name}: a closure is an object")
+        if "static" in closure and not isinstance(closure["static"], bool):
+            raise Malformed(f"closures.{name}: static must be true or false")
 
 
 def merge(pins: dict, entries: dict, origin: str) -> dict:
@@ -113,6 +119,8 @@ def digest(effective: dict) -> str:
         value = effective.get(name)
         if name == "operations":
             value = {op: spec for op, spec in (value or {}).items() if op.startswith(CHECK_PREFIX)}
+        if name == "static" and value is None:
+            continue  # a bundle that declares no static phase keeps the hash it had before the phase existed
         if isinstance(value, dict):
             value = {str(k): value[k] for k in sorted(value)}
         material[name] = value
@@ -138,6 +146,12 @@ def select(config: dict, name: str = "") -> dict:
     for field in ("description", "acceptedRevision", "variables", "stage"):
         if field in closure:
             effective[field] = closure[field]
+    # Nor the static phase: the closure declares it for its own fe producer; undeclared, none is inherited and its
+    # content hashes as it did before the phase existed.
+    if closure.get("static") is True:
+        effective["static"] = True
+    else:
+        effective.pop("static", None)
     # A named bundle inherits no producer and no stage from the accepted one: it declares them.
     variables = effective.get("variables")
     if not isinstance(variables, dict) or any(not isinstance(variables.get(p), str) or not variables[p] for p in PRODUCERS.values()):
@@ -165,6 +179,9 @@ def require(operation: str, effective: dict) -> None:
     """Only the check phases run on a registered closure; the accepted bundle serves every operation."""
     if effective["closureName"] != DEFAULT_CLOSURE and not operation.startswith(CHECK_PREFIX):
         raise Refused(f"Operation {operation} runs on the accepted closure only, not on {effective['closureName']!r}.")
+    if operation == STATIC and effective.get("static") is not True:
+        raise Refused(f"Operation {operation} is not declared for closure {effective['closureName']!r}: a bundle offers it "
+                      "only by declaring \"static\": true for an fe producer that has the --check-only word.")
 
 
 def admit(permit: dict, effective: dict) -> None:
@@ -285,7 +302,8 @@ def listing(config: dict, permit: dict | None) -> dict:
             effective = select(config, "" if name == DEFAULT_CLOSURE else name)
             item = {"role": effective["closureRole"], "default": name == DEFAULT_CLOSURE,
                     "effectiveHash": effective["effectiveHash"],
-                    "operations": [op for op in config.get("operations", {}) if op.startswith(CHECK_PREFIX)]}
+                    "operations": [op for op in config.get("operations", {}) if op.startswith(CHECK_PREFIX)],
+                    "static": effective.get("static") is True}
             if name != DEFAULT_CLOSURE:
                 item["producers"] = {p: effective["variables"][p] for p in PRODUCERS.values()}
                 item["stage"] = {"root": str(effective["stage"]), "manifest": str(effective["stageManifest"])}

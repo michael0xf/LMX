@@ -52,7 +52,7 @@ def main() -> int:
     check.add_argument("file")
     check.add_argument("--phase", choices=["syntax", "static", "translate"], default="syntax")
     check.add_argument("--closure", default="",
-                       help="Registered producer closure for syntax/translate (name only); default: the accepted bundle")
+                       help="Registered producer closure for syntax/translate/static (name only); default: the accepted bundle")
     bootstrap = sub.add_parser("bootstrap")
     bootstrap.add_argument("profile", choices=["smoke", "selfHost"], default="smoke", nargs="?")
     permit = sub.add_parser("permit", help="Lead only: admit compiler jobs after releasing the shared pipeline")

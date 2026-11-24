@@ -46,7 +46,7 @@ def accepted_w3(root: Path, output: Path) -> dict:
                 "achieved_phase": "P0 syntax"
             },
             "check:static": {
-                "unavailable": "The accepted frontend has no standalone normative sys-check/static CLI. Graph check is build/preflight only; translate is a different phase."
+                "unavailable": "This accepted W3 frontend has no --check-only word (it predates the hosted L2 CHECK phase). check:static is wired only for a bundle that declares \"static\": true for a frontend that has the word; it is not the normative sys-check."
             },
             "check:translate": {
                 "description": "Accepted frontend translates L2 to L1 (includes its CHECK), without executing the target program. Not sys\\translate.",

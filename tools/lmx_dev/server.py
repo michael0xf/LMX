@@ -37,10 +37,13 @@ def create_server(index: SpecIndex, runner: Runner) -> FastMCP:
                          closure: str = "") -> dict:
         """Check one project file without running its body/tests. Needs an open compiler window.
 
-        Static is unavailable until a real static CLI exists. Logs/receipts go to a fresh run directory.
-        `closure` selects a registered producer closure for syntax/translate by NAME only (never a path or a
-        command); empty is the accepted bundle. An unknown, unadmitted or changed closure is refused before any
-        process starts. This tool never opens the window.
+        syntax: P0 parse only. translate: .lm2 to L1 by the accepted frontend.
+        static: the common semantic analysis of one .lm2 source in program context, before the backend's COUNT and
+        emission: no L1, no C, nothing executed;
+        not the normative sys\\check; no library or machine context. Only where the selected bundle declares it, else
+        unavailable/notRun. Logs/receipts go to a fresh run directory. `closure` selects a registered producer closure by
+        NAME only (never a path or a command); empty is the accepted bundle. An unknown, unadmitted, undeclared or
+        changed closure is refused before any process starts. This tool never opens the window.
         """
         return await run("check:" + phase, file, closure)
 

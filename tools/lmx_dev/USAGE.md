@@ -36,8 +36,15 @@
 - `check_file(file, phase="syntax")` — только P0-разбор, без выполнения программы.
 - `check_file(file, phase="translate")` — перевод `.lm2` в L1 принятым FE;
   внутри есть его CHECK. Это не реализация нормативного `sys\translate`.
-- `check_file(file, phase="static")` сейчас возвращает `unavailable/notRun`:
-  отдельного нормативного CLI `sys\check` нет. Не выдавай перевод за этот этап.
+- `check_file(file, phase="static", closure="")` — hosted L2 CHECK одного `.lm2`
+  исходника в контексте программы: разбор P0 и общий семантический анализ FE
+  до backend COUNT и выдачи (имена, типы, вызовы, providers). Backend COUNT и
+  выдача не выполняются: без L1, без C, без исполнения. Это **не** нормативный
+  `sys\check`/`sys\checkL3`; контекст библиотеки (`--library --machine`) фаза не
+  передаёт. Работает только там, где выбранная связка сама объявила фазу
+  (`"static": true` для FE со словом `--check-only`); иначе `unavailable/notRun`.
+  Для местной связки `hosted-static-21-7` укажи её имя. Фиксированные части
+  `convert.lm2` и `primitive.lm2` уже закреплены в её стадии.
 - `bootstrap(profile="smoke")` запускает компонентный suite10 и исполняет его
   программы. Это не самосборка поколений.
 - `bootstrap(profile="selfHost")` — **полная G1/G2**, full-suite и штатные
@@ -69,8 +76,8 @@ producers, stage и pins. Нельзя смешивать W3 runtime с W4 heade
 - MCP: `check_file(file, phase="syntax", closure="return-at-graph05")`
 - CLI: `… entry.py check path/to/file.lm2 --phase syntax --closure return-at-graph05`
 
-Имена связок, их роли и допуск текущим permit показывает `service_status()` →
-`closures`. Инструмент не принимает путь, команду или argv и не открывает permit.
+Имена связок, их роли, объявление `static` и допуск текущим permit показывает
+`service_status()` → `closures`. Инструмент не принимает путь, команду или argv и не открывает permit.
 Неизвестное имя, имя без допуска, изменённый producer или стадия отвечают
 `unavailable/notRun` **до запуска процесса**: это не вердикт о файле. В отчёте
 называй `closure.name`, `closure.role` и `closure.effectiveHash` из ответа.
@@ -96,6 +103,7 @@ $lmxDevEntry = 'C:/Nyasha_Planet/LMX/tools/lmx_dev/entry.py'
 & $lmxDevPython $lmxDevEntry spec R0
 & $lmxDevPython $lmxDevEntry status
 & $lmxDevPython $lmxDevEntry check path/to/file.lm2 --phase syntax
+& $lmxDevPython $lmxDevEntry check path/to/file.lm2 --phase static --closure NAME
 ```
 
 CLI применяет ту же блокировку, permit и адаптеры. Это не обход политики.

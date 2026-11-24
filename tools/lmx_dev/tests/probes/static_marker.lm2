@@ -1,0 +1,16 @@
+# A valid program: launched, it writes the marker file in its working directory, says so and exits 7. A check of the
+# source runs nothing: after it the marker is absent and the log holds the driver's done line alone.
+include: "<stdio.h>"
+
+fn: run () int
+    @: marker c.FILE c.fopen("lmx-dev-static-marker.txt", "wb")
+    if: marker = 0
+        return: 80
+    c.fputs("the program ran\n", marker)
+    c.fclose(marker)
+    c.printf("lmx-dev-static-ran\n")
+    return: 7
+end: run
+
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

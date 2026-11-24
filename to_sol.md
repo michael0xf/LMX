@@ -117,17 +117,18 @@ Smoke G1 и G2 прошёл по 11 строк. Graph G2 прошёл 8 случ
 
 ### Продолжение проекта
 
-1. Сверь HEAD/origin/main, goal, рабочее дерево и pipeline. Прочти W4 witness и текущую очередь v3.
-   Текущий W4 G2 уже принят. Сохрани все чужие изменения.
-2. Проверь пакет coder `CODEX-CODER-21-7-STRUCTURAL-RESULT-20261124-265` из
-   `T/w21-7-structural-result-coder`. Его граница согласована в сообщении 269.
-   Это K3 и нужная часть K4 для `C()`, `call(C)` и `call(code := C)`: действительный parent(C),
-   единый frame/execution/result и настоящие typed results. Проверить Graph interpreter, GraphTool и hosted frontend.
-3. Следующий отдельный пакет coder — K2: `C(args)` и `call(A C)` передают принятые actuals в тот же механизм.
+1. Сверь HEAD/origin/main, goal, рабочее дерево и pipeline. Сохрани чужие изменения. Прочти
+   [свидетельство первого компонента 21.7](steps/witnesses/structural-result-20261124/notes.md) и очередь v3.
+   Актуальные Tool, Runtime, Frontend и Graph G2 перечислены в нём. W4 выше сохраняется как прежняя база.
+2. Закончи `lmx-dev` hosted L2 CHECK по пакету coder 338. Реальные пробы: корректный файл, ошибка CHECK,
+   отсутствие запуска программы и вывода L1, прежний результат `translate`. Kernel `sys\check` открыт отдельно.
+3. Продолжи K4 с реальным исполнением нативного вызывающего кода Graph и отдельным hosted-свидетельством.
+   Проверяй тот же полный Value и ровно одно выполнение вызова. K3 с вложенным результатом-Structure остаётся открыт.
+4. Отдельный пакет coder — K2: `C(args)` и `call(A C)` передают принятые actuals в тот же механизм.
    Текущие старые формы с подменой DATA и критерии их удаления описать явно.
-4. Затем общий kernel constant export и `sys/native`: обычный путь, существующий дескриптор или 0,
+5. Затем общий kernel constant export и `sys/native`: обычный путь, существующий дескриптор или 0,
    форма без actual в исходном caller context. Используй консультацию Astra 247.
-5. Принимай, коммить и публикуй закрытые срезы. Продолжай полный next_core_tasks_v3.md с его зависимостями.
+6. Принимай, коммить и публикуй закрытые срезы. Продолжай полный next_core_tasks_v3.md с его зависимостями.
 
 Официальные команды: build-runtime, build-frontend-host, build-self, build-graph, suite, graph-check,
 manifest, verify, stage-copy, verify-record, same, exe-same. Hosted prefix: 0 entry 0 --.

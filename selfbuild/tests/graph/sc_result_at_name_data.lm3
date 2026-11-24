@@ -1,0 +1,16 @@
+# Entry Main: the exact name @ in the record `return` of data is not the contract of a reference (the book
+# #return-in-data). The record is read by its form: the WORD of a name describes no result, as the record of the written
+# `return: @` alone is the reference. A call in a value context over that data answers 5 before any effect: C does not
+# run, D\seen 0, r 0.
+int: r 0
+D:
+    int: seen 0
+    return: `@`
+    C:
+        node\seen := 1
+        return: 7
+    end: C
+end: D
+---
+Main:
+    node\r := D\C()

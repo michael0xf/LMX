@@ -1,0 +1,13 @@
+# Entry Main: a typed result that the int projection cannot carry (step 21.7 K3). The data of C describes `return: size_t`.
+# n is a size_t place of that data holding 3000000000, beyond int; the body returns node\n (node in C is D), a value
+# already of type size_t; the size_t place r receives it. A result narrowed to int or read as an int would not give this
+# value. Spellings as in literal_typed_spellings (`size_t: m 0U`).
+size_t: r 0U
+D:
+    size_t: n 3000000000U
+    return: size_t
+    C:
+        return: node\n
+---
+Main:
+    node\r := D\C()

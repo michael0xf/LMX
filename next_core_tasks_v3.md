@@ -18,8 +18,9 @@ compiler/test/docs pipeline, commit и публикацию. Кодинг пол
 Haiku закрыт автором; coder GLM 5.4 — исполнитель максимума работ; helper GLM 5.3 Flash — оставшийся помощник;
 только Astra по своему решению подключает Fable 5.2. Используется lmx-dev, реализованный Astra и проверенный Haiku;
 его permit, lock и producer pins сохраняются. Физический W4 принят ведущим как компонент (вердикт 2026-11-24;
-[свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 остаётся открытым: 21.7 —
-K3/K4 zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA;
+[свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 остаётся открытым. В 21.7
+принят [компонент результата Graph без actuals](steps/witnesses/structural-result-20261124/notes.md).
+Дальше: оставшиеся K3/K4, отдельный K2, действительный kernel sys export и current DATA;
 sys/native, весь W4, W5 и весь 27.10 открыты. Полный набор в W4 не запускался и зелёным не объявляется; шесть
 отказов targeted15 — прежние две baseline-строки с неизменными ожиданиями. Перезагрузка после commit/push прошла.
 Продолжение —
@@ -53,8 +54,8 @@ sys/native, весь W4, W5 и весь 27.10 открыты. Полный на�
    ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
    ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент (одна
    таблица call/native на арену) принят ведущим как компонент 2026-11-24
-   ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ: 21.7 — K3/K4
-   zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA;
+   ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ. В 21.7 принят узкий
+   [компонент Graph](steps/witnesses/structural-result-20261124/notes.md). Открыты оставшиеся K3/K4, K2 и sys export;
    sys/native, W5 и весь 27.10 открыты; полный набор в W4 не запускался.
    Весь 27.17, Graph dense Array, descriptor/index, 32-битный ABI и общий шаг 21.25 остаются открыты.
    Индексный компонент опубликован коммитом `6d4ad9384b20e9524ec3fabe208cfa18d9e67177`.
@@ -191,8 +192,8 @@ Full-suite нужен при широком влиянии, общей регр�
   с прежним .expected (expected не менялись). W2 принят как компонент; W3 принят как компонент
   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4–W5 и весь 27.10 ОТКРЫТЫ;
   W4: физический компонент принят ведущим как компонент 2026-11-24
-  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ: 21.7 — K3/K4
-  zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA.
+  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ. Первый результат
+  обычного вызова Graph принят. Открыты оставшиеся K3/K4, K2, kernel sys export и DATA вызывающего.
   Порядок и исполнителя срезов определяет координатор.
   W3: LmxGraph принадлежит arena; entry читает переданный arena.graph_metadata при прежнем C9 и отдельном code;
   process graphs/find и глобальный обход top, globals и getter чистого GraphTool удалены; обход получает g явно;
@@ -277,8 +278,8 @@ Full-suite нужен при широком влиянии, общей регр�
   ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент принят
   ведущим как компонент 2026-11-24
-  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ: 21.7 — K3/K4
-  zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA.
+  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ. Использовать принятый
+  [результат обычного вызова Graph](steps/witnesses/structural-result-20261124/notes.md) в оставшихся K3/K4 и K2.
 - **27.17. Носитель индекса и общий числовой механизм — компоненты приняты, весь шаг ОТКРЫТ**
   (зависимость 21.25 и M13; 2026-11-23; ответ Astra 83: причина найдена по коду, это не изменение языка;
   состояние — в конце пункта). Две потери одного рода сидят в общих
@@ -324,8 +325,8 @@ Full-suite нужен при широком влиянии, общей регр�
   ([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
   ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)). Физический компонент W4 принят
-  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)). Следующий код — 21.7 K3/K4 для
-  вызовов без actuals, отдельный K2 для actuals, затем константный sys-экспорт ядра и DATA вызывающего.
+  ([свидетельство](steps/witnesses/native-descriptor-table-20261124/notes.md)). В 21.7 остаются K4 для вызывающего
+  кода, результат-Structure K3, K2 для actuals, константный sys-экспорт ядра и DATA вызывающего.
   Не приняты: весь 27.17, Graph dense Array lowering, все foreign-операторы, весь native L2 без checks,
   шаг 21.25, M13, M14, W4–W5, 32-битный ABI и штатная команда полного bootstrap.
 

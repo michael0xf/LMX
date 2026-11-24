@@ -1,0 +1,13 @@
+# Entry Main: a bare `return` in a structural launch exits without a value (the book #return-in-data; step 21.7 K3). The
+# effects before it stand: the body writes node\seen, a field of D (node in C is D), D\seen 1. The call in a value
+# context answers 5 -- no result --, and r stays 0.
+int: r 0
+D:
+    int: seen 0
+    return: int
+    C:
+        node\seen := 1
+        return
+---
+Main:
+    node\r := D\C()

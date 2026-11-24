@@ -678,7 +678,8 @@ end: lm_graph_build_assignment
 
 # A statically described primitive place, named at its cell (§3.2): int with
 # no value or a literal, and the required int-reference without a candidate.
-# Other models and computed initializers keep their ordinary receiver Frame.
+# Other models and computed initializers keep their ordinary receiver Frame;
+# a declaration of another row with a ready integral literal is lm_graph_build_typed_place.
 fn: lm_graph_build_place (c.LmxGraph@: g; c.LmP0Frame@: fr) @
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.LmP0Field@: f1 0
@@ -855,6 +856,68 @@ fn: lm_graph_frame_admitted (c.LmP0Frame@: fr) int
     return: (cast: (int) (target = head))
 end: lm_graph_frame_admitted
 
+# Is the Frame the exact written `return: @` (the book #operand-storage, #return-in-data): a colon Frame whose head is return and whose body
+# is the one atom @, raw -- one byte, not the three of the backtick spelling of a name @ (lm_graph_name_bytes)? It carries no trailer but
+# `end`, whose target lm_graph_frame_admitted has checked: a trailer of another meaning (until, a terminal return) belongs to the general
+# construction (lm_graph_build_sequence) and is not this form. 1 or 0. The role is the head of the Frame; a prefix operator of an expression
+# (lm_graph_build_expression) and the terminal return (lm_graph_build_return) are other forms.
+fn: lm_graph_return_reference (c.LmP0Frame@: fr; char@: head) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    c.LmP0Trailer@: tail 0
+    c.LmP0Field@: lone 0
+    char@: w_end c.lmx_graph_intern("end", 3U)
+    if: state = 0 || fr = 0 || head != state\w_return || (fr\flags & c.LM_P0_FRAME_COLON) = 0U || lm_graph_p0_body(fr) = 0
+        return: 0
+    tail := (cast: (c.LmP0Trailer@) fr\trailer)
+    if: tail != 0 && (tail\spelling = 0 || c.lmx_graph_intern((cast: (char@) tail\spelling\data), (cast: (size_t) tail\spelling\length)) != w_end)
+        return: 0
+    if: lm_graph_count_active(lm_graph_p0_body(fr)) != 1U
+        return: 0
+    lone := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
+    return: lm_graph_build_atom_is(lone, 64)
+end: lm_graph_return_reference
+
+# A primitive declaration with a ready integral literal of a row that has an inline NUMBER target -- `size_t: n 0U`,
+# `unsigned: a 3U`, `char: c 65` --: the value cell of that row, named at its cell as an int place is (lm_graph_build_place).
+# The written literal is received by the declared row before any C99 type is chosen (lmx_graph_number_in). int and the
+# reference declarations keep lm_graph_build_place; a row without a NUMBER target, a floating spelling, a name or an
+# expression keep their written Frame. 0 and the cell in out (0 for another form); 2 for a literal out of the range of
+# its row: construction refuses it and does not keep it as a declaration; 1 without memory.
+fn: lm_graph_build_typed_place (c.LmxGraph@: g; c.LmP0Frame@: fr; char@: head; @@: out) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    c.LmP0Field@: f1 0
+    c.LmP0Field@: f2 0
+    c.LmP0Text@: name 0
+    c.LmP0Text@: literal 0
+    int: v 0
+    int: status 0
+    if: out = 0
+        return: 2
+    out[0] := 0
+    if: state = 0 || fr = 0 || head = state\w_int || head = state\w_at || c.lmx_graph_primitive_receiver(head) = 0
+        return: 0
+    if: lm_graph_count_active(lm_graph_p0_body(fr)) != 2U
+        return: 0
+    f1 := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
+    f2 := lm_graph_next_active(lm_graph_p0_next(f1))
+    if: f1 = 0 || f2 = 0 || f1\value\kind != c.LM_P0_NODE_ATOM || f2\value\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    name := lm_graph_p0_atom(lm_graph_p0_value(f1))
+    if: lm_graph_int_literal(name, @ v) != 0
+        return: 0
+    literal := lm_graph_p0_atom(lm_graph_p0_value(f2))
+    status := c.lmx_graph_number_in(g, lm_graph_p0_data(literal), lm_graph_p0_length(literal), head, @ out[0])
+    if: status = 1
+        return: 2
+    if: status = 2
+        return: 0
+    if: status != 0 || out[0] = 0
+        return: 1
+    if: c.lmx_graph_name_address(g, out[0], lm_graph_p0_name_word(name)) != 0
+        return: 1
+    return: 0
+end: lm_graph_build_typed_place
+
 fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: described; @@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.LmP0Text@: text 0
@@ -862,6 +925,7 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
     c.LmP0Structure@: source 0
     c.LmP0Field@: literal 0
     @: value void 0
+    @: marker void 0
     c.Lmx@: block 0
     char@: head 0
     int: number 0
@@ -912,6 +976,13 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
         # Frame is classified as a named block or an application. End has
         # already been checked; a real postcondition keeps its loop lowering.
         if: described = 0 && lm_graph_until_tail((cast: (c.LmP0Trailer@) frame\trailer)) = 0
+            status := lm_graph_build_typed_place(g, frame, head, @ value)
+            if: status != 0
+                return: status
+            if: value != 0
+                out[0] := value
+                return: 0
+            ---
             value := lm_graph_build_place(g, frame)
             if: value != 0
                 out[0] := value
@@ -935,6 +1006,21 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
                 out[0] := c.lmx_graph_int(g, number)
                 return: (cast: (int) (out[0] = 0))
             ---
+        ---
+        # `return: @` (lm_graph_return_reference): the atom is the prefix operator @ without its operand. The record of return keeps one
+        # field, that operator -- its word and the edge to the operand empty: the form [operator, operand] of every prefix operation with
+        # the operand absent. It is neither the WORD of a name spelled @ nor the one-field record the compact form `@()` makes below. The
+        # record is the same in data and in code, and nothing here tells them apart: the data of a called Structure is read as the contract
+        # of a reference result by its consumer (lmx_graph_data_result); reached code refuses the missing operand as any expression does.
+        if: lm_graph_return_reference(frame, head) != 0
+            marker := (cast: (@) c.lmx_graph_lmx(g, 0, 2U))
+            if: marker = 0 || lm_graph_build_put(g, (cast: (c.Lmx@) marker), 0U, c.lmx_graph_word_of(g, state\w_at)) != 0
+                return: 1
+            block := c.lmx_graph_lmx(g, parent, 1U)
+            if: block = 0 || c.lmx_graph_name_address(g, (cast: (@) block), head) != 0 || lm_graph_build_put(g, block, 0U, marker) != 0
+                return: 1
+            out[0] := (cast: (@) block)
+            return: 0
         ---
         # A prefix operator applied in the compact form `-(2 + 3)` is that operation, as everywhere in an expression
         # (§3.3): the operator word and its operand, not a Frame named by a receiver. `@: name T` declares a reference.
@@ -1010,6 +1096,8 @@ fn: lm_graph_own_field (c.LmxGraph@: g; c.Lmx@: result; size_t: index; c.LmP0Nod
         return: 1
     if: kind = 1 || kind = 5 || kind = 6 || kind = 8 || kind = 9
         return: (cast: (int) (c.lmx_graph_slot_name(g, result, index) != 0))
+    if: kind = 0
+        return: (cast: (int) (c.lmx_graph_name_of(g, leaf) != 0))
     if: kind = 4
         return: lm_graph_receiving_block(nd)
     return: 0

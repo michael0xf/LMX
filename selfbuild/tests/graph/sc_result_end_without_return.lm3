@@ -1,0 +1,12 @@
+# Entry Main: the end of the body of a Structure creates no result (the book #return-in-data; step 21.7 K3). The data of
+# C describes `return: int` and the body ends without `return`: the call in a value context answers 5, after the effect
+# of the body, the write of node\seen, a field of D (node in C is D): D\seen 1. r stays 0.
+int: r 0
+D:
+    int: seen 0
+    return: int
+    C:
+        node\seen := 1
+---
+Main:
+    node\r := D\C()

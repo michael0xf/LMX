@@ -1,0 +1,18 @@
+# Entry Main: `return: @` in the data describes a reference (the book #operand-storage, #return-in-data; step 21.7 K3).
+# Mk returns node\Box: node in Mk is D, its parent. The caller receives that Structure itself, its identity and not
+# a copy. The root place p is written and read by its explicit path (the book #binding-places: a bare p in Main would
+# be Main's own place): a write through node\p changes Box\v. Box\v 5, p is Box.
+D:
+    Box:
+        int: v 0
+    end: Box
+    return: @
+    Mk:
+        return: node\Box
+    end: Mk
+end: D
+@: p 0
+---
+Main:
+    node\p := D\Mk()
+    node\p\v := 5

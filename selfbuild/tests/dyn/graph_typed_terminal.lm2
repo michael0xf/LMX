@@ -1,0 +1,86 @@
+# A declaration `T: name literal` of a row with an inline NUMBER target is a value cell of that row, named at its
+# cell: the normal builder makes it (lm_graph_build_typed_place), before any execution. The two places of a wide copy
+# are read back through the existing context and range APIs: the exact SOURCE and ABI of size_t, the wide C payload.
+# gt_check answers 7 when every check passes.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: gt_binding (@: name char; @@: description void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), description)
+
+# The slot of root whose value cell is named name; 0 when there is none.
+fn: gt_named (c.LmxGraph@: g; c.Lmx@: root; @: name char) @
+    @: cell 0
+    size_t: i 0U
+    while: i < c.lmx_graph_count(root)
+        cell := c.lmx_graph_get_in(g, root, i)
+        if: cell != 0 && c.lmx_graph_name_of(g, cell) != 0 && c.strcmp(c.lmx_graph_name_of(g, cell), name) = 0
+            return: cell
+        i := i + 1U
+    ---
+    return: 0
+
+# Is cell a ready typed place of the row: the FOREIGN context of that cell, the exact ABI and SOURCE of the row, a
+# payload as wide as size_t, and its integer magnitude? 0, or the number of the failed check.
+fn: gt_place (c.LmxArena@: arena; @: cell; const: (@: abi c.LmxScalarABI); @: source void; ullong@: magnitude) int
+    c.LmxWalkValue@: context 0
+    int: negative 0
+    context := c.lmx_value_cell_context(arena, cell)
+    if: context = 0
+        return: 1
+    if: context\present = 0 || context\ref != cell || context\kind != c.LMX_WALK_VALUE_FOREIGN
+        return: 2
+    if: context\scalar_abi != abi || context\source_type != source || abi\size != sizeof(size_t)
+        return: 3
+    c.lmx_walk_value_integer_parts(context, magnitude, @ negative)
+    if: negative != 0
+        return: 4
+    return: 0
+
+fn: gt_check () int
+    c.LmxArena: arena
+    @: source void 0
+    const: (@: abi c.LmxScalarABI gt_binding("size_t", @ source))
+    c.LmxGraph@: g 0
+    c.Lmx@: root 0
+    @: cell 0
+    c.FILE@: file 0
+    ullong: magnitude (cast: (ullong) 0)
+    int: status 0
+    c.memset((cast: (@) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_typed_terminal.lm3", "wb")
+    if: g = 0 || file = 0 || abi = 0 || source = 0
+        return: 81
+    if: c.fputs("size_t: r 0U\nsize_t: n 3000000000U\n", file) < 0
+        return: 82
+    c.fclose(file)
+    status := c.lm_graph_build_file(g, "graph_typed_terminal.lm3", @ root)
+    c.remove("graph_typed_terminal.lm3")
+    if: status != 0 || root = 0 || c.lmx_graph_count(root) != 2U
+        return: 83
+    cell := gt_named(g, root, "r")
+    if: cell = 0 || c.lmx_graph_kind(g, cell) != 0
+        return: 84
+    status := gt_place(@ arena, cell, abi, source, @ magnitude)
+    if: status != 0 || magnitude != (cast: (ullong) 0)
+        return: 85
+    cell := gt_named(g, root, "n")
+    if: cell = 0 || c.lmx_graph_kind(g, cell) != 0
+        return: 86
+    status := gt_place(@ arena, cell, abi, source, @ magnitude)
+    if: status != 0 || magnitude != (cast: (ullong) 3000000000U)
+        return: 87
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7
+end: gt_check

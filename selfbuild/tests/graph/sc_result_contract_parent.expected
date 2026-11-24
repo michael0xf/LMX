@@ -1,0 +1,16 @@
+int: a 5
+return: int
+Q:
+    return: int
+end: Q
+P:
+    Box:
+        int: v 5
+    end: Box
+    return: @
+    C:
+        return: (node \ Box)
+    end: C
+end: P
+@: p Box
+Main: (:= (node \ p) P\C()) (:= ((node \ p) \ v) 5) (:= (node \ a) ((node \ p) \ v))

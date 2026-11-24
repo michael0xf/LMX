@@ -1,0 +1,17 @@
+# Entry Main: `return: @` reached in code is refused by its missing operand (the book #return-in-data, #operand-storage; the
+# grammar #close: the same receiver at body level is an internal return). The record is the one that describes a reference
+# result in the data of a Structure; reached as the return of code, it is the operator @ without its operand. D describes
+# `return: int`, so the return carries a result; the body of C writes node\seen, a field of D (node in C is D), then
+# returns @. The call answers 2 and the effect stands: D\seen 1, r 0.
+int: r 0
+D:
+    int: seen 0
+    return: int
+    C:
+        node\seen := 1
+        return: @
+    end: C
+end: D
+---
+Main:
+    node\r := D\C()

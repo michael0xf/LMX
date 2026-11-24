@@ -242,8 +242,25 @@ fn: lm_compiler_graph_place_at (char@@: names; size_t: n; char@: word) size_t
     return: n
 end: lm_compiler_graph_place_at
 
+# The type word of a typed ready cell: the row its exact SOURCE description names (lmx_graph_scalar_typed_text proves
+# the row and the literal the cell holds), when that row is a C scalar a place is written with (lm_compiler_graph_scalar).
+# 1 and the word in type_out[0]; 0 for any other value -- the kind 0 of a cell alone declares nothing.
+fn: lm_compiler_graph_typed_word (c.LmxGraph@: g; @: value; char@@: type_out) int
+    char@: spelled (cast: (char@) c.calloc(64U, 1U))
+    char@: word 0
+    int: status 1
+    if: spelled != 0
+        status := c.lmx_graph_scalar_typed_text(g, value, @ word, spelled, 64U)
+    c.free((cast: (@) spelled))
+    if: status != 0 || lm_compiler_graph_scalar(word) = 0
+        return: 0
+    type_out[0] := word
+    return: 1
+end: lm_compiler_graph_typed_word
+
 # Is the field i of block a declaration of an own place, and of which form? 1 an int place without a value (`int:
-# name`), 2 an int place holding a literal (`int: name 5`), 3 a place `T: name [value]` (T a C scalar word, int with a
+# name`), 2 a ready cell holding a literal -- an int place (`int: name 5`) or a typed place of its row (`size_t: name
+# 0U`: its type word is the row's, lm_compiler_graph_typed_word) --, 3 a place `T: name [value]` (T a C scalar word, int with a
 # computed value included), 4 a reference `@: name T [value]`, 5 a place of a C door type `c.T: name [value]` (c.T a
 # struct or fnptr of the unit's predefs: dheads/droles, lm_compiler_graph_import; not translated yet), 6 a Frame of such
 # a type in another shape, 0 none -- a Frame of any other door name is a call. Its name in name_out[0], its type word in
@@ -269,6 +286,11 @@ fn: lm_compiler_graph_declaration (c.LmxGraph@: g; c.Lmx@: block; size_t: i; cha
         type_out[0] := (cast: (char@) state\w_int)
         if: kind = 3
             return: 1
+        return: 2
+    # A typed ready cell named at its cell (`size_t: name 0U`, lm_graph_build_typed_place): the place of its row holding
+    # that literal, the form 2 of an int place with the row's type word -- only what lmx_graph_scalar_typed_text proves.
+    if: kind = 0 && c.lmx_graph_slot_name(g, block, i) != 0 && lm_compiler_graph_typed_word(g, value, type_out) != 0
+        name_out[0] := c.lmx_graph_slot_name(g, block, i)
         return: 2
     if: kind != 4
         return: 0
@@ -834,6 +856,23 @@ fn: lm_compiler_graph_number_out (c.LmxGraph@: g; c.FILE@: f; @: value) int
     c.free((cast: (@) spelled))
     return: status
 
+# The initializing write of an own place that is a typed ready cell (lm_compiler_graph_declaration, form 2): the literal
+# the cell holds, in the canonical spelling of its row (lmx_graph_scalar_typed_text: `0U`, `65`), written where the
+# declaration stands as the literal of an int place is. 0 written; 1 when the cell is no such place or there is no room.
+fn: lm_compiler_graph_typed_out (c.LmxGraph@: g; c.FILE@: f; @: value; int: k; char@: name; int: level) int
+    char@: spelled (cast: (char@) c.calloc(64U, 1U))
+    char@: word 0
+    int: status 1
+    if: spelled != 0
+        status := c.lmx_graph_scalar_typed_text(g, value, @ word, spelled, 64U)
+    if: status = 0
+        lm_compiler_graph_indent(f, level)
+        lm_compiler_graph_place_cname(f, k, name)
+        c.fprintf(f, ": %s\n", spelled)
+    c.free((cast: (@) spelled))
+    return: status
+end: lm_compiler_graph_typed_out
+
 # The L1 of an expression of a machine function, read from the graph (§3.3) of function mi with formals args and own
 # places names[0..n) (the first numbered k0): a formal or a place by its C name -- resolved here, by the address of its
 # spelling --, a door name `c.X` and a number written with a suffix (a word such as `0U`) as written, an int primitive
@@ -996,11 +1035,18 @@ fn: lm_compiler_graph_block (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: root; c.Lmx@: a
             continue
         if: form = 2
             k := lm_compiler_graph_place_at(names, n, name)
-            if: c.lmx_graph_value_int(g, raw, @ number) != 0
-                return: lm_compiler_graph_refuse_at(src, fname, at[0], "an int place has no value")
-            lm_compiler_graph_indent(f, level)
-            lm_compiler_graph_place_cname(f, k0 + (cast: (int) k), name)
-            c.fprintf(f, ": %d\n", number)
+            if: c.lmx_graph_kind(g, raw) = 0
+                # The typed ready cell writes its own literal, in the spelling of its row (lm_compiler_graph_typed_out).
+                if: lm_compiler_graph_typed_out(g, f, raw, k0 + (cast: (int) k), name, level) != 0
+                    return: lm_compiler_graph_refuse_at(src, fname, at[0], "a typed place of a machine function holds the literal of its row")
+                ---
+            else:
+                if: c.lmx_graph_value_int(g, raw, @ number) != 0
+                    return: lm_compiler_graph_refuse_at(src, fname, at[0], "an int place has no value")
+                lm_compiler_graph_indent(f, level)
+                lm_compiler_graph_place_cname(f, k0 + (cast: (int) k), name)
+                c.fprintf(f, ": %d\n", number)
+            ---
             i := i + 1U
             continue
         if: form = 3 || form = 4

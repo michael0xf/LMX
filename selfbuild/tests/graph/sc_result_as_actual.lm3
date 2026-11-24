@@ -1,0 +1,14 @@
+# Entry Main: the result of a structural call flows through the existing binder (step 21.7 K3; a legacy fn stays legal
+# until K6). C returns 7; the fn Use receives it as its int actual and returns 8. r 8.
+int: r 0
+D:
+    return: int
+    C:
+        return: 7
+    end: C
+end: D
+fn: Use (int: a) int
+    return: a + 1
+---
+Main:
+    node\r := Use(D\C())

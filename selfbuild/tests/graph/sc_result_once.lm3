@@ -1,0 +1,14 @@
+# Entry Main: one call, one execution (the book #structural-call; step 21.7 K3). The body of C counts its runs in node\count,
+# a field of D (node in C is D), and returns 6: it is called in a value context (`D\C() + 1`, r 7) and as a statement,
+# whose result is discarded. D\count 2 after two calls: neither the body nor the result is evaluated twice.
+int: r 0
+D:
+    int: count 0
+    return: int
+    C:
+        node\count := node\count + 1
+        return: 6
+---
+Main:
+    node\r := D\C() + 1
+    D\C()

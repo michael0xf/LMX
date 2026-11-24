@@ -16,8 +16,9 @@ compiler/test/docs pipeline, commit и публикацию. Кодинг пол
 Haiku закрыт автором; coder GLM 5.4 — исполнитель максимума работ; helper GLM 5.3 Flash — оставшийся помощник;
 только Astra по своему решению подключает Fable 5.2. Используется lmx-dev, реализованный Astra и проверенный Haiku;
 его permit, lock и producer pins сохраняются. Физический W4 принят ведущим как компонент (вердикт 2026-11-24;
-[свидетельство](witnesses/native-descriptor-table-20261124/notes.md)); весь W4 остаётся открытым: 21.7 —
-K3/K4 zero-actual в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA;
+[свидетельство](witnesses/native-descriptor-table-20261124/notes.md)); весь W4 остаётся открытым. В 21.7 принят
+[компонент результата Graph без actuals](witnesses/structural-result-20261124/notes.md) и типизированных ячеек.
+Проверены два поколения с адресным smoke и восемью сравнениями. Дальше остаются K3/K4, K2 и sys export;
 sys/native, весь W4, W5 и весь 27.10 открыты. Полный набор в W4 не запускался и зелёным не объявляется; шесть
 отказов targeted15 — прежние две baseline-строки с неизменными ожиданиями. Перезагрузка после commit/push прошла.
 Продолжение —
@@ -47,8 +48,8 @@ Array, FOREIGN/C pointee, большие глубины и весь M14 не о�
 ([свидетельство](witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
 ([свидетельство](witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент (таблица
 call/native на арену) принят ведущим как компонент 2026-11-24
-([свидетельство](witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ: 21.7 — K3/K4 zero-actual
-в работе, отдельный K2 (actuals), далее действительный kernel sys export и current DATA. Весь 27.17, 21.25,
+([свидетельство](witnesses/native-descriptor-table-20261124/notes.md)); весь W4 ОТКРЫТ. После первого компонента
+21.7 остаются K3/K4, K2, действительный kernel sys export и current DATA. Весь 27.17, 21.25,
 M13 и прочие шаги открыты; sys/native, W4–W5 открыты; graph_call_frames, случай 122, открыт.
 Необходимая зависимость записи по пути и индекса — контекст конкретного native-варианта (M14, п. 4;
 [27.16](../next_core_tasks_v3.md#backends-20261123)): ОТКРЫТ.

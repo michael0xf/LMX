@@ -1210,7 +1210,7 @@ fn: lmx_graph_number_digit (int: b; int: base) int
 # program (l2_graph_tool) call it, so what lmx_graph_scalar_text writes reads back to the same type and value.
 # 0 when the bytes are no such spelling; 1 and the value in as_int when its type is int; 2 and the value cell
 # (lmx_graph_scalar_cell) in out; 3 without memory, or for a constant no type of its list holds.
-fn: lmx_graph_number (c.LmxGraph@: g; const: (char@: bytes); size_t: n; @@: out; int@: as_int) int
+fn: lmx_graph_number_read (c.LmxGraph@: g; const: (char@: bytes); size_t: n; const: (char@: declared); @@: out; int@: as_int) int
     char@: buf 0
     char@: rest 0
     @: cell void 0
@@ -1298,9 +1298,21 @@ fn: lmx_graph_number (c.LmxGraph@: g; const: (char@: bytes); size_t: n; @@: out;
         while: i < stop
             d := lmx_graph_number_digit((cast: (int) bytes[i]), base)
             if: d < 0 || v > ((cast: (ullong) c.ULLONG_MAX) - (cast: (ullong) d)) / (cast: (ullong) base)
+                if: declared != 0
+                    return: 1
+                ---
                 return: 3
+            ---
             v := v * (cast: (ullong) base) + (cast: (ullong) d)
             i := i + 1U
+        # A declared receiver takes the written literal before any C99 type is chosen (lmx_graph_number_in). The
+        # written u goes with it; l and ll are a C99 type chosen in writing and stay outside that entry.
+        if: declared != 0
+            if: l != 0
+                return: 2
+            ---
+            return: lmx_graph_number_typed(g, declared, v, neg, u, out)
+        ---
         if: u = 0 && l = 0 && v <= (cast: (ullong) c.INT_MAX)
             as_int[0] := (cast: (int) v)
             if: neg != 0
@@ -1348,6 +1360,10 @@ fn: lmx_graph_number (c.LmxGraph@: g; const: (char@: bytes); size_t: n; @@: out;
             return: 3
         out[0] := cell
         return: 2
+    # A floating spelling is no integral literal of a declared receiver: another form, not a refusal of range.
+    if: declared != 0
+        return: 2
+    ---
     buf := (cast: (char@) c.calloc(stop - body + 1U, 1U))
     if: buf = 0
         return: 3
@@ -1378,6 +1394,153 @@ fn: lmx_graph_number (c.LmxGraph@: g; const: (char@: bytes); size_t: n; @@: out;
         return: 3
     out[0] := cell
     return: 2
+
+fn: lmx_graph_number (c.LmxGraph@: g; const: (char@: bytes); size_t: n; @@: out; int@: as_int) int
+    return: lmx_graph_number_read(g, bytes, n, 0, out, as_int)
+end: lmx_graph_number
+
+# A number written where a receiver declares its type -- `size_t: n 3000000000U`, `unsigned: a 3U`, `char: c 65` --:
+# the written literal is received by the row of the declared word before any C99 type is chosen, and boxed as a value
+# cell of that row. The row must have an inline NUMBER target (a kernel scalar type, lmx_graph_scalar_type) and an
+# integer ABI; a row that is FOREIGN only is not served here and keeps its written declaration. 0 and the value cell in
+# out: the pool of the row's own ABI record, its context the FOREIGN kind and type, that ABI and the row's description
+# as SOURCE (what lmx_graph_scalar_pool proves); 1 for an integral literal out of the range of the row; 2 when this is
+# no integral literal of such a row (a name or any other text, a floating spelling, a spelling with l or ll, no such
+# row, a row without a NUMBER target); 3 without memory or on an operational failure of the kernel.
+fn: lmx_graph_number_in (c.LmxGraph@: g; const: (char@: bytes); size_t: n; const: (char@: declared); @@: out) int
+    int: as_int 0
+    int: status 0
+    if: out = 0 || declared = 0
+        return: 2
+    out[0] := 0
+    status := lmx_graph_number_read(g, bytes, n, declared, out, @ as_int)
+    # The common reader answers 0 both for a text that is no number and for nothing else that reached a value: with
+    # no cell made this is no literal of the row.
+    if: status = 0 && out[0] = 0
+        return: 2
+    return: status
+end: lmx_graph_number_in
+
+# The written magnitude as a value cell of the row of type: the kernel receives the literal by the row's scalar type
+# (lmx_walk_value_lit with the written u, lmx_walk_value_receive: its range is the kernel's), the received value takes
+# the row's ABI and description, and lmx_graph_scalar_box copies its C object into a cell of that ABI. The answers are
+# those of lmx_graph_number_in.
+fn: lmx_graph_number_typed (c.LmxGraph@: g; const: (char@: type); ullong: magnitude; int: negative; int: usuf; @@: out) int
+    @: source void 0
+    const: (c.LmxScalarABI@: abi 0)
+    int: ty 0
+    int: status 0
+    c.LmxWalkValue: literal
+    c.LmxWalkValue: received
+    c.LmxWalkValue: boxed
+    if: out = 0
+        return: 3
+    out[0] := 0
+    abi := lmx_graph_scalar_binding(lmx_graph_intern(type, c.strlen(type)), @ source)
+    ty := lmx_graph_scalar_type(abi)
+    if: abi = 0 || abi\integer_magnitude = 0 || ty = c.LMX_TYPE_NONE || ty = c.LMX_TYPE_FOREIGN
+        return: 2
+    if: c.lmx_walk_value_lit(@ literal, magnitude, usuf, negative) != c.LMX_WALK_OK
+        return: 1
+    status := c.lmx_walk_value_receive(@ literal, ty, @ received)
+    if: status != c.LMX_WALK_OK
+        if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            return: 1
+        ---
+        return: 3
+    ---
+    received\scalar_abi := abi
+    received\source_type := source
+    if: lmx_graph_scalar_box((cast: (c.LmxArena@) g\arena), @ received, @ boxed) != c.LMX_WALK_OK
+        return: 3
+    out[0] := boxed\ref
+    return: 0
+end: lmx_graph_number_typed
+
+# The word that names the SOURCE description of a value cell: the name of the catalog row whose payload it is exactly;
+# 0 for any other description. A C spelling that shares the row's ABI is no such SOURCE.
+fn: lmx_graph_scalar_source_word (@: description) char@
+    const: (char@: names c.lmx_primitive_profile_names)
+    size_t: at 0U
+    size_t: i 0U
+    if: description = 0
+        return: 0
+    while: i < c.lmx_primitive_profile_count
+        if: (cast: (@) c.lmx_primitive_profile_row(i)) = description
+            return: lmx_graph_intern(names + at, c.strlen(names + at))
+        at := at + c.strlen(names + at) + 1U
+        i := i + 1U
+    ---
+    return: 0
+end: lmx_graph_scalar_source_word
+
+# The text of a typed place: a value cell of an integral row with an inline NUMBER target. source_word takes the word
+# of its SOURCE row, text its value as a decimal magnitude (cap bytes) with the suffix of the row's kind -- U for the
+# unsigned rows (unsigned, size_t), none for a signed one (char). The suffix comes from the receiver, not from the
+# bytes: reading `row: name text` again gives the same cell. 0, or 1 when the cell is no such place or there is no room.
+fn: lmx_graph_scalar_typed_text (c.LmxGraph@: g; @: cell; char@@: source_word; char@: text; size_t: cap) int
+    c.LmxWalkValue@: context 0
+    const: (c.LmxScalarABI@: abi 0)
+    ullong: magnitude (cast: (ullong) 0)
+    int: negative 0
+    int: ty 0
+    int: written 0
+    if: g = 0 || cell = 0 || source_word = 0 || text = 0
+        return: 1
+    source_word[0] := 0
+    context := c.lmx_value_cell_context(g\arena, cell)
+    if: context = 0 || context\present = 0 || context\ref != cell || context\scalar_abi = 0
+        return: 1
+    abi := (cast: (const: (c.LmxScalarABI@)) context\scalar_abi)
+    ty := lmx_graph_scalar_type(abi)
+    if: abi\integer_magnitude = 0 || ty = c.LMX_TYPE_NONE || ty = c.LMX_TYPE_FOREIGN
+        return: 1
+    source_word[0] := lmx_graph_scalar_source_word((cast: (@) context\source_type))
+    if: source_word[0] = 0
+        return: 1
+    c.lmx_walk_value_integer_parts(context, @ magnitude, @ negative)
+    if: negative != 0 && magnitude != (cast: (ullong) 0)
+        written := c.snprintf(text, cap, "-%llu", magnitude)
+    else:
+        written := c.snprintf(text, cap, "%llu", magnitude)
+    ---
+    if: written < 0 || (cast: (size_t) written) + 3U >= cap
+        return: 1
+    if: ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_SIZE_T
+        c.strcat(text, "U")
+    return: 0
+end: lmx_graph_scalar_typed_text
+
+# Is the value a typed place -- a named value cell of a catalog row with an inline NUMBER target, its SOURCE exactly
+# that row (a declaration `T: name literal`, lm_graph_build_typed_place)? 1 or 0.
+fn: lmx_graph_typed_place (c.LmxGraph@: g; @: value) int
+    char@: word 0
+    char@: text 0
+    int: answer 0
+    if: lmx_graph_name_of(g, value) = 0
+        return: 0
+    text := (cast: (char@) c.calloc(64U, 1U))
+    if: text != 0 && lmx_graph_scalar_typed_text(g, value, @ word, text, 64U) = 0
+        answer := 1
+    ---
+    c.free((cast: (@) text))
+    return: answer
+end: lmx_graph_typed_place
+
+# The typed place in its line form: `row: name text`. Its caller has asked lmx_graph_typed_place first.
+fn: lmx_graph_dump_typed (c.LmxGraph@: g; @: value; c.FILE@: f) int
+    char@: word 0
+    char@: text 0
+    int: status 1
+    text := (cast: (char@) c.calloc(64U, 1U))
+    if: text = 0
+        return: 1
+    if: lmx_graph_scalar_typed_text(g, value, @ word, text, 64U) = 0
+        status := (cast: (int) (c.fprintf(f, "%s: %s %s", word, lmx_graph_name_of(g, value), text) < 0))
+    ---
+    c.free((cast: (@) text))
+    return: status
+end: lmx_graph_dump_typed
 
 # The text of a value cell of a literal row (lmx_graph_number_kind) in the canonical C99 form lmx_graph_number reads
 # back to the same type and value (the author: «Примитив мы можем точно восстановить только по самому значению»):
@@ -2687,6 +2850,13 @@ fn: lmx_graph_dump_token (c.LmxGraph@: g; @: value; c.FILE@: f; @@: path) int
         return: 0
     # A typed number (G2.1): a value cell of a literal row, written back as its canonical C99 spelling
     # (lmx_graph_scalar_text) -- reading that text again gives the same type and value.
+    if: kind = 0 && lmx_graph_typed_place(g, value) != 0
+        c.fputs("(", f)
+        if: lmx_graph_dump_typed(g, value, f) != 0
+            return: 1
+        c.fputs(")", f)
+        return: 0
+    ---
     if: kind = 0
         text := (cast: (char@) c.calloc(64U, 1U))
         status := 1
@@ -2707,6 +2877,12 @@ fn: lmx_graph_dump_token (c.LmxGraph@: g; @: value; c.FILE@: f; @@: path) int
     text := lmx_graph_name_of(g, value)
     inner := (cast: (c.Lmx@) value)
     n := lmx_graph_count(inner)
+    # The record of `return: @` (lm_graph_return_reference): the operator @ with the edge to its operand empty prints as the atom it
+    # stands for; read again, the text makes the same record. A name spelled @ is a WORD and is printed by lmx_graph_dump_frame.
+    if: state != 0 && text = 0 && n = 2U && lmx_graph_get_in(g, inner, 1U) = 0 && lmx_graph_word_text(g, lmx_graph_get_in(g, inner, 0U)) = state\w_at
+        c.free((cast: (@) link))
+        c.fputs("@", f)
+        return: 0
     printed := lmx_graph_dump_application(g, inner, f, link)
     if: printed >= 0
         c.free((cast: (@) link))
@@ -2780,6 +2956,9 @@ fn: lmx_graph_dump_formal (c.LmxGraph@: g; c.Lmx@: args; size_t: index; c.FILE@:
     if: kind = 6 && c.lmx_arena_pointer_void_read(formal) = 0
         c.fprintf(f, "@: %s 0", lmx_graph_slot_name(g, args, index))
         return: 0
+    if: kind = 0 && lmx_graph_typed_place(g, formal) != 0
+        return: lmx_graph_dump_typed(g, formal, f)
+    ---
     if: kind != 4
         return: lmx_graph_dump_token(g, formal, f, path)
     declaration := (cast: (c.Lmx@) formal)
@@ -2905,6 +3084,8 @@ fn: lmx_graph_dump_block (c.LmxGraph@: g; c.Lmx@: inner; @@: path) int
         field := lmx_graph_get_in(g, inner, k)
         kind := lmx_graph_kind(g, field)
         if: kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 1 && lmx_graph_name_of(g, field) != 0)
+            return: 1
+        if: kind = 0 && lmx_graph_typed_place(g, field) != 0
             return: 1
         if: kind = 4 && lmx_graph_name_of(g, field) != 0
             if: lmx_graph_dump_statement_word(lmx_graph_name_of(g, field)) != 0
@@ -3098,6 +3279,14 @@ fn: lmx_graph_dump_at (c.LmxGraph@: g; c.Lmx@: lmx; c.FILE@: f; int: depth; @@: 
             c.fprintf(f, "@: %s %s\n", name, head)
             i := i + 1U
             continue
+        # A typed place of a row with an inline NUMBER target (`size_t: n 0U`): the row names the type.
+        if: kind = 0 && lmx_graph_typed_place(g, value) != 0
+            if: lmx_graph_dump_typed(g, value, f) != 0
+                return: 1
+            c.fputs("\n", f)
+            i := i + 1U
+            continue
+        ---
         if: kind = 1
             name := lmx_graph_name_of(g, value)
             if: name != 0
@@ -3150,6 +3339,7 @@ fn: lmx_graph_dump_frame (c.LmxGraph@: g; c.Lmx@: inner; c.FILE@: f; int: depth;
     char@: head 0
     int: printed lmx_graph_dump_declaration(g, value, f, depth, path)
     int: block 0
+    c.LmxGraphState@: state lmx_graph_state()
     if: printed < 0
         return: 1
     if: printed > 0
@@ -3164,6 +3354,17 @@ fn: lmx_graph_dump_frame (c.LmxGraph@: g; c.Lmx@: inner; c.FILE@: f; int: depth;
                 return: 1
             lmx_graph_dump_indent(f, depth)
             c.fprintf(f, "end: %s\n", name)
+            return: 0
+        ---
+        # The return whose one field is a WORD spelled @: the exact name of a place, written in backticks, in the operand position
+        # of the return. It prints in backticks: the bare atom after `return:` reads again as the record of the reference
+        # (lm_graph_return_reference). No other word prints so -- an operator in the position of an operator prints as it is.
+        if: state != 0 && name = state\w_return && lmx_graph_count(inner) = 1U && lmx_graph_kind(g, lmx_graph_get_in(g, inner, 0U)) = 2 && lmx_graph_word_text(g, lmx_graph_get_in(g, inner, 0U)) = state\w_at
+            c.fputs("return: ", f)
+            c.fputc(96, f)
+            c.fputs("@", f)
+            c.fputc(96, f)
+            c.fputs("\n", f)
             return: 0
         ---
         c.fprintf(f, "%s:", name)

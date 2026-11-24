@@ -1,0 +1,24 @@
+# Entry Main: the contract of a structural call is the one its real parent describes (the book #structural-call,
+# #return-in-data; step 21.7 K3). The root, the data of Main, and the sibling Q declare `return: int`; P, the parent of
+# C, declares `return: @`: the call of C answers a reference. Were the contract taken from the data of the caller or from
+# another Structure, the reference node\Box would be refused. The root place p is written and read by its explicit path
+# (the book #binding-places). Box\v 5, a 5.
+int: a 0
+return: int
+Q:
+    return: int
+P:
+    Box:
+        int: v 0
+    end: Box
+    return: @
+    C:
+        return: node\Box
+    end: C
+end: P
+@: p 0
+---
+Main:
+    node\p := P\C()
+    node\p\v := 5
+    node\a := node\p\v

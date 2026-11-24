@@ -411,6 +411,9 @@ fn: lm_graph_emit_record (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: hol
             return: lm_graph_emit_record(g, f, scope, (cast: (c.Lmx@) raw), 0U, temps, decl_names, decl_slots, decl_n, temp)
         if: word = state\w_fncall
             return: lm_graph_emit_fncall(g, f, scope, (cast: (c.Lmx@) raw), temps, decl_names, decl_slots, decl_n, 3, temp)
+        # The receiver call read as a value keeps its whole result (lm_graph_emit_evaluated).
+        if: word = state\w_call
+            return: lm_graph_emit_evaluated(g, f, scope, (cast: (c.Lmx@) raw), temps, 3, temp)
         if: word = 0 || c.lmx_graph_language_word(state, word) = 0
             if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
                 return: lm_graph_emit_application(g, f, scope, (cast: (c.Lmx@) raw), temps, decl_names, decl_slots, decl_n, 3, temp)
@@ -470,6 +473,9 @@ fn: lm_graph_emit_operand (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: ho
             return: lm_graph_emit_merge(g, f, scope, (cast: (c.Lmx@) raw), temps, decl_names, decl_slots, decl_n, temp)
         if: c.lmx_graph_name_of(g, raw) = state\w_fncall
             return: lm_graph_emit_fncall(g, f, scope, (cast: (c.Lmx@) raw), temps, decl_names, decl_slots, decl_n, 2, temp)
+        # The receiver call read as a value keeps its whole result, then gives its cell (lm_graph_emit_evaluated).
+        if: c.lmx_graph_name_of(g, raw) = state\w_call
+            return: lm_graph_emit_evaluated(g, f, scope, (cast: (c.Lmx@) raw), temps, 2, temp)
         if: c.lmx_graph_language_word(state, c.lmx_graph_name_of(g, raw)) = 0
             return: lm_graph_emit_application(g, f, scope, (cast: (c.Lmx@) raw), temps, decl_names, decl_slots, decl_n, 2, temp)
         status := lm_graph_emit_number(g, f, scope, holder, index, temps, decl_names, decl_slots, decl_n, @ number)
@@ -680,6 +686,9 @@ fn: lm_graph_emit_number (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: hol
         # The receiver fncall (the book, call-receivers): the launch of the code it is given, with its result.
         if: word = state\w_fncall
             return: lm_graph_emit_fncall(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, 1, temp)
+        # The receiver call read as a number keeps its whole result, then gives its int (lm_graph_emit_evaluated).
+        if: word = state\w_call
+            return: lm_graph_emit_evaluated(g, f, scope, expression, temps, 1, temp)
         # The live launch selects the callee before actuals, including a local
         # declaration that shadows this translation's lexical fallback. Its
         # result contract is checked before any actual can have an effect.
@@ -3384,6 +3393,47 @@ fn: lm_graph_emit_selected_call (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lm
     temp[0] := call_id
     return: status
 
+# Is the head of a consumed call an ordinary fn this translation already knows: a bare name that resolves here, in
+# the scope of the emitted method, to a Structure of the FN pool (lmx_graph_resolve, lmx_graph_target,
+# lmx_graph_fn_result)? Only such a head keeps its compiled dispatch (lm_graph_emit_application,
+# lm_graph_emit_call_selected). Every other head -- the call of an ordinary Structure (step 21.7 K4), a head written
+# as an expression, a name this translation does not resolve, a head the code declares when it runs -- is read by the
+# common evaluator when the code runs (lm_graph_emit_evaluated). The question only chooses what to emit; the call
+# itself is never resolved here. 1 or 0.
+fn: lm_graph_head_proven_fn (c.LmxGraph@: g; c.Lmx@: scope; char@: name) int
+    if: name = 0
+        return: 0
+    return: c.lmx_graph_fn_result(g, c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, name)))
+
+# A consumed call whose head is not proven here (lm_graph_head_proven_fn) is read when the code runs by the common
+# evaluator from the written record itself: the receiver call `call(C)`, or an application -- the call of an ordinary
+# Structure; the book #structural-call, #return-in-data; step 21.7 K4 --, over the scope of the running native frame
+# (lmx_call_code), as the interpreter reads it (lmx_graph_eval_record): selection, admission, launch and result
+# transfer are the kernel's one mechanism, and no head is evaluated ahead of it, so none is evaluated twice. The
+# record's whole Value stays in l2_cv; then the projection the consumer asks for: an int (want_result 1, l2_t), a cell
+# (2, l2_v), the record itself (3), as lm_graph_emit_selected_call does.
+fn: lm_graph_emit_evaluated (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: expression; int@: temps; int: want_result; int@: temp) int
+    c.LmxGraphEmitScratch: leave_storage
+    char@: leave_failure (cast: (char@) leave_storage\failure)
+    int: call_id temps[0]
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    temps[0] := temps[0] + 1
+    c.fprintf(f, "        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n", call_id, call_id)
+    if: want_result = 1
+        c.fprintf(f, "        int: l2_t%d 0\n", call_id)
+    if: want_result = 2
+        c.fprintf(f, "        @: void l2_v%d 0\n", call_id)
+    c.fputs("        if: lmx_graph_eval_record(l2_g, lmx_call_code, (cast: (@: void) ", f)
+    if: lm_graph_emit_address(g, f, scope, expression) != 0
+        return: 3
+    c.fprintf(f, "), @ l2_cv%d) != 0\n            %s\n", call_id, leave_failure)
+    if: want_result = 1
+        c.fprintf(f, "        if: lmx_graph_result_int(l2_g, @ l2_cv%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, leave_failure)
+    if: want_result = 2
+        c.fprintf(f, "        if: lmx_graph_result_cell(l2_g, @ l2_cv%d, @ l2_v%d) != 0\n            %s\n", call_id, call_id, leave_failure)
+    temp[0] := call_id
+    return: 0
+
 # Named and expression-headed Frames select one live target before actuals.
 # The same target then uses the common callable binder or ordinary launch.
 fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: application; int@: temps; char@@: decl_names; size_t@: decl_slots; size_t: decl_n; int: want_result; int@: temp) int
@@ -3408,6 +3458,11 @@ fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@
     # the image does not prepare it yet (fable's answer Q6 (b); the call tables are OPEN).
     if: name != 0 && c.lmx_graph_call_selects(g, scope, name, actuals) != 0
         return: lm_graph_emit_selected_call(g, f, scope, application, actuals, temps, want_result, temp)
+    # A consumed value whose head is not an ordinary fn proven here (lm_graph_head_proven_fn) is read by the common
+    # evaluator when the code runs (lm_graph_emit_evaluated): nothing of the head is evaluated before it, so no head is
+    # evaluated twice. A statement (want_result 0) keeps both routes written below.
+    if: want_result != 0 && lm_graph_head_proven_fn(g, scope, name) = 0
+        return: lm_graph_emit_evaluated(g, f, scope, application, temps, want_result, temp)
     temps[0] := temps[0] + 3
     c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_application_head(l2_g, lmx_call_code, ", structure)
     if: name != 0

@@ -5586,6 +5586,12 @@ fn: lmx_graph_eval_record (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.LmxWalkValue
             return: lmx_graph_eval_record(g, scope, c.lmx_graph_get_in(g, (cast: (c.Lmx@) raw), 0U), out)
         if: word = state\w_fncall
             return: lmx_graph_eval_fncall_value(g, scope, (cast: (c.Lmx@) raw), out)
+        # The receiver call read as a value (the book #structural-call, #return-in-data; step 21.7 K4): the code it is
+        # given runs by the reader of the statement (lmx_graph_eval_explicit_call_value) with the result its data
+        # describes, and the record keeps that whole Value: `call(C)` and `C()` are one call. A statement discards the
+        # result as before (lmx_graph_eval_explicit_call).
+        if: word = state\w_call
+            return: lmx_graph_eval_explicit_call_value(g, scope, (cast: (c.Lmx@) raw), 1, out)
         if: word = 0 || lmx_graph_language_word(state, word) = 0
             if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
                 return: lmx_graph_eval_application_value(g, scope, (cast: (c.Lmx@) raw), 1, out)

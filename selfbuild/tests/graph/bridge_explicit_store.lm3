@@ -1,0 +1,31 @@
+int: r 0
+W:
+    @: selected 0
+end: W
+D:
+    int: seen 0
+    return: int
+    C:
+        node\seen := node\seen + 1
+        return: 7
+    end: C
+end: D
+E:
+    Box:
+        int: v 0
+    end: Box
+    return: @
+    R:
+        return: node\Box
+    end: R
+end: E
+fn: Bridge () int (
+    int: t 0
+)
+    t := call(code := D\C)
+    W\selected := call(code := E\R)
+    return: t
+---
+Main:
+    node\r := Bridge()
+    W\selected\v := 9

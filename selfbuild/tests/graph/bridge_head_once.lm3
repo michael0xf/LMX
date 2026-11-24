@@ -1,0 +1,22 @@
+int: r 0
+D:
+    int: seen 0
+    return: int
+    C:
+        node\seen := node\seen + 1
+        return: 7
+    end: C
+end: D
+I:
+    int: heads 0
+    return: int
+    Next:
+        node\heads := node\heads + 1
+        return: 2
+    end: Next
+end: I
+fn: Bridge () int
+    return: D[I\Next()]() + 1
+---
+Main:
+    node\r := Bridge()

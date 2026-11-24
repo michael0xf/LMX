@@ -243,7 +243,8 @@ fn: eg_native (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: descripti
     \number := 73
     if: c.lmx_arena_refs_open_owned(arena, data, 1U) != 0 || c.lmx_arena_ref_store(arena, data, 0U, (cast: (@: void) number)) != 0
         return: 36
-    code\native := (cast: (c.LmxEntry) c.eg_native_entry)
+    if: c.lmx_native_install(arena, code, (cast: (c.LmxPrimitiveEntry) c.eg_native_entry), 0, 0, 0, 0, 0) != 0
+        return: 1
     if: c.lmx_call_prim_values(arena, code, data, 0, 1U, (cast: (@: void) answer), output, v, @ result) != 0 || \answer != 7
         return: 37
     if: arena\activation != 0 || arena\execution_roots != 0

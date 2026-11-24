@@ -21,6 +21,7 @@
 # the kernel's C functions, called through the C door; the block list's and the index's modules come before the
 # manager in the kernel's translation unit.
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
@@ -101,6 +102,9 @@ fn: lmx_arena_open (c.LmxArena@: arena) int
     if: lmx_arena_index_len(arena) != 0U || lmx_arena_index_cap(arena) != 0U
         return: 1
     if: arena\impl != 0 || arena\impl_len != 0U || arena\impl_cap != 0U
+        return: 1
+    c.LmxNativeTable@: native_table @ arena\native_calls
+    if: native_table\rows != 0 || native_table\len != 0U || native_table\cap != 0U
         return: 1
     arena\generation := 0U
     arena\simple := 0U
@@ -611,6 +615,7 @@ end: lmx_arena_rehome_primitive_owners
 # entries this call added and disturbs nothing else.
 fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
     c.LmxGraph@: donor_names 0
+    c.LmxNativeTable@: donor_native 0
     c.LmxRange@: entry 0
     c.LmxRange@: present 0
     c.LmxRange@: inserted 0
@@ -627,12 +632,15 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
     if: arena = other
         return: 1
     donor_names := other\graph_metadata
-    if: lmx_arena_index_len(other) = 0U && other\arrays = 0 && other\blocks = 0 && (donor_names = 0 || donor_names\names_len = 0U)
+    donor_native := @ other\native_calls
+    if: lmx_arena_index_len(other) = 0U && other\arrays = 0 && other\blocks = 0 && donor_native\rows = 0 && (donor_names = 0 || donor_names\names_len = 0U)
         return: 0
     # The final ownership-list splice is fallible on malformed/intersecting lists. Preflight it
     # before adding one range, relinking one Array or clearing one donor field; after this succeeds
     # the same owner-exclusive lists cannot change until the final constant-time splice.
     if: c.lmx_arena_blocks_can_move(@ arena\blocks, @ other\blocks) != c.LMX_ARENA_BLOCKS_OK
+        return: 1
+    if: c.lmx_native_attach_prepare(arena, other) != 0
         return: 1
     # D-105: the donor's `implements` correspondences name its values, whose addresses do not
     # change -- they join this arena's table.  Room first, so a refusal disturbs nothing.
@@ -721,6 +729,7 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
         return: 1
     ---
     c.free((cast: (@) inserted))
+    c.lmx_native_attach_move(arena, other)
     # The arrays follow the entries, and the storage follows the arrays: after this the
     # attached arena holds nothing at all.
     lmx_arena_rehome_primitive_owners(arena, other)
@@ -775,6 +784,7 @@ fn: lmx_arena_release (c.LmxArena@: arena) int
     if: arena\graph_metadata != 0
         c.lmx_graph_close(arena\graph_metadata)
     ---
+    c.lmx_native_table_dispose(@ arena\native_calls)
     status := c.lmx_arena_blocks_dispose_all(@ arena\blocks)
     arena\arrays := 0
     if: lmx_arena_index_data(arena) != 0

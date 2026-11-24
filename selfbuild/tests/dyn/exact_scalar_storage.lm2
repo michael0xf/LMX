@@ -534,9 +534,11 @@ fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness
     destination := c.lmx_walk_result_storage(arena, c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) value\physical_profile), value\source_type, @ destination_value)
     if: destination = 0 || destination_value\present != 0 || destination_value\ref != destination || destination_value\scalar_abi != abi || destination_value\physical_profile != value\physical_profile || destination_value\source_type != value\source_type || destination_value\model != 0
         return: 108
-    code\native := (cast: (c.LmxEntry) c.es_result_entry)
+    if: c.lmx_native_install(arena, code, (cast: (c.LmxPrimitiveEntry) c.es_result_entry), 0, 0, 0, 0, 0) != 0
+        return: 1
     status := c.lmx_call_prim_values(arena, code, vars, refs, 1U, destination, output, value, @ result)
-    code\native := 0
+    if: c.lmx_native_install(arena, code, (cast: (c.LmxPrimitiveEntry) 0), 0, 0, 0, 0, 0) != 0
+        return: 1
     if: status != 0 || output[0] != destination || result\present = 0 || result\ref != destination || result\scalar_abi != abi || result\source_type != value\source_type || result\model != value\model || result\physical_profile != value\physical_profile
         return: 108
     read := (cast: (@: c.LmxScalarType9) destination)

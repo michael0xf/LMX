@@ -1,0 +1,325 @@
+# Installed native is one arena-owned binding to ordinary descriptor data.
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_merge_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+include: "<string.h>" "<stdlib.h>" "<stdio.h>"
+
+fn: nd_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    return: 77
+
+fn: nd_variant (@: arena c.LmxArena; @: descriptor c.Lmx) @: c.Lmx
+    @: variants c.Lmx (cast: (@: c.Lmx) c.lmx_graph_value_in(arena, descriptor, 0U))
+    return: (cast: (@: c.Lmx) c.lmx_graph_value_in(arena, variants, 0U))
+
+# Descriptor text is ordinary dense Char Array data, preserved after source release.
+fn: nd_text_is (@: arena c.LmxArena; @: value c.Lmx; const: (@: expected char)) int
+    @: base c.VoidArray 0
+    size_t: count 0U
+    if: value = 0 || expected = 0 || c.lmx_range_classify(arena, (cast: (@: void) value)) != c.LMX_KIND_ARRAY
+        return: 0
+    count := c.strlen(expected)
+    base := (cast: (@: c.VoidArray) (@ value\array))
+    if: base\size != count || base\data = 0
+        return: 0
+    return: (cast: (int) (c.memcmp((cast: (const: @: void) base\data), (cast: (const: @: void) expected), count) = 0))
+
+# One map preserves both the user's descriptor alias and the service binding.
+# The signature and typed leaf point at the final copied CODE, never the source.
+fn: nd_copy () int
+    c.LmxArena: source
+    c.LmxArena: destination
+    c.LmxArena: receiver
+    c.memset((cast: (@: void) (@ source)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ receiver)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ source) != 0 || c.lmx_arena_open(@ destination) != 0 || c.lmx_arena_open(@ receiver) != 0
+        return: 101
+    @: gs c.LmxGraph c.lmx_graph_open(@ source)
+    @: gd c.LmxGraph c.lmx_graph_open(@ destination)
+    @: gr c.LmxGraph c.lmx_graph_open(@ receiver)
+    @: root c.Lmx c.lmx_graph_lmx(gs, 0, 2U)
+    @: code c.Lmx c.lmx_graph_lmx(gs, root, 1U)
+    @: existing c.Lmx c.lmx_graph_lmx(gr, 0, 0U)
+    @: copied c.Lmx 0
+    int: number 0
+    if: gs = 0 || gd = 0 || gr = 0 || root = 0 || code = 0 || existing = 0
+        return: 102
+    @: payload void c.lmx_graph_int(gs, 19)
+    if: payload = 0 || c.lmx_graph_put_in(gs, code, 0U, payload) != 0 || c.lmx_graph_put_in(gs, root, 0U, (cast: (@: void) code)) != 0
+        return: 103
+    if: c.lmx_native_descriptor(@ source, code) != 0 || c.lmx_native_entry(@ source, code) != 0
+        return: 104
+    if: c.lmx_native_install(@ source, code, (cast: (c.LmxPrimitiveEntry) c.nd_entry), code, "linked-test", "nd_entry", "native_descriptor_storage.lm1", 0) != 0
+        return: 105
+    @: description c.Lmx c.lmx_native_descriptor(@ source, code)
+    if: description = 0 || description = code || description != c.lmx_native_descriptor(@ source, code) || description\parent != 0 || c.lmx_graph_count(code) != 1U || c.lmx_graph_get_in(gs, code, 0U) != payload || c.lmx_graph_call(gs, code) != 77
+        return: 106
+    if: c.lmx_graph_put_in(gs, root, 1U, (cast: (@: void) description)) != 0 || c.lmx_graph_name(gs, (cast: (@: void) description), "native", 6U) != 0
+        return: 107
+    if: c.lmx_graph_copy_owned(root, @ source, @ destination, @ copied) != c.LMX_GRAPH_COPY_OK || copied = 0
+        return: 108
+    @: copied_code c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(gd, copied, 0U))
+    @: copied_description c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(gd, copied, 1U))
+    @: variant c.Lmx nd_variant(@ destination, copied_description)
+    @: leaf c.LmxPrimitive (cast: (@: c.LmxPrimitive) c.lmx_graph_get_in(gd, variant, 1U))
+    if: copied_code = 0 || copied_code = code || copied_description = 0 || copied_description = description || copied_description != c.lmx_native_descriptor(@ destination, copied_code) || variant = 0 || leaf = 0
+        return: 109
+    if: copied_code\parent != copied || copied\parent != 0 || copied_description\parent != 0 || c.lmx_graph_get_in(gd, variant, 0U) != (cast: (@: void) copied_code) || leaf\signature != copied_code || leaf\fn != (cast: (c.LmxPrimitiveEntry) c.nd_entry)
+        return: 110
+    if: c.lmx_arena_release(@ source) != 0 || c.lmx_graph_call(gd, copied_code) != 77 || c.lmx_graph_value_int(gd, c.lmx_graph_get_in(gd, copied_code, 0U), @ number) != 0 || number != 19
+        return: 111
+    if: nd_text_is(@ destination, (cast: (@: c.Lmx) c.lmx_graph_get_in(gd, variant, 2U)), "linked-test") = 0 || nd_text_is(@ destination, (cast: (@: c.Lmx) c.lmx_graph_get_in(gd, variant, 3U)), "nd_entry") = 0 || nd_text_is(@ destination, (cast: (@: c.Lmx) c.lmx_graph_get_in(gd, variant, 4U)), "native_descriptor_storage.lm1") = 0 || c.lmx_graph_get_in(gd, variant, 5U) != 0
+        return: 115
+    if: c.lmx_native_install(@ receiver, existing, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0) != 0 || c.lmx_arena_attach(@ receiver, @ destination) != 0
+        return: 112
+    if: c.lmx_arena_release(@ destination) != 0 || c.lmx_native_descriptor(@ receiver, copied_code) != copied_description || c.lmx_graph_call(gr, copied_code) != 77 || c.lmx_native_entry(@ receiver, existing) != (cast: (c.LmxPrimitiveEntry) c.nd_entry)
+        return: 113
+    if: c.lmx_arena_release(@ receiver) != 0
+        return: 114
+    return: 0
+
+# Code and descriptor originate in different arenas/chunks. Marking the code
+# cannot accidentally retain the descriptor through a shared allocation chunk.
+fn: nd_weak_key () int
+    c.LmxArena: arena
+    c.LmxArena: donor
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ donor)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0 || c.lmx_arena_open(@ donor) != 0
+        return: 121
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: other c.LmxGraph c.lmx_graph_open(@ donor)
+    @: physical_profile c.Lmx c.lmx_node_new_owned(@ arena)
+    @: code c.Lmx c.lmx_node_new_profiled(@ arena, physical_profile)
+    @: description c.Lmx c.lmx_graph_native_descriptor(other, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0)
+    if: g = 0 || other = 0 || physical_profile = 0 || code = 0 || description = 0 || c.lmx_arena_attach(@ arena, @ donor) != 0 || c.lmx_arena_release(@ donor) != 0
+        return: 122
+    if: c.lmx_native_bind(@ arena, code, description) != 0
+        return: 123
+    unsigned: generation c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_mark_value(@ arena, (cast: (@: void) code), generation, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK
+        return: 124
+    if: c.lmx_native_descriptor(@ arena, code) != description || c.lmx_graph_call(g, code) != 77
+        return: 125
+    generation := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_mark_value(@ arena, (cast: (@: void) description), generation, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK
+        return: 126
+    @: bindings c.LmxNativeTable @ arena\native_calls
+    if: c.lmx_range_classify(@ arena, (cast: (@: void) code)) != c.LMX_KIND_NONE || bindings\len != 0U || c.lmx_graph_node_in(@ arena, (cast: (@: void) description)) = 0
+        return: 127
+    if: c.lmx_arena_release(@ arena) != 0
+        return: 128
+    return: 0
+
+fn: nd_table_growth () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 131
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: description c.Lmx c.lmx_graph_native_descriptor(g, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0)
+    @@: codes c.Lmx (cast: (@@: c.Lmx) c.calloc(96U, sizeof(@)))
+    size_t: i 0U
+    if: g = 0 || description = 0 || codes = 0
+        return: 132
+    while: i < 96U
+        codes[i] := c.lmx_graph_lmx(g, 0, 0U)
+        if: codes[i] = 0 || c.lmx_native_bind(@ arena, codes[i], description) != 0
+            return: 133
+        i := i + 1U
+    ---
+    i := 0U
+    while: i < 96U
+        if: c.lmx_native_descriptor(@ arena, codes[i]) != description
+            return: 134
+        if: c.lmx_native_bind(@ arena, codes[i], 0) != 0
+            return: 135
+        size_t: j i + 1U
+        while: j < 96U
+            if: c.lmx_native_descriptor(@ arena, codes[j]) != description
+                return: 136
+            j := j + 1U
+        ---
+        i := i + 1U
+    ---
+    @: bindings c.LmxNativeTable @ arena\native_calls
+    if: bindings\len != 0U
+        return: 137
+    c.free(codes)
+    if: c.lmx_arena_release(@ arena) != 0
+        return: 138
+    return: 0
+
+# A later closure failure must publish none of the earlier completed bindings.
+# Both receiving roots allocate beside an existing live root in the target pool.
+fn: nd_failed_copy () int
+    c.LmxArena: source
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ source)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ source) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 141
+    @: gs c.LmxGraph c.lmx_graph_open(@ source)
+    @: gd c.LmxGraph c.lmx_graph_open(@ destination)
+    @: root c.Lmx c.lmx_graph_lmx(gs, 0, 2U)
+    @: bad c.Lmx c.lmx_graph_lmx(gs, root, 0U)
+    @: good c.Lmx c.lmx_graph_lmx(gs, root, 0U)
+    @: existing c.Lmx c.lmx_graph_lmx(gd, 0, 0U)
+    @: copied c.Lmx 0
+    @: opaque void c.malloc(1U)
+    if: root = 0 || bad = 0 || good = 0 || existing = 0 || opaque = 0 || c.lmx_graph_put_in(gs, root, 0U, (cast: (@: void) bad)) != 0 || c.lmx_graph_put_in(gs, root, 1U, (cast: (@: void) good)) != 0
+        return: 142
+    if: c.lmx_native_install(@ source, bad, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0) != 0 || c.lmx_native_install(@ source, good, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0) != 0 || c.lmx_native_install(@ destination, existing, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0) != 0
+        return: 143
+    @: description c.Lmx c.lmx_native_descriptor(@ source, bad)
+    @: variant c.Lmx nd_variant(@ source, description)
+    @: prior c.Lmx c.lmx_native_descriptor(@ destination, existing)
+    @: bindings c.LmxNativeTable @ destination\native_calls
+    if: variant = 0 || prior = 0 || bindings\len != 1U || c.lmx_graph_put_in(gs, variant, 2U, opaque) != 0
+        return: 144
+    if: c.lmx_graph_copy_owned(root, @ source, @ destination, @ copied) != c.LMX_GRAPH_COPY_UNSUPPORTED || copied != 0 || bindings\len != 1U || c.lmx_native_descriptor(@ destination, existing) != prior || c.lmx_graph_call(gd, existing) != 77
+        return: 145
+    c.free(opaque)
+    if: c.lmx_arena_release(@ source) != 0 || c.lmx_arena_release(@ destination) != 0
+        return: 146
+    return: 0
+
+# The explicitly selected second operand has a different structural parent.
+# Descriptor self/signature/physical-cell aliases use the final receiving map.
+fn: nd_selected_merge () int
+    c.LmxArena: source
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ source)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ source) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 151
+    @: gs c.LmxGraph c.lmx_graph_open(@ source)
+    @: gd c.LmxGraph c.lmx_graph_open(@ destination)
+    @: first_parent c.Lmx c.lmx_graph_lmx(gs, 0, 2U)
+    @: later_parent c.Lmx c.lmx_graph_lmx(gs, 0, 2U)
+    @: first c.Lmx c.lmx_graph_lmx(gs, first_parent, 1U)
+    @: later c.Lmx c.lmx_graph_lmx(gs, later_parent, 2U)
+    @: merged c.Lmx 0
+    @: absent c.Lmx 0
+    @: qualified c.Lmx 0
+    @: physical_profile c.Lmx c.lmx_node_new_owned(@ destination)
+    @@: operands c.Lmx (cast: (@@: c.Lmx) c.calloc(2U, sizeof(@)))
+    @: map size_t (cast: (@: size_t) c.calloc(4U, c.sizeof(c.size_t)))
+    @@: use_anchors c.Lmx (cast: (@@: c.Lmx) c.calloc(1U, sizeof(@)))
+    @: use_words size_t (cast: (@: size_t) c.calloc(3U, c.sizeof(c.size_t)))
+    @: alias void c.lmx_pointer_new_owned(c.LMX_TYPE_CELL_POINTER, @ source)
+    int: number 0
+    if: first_parent = 0 || later_parent = 0 || first = 0 || later = 0 || physical_profile = 0 || operands = 0 || map = 0 || alias = 0 || use_anchors = 0 || use_words = 0
+        return: 152
+    if: c.lmx_graph_put_in(gs, first_parent, 0U, (cast: (@: void) first)) != 0 || c.lmx_graph_put_in(gs, later_parent, 0U, (cast: (@: void) later)) != 0 || c.lmx_graph_put_in(gs, first_parent, 1U, c.lmx_graph_int(gs, 1234)) != 0 || c.lmx_graph_put_in(gs, later_parent, 1U, c.lmx_graph_int(gs, 5678)) != 0 || c.lmx_graph_put_in(gs, first, 0U, c.lmx_graph_int(gs, 31)) != 0 || c.lmx_graph_put_in(gs, later, 0U, c.lmx_graph_int(gs, 41)) != 0 || c.lmx_graph_put_in(gs, later, 1U, c.lmx_graph_int(gs, 42)) != 0
+        return: 153
+    if: c.lmx_native_install(@ source, first, (cast: (c.LmxPrimitiveEntry) c.nd_entry), first, 0, 0, 0, 0) != 0 || c.lmx_native_install(@ source, later, (cast: (c.LmxPrimitiveEntry) c.nd_entry), later, 0, 0, 0, 0) != 0
+        return: 154
+    @: description c.Lmx c.lmx_native_descriptor(@ source, later)
+    @: variant c.Lmx nd_variant(@ source, description)
+    if: variant = 0 || c.lmx_pointer_store_in(@ source, alias, (cast: (@: void) c.lmx_graph_ref_cell_in(@ source, later, 0U))) != 0 || c.lmx_graph_put_in(gs, variant, 2U, (cast: (@: void) description)) != 0 || c.lmx_graph_put_in(gs, variant, 4U, alias) != 0
+        return: 155
+    # The marker is an explicit lexical use; unused lexical fields stay absent.
+    use_anchors[0U] := first_parent
+    use_words[0U] := 0U
+    use_words[1U] := 1U
+    use_words[2U] := 1U
+    operands[0U] := first
+    operands[1U] := later
+    map[0U] := 1U
+    map[1U] := 2U
+    map[2U] := 1U
+    map[3U] := 2U
+    if: c.lmx_merge_selected_owned(operands, 2U, 0, @ source, @ destination, 0, 0U, use_anchors, use_words, use_words + 1U, use_words + 2U, 1U, 1U, 0, 0U, @ merged, 1U, map, 2U) != c.LMX_MERGE_OK || merged = 0
+        return: 156
+    @: copied_description c.Lmx c.lmx_native_descriptor(@ destination, merged)
+    @: copied_variant c.Lmx nd_variant(@ destination, copied_description)
+    @: copied_leaf c.LmxPrimitive (cast: (@: c.LmxPrimitive) c.lmx_graph_get_in(gd, copied_variant, 1U))
+    if: copied_description = 0 || copied_description = description || copied_variant = 0 || copied_leaf = 0 || copied_leaf\signature != merged || c.lmx_graph_get_in(gd, copied_variant, 0U) != (cast: (@: void) merged) || c.lmx_graph_get_in(gd, copied_variant, 2U) != (cast: (@: void) copied_description)
+        return: 157
+    @: copied_alias void c.lmx_graph_get_in(gd, copied_variant, 4U)
+    int: alias_match (cast: (int) (c.lmx_pointer_value_in(@ destination, copied_alias) = (cast: (@: void) c.lmx_graph_ref_cell_in(@ destination, merged, 1U))))
+    int: parent_present (cast: (int) (merged\parent != 0))
+    int: parent_child_match (cast: (int) (c.lmx_graph_get_in(gd, merged\parent, 0U) = (cast: (@: void) merged)))
+    int: marker_status c.lmx_graph_value_int(gd, c.lmx_graph_get_in(gd, merged\parent, 1U), @ number)
+    if: alias_match = 0 || parent_present = 0 || parent_child_match = 0 || marker_status != 0 || number != 1234
+        c.fprintf(c.stderr, "selected alias=%d parent=%d child=%d marker_status=%d marker=%d\n", alias_match, parent_present, parent_child_match, marker_status, number)
+        return: 158
+    # Independent then immutable-style copy must carry the already selected binding.
+    merged\parent := 0
+    if: c.lmx_graph_copy_qualified_owned(merged, @ destination, @ destination, 0, 0U, physical_profile, @ qualified) != c.LMX_GRAPH_COPY_OK || qualified = 0 || qualified\parent != 0
+        return: 159
+    @: qualified_description c.Lmx c.lmx_native_descriptor(@ destination, qualified)
+    @: qualified_variant c.Lmx nd_variant(@ destination, qualified_description)
+    if: qualified_description = 0 || qualified_description = copied_description || qualified_variant = 0 || c.lmx_graph_get_in(gd, qualified_variant, 0U) != (cast: (@: void) qualified) || c.lmx_graph_get_in(gd, qualified_variant, 2U) != (cast: (@: void) qualified_description)
+        return: 160
+    # An absent selected implementation never falls back to the first operand's.
+    if: c.lmx_native_bind(@ source, later, 0) != 0 || c.lmx_merge_selected_owned(operands, 2U, 0, @ source, @ destination, 0, 0U, use_anchors, use_words, use_words + 1U, use_words + 2U, 1U, 1U, 0, 0U, @ absent, 1U, map, 2U) != c.LMX_MERGE_OK || absent = 0 || c.lmx_native_descriptor(@ destination, absent) != 0
+        return: 161
+    if: c.lmx_arena_release(@ source) != 0 || c.lmx_graph_call(gd, merged) != 77 || c.lmx_graph_call(gd, qualified) != 77
+        return: 162
+    if: c.lmx_arena_release(@ destination) != 0
+        return: 163
+    c.free(operands)
+    c.free(map)
+    c.free(use_anchors)
+    c.free(use_words)
+    return: 0
+
+# An ordinary descriptor can change; invalid replacement data never becomes a machine entry.
+fn: nd_changed_leaf () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 170
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: code c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: wrong c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: number void c.lmx_graph_int(g, 3)
+    if: g = 0 || code = 0 || wrong = 0 || number = 0
+        return: 171
+    if: c.lmx_native_install(@ arena, code, (cast: (c.LmxPrimitiveEntry) c.nd_entry), 0, 0, 0, 0, 0) != 0
+        return: 172
+    @: description c.Lmx c.lmx_native_descriptor(@ arena, code)
+    @: variant c.Lmx nd_variant(@ arena, description)
+    @: saved void c.lmx_graph_value_in(@ arena, variant, 1U)
+    if: description = 0 || variant = 0 || saved = 0
+        return: 173
+    if: c.lmx_graph_put_in(g, variant, 1U, 0) != 0 || c.lmx_native_entry(@ arena, code) != 0
+        return: 174
+    if: c.lmx_graph_put_in(g, variant, 1U, number) != 0 || c.lmx_native_entry(@ arena, code) != 0
+        return: 175
+    if: c.lmx_graph_put_in(g, variant, 1U, (cast: (@: void) wrong)) != 0 || c.lmx_native_entry(@ arena, code) != 0
+        return: 176
+    if: c.lmx_native_descriptor(@ arena, code) != description || c.lmx_graph_put_in(g, variant, 1U, saved) != 0
+        return: 177
+    if: c.lmx_native_entry(@ arena, code) != (cast: (c.LmxPrimitiveEntry) c.nd_entry) || c.lmx_graph_call(g, code) != 77
+        return: 178
+    if: c.lmx_arena_release(@ arena) != 0
+        return: 179
+    return: 0
+
+fn: nd_storage_check () int
+    int: status nd_copy()
+    if: status != 0
+        return: status
+    status := nd_weak_key()
+    if: status != 0
+        return: status
+    status := nd_table_growth()
+    if: status != 0
+        return: status
+    status := nd_failed_copy()
+    if: status != 0
+        return: status
+    status := nd_selected_merge()
+    if: status != 0
+        return: status
+    status := nd_changed_leaf()
+    if: status != 0
+        return: status
+    return: 7

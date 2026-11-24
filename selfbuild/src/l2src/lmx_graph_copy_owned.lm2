@@ -4,6 +4,7 @@
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
@@ -193,6 +194,7 @@ sub: lmx_copy_map_dispose (c.LmxCopyMap@: m)
     m\n := 0U
     m\unmapped := 0
     m\value_policy := 0
+    m\fresh := 0
 end: lmx_copy_map_dispose
 
 fn: lmx_copy_map_get (c.LmxCopyMap@: m; @: key) @
@@ -261,8 +263,10 @@ fn: lmx_copy_map_put (c.LmxCopyMap@: m; @: key; @: value) int
     @@: keys
     @@: vals
     size_t: i
+    c.LmxCopyMap@: fresh 0
     if: m = 0 || key = 0 || value = 0
         return: 1
+    fresh := (cast: (c.LmxCopyMap@) m\fresh)
     if: (m\n + 1U) * 2U > lmx_copy_map_keys_cap(m)
         if: lmx_copy_map_grow(m) != 0
             return: 1
@@ -272,9 +276,20 @@ fn: lmx_copy_map_put (c.LmxCopyMap@: m; @: key; @: value) int
     i := lmx_copy_hash(key, lmx_copy_map_keys_cap(m))
     while: keys[i] != 0
         if: keys[i] = key
+            if: fresh != 0 && lmx_copy_map_get(fresh, key) != 0 && lmx_copy_map_put(fresh, key, value) != 0
+                return: 1
+            ---
             vals[i] := value
             return: 0
         i := (i + 1U) & (lmx_copy_map_keys_cap(m) - 1U)
+    ---
+    # Extension seeds already exist. Only new physical copies enter this phase's footprint.
+    if: fresh != 0 && key != value
+        if: lmx_copy_map_keys_cap(fresh) = 0U && lmx_copy_map_init(fresh) != 0
+            return: 1
+        if: lmx_copy_map_put(fresh, key, value) != 0
+            return: 1
+        ---
     ---
     keys[i] := key
     vals[i] := value
@@ -3005,12 +3020,30 @@ end: lmx_copy_process
 
 # The queue engine is shared by ordinary complete copies and a constructor
 # which has already installed all of its receiving correspondences.
-fn: lmx_copy_drain (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: wholes; c.LmxCopyStack@: todo; c.LmxCopyStack@: links; int@: status; c.Lmx@: dst_profile; int: chain; c.Lmx@@: leaves; size_t: leaf_count; c.LmxCopyMap@: profile_map; int: requested_type) int
+fn: lmx_copy_drain (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: wholes; c.LmxCopyStack@: todo; c.LmxCopyStack@: links; int@: status; c.Lmx@: dst_profile; int: chain; c.Lmx@@: leaves; size_t: leaf_count; c.LmxCopyMap@: profile_map; int: requested_type; c.LmxNativeTable@: native_pending; c.LmxCopyStack@: native_work) int
     c.Lmx@: source 0
+    c.Lmx@: description 0
+    c.Lmx@: copied_code 0
     while: \status = c.LMX_GRAPH_COPY_OK && (lmx_copy_stack_items_len(todo) != 0U || lmx_copy_stack_items_len(links) != 0U)
         if: lmx_copy_stack_items_len(todo) != 0U
             source := lmx_copy_stack_pop(todo)
             lmx_copy_process(source, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type)
+            # Freeze the source binding now. Publication follows the completed descriptor closure.
+            if: \status = c.LMX_GRAPH_COPY_OK && c.lmx_graph_node_in(src_arena, (cast: (@) source)) != 0 && (wholes = 0 || lmx_copy_map_get(wholes, (cast: (@) source)) != 0)
+                description := c.lmx_native_descriptor(src_arena, source)
+                copied_code := (cast: (c.Lmx@) lmx_copy_map_get(map, (cast: (@) source)))
+                if: description != 0
+                    if: copied_code = 0
+                        \status := c.LMX_GRAPH_COPY_INVALID
+                    else:
+                        if: c.lmx_native_table_set(native_pending, copied_code, description) != 0
+                            \status := c.LMX_GRAPH_COPY_NOMEM
+                        if: \status = c.LMX_GRAPH_COPY_OK && lmx_copy_stack_push(native_work, description) != 0
+                            \status := c.LMX_GRAPH_COPY_NOMEM
+                        ---
+                    ---
+                ---
+            ---
         else:
             source := lmx_copy_stack_pop(links)
             lmx_copy_link(source, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
@@ -3039,13 +3072,26 @@ end: lmx_graph_copy_value_mapped_staged
 # Drain saved Value edges using the same map. Structural parent/name/fact
 # policy belongs to the receiving constructor; its seed root is never queued.
 fn: lmx_graph_copy_drain_mapped (c.LmxArena@: arena; c.LmxCopyMap@: map; c.LmxCopyStack@: todo; int: chain) int
+    c.LmxNativeTable: native_pending
+    c.LmxCopyStack: native_work
+    c.LmxCopyMap: pending
     c.LmxCopyStack: links
     int: status c.LMX_GRAPH_COPY_OK
+    c.memset((cast: (@) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@) (@ native_pending)), 0, c.sizeof(c.LmxNativeTable))
+    c.memset((cast: (@) (@ native_work)), 0, c.sizeof(c.LmxCopyStack))
     if: arena = 0 || map = 0 || todo = 0
         return: c.LMX_GRAPH_COPY_INVALID
     c.memset((cast: (@) (@ links)), 0, c.sizeof(c.LmxCopyStack))
     map\value_policy := map\value_policy & ~2
-    lmx_copy_drain(arena, arena, 0, 0U, map, 0, todo, @ links, @ status, 0, chain, 0, 0U, 0, c.LMX_TYPE_NONE)
+    lmx_copy_drain(arena, arena, 0, 0U, map, 0, todo, @ links, @ status, 0, chain, 0, 0U, 0, c.LMX_TYPE_NONE, @ native_pending, @ native_work)
+    if: status = c.LMX_GRAPH_COPY_OK
+        status := lmx_copy_native_finish(arena, arena, 0, 0U, map, @ pending, @ native_pending, @ native_work, 0, 0, c.LMX_TYPE_NONE, 0, 0, 1)
+    if: status = c.LMX_GRAPH_COPY_OK && c.lmx_native_publish(arena, @ native_pending) != 0
+        status := c.LMX_GRAPH_COPY_NOMEM
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
+    lmx_copy_stack_dispose(@ native_work)
+    c.lmx_native_table_dispose(@ native_pending)
     lmx_copy_stack_dispose(@ links)
     return: status
 end: lmx_graph_copy_drain_mapped
@@ -3858,7 +3904,8 @@ end: lmx_copy_carry_target
 # Structure keeps its own source-edge coordinates, unless it is an absorbed root
 # whose new coordinates composition must prove. Carry those projections after
 # receiving/partial records, without borrowing an uncopied frame or requirement.
-fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.LmxCopyMap@: map; c.LmxCopyMap@: wholes; int: used; int: part_roots; int: absorbed; int: requested_type) int
+fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.LmxCopyMap@: map; c.LmxCopyMap@: wholes; int: used; int: part_roots; int: absorbed; int: requested_type; c.LmxCopyMap@: subjects) int
+    c.LmxCopyMap@: values map
     c.LmxCopyMap: self_storage
     c.LmxCopyMap@: selfs (@ self_storage)
     c.LmxCopyMap: lay_storage
@@ -3884,6 +3931,8 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
     @@: vals
     if: src_arena = 0 || dst_arena = 0 || map = 0
         return: c.LMX_GRAPH_COPY_INVALID
+    if: subjects != 0
+        values := subjects
     if: absorbed = 0
         carry_roots := 1
     n := src_arena\impl_len
@@ -3900,7 +3949,7 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
         while: i < n && status = c.LMX_GRAPH_COPY_OK
             # The table moves when it grows: each record is read again by its index.
             e := src_arena\impl + i
-            vd := lmx_copy_carry_target(map, sources, count, src_arena, (cast: (c.Lmx@) e\value), carry_roots)
+            vd := lmx_copy_carry_target(values, sources, count, src_arena, (cast: (c.Lmx@) e\value), carry_roots)
             rd := lmx_copy_carry_target(map, sources, count, src_arena, (cast: (c.Lmx@) e\req), carry_roots)
             fd := 0
             if: e\frame != 0
@@ -3947,7 +3996,7 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
                     ---
                 ---
             ---
-            if: status = c.LMX_GRAPH_COPY_OK && rd != 0 && c.lmx_graph_node_in(dst_arena, (cast: (@) e\value)) != 0 && (fr = 0 || c.lmx_graph_node_in(dst_arena, (cast: (@) fr)) != 0)
+            if: subjects = 0 && status = c.LMX_GRAPH_COPY_OK && rd != 0 && c.lmx_graph_node_in(dst_arena, (cast: (@) e\value)) != 0 && (fr = 0 || c.lmx_graph_node_in(dst_arena, (cast: (@) fr)) != 0)
                 if: pass = 0
                     need := need + 1U
                 else:
@@ -3969,12 +4018,12 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
         ---
         # A partial copy with no record with itself in its source gets one, with holes: a direct read of a place it
         # holds no object at is refused (lmx_walk_place).
-        keys := lmx_copy_map_keys_data(map)
-        vals := lmx_copy_map_vals_data(map)
+        keys := lmx_copy_map_keys_data(values)
+        vals := lmx_copy_map_vals_data(values)
         i := 0U
-        while: status = c.LMX_GRAPH_COPY_OK && used != 0 && i < lmx_copy_map_keys_cap(map)
+        while: status = c.LMX_GRAPH_COPY_OK && used != 0 && i < lmx_copy_map_keys_cap(values)
             key := (cast: (c.Lmx@) keys[i])
-            if: key != 0 && lmx_copy_carry_target(map, sources, count, src_arena, key, part_roots) != 0 && lmx_copy_map_get(wholes, (cast: (@) key)) = 0 && lmx_copy_map_get(selfs, (cast: (@) key)) = 0
+            if: key != 0 && lmx_copy_carry_target(values, sources, count, src_arena, key, part_roots) != 0 && lmx_copy_map_get(wholes, (cast: (@) key)) = 0 && lmx_copy_map_get(selfs, (cast: (@) key)) = 0
                 if: pass = 0
                     need := need + 1U
                 else:
@@ -3998,7 +4047,7 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
             e := src_arena\impl + i
             vd := 0
             if: e\value = e\req && e\exec_map != 0 && (absorbed = 0 || lmx_copy_is_root(sources, count, (cast: (@) e\value)) = 0)
-                vd := (cast: (c.Lmx@) lmx_copy_map_get(map, (cast: (@) e\value)))
+                vd := (cast: (c.Lmx@) lmx_copy_map_get(values, (cast: (@) e\value)))
             if: vd != 0
                 if: pass = 0
                     # An upper bound: an existing ordinary/partial self record
@@ -4041,7 +4090,171 @@ fn: lmx_copy_carry_records (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_ar
     return: status
 end: lmx_copy_carry_records
 
+# Resolve parents through the full identity map, but write only the selected fresh subjects.
+# Merge receiving seeds never enter the descriptor-extension footprint.
+fn: lmx_copy_finish_headers (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: lookup; c.LmxCopyMap@: subjects) int
+    @@: keys void 0
+    @@: vals void 0
+    @: key void 0
+    c.Lmx@: src 0
+    c.Lmx@: dst 0
+    size_t: i 0U
+    int: status c.LMX_GRAPH_COPY_OK
+    keys := lmx_copy_map_keys_data(subjects)
+    vals := lmx_copy_map_vals_data(subjects)
+    while: i < lmx_copy_map_keys_cap(subjects)
+        key := keys[i]
+        if: key != 0
+            if: c.lmx_graph_node_in(src_arena, key) != 0
+                src := (cast: (c.Lmx@) key)
+                dst := (cast: (c.Lmx@) vals[i])
+                dst\parent := 0
+                if: src\parent != 0
+                    # A structural parent is a Structure. Anything else in
+                    # parent is a defect of the source, not a terminal.
+                    if: c.lmx_graph_node_in(src_arena, (cast: (@) src\parent)) = 0
+                        status := c.LMX_GRAPH_COPY_INVALID
+                    else:
+                        if: lmx_copy_retained_profiles(src_arena, (cast: (@) src\parent), retain_profiles, retain_count) != 0
+                            if: lmx_copy_retained_profiles(dst_arena, (cast: (@) src\parent), retain_profiles, retain_count) = 0
+                                status := c.LMX_GRAPH_COPY_INVALID
+                            else:
+                                dst\parent := src\parent
+                            ---
+                        else:
+                            dst\parent := (cast: (c.Lmx@) lmx_copy_map_get(lookup, (cast: (@) src\parent)))
+                            if: dst\parent = 0
+                                if: c.lmx_range_home(dst_arena, (cast: (@) src\parent)) = dst_arena
+                                    dst\parent := src\parent
+                                else:
+                                    status := c.LMX_GRAPH_COPY_INVALID
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: status
+end: lmx_copy_finish_headers
+
+# Extend one authoritative identity map. Only newly allocated subjects receive finalization;
+# existing receiving parents, fields, names and execution facts are already complete.
+fn: lmx_copy_native_finish (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.LmxNativeTable@: native_pending; c.LmxCopyStack@: native_work; c.Lmx@: dst_profile; c.LmxCopyMap@: profile_map; int: requested_type; int: absorbed; c.LmxCopyMap@: wholes; int: fresh_records) int
+    c.LmxCopyMap: fresh
+    c.LmxCopyStack: todo
+    c.LmxCopyStack: links
+    c.Lmx@: source 0
+    @: copied void 0
+    size_t: i 0U
+    int: status c.LMX_GRAPH_COPY_OK
+    c.LmxNativeBinding@: row 0
+    @@: fresh_keys void 0
+    @@: fresh_vals void 0
+    size_t: at 0U
+    if: map = 0 || map\fresh != 0 || native_pending = 0 || native_work = 0
+        return: c.LMX_GRAPH_COPY_INVALID
+    if: native_pending\len = 0U
+        return: c.LMX_GRAPH_COPY_OK
+    c.memset((cast: (@) (@ fresh)), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
+    c.memset((cast: (@) (@ links)), 0, c.sizeof(c.LmxCopyStack))
+    map\fresh := @ fresh
+    while: status = c.LMX_GRAPH_COPY_OK && lmx_copy_stack_items_len(native_work) != 0U
+        source := lmx_copy_stack_pop(native_work)
+        copied := lmx_copy_value((cast: (@) source), src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ status, dst_profile, 0, 0U, profile_map, requested_type)
+        # Retained profile values are identity terminals and need no fresh finalization.
+        if: status = c.LMX_GRAPH_COPY_OK && lmx_copy_map_get(map, (cast: (@) source)) = 0
+            if: copied = 0
+                status := c.LMX_GRAPH_COPY_INVALID
+            else:
+                if: lmx_copy_map_put(map, (cast: (@) source), copied) != 0
+                    status := c.LMX_GRAPH_COPY_NOMEM
+                ---
+            ---
+        ---
+        if: status = c.LMX_GRAPH_COPY_OK
+            lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ links, @ status, dst_profile, 1, 0, 0U, profile_map, requested_type, native_pending, native_work)
+        ---
+    ---
+    map\fresh := 0
+    if: status = c.LMX_GRAPH_COPY_OK
+        status := lmx_copy_finish_headers(src_arena, dst_arena, retain_profiles, retain_count, map, @ fresh)
+    if: status = c.LMX_GRAPH_COPY_OK && pending != 0
+        status := lmx_copy_names(src_arena, dst_arena, @ fresh, pending)
+    # A used-copy's descriptor extension copied every NEW subject completely.
+    # Finished receiving seeds retain their original partial/whole classification.
+    fresh_keys := lmx_copy_map_keys_data(@ fresh)
+    fresh_vals := lmx_copy_map_vals_data(@ fresh)
+    while: status = c.LMX_GRAPH_COPY_OK && wholes != 0 && at < lmx_copy_map_keys_cap(@ fresh)
+        if: fresh_keys[at] != 0 && lmx_copy_map_put(wholes, fresh_keys[at], fresh_vals[at]) != 0
+            status := c.LMX_GRAPH_COPY_NOMEM
+        at := at + 1U
+    ---
+    if: status = c.LMX_GRAPH_COPY_OK && fresh_records != 0
+        status := lmx_copy_carry_records(0, 0U, src_arena, dst_arena, map, 0, 0, 1, absorbed, requested_type, @ fresh)
+    # Resolve every source descriptor before any binding can change source/destination overlap.
+    while: status = c.LMX_GRAPH_COPY_OK && i < native_pending\cap
+        row := native_pending\rows + i
+        if: row\code != 0 && row\descriptor != 0
+            copied := lmx_copy_map_get(map, (cast: (@) row\descriptor))
+            if: copied = 0
+                status := c.LMX_GRAPH_COPY_INVALID
+            else:
+                row\descriptor := (cast: (c.Lmx@) copied)
+            ---
+        ---
+        i := i + 1U
+    ---
+    lmx_copy_stack_dispose(@ todo)
+    lmx_copy_stack_dispose(@ links)
+    lmx_copy_map_dispose(@ fresh)
+    return: status
+end: lmx_copy_native_finish
+
+# A merge has already composed source addresses with final receiving places.
+# Its selected executable supplies exactly this binding, including an absent binding.
+fn: lmx_graph_copy_native_mapped (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.Lmx@: dst_profile; c.LmxCopyMap@: profile_map; int: requested_type; c.Lmx@: source; c.Lmx@: copied_code; int: absorbed) int
+    c.LmxNativeTable: native_pending
+    c.LmxCopyStack: native_work
+    c.Lmx@: description 0
+    c.Lmx@: known 0
+    int: status c.LMX_GRAPH_COPY_OK
+    if: src_arena = 0 || dst_arena = 0 || map = 0 || pending = 0 || source = 0 || copied_code = 0
+        return: c.LMX_GRAPH_COPY_INVALID
+    c.memset((cast: (@) (@ native_pending)), 0, c.sizeof(c.LmxNativeTable))
+    c.memset((cast: (@) (@ native_work)), 0, c.sizeof(c.LmxCopyStack))
+    description := c.lmx_native_descriptor(src_arena, source)
+    # An exactly retained occurrence keeps its existing owner's binding and closure.
+    if: copied_code = source && c.lmx_native_descriptor(dst_arena, copied_code) = description
+        return: c.LMX_GRAPH_COPY_OK
+    if: description = 0
+        if: c.lmx_native_bind(dst_arena, copied_code, 0) != 0
+            return: c.LMX_GRAPH_COPY_INVALID
+        return: c.LMX_GRAPH_COPY_OK
+    known := (cast: (c.Lmx@) lmx_copy_map_get(map, (cast: (@) description)))
+    if: known != 0
+        if: c.lmx_native_bind(dst_arena, copied_code, known) != 0
+            return: c.LMX_GRAPH_COPY_NOMEM
+        return: c.LMX_GRAPH_COPY_OK
+    if: c.lmx_native_table_set(@ native_pending, copied_code, description) != 0
+        status := c.LMX_GRAPH_COPY_NOMEM
+    if: status = c.LMX_GRAPH_COPY_OK && description != 0 && lmx_copy_stack_push(@ native_work, description) != 0
+        status := c.LMX_GRAPH_COPY_NOMEM
+    if: status = c.LMX_GRAPH_COPY_OK
+        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, dst_profile, profile_map, requested_type, absorbed, 0, 1)
+    if: status = c.LMX_GRAPH_COPY_OK && c.lmx_native_publish(dst_arena, @ native_pending) != 0
+        status := c.LMX_GRAPH_COPY_NOMEM
+    lmx_copy_stack_dispose(@ native_work)
+    c.lmx_native_table_dispose(@ native_pending)
+    return: status
+end: lmx_graph_copy_native_mapped
+
 fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@: absorb; int: used; int: part_roots; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.Lmx@@: outs; c.LmxCopyMap@: pending; c.Lmx@: dst_profile; int: chain; c.Lmx@@: leaves; size_t: leaf_count; c.LmxCopyMap@: relocated; c.LmxCopyMap@: profile_map; int: requested_type) int
+    c.LmxNativeTable: native_pending
+    c.LmxCopyStack: native_work
     c.LmxCopyMap: map_storage
     c.LmxCopyStack: todo_storage
     c.LmxCopyMap: wholes_storage
@@ -4064,6 +4277,8 @@ fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.Lmx
     int: status c.LMX_GRAPH_COPY_OK
     size_t: i 0U
     size_t: r 0U
+    c.memset((cast: (@) (@ native_pending)), 0, c.sizeof(c.LmxNativeTable))
+    c.memset((cast: (@) (@ native_work)), 0, c.sizeof(c.LmxCopyStack))
     if: relocated != 0
         c.memset((cast: (@) relocated), 0, c.sizeof(c.LmxCopyMap))
     ---
@@ -4180,57 +4395,9 @@ fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.Lmx
         off := off + use_len[u]
         u := u + 1U
     ---
-    lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type)
-    # Parent fixup: a copied Structure points at a copied parent, an explicitly
-    # retained qualified parent, or zero. A subtree may keep an outside
-    # lexical parent physically owned by the destination. An unresolved parent
-    # physically owned by another arena is a dangling edge, even if the source
-    # and destination arena views happen to be the same imported view.
+    lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type, @ native_pending, @ native_work)
     if: status = c.LMX_GRAPH_COPY_OK
-        keys := lmx_copy_map_keys_data(map)
-        vals := lmx_copy_map_vals_data(map)
-        while: i < lmx_copy_map_keys_cap(map)
-            key := keys[i]
-            if: key != 0
-                if: c.lmx_graph_node_in(src_arena, key) != 0
-                    src := (cast: (c.Lmx@) key)
-                    dst := (cast: (c.Lmx@) vals[i])
-                    dst\parent := 0
-                    # A native entry belongs to the exact executable body it was
-                    # compiled for. A whole graph copy preserves that body and may
-                    # reuse the entry; a used/partial lexical copy does not.
-                    dst\native := 0
-                    if: wholes = 0 || lmx_copy_map_get(wholes, key) != 0
-                        dst\native := src\native
-                    ---
-                    if: src\parent != 0
-                        # A structural parent is a Structure. Anything else in
-                        # parent is a defect of the source, not a terminal.
-                        if: c.lmx_graph_node_in(src_arena, (cast: (@) src\parent)) = 0
-                            status := c.LMX_GRAPH_COPY_INVALID
-                        else:
-                            if: lmx_copy_retained_profiles(src_arena, (cast: (@) src\parent), retain_profiles, retain_count) != 0
-                                if: lmx_copy_retained_profiles(dst_arena, (cast: (@) src\parent), retain_profiles, retain_count) = 0
-                                    status := c.LMX_GRAPH_COPY_INVALID
-                                else:
-                                    dst\parent := src\parent
-                                ---
-                            else:
-                                dst\parent := (cast: (c.Lmx@) lmx_copy_map_get(map, (cast: (@) src\parent)))
-                                if: dst\parent = 0
-                                    if: c.lmx_range_home(dst_arena, (cast: (@) src\parent)) = dst_arena
-                                        dst\parent := src\parent
-                                    else:
-                                        status := c.LMX_GRAPH_COPY_INVALID
-                                    ---
-                                ---
-                            ---
-                        ---
-                    ---
-                ---
-            ---
-            i := i + 1U
-        ---
+        status := lmx_copy_finish_headers(src_arena, dst_arena, retain_profiles, retain_count, map, map)
     ---
     if: status = c.LMX_GRAPH_COPY_OK && absorb != 0 && relocated = 0
         status := lmx_copy_absorb(sources, count, src_arena, dst_arena, retain_profiles, retain_count, map, absorb)
@@ -4238,9 +4405,15 @@ fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.Lmx
     if: status = c.LMX_GRAPH_COPY_OK
         status := lmx_copy_names(src_arena, dst_arena, map, pending)
     ---
+    if: status = c.LMX_GRAPH_COPY_OK
+        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, dst_profile, profile_map, requested_type, (cast: (int) (absorb != 0)), wholes, 0)
+    ---
     # Correspondences: the copy's records, decided by the copy map (lmx_copy_carry_records).
     if: status = c.LMX_GRAPH_COPY_OK
-        status := lmx_copy_carry_records(sources, count, src_arena, dst_arena, map, wholes, used, part_roots, (cast: (int) (absorb != 0)), requested_type)
+        status := lmx_copy_carry_records(sources, count, src_arena, dst_arena, map, wholes, used, part_roots, (cast: (int) (absorb != 0)), requested_type, 0)
+    ---
+    if: status = c.LMX_GRAPH_COPY_OK && c.lmx_native_publish(dst_arena, @ native_pending) != 0
+        status := c.LMX_GRAPH_COPY_NOMEM
     ---
     if: status != c.LMX_GRAPH_COPY_OK
         lmx_copy_names_finish(pending, 0)
@@ -4261,6 +4434,8 @@ fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.Lmx
             r := r + 1U
         ---
     ---
+    lmx_copy_stack_dispose(@ native_work)
+    c.lmx_native_table_dispose(@ native_pending)
     lmx_copy_stack_dispose(todo)
     lmx_copy_stack_dispose(links)
     if: status = c.LMX_GRAPH_COPY_OK && relocated != 0

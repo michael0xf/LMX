@@ -18507,6 +18507,8 @@ fn: lm_compiler_merge_uses_native (const: (char@: ind); int: msf; int: nops; int
     return: (cast: (int) (0))
 end: lm_compiler_merge_uses_native
 
+
+
 # Original: l2src/l2trans.lm1:47101
 fn: lm_compiler_emit_keep (const: (char@: ind); const: (char@: arr); const: (char@: cnt)) int
     int@: ebr_n_cell (cast: (int@) (@ c.l2_ebr_n))
@@ -19119,10 +19121,6 @@ fn: lm_compiler_emit_stmts_with_position (const: (c.LmP0Structure@: body); c.LmP
     char@: merge_source_token (cast: (char@) merge_source_token_storage\buffer)
     c.L2FrontendScratchChar64: merge_keep_n_storage
     char@: merge_keep_n (cast: (char@) merge_keep_n_storage\buffer)
-    c.L2FrontendScratchChar64: merge_code_source_name_storage
-    char@: merge_code_source_name (cast: (char@) merge_code_source_name_storage\buffer)
-    c.L2FrontendScratchChar64: merge_code_map_name_storage
-    char@: merge_code_map_name (cast: (char@) merge_code_map_name_storage\buffer)
     size_t: l2_pv 0U
     int: l2_pkind 0
     int: l2_ptype 0 - 1
@@ -19546,13 +19544,18 @@ fn: lm_compiler_emit_stmts_with_position (const: (c.LmP0Structure@: body); c.LmP
             # (l2_emit_qualify_copy, l2_emit_qualify_result); const is the binding's contract (l2_colon_check_assignment).
             if: (qual & 1) != 0 && c.lm_compiler_has_lexical(mur_role_cell[0], mur_n_cell[0]) != 0
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "an independent merge result cannot read its lexical context")))
-            if: mq > 0 && mnp = 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, 0, 0U, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots) < 0
+            # A later executable source contributes the selected body (the D-105 ordinal/LAST table l2_mexec<msf>):
+            # the one selected merge proves its result-to-source admission and composes its descriptor here, before
+            # independent and immutable work on the result, so no later step joins the source's entry to the result.
+            if: mres_code_k_cell[0][msf] > 0 && lm_compiler_emit_merge_selected(ind, msf, n, mq, mslots, mnp, mres_code_k_cell[0][msf], c.lm_compiler_d105_width(mres_code_schema_cell[0][msf])) != 0
                 return: (cast: (int) (1))
-            if: mq > 0 && mnp > 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, l2_mpp, %dU, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots, mnp) < 0
+            if: mres_code_k_cell[0][msf] <= 0 && mq > 0 && mnp = 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, 0, 0U, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots) < 0
                 return: (cast: (int) (1))
-            if: mq = 0 && mnp = 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, 0, 0U, @ l2_mresult)\n", ind, n, msf) < 0
+            if: mres_code_k_cell[0][msf] <= 0 && mq > 0 && mnp > 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, l2_mpp, %dU, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots, mnp) < 0
                 return: (cast: (int) (1))
-            if: mq = 0 && mnp > 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mpp, %dU, @ l2_mresult)\n", ind, n, msf, mnp) < 0
+            if: mres_code_k_cell[0][msf] <= 0 && mq = 0 && mnp = 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, 0, 0U, @ l2_mresult)\n", ind, n, msf) < 0
+                return: (cast: (int) (1))
+            if: mres_code_k_cell[0][msf] <= 0 && mq = 0 && mnp > 0 && c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mpp, %dU, @ l2_mresult)\n", ind, n, msf, mnp) < 0
                 return: (cast: (int) (1))
             if: c.fprintf(out_cell[0], "%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind) < 0
                 return: (cast: (int) (1))
@@ -19572,34 +19575,6 @@ fn: lm_compiler_emit_stmts_with_position (const: (c.LmP0Structure@: body); c.LmP
                 return: (cast: (int) (1))
             if: c.lm_compiler_emit_invariant(ind, "successful merge has conflicting producer evidence") != 0
                 return: (cast: (int) (1))
-            # A later executable source contributes the selected body. Its
-            # result-to-source admission uses the existing D-105 ordinal/LAST
-            # table; the composed self projection lets native and walked OWN
-            # address the completed result, not the operand's former slots.
-            if: mres_code_k_cell[0][msf] > 0
-                if: c.snprintf(merge_code_map_name, 64U, "l2_mexec%d", msf) < 0
-                    return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "internal: a selected merge body has no address table")))
-                if: mres_code_k_cell[0][msf] = n
-                    c.strcpy(merge_code_source_name, "l2_mbody")
-                else:
-                    if: c.snprintf(merge_code_source_name, 64U, "l2_mops[%dU]", mres_code_k_cell[0][msf]) < 0
-                        return: (cast: (int) (1))
-                ---
-                if: c.fprintf(out_cell[0], "%sint: l2_mview_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_mexec_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_mexec_status%d lmx_implements_register_map(l2_program_arena, l2_mresult, %s, %s, %dU, 0, @ l2_mview_answer%d)\n", ind, msf, ind, msf, ind, msf, merge_code_source_name, merge_code_map_name, c.lm_compiler_d105_width(mres_code_schema_cell[0][msf]), msf) < 0
-                    return: (cast: (int) (1))
-                if: c.fprintf(out_cell[0], "%sif: l2_mexec_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_mexec_status%d)\n%s---\n%sif: l2_mview_answer%d != c.LMX_IMPLEMENTS_NO\n", ind, msf, ind, msf, ind, ind, msf) < 0
-                    return: (cast: (int) (1))
-                if: c.fprintf(out_cell[0], "%s    l2_mexec_status%d: lmx_implements_exec_compose_copy(l2_program_arena, %s, l2_program_arena, l2_mresult, %s, @ l2_mexec_answer%d)\n%s    if: l2_mexec_status%d != c.LMX_WALK_OK\n%s        lmx_call_note_walk_fail(l2_mexec_status%d)\n%s    ---\n%s---\n", ind, msf, merge_code_source_name, merge_code_source_name, msf, ind, msf, ind, msf, ind, ind) < 0
-                    return: (cast: (int) (1))
-                if: c.fprintf(out_cell[0], "%sif: l2_mview_answer%d = c.LMX_IMPLEMENTS_NO || l2_mexec_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, msf, msf) < 0
-                    return: (cast: (int) (1))
-                if: (qual & 4) != 0 && c.fprintf(out_cell[0], "%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n", ind) < 0
-                    return: (cast: (int) (1))
-                if: c.lm_compiler_emit_implicit_throw(mi, "merge", ind) != 0
-                    return: (cast: (int) (1))
-                if: c.fprintf(out_cell[0], "%sl2_mresult\\native: %s\\native\n", ind, merge_code_source_name) < 0
-                    return: (cast: (int) (1))
-            ---
             if: (qual & 4) != 0 && lm_compiler_emit_qualify_result(msf, merge_own, ind) != 0
                 return: (cast: (int) (1))
             if: c.lm_compiler_tx_set(tok_cell[0], "l2_mresult") != 0
@@ -22096,3 +22071,27 @@ fn: lm_compiler_cached_graph_value (int: own; c.L2Tx@: dest) int
         return: 1
     return: c.lm_compiler_tx_join(dest, "(cast: (@: Lmx) ", (cast: (const: char@) value\data), ")", 0, 0)
 end: lm_compiler_cached_graph_value
+
+# The merge whose result contributes a later executable source's body (plan W4): the call of lmx_merge_used_owned
+# with its sixteen arguments in their places, the out last of them, then the selected source (an operand index; the
+# body, when it is the selected one, has the index n, as l2_mops[n] would), the D-105 address table l2_mexec<msf> and
+# its width. The kernel proves the result-to-source admission and composes the descriptor before the independent and
+# the immutable steps; a refused proof has marked the walk failure there, so the caller keeps its ordinary implicit
+# merge throw. Without uses (mq = 0) the four use pointers and the two use counts are 0; without pairs (mnp = 0) the
+# overrides are 0 and 0U.
+fn: lm_compiler_emit_merge_selected (const: (char@: ind); int: msf; int: n; int: mq; int: mslots; int: mnp; int: selected; int: width) int
+    c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
+    if: c.fprintf(out_cell[0], "%sl2_mstatus: lmx_merge_selected_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, ", ind, n, msf) < 0
+        return: (cast: (int) (1))
+    if: mq > 0 && c.fprintf(out_cell[0], "l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, ", msf, msf, msf, msf, mq, mslots) < 0
+        return: (cast: (int) (1))
+    if: mq <= 0 && c.fputs("0, 0, 0, 0, 0U, 0U, ", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: mnp > 0 && c.fprintf(out_cell[0], "l2_mpp, %dU, ", mnp) < 0
+        return: (cast: (int) (1))
+    if: mnp <= 0 && c.fputs("0, 0U, ", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: c.fprintf(out_cell[0], "@ l2_mresult, %dU, l2_mexec%d, %dU)\n", selected, msf, width) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_emit_merge_selected

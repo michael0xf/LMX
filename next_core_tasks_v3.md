@@ -13,6 +13,14 @@
 наши правки сохранять по [журналу](steps/docs-edits-log.md).
 PDF, XLS и статистика не входят в сверку. Изменения рабочих документов журналируются вместе с коммитом.
 
+**Оговорка 2026-11-24 (Sol 6.2; новая goal активна).** Codex ведёт интеграцию, приёмку, единственный
+compiler/test/docs pipeline, commit и публикацию. Кодинг получает coder GLM 5.4; консультант — Astra 6.2 Astra Max.
+Всем доступны helper GLM 5.3 Flash и haiku 5.5 xhigh ultracode; остановленных пиров запускают из C:/claude/new/*.bat
+после проверки живых сессий. Используется lmx-dev, реализованный Astra и проверенный Haiku; его permit, lock
+и producer pins сохраняются. Физический W4 остаётся кандидатом до G1/G2 и окончательной расписки.
+После commit/push автор перезагрузит компьютер; до этого новых compiler jobs нет. Продолжение —
+[to_sol.md](to_sol.md). Прежние назначения описывают историю.
+
 Ближайшая очередь по [передаче](to_codex.md), с обязательной сверкой фактической базы перед каждым срезом:
 
 1. Сверять HEAD, origin/main, рабочее дерево, принятые свидетельства и хеши действующих producers перед каждым срезом.
@@ -39,7 +47,9 @@ PDF, XLS и статистика не входят в сверку. Измене
    глубины и весь M14 не объявлены готовыми. W1-компонент принят
    ([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
    ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
-   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); следующий код — W4.
+   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент (одна
+   таблица call/native на арену) — КАНДИДАТ, PENDING до G1/G2 и расписки ведущего, весь W4 ОТКРЫТ; следующий код —
+   21.7 (обычный result-call), константный sys-экспорт ядра и zero-actual caller DATA.
    Весь 27.17, Graph dense Array, descriptor/index, 32-битный ABI и общий шаг 21.25 остаются открыты.
    Индексный компонент опубликован коммитом `6d4ad9384b20e9524ec3fabe208cfa18d9e67177`.
    Промежуточные ограничения именовать прямо; они не становятся исключениями из нормы.
@@ -174,17 +184,28 @@ Full-suite нужен при широком влиянии, общей регр�
   и на принятой базе; дамп admission_structure_snapshot после исполнения побайтно равен базовому и не совпадает
   с прежним .expected (expected не менялись). W2 принят как компонент; W3 принят как компонент
   ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4–W5 и весь 27.10 ОТКРЫТЫ;
-  следующий код — W4. Порядок и исполнителя срезов определяет координатор.
+  W4: физический компонент — КАНДИДАТ, PENDING до G1/G2; следующий код — 21.7 (обычный result-call), константный
+  sys-экспорт ядра и zero-actual caller DATA. Порядок и исполнителя срезов определяет координатор.
   W3: LmxGraph принадлежит arena; entry читает переданный arena.graph_metadata при прежнем C9 и отдельном code;
   process graphs/find и глобальный обход top, globals и getter чистого GraphTool удалены; обход получает g явно;
   attach/rollback/release сохраняют имена и освобождают metadata. Обычный legacy l2trans и его globals остаются W5.
-  W4 (OPEN, private): реализуется ровно предусмотренная call/native table — arena-owned selected executable occurrence
-  → обычный native descriptor; физически этой таблицы в checkout ещё нет. Запрет относится к дополнительным registry,
-  кэшам и обратным картам; admission maps и LmxCallPlaces таблицу не подменяют. Нужны typed C9 entry leaf и обычные
-  данные signature/variants/module-entry/L1-C path; связывание GC условно по живому ключу в общей неподвижной точке;
-  copy и merge идут через общую map; attach, revert и release выполняются вместе; sys/native возвращает существующий
-  descriptor или 0 без создания и выполнения. Это уточнение реализации действующей нормы по Astra 231, не изменение
-  нормы; весь M14, actual-signatures, codec и SLJIT не входят.
+  W4 (весь ОТКРЫТ; физический компонент — КАНДИДАТ, PENDING до G1/G2 и расписки ведущего): реализуется
+  ровно предусмотренная call/native table — одна таблица на арену: выбранная executable occurrence → обыкновенный
+  native descriptor (обычная Structure D). Поле `native` из заголовка `Lmx` удалено, чтения и записи идут через
+  таблицу. Typed C9 entry leaf и обычные данные signature/variants/module-entry/L1-C path; связывание GC условно по
+  живому ключу в общей неподвижной точке; copy/merge используют общую map; attach переносит строки,
+  release освобождает их. Записи графа не пересоздают и не очищают identity D. Дополнительных registry,
+  кэшей и обратных карт нет; admission maps и
+  LmxCallPlaces таблицу не подменяют. Завершённый шаг: целевой runtime RT07 (exit 0) и юнит
+  `native_descriptor_storage` (6 PASS: 2 сборки и 4 исполнения) зелёные; 32 пути кода и контроля перенесены в
+  репозиторий как кандидат (манифест 1688 файлов); принятая граница ABI остаётся W3. Языковой sys/native
+  ещё не подключён; синтетических source-полей native нет. C-запрос descriptor и тест через C-дверь
+  исходный приёмник не заменяют. Для него нужны: 21.7 (обычный result-call), константный sys-экспорт ядра
+  и zero-actual
+  форма DATA вызывающего; это не W5-заметание долга. Это уточнение реализации действующей нормы по Astra 231 и
+  Astra 247, не изменение нормы; границы M13 и M14 (actual-signatures, codec, SLJIT), полный набор, 32-битный ABI и
+  runtime backend ОТКРЫТЫ. Итоговые G1/G2 и окончательная приёмка — PENDING до расписки ведущего; публикация кандидата
+  не означает их прохождение. Свидетельство: [кандидат W4](steps/witnesses/native-descriptor-table-20261124/notes.md).
   Открыто: graph_call_frames, случай 122, отвечает 5 вместо 9 на опубликованной базе W2 и на W3; ожидание 7 программы
   не менялось, строка не зелёная. Другие старые открытые случаи сохраняются. Не приняты: весь 27.10, M13, M14, W4–W5.
 - **27.11. Нулевой родитель — общий контракт; независимость Thread** (слова автора — [журнал](LMX_blog/2026-11-23.md#thread-independence); продолжение 27.10). `parent`, равный 0, — обычное состояние Structure, не особенность R0:
@@ -246,7 +267,9 @@ Full-suite нужен при широком влиянии, общей регр�
   Array, FOREIGN/C pointee, большие глубины и весь M14 не объявлены готовыми. W1-компонент принят
   ([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
   ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
-  ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); следующий код — W4.
+  ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент — КАНДИДАТ,
+  PENDING до G1/G2 и расписки ведущего, весь W4 ОТКРЫТ; следующий код — 21.7 (обычный result-call), константный
+  sys-экспорт ядра и zero-actual caller DATA.
 - **27.17. Носитель индекса и общий числовой механизм — компоненты приняты, весь шаг ОТКРЫТ**
   (зависимость 21.25 и M13; 2026-11-23; ответ Astra 83: причина найдена по коду, это не изменение языка;
   состояние — в конце пункта). Две потери одного рода сидят в общих
@@ -291,7 +314,9 @@ Full-suite нужен при широком влиянии, общей регр�
   компонент ([свидетельство](steps/witnesses/own-graph-reference-place-20261124/notes.md)); W1-компонент принят
   ([свидетельство](steps/witnesses/frame-selected-description-20261124/notes.md)); W2-компонент принят
   ([свидетельство](steps/witnesses/r0-check-parent-20261124/notes.md)); W3-компонент принят
-  ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); следующий код — W4.
+  ([свидетельство](steps/witnesses/graph-context-ownership-20261124/notes.md)); W4: физический компонент — КАНДИДАТ,
+  PENDING до G1/G2 и расписки ведущего; следующий код — 21.7 (обычный result-call), константный sys-экспорт ядра и
+  zero-actual caller DATA.
   Не приняты: весь 27.17, Graph dense Array lowering, все foreign-операторы, весь native L2 без checks,
   шаг 21.25, M13, M14, W4–W5, 32-битный ABI и штатная команда полного bootstrap.
 

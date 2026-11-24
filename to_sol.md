@@ -1,4 +1,176 @@
-# Передача проекта: ведущий Sol 6.1 xhigh (действующая, 2026-11-23)
+# Передача проекта Sol 6.2: ведущий и координатор (2026-11-24)
+
+## Действующая инструкция после смены модели
+
+Автор поручил сохранить результаты текущего шага, сделать commit/push и подготовить эту передачу.
+Автор вставил новую goal полного next_core_tasks_v3.md и возобновил её: статус **active**.
+План не завершён и не сокращён. Перед продолжением сверяй актуальное состояние карточки goal.
+После commit/push автор перезагрузит компьютер. До перезагрузки новых compiler jobs не запускать.
+Автор подтвердил переключение на Sol 6.2 и Astra 6.2 Astra Max; кодинг теперь у coder GLM 5.4.
+Разделы ниже заголовка «История передачи 2026-11-23» описывают прежнее состояние и прежнее распределение ролей.
+Исторические цитаты goal сохранены дословно; их инструкции об автоматическом продолжении сейчас не действуют.
+
+### Роли и порядок работы
+
+- Ты — codex, Sol 6.2, ведущий: план, задания, интеграция, единственный pipeline, приёмка, commit и push.
+- Основной кодинг получает отдельный агент coder на GLM 5.4.
+  Давай ему конкретный срез, базовый commit, границы файлов, контракт и критерий проверки.
+  Получай полный патч и факты проверок; ведение main и общий pipeline остаются у тебя.
+- Astra 6.2 Astra Max — консультант в чате 01a1d3c8-3541-7120-985e-7236aa852743.
+  Обращаешься к ней ты после чтения нормы, кода и свидетельств; исполнители пишут To: codex.
+- Всем доступны helper GLM 5.3 Flash и haiku 5.5 xhigh ultracode для ограниченных подзадач.
+  Sonnet готовил прежнюю документацию. Живые сессии и модели проверяй по текущему реестру.
+  Помощников используй через их peer-маршруты; собственных дублирующих сессий не создавай.
+- Чат ведущего остаётся 01a1d3fb-54e2-7ee0-9108-8c062ecf4252, адрес peer-отчётов — To: codex.
+
+Читать сначала AGENTS.md, READ.ME, steps/current.md, to_fable2_fast_build.md и tools/lmx_dev/USAGE.md.
+Норма — действующие EN документы docs/spec; организационные сообщения в журнал автора не переносить.
+
+### Новая формулировка goal для карточки
+
+Текст подготовлен ведущим по поручению автора и вставлен автором в карточку goal.
+
+Продолжай next_core_tasks_v3.md до конца. Ты — Sol 6.2, ведущий и координатор проекта: планируешь работу,
+ставишь задачи, интегрируешь изменения, управляешь единственным pipeline, принимаешь результаты,
+делаешь commit и push законченных шагов.
+
+Кодинг делегируй агенту coder — GLM 5.4. Astra 6.2 Astra Max остаётся твоим консультантом по сложным
+вопросам после собственного исследования нормы, кода и свидетельств. Всем доступны помощники helper —
+GLM 5.3 Flash и haiku — 5.5 xhigh ultracode; используй их для поиска, описи, механических изменений и других
+ограниченных подзадач. Работай через существующие peer-сессии; при остановке используй соответствующие
+C:/claude/new/*.bat, проверяя отсутствие дубликатов.
+
+Используй сервис lmx-dev, реализованный Astra и проверенный Haiku: get_spec_rule для поиска нормы,
+service_status и согласованные check_file/bootstrap для проверок. Если MCP ещё не подключён к сессии,
+используй документированный CLI того же сервиса. Соблюдай permit, общий lock, закреплённые producers
+и фактические границы проверки.
+
+Следуй AGENTS.md, READ.ME, to_sol.md и to_fable2_fast_build.md. Сохраняй чужие изменения, проверяй
+затронутые компоненты и адресные случаи; G1/G2 и full-suite запускай по основаниям инструкции.
+Различай проверенного кандидата, принятый компонент и незавершённые задачи. Не объявляй весь v3
+завершённым до фактического выполнения всех его требований.
+
+### Законченный шаг и граница приёмки
+
+Законченный шаг — runtime W4 RT07 и адресный unit07. RT07: exit 0, record 154 hashes / 0 failed.
+Unit07: **2 build PASS + 4 execution PASS**, native/forced, roots 0/1; expected 7 сохранён.
+Он проверяет copy/selected merge/attach/GC и жизнь descriptor после освобождения source arena.
+Последняя проверка меняет typed entry leaf на null, int и Structure, затем восстанавливает:
+неподходящий leaf не становится machine entry, descriptor identity сохраняется.
+native_entry читает kind/type/stride из одного найденного pool вместо трёх одинаковых поисков.
+
+Кандидат физического W4 перенесён в selfbuild: 29 исходников и 3 control-пути, всего 32.
+Включены удаление header.native, одна arena-owned call/native table, ordinary descriptor с typed C9 leaf,
+dispatch, conditional GC, copy/merge/attach/retire/release и все найденные producers/consumers.
+Проверены 1688 входов и 1658 неизменённых входов, оба результата 0 failed; git diff --check чист.
+SHA-256 selfbuild/inputs.sha256:
+86ab3082854c5c7d39ca175328598a800995ca95004857e53ab43fb856d543be
+
+**Физический компонент пока CANDIDATE/PENDING.** Его G1/G2 и fixedpoint ещё не выполнялись.
+Последний принятый ABI/bundle — W3, commit cb7a8798a1c9a271ec7cb544db335f1f908563e9.
+R и основной S уже содержат W4: W3 host objects нельзя связывать с их W4 headers.
+Этот commit передачи сохраняет проверенного кандидата; он не объявляет новый общий набор принятым.
+Свидетельство: steps/witnesses/native-descriptor-table-20261124/notes.md.
+
+Весь W4 OPEN. В языке ещё нет законченного sys/native: нужны общий value-result call обычной Structure
+(часть 21.7), настоящий kernel constant namespace export и zero-actual форма с DATA исходного caller.
+Отсутствующий actual отличается от явного null; R0 не получает подставного DATA.
+C query lmx_native_descriptor и его unit не заменяют языковой receiver.
+Эту зависимость не переносить молча в W5. W5, M13, M14, 21.25, 32-bit ABI и остальные открытые шаги остаются OPEN.
+
+### Пути и воспроизводимые результаты
+
+Обозначения в существующих командах:
+
+    R  = C:/Nyasha_Planet/LMX
+    CF = R/build2/codex_fix250generationchain01
+    S  = CF/sol-m14-field-values-01
+    T  = CF/runs/fable-m10-call-forms-20261116-01/fable/tz-20261121
+    A  = T/w4-accept-20261124/root01
+    B  = CF/cold-candidate48/full48/g2/frontend
+
+Кандидаты W4, пути относительно S:
+
+| Назначение | Путь |
+| --- | --- |
+| TOOL01 | codex-w4-s2126j-tool01/lmxtool-tool.exe |
+| FEH01 | codex-w4-s2126j-feh01/l2trans.exe |
+| RT07 | codex-w4-s2126j-rt07/ |
+| Graph01, внутри RT06 | codex-w4-s2126j-graph01/graph_trans-prod.exe |
+| W3 seed tool, внутри ABI W3 | codex-w4-s2126j-tool-seed01/lmxtool-tool.exe |
+| W3 seed frontend, внутри ABI W3 | codex-w4-s2126j-seed-fep02/l2trans.exe |
+
+FEH01 собран и record 135/0 проверен; TOOL01 собран и record 54/0 проверен.
+Seed executable внутри W3 ABI и его target output W4 — разные границы; исторические seeds не линковать с W4.
+A/frontend01.log, tool01.log, runtime07.log, descriptor-one07.log и guard-*.txt — первичные receipts.
+A/draft-rt07.sha256 — frozen 29-path source overlay; A/integration32.sha256 — пакет интеграции.
+A/inputs-final1688.sha256 — полный финальный manifest; канонический черновик T/w4-native-descriptor-codex/selfbuild.
+Сейчас источник продолжения — main/selfbuild; private packages повторно поверх него не применять.
+
+Предыдущие адресные прогоны: targeted15-02 (только первые 3 завершённые строки) + remain12-01:
+13/15 rows green; 28 build PASS + 52 execution PASS = 80 PASS; 6 FAIL.
+graph_call_frames: 4 исполнения, case 122, value 5 вместо 9 — известный baseline W2/W3.
+immutable_reached_write: 2 compile FAIL на line 136, opaque C operand рядом с runtime Value.
+Его точный отказ повторён на согласованной W3 baseline: A/baseline-w3-immutable01.log.
+Этот набор был до RT07; окончательный targeted15 на финальном наборе ещё нужен. Ожидания не менять.
+Graph01: root_closed_names и path_write_native_level2 прошли interp/native/forced, всего 6 routes.
+Полный suite не запускался для W4. tests/native_closure_values.lm2 не имеет suite row и не проверен исполнением.
+
+### Первые действия после разрешения продолжить
+
+1. Сверь HEAD/origin/main, goal status, рабочее дерево и pipeline. Прочти W4 witness и текущую очередь v3.
+   Получи живой маршрут coder из реестра после его запуска автором. Сохрани все чужие изменения.
+2. Закончи согласованный ABI переход и G1/G2. RT07 можно использовать как runtime первой генерации,
+   если его record и frozen sources совпадают; новая runtime-правка требует нового runtime label.
+   Затем G1 frontend-host через FEH01/RT07, G1 tool через G1 FE/RT07;
+   G2 runtime через G1 FE, G2 frontend-host с G2 RT и G2 tool. Всегда новые labels.
+3. Сравни LM1, C, нормализованные exe, backend/libc и runtime objects по образцу W3 witness.
+   Повтори необходимые record/source проверки. Компонентные builds сами по себе не fixedpoint.
+4. Выполни финальный targeted15 с прежними ожиданиями и краткий generation smoke
+   (S/tests/codex-w3-generation-smoke10.tsv + новый native_descriptor_storage).
+   Собери Graph на конечном RT и выполни 8 W3 graph cases по прежним expect/exit/runs/answer.
+   Две известные baseline-проблемы описывать отдельно, а не превращать весь набор в зелёный.
+5. После реальных receipts реши приёмку физического компонента. Затем дай coder связанный язык W4:
+   ordinary Structure result call + kernel sys export + caller-DATA zero form.
+   Для развилки используй консультацию Astra 247 из текущего чата; имя sys не должно стать opcode/special token.
+6. Дальше продолжай полный next_core_tasks_v3.md с его зависимостями и честными OPEN, без нового лимита.
+
+Официальные команды: build-runtime, build-frontend-host, build-self, build-graph, suite, graph-check,
+manifest, verify, stage-copy, verify-record, same, exe-same. Hosted prefix: 0 entry 0 --.
+build-self/suite принимают RT/driver.o; frontend-host/Graph принимают каталог RT.
+При прямом переводе cwd = S/src, L2_RUNTIME_ROOT = l2src/ (или абсолютный S/src/l2src/ с завершающим slash).
+Сначала прочти форму в to_fable2_fast_build.md; bootstrap quick — полная G1/G2, а не smoke.
+
+### Pipeline, сервис и сохранность состояния
+
+При завершении передачи compiler pipeline свободен. Goal active, service permit CLOSED; ожидается перезагрузка.
+Один heavy producer: общий atomic T/machine.lock.d, markers docs-check.running/quiet.running.
+Штатный T/accept-tools/machine_lock.sh берёт lock; guarded_build.ps1 — только memory watchdog.
+Порог старта 900 MB свободного commit, floor 600 MB. Для каждого запуска новый label/log/receipt.
+Освобождай только собственный lock после подтверждённого окончания процесса и его детей.
+
+LMX dev-service завершён отдельно: tools/lmx_dev/README.md и USAGE.md, Python/MCP 11 tests PASS.
+Commit сервиса: 780d75ead384c239768fcf91696dd6d1c75df3b1. Автор подтвердил проверку Haiku.
+Реальные W3 checks: valid P0 PASS, syntax-error rejected (logical 2 / process 1), valid translate PASS с новым L1.
+Receipts: build2/lmx_dev/runs/20261124-090149-0c65872aa302, 20261124-090638-7a1785003fac,
+20261124-090208-158187b6589e. Целевая программа в этих checks не исполнялась.
+Конфиг/venv/logs в build2/lmx_dev локальные и игнорируются Git; внешний launcher backup —
+C:/claude/new/backups/lmx-dev-20261124-090307. 12 bat подключены, lmx_uds не менялся.
+Сервис пока закреплён на принятом W3 stage; W4 им не проверять до явного обновления closure/pins.
+spec/status работают при закрытом gate; static/sys-check пока unavailable. Для этого чата доступен CLI fallback.
+
+Доставка: python claude_chat/uds.py --name lmx_uds status; полный From/To/Request ID через stdin в
+python claude_chat/uds.py --name lmx_uds send. Fresh ListAgents и SendMessage выполняет почтальон.
+Для Astra доступен app send_message_to_thread с явным threadId; новая привязка ведущего не нужна.
+Write ACK не является ответом исполнителя. Opus не запускать.
+
+Сохраняй чужие untracked: docs/tasks/ffgg.txt, steps/handoff/m11-step5b-inventory-appendix-20261111.md,
+steps/witnesses/used-scope-20261020/reference-producer117.patch. Отдельную передачу to_astra.md ведёт Astra.
+Не использовать массовый add/reset/clean, новые worktrees/ветки и force push.
+Коммиты по точному allowlist: git -c user.name=codex commit, текущий email сохраняется.
+
+## История передачи 2026-11-23 (прежние роли и состояние)
+
 
 **Статус передачи.** Переключение выполнено 2026-11-23. Автор приостановил goal прежнего ведущего astra
 (чат 01a1d3c8-3541-7120-985e-7236aa852743; статус старой goal: **paused**) и передал проект Sol 6.1 xhigh

@@ -6,9 +6,320 @@ predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>"
+include: "<stdlib.h>" "<stdint.h>"
+
+# ---- Installed native descriptors ----------------------------------------------------------
+# One normative call table belongs to the arena. The same container holds construction-local pending rows.
+# Only an installed live code key conditionally retains its descriptor; the bindings never roots its keys.
+fn: lmx_native_hash (c.Lmx@: code) size_t
+    size_t: word (cast: (size_t) (cast: (c.uintptr_t) code))
+    return: (word >> 4U) ^ (word >> 17U)
+end: lmx_native_hash
+
+fn: lmx_native_slot (c.LmxNativeTable@: bindings; c.Lmx@: code) size_t
+    size_t: slot lmx_native_hash(code) & (bindings\cap - 1U)
+    c.LmxNativeBinding@: row bindings\rows + slot
+    while: row\code != 0 && row\code != code
+        slot := (slot + 1U) & (bindings\cap - 1U)
+        row := bindings\rows + slot
+    ---
+    return: slot
+end: lmx_native_slot
+
+# Room was prepared; this insert cannot allocate or fail.
+fn: lmx_native_put (c.LmxNativeTable@: bindings; c.Lmx@: code; c.Lmx@: descriptor) void
+    size_t: slot lmx_native_slot(bindings, code)
+    c.LmxNativeBinding@: row bindings\rows + slot
+    if: row\code = 0
+        bindings\len := bindings\len + 1U
+    ---
+    row\code := code
+    row\descriptor := descriptor
+    return
+end: lmx_native_put
+
+fn: lmx_native_reserve (c.LmxNativeTable@: bindings; size_t: need) int
+    c.LmxNativeBinding@: old bindings\rows
+    c.LmxNativeBinding@: row 0
+    size_t: old_cap bindings\cap
+    size_t: capacity 32U
+    size_t: i 0U
+    if: need <= bindings\cap / 2U
+        return: 0
+    while: capacity / 2U < need
+        if: capacity > (cast: (size_t) -1) / 2U
+            return: 1
+        ---
+        capacity := capacity * 2U
+    ---
+    if: capacity > (cast: (size_t) -1) / c.sizeof(c.LmxNativeBinding)
+        return: 1
+    row := (cast: (c.LmxNativeBinding@) c.calloc(capacity, c.sizeof(c.LmxNativeBinding)))
+    if: row = 0
+        return: 1
+    bindings\rows := row
+    bindings\cap := capacity
+    bindings\len := 0U
+    while: i < old_cap
+        row := old + i
+        if: row\code != 0
+            lmx_native_put(bindings, (cast: (c.Lmx@) row\code), (cast: (c.Lmx@) row\descriptor))
+        ---
+        i := i + 1U
+    ---
+    c.free((cast: (@) old))
+    return: 0
+end: lmx_native_reserve
+
+fn: lmx_native_remove (c.LmxNativeTable@: bindings; size_t: hole) void
+    size_t: mask bindings\cap - 1U
+    size_t: scan (hole + 1U) & mask
+    size_t: home 0U
+    c.LmxNativeBinding@: row bindings\rows + scan
+    c.LmxNativeBinding@: target 0
+    while: row\code != 0
+        home := lmx_native_hash((cast: (c.Lmx@) row\code)) & mask
+        if: ((scan - home) & mask) >= ((scan - hole) & mask)
+            target := bindings\rows + hole
+            target\code := row\code
+            target\descriptor := row\descriptor
+            hole := scan
+        ---
+        scan := (scan + 1U) & mask
+        row := bindings\rows + scan
+    ---
+    target := bindings\rows + hole
+    target\code := 0
+    target\descriptor := 0
+    bindings\len := bindings\len - 1U
+    return
+end: lmx_native_remove
+
+# A pending row may explicitly request removal (descriptor 0). Installed bindings use bind instead.
+fn: lmx_native_table_set (c.LmxNativeTable@: bindings; c.Lmx@: code; c.Lmx@: descriptor) int
+    c.LmxNativeBinding@: row 0
+    size_t: slot 0U
+    if: bindings = 0 || code = 0
+        return: 1
+    if: bindings\len != 0U
+        slot := lmx_native_slot(bindings, code)
+        row := bindings\rows + slot
+        if: row\code != 0
+            row\descriptor := descriptor
+            return: 0
+        ---
+    ---
+    if: bindings\len = (cast: (size_t) -1) || lmx_native_reserve(bindings, bindings\len + 1U) != 0
+        return: 1
+    lmx_native_put(bindings, code, descriptor)
+    return: 0
+end: lmx_native_table_set
+
+fn: lmx_native_table_dispose (c.LmxNativeTable@: bindings) void
+    if: bindings = 0
+        return
+    c.free((cast: (@) bindings\rows))
+    bindings\rows := 0
+    bindings\len := 0U
+    bindings\cap := 0U
+    return
+end: lmx_native_table_dispose
+
+# Resolve the already registered physical owner. A read constructs and executes nothing.
+# The physical owner has already been resolved by either public lookup.
+fn: lmx_native_descriptor_owned (c.LmxArena@: owner; c.Lmx@: code) c.Lmx@
+    c.LmxNativeTable@: bindings @ owner\native_calls
+    c.LmxNativeBinding@: row 0
+    if: bindings\len = 0U
+        return: 0
+    row := bindings\rows + lmx_native_slot(bindings, code)
+    return: (cast: (c.Lmx@) row\descriptor)
+end: lmx_native_descriptor_owned
+
+fn: lmx_native_descriptor (c.LmxArena@: arena; c.Lmx@: code) c.Lmx@
+    c.LmxArena@: owner 0
+    if: arena = 0 || code = 0
+        return: 0
+    owner := c.lmx_range_home(arena, (cast: (@) code))
+    if: owner = 0
+        return: 0
+    return: lmx_native_descriptor_owned(owner, code)
+end: lmx_native_descriptor
+
+# Existing callers retain their body/contract selection. One prepared C9 variant is currently emitted.
+fn: lmx_native_entry (c.LmxArena@: arena; c.Lmx@: code) c.LmxPrimitiveEntry
+    c.Lmx@: descriptor 0
+    c.LmxArena@: owner 0
+    c.Lmx@: variants 0
+    c.Lmx@: variant 0
+    @: leaf 0
+    c.LmxPrimitive@: primitive 0
+    c.LmxPool@: leaf_pool 0
+    if: arena = 0 || code = 0
+        return: 0
+    owner := c.lmx_range_home(arena, (cast: (@) code))
+    if: owner = 0
+        return: 0
+    descriptor := lmx_native_descriptor_owned(owner, code)
+    if: descriptor = 0
+        return: 0
+    variants := (cast: (c.Lmx@) c.lmx_graph_value_in(owner, descriptor, 0U))
+    variant := (cast: (c.Lmx@) c.lmx_graph_value_in(owner, variants, 0U))
+    leaf := c.lmx_graph_value_in(owner, variant, 1U)
+    # Resolve this physical object once; kind, type and stride come from that same pool.
+    leaf_pool := (cast: (c.LmxPool@) c.lmx_range_cell_pool(owner, leaf))
+    if: leaf_pool = 0 || leaf_pool\kind != c.LMX_DOMAIN_KIND_PRIMITIVE || c.lmx_type_base((cast: (int) leaf_pool\type)) != c.LMX_DOMAIN_PRIMITIVE || leaf_pool\stride != c.sizeof(c.LmxPrimitive)
+        return: 0
+    primitive := (cast: (c.LmxPrimitive@) leaf)
+    return: (cast: (c.LmxPrimitiveEntry) primitive\fn)
+end: lmx_native_entry
+
+fn: lmx_native_bind (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@: descriptor) int
+    c.LmxArena@: owner 0
+    c.LmxNativeTable@: bindings 0
+    c.LmxNativeBinding@: row 0
+    size_t: slot 0U
+    if: arena = 0 || code = 0
+        return: 1
+    owner := c.lmx_range_home(arena, (cast: (@) code))
+    if: owner = 0
+        return: 1
+    bindings := @ owner\native_calls
+    if: descriptor = 0
+        if: bindings\len != 0U
+            slot := lmx_native_slot(bindings, code)
+            row := bindings\rows + slot
+            if: row\code != 0
+                lmx_native_remove(bindings, slot)
+            ---
+        ---
+        return: 0
+    ---
+    return: lmx_native_table_set(bindings, code, descriptor)
+end: lmx_native_bind
+
+# Construction has finished. Validate and reserve everything before publishing one row.
+fn: lmx_native_publish (c.LmxArena@: arena; c.LmxNativeTable@: pending) int
+    c.LmxNativeTable@: bindings 0
+    c.LmxNativeBinding@: row 0
+    c.LmxNativeBinding@: prior 0
+    c.LmxArena@: owner 0
+    size_t: i 0U
+    size_t: need 0U
+    size_t: slot 0U
+    if: arena = 0 || pending = 0
+        return: 1
+    if: pending\len = 0U
+        return: 0
+    bindings := @ arena\native_calls
+    if: bindings = pending
+        return: 1
+    need := bindings\len
+    while: i < pending\cap
+        row := pending\rows + i
+        if: row\code != 0
+            owner := c.lmx_range_home(arena, (cast: (@) row\code))
+            if: owner != arena
+                # An exactly retained occurrence keeps its owner's existing binding.
+                if: owner = 0 || lmx_native_descriptor(arena, (cast: (c.Lmx@) row\code)) != row\descriptor
+                    return: 1
+                ---
+            else:
+                if: row\descriptor != 0
+                    prior := 0
+                    if: bindings\len != 0U
+                        prior := bindings\rows + lmx_native_slot(bindings, (cast: (c.Lmx@) row\code))
+                    ---
+                    if: prior = 0 || prior\code = 0
+                        if: need = (cast: (size_t) -1)
+                            return: 1
+                        need := need + 1U
+                    ---
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    if: lmx_native_reserve(bindings, need) != 0
+        return: 1
+    i := 0U
+    while: i < pending\cap
+        row := pending\rows + i
+        if: row\code != 0 && c.lmx_range_home(arena, (cast: (@) row\code)) = arena
+            if: row\descriptor != 0
+                lmx_native_put(bindings, (cast: (c.Lmx@) row\code), (cast: (c.Lmx@) row\descriptor))
+            else:
+                if: bindings\len != 0U
+                    slot := lmx_native_slot(bindings, (cast: (c.Lmx@) row\code))
+                    prior := bindings\rows + slot
+                    if: prior\code != 0
+                        lmx_native_remove(bindings, slot)
+                    ---
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: 0
+end: lmx_native_publish
+
+fn: lmx_native_attach_prepare (c.LmxArena@: arena; c.LmxArena@: other) int
+    c.LmxNativeTable@: target @ arena\native_calls
+    c.LmxNativeTable@: source @ other\native_calls
+    c.LmxNativeBinding@: row 0
+    c.LmxNativeBinding@: prior 0
+    size_t: i 0U
+    if: source\len = 0U
+        return: 0
+    while: i < source\cap
+        row := source\rows + i
+        if: row\code != 0 && target\len != 0U
+            prior := target\rows + lmx_native_slot(target, (cast: (c.Lmx@) row\code))
+            if: prior\code != 0 && prior\descriptor != row\descriptor
+                return: 1
+            ---
+        ---
+        i := i + 1U
+    ---
+    if: source\len > (cast: (size_t) -1) - target\len
+        return: 1
+    return: lmx_native_reserve(target, (cast: (size_t) (target\len + source\len)))
+end: lmx_native_attach_prepare
+
+fn: lmx_native_attach_move (c.LmxArena@: arena; c.LmxArena@: other) void
+    c.LmxNativeTable@: target @ arena\native_calls
+    c.LmxNativeTable@: source @ other\native_calls
+    c.LmxNativeBinding@: row 0
+    size_t: i 0U
+    while: i < source\cap
+        row := source\rows + i
+        if: row\code != 0
+            lmx_native_put(target, (cast: (c.Lmx@) row\code), (cast: (c.Lmx@) row\descriptor))
+        ---
+        i := i + 1U
+    ---
+    lmx_native_table_dispose(source)
+    return
+end: lmx_native_attach_move
+
+fn: lmx_native_drop (c.LmxArena@: arena; @: lo; @: hi) void
+    c.LmxNativeTable@: bindings @ arena\native_calls
+    c.LmxNativeBinding@: row 0
+    size_t: i 0U
+    while: i < bindings\cap
+        row := bindings\rows + i
+        if: row\code != 0 && (((cast: (c.uintptr_t) row\code) >= (cast: (c.uintptr_t) lo) && (cast: (c.uintptr_t) row\code) < (cast: (c.uintptr_t) hi)) || ((cast: (c.uintptr_t) row\descriptor) >= (cast: (c.uintptr_t) lo) && (cast: (c.uintptr_t) row\descriptor) < (cast: (c.uintptr_t) hi)))
+            lmx_native_remove(bindings, i)
+        else:
+            i := i + 1U
+        ---
+    ---
+    return
+end: lmx_native_drop
 
 # Decode the walk boundary's throw status. Errors remain X1; no remembered/current-call status is written.
 fn: lmx_call_note_walk_fail (int: st) int
@@ -279,8 +590,8 @@ fn: lmx_call0_mode (c.LmxArena@: arena; c.Lmx@: callable; int@: route; int@: val
     if: value = 0 || lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         return: c.LMX_CALL_NOT_CALLABLE
     \value := 0
-    c.LmxEntry: addr (cast: (c.LmxEntry) callable\native)
-    if: addr = 0
+    c.LmxPrimitiveEntry: entry lmx_native_entry(arena, callable)
+    if: entry = 0
         if: route != 0
             \route := c.LMX_CALL_ROUTE_WALK
         ---
@@ -288,7 +599,6 @@ fn: lmx_call0_mode (c.LmxArena@: arena; c.Lmx@: callable; int@: route; int@: val
     ---
     if: route != 0
         \route := c.LMX_CALL_ROUTE_NATIVE
-    c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
     c.LmxActivation: act
     c.LmxExecutionRoots@: roots_mark lmx_execution_roots_mark(arena)
     lmx_activation_push(arena, @ act, 2, callable, 0, 0, 0U, 0)
@@ -332,10 +642,9 @@ fn: lmx_call_prim_values_origins (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@: data
     lmx_execution_roots_push(arena, @ input_roots, (cast: (@) lmx_input_values), input_count, refs, nargs, (cast: (@) data), 0)
     lmx_execution_roots_push(arena, @ origin_roots, 0, 0U, origins, origin_count, 0, 0)
     lmx_execution_roots_push(arena, @ result_roots, (cast: (@) (@ result_context)), 1U, out, 1U, dest, 0)
-    c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
+    c.LmxPrimitiveEntry: entry lmx_native_entry(arena, code)
     c.LmxActivation: act
-    if: addr != 0
-        c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
+    if: entry != 0
         # The native activation's record (slice 254): its inputs are the arrays the entry receives.
         lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@) lmx_input_values), nargs, 0)
         lmx_activation_origins(arena, origins, private_flags, origin_count)

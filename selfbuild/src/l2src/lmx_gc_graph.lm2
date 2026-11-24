@@ -106,7 +106,7 @@ fn: lmx_gc_cells (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; unsi
         return: c.LMX_GC_OK
     if: (pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY) && pool\stride != c.sizeof(c.Lmx)
         return: c.LMX_GC_INVALID
-    # The external spelling table has weak keys. Neither its key nor its
+    # The external spelling bindings has weak keys. Neither its key nor its
     # text descriptor is an ordinary graph edge; handle it after graph mark.
     if: pool\kind = c.LMX_KIND_SOURCE_NAME
         return: c.LMX_GC_OK
@@ -287,7 +287,7 @@ end: lmx_gc_block_dispose
 # a field is replaced. An admitting frame is different: its departure retires
 # the frame-backed record. Mark to a fixed point because marking one model can
 # make another recorded value reachable through its ordinary graph edges.
-fn: lmx_gc_impl_live (c.LmxArena@: arena; c.Lmx@: value; unsigned: gen) int
+fn: lmx_gc_value_live (c.LmxArena@: arena; c.Lmx@: value; unsigned: gen) int
     c.LmxPool@: pool 0
     c.LmxChunk@: chunk 0
     if: arena = 0 || value = 0
@@ -299,7 +299,7 @@ fn: lmx_gc_impl_live (c.LmxArena@: arena; c.Lmx@: value; unsigned: gen) int
         return: 1
     chunk := (cast: (LmxChunk@) c.lmx_range_cell_chunk(arena, (cast: (@) value)))
     return: (cast: (int) (chunk != 0 && chunk\mark = gen))
-end: lmx_gc_impl_live
+end: lmx_gc_value_live
 
 # Slice 286 (CALLABLE-PLACE-FREE-SIGNATURE): a callable field's declaration (lmx_source_place_callable_set) is a live dependency
 # of its slot, as a recorded admission's model is of its value: once the callable first put there is replaced, later writes
@@ -326,7 +326,7 @@ fn: lmx_gc_mark_place_callables (c.LmxArena@: arena; unsigned: gen; int@: change
                     i := 0U
                     while: i < n
                         row := rows + i
-                        if: row\key != 0 && row\place_callable != 0 && lmx_gc_impl_live(arena, (cast: (Lmx@) row\place_callable), gen) = 0
+                        if: row\key != 0 && row\place_callable != 0 && lmx_gc_value_live(arena, (cast: (Lmx@) row\place_callable), gen) = 0
                             live := 0
                             owner := (cast: (LmxPool@) c.lmx_range_pool(arena, row\key))
                             if: owner != 0
@@ -342,7 +342,7 @@ fn: lmx_gc_mark_place_callables (c.LmxArena@: arena; unsigned: gen; int@: change
                             if: live != 0
                                 if: lmx_gc_mark_value(arena, (cast: (@) row\place_callable), gen, 0) != c.LMX_GC_OK
                                     return: c.LMX_GC_PARTIAL
-                                if: lmx_gc_impl_live(arena, (cast: (Lmx@) row\place_callable), gen) != 0
+                                if: lmx_gc_value_live(arena, (cast: (Lmx@) row\place_callable), gen) != 0
                                     changed[0] := 1
                                 ---
                             ---
@@ -358,7 +358,27 @@ fn: lmx_gc_mark_place_callables (c.LmxArena@: arena; unsigned: gen; int@: change
     return: c.LMX_GC_OK
 end: lmx_gc_mark_place_callables
 
-fn: lmx_gc_mark_impl (c.LmxArena@: arena; unsigned: gen) int
+# A weak selected-code key conditionally retains its ordinary descriptor and graph dependencies.
+# Native descriptors can reveal more admission/place dependencies, so this shares their fixed point.
+fn: lmx_gc_mark_native (c.LmxArena@: arena; unsigned: gen; int@: changed) int
+    size_t: i 0U
+    c.LmxNativeTable@: bindings @ arena\native_calls
+    c.LmxNativeBinding@: row 0
+    while: i < bindings\cap
+        row := bindings\rows + i
+        if: row\code != 0 && lmx_gc_value_live(arena, (cast: (c.Lmx@) row\code), gen) != 0 && lmx_gc_value_live(arena, (cast: (c.Lmx@) row\descriptor), gen) = 0
+            if: lmx_gc_mark_value(arena, (cast: (@) row\descriptor), gen, 0) != c.LMX_GC_OK
+                return: c.LMX_GC_PARTIAL
+            if: lmx_gc_value_live(arena, (cast: (c.Lmx@) row\descriptor), gen) != 0
+                \changed := 1
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: c.LMX_GC_OK
+end: lmx_gc_mark_native
+
+fn: lmx_gc_mark_metadata (c.LmxArena@: arena; unsigned: gen) int
     size_t: i 0U
     int: changed 1
     c.LmxImplEntry@: entries 0
@@ -369,11 +389,11 @@ fn: lmx_gc_mark_impl (c.LmxArena@: arena; unsigned: gen) int
         while: i < (cast: (size_t) arena\impl_len)
             entries := (cast: (LmxImplEntry@) arena\impl)
             entry := entries + i
-            if: lmx_gc_impl_live(arena, (cast: (Lmx@) entry\value), gen) != 0 && ((cast: (Lmx@) entry\frame) = 0 || lmx_gc_impl_live(arena, (cast: (Lmx@) entry\frame), gen) != 0)
-                if: (cast: (Lmx@) entry\req) != 0 && lmx_gc_impl_live(arena, (cast: (Lmx@) entry\req), gen) = 0
+            if: lmx_gc_value_live(arena, (cast: (Lmx@) entry\value), gen) != 0 && ((cast: (Lmx@) entry\frame) = 0 || lmx_gc_value_live(arena, (cast: (Lmx@) entry\frame), gen) != 0)
+                if: (cast: (Lmx@) entry\req) != 0 && lmx_gc_value_live(arena, (cast: (Lmx@) entry\req), gen) = 0
                     if: lmx_gc_mark_value(arena, (cast: (@) entry\req), gen, 0) != c.LMX_GC_OK
                         return: c.LMX_GC_PARTIAL
-                    if: lmx_gc_impl_live(arena, (cast: (Lmx@) entry\req), gen) != 0
+                    if: lmx_gc_value_live(arena, (cast: (Lmx@) entry\req), gen) != 0
                         changed := 1
                     ---
                 ---
@@ -383,9 +403,12 @@ fn: lmx_gc_mark_impl (c.LmxArena@: arena; unsigned: gen) int
         if: lmx_gc_mark_place_callables(arena, gen, @ changed) != c.LMX_GC_OK
             return: c.LMX_GC_PARTIAL
         ---
+        if: lmx_gc_mark_native(arena, gen, @ changed) != c.LMX_GC_OK
+            return: c.LMX_GC_PARTIAL
+        ---
     ---
     return: c.LMX_GC_OK
-end: lmx_gc_mark_impl
+end: lmx_gc_mark_metadata
 
 # Explicit execution storage is borrowed, never treated as an array of words.
 # Reading a Value here must not create the snapshot that value_load would take.
@@ -487,7 +510,7 @@ fn: lmx_gc_mark_execution (c.LmxArena@: arena; unsigned: gen) int
     ---
     # A live traversal owns its constructed callable values and receiver
     # catalogs in these existing rows. They are ordinary GC edges for the
-    # lifetime of that table, including suspended outer construction scopes.
+    # lifetime of that bindings, including suspended outer construction scopes.
     while: space != 0 && status = c.LMX_GC_OK
         space_rows := space\rows
         if: space\count > space\cap || (space\count != 0U && space_rows = 0)
@@ -573,7 +596,7 @@ fn: lmx_gc_sweep (c.LmxArena@: arena; unsigned: gen) int
     # Before the implements fixpoint, which reads what is already live.
     if: lmx_gc_mark_types(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_PARTIAL
-    if: lmx_gc_mark_impl(arena, gen) != c.LMX_GC_OK
+    if: lmx_gc_mark_metadata(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_PARTIAL
     if: c.lmx_source_names_mark(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_INVALID
@@ -590,7 +613,7 @@ fn: lmx_gc_sweep (c.LmxArena@: arena; unsigned: gen) int
         ---
         block := next
     ---
-    # D-105: a correspondence of the `implements` table never outlives its value by one pass --
+    # D-105: a correspondence of the `implements` bindings never outlives its value by one pass --
     # dropped here, after the storage and before anything can be handed out at its address.
     c.lmx_arena_impl_prune(arena)
     return: c.LMX_GC_OK

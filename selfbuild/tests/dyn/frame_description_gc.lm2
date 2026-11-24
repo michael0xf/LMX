@@ -1,6 +1,7 @@
 # A selected computed description survives replacing its source and an explicit execution-root sweep.
 # Collect is called normally from the interpreted body before the first bare x read.
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l2src/lmx_gc.h.lm1"
@@ -92,7 +93,8 @@ fn: wd_description_gc_check () int
     if: counter = 0 || collect_data = 0 || observed_ref = 0 || source_ref = 0 || data_slot >= c.lmx_graph_count(collect) || c.lmx_graph_put_in(g, collect_data, 0U, counter) != 0 || c.lmx_graph_put_in(g, collect_data, 1U, observed_ref) != 0 || c.lmx_graph_put_in(g, collect_data, 2U, source_ref) != 0 || c.lmx_graph_name(g, (cast: (@: void) collect_data), "data", 4U) != 0 || c.lmx_graph_put_in(g, collect, data_slot, (cast: (@: void) collect_data)) != 0
         return: 90
     collect_data\parent := collect
-    collect\native := (cast: (c.LmxEntry) c.wd_collect)
+    if: c.lmx_native_install(@arena, collect, (cast: (c.LmxPrimitiveEntry) c.wd_collect), 0, 0, 0, 0, 0) != 0
+        return: 1
     before := c.lmx_execution_roots_mark(@ arena)
     # The source graph and callback remain roots. The removed description has no assertion root.
     c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, 0, 0U, (cast: (@: void) root), 0)

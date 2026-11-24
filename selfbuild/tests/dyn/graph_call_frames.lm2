@@ -3,6 +3,7 @@
 predef: "l2src/l2_graph_build.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 fn: cf_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
@@ -193,7 +194,7 @@ fn: cf_frames_check () int
     if: cf_expect(g, status, @ result, 5, 123) != 0 || cf_number(g, counter, "calls") != 7 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4 || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5 || arena\activation != 0 || arena\execution_roots != 0
         return: 123
     descriptor := cf_named(g, root, "cf_descriptor")
-    if: descriptor = 0 || descriptor\native != 0
+    if: descriptor = 0 || (cast: (c.LmxEntry) c.lmx_native_entry(@arena, descriptor)) != 0
         return: 124
     status := c.lmx_graph_call_data(g, 0, descriptor, 1)
     if: status != 0 || cf_number(g, counter, "calls") != 8
@@ -201,7 +202,8 @@ fn: cf_frames_check () int
         return: 124
     if: c.lmx_int_store_known(cf_field(g, counter, "calls"), 7) != 0
         return: 124
-    descriptor\native := (cast: (c.LmxEntry) c.cf_descriptor_entry)
+    if: c.lmx_native_install(@arena, descriptor, (cast: (c.LmxPrimitiveEntry) c.cf_descriptor_entry), 0, 0, 0, 0, 0) != 0
+        return: 1
     status := c.lmx_graph_call_data(g, 0, descriptor, 1)
     if: status != 0 || cf_number(g, counter, "calls") != 8
         c.fprintf(c.stderr, "descriptor native: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))

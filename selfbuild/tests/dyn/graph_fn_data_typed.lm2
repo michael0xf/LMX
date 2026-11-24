@@ -1,6 +1,7 @@
 # Real sub/fn construction and ordinary Code exercise the common copier.
 # The C ABI supplies exact scalar bytes and observes physical identities.
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
@@ -8,6 +9,7 @@ predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_gc.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<float.h>"
 
 fn: fd_binding (@: name char; @@: source void) const: @: c.LmxScalarABI
@@ -355,16 +357,19 @@ fn: fd_index_storage (@: g c.LmxGraph) int
     if: c.lmx_pointer_store_in(arena, pointer, 0) != 0 || fd_index_value(g, holder, pointer, 0) != 0 || fd_index_value(g, (cast: (@: c.Lmx) array), pointer, 0) != 0
         return: 165
     c.free(opaque)
-    protected_node\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_index_write(g, (cast: (@: void) protected_node), 0, (cast: (@: void) target)) = 0 || c.lmx_graph_get_in(g, protected_node, 0U) != scalar || protected_node\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_native_install(arena, protected_node, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_graph_index_write(g, (cast: (@: void) protected_node), 0, (cast: (@: void) target)) = 0 || c.lmx_graph_get_in(g, protected_node, 0U) != scalar || (cast: (c.LmxEntry) c.lmx_native_entry(arena, protected_node)) != (cast: (c.LmxEntry) c.fd_callback)
         return: 166
     # An index write takes effect on its element and keeps the native entry of the written Structure or Array
     # (kernel-implementation §6.5: graph writes do not invalidate native); the entry stays the one that was set.
-    holder\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: fd_index_value(g, holder, (cast: (@: void) target), (cast: (@: void) target)) != 0 || holder\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_native_install(arena, holder, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: fd_index_value(g, holder, (cast: (@: void) target), (cast: (@: void) target)) != 0 || (cast: (c.LmxEntry) c.lmx_native_entry(arena, holder)) != (cast: (c.LmxEntry) c.fd_callback)
         return: 167
-    array\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: fd_index_value(g, (cast: (@: c.Lmx) array), (cast: (@: void) target), (cast: (@: void) target)) != 0 || array\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_native_install(arena, array, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: fd_index_value(g, (cast: (@: c.Lmx) array), (cast: (@: void) target), (cast: (@: void) target)) != 0 || (cast: (c.LmxEntry) c.lmx_native_entry(arena, array)) != (cast: (c.LmxEntry) c.fd_callback)
         return: 168
     if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, scalar) = 0 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target)
         return: 169
@@ -377,8 +382,9 @@ fn: fd_index_storage (@: g c.LmxGraph) int
     number := 23
     if: c.lmx_graph_address_type(g, giving_uninit, @ number) != 5 || number != 23 || c.lmx_graph_address_type(g, immutable_service, @ number) != 5 || number != 23
         return: 172
-    holder\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, giving_uninit) != 4 || c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, immutable_service) != 4 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target) || holder\native != (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_native_install(arena, holder, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, giving_uninit) != 4 || c.lmx_graph_index_write(g, (cast: (@: void) holder), 0, immutable_service) != 4 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target) || (cast: (c.LmxEntry) c.lmx_native_entry(arena, holder)) != (cast: (c.LmxEntry) c.fd_callback)
         return: 173
     if: fd_index_value(g, holder, explicit_reference, giving_uninit) != 0
         return: 174
@@ -396,8 +402,9 @@ fn: fd_index_storage (@: g c.LmxGraph) int
     cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) code_array), 0U)
     if: code_array = 0 || cell = 0 || c.lmx_pointer_store_in(arena, cell, (cast: (@: void) target)) != 0
         return: 177
-    code_array\native := (cast: (c.LmxEntry) c.fd_callback)
-    if: c.lmx_graph_assign_reference(g, cell, (cast: (@: void) holder)) != 0 || c.lmx_pointer_value_in(arena, cell) != (cast: (@: void) holder) || code_array\native = 0
+    if: c.lmx_native_install(arena, code_array, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_graph_assign_reference(g, cell, (cast: (@: void) holder)) != 0 || c.lmx_pointer_value_in(arena, cell) != (cast: (@: void) holder) || (cast: (c.LmxEntry) c.lmx_native_entry(arena, code_array)) = 0
         return: 178
 return: 0
 
@@ -594,7 +601,8 @@ fn: fd_merge_check () int
     n\parent := root
     bad\parent := root
     verify := (cast: (@: c.Lmx) fd_named(g, root, "VerifyMerge"))
-    verify\native := (cast: (c.LmxEntry) c.fd_merge_callback)
+    if: c.lmx_native_install(@arena, verify, (cast: (c.LmxPrimitiveEntry) c.fd_merge_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
     work := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("MergeWork", 9U)))
     bad_work := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("BadMergeWork", 12U)))
     bad_data := c.lmx_graph_method_data(g, bad_work)
@@ -692,8 +700,10 @@ fn: fd_mapped_check () int
     make := (cast: (@: c.Lmx) fd_named(g, root, "Make"))
     before := (cast: (@: c.Lmx) fd_named(g, root, "Before"))
     verify := (cast: (@: c.Lmx) fd_named(g, root, "Verify"))
-    before\native := (cast: (c.LmxEntry) c.fd_callback)
-    verify\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_native_install(@arena, before, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_native_install(@arena, verify, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
+        return: 1
     status := c.lmx_graph_call_data(g, data, make, 0)
     if: status != 0
         @: built_f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, make, c.lmx_graph_intern("F", 1U)))

@@ -31,6 +31,7 @@
 # writes as L1 text (decls_write_all, tools/l2/build.lm2); the accessors of the arena's index and of a chunk are the
 # kernel's C functions, called through the C door.
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 include: "<stdlib.h>" "<stddef.h>" "<limits.h>"
@@ -277,6 +278,7 @@ fn: lmx_range_remove (c.LmxArena@: arena; @: lo; @: hi; int: retire) int
             # Spelling keys/text must retire while this storage is still
             # registered and readable, before its address can be reused.
             if: retire != 0
+                c.lmx_native_drop(arena, lo, hi)
                 c.lmx_source_names_drop(arena, lo, hi)
             ---
             while: index + 1U < c.lmx_arena_index_len(arena)

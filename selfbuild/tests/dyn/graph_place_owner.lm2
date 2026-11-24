@@ -7,6 +7,7 @@
 # the chain to the owner during the computation, Reader is not on the marked chain: x is 1 and Caller() = 11.
 # (A FOREIGN Value held by Reader was not used: an L3 double formal does not receive one today, answer 5.)
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -98,7 +99,8 @@ fn: go_owner_check () int
     caller := go_named(g, root, "Caller")
     if: collect = 0 || caller = 0
         return: 203
-    collect\native := (cast: (c.LmxEntry) c.go_collect)
+    if: c.lmx_native_install(@arena, collect, (cast: (c.LmxPrimitiveEntry) c.go_collect), 0, 0, 0, 0, 0) != 0
+        return: 1
     # The assertion owner retains the callables and the root.
     codes[0] := (cast: (@: void) collect)
     codes[1] := (cast: (@: void) caller)

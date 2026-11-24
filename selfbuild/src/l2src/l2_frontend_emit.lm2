@@ -17269,18 +17269,19 @@ fn: lm_compiler_native_entry_ready (int: i) int
     return: (cast: (int) ((cast: (int) ((c.lm_compiler_m_native(i) != 0 || c.lm_compiler_mad_on(i) != 0) && c.lm_compiler_pap_on(i) = 0))))
 end: lm_compiler_native_entry_ready
 
+
+
+
+
 # Original: l2src/l2trans.lm1:37115
 fn: lm_compiler_emit_native_word (int: i) int
-    c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
     int@: e_cell (cast: (int@) (@ c.l2_e))
     int@: walk_methods_cell (cast: (int@) (@ c.l2_walk_methods))
     int@@: m_steps_cell (cast: (int@@) (@ c.l2_m_steps))
     int@@: m_walkable_cell (cast: (int@@) (@ c.l2_m_walkable))
-    # S8.1: a provided construction's descriptor has the provider's export as its native word (l2_m_provider).
+    # S8.1: a provided construction's descriptor has the provider's export as its native entry (l2_m_provider).
     if: c.lm_compiler_m_provider(i) != 0
-        if: c.fputs("        l2_entry_leaf\\native: (cast: (LmxEntry) ", out_cell[0]) < 0 || c.fputs(c.lm_compiler_m_provider(i), out_cell[0]) < 0 || c.fputs(")\n", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (0))
+        return: (cast: (int) (lm_compiler_emit_native_install(i, c.lm_compiler_m_provider(i))))
     ---
     # A T7 host's return is the signature frame's trailer, so the method body is
     # empty, but the native function still builds the node. It is not walked.
@@ -17291,9 +17292,7 @@ fn: lm_compiler_emit_native_word (int: i) int
     # including a zero-width body; -1 still means no completed lowering.
     if: i != e_cell[0] && walk_methods_cell[0] != 0 && m_steps_cell[0] != 0 && m_steps_cell[0][i] >= 0 && m_walkable_cell[0][i] != 0
         return: (cast: (int) (0))
-    if: c.fputs("        l2_entry_leaf\\native: (cast: (LmxEntry) ", out_cell[0]) < 0 || c.lm_compiler_write_sym(out_cell[0], i) != 0 || c.fputs("_tr)\n", out_cell[0]) < 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_emit_native_install(i, 0)))
 end: lm_compiler_emit_native_word
 
 # Original: l2src/l2trans.lm1:37151
@@ -19833,3 +19832,32 @@ fn: lm_compiler_merge_lift_methods (const: (char@: path)) int
     here_on_cell[0] := saved_on
     return: (cast: (int) (0))
 end: lm_compiler_merge_lift_methods
+
+# The C symbol of a method's native entry as the generated builder names it: its provider's export, or its trampoline
+# (the symbol of the method and `_tr`). Both are identifier-only (lm_compiler_construct_name_ok; l2_m<i>), so the
+# text needs no escaping where it stands in a string.
+fn: lm_compiler_emit_native_symbol (int: i; const: (char@: provider)) int
+    c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
+    if: provider != 0
+        return: (cast: (int) (c.fputs(provider, out_cell[0]) < 0))
+    if: c.lm_compiler_write_sym(out_cell[0], i) != 0 || c.fputs("_tr", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_emit_native_symbol
+
+# The generated builder installs the entry of the occurrence l2_entry_leaf by the one explicit installation (plan W4),
+# in the arena of the program. The entry is the uniform C9 transport of the method (the provider's export or the
+# trampoline: the same nine parameters as LmxPrimitiveEntry), the entry name is that very C symbol. The prepared
+# signature, the module and the C path are not known here (0: no annotation, not a proof); the L1 path is 0 as well,
+# because the final output path is only a parameter of lm_compiler_emit_unit and no cell retains it (the retained ones
+# name the .tmp and .build.tmp files). A refused installation ends the builder with 1, like every other refused store.
+fn: lm_compiler_emit_native_install (int: i; const: (char@: provider)) int
+    c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
+    if: c.fputs("        if: lmx_native_install(l2_program_arena, l2_entry_leaf, (cast: (LmxPrimitiveEntry) ", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: lm_compiler_emit_native_symbol(i, provider) != 0 || c.fputs("), 0, 0, \"", out_cell[0]) < 0 || lm_compiler_emit_native_symbol(i, provider) != 0
+        return: (cast: (int) (1))
+    if: c.fputs("\", 0, 0) != 0\n            return: 1\n", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_emit_native_install

@@ -2,6 +2,7 @@
 # Graph invocation adapter. Parsed bodies exercise the same interpreter frame;
 # the native entry below checks the ordinary selected-code/data C ABI.
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -166,7 +167,7 @@ fn: gv_native (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: ou
     immutable_word := c.lmx_graph_word(g, "immutable", 9U)
     free_echo := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, code, c.lmx_graph_intern("FreeEcho", 8U)))
     collect := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, code, c.lmx_graph_intern("Collect", 7U)))
-    if: immutable_word = 0 || free_echo = 0 || collect = 0 || free_echo\native != 0
+    if: immutable_word = 0 || free_echo = 0 || collect = 0 || (cast: (c.LmxEntry) c.lmx_native_entry(arena, free_echo)) != 0
         return: 154
     scalar_input := inputs + 4U
     collected := c.lmx_graph_get(c.lmx_graph_method_data(g, collect), 0U)
@@ -267,8 +268,10 @@ fn: gv_pending_value (@: g c.LmxGraph; @: root c.Lmx) int
         return: 173
     if: c.lmx_graph_name(g, made, "made", 4U) != 0 || c.lmx_graph_name(g, collected, "collected", 9U) != 0 || c.lmx_graph_name(g, used, "used", 4U) != 0 || c.lmx_graph_name(g, second, "second", 6U) != 0 || c.lmx_graph_put_in(g, produce_data, 0U, made) != 0 || c.lmx_graph_put_in(g, collect_data, 0U, collected) != 0 || c.lmx_graph_put_in(g, use_data, 0U, gv_witness(g, abi, source, "first")) != 0 || c.lmx_graph_put_in(g, use_data, 1U, second) != 0 || c.lmx_graph_put_in(g, use_data, 2U, used) != 0 || gv_install_data(g, produce, produce_data) != 0 || gv_install_data(g, collect, collect_data) != 0 || gv_install_data(g, use, use_data) != 0
         return: 173
-    produce\native := (cast: (c.LmxEntry) c.gv_produce)
-    collect\native := (cast: (c.LmxEntry) c.gv_collect)
+    if: c.lmx_native_install(arena, produce, (cast: (c.LmxPrimitiveEntry) c.gv_produce), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_native_install(arena, collect, (cast: (c.LmxPrimitiveEntry) c.gv_collect), 0, 0, 0, 0, 0) != 0
+        return: 1
     # Retain the assertion owner's callable references, not any produced Value.
     codes[0] := (cast: (@: void) produce)
     codes[1] := (cast: (@: void) collect)
@@ -517,7 +520,8 @@ fn: gv_values_check () int
         return: 143
     c.memcpy((cast: (@: void) (@ immutable_context)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
     c.memcpy((cast: (@: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue))
-    probe\native := (cast: (c.LmxEntry) c.gv_native)
+    if: c.lmx_native_install(@arena, probe, (cast: (c.LmxPrimitiveEntry) c.gv_native), 0, 0, 0, 0, 0) != 0
+        return: 1
     status := c.lmx_graph_invoke_values(g, probe, actuals, 5U, bindings, @ returned)
     if: status != 0 || c.memcmp((cast: (const: @: void) (@ returned)), (cast: (const: @: void) (actuals + 4U)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) before), (cast: (const: @: void) actuals), 5U * c.sizeof(c.LmxWalkValue)) != 0 || arena\activation != 0 || arena\execution_roots != @ roots
         c.fprintf(c.stderr, "graph call Values native status=%d\n", status)
@@ -526,7 +530,7 @@ fn: gv_values_check () int
     pair_bindings[1] := 1U
     c.memcpy((cast: (@: void) pair), (cast: (const: @: void) (actuals + 4U)), c.sizeof(c.LmxWalkValue))
     c.memcpy((cast: (@: void) (pair + 1U)), (cast: (const: @: void) (actuals + 2U)), c.sizeof(c.LmxWalkValue))
-    if: echo\native != 0 || store\native != 0 || c.lmx_graph_invoke_values(g, echo, pair, 1U, pair_bindings, @ returned) != 0 || c.memcmp((cast: (const: @: void) (@ returned)), (cast: (const: @: void) pair), c.sizeof(c.LmxWalkValue)) != 0
+    if: (cast: (c.LmxEntry) c.lmx_native_entry(@arena, echo)) != 0 || (cast: (c.LmxEntry) c.lmx_native_entry(@arena, store)) != 0 || c.lmx_graph_invoke_values(g, echo, pair, 1U, pair_bindings, @ returned) != 0 || c.memcmp((cast: (const: @: void) (@ returned)), (cast: (const: @: void) pair), c.sizeof(c.LmxWalkValue)) != 0
         return: 145
     status := c.lmx_graph_invoke_values(g, store, pair, 2U, pair_bindings, @ returned)
     value := pair + 1U

@@ -2159,7 +2159,28 @@ fn: lm_graph_collect_methods (c.LmxGraph@: g; c.Lmx@: root; c.Lmx@@@: methods; s
     return: status
 end: lm_graph_collect_methods
 
-fn: lm_graph_emit_methods (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@@: methods; size_t: count; int: install) int
+# Install a prepared C9 variant while constructing the image; lookup never executes this path.
+# The actual emitted symbol and L1 path are data. Module identity and C path are absent at this stage.
+fn: lm_graph_emit_native_install (c.FILE@: f; const: (char@: place); const: (char@: symbol); int: label; const: (char@: out_path)) int
+    c.fprintf(f, "        if: lmx_native_install(arena, %s, (cast: (LmxPrimitiveEntry) %s", place, symbol)
+    if: label >= 0
+        c.fprintf(f, "%d", label)
+    c.fputs("), 0, 0, ", f)
+    c.fputc(34, f)
+    c.fputs(symbol, f)
+    if: label >= 0
+        c.fprintf(f, "%d", label)
+    c.fputc(34, f)
+    c.fputs(", ", f)
+    if: out_path != 0
+        lm_graph_emit_quoted_bytes(f, (cast: (char@) out_path), c.strlen(out_path), 1)
+    else:
+        c.fputc(48, f)
+    ---
+    c.fputs(", 0) != 0\n            return: 1\n", f)
+    return: (cast: (int) (c.ferror(f) != 0))
+end: lm_graph_emit_native_install
+fn: lm_graph_emit_methods (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@@: methods; size_t: count; int: install; const: (char@: out_path)) int
     c.Lmx@: current 0
     size_t: i 0U
     int: label 0
@@ -2177,7 +2198,10 @@ fn: lm_graph_emit_methods (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@@: m
             # takes it (lmx_graph_fn_make); the data a traversal makes runs its initializers through the interpreter.
             c.fputs("        l2_method: ", f)
             status := lm_graph_emit_address(g, f, scope, (cast: (c.Lmx@) current\parent))
-            c.fprintf(f, "\n        l2_method\\native: (cast: (LmxEntry) lm_graph_method%d)\n", label)
+            c.fputc(10, f)
+            if: status = 0
+                status := lm_graph_emit_native_install(f, "l2_method", "lm_graph_method", label, out_path)
+            ---
         else:
             temps[0] := 0
             temps[1] := -1
@@ -2287,7 +2311,7 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
         if: r = 0
             r := lm_graph_native_methods(g, methods, @ methods_count)
         if: r = 0
-            r := lm_graph_emit_methods(g, f, code, methods, methods_count, 0)
+            r := lm_graph_emit_methods(g, f, code, methods, methods_count, 0, out_path)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@) methods))
@@ -2375,7 +2399,7 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
             c.fputs("        lmx_call_code: l2_program_unit\n", f)
         else:
             c.fprintf(f, "        lmx_call_code: (cast: (@: Lmx) l2_gv%zu)\n", code_id)
-        r := lm_graph_emit_methods(g, f, code, methods, methods_count, 1)
+        r := lm_graph_emit_methods(g, f, code, methods, methods_count, 1, out_path)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@) methods))
@@ -2387,14 +2411,26 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
     # the root of an ordinary program enters it through lm_graph_file, which calls the file (lmx_graph_call passes
     # through the record to the record's entry).
     if: code_id = 1U
-        c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_body)\n", f)
-    else:
-        c.fprintf(f, "        lmx_call_code: (cast: (@: Lmx) l2_gv%zu)\n        lmx_call_code\\native: (cast: (LmxEntry) lm_graph_body)\n", code_id)
+        # The check adapter directly enters the body; do not allocate an installation it immediately replaces.
         if: check_root = 0
-            c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_file)\n", f)
+            r := lm_graph_emit_native_install(f, "l2_program_unit", "lm_graph_body", -1, out_path)
+        ---
+    else:
+        c.fprintf(f, "        lmx_call_code: (cast: (@: Lmx) l2_gv%zu)\n", code_id)
+        r := lm_graph_emit_native_install(f, "lmx_call_code", "lm_graph_body", -1, out_path)
+        if: r = 0 && check_root = 0
+            r := lm_graph_emit_native_install(f, "l2_program_unit", "lm_graph_file", -1, out_path)
+        ---
     ---
-    if: check_root != 0
-        c.fputs("        graph\\native: (cast: (LmxEntry) lm_graph_check_root)\n", f)
+    if: r = 0 && check_root != 0
+        r := lm_graph_emit_native_install(f, "graph", "lm_graph_check_root", -1, out_path)
+    ---
+    if: r != 0
+        c.fclose(f)
+        c.free((cast: (@) methods))
+        c.lmx_graph_space_close(g, opened)
+        return: r
+    ---
     c.fputs("        return: 0\n    end: l2_program_build\nend: external\n\n", f)
     if: check_root != 0
         c.fprintf(f, "external:\n    fn: main (int: argc; @@: char argv) int\n        LmxRoot: l2_program_root\n        return: lmx_root_launch_tapped(@ l2_program_root, argc, argv, l2_program_build, %zuU, lmx_root_settings, 5000U, lm_graph_check_before, (cast: (@: void) c.stdout), (cast: (@: void) c.stderr))\n    end: main\nend: external\n", n)

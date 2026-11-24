@@ -5198,7 +5198,7 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
         # matching selected body may use the method's installed entry.
         # The entry of a native body receives values, not the description of a place that is made on demand: a call with one
         # runs the same body by the interpreter.
-        if: code\native != 0 && (c.lmx_graph_method(g, code) = 0 || body = c.lmx_graph_method_code(g, code)) && (result = 0 || c.lmx_graph_method(g, code) != 0)
+        if: c.lmx_native_entry(g\arena, code) != 0 && (c.lmx_graph_method(g, code) = 0 || body = c.lmx_graph_method_code(g, code)) && (result = 0 || c.lmx_graph_method(g, code) != 0)
             if: result != 0
                 destination := c.lmx_walk_result_storage(g\arena, result_type, (cast: (const: c.LmxScalarABI@) result_abi), 0, result_source, @ destination_value)
                 if: destination = 0
@@ -5856,7 +5856,7 @@ fn: lmx_graph_call (c.LmxGraph@: g; c.Lmx@: file) int
     status := lmx_graph_space_open(g, root, @ opened)
     if: status != 0
         return: status
-    if: root\native != 0
+    if: c.lmx_native_entry(g\arena, root) != 0
         status := c.lmx_call0(g\arena, root, @ value)
     else:
         status := 5
@@ -8284,6 +8284,7 @@ end: lmx_graph_fn_data
 # exists: the Structures a running program creates otherwise are interpreted). 0 and the Structure in out; 1 without
 # memory; 5 for an argument of another kind.
 fn: lmx_graph_fn_make (c.LmxGraph@: g; c.Lmx@: decl; char@: name; c.Lmx@: args; @: result; c.Lmx@: written; c.Lmx@: body; int: with_result; c.Lmx@@: out) int
+    c.Lmx@: native_description 0
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.Lmx@: made 0
     c.Lmx@: vars 0
@@ -8338,7 +8339,9 @@ fn: lmx_graph_fn_make (c.LmxGraph@: g; c.Lmx@: decl; char@: name; c.Lmx@: args; 
             return: 1
         ---
     ---
-    made\native := decl\native
+    native_description := c.lmx_native_descriptor(g\arena, decl)
+    if: c.lmx_native_bind(g\arena, made, native_description) != 0
+        return: 1
     out[0] := made
     return: 0
 end: lmx_graph_fn_make

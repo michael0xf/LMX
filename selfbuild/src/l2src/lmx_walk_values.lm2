@@ -6913,11 +6913,6 @@ end: lmx_walk_capture
 
 # Existing native-word access, construction and exact immutable-context guards.
 
-fn: lmx_walk_callable_addr (c.LmxArena@: arena; c.Lmx@: operand) c.LmxEntry
-    if: operand = 0
-        return: (cast: (c.LmxEntry) 0)
-    return: (cast: (c.LmxEntry) operand\native)
-end: lmx_walk_callable_addr
 
 fn: lmx_walk_frame (c.LmxArena@: arena; c.Lmx@: parent; int: code; size_t: children) c.Lmx@
     return: lmx_walk_frame_profiled(arena, parent, code, children, 0)
@@ -7128,11 +7123,10 @@ fn: lmx_walk_dispatch_values (c.LmxWalkFrame@: f; c.Lmx@: code; c.Lmx@: callee; 
     c.lmx_execution_roots_push((cast: (c.LmxArena@) f\arena), @ input_roots, (cast: (@) values), n, refs, n, rtype, 0)
     c.lmx_execution_roots_push((cast: (c.LmxArena@) f\arena), @ origin_roots, 0, 0U, origins, origin_count, 0, 0)
     # Actual evaluation may mutate the selected code or its native
-    # word. Select dispatch at the boundary, after those effects, not from
+    # binding. Select dispatch at the boundary, after those effects, not from
     # a value cached while resolving the callee.
-    c.LmxEntry: addr (cast: (c.LmxEntry) c.lmx_walk_callable_addr((cast: (c.LmxArena@) f\arena), callee))
-    if: addr != 0
-        c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
+    c.LmxPrimitiveEntry: entry c.lmx_native_entry((cast: (c.LmxArena@) f\arena), callee)
+    if: entry != 0
         dest := lmx_walk_result_dest((cast: (c.LmxArena@) f\arena), rtype, @ temp)
         lmx_walk_value_clear(@ result_context)
         # Slice 254: the native activation's record, child of this frame's.

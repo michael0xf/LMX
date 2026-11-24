@@ -1,6 +1,7 @@
 # The assertion owner uses the C ABI. The Code bodies below are parsed and
 # executed as ordinary Structures over supplied typed DATA, without a fake fn.
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -278,7 +279,8 @@ fn: gs_pending_actuals () int
             c.fprintf(c.stderr, "pending setup filling reference anchor chunk: cells=%zu room=%zu\n", (cast: (size_t) c.lmx_chunk_cells(first_chunk, pool\stride)), c.lmx_chunk_room(first_chunk, pool\stride))
             return: 125
     ---
-    collect\native := (cast: (c.LmxEntry) c.gs_pending_collect)
+    if: c.lmx_native_install(@arena, collect, (cast: (c.LmxPrimitiveEntry) c.gs_pending_collect), 0, 0, 0, 0, 0) != 0
+        return: 1
     roots_before := c.lmx_execution_roots_mark(@ arena)
     c.lmx_execution_roots_push(@ arena, @ anchor_roots, 0, 0U, (cast: (@@: void) (@ anchor)), 1U, 0, 0)
     status := c.lmx_graph_call(g, root)
@@ -485,7 +487,8 @@ fn: gs_working_check () int
     held_codes[4] := (cast: (@: void) forward_hold_code)
     roots_before := c.lmx_execution_roots_mark(@ arena)
     c.lmx_execution_roots_push(@ arena, @ code_roots, 0, 0U, held_codes, 5U, (cast: (@: void) root), 0)
-    touch_code\native := (cast: (c.LmxEntry) c.gs_touch)
+    if: c.lmx_native_install(@arena, touch_code, (cast: (c.LmxPrimitiveEntry) c.gs_touch), 0, 0, 0, 0, 0) != 0
+        return: 1
     status := c.lmx_graph_launch_value(g, 0, data, c.lmx_graph_intern("double", 6U), snapshot_code, @ returned)
     if: status != 0
         c.fprintf(c.stderr, "graph scalar Snapshot status %d\n", status)

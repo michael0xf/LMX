@@ -7,6 +7,7 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_call.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # A real native entry whose distinct answer proves that dispatch used the entry, not the walker.
@@ -157,6 +158,9 @@ fn: gm_mutation () int
     c.Lmx@: fresh 0
     c.Lmx@: statement 0
     c.Lmx@: expression 0
+    c.Lmx@: a_descriptor 0
+    c.Lmx@: b_descriptor 0
+    c.Lmx@: fresh_descriptor 0
     @: x void 0
     @: literal void 0
     @: uninit void 0
@@ -191,27 +195,37 @@ fn: gm_mutation () int
         return: 1
     if: c.lmx_graph_put_in(g, statement, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || c.lmx_graph_put_in(g, statement, 1U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, statement, 2U, (cast: (@) expression)) != 0 || c.lmx_graph_put_in(g, expression, 0U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, expression, 1U, plus) != 0 || c.lmx_graph_put_in(g, expression, 2U, literal) != 0
         return: 1
-    a\native := (cast: (c.LmxEntry) c.gm_native_probe)
-    b\native := (cast: (c.LmxEntry) c.gm_native_probe)
-    fresh\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    if: c.lmx_native_install(arena, a, (cast: (c.LmxPrimitiveEntry) c.gm_native_probe), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_native_install(arena, b, (cast: (c.LmxPrimitiveEntry) c.gm_native_probe), 0, 0, 0, 0, 0) != 0
+        return: 1
+    if: c.lmx_native_install(arena, fresh, (cast: (c.LmxPrimitiveEntry) c.gm_native_probe), 0, 0, 0, 0, 0) != 0
+        return: 1
+    # One descriptor object per installed code, taken before any write: the checks below ask for the same object,
+    # not only for the same entry.
+    a_descriptor := c.lmx_native_descriptor(arena, a)
+    b_descriptor := c.lmx_native_descriptor(arena, b)
+    fresh_descriptor := c.lmx_native_descriptor(arena, fresh)
+    if: a_descriptor = 0 || b_descriptor = 0 || fresh_descriptor = 0
+        return: 1
     same_cell := c.lmx_graph_place_cell(g, fresh, 0U)
     status := c.lmx_graph_assign_int(g, fresh, 0U, 5)
-    fails := fails + gm_report("first-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_graph_kind(g, uninit) = 3 && c.lmx_arena_pointer_void_read(uninit) = same_cell && c.lmx_graph_kind(g, same_cell) = 1 && fresh\native != 0 && c.lmx_graph_read_int(g, fresh, 0U, @ value) = 0 && value = 5)))
+    fails := fails + gm_report("first-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_graph_kind(g, uninit) = 3 && c.lmx_arena_pointer_void_read(uninit) = same_cell && c.lmx_graph_kind(g, same_cell) = 1 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, fresh)) != 0 && c.lmx_native_descriptor(arena, fresh) = fresh_descriptor && c.lmx_graph_read_int(g, fresh, 0U, @ value) = 0 && value = 5)))
     status := c.lmx_graph_assign_int(g, fresh, 0U, 7)
-    fails := fails + gm_report("later-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_arena_pointer_void_read(uninit) = same_cell && fresh\native != 0 && c.lmx_graph_value_int(g, same_cell, @ value) = 0 && value = 7)))
+    fails := fails + gm_report("later-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_arena_pointer_void_read(uninit) = same_cell && (cast: (c.LmxEntry) c.lmx_native_entry(arena, fresh)) != 0 && c.lmx_native_descriptor(arena, fresh) = fresh_descriptor && c.lmx_graph_value_int(g, same_cell, @ value) = 0 && value = 7)))
     status := c.lmx_graph_assign_int(g, a, 0U, 9)
-    fails := fails + gm_report("ordinary-data-write-preserves-both-entries", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
+    fails := fails + gm_report("ordinary-data-write-preserves-both-entries", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, a)) != 0 && c.lmx_native_descriptor(arena, a) = a_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, b)) != 0 && c.lmx_native_descriptor(arena, b) = b_descriptor && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
     fails := fails + gm_report("preserved-entry-is-dispatched", (cast: (int) (c.lmx_graph_call(g, a) = 77)))
     status := c.lmx_graph_write_slot(g, expression, 1U, (cast: (@) (@ value)))
-    fails := fails + gm_report("checked-slot-store-takes-a-foreign-address-and-keeps-entries", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, expression, 1U) = (cast: (@) (@ value)) && a\native != 0 && b\native != 0)))
+    fails := fails + gm_report("checked-slot-store-takes-a-foreign-address-and-keeps-entries", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, expression, 1U) = (cast: (@) (@ value)) && (cast: (c.LmxEntry) c.lmx_native_entry(arena, a)) != 0 && c.lmx_native_descriptor(arena, a) = a_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, b)) != 0 && c.lmx_native_descriptor(arena, b) = b_descriptor)))
     status := c.lmx_graph_assign_int(g, data, 0U, 7)
-    fails := fails + gm_report("literal-written-through-data-alias-keeps-native", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && fresh\native != 0)))
+    fails := fails + gm_report("literal-written-through-data-alias-keeps-native", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, a)) != 0 && c.lmx_native_descriptor(arena, a) = a_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, b)) != 0 && c.lmx_native_descriptor(arena, b) = b_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, fresh)) != 0 && c.lmx_native_descriptor(arena, fresh) = fresh_descriptor)))
     status := c.lmx_graph_call(g, a)
     fails := fails + gm_report("preserved-entry-is-dispatched-after-a-literal-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, a, 0U, @ value) = 0 && value = 9)))
     status := c.lmx_graph_call(g, b)
     fails := fails + gm_report("second-holder-entry-is-dispatched-after-the-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
     status := c.lmx_graph_write_slot(g, expression, 1U, minus)
-    fails := fails + gm_report("operator-write-keeps-native", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && fresh\native != 0)))
+    fails := fails + gm_report("operator-write-keeps-native", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, a)) != 0 && c.lmx_native_descriptor(arena, a) = a_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, b)) != 0 && c.lmx_native_descriptor(arena, b) = b_descriptor && (cast: (c.LmxEntry) c.lmx_native_entry(arena, fresh)) != 0 && c.lmx_native_descriptor(arena, fresh) = fresh_descriptor)))
     status := c.lmx_graph_call(g, a)
     fails := fails + gm_report("preserved-entry-is-dispatched-after-an-operator-write", (cast: (int) (status = 77 && c.lmx_graph_read_int(g, a, 0U, @ value) = 0 && value = 9)))
     fails := fails + gm_var_chain(g)
@@ -243,6 +257,7 @@ fn: gm_method () int
     c.Lmx@: product 0
     c.Lmx@: formal 0
     c.Lmx@: walker 0
+    c.Lmx@: method_descriptor 0
     @: required void 0
     @@: values void (cast: (@@) c.calloc(2U, sizeof(@)))
     int: status 0
@@ -281,30 +296,34 @@ fn: gm_method () int
     expression := (cast: (c.Lmx@) c.lmx_graph_get_in(g, statement, 0U))
     product := (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U))
     required := c.lmx_graph_get_in(g, args, 1U)
-    method\native := (cast: (c.LmxEntry) c.gm_native_probe)
+    if: c.lmx_native_install(arena, method, (cast: (c.LmxPrimitiveEntry) c.gm_native_probe), 0, 0, 0, 0, 0) != 0
+        return: 1
+    method_descriptor := c.lmx_native_descriptor(arena, method)
+    if: method_descriptor = 0
+        return: 1
     status := c.lmx_graph_assign_int(g, point, 0U, 3)
-    fails := fails + gm_report("method-data-write-preserves-entry", (cast: (int) (status = 0 && method\native != 0)))
+    fails := fails + gm_report("method-data-write-preserves-entry", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, method)) != 0 && c.lmx_native_descriptor(arena, method) = method_descriptor)))
     status := c.lmx_graph_admit(g, method, 0U, (cast: (@) point), @ values[0])
     status := status + c.lmx_graph_admit(g, method, 1U, c.lmx_graph_int(g, 1), @ values[1])
     if: status = 0
         status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
     fails := fails + gm_report("method-preserved-native-is-dispatched", (cast: (int) (status = 77)))
     status := c.lmx_graph_assign_int(g, product, 2U, 20)
-    fails := fails + gm_report("method-body-literal-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    fails := fails + gm_report("method-body-literal-keeps-entry", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, method)) != 0 && c.lmx_native_descriptor(arena, method) = method_descriptor)))
     status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
     fails := fails + gm_report("method-preserved-entry-is-dispatched-after-a-body-write", (cast: (int) (status = 77)))
     status := c.lmx_graph_write_slot(g, expression, 1U, c.lmx_graph_word(g, "-", 1U))
-    fails := fails + gm_report("method-body-operator-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    fails := fails + gm_report("method-body-operator-keeps-entry", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, method)) != 0 && c.lmx_native_descriptor(arena, method) = method_descriptor)))
     status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
     fails := fails + gm_report("method-preserved-entry-is-dispatched-after-an-operator-write", (cast: (int) (status = 77)))
     formal := (cast: (c.Lmx@) c.lmx_graph_get_in(g, args, 0U))
     status := c.lmx_graph_write_slot(g, formal, 0U, c.lmx_graph_word(g, "Point", 5U))
-    fails := fails + gm_report("method-written-formal-keeps-entry", (cast: (int) (status = 0 && method\native != 0)))
+    fails := fails + gm_report("method-written-formal-keeps-entry", (cast: (int) (status = 0 && (cast: (c.LmxEntry) c.lmx_native_entry(arena, method)) != 0 && c.lmx_native_descriptor(arena, method) = method_descriptor)))
     fails := fails + gm_report("method-formal-and-activation-lifetime", (cast: (int) (required = c.lmx_graph_get_in(g, args, 1U) && c.lmx_graph_kind(g, required) = 3 && arena\activation = 0)))
     # A callable without an entry walks its current body: take2's literal and operator are written, and each
     # invoke reads them (Point\y is 3: 3 * 20 + 1, then 3 * 20 - 1).
     walker := (cast: (c.Lmx@) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take2", 5U))))
-    if: c.lmx_graph_method(g, walker) = 0 || walker\native != 0
+    if: c.lmx_graph_method(g, walker) = 0 || (cast: (c.LmxEntry) c.lmx_native_entry(arena, walker)) != 0
         return: 1
     statement := (cast: (c.Lmx@) c.lmx_graph_get_in(g, c.lmx_graph_method_code(g, walker), 0U))
     expression := (cast: (c.Lmx@) c.lmx_graph_get_in(g, statement, 0U))

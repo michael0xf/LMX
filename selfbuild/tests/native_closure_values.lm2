@@ -2,6 +2,7 @@
 # Only each former main is renamed; its callbacks and all assertions are preserved.
 include: "<stdio.h>" "<string.h>" "<errno.h>"
 predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_source_names.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_manager_running.lm1"
@@ -163,7 +164,8 @@ fn: thread_values (int: argc; @@: argv char) int
         return: 3
     if: c.lmx_arena_ref_store(@ ca, cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 3U, (cast: (@: void) binding)) != 0 || c.lmx_arena_ref_store(@ ca, pg, 0U, (cast: (@: void) child)) != 0
         return: 4
-    cg\native: (cast: (c.LmxEntry) c.lane_body)
+    if: c.lmx_native_install(@ ca, cg, (cast: (c.LmxPrimitiveEntry) c.lane_body), 0, 0, 0, 0, 0) != 0
+        return: 4
     @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) child\slot)
     if: c.lmx_thread_child_add(parent, child, @ pa) != 0 || c.lmx_manager_running_init(@ manager) != 0 || c.lmx_manager_running_add(@ manager, slot) != 0 || c.lmx_schedule_wait(slot, c.lmx_clock_ticks()) != 0
         return: 5

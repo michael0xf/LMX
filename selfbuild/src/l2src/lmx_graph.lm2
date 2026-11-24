@@ -33,9 +33,12 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_checks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_language_words.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
@@ -489,6 +492,105 @@ fn: lmx_graph_put_in (c.LmxGraph@: g; c.Lmx@: lmx; size_t: index; @: value) int
         return: 1
     return: c.lmx_graph_ref_fill_in((cast: (c.LmxArena@) g\arena), lmx, index, value)
 end: lmx_graph_put_in
+
+# The bytes of one native metadata text as a real Array<Char> child of parent: strlen(bytes) cells, the NUL is no part
+# of the text (the physical pattern of lmx_graph_send_text). 0 for an absent or empty text and for a refused
+# allocation; the caller tells the two apart by the bytes it passed. Nothing is interned and no path is read or checked.
+fn: lmx_graph_native_text (c.LmxGraph@: g; c.Lmx@: parent; const: (char@: bytes)) c.LmxArray@
+    c.LmxArray@: text 0
+    c.VoidArray@: fields 0
+    size_t: width 0U
+    if: g = 0 || parent = 0 || bytes = 0
+        return: 0
+    width := c.strlen(bytes)
+    if: width = 0U
+        return: 0
+    text := c.lmx_array_new_child_profiled(parent, c.LMX_TYPE_ARRAY_OF_CHAR, width, (cast: (c.LmxArena@) g\arena), 0)
+    if: text = 0
+        return: 0
+    fields := (cast: (c.VoidArray@) (@ text\array))
+    c.memcpy((cast: (@) fields\data), (cast: (const: @) bytes), width)
+    return: text
+end: lmx_graph_native_text
+
+# One metadata slot of a native variant: the text as an Array<Char> child stored at index, or the slot left 0 when the
+# text is absent (a null or empty input). 0, or 1 when an allocation or the fill is refused.
+fn: lmx_graph_native_field (c.LmxGraph@: g; c.Lmx@: variant; size_t: index; const: (char@: bytes)) int
+    c.LmxArray@: text 0
+    if: bytes = 0 || bytes[0] = 0
+        return: 0
+    text := lmx_graph_native_text(g, variant, bytes)
+    if: text = 0
+        return: 1
+    return: lmx_graph_put_in(g, variant, index, (cast: (@) text))
+end: lmx_graph_native_field
+
+# An ordinary native descriptor (plan W4; the book: "Native is an explicit descriptor", an ordinary Structure with
+# its machine-entry variants, signatures, module/entry references and the available L1/C source paths). D (parent 0,
+# one slot) holds V, the one list of variants (parent D, one slot), which holds X, the one variant (parent V, six
+# slots):
+#   0 the prepared signature, as given (0 when there is none: no ready annotation, not a universal proof);
+#   1 the typed LmxPrimitive(fn = entry, signature, owner = 0), a record of the PRIMITIVE pool of the arena;
+#   2 module, 3 entry name, 4 L1 path, 5 C path: each a real Array<Char>, or the slot left 0 when the text is absent.
+# Nothing is registered, copied or compiled here and no table is touched: the caller installs D. A signature is never
+# renamed, a path is neither guessed nor interned. entry 0, or a refused allocation or fill, answers 0; the cells
+# already taken are unreachable and the ordinary GC releases them.
+fn: lmx_graph_native_descriptor (c.LmxGraph@: g; c.LmxPrimitiveEntry: entry; c.Lmx@: signature; const: (char@: module); const: (char@: entry_name); const: (char@: lm1_path); const: (char@: c_path)) c.Lmx@
+    c.Lmx@: descriptor 0
+    c.Lmx@: variants 0
+    c.Lmx@: variant 0
+    c.LmxPrimitive@: leaf 0
+    if: g = 0 || entry = 0
+        return: 0
+    descriptor := lmx_graph_lmx(g, 0, 1U)
+    if: descriptor = 0
+        return: 0
+    variants := lmx_graph_lmx(g, descriptor, 1U)
+    if: variants = 0
+        return: 0
+    variant := lmx_graph_lmx(g, variants, 6U)
+    if: variant = 0
+        return: 0
+    leaf := (cast: (c.LmxPrimitive@) c.lmx_arena_take_profiled((cast: (c.LmxArena@) g\arena), c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, c.lmx_range_profile((cast: (c.LmxArena@) g\arena), (cast: (@) variant))))
+    if: leaf = 0
+        return: 0
+    leaf\fn := entry
+    leaf\signature := signature
+    leaf\owner := 0
+    if: signature != 0 && lmx_graph_put_in(g, variant, 0U, (cast: (@) signature)) != 0
+        return: 0
+    if: lmx_graph_put_in(g, variant, 1U, (cast: (@) leaf)) != 0
+        return: 0
+    if: lmx_graph_native_field(g, variant, 2U, module) != 0 || lmx_graph_native_field(g, variant, 3U, entry_name) != 0 || lmx_graph_native_field(g, variant, 4U, lm1_path) != 0 || lmx_graph_native_field(g, variant, 5U, c_path) != 0
+        return: 0
+    if: lmx_graph_put_in(g, variants, 0U, (cast: (@) variant)) != 0 || lmx_graph_put_in(g, descriptor, 0U, (cast: (@) variants)) != 0
+        return: 0
+    return: descriptor
+end: lmx_graph_native_descriptor
+
+# The one explicit installation of a native entry (plan W4): every producer and test writes a native binding through it,
+# so that a refused descriptor is an answer 1 and never the removal that a null bind means. An entry of 0 removes the
+# binding of code (lmx_native_bind with a null descriptor) and builds nothing. Otherwise the descriptor is made in the
+# arena that really owns code, even when the caller holds a borrowed view of it, and the table of that arena binds it.
+# This is an explicit act: an ordinary call or a graph write never reaches it, and a lookup creates nothing. 0, or 1
+# when the owner, its graph, the descriptor or the bind is refused.
+fn: lmx_native_install (c.LmxArena@: arena; c.Lmx@: code; c.LmxPrimitiveEntry: entry; c.Lmx@: signature; const: (char@: module); const: (char@: entry_name); const: (char@: lm1_path); const: (char@: c_path)) int
+    c.LmxArena@: owner 0
+    c.LmxGraph@: g 0
+    c.Lmx@: descriptor 0
+    if: entry = 0
+        return: c.lmx_native_bind(arena, code, 0)
+    owner := c.lmx_range_home(arena, (cast: (@) code))
+    if: owner = 0
+        return: 1
+    g := lmx_graph_open(owner)
+    if: g = 0
+        return: 1
+    descriptor := lmx_graph_native_descriptor(g, entry, signature, module, entry_name, lm1_path, c_path)
+    if: descriptor = 0
+        return: 1
+    return: c.lmx_native_bind(owner, code, descriptor)
+end: lmx_native_install
 
 # What an address is in this arena: 0 nothing of the graph, 1 an int primitive, 2 a word primitive, 3 the pointer
 # primitive of a place without a value, 4 an Lmx, 5 an int reference, 6 a reference to an Lmx -- a Structure or a

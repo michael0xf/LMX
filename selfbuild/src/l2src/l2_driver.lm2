@@ -6,6 +6,8 @@ predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/l2_driver_state_decl.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -944,11 +946,11 @@ fn: dispatch_install (c.LmxArena@: arena; c.Lmx@: graph; int: original_slot; int
     @: value void 0
     size_t: i 0U
     int: paths 0
-    check((cast: (int) (graph\native != 0 && caller != 0 && caller\native != 0)), "dispatch probe keeps root and caller native")
-    check((cast: (int) (original != 0 && original\native != 0 && walked != 0 && walked\native != 0)), "dispatch probe starts from two native callees")
+    check((cast: (int) (c.lmx_native_entry(arena, graph) != 0 && caller != 0 && c.lmx_native_entry(arena, caller) != 0)), "dispatch probe keeps root and caller native")
+    check((cast: (int) (original != 0 && c.lmx_native_entry(arena, original) != 0 && walked != 0 && c.lmx_native_entry(arena, walked) != 0)), "dispatch probe starts from two native callees")
     if: original = 0 || walked = 0 || caller = 0
         return: 1
-    c.LmxEntry: saved_native original\native
+    c.LmxPrimitiveEntry: saved_native c.lmx_native_entry(arena, original)
     # Exactly one immediate physical Holder field names this method.
     while: i < graph_fields\size
         value := c.lmx_arena_ref_value(graph, i)
@@ -959,7 +961,10 @@ fn: dispatch_install (c.LmxArena@: arena; c.Lmx@: graph; int: original_slot; int
                 if: c.lmx_graph_copy_owned(original, arena, arena, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0
                     return: 1
                 copy\parent := holder
-                copy\native := (cast: (c.LmxEntry) c.dispatch_probe)
+                # The probe goes through the one explicit installation: its C symbol is the entry name, nothing
+                # else is known.
+                if: c.lmx_native_install(arena, copy, (cast: (c.LmxPrimitiveEntry) c.dispatch_probe), 0, 0, "dispatch_probe", 0, 0) != 0
+                    return: 1
                 if: c.lmx_arena_ref_store(arena, holder, 0U, (cast: (@) copy)) != 0
                     return: 1
                 dispatch_selected_cell[0] := copy
@@ -968,9 +973,10 @@ fn: dispatch_install (c.LmxArena@: arena; c.Lmx@: graph; int: original_slot; int
         i := i + 1U
     ---
     check((cast: (int) (paths = 1 && dispatch_selected_cell[0] != original)), "one physical path selects a distinct copied occurrence")
-    check((cast: (int) (original\native = saved_native)), "the original declaration native word remains unchanged")
+    check((cast: (int) (c.lmx_native_entry(arena, original) = saved_native)), "the original declaration native word remains unchanged")
     check((cast: (int) (dispatch_rewrite_return(arena, walked) = 1)), "exactly one retained return literal is changed")
-    walked\native := 0
+    if: c.lmx_native_install(arena, walked, (cast: (c.LmxPrimitiveEntry) 0), 0, 0, 0, 0, 0) != 0
+        return: 1
     dispatch_arena_cell[0] := arena
     if: dispatch_throws_cell[0] != 0
         dispatch_payload_cell[0] := c.lmx_walk_plain(arena, graph, 1U)
@@ -1099,7 +1105,7 @@ sub: inspect_merge (c.Lmx@@: operands; size_t: count; c.Lmx@: result; c.LmxArena
                                 ---
                                 check((cast: (int) (copied != source)), "merge copies the callable occurrence")
                                 if: c.strcmp(gargv_cell[0][at], "merge_native") = 0
-                                    check((cast: (int) (source\native != 0 && copied\native = source\native)), "copied callable shares its compiled native implementation")
+                                    check((cast: (int) (c.lmx_native_entry(src_arena, source) != 0 && c.lmx_native_entry(dst_arena, copied) = c.lmx_native_entry(src_arena, source))), "copied callable shares its compiled native implementation")
                                 else:
                                     src := arg(at + 5)
                                     check((cast: (int) ((src >= 0 && (cast: (size_t) src) < copied_fields\size && (cast: (size_t) src) < source_fields\size))), "observed callable child is in both occurrences")
@@ -1479,7 +1485,7 @@ fn: shape_paths_check (c.LmxArena@: arena; c.Lmx@: graph; int: late) int
                 if: holder != 0
                     holder_fields := @ holder\array
                 ---
-                check((cast: (int) (holder\native != 0)) = arg(at), "selected Structure has its actual requested native word")
+                check((cast: (int) (c.lmx_native_entry(arena, holder) != 0)) = arg(at), "selected Structure has its actual requested native word")
             ---
             at := at + 1
         ---
@@ -2507,12 +2513,12 @@ sub: stop_probe_adapter (c.Lmx@: method; c.LmxArena@: arena)
     @: before void c.malloc(128U)
     @: result void 0
     int: status
-    check((cast: (int) (method != 0 && method\native != 0 && dest != 0 && before != 0)), "stopped adapter retains an actual typed native body")
-    if: method = 0 || method\native = 0 || dest = 0 || before = 0
+    check((cast: (int) (method != 0 && c.lmx_native_entry(arena, method) != 0 && dest != 0 && before != 0)), "stopped adapter retains an actual typed native body")
+    if: method = 0 || c.lmx_native_entry(arena, method) = 0 || dest = 0 || before = 0
         c.abort()
     c.memset(dest, 165, 128U)
     c.memset(before, 165, 128U)
-    c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) method\native)
+    c.LmxPrimitiveEntry: entry c.lmx_native_entry(arena, method)
     status := entry((cast: (@) method), 0, 0U, dest, @ result, arena, method, 0, 0)
     check((cast: (int) (status = 0 && result = 0)), "stopped typed adapter has no result or throw")
     check((cast: (int) (c.memcmp(dest, before, 128U) = 0)), "stopped typed adapter leaves destination untouched")
@@ -2624,31 +2630,39 @@ fn: stop_install (c.LmxArena@: arena; c.Lmx@: graph; int: at) int
     stop_received_cell[0] := stop_int_cell(arena, stop_cells, 1)
     stop_later_cell[0] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 6)))
     stop_receiver_cell[0] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 7)))
-    check((cast: (int) (first != 0 && first\native != 0 && stop_caller_cell[0] != 0 && stop_caller_cell[0]\native != 0 && graph\native != 0)), "stop tap starts with real native adapters and caller")
+    check((cast: (int) (first != 0 && c.lmx_native_entry(arena, first) != 0 && stop_caller_cell[0] != 0 && c.lmx_native_entry(arena, stop_caller_cell[0]) != 0 && c.lmx_native_entry(arena, graph) != 0)), "stop tap starts with real native adapters and caller")
     if: first = 0 || stop_caller_cell[0] = 0 || stop_later_cell[0] = 0 || stop_receiver_cell[0] = 0
         return: 1
-    check((cast: (int) (stop_later_cell[0]\native != 0 && stop_receiver_cell[0]\native != 0)), "skipped later actual and receiver begin as actual native bodies")
-    if: stop_later_cell[0]\native = 0 || stop_receiver_cell[0]\native = 0
+    check((cast: (int) (c.lmx_native_entry(arena, stop_later_cell[0]) != 0 && c.lmx_native_entry(arena, stop_receiver_cell[0]) != 0)), "skipped later actual and receiver begin as actual native bodies")
+    if: c.lmx_native_entry(arena, stop_later_cell[0]) = 0 || c.lmx_native_entry(arena, stop_receiver_cell[0]) = 0
         return: 1
-    stop_saved_view[0] := (cast: (c.LmxPrimitiveEntry) first\native)
-    first\native := (cast: (c.LmxEntry) c.stop_first)
+    # Every probe is installed through the one explicit installation: its C symbol is the entry name, no module or path
+    # is known (0), and a refused installation leaves the probe unplanted instead of being ignored. The saved typed
+    # entries serve only the direct calls of the probes.
+    stop_saved_view[0] := c.lmx_native_entry(arena, first)
+    if: c.lmx_native_install(arena, first, (cast: (c.LmxPrimitiveEntry) c.stop_first), 0, 0, "stop_first", 0, 0) != 0
+        return: 1
     while: k < 4
         stop_extra_view[k] := c.lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + k + 2)))
-        check((cast: (int) (stop_extra_view[k] != 0 && stop_extra_view[k]\native != 0)), "each extra typed adapter starts with its native body")
-        if: stop_extra_view[k] = 0 || stop_extra_view[k]\native = 0
+        check((cast: (int) (stop_extra_view[k] != 0 && c.lmx_native_entry(arena, stop_extra_view[k]) != 0)), "each extra typed adapter starts with its native body")
+        if: stop_extra_view[k] = 0 || c.lmx_native_entry(arena, stop_extra_view[k]) = 0
             return: 1
         k := k + 1
     ---
     c.Lmx@: later_target stop_later_cell[0]
-    later_target\native := (cast: (c.LmxEntry) c.stop_later_probe)
+    if: c.lmx_native_install(arena, later_target, (cast: (c.LmxPrimitiveEntry) c.stop_later_probe), 0, 0, "stop_later_probe", 0, 0) != 0
+        return: 1
     c.Lmx@: receiver_target stop_receiver_cell[0]
-    receiver_target\native := (cast: (c.LmxEntry) c.stop_receiver_probe)
-    stop_saved_view[1] := (cast: (c.LmxPrimitiveEntry) graph\native)
-    graph\native := (cast: (c.LmxEntry) c.stop_root_probe)
+    if: c.lmx_native_install(arena, receiver_target, (cast: (c.LmxPrimitiveEntry) c.stop_receiver_probe), 0, 0, "stop_receiver_probe", 0, 0) != 0
+        return: 1
+    stop_saved_view[1] := c.lmx_native_entry(arena, graph)
+    if: c.lmx_native_install(arena, graph, (cast: (c.LmxPrimitiveEntry) c.stop_root_probe), 0, 0, "stop_root_probe", 0, 0) != 0
+        return: 1
     if: stop_walk_caller_cell[0] != 0
         c.Lmx@: caller_target stop_caller_cell[0]
-        caller_target\native := 0
-        check((cast: (int) (stop_caller_cell[0]\native = 0 && first\native != 0 && graph\native != 0)), "only caller is actually walked, typed stop body and root remain native")
+        if: c.lmx_native_install(arena, caller_target, (cast: (c.LmxPrimitiveEntry) 0), 0, 0, 0, 0, 0) != 0
+            return: 1
+        check((cast: (int) (c.lmx_native_entry(arena, stop_caller_cell[0]) = 0 && c.lmx_native_entry(arena, first) != 0 && c.lmx_native_entry(arena, graph) != 0)), "only caller is actually walked, typed stop body and root remain native")
     ---
     return: 0
 end: stop_install
@@ -2763,7 +2777,7 @@ sub: shape_copy_native_call (c.LmxArena@: source; c.Lmx@: graph; size_t: slot; i
     ---
     method := c.lmx_arena_ref_struct(copied, slot)
     original := c.lmx_arena_ref_struct(graph, slot)
-    if: method = 0 || method\native = 0
+    if: method = 0 || c.lmx_native_entry(@ destination, method) = 0
         check((cast: (int) (0)), "cross-arena native call selects a copied compiled method")
         c.lmx_arena_release(@ destination)
         return
@@ -2911,7 +2925,7 @@ fn: driver_program (c.LmxArena@: arena; c.Lmx@: graph; c.Lmx@: settings) int
         if: walkroot != 0
             # Test-only dispatch change, after the unmodified production builder.
             # The host still calls the ordinary native-or-walker dispatch.
-            check((cast: (int) (graph\native != 0)), "WalkRoot starts with a compiled native root")
+            check((cast: (int) (c.lmx_native_entry(arena, graph) != 0)), "WalkRoot starts with a compiled native root")
             check((cast: (int) (graph != 0 && c.lmx_domain_kind(arena, graph) = c.LMX_KIND_STRUCT)), "WalkRoot has the program's actual source graph")
             while: i < graph_fields\size
                 child := c.lmx_arena_ref_value(graph, i)
@@ -2924,8 +2938,9 @@ fn: driver_program (c.LmxArena@: arena; c.Lmx@: graph; c.Lmx@: settings) int
                 i := i + 1U
             ---
             check((cast: (int) (steps > 0)), "WalkRoot executes a nonempty physical root operator graph")
-            graph\native := 0
-            check((cast: (int) (graph\native = 0)), "WalkRoot clears only the root native word")
+            if: c.lmx_native_install(arena, graph, (cast: (c.LmxPrimitiveEntry) 0), 0, 0, 0, 0, 0) != 0
+                return: 1
+            check((cast: (int) (c.lmx_native_entry(arena, graph) = 0)), "WalkRoot clears only the root native word")
         ---
     ---
     return: rc

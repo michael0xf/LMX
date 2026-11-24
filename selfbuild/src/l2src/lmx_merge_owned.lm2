@@ -264,7 +264,25 @@ end: lmx_merge_receive_slot
 
 # The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
 # merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
-fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@: dst_profile; c.Lmx@@: out; c.LmxCopyMap@: relocated_out) int
+# Register the selected relation against its actual intermediate coordinate carrier.
+fn: lmx_merge_carry_selected_exec (c.LmxArena@: src_arena; c.Lmx@: source; c.LmxArena@: dst_arena; c.Lmx@: result; c.Lmx@: copied_source; size_t@: map; size_t: width; int@: out_answer) int
+    int: status c.LMX_WALK_OK
+    int: answer c.LMX_IMPLEMENTS_YES
+    if: out_answer = 0 || source = 0 || copied_source = 0 || map = 0 || width = 0U
+        return: c.LMX_WALK_INVALID
+    out_answer[0] := c.LMX_IMPLEMENTS_NO
+    status := c.lmx_implements_register_map(dst_arena, result, copied_source, map, width, 0, @ answer)
+    if: status != c.LMX_WALK_OK || answer = c.LMX_IMPLEMENTS_NO
+        out_answer[0] := answer
+        return: status
+    ---
+    status := c.lmx_implements_exec_compose_copy(src_arena, source, dst_arena, result, copied_source, out_answer)
+    if: status = c.LMX_WALK_OK && out_answer[0] != c.LMX_IMPLEMENTS_NO && answer = c.LMX_IMPLEMENTS_UNKNOWN
+        out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+    return: status
+end: lmx_merge_carry_selected_exec
+
+fn: lmx_merge_construct (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@: dst_profile; c.Lmx@@: out; c.LmxCopyMap@: relocated_out; size_t: selected; size_t@: selected_map; size_t: selected_width; int@: selected_status) int
     c.LmxCopyMap: pending
     c.LmxCopyMap: relocated
     c.LmxCopyMap: projection
@@ -297,14 +315,20 @@ fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c
     int: model_code_selected 1
     int: map_answer c.LMX_IMPLEMENTS_YES
     int: map_status
+    c.Lmx@: native_source 0
+    c.Lmx@: selected_copy 0
     c.Lmx@: lexical 0
     c.Lmx@: pair_source 0
     c.memset((cast: (@) @ relocated), 0, c.sizeof(c.LmxCopyMap))
     c.memset((cast: (@) @ projection), 0, c.sizeof(c.LmxCopyMap))
+    if: selected_status != 0
+        selected_status[0] := c.LMX_WALK_OK
     if: relocated_out != 0
         c.memset((cast: (@) relocated_out), 0, c.sizeof(c.LmxCopyMap))
     if: out != 0
         \out := 0
+    if: selected_map != 0 && (selected > count || selected_width = 0U || (selected = count && body = 0))
+        return: c.LMX_MERGE_INVALID
     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
         return: c.LMX_MERGE_INVALID
     use_map := 0
@@ -563,7 +587,26 @@ fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c
     # or modify an operand it deliberately retained by physical identity.
     if: status = c.LMX_MERGE_OK && count = 1U && body = 0 && use_map = 0
         result := copies[0]
-        map_status := lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0], @ map_answer)
+        if: selected_map != 0
+            map_status := lmx_merge_carry_selected_exec(src_arena, operands[0], dst_arena, result, copies[0], selected_map, selected_width, @ map_answer)
+            if: selected_status != 0
+                selected_status[0] := map_status
+                if: map_status = c.LMX_WALK_OK && map_answer = c.LMX_IMPLEMENTS_NO
+                    selected_status[0] := -1
+                ---
+            ---
+        else:
+            map_status := lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0], @ map_answer)
+        ---
+        if: map_status = c.LMX_WALK_OK && map_answer != c.LMX_IMPLEMENTS_NO
+            cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, dst_profile, 0, c.LMX_TYPE_STRUCT, operands[0], result, 0)
+            if: cst != c.LMX_GRAPH_COPY_OK
+                map_status := c.LMX_WALK_INVALID
+                if: cst = c.LMX_GRAPH_COPY_NOMEM
+                    map_status := c.LMX_WALK_NOMEM
+                ---
+            ---
+        ---
         if: map_status != c.LMX_WALK_OK || map_answer = c.LMX_IMPLEMENTS_NO
             c.lmx_copy_names_finish(@ pending, 0)
             c.lmx_graph_copy_map_dispose(@ relocated)
@@ -821,7 +864,7 @@ fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c
         if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM
             status := c.LMX_MERGE_INVALID
     ---
-    if: status = c.LMX_MERGE_OK && model_code_selected != 0
+    if: status = c.LMX_MERGE_OK && selected_map = 0 && model_code_selected != 0
         map_status := lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0], @ map_answer)
         if: map_status = c.LMX_WALK_NOMEM
             status := c.LMX_MERGE_NOMEM
@@ -836,14 +879,41 @@ fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c
     # the copy's absorb pass names the result instead -- for every copied Structure, not
     # only the result's direct children -- so a later merge/copy of `result` finds it
     # inside its own subtree.
+    if: status = c.LMX_MERGE_OK && selected_map != 0
+        native_source := roots[selected]
+        selected_copy := copies[selected]
+        # The intermediate copy still has the selected source's coordinate width.
+        # The final map below can map that source to a wider receiving root.
+        map_status := lmx_merge_carry_selected_exec(src_arena, native_source, dst_arena, result, selected_copy, selected_map, selected_width, @ map_answer)
+        if: selected_status != 0
+            selected_status[0] := map_status
+            if: map_status = c.LMX_WALK_OK && map_answer = c.LMX_IMPLEMENTS_NO
+                selected_status[0] := -1
+            ---
+        ---
+        if: map_status = c.LMX_WALK_NOMEM
+            status := c.LMX_MERGE_NOMEM
+        if: map_status != c.LMX_WALK_OK && map_status != c.LMX_WALK_NOMEM
+            status := c.LMX_MERGE_INVALID
+        if: map_status = c.LMX_WALK_OK && map_answer = c.LMX_IMPLEMENTS_NO
+            status := c.LMX_MERGE_INVALID
+        ---
+    ---
     if: status = c.LMX_MERGE_OK
         result\parent := lexical
-        if: keep_model_native != 0
-            result\native := copies[0]\native
-        ---
-    if: status = c.LMX_MERGE_OK && relocated_out != 0
+        # Compose once before extending descriptor edges through the final receiving map.
         cst := c.lmx_graph_copy_map_project(@ relocated, @ projection)
         if: cst != c.LMX_GRAPH_COPY_OK
+            status := c.LMX_MERGE_INVALID
+        ---
+    ---
+    if: status = c.LMX_MERGE_OK && selected_map = 0 && keep_model_native != 0
+        native_source := operands[0]
+    if: status = c.LMX_MERGE_OK && native_source != 0
+        cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, dst_profile, 0, c.LMX_TYPE_STRUCT, native_source, result, 1)
+        if: cst = c.LMX_GRAPH_COPY_NOMEM
+            status := c.LMX_MERGE_NOMEM
+        if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM
             status := c.LMX_MERGE_INVALID
         ---
     ---
@@ -867,10 +937,26 @@ fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c
     c.free((cast: (@) roots))
     c.free((cast: (@) copies))
     return: status
+end: lmx_merge_construct
+
+fn: lmx_merge_used_relocated_profiled_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@: dst_profile; c.Lmx@@: out; c.LmxCopyMap@: relocated_out) int
+    return: lmx_merge_construct(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, dst_profile, out, relocated_out, 0U, 0, 0U, 0)
 end: lmx_merge_used_relocated_profiled_owned
 
 # Existing callers use the same worker without retaining its transient map.
 # There is no second copy/composition algorithm or Model-specific route.
+# The same constructor with an explicit prepared executable selection.
+fn: lmx_merge_selected_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@@: out; size_t: selected; size_t@: selected_map; size_t: selected_width) int
+    int: selected_status c.LMX_WALK_OK
+    int: status
+    if: selected_map = 0 || selected_width = 0U
+        return: c.LMX_MERGE_INVALID
+    status := lmx_merge_construct(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, 0, out, 0, selected, selected_map, selected_width, @ selected_status)
+    if: selected_status != c.LMX_WALK_OK && selected_status != -1
+        c.lmx_call_note_walk_fail(selected_status)
+    return: status
+end: lmx_merge_selected_owned
+
 fn: lmx_merge_used_profiled_owned (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.Lmx@@: use_anchor; size_t@: use_sel; size_t@: use_slot; size_t@: use_len; size_t: use_count; size_t: use_slots; c.LmxMergePair@@: overrides; size_t: override_count; c.Lmx@: dst_profile; c.Lmx@@: out) int
     return: lmx_merge_used_relocated_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, dst_profile, out, 0)
 end: lmx_merge_used_profiled_owned
@@ -1267,7 +1353,6 @@ end: lmx_walk_merge_map
 # correspondence, and its width. Both dispatch modes compose that relation
 # with the source's own exec map before publishing the new Structure.
 fn: lmx_walk_merge_selected_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; size_t: bits; size_t@: leaf_slots; size_t: leaf_count; int@: opaque_ids; size_t: opaque_count) int
-    c.LmxArena@: arena (cast: (c.LmxArena@) owner)
     size_t: core
     size_t: np
     size_t: nq
@@ -1277,10 +1362,6 @@ fn: lmx_walk_merge_selected_run (@: owner; @@: refs; size_t: nargs; @: dest; @@:
     size_t: width
     size_t@: map
     c.Lmx@: source
-    c.Lmx@: result
-    int: status
-    int: answer
-    int: exec_answer
     if: refs = 0 || out = 0 || nargs < 10U || refs[nargs - 3U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 1U] = 0
         return: 1
     core := nargs - 3U
@@ -1300,31 +1381,9 @@ fn: lmx_walk_merge_selected_run (@: owner; @@: refs; size_t: nargs; @: dest; @@:
     if: selected > op_count || map = 0 || width = 0U || refs[5U + selected] = 0
         return: 1
     source := (cast: (c.Lmx@) c.lmx_pointer_value_known(refs[5U + selected]))
-    status := lmx_walk_merge_run(owner, refs, core, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count)
-    if: status != 0
-        return: status
-    result := (cast: (c.Lmx@) \out)
-    if: source = 0 || result = 0
-        \out := 0
+    if: source = 0
         return: 1
-    status := c.lmx_implements_register_map(arena, result, source, map, width, 0, @ answer)
-    if: status != c.LMX_WALK_OK
-        \out := 0
-        return: c.lmx_call_note_walk_fail(status)
-    if: answer = c.LMX_IMPLEMENTS_NO
-        \out := 0
-        return: 1
-    status := c.lmx_implements_exec_compose_copy(arena, source, arena, result, source, @ exec_answer)
-    if: status != c.LMX_WALK_OK
-        \out := 0
-        return: c.lmx_call_note_walk_fail(status)
-    if: exec_answer = c.LMX_IMPLEMENTS_NO
-        \out := 0
-        return: 1
-    # The selected code, not the completeness of unrelated map coordinates,
-    # supplies the native word. Its reached accesses consume checked places.
-    result\native := source\native
-    return: 0
+    return: lmx_walk_merge_construct(owner, refs, core, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count, selected, map, width)
 end: lmx_walk_merge_selected_run
 
 fn: lmx_walk_merge_selected_map (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; c.LmxArena@: lmx_call_arena; c.Lmx@: lmx_call_code; c.LmxWalkValue@: lmx_input_values; c.LmxWalkValue@: lmx_result_context) int
@@ -1405,8 +1464,9 @@ fn: lmx_walk_merge_selected_qualified_map (@: owner; @@: refs; size_t: nargs; @:
 end: lmx_walk_merge_selected_qualified_map
 
 # The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
-fn: lmx_walk_merge_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; size_t: bits; size_t@: leaf_slots; size_t: leaf_count; int@: opaque_ids; size_t: opaque_count) int
+fn: lmx_walk_merge_construct (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; size_t: bits; size_t@: leaf_slots; size_t: leaf_count; int@: opaque_ids; size_t: opaque_count; size_t: selected; size_t@: selected_map; size_t: selected_width) int
     c.VoidArray@: part_result_array 0
+    int: selected_status c.LMX_WALK_OK
     int: layout_status c.LMX_WALK_OK
     int: layout_answer c.LMX_IMPLEMENTS_YES
     c.LmxCopyMap: qpending
@@ -1618,7 +1678,7 @@ fn: lmx_walk_merge_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; siz
             i := i + 3U + len
         ---
     ---
-    status := lmx_merge_used_owned(operands, op_count, body, arena, arena, retain_profiles, retain_count, ua, uk, us, ul, nu, ns, pairs, pair_count, @ result)
+    status := lmx_merge_construct(operands, op_count, body, arena, arena, retain_profiles, retain_count, ua, uk, us, ul, nu, ns, pairs, pair_count, 0, @ result, 0, selected, selected_map, selected_width, @ selected_status)
     c.free((cast: (@) ua))
     c.free((cast: (@) uk))
     c.free((cast: (@) us))
@@ -1668,6 +1728,10 @@ fn: lmx_walk_merge_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; siz
     c.free((cast: (@) leaves))
     c.free((cast: (@) operands))
     lmx_walk_merge_pairs_free(pairs, pair_count)
+    if: selected_status = -1
+        return: 1
+    if: selected_status != c.LMX_WALK_OK
+        return: c.lmx_call_note_walk_fail(selected_status)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2
     ---
@@ -1677,6 +1741,10 @@ fn: lmx_walk_merge_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; siz
         return: 1
     \out := (cast: (@) result)
     return: 0
+end: lmx_walk_merge_construct
+
+fn: lmx_walk_merge_run (@: owner; @@: refs; size_t: nargs; @: dest; @@: out; size_t: bits; size_t@: leaf_slots; size_t: leaf_count; int@: opaque_ids; size_t: opaque_count) int
+    return: lmx_walk_merge_construct(owner, refs, nargs, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count, 0U, 0, 0U)
 end: lmx_walk_merge_run
 
 # -194 к.6 (K2): merge INTO an existing target, `o\inner: a` (Q26.1). Node (Opus/T3; D1 2026-09-28: the map inline):

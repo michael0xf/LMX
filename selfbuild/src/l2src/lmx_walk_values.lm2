@@ -434,23 +434,14 @@ end: lmx_walk_value_foreign
 # Capture the exact C object in the caller's arena. Value copies then borrow
 # stable owned storage, not a callee local or an original mutable cell. An
 # already immutable physical cell retains its identity and stored context.
-fn: lmx_walk_value_foreign_capture (c.LmxArena@: arena; @: storage; int: type; const: (c.LmxScalarABI@: abi); c.Lmx@: pool_profile; c.LmxWalkValue@: context; c.LmxWalkValue@: out) int
+fn: lmx_walk_value_foreign_take (c.LmxArena@: arena; @: storage; int: type; const: (c.LmxScalarABI@: abi); c.Lmx@: pool_profile; c.LmxWalkValue@: context; c.LmxPool@: pool; c.LmxWalkValue@: out) int
     c.LmxWalkValue: saved
     @: cell void 0
-    c.LmxPool@: pool 0
     c.LmxWalkValue@: stored 0
-    if: arena = 0 || storage = 0 || out = 0 || c.lmx_type_base(type) != c.LMX_TYPE_FOREIGN || abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0
-        return: c.LMX_WALK_INVALID
     if: context = 0
         c.memset((cast: (@) (@ saved)), 0, c.sizeof(c.LmxWalkValue))
     else:
         c.memcpy((cast: (@) (@ saved)), (cast: (@) context), c.sizeof(c.LmxWalkValue))
-    pool := c.lmx_range_cell_pool(arena, storage)
-    if: pool != 0 && pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
-        if: pool\scalar_abi != abi || pool\stride != abi\size
-            return: c.LMX_WALK_INVALID
-        ---
-    ---
     if: type < 0 && pool != 0 && pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\scalar_abi = abi && pool\stride = abi\size
         cell := storage
     else:
@@ -470,6 +461,20 @@ fn: lmx_walk_value_foreign_capture (c.LmxArena@: arena; @: storage; int: type; c
         c.memcpy((cast: (@) stored), (cast: (@) (@ saved)), c.sizeof(c.LmxWalkValue))
     c.memcpy((cast: (@) out), (cast: (@) (@ saved)), c.sizeof(c.LmxWalkValue))
     return: c.LMX_WALK_OK
+
+# Checked capture proves the exact physical contract before the common allocation/copy operation.
+fn: lmx_walk_value_foreign_capture (c.LmxArena@: arena; @: storage; int: type; const: (c.LmxScalarABI@: abi); c.Lmx@: pool_profile; c.LmxWalkValue@: context; c.LmxWalkValue@: out) int
+    c.LmxPool@: pool 0
+    if: arena = 0 || storage = 0 || out = 0 || c.lmx_type_base(type) != c.LMX_TYPE_FOREIGN || abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0
+        return: c.LMX_WALK_INVALID
+    pool := c.lmx_range_cell_pool(arena, storage)
+    if: pool != 0 && pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
+        if: pool\scalar_abi != abi || pool\stride != abi\size
+            return: c.LMX_WALK_INVALID
+        ---
+    ---
+    return: lmx_walk_value_foreign_take(arena, storage, type, abi, pool_profile, context, pool, out)
+end: lmx_walk_value_foreign_capture
 
 fn: lmx_walk_value_foreign_owned (c.LmxArena@: arena; c.LmxWalkValue@: value; @: storage; const: (c.LmxScalarABI@: abi)) int
     return: lmx_walk_value_foreign_capture(arena, storage, c.LMX_TYPE_FOREIGN, abi, 0, 0, value)
@@ -855,14 +860,16 @@ fn: lmx_walk_value_truth (c.LmxWalkValue@: value; int@: out) int
     return: c.LMX_WALK_OK
 end: lmx_walk_value_truth
 
-# A bounded numeric consumer can inspect sign and magnitude before choosing its own word or offset type.
-# This projection is not the transport used by stores, calls, materialization, or numeric operators.
-fn: lmx_walk_value_magnitude (c.LmxWalkValue@: value; ullong@: magnitude; int@: negative) int
+# Physical projection of an already selected integer object. The caller supplies present integer storage and outputs.
+# Source admission belongs to the checked wrapper; this operation neither converts nor receives a value.
+sub: lmx_walk_value_integer_parts (c.LmxWalkValue@: value; ullong@: magnitude; int@: negative)
     int: ty 0
     int: small 0
     unsigned: residue 0U
-    if: magnitude = 0 || negative = 0 || lmx_walk_value_numeric(value) != c.LMX_WALK_OK
-        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_FOREIGN
+        c.LmxScalarIntegerMagnitude: project (cast: (c.LmxScalarIntegerMagnitude) value\scalar_abi\integer_magnitude)
+        project(value\ref, (cast: (c.LmxScalarMagnitude@) magnitude), negative)
+        return
     ty := c.lmx_type_base(value\type)
     negative[0] := 0
     if: ty = c.LMX_TYPE_NONE
@@ -872,18 +879,23 @@ fn: lmx_walk_value_magnitude (c.LmxWalkValue@: value; ullong@: magnitude; int@: 
         else:
             magnitude[0] := (cast: (ullong) value\wide)
         ---
-        return: c.LMX_WALK_OK
-    if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_CHAR
+        return
+    if: ty = c.LMX_TYPE_CHAR
+        magnitude[0] := (cast: (ullong) value\byte)
+        if: value\byte < (cast: (char) 0)
+            negative[0] := 1
+            magnitude[0] := (cast: (ullong) 0) - magnitude[0]
+        ---
+        return
+    if: ty = c.LMX_TYPE_INT
         small := value\number
-        if: ty = c.LMX_TYPE_CHAR
-            small := c.lmx_char_value_known((cast: (@) (@ value\byte)))
         residue := (cast: (unsigned) small)
         if: small < 0
             negative[0] := 1
             residue := 0U - residue
         ---
         magnitude[0] := (cast: (ullong) residue)
-        return: c.LMX_WALK_OK
+        return
     if: ty = c.LMX_TYPE_UNSIGNED_CHAR
         magnitude[0] := (cast: (ullong) c.lmx_uchar_value_known((cast: (@) (@ value\byte))))
     if: ty = c.LMX_TYPE_UNSIGNED
@@ -892,6 +904,26 @@ fn: lmx_walk_value_magnitude (c.LmxWalkValue@: value; ullong@: magnitude; int@: 
         magnitude[0] := (cast: (ullong) value\longnum)
     if: ty = c.LMX_TYPE_SIZE_T
         magnitude[0] := (cast: (ullong) value\wide)
+    return
+end: lmx_walk_value_integer_parts
+
+# A bounded numeric consumer inspects sign and magnitude before choosing its own word or offset type.
+# Ready foreign integers retain their exact typed storage and their own source identity.
+# This projection is not the transport used by stores, calls, materialization, or numeric operators.
+fn: lmx_walk_value_magnitude (c.LmxWalkValue@: value; ullong@: magnitude; int@: negative) int
+    if: magnitude = 0 || negative = 0 || value = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_FOREIGN
+        if: value\ref = 0 || value\scalar_abi = 0
+            return: c.LMX_WALK_INVALID
+        if: c.lmx_graph_scalar_integer_source((cast: (const: c.LmxScalarABI@) value\scalar_abi), value\source_type) = 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        ---
+    else:
+        if: lmx_walk_value_numeric(value) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+    ---
+    lmx_walk_value_integer_parts(value, magnitude, negative)
     return: c.LMX_WALK_OK
 end: lmx_walk_value_magnitude
 
@@ -2753,6 +2785,169 @@ fn: lmx_walk_graph_cell_place (c.LmxArena@: arena; @@: slot; int: desc_ok; c.Lmx
     return: c.LMX_WALK_OK
 end: lmx_walk_graph_cell_place
 
+# Select the retained C pointer-object accessors. No type admission, protection or object bound is tested.
+# External opaque pointer objects need their actual physical contract; they are not treated as void* storage.
+fn: lmx_walk_place_pointer_access (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxPointerCellRead@: read; c.LmxPointerCellWrite@: write) int
+    c.LmxPool@: pool c.lmx_range_cell_pool(arena, place\address)
+    c.LmxWalkValue@: owner (cast: (c.LmxWalkValue@) place\context)
+    if: pool != 0
+        if: pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF
+            read[0] := c.lmx_arena_pointer_void_read
+            write[0] := c.lmx_arena_pointer_void_write
+            return: c.LMX_WALK_OK
+        if: pool\pointer_read != 0 && pool\pointer_write != 0
+            read[0] := pool\pointer_read
+            write[0] := pool\pointer_write
+            return: c.LMX_WALK_OK
+        ---
+    ---
+    if: owner != 0 && place\address = (cast: (@) (@ owner\ref))
+        read[0] := c.lmx_arena_pointer_void_read
+        write[0] := c.lmx_arena_pointer_void_write
+        return: c.LMX_WALK_OK
+    if: c.lmx_type_base(place\type) = c.LMX_TYPE_CHAR_PTR
+        read[0] := c.lmx_value_charptr_read
+        write[0] := c.lmx_value_charptr_write
+        return: c.LMX_WALK_OK
+    return: c.LMX_WALK_UNSUPPORTED
+end: lmx_walk_place_pointer_access
+
+# Read the already selected physical place for native L2. A valid place and its exact representation are preconditions.
+# Only a real allocation/copy failure or missing physical lowering is returned; no checked load is re-entered.
+fn: lmx_walk_place_read (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: out) int
+    c.LmxWalkValue: current
+    c.LmxWalkValue@: item @ current
+    c.LmxWalkValue@: context (cast: (c.LmxWalkValue@) place\context)
+    c.LmxPool@: pool 0
+    c.LmxPointerCellRead: read 0
+    c.LmxPointerCellWrite: write 0
+    int: ty c.lmx_type_base(place\type)
+    int: status 0
+    size_t: bytes 0U
+    @: raw void 0
+    lmx_walk_value_clear(item)
+    if: ty = c.LMX_TYPE_FOREIGN
+        pool := c.lmx_range_cell_pool(arena, place\address)
+        if: context = 0
+            context := c.lmx_value_cell_context(arena, place\address)
+        if: pool != 0
+            return: lmx_walk_value_foreign_take(arena, (cast: (@) place\address), (cast: (int) place\type), (cast: (const: c.LmxScalarABI@) pool\scalar_abi), (cast: (c.Lmx@) pool\profile), context, pool, out)
+        if: context = 0 || context\scalar_abi = 0
+            return: c.LMX_WALK_UNSUPPORTED
+        return: lmx_walk_value_foreign_take(arena, (cast: (@) place\address), (cast: (int) place\type), (cast: (const: c.LmxScalarABI@) context\scalar_abi), (cast: (c.Lmx@) context\physical_profile), context, 0, out)
+    item\present := 1
+    item\type := place\type
+    if: place\descriptor != 0 || c.lmx_type_reference_cell(ty) != 0
+        raw := place\address
+        if: place\descriptor = 0
+            status := lmx_walk_place_pointer_access(arena, place, @ read, @ write)
+            if: status != c.LMX_WALK_OK
+                return: status
+            raw := read(place\address)
+        ---
+        item\kind := c.LMX_WALK_VALUE_REFERENCE
+        item\ref := raw
+        if: place\descriptor != 0
+            c.lmx_value_context_copy(item, context)
+        else:
+            c.lmx_value_context_copy(item, c.lmx_value_loaded_context(context, raw))
+        ---
+    else:
+        bytes := lmx_walk_type_size(ty)
+        if: bytes = 0U
+            return: c.LMX_WALK_UNSUPPORTED
+        item\kind := c.LMX_WALK_VALUE_NUMBER
+        c.memcpy(lmx_walk_value_storage(item), place\address, bytes)
+    ---
+    c.memcpy((cast: (@) out), (cast: (@) item), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+end: lmx_walk_place_read
+
+# Write through the same native L2 physical place, without receipt, protection or a second address calculation.
+# Type preparation has selected the C object contract. A contextual literal is projected directly into that object.
+fn: lmx_walk_place_write (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: value) int
+    c.LmxWalkValue: literal
+    c.LmxWalkValue@: giving value
+    c.LmxWalkValue: saved
+    c.LmxWalkValue@: context (cast: (c.LmxWalkValue@) place\context)
+    c.LmxWalkValue@: stored 0
+    const: (c.LmxScalarABI@: abi 0)
+    c.LmxPointerCellRead: read 0
+    c.LmxPointerCellWrite: write 0
+    int: ty c.lmx_type_base(place\type)
+    int: status 0
+    int: negative 0
+    ullong: magnitude (cast: (ullong) 0)
+    size_t: bytes 0U
+    @: raw void value\ref
+    if: ty = c.LMX_TYPE_FOREIGN
+        if: context = 0
+            context := c.lmx_value_cell_context(arena, place\address)
+        if: context = 0 || context\scalar_abi = 0
+            return: c.LMX_WALK_UNSUPPORTED
+        abi := (cast: (const: c.LmxScalarABI@) context\scalar_abi)
+        status := (cast: (int) abi\copy(place\address, value\ref))
+        if: status = 0
+            c.lmx_value_context_copy(context, value)
+            context\present := 1
+            context\kind := c.LMX_WALK_VALUE_FOREIGN
+            context\type := place\type
+            context\ref := place\address
+        ---
+        return: status
+    if: c.lmx_type_reference_cell(ty) != 0
+        status := lmx_walk_place_pointer_access(arena, place, @ read, @ write)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value\kind = c.LMX_WALK_VALUE_NUMBER
+            lmx_walk_value_integer_parts(value, @ magnitude, @ negative)
+            if: negative != 0
+                magnitude := (cast: (ullong) 0) - magnitude
+            raw := (cast: (@) magnitude)
+        ---
+        c.lmx_value_context_copy(@ saved, value)
+        status := (cast: (int) write(place\address, raw))
+        if: status != 0
+            return: status
+        stored := c.lmx_pointer_cell_context(arena, place\address)
+        c.lmx_value_context_copy(stored, @ saved)
+        if: stored != 0
+            stored\present := 1
+            stored\kind := c.LMX_WALK_VALUE_REFERENCE
+            stored\ref := raw
+        ---
+        if: context != stored
+            c.lmx_value_context_copy(context, @ saved)
+        return: c.LMX_WALK_OK
+    bytes := lmx_walk_type_size(ty)
+    if: bytes = 0U
+        return: c.LMX_WALK_UNSUPPORTED
+    if: c.lmx_type_base(value\type) != ty
+        lmx_walk_value_integer_parts(value, @ magnitude, @ negative)
+        if: negative != 0
+            magnitude := (cast: (ullong) 0) - magnitude
+        lmx_walk_value_clear(@ literal)
+        giving := @ literal
+        giving\present := 1
+        giving\kind := c.LMX_WALK_VALUE_NUMBER
+        giving\type := place\type
+        if: ty = c.LMX_TYPE_INT
+            giving\number := (cast: (int) magnitude)
+        if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
+            giving\byte := (cast: (char) magnitude)
+        if: ty = c.LMX_TYPE_UNSIGNED
+            giving\natural := (cast: (unsigned) magnitude)
+        if: ty = c.LMX_TYPE_SIZE_T
+            giving\wide := (cast: (size_t) magnitude)
+        if: ty = c.LMX_TYPE_ULONG
+            giving\longnum := (cast: (ulong) magnitude)
+        ---
+    ---
+    c.memcpy((cast: (@) place\address), lmx_walk_value_storage(giving), bytes)
+    c.lmx_value_context_copy(context, 0)
+    return: c.LMX_WALK_OK
+end: lmx_walk_place_write
+
 fn: lmx_walk_place_load (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: out) int
     c.LmxWalkValue: saved
     c.LmxWalkValue@: context @ saved
@@ -2853,16 +3048,12 @@ end: lmx_type_pointer_to
 # pointer): the place is typed by the holder's actual pointer code (lmx_type_pointee), the same selection as a typed DEREF's
 # (lmx_walk_value_deref_place: a null holder is the implicit `interpreter` throw).  An opaque pointee is UNSUPPORTED -- the
 # existing runtime refusal, no invented type.  Both the walker's DEREF without a witness and the native code run this.
-fn: lmx_walk_value_deref_actual (c.LmxArena@: arena; c.LmxWalkValue@: holder; c.LmxWalkPlace@: out) int
-    int: ty 0
-    int: kind 0
+# Physical pointee selection from the actual owning record, arena cell metadata or the retained pointer code.
+# A missing pointee stays NONE; no reference type or pointer-sized stride is invented.
+fn: lmx_walk_value_pointee (c.LmxArena@: arena; c.LmxWalkValue@: holder; int: kind) int
+    int: ty c.LMX_TYPE_NONE
     c.LmxWalkValue@: owner 0
     @: held void 0
-    if: holder = 0 || out = 0
-        return: c.LMX_WALK_INVALID
-    c.memset((cast: (@) out), 0, c.sizeof(c.LmxWalkPlace))
-    if: holder\present = 0 || holder\kind != c.LMX_WALK_VALUE_REFERENCE
-        return: c.LMX_WALK_INVALID
     # The record owning the addressed payload first: the address of a free name (lmx_walk_place_address) refers to the
     # activation's input record -- the typed semantic cell of that local (the author, 2026-11-02: a hidden input is a local of
     # the activation, `@x` its local address) -- as its referent; the record's actual type is the pointee's (a number's, or a
@@ -2874,7 +3065,6 @@ fn: lmx_walk_value_deref_actual (c.LmxArena@: arena; c.LmxWalkValue@: holder; c.
     # Structure, an Array, a number, a pointer cell (the next level of a known pointer); the pointer-code table only for
     # storage outside the pools (a free input's own record, machine storage).
     if: holder\ref != 0
-        kind := (cast: (int) c.lmx_domain_kind(arena, holder\ref))
         if: kind = c.LMX_KIND_STRUCT
             ty := c.LMX_TYPE_LMX
         if: kind = c.LMX_KIND_ARRAY
@@ -2894,6 +3084,14 @@ fn: lmx_walk_value_deref_actual (c.LmxArena@: arena; c.LmxWalkValue@: holder; c.
     ---
     if: ty = c.LMX_TYPE_NONE
         ty := lmx_type_pointee(holder\type)
+    return: ty
+end: lmx_walk_value_pointee
+
+fn: lmx_walk_value_deref_actual (c.LmxArena@: arena; c.LmxWalkValue@: holder; c.LmxWalkPlace@: out) int
+    int: ty c.LMX_TYPE_NONE
+    if: holder = 0 || out = 0 || holder\present = 0 || holder\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    ty := lmx_walk_value_pointee(arena, holder, (cast: (int) c.lmx_domain_kind(arena, holder\ref)))
     if: ty = c.LMX_TYPE_NONE
         return: c.LMX_WALK_UNSUPPORTED
     return: lmx_walk_value_deref_place(arena, holder, ty, out)
@@ -2905,6 +3103,20 @@ end: lmx_walk_value_deref_actual
 # place's is its slot's (the storage), a reference cell's or an opaque cell's has the kernel's own code
 # LMX_TYPE_CELL_POINTER (the pointee read cell-first: lmx_walk_value_deref_actual); only a place of no type is
 # UNSUPPORTED.  Both the walker's ADDRESS without a witness and the native code run this.
+sub: lmx_walk_place_reference (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: out)
+    @: storage void place\storage
+    c.LmxWalkValue@: context lmx_walk_place_context(arena, place)
+    if: storage = 0
+        storage := place\address
+    lmx_walk_value_clear(out)
+    out\present := 1
+    out\kind := c.LMX_WALK_VALUE_REFERENCE
+    out\type := lmx_type_pointer_to((cast: (int) place\type))
+    out\ref := storage
+    out\referent := context
+    return
+end: lmx_walk_place_reference
+
 fn: lmx_walk_place_address (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: out) int
     int: ty 0
     int: status 0
@@ -2919,9 +3131,8 @@ fn: lmx_walk_place_address (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWal
     ty := lmx_type_pointer_to((cast: (int) place\type))
     if: ty = c.LMX_TYPE_NONE
         return: c.LMX_WALK_UNSUPPORTED
-    status := lmx_walk_value_ref(out, ty, storage)
-    out\referent := lmx_walk_place_context(arena, place)
-    return: status
+    lmx_walk_place_reference(arena, place, out)
+    return: c.LMX_WALK_OK
 end: lmx_walk_place_address
 
 # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the one receive of a runtime-typed reference by a pointer place whose static
@@ -3203,19 +3414,37 @@ fn: lmx_walk_value_field_store (c.LmxArena@: arena; c.Lmx@: root; size_t: index;
     return: c.LMX_WALK_OK
 end: lmx_walk_value_field_store
 
-# Slice 410 (plan M13 item 3; the book: L3 access checks only its one final element): an L3 element of an Array
-# checks only its linear index against the current length; the place is the descriptor's cell of the element type.
-# No arena, range, pool, stride or former-field check. A null reference is the caller's general rule.
-fn: lmx_value_array_place (c.LmxArena@: arena; c.LmxArray@: array; size_t: index; c.LmxWalkPlace@: out) int
+# One physical signed byte offset. Checked callers prove the product's representability before entering it.
+# Native L2 uses the same operation with its ordinary C object preconditions.
+fn: lmx_walk_index_address (@: base; ullong: magnitude; int: negative; size_t: stride) @
+    ullong: offset magnitude * (cast: (ullong) stride)
+    if: negative != 0
+        return: (cast: (@) ((cast: (char@) base) - offset))
+    return: (cast: (@) ((cast: (char@) base) + offset))
+end: lmx_walk_index_address
+
+# Physical Array element selection. The backing describes the element representation; no access is admitted here.
+fn: lmx_value_array_at (c.LmxArena@: arena; c.LmxArray@: array; ullong: magnitude; int: negative; c.LmxWalkPlace@: out) int
     c.VoidArray@: fields @ array\array
-    if: index >= fields\size
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    out\address := c.lmx_array_cell_in(arena, array, index)
+    size_t: stride 0U
+    stride := c.lmx_range_stride(arena, fields\data)
+    if: stride = 0U
+        return: c.LMX_WALK_UNSUPPORTED
+    out\address := lmx_walk_index_address((cast: (@) fields\data), magnitude, negative, stride)
     out\storage := out\address
     out\type := c.lmx_type_element((cast: (int) c.lmx_domain_type(arena, (cast: (@) array))))
     out\descriptor := 0
     out\context := c.lmx_pointer_cell_context(arena, out\address)
     return: c.LMX_WALK_OK
+end: lmx_value_array_at
+
+# The checked Array wrapper judges the one final index before narrowing its magnitude.
+# A null reference remains the caller's general rule; physical selection does no second element-bound check.
+fn: lmx_value_array_place (c.LmxArena@: arena; c.LmxArray@: array; ullong: magnitude; int: negative; c.LmxWalkPlace@: out) int
+    c.VoidArray@: fields @ array\array
+    if: negative != 0 || magnitude >= (cast: (ullong) fields\size)
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    return: lmx_value_array_at(arena, array, magnitude, negative, out)
 end: lmx_value_array_place
 
 # The C size of one cell of a kernel type; 0 for a type that has no cell.
@@ -3240,10 +3469,34 @@ fn: lmx_walk_type_size (int: ty) size_t
     return: 0U
 end: lmx_walk_type_size
 
-# INDEX consumes an already evaluated reference and received size_t index.
+# Physical INDEX for native L2. Its ready reference describes an Array or a pointer's actual pointee.
+# A missing physical description is unsupported lowering; it is never guessed to be a void* cell.
+fn: lmx_walk_value_index_at (c.LmxArena@: arena; c.LmxWalkValue@: holder; ullong: magnitude; int: negative; c.LmxWalkPlace@: out) int
+    int: kind (cast: (int) c.lmx_domain_kind(arena, holder\ref))
+    int: ty c.LMX_TYPE_NONE
+    size_t: stride 0U
+    if: kind = c.LMX_KIND_ARRAY
+        return: lmx_value_array_at(arena, (cast: (c.LmxArray@) holder\ref), magnitude, negative, out)
+    ty := lmx_walk_value_pointee(arena, holder, kind)
+    if: ty = c.LMX_TYPE_NONE || kind = c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_UNSUPPORTED
+    stride := c.lmx_range_stride(arena, holder\ref)
+    if: stride = 0U
+        stride := lmx_walk_type_size(ty)
+    if: stride = 0U
+        return: c.LMX_WALK_UNSUPPORTED
+    out\address := lmx_walk_index_address((cast: (@) holder\ref), magnitude, negative, stride)
+    out\storage := out\address
+    out\type := ty
+    out\descriptor := 0
+    out\context := c.lmx_value_address_context(arena, out\address, holder)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_index_at
+
+# INDEX consumes an already evaluated reference and a lossless integer sign/magnitude.
 # Array cells use the descriptor's actual element metadata. Machine pointers
 # use the same actual pointee classifier as DEREF; no lexical type is invented.
-fn: lmx_walk_value_index_place (c.LmxArena@: arena; c.LmxWalkValue@: holder; size_t: index; c.LmxWalkPlace@: out) int
+fn: lmx_walk_value_index_place (c.LmxArena@: arena; c.LmxWalkValue@: holder; ullong: magnitude; int: negative; c.LmxWalkPlace@: out) int
     int: status
     int: kind
     int: ty
@@ -3257,12 +3510,13 @@ fn: lmx_walk_value_index_place (c.LmxArena@: arena; c.LmxWalkValue@: holder; siz
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
     kind := (cast: (int) c.lmx_domain_kind(arena, holder\ref))
     if: kind = c.LMX_KIND_ARRAY
-        return: lmx_value_array_place(arena, (cast: (c.LmxArray@) holder\ref), index, out)
+        return: lmx_value_array_place(arena, (cast: (c.LmxArray@) holder\ref), magnitude, negative, out)
     if: kind = c.LMX_KIND_STRUCT
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
-    # A machine pointer's element is a plain offset from it (the book: no length, sign, arena or former-field check).
+    # This legacy pointer has no retained object extent. Preserve its signed offset for a valid live object.
+    # The product check is not a proof of the final pointer's bounds; full checked pointers remain M13.
     status := lmx_walk_value_deref_actual(arena, holder, out)
-    if: status != c.LMX_WALK_OK || index = 0U
+    if: status != c.LMX_WALK_OK || magnitude = (cast: (ullong) 0)
         return: status
     ty := c.lmx_type_base((cast: (int) out\type))
     stride := c.lmx_range_stride(arena, holder\ref)
@@ -3270,7 +3524,9 @@ fn: lmx_walk_value_index_place (c.LmxArena@: arena; c.LmxWalkValue@: holder; siz
         stride := lmx_walk_type_size(ty)
     if: stride = 0U
         return: c.LMX_WALK_UNSUPPORTED
-    target := (cast: (@) ((cast: (char@) holder\ref) + index * stride))
+    if: magnitude > (cast: (ullong) (c.SIZE_MAX / stride))
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    target := lmx_walk_index_address((cast: (@) holder\ref), magnitude, negative, stride)
     out\address := target
     out\storage := target
     out\context := c.lmx_value_address_context(arena, target, 0)
@@ -4892,6 +5148,8 @@ fn: lmx_walk_place_mode_in (c.LmxWalkFrame@: f; @: operand; int: write; int: clo
     @: root void 0
     @: witness void 0
     size_t: index 0U
+    ullong: index_magnitude (cast: (ullong) 0)
+    int: index_negative 0
     size_t: resolved (cast: (size_t) -1)
     size_t: stride 0U
     size_t: witness_slot 0U
@@ -5054,10 +5312,10 @@ fn: lmx_walk_place_mode_in (c.LmxWalkFrame@: f; @: operand; int: write; int: clo
         status := c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
             return: status
-        status := lmx_walk_index(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 2U), @ index)
+        status := lmx_walk_index(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 2U), @ index_magnitude, @ index_negative)
         if: status != c.LMX_WALK_OK
             return: status
-        status := lmx_walk_value_index_place((cast: (c.LmxArena@) f\arena), @ holder, index, out)
+        status := lmx_walk_value_index_place((cast: (c.LmxArena@) f\arena), @ holder, index_magnitude, index_negative, out)
         if: status = c.LMX_WALK_OK && write != 0 && c.lmx_walk_immutable(f, holder_p\ref) != 0
             return: lmx_walk_fault(f)
         if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
@@ -6283,19 +6541,17 @@ fn: lmx_walk_exec_data (c.LmxWalkFrame@: f; @: operand; c.Lmx@@: out; char@@: to
     return: c.LMX_WALK_OK
 end: lmx_walk_exec_data
 
-fn: lmx_walk_index (c.LmxWalkFrame@: f; @: operand; size_t@: out) int
+fn: lmx_walk_index (c.LmxWalkFrame@: f; @: operand; ullong@: magnitude; int@: negative) int
     c.LmxWalkValue: value
-    c.LmxWalkValue: taken
-    c.LmxWalkValue@: taken_p @ taken
     int: status c.lmx_walk_eval(f, operand, @ value)
     if: status != c.LMX_WALK_OK
         return: status
-    # Slice 272: the one reception of a machine index, as native: another number or a reference is the implicit `convert`.
-    status := lmx_walk_value_receive(@ value, c.LMX_TYPE_SIZE_T, taken_p)
-    if: status != c.LMX_WALK_OK
-        return: status
-    \out := taken_p\wide
-    return: c.LMX_WALK_OK
+    # Evaluate once; the common integer projection preserves the type's sign and full magnitude.
+    if: value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    return: lmx_walk_value_magnitude(@ value, magnitude, negative)
 end: lmx_walk_index
 
 fn: lmx_walk_throw (c.LmxWalkFrame@: f; c.Lmx@: code; c.LmxWalkValue@: out) int

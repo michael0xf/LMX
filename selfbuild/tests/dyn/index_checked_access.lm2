@@ -1,0 +1,78 @@
+# Interpreter checks run inside portable methods in the forced route. Deliberately invalid offsets are never
+# executed by a native L2 body. Valid native/walked offsets remain in free_index_places and index_numeric_receive.
+fn: checked_rhs (@: count int) int
+    count[0U] := count[0U] + 1
+    return: 40
+end: checked_rhs
+
+fn: checked_array () int
+    []: int values 3
+    values[0U] := 11
+    values[1U] := 22
+    values[2U] := 33
+    int: negative 0 - 1
+    size_t: above 4294967295U
+    int: caught 0
+    int: count 0
+    ---
+        caught := values[negative]
+        catch: interpreter ()
+            caught := 1
+    ---
+    if: caught != 1
+        return: 11
+    caught := 0
+    ---
+        values[negative] := checked_rhs(@ count)
+        catch: interpreter ()
+            caught := 1
+    ---
+    if: caught != 1 || count != 0
+        return: 12
+    caught := 0
+    ---
+        caught := values[above]
+        catch: interpreter ()
+            caught := 1
+    ---
+    if: caught != 1
+        return: 13
+    if: values[0U] != 11 || values[1U] != 22 || values[2U] != 33
+        return: 14
+    values[2U] := checked_rhs(@ count)
+    if: values[2U] != 40 || count != 1
+        return: 15
+    return: 0
+end: checked_array
+
+# A non-reference hidden input still fails as convert in the interpreter. No native invalid access is run.
+int: quote 0
+fn: checked_free_read () int
+    return: quote[0U]
+end: checked_free_read
+
+fn: checked_kind () int
+    int: quote 7
+    int: caught 0
+    ---
+        caught := checked_free_read()
+        catch: convert ()
+            caught := 1
+    ---
+    if: caught != 1
+        return: 16
+    return: 0
+end: checked_kind
+
+fn: checked_run () int
+    int: status checked_array()
+    if: status != 0
+        return: status
+    status := checked_kind()
+    if: status != 0
+        return: status
+    return: 7
+end: checked_run
+
+send: exit(exit_code: checked_run(); stdout: ""; stderr: "")
+return

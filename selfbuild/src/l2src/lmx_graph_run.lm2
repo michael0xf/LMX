@@ -2051,19 +2051,31 @@ end: lmx_graph_path_field
 fn: lmx_graph_eval_index_write (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: left; @: operand) int
     @: base void 0
     @: value void 0
-    int: index 0
+    ullong: magnitude (cast: (ullong) 0)
+    int: negative 0
     int: status 0
     status := lmx_graph_read_received_value(g, code, c.lmx_graph_get_in(g, left, 0U), 2, @ base)
     if: status != 0
         return: status
-    status := lmx_graph_eval_number(g, code, c.lmx_graph_get_in(g, left, 2U), @ index)
+    status := lmx_graph_eval_index_parts(g, code, c.lmx_graph_get_in(g, left, 2U), @ magnitude, @ negative)
     if: status != 0
         return: status
     status := lmx_graph_read_received_value(g, code, operand, 2, @ value)
     if: status != 0
         return: status
-    return: c.lmx_graph_index_write(g, base, index, value)
+    return: c.lmx_graph_index_write_parts(g, base, magnitude, negative, value)
 end: lmx_graph_eval_index_write
+
+# A complete integer Value, evaluated once, supplies the checked Graph index without an int or size_t reception.
+fn: lmx_graph_eval_index_parts (c.LmxGraph@: g; c.Lmx@: scope; @: raw; ullong@: magnitude; int@: negative) int
+    c.LmxWalkValue: value
+    int: status lmx_graph_eval_record(g, scope, raw, @ value)
+    if: status != 0
+        return: status
+    if: c.lmx_walk_value_magnitude(@ value, magnitude, negative) != c.LMX_WALK_OK
+        return: 4
+    return: 0
+end: lmx_graph_eval_index_parts
 
 fn: lmx_graph_eval_assignment (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; int: mode) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
@@ -5517,6 +5529,8 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
     size_t: count 0U
     int: kind (cast: (int) c.lmx_graph_kind(g, raw))
     int: number 0
+    ullong: index_magnitude (cast: (ullong) 0)
+    int: index_negative 0
     int: status 0
     int: snapshot (cast: (int) (kind = 5 || kind = 6 || kind = 8 || kind = 9))
     if: out = 0
@@ -5575,10 +5589,10 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
                     status := lmx_graph_read_received_value(g, scope, c.lmx_graph_get_in(g, expression, 0U), 2, @ value)
                     if: status != 0
                         return: status
-                    status := lmx_graph_eval_number(g, scope, c.lmx_graph_get_in(g, expression, 2U), @ number)
+                    status := lmx_graph_eval_index_parts(g, scope, c.lmx_graph_get_in(g, expression, 2U), @ index_magnitude, @ index_negative)
                     if: status != 0
                         return: status
-                    return: c.lmx_graph_index(g, value, number, out)
+                    return: c.lmx_graph_index_parts(g, value, index_magnitude, index_negative, out)
                 if: count = 3U && word = state\w_deref
                     status := lmx_graph_read_received_value(g, scope, c.lmx_graph_get_in(g, expression, 0U), 2, @ value)
                     if: status != 0

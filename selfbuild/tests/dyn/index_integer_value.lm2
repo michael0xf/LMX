@@ -1,0 +1,402 @@
+# A ready foreign integer gives its sign and magnitude to the common magnitude API from its exact typed storage and its OWN
+# source. The physical callback of a C spelling group admits nothing: Boolean shares int8_t with i8 and is not an integer.
+# The checked Array and the legacy pointer consume the same ullong magnitude and sign without a size_t word.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_primitive_profile.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+include: "<stdlib.h>" "<string.h>" "<limits.h>" "<stdint.h>"
+
+fn: ii_binding (@: name char; @@: description void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), description)
+
+# One real captured foreign Value. The payload is copied into heap storage, captured into an arena-owned cell with the given
+# SOURCE, received, materialized and loaded back; the Value returned is that copy. No Value refers to a stack object.
+fn: ii_capture (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: description void; @: payload void; size_t: size; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    c.LmxWalkValue: received
+    @: source void 0
+    @@: cell void c.calloc(1U, sizeof(@: void))
+    if: abi = 0 || description = 0 || payload = 0 || out = 0 || cell = 0 || abi\size != size || abi\init = 0 || abi\copy = 0
+        return: 1
+    source := c.malloc(size)
+    if: source = 0 || abi\init(source) != 0
+        return: 2
+    c.memcpy((cast: (@: void) source), (cast: (const: @: void) payload), size)
+    c.memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkValue))
+    context\source_type := description
+    if: c.lmx_walk_value_foreign_capture(arena, source, c.LMX_TYPE_FOREIGN, abi, 0, @ context, @ value) != c.LMX_WALK_OK
+        return: 3
+    if: value\ref = source || value\scalar_abi != abi || value\source_type != description
+        return: 4
+    c.free(source)
+    if: c.lmx_walk_value_receive_scalar(@ value, c.LMX_TYPE_FOREIGN, abi, @ received) != c.LMX_WALK_OK
+        return: 5
+    if: c.lmx_walk_value_materialize(arena, @ received, cell) != c.LMX_WALK_OK || cell[0] = value\ref
+        return: 6
+    if: c.lmx_walk_value_load(arena, cell[0], c.LMX_TYPE_FOREIGN, out) != c.LMX_WALK_OK
+        return: 7
+    if: out\ref = cell[0] || out\scalar_abi != abi || out\source_type != description
+        return: 8
+    c.free(cell)
+    return: 0
+
+# The common magnitude API alone judges the Value: its answer, and for an accepted one its magnitude and sign.
+fn: ii_expect (@: value c.LmxWalkValue; int: status; ullong: magnitude; int: negative) int
+    ullong: got (cast: (ullong) 0)
+    int: sign 0
+    int: answered c.lmx_walk_value_magnitude(value, @ got, @ sign)
+    if: answered != status
+        return: 1
+    if: status != c.LMX_WALK_OK
+        return: 0
+    if: got != magnitude || sign != negative
+        return: 2
+    return: 0
+
+# Boolean, i8, int8 and the explicit C source share one physical int8_t contract and differ only in their SOURCE.
+fn: ii_byte_group (@: arena c.LmxArena) int
+    @: d_bool void 0
+    @: d_i8 void 0
+    @: d_int8 void 0
+    @: d_c void 0
+    const: (@: abi_bool c.LmxScalarABI ii_binding("Boolean", @ d_bool))
+    const: (@: abi_i8 c.LmxScalarABI ii_binding("i8", @ d_i8))
+    const: (@: abi_int8 c.LmxScalarABI ii_binding("int8", @ d_int8))
+    const: (@: abi_c c.LmxScalarABI ii_binding("c.int8_t", @ d_c))
+    @: low c.int8_t c.malloc(c.sizeof(c.int8_t))
+    c.LmxWalkValue: value
+    if: low = 0 || abi_bool = 0 || abi_i8 = 0 || abi_int8 = 0 || abi_c = 0 || d_bool = 0 || d_i8 = 0 || d_int8 = 0 || d_c = 0
+        return: 101
+    # One physical ABI whose callback exists because the i8 group says integer; four distinct SOURCE identities.
+    if: abi_bool != abi_i8 || abi_int8 != abi_i8 || abi_c != abi_i8 || abi_i8\integer_magnitude = 0
+        return: 102
+    if: d_bool = d_i8 || d_int8 = d_i8 || d_c = d_i8 || d_bool = d_int8 || d_bool = d_c || d_int8 = d_c
+        return: 103
+    \low := (cast: (c.int8_t) c.INT8_MIN)
+    if: ii_capture(arena, abi_i8, d_i8, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 104
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 128U), 1) != 0
+        return: 105
+    if: ii_capture(arena, abi_int8, d_int8, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 106
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 128U), 1) != 0
+        return: 107
+    # The same C payload under the Boolean SOURCE is no integer: the shared callback admits nothing.
+    if: ii_capture(arena, abi_bool, d_bool, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 108
+    if: ii_expect(@ value, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT, (cast: (ullong) 0U), 0) != 0
+        return: 109
+    # An explicit C source has its own C contract and does not inherit integer 0 from Boolean.
+    if: ii_capture(arena, abi_c, d_c, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 110
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 128U), 1) != 0
+        return: 111
+    \low := (cast: (c.int8_t) c.INT8_MAX)
+    if: ii_capture(arena, abi_i8, d_i8, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 112
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 127U), 0) != 0
+        return: 113
+    c.free(low)
+    return: 0
+
+# Two complete sorted primitive.description records of one class and one C spelling that differ only in the integer column.
+# Each is interned as its own SOURCE identity; capture and copy keep it. Sizes are counted by hand, every NUL included:
+# 22 + 11 + 7 + 16 + 13 + 10 + 9 + 12 + 16 = 116 bytes (name, callable, cell, class, descriptor, integer, opaque, reference, spelling).
+fn: ii_records (@: arena c.LmxArena) int
+    const: (@: record_zero char "primitive.description\000callable\0000\000cell\0001\000class\000IndexByte\000descriptor\0000\000integer\0000\000opaque\0000\000reference\0000\000spelling\000int8_t\000")
+    const: (@: record_one char "primitive.description\000callable\0000\000cell\0001\000class\000IndexByte\000descriptor\0000\000integer\0001\000opaque\0000\000reference\0000\000spelling\000int8_t\000")
+    const: (@: record_text char "primitive.description\000callable\0000\000cell\0001\000class\000IndexByte\000descriptor\0000\000integer\000\"1\"\000opaque\0000\000reference\0000\000spelling\000int8_t\000")
+    @: d_i8 void 0
+    @: d_zero void 0
+    @: d_one void 0
+    @: d_text void 0
+    const: (@: abi c.LmxScalarABI ii_binding("i8", @ d_i8))
+    @: low c.int8_t c.malloc(c.sizeof(c.int8_t))
+    c.LmxWalkValue: value
+    if: low = 0 || abi = 0 || d_i8 = 0
+        return: 201
+    if: c.lmx_graph_scalar_description(abi, record_zero, 116U, @ d_zero) != c.LMX_WALK_OK || c.lmx_graph_scalar_description(abi, record_one, 116U, @ d_one) != c.LMX_WALK_OK
+        return: 202
+    if: d_zero = 0 || d_one = 0 || d_zero = d_one || d_zero = d_i8 || d_one = d_i8
+        return: 203
+    if: c.lmx_graph_scalar_source(abi, d_zero) = 0 || c.lmx_graph_scalar_source(abi, d_one) = 0
+        return: 204
+    \low := (cast: (c.int8_t) c.INT8_MIN)
+    if: ii_capture(arena, abi, d_zero, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 205
+    if: ii_expect(@ value, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT, (cast: (ullong) 0U), 0) != 0
+        return: 206
+    if: ii_capture(arena, abi, d_one, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 207
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 128U), 1) != 0
+        return: 208
+    # The quoted text "1" is no integer flag, just as in the frontend's active table reader.
+    # Its two quote bytes make this otherwise identical full record 118 bytes.
+    if: c.lmx_graph_scalar_description(abi, record_text, 118U, @ d_text) != c.LMX_WALK_OK || d_text = 0 || d_text = d_one
+        return: 209
+    if: ii_capture(arena, abi, d_text, (cast: (@: void) low), c.sizeof(c.int8_t), @ value) != 0
+        return: 210
+    if: ii_expect(@ value, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT, (cast: (ullong) 0U), 0) != 0
+        return: 211
+    c.free(low)
+    return: 0
+
+# The widest signed and unsigned rows keep their whole magnitude; no narrower word is on the way.
+fn: ii_wide (@: arena c.LmxArena) int
+    @: d_ll void 0
+    @: d_u64 void 0
+    const: (@: abi_ll c.LmxScalarABI ii_binding("llong", @ d_ll))
+    const: (@: abi_u64 c.LmxScalarABI ii_binding("u64", @ d_u64))
+    llong: ll (cast: (llong) c.LLONG_MIN)
+    @: top c.uint64_t c.malloc(c.sizeof(c.uint64_t))
+    c.LmxWalkValue: value
+    if: top = 0 || abi_ll = 0 || abi_u64 = 0 || d_ll = 0 || d_u64 = 0 || abi_ll\integer_magnitude = 0 || abi_u64\integer_magnitude = 0
+        return: 301
+    if: ii_capture(arena, abi_ll, d_ll, (cast: (@: void) (@ ll)), sizeof(ll), @ value) != 0
+        return: 302
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) (0 - (c.LLONG_MIN + 1))) + (cast: (ullong) 1U), 1) != 0
+        return: 303
+    ll := (cast: (llong) c.LLONG_MAX)
+    if: ii_capture(arena, abi_ll, d_ll, (cast: (@: void) (@ ll)), sizeof(ll), @ value) != 0
+        return: 304
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.LLONG_MAX), 0) != 0
+        return: 305
+    \top := (cast: (c.uint64_t) c.UINT64_MAX)
+    if: ii_capture(arena, abi_u64, d_u64, (cast: (@: void) top), c.sizeof(c.uint64_t), @ value) != 0
+        return: 306
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.UINT64_MAX), 0) != 0
+        return: 307
+    c.free(top)
+    return: 0
+
+# The checked Array of three int judges one final index before it narrows the magnitude; a refusal does no pointer arithmetic.
+fn: ii_array (@: arena c.LmxArena) int
+    @: array c.LmxArray c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, arena)
+    @: fields c.VoidArray 0
+    @: cells int 0
+    c.LmxWalkPlace: place
+    c.LmxWalkValue: value
+    int: answer 42
+    if: array = 0
+        return: 401
+    fields := (@ array\array)
+    cells := (cast: (@: int) fields\data)
+    if: fields\size != 3U || cells = 0
+        return: 402
+    cells[0] := 11
+    cells[1] := 22
+    cells[2] := 33
+    c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+    if: c.lmx_value_array_place(arena, array, (cast: (ullong) 1U), 1, @ place) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: 403
+    if: c.lmx_value_array_place(arena, array, (cast: (ullong) c.UINT64_MAX), 0, @ place) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: 404
+    if: c.lmx_value_array_place(arena, array, (cast: (ullong) 3U), 0, @ place) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: 405
+    if: c.lmx_value_array_place(arena, array, (cast: (ullong) 2U), 0, @ place) != c.LMX_WALK_OK
+        return: 406
+    if: place\address != (cast: (@: void) (cells + 2))
+        return: 407
+    if: c.lmx_walk_value_load(0, (cast: (@: void) (@ answer)), c.LMX_TYPE_INT, @ value) != c.LMX_WALK_OK || c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_OK
+        return: 408
+    if: cells[0] != 11 || cells[1] != 22 || cells[2] != 42
+        return: 409
+    return: 0
+
+# A legacy pointer to the second element of a heap int[3], taken as the address of a typed INT place. The signed offset moves
+# to the first or the third element; a magnitude whose product would overflow is refused before any arithmetic, for both signs.
+fn: ii_pointer (@: arena c.LmxArena) int
+    @: heap int c.calloc(3U, c.sizeof(c.int))
+    c.LmxWalkPlace: place
+    c.LmxWalkPlace: chosen
+    c.LmxWalkValue: holder
+    ullong: limit (cast: (ullong) 0)
+    if: heap = 0
+        return: 501
+    heap[0] := 11
+    heap[1] := 22
+    heap[2] := 33
+    c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+    c.memset((cast: (@: void) (@ chosen)), 0, c.sizeof(c.LmxWalkPlace))
+    place\address := (cast: (@: void) (heap + 1))
+    place\storage := place\address
+    place\type := c.LMX_TYPE_INT
+    if: c.lmx_walk_place_address(arena, @ place, @ holder) != c.LMX_WALK_OK
+        return: 502
+    if: c.lmx_walk_value_index_place(arena, @ holder, (cast: (ullong) 1U), 1, @ chosen) != c.LMX_WALK_OK || chosen\address != (cast: (@: void) heap)
+        return: 503
+    if: c.lmx_walk_value_index_place(arena, @ holder, (cast: (ullong) 1U), 0, @ chosen) != c.LMX_WALK_OK || chosen\address != (cast: (@: void) (heap + 2))
+        return: 504
+    if: c.lmx_walk_value_index_place(arena, @ holder, (cast: (ullong) 0U), 0, @ chosen) != c.LMX_WALK_OK || chosen\address != (cast: (@: void) (heap + 1))
+        return: 505
+    # With sizeof(int) = 1 such a magnitude is a valid offset and is never executed; nothing is judged here then.
+    if: c.sizeof(c.int) > 1U
+        limit := (cast: (ullong) (c.SIZE_MAX / c.sizeof(c.int))) + (cast: (ullong) 1U)
+        if: c.lmx_walk_value_index_place(arena, @ holder, limit, 0, @ chosen) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            return: 506
+        if: c.lmx_walk_value_index_place(arena, @ holder, limit, 1, @ chosen) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            return: 507
+    ---
+    c.free(heap)
+    return: 0
+
+# The built-in representations distinguish a negative int, plain C char, an unsigned byte and a high unsigned word.
+# Projection only: the extreme magnitudes are never used in pointer arithmetic.
+fn: ii_builtin () int
+    c.LmxWalkValue: value
+    int: small c.INT_MIN
+    char: byte (cast: (char) c.CHAR_MIN)
+    size_t: top c.SIZE_MAX
+    @: raw void c.malloc(c.sizeof(c.char))
+    if: raw = 0
+        return: 601
+    if: c.lmx_walk_value_load(0, (cast: (@: void) (@ small)), c.LMX_TYPE_INT, @ value) != c.LMX_WALK_OK
+        return: 602
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) (0 - (c.INT_MIN + 1))) + (cast: (ullong) 1U), 1) != 0
+        return: 603
+    if: c.lmx_walk_value_load(0, (cast: (@: void) (@ byte)), c.LMX_TYPE_CHAR, @ value) != c.LMX_WALK_OK
+        return: 604
+    if: c.CHAR_MIN < 0
+        if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) (0 - (c.CHAR_MIN + 1))) + (cast: (ullong) 1U), 1) != 0
+            return: 605
+        ---
+    else:
+        if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.CHAR_MIN), 0) != 0
+            return: 606
+        ---
+    ---
+    c.memset(raw, c.UCHAR_MAX, c.sizeof(c.char))
+    if: c.lmx_walk_value_load(0, raw, c.LMX_TYPE_UNSIGNED_CHAR, @ value) != c.LMX_WALK_OK
+        return: 607
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.UCHAR_MAX), 0) != 0
+        return: 608
+    c.free(raw)
+    if: c.lmx_walk_value_load(0, (cast: (@: void) (@ top)), c.LMX_TYPE_SIZE_T, @ value) != c.LMX_WALK_OK
+        return: 609
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.SIZE_MAX), 0) != 0
+        return: 610
+    if: c.lmx_walk_value_lit(@ value, (cast: (ullong) c.SIZE_MAX), 0, 0) != c.LMX_WALK_OK
+        return: 611
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) c.SIZE_MAX), 0) != 0
+        return: 612
+    if: c.lmx_walk_value_lit(@ value, (cast: (ullong) 1U), 0, 1) != c.LMX_WALK_OK
+        return: 613
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 1U), 1) != 0
+        return: 614
+    return: 0
+
+# Real source indices of the C-compatible unit. This checks CHECK and typed native emission for profile integers
+# and an explicit C _Bool. The checked Value/walker consumer is tested separately above, not inferred from this body.
+fn: ii_source_indices (i8: back; c.int8_t: back_c; u8: one8; u16: one16; u32: one32; u64: one64; uchar: one_byte; c._Bool: one_c) int
+    @: heap int c.calloc(3U, c.sizeof(c.int))
+    @: middle int 0
+    @: chosen int 0
+    if: heap = 0
+        return: 701
+    heap[0] := 11
+    heap[1] := 22
+    heap[2] := 33
+    middle := heap + 1
+    if: middle[back] != 11 || middle[back_c] != 11
+        return: 702
+    if: middle[one8] != 33 || middle[one16] != 33 || middle[one32] != 33
+        return: 703
+    if: middle[one64] != 33 || middle[one_byte] != 33 || middle[one_c] != 33
+        return: 704
+    middle[back] := 41
+    if: heap[0] != 41
+        return: 705
+    chosen := @ middle[back]
+    if: chosen != heap || \chosen != 41
+        return: 706
+    c.free(heap)
+    return: 0
+
+fn: ii_bool_group (@: arena c.LmxArena) int
+    @: d_bool void 0
+    @: d_keyword void 0
+    @: d_c void 0
+    const: (@: abi_bool c.LmxScalarABI ii_binding("bool", @ d_bool))
+    const: (@: abi_keyword c.LmxScalarABI ii_binding("_Bool", @ d_keyword))
+    const: (@: abi_c c.LmxScalarABI ii_binding("c._Bool", @ d_c))
+    c._Bool@: payload (cast: (c._Bool@) c.malloc(c.sizeof(c._Bool)))
+    c.LmxWalkValue: value
+    if: abi_bool = 0 || abi_keyword != abi_bool || abi_c != abi_bool || abi_bool\integer_magnitude = 0
+        return: 801
+    if: d_bool = 0 || d_keyword = 0 || d_c = 0 || d_bool = d_keyword || d_bool = d_c || d_keyword = d_c
+        return: 802
+    if: payload = 0
+        return: 809
+    payload[0] := (cast: (c._Bool) 1)
+    if: ii_capture(arena, abi_bool, d_bool, (cast: (@: void) payload), c.sizeof(c._Bool), @ value) != 0
+        return: 803
+    if: ii_expect(@ value, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT, (cast: (ullong) 0U), 0) != 0
+        return: 804
+    if: ii_capture(arena, abi_keyword, d_keyword, (cast: (@: void) payload), c.sizeof(c._Bool), @ value) != 0
+        return: 805
+    if: ii_expect(@ value, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT, (cast: (ullong) 0U), 0) != 0
+        return: 806
+    if: ii_capture(arena, abi_c, d_c, (cast: (@: void) payload), c.sizeof(c._Bool), @ value) != 0
+        return: 807
+    if: ii_expect(@ value, c.LMX_WALK_OK, (cast: (ullong) 1U), 0) != 0
+        return: 808
+    c.free(payload)
+    return: 0
+
+# General typed pointer arithmetic uses the same SOURCE integer classification as an index, without narrowing.
+fn: ii_offsets () int
+    int@: heap (cast: (int@) c.calloc(3U, sizeof(int)))
+    int@: middle 0
+    ullong: one (cast: (ullong) 1U)
+    if: heap = 0
+        return: 901
+    middle := heap + 1U
+    if: middle - one != heap || one + heap != middle || middle + one != heap + 2U
+        return: 902
+    c.free(heap)
+    return: 0
+
+fn: ii_value_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 91
+    g := c.lmx_graph_open(@ arena)
+    if: g = 0
+        return: 92
+    status := ii_byte_group(@ arena)
+    if: status = 0
+        status := ii_records(@ arena)
+    if: status = 0
+        status := ii_wide(@ arena)
+    if: status = 0
+        status := ii_array(@ arena)
+    if: status = 0
+        status := ii_pointer(@ arena)
+    if: status = 0
+        status := ii_builtin()
+    if: status = 0
+        status := ii_source_indices((cast: (i8) -1), (cast: (c.int8_t) -1), (cast: (u8) 1), (cast: (u16) 1), (cast: (u32) 1), (cast: (u64) 1), (cast: (uchar) 1), (cast: (c._Bool) 1))
+    if: status = 0
+        status := ii_bool_group(@ arena)
+    if: status = 0
+        status := ii_offsets()
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    if: status != 0
+        return: status
+    return: 7

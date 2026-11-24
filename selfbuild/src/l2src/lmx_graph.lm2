@@ -1359,7 +1359,7 @@ fn: lmx_graph_source_key (const: (char@: bytes); size_t: start; size_t: limit; c
 
 # Input-boundary validation of sorted schema/literal-token pairs. Original
 # tokens remain part of identity; only eligibility/spelling reads unquote.
-fn: lmx_graph_scalar_record (const: (char@: bytes); size_t: nb; size_t@: spelling_at; size_t@: spelling_size; size_t@: columns) int
+fn: lmx_graph_scalar_record (const: (char@: bytes); size_t: nb; size_t@: spelling_at; size_t@: spelling_size; size_t@: columns; int@: integer) int
     size_t: at c.strlen("primitive.description")
     size_t: key 0U
     size_t: key_end 0U
@@ -1376,6 +1376,8 @@ fn: lmx_graph_scalar_record (const: (char@: bytes); size_t: nb; size_t@: spellin
     spelling_at[0] := 0U
     spelling_size[0] := 0U
     columns[0] := 0U
+    if: integer != 0
+        integer[0] := 0
     if: bytes = 0 || nb <= at || bytes[at] != 0 || c.memcmp(bytes, "primitive.description", at) != 0
         return: 0
     at := at + 1U
@@ -1401,6 +1403,10 @@ fn: lmx_graph_scalar_record (const: (char@: bytes); size_t: nb; size_t@: spellin
         previous := key
         previous_size := n
         lmx_graph_source_payload(bytes, val, val_end, @ payload, @ payload_size)
+        # Project the operand's own semantic category during the existing bounded source pass.
+        # Missing or nonliteral integer metadata does not establish an integer contract.
+        if: integer != 0 && lmx_graph_source_key(bytes, key, key_end, "integer") != 0
+            integer[0] := (cast: (int) (payload_size = 1U && bytes[payload] = 49 && bytes[val] != 34))
         if: lmx_graph_source_key(bytes, key, key_end, "class") != 0
             if: payload_size = 0U
                 return: 0
@@ -1495,7 +1501,7 @@ fn: lmx_graph_scalar_description (const: (c.LmxScalarABI@: abi); const: (char@: 
     if: out = 0
         return: c.LMX_WALK_INVALID
     out[0] := 0
-    if: abi = 0 || lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns) = 0
+    if: abi = 0 || lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns, 0) = 0
         return: c.LMX_WALK_OK
     if: lmx_graph_scalar_record_abi(abi, bytes, spelling_at, spelling_size) = 0
         return: c.LMX_WALK_OK
@@ -1511,28 +1517,60 @@ fn: lmx_graph_scalar_description (const: (c.LmxScalarABI@: abi); const: (char@: 
     out[0] := (cast: (@) identity)
     return: c.LMX_WALK_OK
 
-fn: lmx_graph_scalar_source (const: (c.LmxScalarABI@: abi); @: description) int
+# Physical source proof and the optional semantic integer projection share one pass.
+# The physical ABI may be shared by distinct source contracts, including Boolean and i8.
+fn: lmx_graph_scalar_source_info (const: (c.LmxScalarABI@: abi); @: description; int@: integer) int
     const: (char@: bytes (cast: (const: char@) description))
+    const: (char@: token 0)
     size_t: i 0U
     size_t: nb 0U
     size_t: spelling_at 0U
     size_t: spelling_size 0U
     size_t: columns 0U
+    size_t: payload 0U
+    size_t: payload_size 0U
     @: selected void 0
+    int: valid 0
+    if: integer != 0
+        integer[0] := 0
     if: abi = 0 || description = 0
         return: 0
     while: i < c.lmx_primitive_profile_count
         if: (cast: (@) c.lmx_primitive_profile_row(i)) = description && c.lmx_primitive_profile_scalar(i) = abi
+            if: integer != 0
+                token := lmx_graph_source_pair_token(i, "integer", @ nb)
+                if: token != 0
+                    lmx_graph_source_payload(token, 0U, nb, @ payload, @ payload_size)
+                    integer[0] := (cast: (int) (payload_size = 1U && token[payload] = 49 && token[0] != 34))
+                ---
+            ---
             return: 1
         i := i + 1U
     ---
     if: lmx_graph_intern_exact_size(description, @ nb) = 0
         return: 0
     if: nb >= 3U && bytes[0] = 99 && bytes[1] = 46 && lmx_graph_source_end(bytes, nb, 0U) = nb
-        return: (cast: (int) (lmx_graph_scalar_binding((cast: (char@) description), @ selected) = abi && selected = description))
-    if: lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns) = 0
+        valid := (cast: (int) (lmx_graph_scalar_binding((cast: (char@) description), @ selected) = abi && selected = description))
+        # Explicit C source has its C contract, not the semantic flags of an arbitrary alias row.
+        # Its physical integer capability is checked by the integer accessor before this query.
+        if: valid != 0 && integer != 0
+            integer[0] := 1
+        return: valid
+    if: lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns, integer) = 0
         return: 0
     return: lmx_graph_scalar_record_abi(abi, bytes, spelling_at, spelling_size)
+
+fn: lmx_graph_scalar_source (const: (c.LmxScalarABI@: abi); @: description) int
+    return: lmx_graph_scalar_source_info(abi, description, 0)
+
+# A physical integer callback never grants the integer category to another source sharing its C type.
+fn: lmx_graph_scalar_integer_source (const: (c.LmxScalarABI@: abi); @: description) int
+    int: integer 0
+    if: abi = 0 || abi\integer_magnitude = 0
+        return: 0
+    if: lmx_graph_scalar_source_info(abi, description, @ integer) = 0
+        return: 0
+    return: integer
 
 # Local families of declaring contracts, not receiver opcodes: primitive/C type, reference, qualification, Array.
 # Pointer depth and rectangular Array rank are read from the complete canonical head, with no fixed ceiling.
@@ -2040,14 +2078,18 @@ end: lmx_graph_statement
 # wrapper. The one physical store of a Structure or Array<@> element, which both offset forms end in: the element at
 # its address -- through the one physical indirection of a field-address table, as lmx_graph_cell_in resolves it --
 # takes value by the physical pointer store (lmx_value_pointer_put). No test.
-fn: lmx_graph_element_store (c.LmxArena@: arena; @: element; @: value) int
+fn: lmx_graph_element_cell (c.LmxArena@: arena; @: element) @
     @: cell void element
     @@: address void 0
     if: (cast: (int) c.lmx_range_classify(arena, cell)) = c.LMX_KIND_FIELD_ADDRESSES
         address := (cast: (@@) cell)
         cell := \address
     ---
-    return: c.lmx_value_pointer_put(arena, cell, value)
+    return: cell
+end: lmx_graph_element_cell
+
+fn: lmx_graph_element_store (c.LmxArena@: arena; @: element; @: value) int
+    return: c.lmx_value_pointer_put(arena, lmx_graph_element_cell(arena, element), value)
 end: lmx_graph_element_store
 
 # The unchecked element write at a non-negative index of holder's storage, as the slot of a field is found
@@ -3214,7 +3256,7 @@ return: c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), address)
 # `S[i]`: an untyped reference to what slot index of the Structure value stands for holds -- the cell of an int field,
 # the pointer of a field without a value, a nested Structure, a word, a reference place. 0 and the reference in out; 4
 # for a value that stands for no Structure, or without memory; 7 for an index outside its fields.
-fn: lmx_graph_index (c.LmxGraph@: g; @: value; int: index; @@: out) int
+fn: lmx_graph_index_parts (c.LmxGraph@: g; @: value; ullong: magnitude; int: negative; @@: out) int
     c.Lmx@: inner lmx_graph_index_node(g, value)
     @: cell void 0
     c.LmxPointerCellRead: read 0
@@ -3223,35 +3265,73 @@ fn: lmx_graph_index (c.LmxGraph@: g; @: value; int: index; @@: out) int
     if: out = 0 || inner = 0
         return: 4
     # The access to the element is checked against the current length (lmx_check_index).
-    status := c.lmx_check_index(inner, index)
-    if: status != 0
-        return: status
-    cell := c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), inner, (cast: (size_t) index))
+    if: negative != 0 || magnitude >= (cast: (ullong) lmx_graph_count(inner))
+        return: 7
+    cell := c.lmx_graph_cell_in((cast: (c.LmxArena@) g\arena), inner, (cast: (size_t) magnitude))
     if: cell = 0 || c.lmx_value_cell_access((cast: (c.LmxArena@) g\arena), cell, @ read, @ write) != 0 || read = 0
         return: 4
     out[0] := lmx_graph_ref(g, read(cell))
     if: out[0] = 0
         return: 4
     return: 0
+end: lmx_graph_index_parts
+
+# Legacy int callers share the complete index operation; the public checked entry above does not narrow an index.
+fn: lmx_graph_index (c.LmxGraph@: g; @: value; int: index; @@: out) int
+    unsigned: magnitude (cast: (unsigned) index)
+    int: negative (cast: (int) (index < 0))
+    if: negative != 0
+        magnitude := 0U - magnitude
+    return: lmx_graph_index_parts(g, value, (cast: (ullong) magnitude), negative, out)
 end: lmx_graph_index
+
+# A prepared reference-slot holder, not a dense Array. The native emitter proves that physical contract.
+# Keep the complete signed offset until C pointer arithmetic; the FIELD_ADDRESSES indirection is shared with writes.
+fn: lmx_graph_reference_element (c.Lmx@: holder; ullong: magnitude; int: negative) @
+    c.VoidArray@: fields @ holder\array
+    @@: slots void (cast: (@@) fields\data)
+    if: negative != 0
+        return: (cast: (@) (slots - magnitude))
+    return: (cast: (@) (slots + magnitude))
+end: lmx_graph_reference_element
+
+fn: lmx_graph_reference_index (c.LmxGraph@: g; c.Lmx@: holder; ullong: magnitude; int: negative; @@: out) int
+    @: element void lmx_graph_reference_element(holder, magnitude, negative)
+    @: cell void lmx_graph_element_cell((cast: (c.LmxArena@) g\arena), element)
+    out[0] := lmx_graph_ref(g, c.lmx_arena_pointer_void_read(cell))
+    if: out[0] = 0
+        return: 4
+    return: 0
+end: lmx_graph_reference_index
+
+fn: lmx_graph_reference_index_store (c.LmxGraph@: g; c.Lmx@: holder; ullong: magnitude; int: negative; @: source) int
+    return: lmx_graph_element_store((cast: (c.LmxArena@) g\arena), lmx_graph_reference_element(holder, magnitude, negative), lmx_graph_reference_target(g, source))
+end: lmx_graph_reference_index_store
 
 # Store one pointer in the actual reference slot. Its former value imposes
 # no receiving requirement; interpretation reads the resulting current graph.
-fn: lmx_graph_index_write (c.LmxGraph@: g; @: value; int: index; @: source) int
+fn: lmx_graph_index_write_parts (c.LmxGraph@: g; @: value; ullong: magnitude; int: negative; @: source) int
     c.Lmx@: inner lmx_graph_index_node(g, value)
     @: address void 0
     int: status 0
     if: inner = 0
         return: 4
     # The write into the array is checked against the current length (lmx_check_index); the former content imposes nothing.
-    status := c.lmx_check_index(inner, index)
-    if: status != 0
-        return: status
+    if: negative != 0 || magnitude >= (cast: (ullong) lmx_graph_count(inner))
+        return: 7
     if: lmx_graph_address_of(g, source, @ address) != 0
         return: 4
-    if: lmx_graph_write_slot(g, inner, (cast: (size_t) index), address) != 0
+    if: lmx_graph_write_slot(g, inner, (cast: (size_t) magnitude), address) != 0
         return: 4
     return: 0
+end: lmx_graph_index_write_parts
+
+fn: lmx_graph_index_write (c.LmxGraph@: g; @: value; int: index; @: source) int
+    unsigned: magnitude (cast: (unsigned) index)
+    int: negative (cast: (int) (index < 0))
+    if: negative != 0
+        magnitude := 0U - magnitude
+    return: lmx_graph_index_write_parts(g, value, (cast: (ullong) magnitude), negative, source)
 end: lmx_graph_index_write
 
 # The book, #structure-index: «`S[i] := p` stores another `void*` there»; «only native L2 adds no check at all».

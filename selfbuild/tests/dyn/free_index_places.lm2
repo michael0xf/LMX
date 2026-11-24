@@ -1,5 +1,6 @@
 # Slice 271: a held hidden input supplies the actual Array or pointer.
-# The same INDEX place is read, written and addressed in native and walker.
+# Valid INDEX places are read, written and addressed in native L2 and walker.
+# Invalid Array bounds and non-reference operands are pinned by forced index_checked_access.lm2.
 int: quote 0
 size_t: at 0U
 fn: read_int () int
@@ -60,30 +61,9 @@ fn: outer_array () int
         return: 88
     if: address_int() != 12 || read_int() != 12
         return: 89
-    at := 3U
-    int: caught 0
-    ---
-        caught := read_int()
-        catch: interpreter ()
-            caught := 90
-    ---
-    if: caught != 90
-        return: 91
     return: 0
 end: outer_array
-fn: outer_number () int
-    int: quote 7
-    size_t: at 0U
-    int: caught 0
-    ---
-        caught := read_int()
-        catch: convert ()
-            caught := 90
-    ---
-    if: caught != 90
-        return: 92
-    return: 0
-end: outer_number
+
 # Neither the caller nor a forwarder needs to read the Array to bind it.
 sub: relay_nine ()
     write_nine()
@@ -134,9 +114,6 @@ fn: m () int
     if: r != 0
         return: r
     r := outer_array()
-    if: r != 0
-        return: r
-    r := outer_number()
     if: r != 0
         return: r
     r := outer_array_only()

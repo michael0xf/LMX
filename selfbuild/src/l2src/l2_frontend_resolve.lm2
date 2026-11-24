@@ -1497,11 +1497,11 @@ fn: lm_compiler_value_expr_type (c.L2ValueSpan@: tok; int: lo; int: hi; int: mi;
                 return: (cast: (int) (-99))
             ---
         ---
-        if: machine_left != 0 && (b = -1 || b = -2 || c.lm_compiler_ty_number(b) != 0 || (b = -99 && right_type = -12))
+        if: machine_left != 0 && (b = -1 || b = -2 || c.lm_compiler_ty_number(b) != 0 || (b = -99 && (right_type = -12 || lm_compiler_offset_integer(right_type) != 0)))
             if: exact_type != 0
                 \exact_type := left_type
             return: (cast: (int) (-5))
-        if: machine_right != 0 && (a = -1 || a = -2 || c.lm_compiler_ty_number(a) != 0 || (a = -99 && left_type = -12))
+        if: machine_right != 0 && (a = -1 || a = -2 || c.lm_compiler_ty_number(a) != 0 || (a = -99 && (left_type = -12 || lm_compiler_offset_integer(left_type) != 0)))
             c.LmP0Node@: operator_node_plus c.lm_compiler_span_node(tok, best)
             if: c.lm_compiler_text_eq((cast: (const: c.LmP0Text@) (operator_node_plus\as\atom)), "+") != 0
                 if: exact_type != 0
@@ -5592,3 +5592,33 @@ fn: lm_compiler_head_structure (int: mi; const: (c.LmP0Text@: t)) int
     ---
     return: (cast: (int) (lm_compiler_head_resolve(mi, t, 0, 0) = 5))
 end: lm_compiler_head_structure
+
+# Pointer offsets use the operand's own integer contract. An explicit C by-value type is checked by C's
+# pointer arithmetic; a profiled scalar must carry integer = 1 in its exact SOURCE row.
+fn: lm_compiler_offset_integer (int: ft) int
+    int@@: raw_c (cast: (int@@) (@ c.l2_foreign_raw_c))
+    int@: pr_t (cast: (int@) (@ c.l2_pr_t))
+    int@@: tb_ncol (cast: (int@@) (@ c.l2_tb_ncol))
+    int@@: tb_cell0 (cast: (int@@) (@ c.l2_tb_cell0))
+    char@@@: tbx_name (cast: (char@@@) (@ c.l2_tbx_name))
+    c.LmP0Node@@@: tbx_arg (cast: (c.LmP0Node@@@) (@ c.l2_tbx_arg))
+    c.LmP0Node@: item 0
+    int: row -1
+    int: col -1
+    int: at 0
+    if: c.lm_compiler_foreign_value_ft(ft) = 0
+        return: 0
+    if: raw_c[0][ft - 100] != 0
+        return: 1
+    row := c.lm_compiler_scalar_type_row(ft)
+    if: row < 0
+        return: 0
+    col := c.lm_compiler_table_col(pr_t[0], "integer")
+    if: col < 0
+        return: 0
+    at := tb_cell0[0][pr_t[0]] + row * tb_ncol[0][pr_t[0]] + col
+    item := tbx_arg[0][at]
+    if: tbx_name[0][at] = 0 || item = 0 || item\kind != c.LM_P0_NODE_ATOM || item\as = 0
+        return: 0
+    return: (cast: (int) (c.lm_compiler_payload_eq((cast: (const: c.LmP0Text@) item\as\atom), "1") != 0))
+end: lm_compiler_offset_integer

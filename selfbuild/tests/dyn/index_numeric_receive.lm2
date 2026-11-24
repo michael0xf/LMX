@@ -1,13 +1,20 @@
-# Slice 289 (INDEX-NUMERIC-RECEPTION): an int index of the L3 INDEX of a machine pointer an own field or a formal holds is
-# received into size_t by the ordinary numeric reception -- the program's receiver of that conversion
-# (lm_stg_convert_int_size_t, a row of l2src/convert.lm2) is called, in native and walked code alike: a read, a write, an
-# address, through the root's own pointer, a formal and a method's own pointer. A negative int is refused by the receiver
-# (`range`), which its caller sees as the implicit `convert`: no place is selected and the value of a write is not
-# evaluated (seen[0U] counts value()), so nothing is written. Under a false guard the index is not received at all. The
-# first failure stays. Slice 410 (plan M13 item 3): the index of a machine pointer is a plain offset from it, so the
-# refusal of an index past the place's interval (former checks 22-23, pc[far]) is cancelled; codes 22-23 are unused.
+# Slice 289 (INDEX-NUMERIC-RECEPTION) re-pinned by plan 27.17 (the index slice, parts I and II):
+# native L2 uses the int index in its own C type; walker consumes its sign/magnitude through the checked operation;
+# neither receives the index into size_t. The index of a machine pointer an own field or a formal holds is a plain
+# SIGNED offset from it: the program's receiver of that conversion (lm_stg_convert_int_size_t, a row of
+# l2src/convert.lm2) stays declared here and counts its calls (Calls\n), and no read, write or address by an index ever
+# calls it -- the one direct call below only proves the counter alive. Every pointer starts at the MIDDLE element of its
+# three-cell Array, so -1 selects the first cell and +1 the third; the pointer of a first element is never indexed with
+# -1. The value of a write is evaluated exactly once (seen[0U] counts value(), which returns 40 plus the count, so the
+# two writes differ). The same through the root's own pointer, a formal and a method's own pointer: a read, a write and
+# an address.
+# Entry 7; 11.. name the failing check.
+Calls:
+    int: n 0
+end: Calls
 fn: lm_stg_convert_int_size_t (int: n) size_t
     throws: range
+    Calls\n := Calls\n + 1
     if: n < 0
         throw: range
     return: (cast: (size_t) n)
@@ -18,14 +25,14 @@ cells[1U] := 17
 cells[2U] := 7
 []: int seen 1
 seen[0U] := 0
-@: pc int @ cells[0U]
+@: pm int @ cells[1U]
 @: ps int @ seen[0U]
 fn: touch () int
     return: 0
 end: touch
 fn: value (@: k int) int
     k[0U] := k[0U] + 1
-    return: 40
+    return: 40 + k[0U]
 end: value
 fn: get (@: p int; int: at) int
     return: p[at]
@@ -34,86 +41,97 @@ sub: put (@: p int; int: at; int: v)
     p[at] := v
 end: put
 fn: own_get (int: at) int
-    []: int slots 2
+    []: int slots 3
+    slots[0U] := 8
     slots[1U] := 9
-    @: q int @ slots[0U]
+    slots[2U] := 10
+    @: q int @ slots[1U]
     return: q[at]
 end: own_get
+fn: own_put (int: at; int: v) int
+    []: int slots 3
+    slots[0U] := 8
+    slots[1U] := 9
+    slots[2U] := 10
+    @: q int @ slots[1U]
+    q[at] := v
+    return: slots[0U] * 100 + slots[2U]
+end: own_put
 fn: address_of (@: p int; int: at) int
     @: pz int @ p[at]
     return: \pz
 end: address_of
+fn: own_address (int: at) int
+    []: int slots 3
+    slots[0U] := 8
+    slots[1U] := 9
+    slots[2U] := 10
+    @: q int @ slots[1U]
+    @: pz int @ q[at]
+    return: \pz
+end: own_address
 int: code 7
 int: t touch()
+int: zero 0
 int: one 1
-int: two 2
 int: neg 0 - 1
-int: guard 0
-if: pc[one] != 17
+size_t: probe 0U
+---
+    probe := lm_stg_convert_int_size_t(3)
+    catch: range ()
+        probe := 99U
+---
+if: probe != 3U
     code := 11
-pc[two] := value(ps)
-if: code = 7 && cells[2U] != 40
+if: code = 7 && Calls\n != 1
+    code := 11
+if: code = 7 && pm[zero] != 17
     code := 12
-if: code = 7 && seen[0U] != 1
-    code := 12
-if: code = 7 && get(pc, one) != 17
+if: code = 7 && pm[neg] != 5
     code := 13
-put(pc, one, 23)
-if: code = 7 && cells[1U] != 23
+if: code = 7 && pm[one] != 7
     code := 14
-if: code = 7 && own_get(one) != 9
+pm[neg] := value(ps)
+if: code = 7 && cells[0U] != 41
     code := 15
-if: code = 7 && address_of(pc, two) != 40
-    code := 16
-int: caught 0
----
-    caught := pc[neg]
-    catch: convert ()
-        caught := 90
----
-if: code = 7 && caught != 90
-    code := 17
-caught := 0
----
-    pc[neg] := value(ps)
-    catch: convert ()
-        caught := 90
----
-if: code = 7 && caught != 90
-    code := 18
 if: code = 7 && seen[0U] != 1
+    code := 15
+pm[one] := value(ps)
+if: code = 7 && cells[2U] != 42
+    code := 16
+if: code = 7 && seen[0U] != 2
+    code := 16
+if: code = 7 && cells[1U] != 17
+    code := 17
+if: code = 7 && get(pm, neg) != 41
     code := 18
-caught := 0
----
-    caught := get(pc, neg)
-    catch: convert ()
-        caught := 90
----
-if: code = 7 && caught != 90
+if: code = 7 && get(pm, one) != 42
     code := 19
-caught := 0
----
-    put(pc, neg, 1)
-    catch: convert ()
-        caught := 90
----
-if: code = 7 && caught != 90
+put(pm, neg, 23)
+if: code = 7 && cells[0U] != 23
     code := 20
-caught := 0
----
-    caught := address_of(pc, neg)
-    catch: convert ()
-        caught := 90
----
-if: code = 7 && caught != 90
+put(pm, one, 29)
+if: code = 7 && cells[2U] != 29
     code := 21
-if: guard != 0 && pc[neg] = 5
+if: code = 7 && address_of(pm, neg) != 23
+    code := 22
+if: code = 7 && address_of(pm, one) != 29
+    code := 23
+if: code = 7 && own_get(neg) != 8
     code := 24
-if: code = 7 && cells[0U] != 5
+if: code = 7 && own_get(one) != 10
     code := 25
-if: code = 7 && cells[1U] != 23
-    code := 25
-if: code = 7 && cells[2U] != 40
-    code := 25
+if: code = 7 && own_put(neg, 3) != 310
+    code := 26
+if: code = 7 && own_put(one, 4) != 804
+    code := 27
+if: code = 7 && own_address(neg) != 8
+    code := 28
+if: code = 7 && own_address(one) != 10
+    code := 29
+if: code = 7 && Calls\n != 1
+    code := 30
+if: code = 7 && cells[1U] != 17
+    code := 31
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

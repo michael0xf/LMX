@@ -1,32 +1,36 @@
-# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE; replaces slice 289's rows index_numeric_refused and
-# index_numeric_write_refused, which witnessed a limit): this program has no receiver of the conversion of an int into size_t,
-# so an int index of the L3 INDEX of a machine pointer an own field holds is an unavailable route -- the translation refuses
-# nothing, the reached index is the implicit `convert`: a read reads nothing, a write writes nothing (the cell keeps 17); an
-# index in a branch that does not run raises nothing, at the root too.  Never an unchecked C index.  Entry 7.
+# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE) re-pinned by plan 27.17 (the index slice, parts I and II):
+# this program defines no receiver of the conversion of an int into size_t, and none is needed:
+# native L2 uses the int index in its own C type; walker consumes its sign/magnitude through the checked operation;
+# neither receives the index into size_t. The index of a machine pointer an own field holds is a plain signed offset
+# from that pointer. A read reads 17, a write writes 40 and the cell keeps it, the offset may be negative from the
+# middle element of an Array, and an index in a branch that does not run executes nothing, at the root too.
+# Entry 7; 81.. name the failing check.
 fn: idx_read () int
     []: int cells 2
     cells[1U] := 17
     @: pc int @ cells[0U]
     int: at 1
-    ---
-        int: got pc[at]
-        return: got
-        catch: convert ()
-            return: 25
-    ---
+    return: pc[at]
 end: idx_read
 fn: idx_write () int
     []: int cells 2
     cells[1U] := 17
     @: pc int @ cells[0U]
     int: at 1
-    ---
-        pc[at] := 40
-        return: 1
-        catch: convert ()
-            return: cells[1U]
-    ---
+    pc[at] := 40
+    return: cells[1U]
 end: idx_write
+fn: idx_back () int
+    []: int cells 3
+    cells[0U] := 5
+    cells[1U] := 17
+    cells[2U] := 7
+    @: pm int @ cells[1U]
+    int: at 0 - 1
+    int: got pm[at]
+    pm[at] := 40
+    return: got * 100 + cells[0U]
+end: idx_back
 fn: idx_skipped (int: k) int
     []: int cells 2
     cells[1U] := 17
@@ -39,14 +43,20 @@ fn: idx_skipped (int: k) int
     return: cells[1U] - 8
 end: idx_skipped
 fn: run () int
-    if: idx_read() != 25
+    if: idx_read() != 17
         return: 81
     ---
-    if: idx_write() != 17
+    if: idx_write() != 40
         return: 82
     ---
-    if: idx_skipped(0) != 9
+    if: idx_back() != 540
         return: 83
+    ---
+    if: idx_skipped(0) != 9
+        return: 84
+    ---
+    if: idx_skipped(1) != 40
+        return: 85
     ---
     return: 7
 end: run

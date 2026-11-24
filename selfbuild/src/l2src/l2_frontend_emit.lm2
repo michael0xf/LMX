@@ -869,9 +869,58 @@ fn: lm_compiler_profile_scalar_type_name (int: row; const: (c.LmP0Text@: spellin
     return: selected
 end: lm_compiler_profile_scalar_type_name
 
+# The `integer` flag of ONE row of the ACTIVE primitive table: 1 only when the cell is the literal 1. A row out of
+# range, a table without that column and a cell that is not a literal answer 0; nothing is read from a name or a
+# width.
+fn: lm_compiler_profile_integer_row (int: row) int
+    int@: pr_t (cast: (int@) (@ c.l2_pr_t))
+    int@@: tb_nrow (cast: (int@@) (@ c.l2_tb_nrow))
+    int@@: tb_ncol (cast: (int@@) (@ c.l2_tb_ncol))
+    int@@: tb_cell0 (cast: (int@@) (@ c.l2_tb_cell0))
+    char@@@: tbx_name (cast: (char@@@) (@ c.l2_tbx_name))
+    c.LmP0Node@@@: tbx_arg (cast: (c.LmP0Node@@@) (@ c.l2_tbx_arg))
+    c.LmP0Node@: item 0
+    int: col 0
+    int: at 0
+    if: row < 0 || c.lm_compiler_prim_load() != 0 || row >= tb_nrow[0][pr_t[0]]
+        return: 0
+    col := c.lm_compiler_table_col(pr_t[0], "integer")
+    if: col < 0
+        return: 0
+    at := tb_cell0[0][pr_t[0]] + row * tb_ncol[0][pr_t[0]] + col
+    item := tbx_arg[0][at]
+    if: tbx_name[0][at] = 0 || item = 0 || item\kind != c.LM_P0_NODE_ATOM || item\as = 0
+        return: 0
+    return: (cast: (int) (c.lm_compiler_payload_eq((cast: (const: c.LmP0Text@) item\as\atom), "1") != 0))
+end: lm_compiler_profile_integer_row
+
+# Does ANY eligible row of the group that shares this C spelling carry integer = 1? The group's physical functions are
+# shared and owned by its first row, so the answer cannot come from that row alone (Boolean stands before i8 and int8
+# and shares int8_t). Scanned from the first row on: no earlier row has this spelling, or the first row would not own
+# the group.
+fn: lm_compiler_profile_group_integer (int: first_row; const: (c.LmP0Text@: spelling)) int
+    int@: pr_t (cast: (int@) (@ c.l2_pr_t))
+    int@@: tb_nrow (cast: (int@@) (@ c.l2_tb_nrow))
+    c.LmP0Text: other_storage
+    c.LmP0Text@: other @ other_storage
+    int: row first_row
+    if: spelling = 0 || first_row < 0
+        return: 0
+    # The exact C99 keyword supplies a physical integer object even when every LMX alias has integer = 0.
+    # This does not grant the integer category to those aliases; their own SOURCE remains authoritative.
+    if: spelling\length = 5U && c.memcmp(spelling\data, "_Bool", 5U) = 0
+        return: 1
+    while: row < tb_nrow[0][pr_t[0]]
+        if: c.lm_compiler_primitive_scalar_spelling(row, other) != 0 && other\length = spelling\length && c.memcmp(other\data, spelling\data, spelling\length) = 0 && lm_compiler_profile_integer_row(row) != 0
+            return: 1
+        row := row + 1
+    return: 0
+end: lm_compiler_profile_group_integer
+
 # Generate exact scalar access contracts from the SAME selected source rows.
 # Equal C spellings can share access functions; source descriptions stay distinct.
 # None/void, reference/opaque/callable/descriptor rows have no scalar binding.
+# A group with an integer = 1 row also gets the physical magnitude accessor (it grants no semantic admission).
 fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
     c.FILE@: out c.l2_out
     int@: pr_t (cast: (int@) (@ c.l2_pr_t))
@@ -896,6 +945,9 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
     int: prior 0
     int: complete 0
     int: status 0
+    c.L2FrontendScratchChar64: callback_storage
+    char@: callback (cast: (char@) callback_storage\buffer)
+    const: (char@: callback_text "0")
     if: rows < 0 || spelling < 0
         return: 1
     ids := (cast: (int@) c.lm_compiler_xmalloc((cast: (size_t) rows) * c.sizeof(c.int)))
@@ -941,7 +993,12 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
                     status := 1
                 if: c.fprintf(out, "fn: lmx_scalar_copy%d (@: void cell; @: void source) int\n    if: cell = 0 || source = 0\n        return: 1\n    end: if\n    @: LmxScalarType%d dst (cast: (@: LmxScalarType%d) cell)\n    @: LmxScalarType%d src (cast: (@: LmxScalarType%d) source)\n    \\dst: \\src\n    return: 0\nend: lmx_scalar_copy%d\n", row, row, row, row, row, row) < 0
                     status := 1
-                if: c.fprintf(out, "c.array:\n    const:\n        [1]: LmxScalarABI lmx_scalar_abi%d ((c.LMX_SCALAR_SIZE%d c.lmx_scalar_init%d c.lmx_scalar_copy%d))\n    end: const\nend: c.array\n", row, row, row, row) < 0
+                callback_text := "0"
+                if: lm_compiler_profile_group_integer(row, current_name) != 0
+                    if: c.fprintf(out, "sub: lmx_scalar_integer_magnitude%d (@: void cell; @: LmxScalarMagnitude magnitude; @: int negative)\n    @: LmxScalarType%d source (cast: (@: LmxScalarType%d) cell)\n    LmxScalarType%d: value (cast: (LmxScalarType%d) 0)\n    int: sign 0\n    LmxScalarMagnitude: absolute (cast: (LmxScalarMagnitude) 0)\n    value: \\source\n    sign: (value < (cast: (LmxScalarType%d) 0))\n    absolute: (cast: (LmxScalarMagnitude) value)\n    if: sign != 0\n        absolute: (cast: (LmxScalarMagnitude) 0) - absolute\n    end: if\n    \\magnitude: absolute\n    \\negative: sign\n    return\nend: lmx_scalar_integer_magnitude%d\n", row, row, row, row, row, row, row) < 0 || c.snprintf(callback, 64U, "c.lmx_scalar_integer_magnitude%d", row) < 0
+                        status := 1
+                    callback_text := (cast: (const: char@) callback)
+                if: c.fprintf(out, "c.array:\n    const:\n        [1]: LmxScalarABI lmx_scalar_abi%d ((c.LMX_SCALAR_SIZE%d c.lmx_scalar_init%d c.lmx_scalar_copy%d %s))\n    end: const\nend: c.array\n", row, row, row, row, callback_text) < 0
                     status := 1
                 ---
             ---
@@ -6708,9 +6765,9 @@ fn: lm_compiler_check_resolved_indices (const: (c.LmP0Node@: at); int: mi; const
     int: l3_index 0
     if: resolved = 0 || resolved\n < 0 || resolved\n > resolved\cap || resolved\names < 0 || resolved\names > resolved\n || resolved\indexed < 0 || resolved\indexed > resolved\n - resolved\names || (resolved\n > 0 && resolved\steps = 0)
         return: (cast: (int) (c.lm_compiler_error(path, at, "internal: a prepared path has inconsistent index geometry")))
-    # Slice 289 (INDEX-NUMERIC-RECEPTION): an index of the L3 INDEX of a machine pointer an own field or a formal holds
-    # (lm_compiler_index_l3_path) is received into size_t as an Array level's is -- the ordinary numeric reception, the call
-    # of its converter, its refusal.
+    # Slice 289, plan 27.17: an index of the L3 INDEX of a machine pointer an own field or a formal holds
+    # (lm_compiler_index_l3_path), like an Array level's, is checked as a value and as an integer kind
+    # (lm_compiler_check_index_integer): it is not received into size_t and no converter edge is recorded.
     l3_index := c.lm_compiler_index_l3_path(resolved, mi)
     prefix := resolved\n
     while: k < resolved\n
@@ -6724,7 +6781,7 @@ fn: lm_compiler_check_resolved_indices (const: (c.LmP0Node@: at); int: mi; const
             if: pf = 0 || pc < 1
                 return: (cast: (int) (c.lm_compiler_error(path, at, "internal: an index step of a place cannot be read")))
             if: (step\level != 0 && step\level\kind = 1) || l3_index != 0
-                if: lm_compiler_check_numeric_receive_span((cast: (c.L2ValueSpan@) (@ step\index)), 2, mi, path, at) != 0
+                if: lm_compiler_check_value_span((cast: (c.L2ValueSpan@) (@ step\index)), mi, path, at) != 0 || lm_compiler_check_index_integer((cast: (c.L2ValueSpan@) (@ step\index)), mi, path, at) != 0
                     return: (cast: (int) (1))
                 ---
             else:
@@ -6772,6 +6829,77 @@ fn: lm_compiler_check_numeric_receive_span (c.L2ValueSpan@: value; int: target; 
         return: (cast: (int) (1))
     return: lm_compiler_check_numeric_receive_plan(value, target, mi, path, at)
 end: lm_compiler_check_numeric_receive_span
+
+# An index is asked to be of an INTEGER KIND and no more (plan 27.17). The reception into size_t that slice 289 gave
+# it could not hold a signed offset (-1 became SIZE_MAX) and called the program's int to size_t receiver for a value
+# the index operation takes as it is. The kind is the existing classification of the prepared span
+# (lm_compiler_value_span_type); the refusals of the numeric reception stay: a callable without a result, a reference,
+# a text, mixed numeric types. Accepted: the translator's integer types (int, char, size_t, unsigned, ulong), a
+# written number or character literal (a contextual literal: its sign and magnitude reach the index operation whole),
+# the member of an opaque C root (the C compiler receives it), a FREE runtime value (no static kind: the run decides,
+# nothing is received into size_t here) and a foreign by-value scalar whose OWN row of the program's ACTIVE
+# primitive.description has integer = 1 (u8, u16, u32, u64, uchar and every other such row; Boolean, bool and _Bool
+# have integer = 0 and are no integer index). The row is found by the exact type (lm_compiler_scalar_type_row), never
+# by a name or a width, and the physical accessor of the profile is not asked: it grants no admission.
+fn: lm_compiler_check_index_integer (c.L2ValueSpan@: value; int: mi; const: (char@: path); const: (c.LmP0Node@: at)) int
+    c.L2ValueSpan@: leaf value
+    c.L2Path@: selected 0
+    c.LmP0Node@: index_node
+    int: path_status
+    int: kind
+    int: exact -1
+    int: row -1
+    int@@: raw_c (cast: (int@@) (@ c.l2_foreign_raw_c))
+    int: neg 0
+    int: uns 0
+    int: ch 0
+    ullong: magnitude (cast: (ullong) 0)
+    if: value = 0 || value\grammar = 0 || value\node = 0
+        return: (cast: (int) (c.lm_compiler_error_fatal(path, 0, "internal: an index has no prepared value")))
+    while: leaf\values != 0 && leaf\value_n = 1 && (leaf\grammar = 3 || leaf\node\kind = c.LM_P0_NODE_STRUCTURE)
+        leaf := leaf\values
+    ---
+    index_node := leaf\node
+    # The selected opaque C root: its member's exact type belongs to the C reception, as in the numeric reception.
+    path_status := c.lm_compiler_value_span_path(leaf, mi, @ selected)
+    if: (path_status = 0 || path_status = 2) && selected != 0 && selected\n > 0 && c.lm_compiler_path_root_raw_c(selected, mi) != 0
+        return: 0
+    kind := c.lm_compiler_value_span_type(value, mi, @ exact)
+    if: kind = -20
+        return: 0
+    if: exact = 8
+        return: (cast: (int) (c.lm_compiler_error(path, index_node, "a callable without a result has no value")))
+    if: kind = -5 || kind = -15
+        return: (cast: (int) (c.lm_compiler_error(path, index_node, "a reference where a number is asked")))
+    if: kind = -6 || kind = -16
+        return: (cast: (int) (c.lm_compiler_error(path, index_node, "a text where a number is asked")))
+    if: kind = -17
+        return: (cast: (int) (c.lm_compiler_error(path, index_node, "a reference compared with a number other than 0")))
+    if: kind = -3
+        return: (cast: (int) (c.lm_compiler_error(path, index_node, "mixed numeric types (a conversion)")))
+    if: kind = -1 || kind = -2
+        return: 0
+    if: leaf\count = 1 && index_node != 0 && index_node\kind = c.LM_P0_NODE_ATOM && index_node\as != 0
+        if: c.lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) (index_node\as\atom)), @ neg, @ magnitude, @ uns) != 0 || c.lm_compiler_rw_char_lit((cast: (const: c.LmP0Text@) (index_node\as\atom)), @ ch) != 0
+            return: 0
+        ---
+    ---
+    if: exact >= 0 && c.lm_compiler_prim_code_name(c.lm_compiler_formal_raw(exact)) != 0
+        return: 0
+    if: exact < 0 && kind >= 0 && c.lm_compiler_prim_code_name(kind) != 0
+        return: 0
+    # An explicit C by-value type retains its C contract, just as an opaque C root member does above.
+    # The emitted C index/integer operator decides its C category; no LMX profile alias supplies that fact.
+    if: exact >= 100 && c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(exact)) != 0 && raw_c[0][c.lm_compiler_formal_raw(exact) - 100] != 0
+        return: 0
+    if: exact >= 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(exact)) != 0
+        row := c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(exact))
+        if: row >= 0 && lm_compiler_profile_integer_row(row) != 0
+            return: 0
+        ---
+    ---
+    return: (cast: (int) (c.lm_compiler_error(path, index_node, "an index is not of an integer kind")))
+end: lm_compiler_check_index_integer
 
 # Original: l2src/l2trans.lm1:21190
 fn: lm_compiler_rw_array_place (const: (c.LmP0Node@: stmt); const: (c.L2ArrayPlace@: place); int: into; int@: out) int
@@ -7944,7 +8072,8 @@ fn: lm_compiler_rw_path_value_full (int@: path; const: (c.L2Path@: prepared); in
             frame_op := "LMX_WALK_OP_ELEMPUT"
         if: c.lm_compiler_rw_frame(parent, frame_op, 3 + store, @ raw) != 0 || lm_compiler_rw_path_value_full(path, prepared, 0, level - 1, raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 1, base) != 0
             return: (cast: (int) (1))
-        if: lm_compiler_rw_numeric_receive_span((cast: (c.L2ValueSpan@) (@ index_step\index)), 2, raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 2, base) != 0
+        # Keep the evaluated integer's actual type, literal sign and full magnitude until the index wrapper.
+        if: lm_compiler_rw_evaluate_span((cast: (c.L2ValueSpan@) (@ index_step\index)), c.lm_compiler_free_own(), raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 2, base) != 0
             return: (cast: (int) (1))
         \out := raw
         return: (cast: (int) (0))
@@ -18965,7 +19094,7 @@ fn: lm_compiler_rw_index_level (const: (c.L2Path@: path); int: level; int: store
     ---
     if: c.lm_compiler_rw_put(raw, 1, base) != 0
         return: 1
-    if: lm_compiler_rw_numeric_receive_span((cast: (c.L2ValueSpan@) (@ step\index)), 2, raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 2, base) != 0
+    if: lm_compiler_rw_evaluate_span((cast: (c.L2ValueSpan@) (@ step\index)), c.lm_compiler_free_own(), raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 2, base) != 0
         return: 1
     \out := raw
     return: 0
@@ -19010,9 +19139,9 @@ fn: lm_compiler_check_numeric_receive_plan (c.L2ValueSpan@: value; int: target; 
     return: (cast: (int) (0))
 end: lm_compiler_check_numeric_receive_plan
 
-# Slice 289 (INDEX-NUMERIC-RECEPTION): the indices of a write through the L3 INDEX (lm_compiler_index_l3_path), each received
-# into size_t by the ordinary numeric reception.  lm_compiler_check_indexed_write has checked their expressions as values
-# before it selected the place, so the reception alone is asked here.
+# Slice 289, plan 27.17: the indices of a write through the L3 INDEX (lm_compiler_index_l3_path), each asked to be of
+# an integer kind (lm_compiler_check_index_integer) and not received into size_t.  lm_compiler_check_indexed_write has
+# checked their expressions as values before it selected the place, so the kind alone is asked here.
 fn: lm_compiler_check_index_l3_receive (const: (c.L2Path@: resolved); int: mi; const: (char@: path); const: (c.LmP0Node@: at)) int
     c.L2PathStep@: step
     int: k 0
@@ -19020,7 +19149,7 @@ fn: lm_compiler_check_index_l3_receive (const: (c.L2Path@: resolved); int: mi; c
         return: (cast: (int) (c.lm_compiler_error(path, at, "internal: a prepared path has inconsistent index geometry")))
     while: k < resolved\n
         step := resolved\steps + k
-        if: step\locus = 7 && lm_compiler_check_numeric_receive_plan((cast: (c.L2ValueSpan@) (@ step\index)), 2, mi, path, at) != 0
+        if: step\locus = 7 && lm_compiler_check_index_integer((cast: (c.L2ValueSpan@) (@ step\index)), mi, path, at) != 0
             return: (cast: (int) (1))
         k := k + 1
     ---

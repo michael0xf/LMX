@@ -256,19 +256,10 @@ fn: lmx_graph_reference_value (c.LmxGraph@: g; @: value) @
         return: (cast: (@) 0)
 return: copy
 
-# Snapshot only a computed declaration's written structure. Pointer values
-# and Model/context edges retain their targets; no lexical graph is copied.
-fn: lmx_graph_description_snapshot (c.LmxGraph@: g; @: raw; @@: out) int
-    return: lmx_graph_copy_with_names(g, raw, 8, out)
-
 # A copy of the Structure source with the names of the addresses it copies (the book, names: "Graph copying transfers names for copied addresses, interning
 # spellings at the receiving boundary"). The arena-level door lmx_graph_copy_owned knows no table of names and leaves a copied Frame without its head; this copy
 # keeps the map of what it copied and gives it to lmx_graph_copy_metadata, the one mechanism that carries the parents and the names.
 fn: lmx_graph_copy_value (c.LmxGraph@: g; @: source; @@: out) int
-    return: lmx_graph_copy_with_names(g, source, 0, out)
-
-# The common copier over a map, then the parents and the names of the copied addresses; value_policy as the caller asks.
-fn: lmx_graph_copy_with_names (c.LmxGraph@: g; @: raw; int: policy; @@: out) int
     c.LmxCopyMap: map
     c.LmxCopyStack: todo
     size_t: name_count (cast: (size_t) g\names_len)
@@ -277,8 +268,7 @@ fn: lmx_graph_copy_with_names (c.LmxGraph@: g; @: raw; int: policy; @@: out) int
     c.memset((cast: (@) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
     if: c.lmx_copy_map_init(@ map) != 0
         return: 4
-    map\value_policy := policy
-    status := c.lmx_graph_copy_value_mapped_staged(g\arena, raw, @ map, @ todo, out)
+    status := c.lmx_graph_copy_value_mapped_staged(g\arena, source, @ map, @ todo, out)
     if: status = 0
         status := c.lmx_graph_copy_drain_mapped(g\arena, @ map, @ todo, 0)
     if: status = 0
@@ -320,7 +310,9 @@ fn: lmx_graph_work_snapshot (c.LmxGraph@: g; c.LmxGraphWork@: row; @: raw) int
         row\loaded := row\loaded | 1
         return: 0
     if: lmx_graph_deferred_kind(g, raw) != 0
-        return: lmx_graph_description_snapshot(g, raw, (cast: (@@) (@ row\cell)))
+        # Keep the description selected now, before the call body can replace its source field.
+        # The row roots this existing record; its first bare read evaluates it in the owning activation.
+        return: 0
     if: kind = 1 || kind = 2 || kind = 5 || kind = 6 || (kind = 4 && c.lmx_graph_declaration_place_name(g, raw) = 0)
         if: c.lmx_walk_value_cell(g\arena, raw, value) != c.LMX_WALK_OK
             return: 4
@@ -8071,8 +8063,6 @@ fn: lmx_graph_copy_metadata (c.LmxGraph@: g; c.LmxCopyMap@: map; c.Lmx@: receivi
                 target_node := (cast: (c.Lmx@) target)
                 if: target_node != receiving && selected = 0
                     target_node\parent := (cast: (c.Lmx@) c.lmx_copy_map_get(map, (cast: (@) source_node\parent)))
-                    if: target_node\parent = 0 && (map\value_policy & 8) != 0
-                        target_node\parent := source_node\parent
             ---
         ---
         i := i + 1U

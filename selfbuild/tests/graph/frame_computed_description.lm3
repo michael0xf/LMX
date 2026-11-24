@@ -1,0 +1,31 @@
+# Entry selects the existing data description before its source field is replaced.
+# The first read computes that description once; the next call selects the new source value.
+(
+    Observed:
+        int: ticks 0
+        int: first 0
+        int: second 0
+        int: source 0
+    Inputs:
+        int: x tick()
+    Code:
+        source\x := 9
+        int: total x + x
+        if: observed\first = 0
+            observed\first := total
+        else:
+            observed\second := total
+)
+fn: tick () int
+    @: shared node[0]
+    shared\Observed\ticks := shared\Observed\ticks + 1
+    return: 40
+sub: main ()
+    @: shared node[0]
+    @: source shared\Inputs
+    @: observed shared\Observed
+    @: body shared\Code
+    call(source; body)
+    call(source; body)
+    observed\source := source\x
+main()

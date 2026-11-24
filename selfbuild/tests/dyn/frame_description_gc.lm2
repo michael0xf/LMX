@@ -1,0 +1,114 @@
+# A selected computed description survives replacing its source and an explicit execution-root sweep.
+# Collect is called normally from the interpreted body before the first bare x read.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: wd_named (@: g c.LmxGraph; @: record c.Lmx; @: name char) @: void
+    if: record = 0 || c.lmx_graph_kind(g, (cast: (@: void) record)) != 4
+        return: 0
+    return: c.lmx_graph_get_in(g, record, c.lmx_graph_named(g, record, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: wd_number (@: g c.LmxGraph; @: record c.Lmx; @: name char; int: expected) int
+    int: actual 0
+    return: (cast: (int) (c.lmx_graph_value_int(g, wd_named(g, record, name), @ actual) != 0 || actual != expected))
+
+fn: wd_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: counter void 0
+    @: observed c.Lmx 0
+    @: source c.Lmx 0
+    int: count 0
+    int: expected_ticks 0
+    c.LmxWalkValue: zero
+    if: g = 0 || owner = 0 || owner = (cast: (@: void) code) || nargs != 0U || c.lmx_graph_kind(g, owner) != 4 || c.lmx_graph_count((cast: (@: c.Lmx) owner)) != 3U
+        return: 92
+    counter := c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
+    observed := (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_get((cast: (@: c.Lmx) owner), 1U)))
+    source := (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_get((cast: (@: c.Lmx) owner), 2U)))
+    if: counter = 0 || c.lmx_graph_value_int(g, counter, @ count) != 0 || count < 0 || count > 1
+        return: 93
+    if: count != 0
+        expected_ticks := 1
+    # The omitted initializer is still untouched at the first collection; reentry does not run it again.
+    if: wd_number(g, observed, "ticks", expected_ticks) != 0 || wd_number(g, source, "x", 9) != 0 || c.lmx_int_store_known(counter, count + 1) != 0
+        return: 94
+    # No assertion owner or private root retains the removed description.
+    # The ordinary active frames must keep it after source.x has been replaced.
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_walk_value_num(@ zero, c.LMX_TYPE_INT, 0U) != c.LMX_WALK_OK
+        return: 95
+    return: c.lmx_call_result_value(arena, code, @ zero, dest, out, result)
+
+fn: wd_description_gc_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: data c.Lmx 0
+    @: observed c.Lmx 0
+    @: source c.Lmx 0
+    @: collect c.Lmx 0
+    @: collect_data c.Lmx 0
+    @: counter void 0
+    @: observed_ref void 0
+    @: source_ref void 0
+    size_t: data_slot 0U
+    @: main_code c.Lmx 0
+    @: file c.FILE 0
+    c.LmxWalkValue: result
+    c.LmxExecutionRoots: roots
+    @: before c.LmxExecutionRoots 0
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 81
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("codex_frame_description_gc_code.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 82
+    if: c.fputs("(\n    Observed:\n        int: ticks 0\n        int: first 0\n        int: second 0\n        int: source 0\n        int: collected 0\n    Inputs:\n        int: x tick()\n    Code:\n        source\\x := 9\n        int: ignored Collect()\n        int: total x + x\n        if: observed\\first = 0\n            observed\\first := total\n        else:\n            observed\\second := total\n)\nfn: tick () int\n    @: shared node[0]\n    shared\\Observed\\ticks := shared\\Observed\\ticks + 1\n    return: 40\nfn: Collect () int\n    return: 1\nsub: main ()\n    @: shared node[0]\n    @: source shared\\Inputs\n    @: observed shared\\Observed\n    @: body shared\\Code\n    call(source; body)\n    call(source; body)\n    observed\\source := source\\x\n", file) < 0 || c.fclose(file) != 0
+        return: 83
+    status := c.lm_graph_build_file(g, "codex_frame_description_gc_code.lm3", @ root)
+    c.remove("codex_frame_description_gc_code.lm3")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 84
+    collect := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Collect", 7U)))
+    main_code := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("main", 4U)))
+    if: collect = 0 || main_code = 0
+        return: 85
+    data := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U))
+    observed := (cast: (@: c.Lmx) wd_named(g, data, "Observed"))
+    source := (cast: (@: c.Lmx) wd_named(g, data, "Inputs"))
+    if: observed = 0 || source = 0
+        return: 89
+    counter := wd_named(g, observed, "collected")
+    collect_data := c.lmx_graph_lmx(g, 0, 3U)
+    observed_ref := c.lmx_graph_ref_lmx(g, observed)
+    source_ref := c.lmx_graph_ref_lmx(g, source)
+    data_slot := c.lmx_graph_named(g, collect, c.lmx_graph_intern("data", 4U))
+    if: counter = 0 || collect_data = 0 || observed_ref = 0 || source_ref = 0 || data_slot >= c.lmx_graph_count(collect) || c.lmx_graph_put_in(g, collect_data, 0U, counter) != 0 || c.lmx_graph_put_in(g, collect_data, 1U, observed_ref) != 0 || c.lmx_graph_put_in(g, collect_data, 2U, source_ref) != 0 || c.lmx_graph_name(g, (cast: (@: void) collect_data), "data", 4U) != 0 || c.lmx_graph_put_in(g, collect, data_slot, (cast: (@: void) collect_data)) != 0
+        return: 90
+    collect_data\parent := collect
+    collect\native := (cast: (c.LmxEntry) c.wd_collect)
+    before := c.lmx_execution_roots_mark(@ arena)
+    # The source graph and callback remain roots. The removed description has no assertion root.
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, 0, 0U, (cast: (@: void) root), 0)
+    status := c.lmx_graph_invoke_values(g, main_code, 0, 0U, 0, @ result)
+    if: status != 0
+        c.fprintf(c.stderr, "description GC invoke status=%d\n", status)
+        return: 86
+    data := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U))
+    observed := (cast: (@: c.Lmx) wd_named(g, data, "Observed"))
+    source := (cast: (@: c.Lmx) wd_named(g, data, "Inputs"))
+    if: observed = 0 || source = 0 || wd_number(g, observed, "ticks", 1) != 0 || wd_number(g, observed, "first", 80) != 0 || wd_number(g, observed, "second", 18) != 0 || wd_number(g, observed, "source", 9) != 0 || wd_number(g, observed, "collected", 2) != 0 || wd_number(g, source, "x", 9) != 0
+        return: 87
+    if: arena\activation != 0 || arena\execution_roots != @ roots
+        return: 88
+    c.lmx_execution_roots_restore(@ arena, before)
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7
